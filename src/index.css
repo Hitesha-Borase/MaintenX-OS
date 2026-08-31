@@ -524,7 +524,7 @@ body {
   color: var(--text-primary) !important;
 }
 
-/* Restrict oversized form action/submit buttons (yellow, red, green) from stretching full-width */
+/* Restrict oversized form action/submit buttons (yellow, red, green) from stretching full-width and align to center */
 .page-content-wrapper form .btn,
 .page-content-wrapper form button[type="submit"],
 .page-content-wrapper form .btn-primary,
@@ -534,7 +534,9 @@ form > .btn,
 form > button[type="submit"] {
   width: fit-content !important;
   max-width: max-content !important;
-  align-self: flex-start !important;
+  align-self: center !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
   padding: 8px 24px !important;
   margin-top: 4px;
 }
