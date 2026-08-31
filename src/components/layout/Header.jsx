@@ -11,7 +11,8 @@ import {
   Menu,
   Sparkles,
   QrCode,
-  Shield
+  Shield,
+  Cpu
 } from "lucide-react";
 import { Breadcrumbs } from "./Breadcrumbs";
 import { useApp } from "../../context/AppContext";
