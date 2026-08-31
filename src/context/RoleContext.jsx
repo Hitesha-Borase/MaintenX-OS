@@ -56,7 +56,7 @@ export function RoleProvider({ children }) {
     }
     switch (moduleKey) {
       case "dashboards":
-        return true;
+        return currentRole.id !== "operator";
       case "cmms":
         return ["maintenance", "supervisor", "plant_manager", "operator"].includes(currentRole.id);
       case "production":
@@ -76,7 +76,7 @@ export function RoleProvider({ children }) {
       case "rca":
       case "documents":
       case "reports":
-        return true;
+        return currentRole.id !== "operator";
       case "shopfloor":
         return ["operator", "maintenance", "quality", "warehouse", "supervisor"].includes(currentRole.id);
       default:

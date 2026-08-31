@@ -163,10 +163,19 @@ export function Sidebar() {
           
           {/* Shop Floor Mobile Launcher */}
           {canAccessModule("shopfloor") && (
-            <NavLink to="/shopfloor" style={navItemStyle} onClick={() => setMobileMenuOpen(false)}>
-              <Smartphone size={17} color="#34D399" />
-              {!sidebarCollapsed && <span>Mobile Shop-Floor Hub</span>}
-            </NavLink>
+            <>
+              <NavLink to="/shopfloor" end style={navItemStyle} onClick={() => setMobileMenuOpen(false)}>
+                <Smartphone size={17} color="#34D399" />
+                {!sidebarCollapsed && <span>Mobile Shop-Floor Hub</span>}
+              </NavLink>
+              
+              {currentRole.id === "operator" && (
+                <div style={navItemStyle({ isActive: false })} onClick={() => { setMobileMenuOpen(false); addToast("Task execution pending backend integration.", "info"); }}>
+                  <FileText size={17} color="#F59E0B" />
+                  {!sidebarCollapsed && <span>My Tasks</span>}
+                </div>
+              )}
+            </>
           )}
 
           {/* Dashboards Section */}
@@ -255,64 +264,74 @@ export function Sidebar() {
 
               {(!sidebarCollapsed ? openGroups.maintenance : true) && (
                 <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                  <NavLink to="/maintenance" end style={navItemStyle} onClick={() => setMobileMenuOpen(false)}>
-                    <Wrench size={17} color="#38BDF8" />
-                    {!sidebarCollapsed && <span>CMMS Dashboard</span>}
-                  </NavLink>
+                  {currentRole.id !== "operator" && (
+                    <NavLink to="/maintenance" end style={navItemStyle} onClick={() => setMobileMenuOpen(false)}>
+                      <Wrench size={17} color="#38BDF8" />
+                      {!sidebarCollapsed && <span>CMMS Dashboard</span>}
+                    </NavLink>
+                  )}
 
                   {!sidebarCollapsed && (
                     <>
-                      <NavLink to="/maintenance/assets" style={subNavItemStyle} onClick={() => setMobileMenuOpen(false)}>
-                        <span>Assets Registry</span>
-                        <span style={{ fontSize: "10px", color: "var(--text-muted)" }}>{assets.length}</span>
-                      </NavLink>
+                      {currentRole.id !== "operator" && (
+                        <>
+                          <NavLink to="/maintenance/assets" style={subNavItemStyle} onClick={() => setMobileMenuOpen(false)}>
+                            <span>Assets Registry</span>
+                            <span style={{ fontSize: "10px", color: "var(--text-muted)" }}>{assets.length}</span>
+                          </NavLink>
 
-                      <NavLink to="/maintenance/work-orders" style={subNavItemStyle} onClick={() => setMobileMenuOpen(false)}>
-                        <span>Work Orders</span>
-                        <span style={{ fontSize: "10px", backgroundColor: "rgba(56, 189, 248, 0.2)", color: "#38BDF8", padding: "1px 5px", borderRadius: "4px" }}>
-                          {activeWOCount}
-                        </span>
-                      </NavLink>
+                          <NavLink to="/maintenance/work-orders" style={subNavItemStyle} onClick={() => setMobileMenuOpen(false)}>
+                            <span>Work Orders</span>
+                            <span style={{ fontSize: "10px", backgroundColor: "rgba(56, 189, 248, 0.2)", color: "#38BDF8", padding: "1px 5px", borderRadius: "4px" }}>
+                              {activeWOCount}
+                            </span>
+                          </NavLink>
 
-                      <NavLink to="/maintenance/pm-schedules" style={subNavItemStyle} onClick={() => setMobileMenuOpen(false)}>
-                        <span>PM Scheduling</span>
-                      </NavLink>
+                          <NavLink to="/maintenance/pm-schedules" style={subNavItemStyle} onClick={() => setMobileMenuOpen(false)}>
+                            <span>PM Scheduling</span>
+                          </NavLink>
+                        </>
+                      )}
 
                       <NavLink to="/maintenance/pm-checklists" style={subNavItemStyle} onClick={() => setMobileMenuOpen(false)}>
                         <span>PM Checklists</span>
                       </NavLink>
 
-                      <NavLink to="/maintenance/breakdowns" style={subNavItemStyle} onClick={() => setMobileMenuOpen(false)}>
-                        <span>Breakdowns</span>
-                      </NavLink>
+                      {currentRole.id !== "operator" && (
+                        <>
+                          <NavLink to="/maintenance/breakdowns" style={subNavItemStyle} onClick={() => setMobileMenuOpen(false)}>
+                            <span>Breakdowns</span>
+                          </NavLink>
 
-                      <NavLink to="/maintenance/troubleshooting" style={subNavItemStyle} onClick={() => setMobileMenuOpen(false)}>
-                        <span>Troubleshooting</span>
-                      </NavLink>
+                          <NavLink to="/maintenance/troubleshooting" style={subNavItemStyle} onClick={() => setMobileMenuOpen(false)}>
+                            <span>Troubleshooting</span>
+                          </NavLink>
 
-                      <NavLink to="/maintenance/verified-solutions" style={subNavItemStyle} onClick={() => setMobileMenuOpen(false)}>
-                        <span>Verified Solutions</span>
-                      </NavLink>
+                          <NavLink to="/maintenance/verified-solutions" style={subNavItemStyle} onClick={() => setMobileMenuOpen(false)}>
+                            <span>Verified Solutions</span>
+                          </NavLink>
 
-                      <NavLink to="/maintenance/repeat-failures" style={subNavItemStyle} onClick={() => setMobileMenuOpen(false)}>
-                        <span>Repeat Failures</span>
-                      </NavLink>
+                          <NavLink to="/maintenance/repeat-failures" style={subNavItemStyle} onClick={() => setMobileMenuOpen(false)}>
+                            <span>Repeat Failures</span>
+                          </NavLink>
 
-                      <NavLink to="/maintenance/reliability" style={subNavItemStyle} onClick={() => setMobileMenuOpen(false)}>
-                        <span>Reliability (MTBF)</span>
-                      </NavLink>
+                          <NavLink to="/maintenance/reliability" style={subNavItemStyle} onClick={() => setMobileMenuOpen(false)}>
+                            <span>Reliability (MTBF)</span>
+                          </NavLink>
 
-                      <NavLink to="/maintenance/spare-parts" style={subNavItemStyle} onClick={() => setMobileMenuOpen(false)}>
-                        <span>Spare Parts</span>
-                      </NavLink>
+                          <NavLink to="/maintenance/spare-parts" style={subNavItemStyle} onClick={() => setMobileMenuOpen(false)}>
+                            <span>Spare Parts</span>
+                          </NavLink>
 
-                      <NavLink to="/maintenance/calibration" style={subNavItemStyle} onClick={() => setMobileMenuOpen(false)}>
-                        <span>Calibration</span>
-                      </NavLink>
+                          <NavLink to="/maintenance/calibration" style={subNavItemStyle} onClick={() => setMobileMenuOpen(false)}>
+                            <span>Calibration</span>
+                          </NavLink>
 
-                      <NavLink to="/maintenance/failure-codes" style={subNavItemStyle} onClick={() => setMobileMenuOpen(false)}>
-                        <span>Failure Codes</span>
-                      </NavLink>
+                          <NavLink to="/maintenance/failure-codes" style={subNavItemStyle} onClick={() => setMobileMenuOpen(false)}>
+                            <span>Failure Codes</span>
+                          </NavLink>
+                        </>
+                      )}
                     </>
                   )}
                 </div>

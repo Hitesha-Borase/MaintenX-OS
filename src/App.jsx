@@ -83,7 +83,7 @@ function RoleProtectedRoute({ children, module }) {
 }
 
 function AppContent() {
-  const { isAuthenticated } = useRole();
+  const { isAuthenticated, currentRole } = useRole();
 
   if (!isAuthenticated) {
     return <Login />;
@@ -93,7 +93,7 @@ function AppContent() {
     <BrowserRouter>
       <Routes>
         <Route element={<AppLayout />}>
-          <Route path="/" element={<Navigate to="/command-center" replace />} />
+          <Route path="/" element={<Navigate to={currentRole?.defaultRoute || "/command-center"} replace />} />
           
           {/* Dashboards */}
           <Route path="/command-center" element={<RoleProtectedRoute module="dashboards"><CommandCenter /></RoleProtectedRoute>} />
@@ -159,7 +159,7 @@ function AppContent() {
           <Route path="/shopfloor" element={<RoleProtectedRoute module="shopfloor"><MobileShopFloorHub /></RoleProtectedRoute>} />
 
           {/* Catch-all */}
-          <Route path="*" element={<Navigate to="/command-center" replace />} />
+          <Route path="*" element={<Navigate to={currentRole?.defaultRoute || "/command-center"} replace />} />
         </Route>
       </Routes>
     </BrowserRouter>
