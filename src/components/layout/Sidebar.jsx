@@ -29,7 +29,13 @@ import {
   Settings,
   Briefcase,
   Bell,
-  User
+  User,
+  Zap,
+  AlertOctagon,
+  FileCheck,
+  Send,
+  CheckSquare,
+  ArrowDown
 } from "lucide-react";
 import { useRole } from "../../context/RoleContext";
 import { useApp } from "../../context/AppContext";
@@ -62,7 +68,13 @@ const iconMap = {
   Settings,
   Briefcase,
   Bell,
-  User
+  User,
+  Zap,
+  AlertOctagon,
+  FileCheck,
+  Send,
+  CheckSquare,
+  ArrowDown
 };
 
 export function Sidebar() {
