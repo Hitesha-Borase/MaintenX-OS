@@ -156,7 +156,7 @@ export function QualityChecks() {
           </div>
         </Card>
 
-        <Button type="submit" variant="primary" icon={Send}>
+        <Button type="submit" variant="primary" style={{ width: "fit-content", padding: "8px 24px" }}>
           Submit Quality Logs
         </Button>
       </form>

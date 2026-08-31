@@ -52,8 +52,8 @@ export function MaterialRequest() {
       </div>
 
       <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-        <Card style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-          {/* Select Material */}
+        <Card style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "20px" }}>
+          {/* SKU */}
           <div>
             <label style={{ fontSize: "12px", fontWeight: 700, color: "#FFFFFF", display: "block", marginBottom: "6px" }}>
               Select Material SKU
@@ -103,7 +103,7 @@ export function MaterialRequest() {
           </div>
         </Card>
 
-        <Button type="submit" variant="primary" icon={Send}>
+        <Button type="submit" variant="primary" style={{ width: "fit-content", padding: "8px 24px" }}>
           Submit Request
         </Button>
       </form>

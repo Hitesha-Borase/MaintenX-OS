@@ -49,61 +49,64 @@ export function ReportIssue() {
       </div>
 
       <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-        <Card style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-          {/* Issue Type */}
-          <div>
-            <label style={{ fontSize: "12px", fontWeight: 700, color: "#FFFFFF", display: "block", marginBottom: "6px" }}>
-              Issue Classification
-            </label>
-            <select
-              value={issueType}
-              onChange={(e) => setIssueType(e.target.value)}
-              className="input-field"
-              style={{ width: "100%" }}
-            >
-              <option value="Mechanical breakdown">Mechanical breakdown</option>
-              <option value="Safety risk / Near miss">Safety risk / Near miss</option>
-              <option value="Allergen / Sanitation defect">Allergen / Sanitation defect</option>
-              <option value="Raw material stockout">Raw material stockout</option>
-              <option value="Quality CCP Deviation">Quality CCP Deviation</option>
-            </select>
-          </div>
+        <Card style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+          {/* Grid for selectors */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "16px" }}>
+            {/* Issue Type */}
+            <div>
+              <label style={{ fontSize: "12px", fontWeight: 700, color: "#FFFFFF", display: "block", marginBottom: "6px" }}>
+                Issue Classification
+              </label>
+              <select
+                value={issueType}
+                onChange={(e) => setIssueType(e.target.value)}
+                className="input-field"
+                style={{ width: "100%" }}
+              >
+                <option value="Mechanical breakdown">Mechanical breakdown</option>
+                <option value="Safety risk / Near miss">Safety risk / Near miss</option>
+                <option value="Allergen / Sanitation defect">Allergen / Sanitation defect</option>
+                <option value="Raw material stockout">Raw material stockout</option>
+                <option value="Quality CCP Deviation">Quality CCP Deviation</option>
+              </select>
+            </div>
 
-          {/* Select Asset */}
-          <div>
-            <label style={{ fontSize: "12px", fontWeight: 700, color: "#FFFFFF", display: "block", marginBottom: "6px" }}>
-              Affected Station / Equipment
-            </label>
-            <select
-              value={assetId}
-              onChange={(e) => setAssetId(e.target.value)}
-              className="input-field"
-              style={{ width: "100%" }}
-            >
-              {assets.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.name} ({a.id})
-                </option>
-              ))}
-            </select>
-          </div>
+            {/* Select Asset */}
+            <div>
+              <label style={{ fontSize: "12px", fontWeight: 700, color: "#FFFFFF", display: "block", marginBottom: "6px" }}>
+                Affected Station / Equipment
+              </label>
+              <select
+                value={assetId}
+                onChange={(e) => setAssetId(e.target.value)}
+                className="input-field"
+                style={{ width: "100%" }}
+              >
+                {assets.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.name} ({a.id})
+                  </option>
+                ))}
+              </select>
+            </div>
 
-          {/* Severity */}
-          <div>
-            <label style={{ fontSize: "12px", fontWeight: 700, color: "#FFFFFF", display: "block", marginBottom: "6px" }}>
-              Incident Severity (Control Tower Priority)
-            </label>
-            <select
-              value={severity}
-              onChange={(e) => setSeverity(e.target.value)}
-              className="input-field"
-              style={{ width: "100%" }}
-            >
-              <option value="P1">P1 - Immediate Stop & Dispatch Required</option>
-              <option value="P2">P2 - High Urgency (Production Bottleneck)</option>
-              <option value="P3">P3 - Medium (Log & Watch)</option>
-              <option value="P4">P4 - Low / Informational</option>
-            </select>
+            {/* Severity */}
+            <div>
+              <label style={{ fontSize: "12px", fontWeight: 700, color: "#FFFFFF", display: "block", marginBottom: "6px" }}>
+                Incident Severity (Control Tower Priority)
+              </label>
+              <select
+                value={severity}
+                onChange={(e) => setSeverity(e.target.value)}
+                className="input-field"
+                style={{ width: "100%" }}
+              >
+                <option value="P1">P1 - Immediate Stop & Dispatch Required</option>
+                <option value="P2">P2 - High Urgency (Production Bottleneck)</option>
+                <option value="P3">P3 - Medium (Log & Watch)</option>
+                <option value="P4">P4 - Low / Informational</option>
+              </select>
+            </div>
           </div>
 
           {/* Description */}
@@ -122,7 +125,7 @@ export function ReportIssue() {
           </div>
         </Card>
 
-        <Button type="submit" variant="danger" icon={Send}>
+        <Button type="submit" variant="danger" style={{ width: "fit-content", padding: "8px 24px" }}>
           Log Issue Ticket
         </Button>
       </form>
