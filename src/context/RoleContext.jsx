@@ -8,9 +8,9 @@ export const ROLES = [
   { id: "warehouse", label: "Warehouse / Receiver", icon: "Package", defaultRoute: "/warehouse/dashboard" },
   { id: "quality", label: "Quality / QA", icon: "ShieldCheck", defaultRoute: "/quality/dashboard" },
   { id: "maintenance", label: "Maintenance", icon: "Wrench", defaultRoute: "/maintenance" },
-  { id: "ci_engineer", label: "CI / Engineering", icon: "Settings", defaultRoute: "/engineering/dashboard" },
+  { id: "ci_engineer", label: "CI / Engineering", icon: "Settings", defaultRoute: "/ci/dashboard" },
   { id: "plant_manager", label: "Plant Manager", icon: "Building2", defaultRoute: "/command-center" },
-  { id: "executive", label: "Executive", icon: "Briefcase", defaultRoute: "/executive/portfolio" },
+  { id: "executive", label: "Executive", icon: "Briefcase", defaultRoute: "/executive/dashboard" },
   { id: "admin", label: "System Administrator", icon: "ShieldAlert", defaultRoute: "/admin/console" }
 ];
 
@@ -275,22 +275,52 @@ export const NAVIGATION_CONFIG = {
     }
   ],
   ci_engineer: [
+    { label: "Dashboard", path: "/ci/dashboard", icon: "LayoutDashboard" },
     {
-      group: "CMMS",
+      group: "RCA 2.0",
       items: [
-        { label: "Dashboard", path: "/maintenance", icon: "Wrench" },
-        { label: "Maintenance KPIs", path: "/maintenance", icon: "Wrench" },
-        { label: "Repeat Failures", path: "/maintenance/repeat-failures", icon: "Wrench" },
-        { label: "Verified Solutions", path: "/maintenance/verified-solutions", icon: "Wrench" },
-        { label: "RCA Integration", path: "/rca-capa", icon: "SearchCode" }
+        { label: "Investigations", path: "/ci/rca/investigations", icon: "SearchCode" },
+        { label: "Evidence", path: "/ci/rca/evidence", icon: "FileText" },
+        { label: "Hypothesis & Tests", path: "/ci/rca/hypothesis", icon: "Zap" },
+        { label: "Occurrence Cause", path: "/ci/rca/occurrence", icon: "AlertTriangle" },
+        { label: "Escape Cause", path: "/ci/rca/escape", icon: "AlertOctagon" }
       ]
     },
     {
-      group: "Analytics",
+      group: "CAPA",
       items: [
-        { label: "Reliability Analytics", path: "/maintenance/reliability", icon: "LineChart" }
+        { label: "Corrective Actions", path: "/ci/capa/corrective", icon: "CheckCircle" },
+        { label: "Preventive Actions", path: "/ci/capa/preventive", icon: "ShieldCheck" },
+        { label: "Owners & Due Dates", path: "/ci/capa/owners", icon: "Users" },
+        { label: "Effectiveness Verification", path: "/ci/capa/verification", icon: "FileCheck" }
       ]
-    }
+    },
+    {
+      group: "Loss Analysis",
+      items: [
+        { label: "Production Loss", path: "/ci/loss/production", icon: "Factory" },
+        { label: "Downtime Loss", path: "/ci/loss/downtime", icon: "Clock" },
+        { label: "Quality Loss", path: "/ci/loss/quality", icon: "ShieldAlert" },
+        { label: "Yield Loss", path: "/ci/loss/yield", icon: "LineChart" },
+        { label: "Scrap / Rework Loss", path: "/ci/loss/scrap", icon: "Trash2" }
+      ]
+    },
+    {
+      group: "CI Projects",
+      items: [
+        { label: "Projects", path: "/ci/projects/list", icon: "Briefcase" },
+        { label: "Project Actions", path: "/ci/projects/actions", icon: "CheckSquare" },
+        { label: "Savings", path: "/ci/projects/savings", icon: "DollarSign" },
+        { label: "Benefits Verification", path: "/ci/projects/benefits", icon: "FileCheck" }
+      ]
+    },
+    { label: "Standards", path: "/ci/standards", icon: "FileText" },
+    { label: "Verified Solutions", path: "/ci/verified-solutions", icon: "FileCheck" },
+    { label: "Engineering", path: "/ci/engineering", icon: "Settings" },
+    { label: "Reliability Insights", path: "/ci/reliability", icon: "Activity" },
+    { label: "Reports", path: "/ci/reports", icon: "FileSpreadsheet" },
+    { label: "Notifications", path: "/ci/notifications", icon: "Bell" },
+    { label: "Profile", path: "/ci/profile", icon: "User" }
   ],
   plant_manager: [
     {
@@ -307,13 +337,58 @@ export const NAVIGATION_CONFIG = {
     { label: "Reports", path: "/reports", icon: "FileSpreadsheet" }
   ],
   executive: [
+    { label: "Executive Dashboard", path: "/executive/dashboard", icon: "LayoutDashboard" },
     {
-      group: "Dashboards",
+      group: "Enterprise Performance",
       items: [
-        { label: "Executive Portfolio", path: "/executive/portfolio", icon: "LayoutDashboard", isPlaceholder: true }
+        { label: "Multi-Plant KPIs", path: "/executive/enterprise/kpis", icon: "Gauge" },
+        { label: "OEE", path: "/executive/enterprise/oee", icon: "Activity" },
+        { label: "Production", path: "/executive/enterprise/production", icon: "Factory" },
+        { label: "Quality", path: "/executive/enterprise/quality", icon: "ShieldCheck" },
+        { label: "Delivery", path: "/executive/enterprise/delivery", icon: "Send" }
       ]
     },
-    { label: "Reports", path: "/reports", icon: "FileSpreadsheet" }
+    {
+      group: "Financial Intelligence",
+      items: [
+        { label: "Manufacturing Cost", path: "/executive/finance/manufacturing", icon: "DollarSign" },
+        { label: "Cost Variance", path: "/executive/finance/variance", icon: "LineChart" },
+        { label: "Material Cost", path: "/executive/finance/material", icon: "Package" },
+        { label: "Labour Cost", path: "/executive/finance/labour", icon: "Users" },
+        { label: "Machine Cost", path: "/executive/finance/machine", icon: "Settings" },
+        { label: "Scrap / Rework Cost", path: "/executive/finance/scrap", icon: "Trash2" },
+        { label: "CI Savings", path: "/executive/finance/ci-savings", icon: "TrendingUp" }
+      ]
+    },
+    {
+      group: "Business Performance",
+      items: [
+        { label: "Customer Demand", path: "/executive/business/demand", icon: "ShoppingBag" },
+        { label: "Service Level", path: "/executive/business/service-level", icon: "CheckCircle" },
+        { label: "Shipment Performance", path: "/executive/business/shipments", icon: "Truck" },
+        { label: "Trends", path: "/executive/business/trends", icon: "TrendingUp" }
+      ]
+    },
+    {
+      group: "Risk & Opportunity",
+      items: [
+        { label: "Risks", path: "/executive/risk/risks", icon: "AlertTriangle" },
+        { label: "Constraints", path: "/executive/risk/constraints", icon: "AlertOctagon" },
+        { label: "Opportunities", path: "/executive/risk/opportunities", icon: "Zap" },
+        { label: "Recovery", path: "/executive/risk/recovery", icon: "RefreshCw" }
+      ]
+    },
+    {
+      group: "AI",
+      items: [
+        { label: "Executive AI Briefing", path: "/executive/ai/briefing", icon: "BrainCircuit" },
+        { label: "AI Recommendations", path: "/executive/ai/recommendations", icon: "Cpu" },
+        { label: "AI Agents", path: "/executive/ai/agents", icon: "Layers" }
+      ]
+    },
+    { label: "Reports", path: "/executive/reports", icon: "FileSpreadsheet" },
+    { label: "Notifications", path: "/executive/notifications", icon: "Bell" },
+    { label: "Profile", path: "/executive/profile", icon: "User" }
   ],
   admin: [
     {

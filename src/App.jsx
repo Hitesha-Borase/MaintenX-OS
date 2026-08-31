@@ -201,6 +201,63 @@ import { Reports as QualityReports } from "./pages/quality/Reports";
 import { Notifications as QualityNotifications } from "./pages/quality/Notifications";
 import { Profile as QualityProfile } from "./pages/quality/Profile";
 
+// CI / Engineering Pages
+import { CIDashboard } from "./pages/ci/CIDashboard";
+import { Investigations as CIInvestigations } from "./pages/ci/rca/Investigations";
+import { Evidence as CIEvidence } from "./pages/ci/rca/Evidence";
+import { HypothesisTests as CIHypothesisTests } from "./pages/ci/rca/HypothesisTests";
+import { OccurrenceCause as CIOccurrenceCause } from "./pages/ci/rca/OccurrenceCause";
+import { EscapeCause as CIEscapeCause } from "./pages/ci/rca/EscapeCause";
+import { CorrectiveActions as CICorrectiveActions } from "./pages/ci/capa/CorrectiveActions";
+import { PreventiveActions as CIPreventiveActions } from "./pages/ci/capa/PreventiveActions";
+import { OwnersDueDates as CIOwnersDueDates } from "./pages/ci/capa/OwnersDueDates";
+import { EffectivenessVerification as CIEffectivenessVerification } from "./pages/ci/capa/EffectivenessVerification";
+import { ProductionLoss as CIProductionLoss } from "./pages/ci/loss/ProductionLoss";
+import { DowntimeLoss as CIDowntimeLoss } from "./pages/ci/loss/DowntimeLoss";
+import { QualityLoss as CIQualityLoss } from "./pages/ci/loss/QualityLoss";
+import { YieldLoss as CIYieldLoss } from "./pages/ci/loss/YieldLoss";
+import { ScrapReworkLoss as CIScrapReworkLoss } from "./pages/ci/loss/ScrapReworkLoss";
+import { CIProjects as CIProjectsList } from "./pages/ci/projects/CIProjects";
+import { ProjectActions as CIProjectActions } from "./pages/ci/projects/ProjectActions";
+import { Savings as CISavings } from "./pages/ci/projects/Savings";
+import { BenefitsVerification as CIBenefitsVerification } from "./pages/ci/projects/BenefitsVerification";
+import { Standards as CIStandards } from "./pages/ci/Standards";
+import { VerifiedSolutions as CIVerifiedSolutions } from "./pages/ci/VerifiedSolutions";
+import { Engineering as CIEngineering } from "./pages/ci/Engineering";
+import { ReliabilityInsights as CIReliabilityInsights } from "./pages/ci/ReliabilityInsights";
+import { Reports as CIReports } from "./pages/ci/Reports";
+import { Notifications as CINotifications } from "./pages/ci/Notifications";
+import { Profile as CIProfile } from "./pages/ci/Profile";
+
+// Executive Pages
+import { ExecutiveDashboard } from "./pages/executive/ExecutiveDashboard";
+import { MultiPlantKPIs as ExecMultiPlantKPIs } from "./pages/executive/enterprise/MultiPlantKPIs";
+import { OEE as ExecOEE } from "./pages/executive/enterprise/OEE";
+import { Production as ExecProduction } from "./pages/executive/enterprise/Production";
+import { Quality as ExecQuality } from "./pages/executive/enterprise/Quality";
+import { Delivery as ExecDelivery } from "./pages/executive/enterprise/Delivery";
+import { ManufacturingCost as ExecManufacturingCost } from "./pages/executive/finance/ManufacturingCost";
+import { CostVariance as ExecCostVariance } from "./pages/executive/finance/CostVariance";
+import { MaterialCost as ExecMaterialCost } from "./pages/executive/finance/MaterialCost";
+import { LabourCost as ExecLabourCost } from "./pages/executive/finance/LabourCost";
+import { MachineCost as ExecMachineCost } from "./pages/executive/finance/MachineCost";
+import { ScrapReworkCost as ExecScrapReworkCost } from "./pages/executive/finance/ScrapReworkCost";
+import { CISavings as ExecCISavings } from "./pages/executive/finance/CISavings";
+import { CustomerDemand as ExecCustomerDemand } from "./pages/executive/business/CustomerDemand";
+import { ServiceLevel as ExecServiceLevel } from "./pages/executive/business/ServiceLevel";
+import { ShipmentPerformance as ExecShipmentPerformance } from "./pages/executive/business/ShipmentPerformance";
+import { Trends as ExecTrends } from "./pages/executive/business/Trends";
+import { Risks as ExecRisks } from "./pages/executive/risk/Risks";
+import { Constraints as ExecConstraints } from "./pages/executive/risk/Constraints";
+import { Opportunities as ExecOpportunities } from "./pages/executive/risk/Opportunities";
+import { Recovery as ExecRecovery } from "./pages/executive/risk/Recovery";
+import { Briefing as ExecAIBriefing } from "./pages/executive/ai/Briefing";
+import { Recommendations as ExecAIRecommendations } from "./pages/executive/ai/Recommendations";
+import { Agents as ExecAIAgents } from "./pages/executive/ai/Agents";
+import { Reports as ExecReports } from "./pages/executive/Reports";
+import { Notifications as ExecNotifications } from "./pages/executive/Notifications";
+import { Profile as ExecProfile } from "./pages/executive/Profile";
+
 function RoleProtectedRoute({ children }) {
   const { currentRole, canAccessPath } = useRole();
   const location = useLocation();
@@ -449,13 +506,69 @@ function AppContent() {
 
           {/* Missing / Placeholder Routes */}
           <Route path="/production/shift-plan" element={<RoleProtectedRoute><PlaceholderPage /></RoleProtectedRoute>} />
-          <Route path="/executive/portfolio" element={<RoleProtectedRoute><PlaceholderPage /></RoleProtectedRoute>} />
           <Route path="/admin/console" element={<RoleProtectedRoute><PlaceholderPage /></RoleProtectedRoute>} />
           <Route path="/admin/users" element={<RoleProtectedRoute><PlaceholderPage /></RoleProtectedRoute>} />
           <Route path="/admin/roles" element={<RoleProtectedRoute><PlaceholderPage /></RoleProtectedRoute>} />
           <Route path="/admin/config" element={<RoleProtectedRoute><PlaceholderPage /></RoleProtectedRoute>} />
           <Route path="/admin/devices" element={<RoleProtectedRoute><PlaceholderPage /></RoleProtectedRoute>} />
           <Route path="/engineering/dashboard" element={<RoleProtectedRoute><PlaceholderPage /></RoleProtectedRoute>} />
+
+          {/* CI / Engineering Routes */}
+          <Route path="/ci/dashboard" element={<RoleProtectedRoute><CIDashboard /></RoleProtectedRoute>} />
+          <Route path="/ci/rca/investigations" element={<RoleProtectedRoute><CIInvestigations /></RoleProtectedRoute>} />
+          <Route path="/ci/rca/evidence" element={<RoleProtectedRoute><CIEvidence /></RoleProtectedRoute>} />
+          <Route path="/ci/rca/hypothesis" element={<RoleProtectedRoute><CIHypothesisTests /></RoleProtectedRoute>} />
+          <Route path="/ci/rca/occurrence" element={<RoleProtectedRoute><CIOccurrenceCause /></RoleProtectedRoute>} />
+          <Route path="/ci/rca/escape" element={<RoleProtectedRoute><CIEscapeCause /></RoleProtectedRoute>} />
+          <Route path="/ci/capa/corrective" element={<RoleProtectedRoute><CICorrectiveActions /></RoleProtectedRoute>} />
+          <Route path="/ci/capa/preventive" element={<RoleProtectedRoute><CIPreventiveActions /></RoleProtectedRoute>} />
+          <Route path="/ci/capa/owners" element={<RoleProtectedRoute><CIOwnersDueDates /></RoleProtectedRoute>} />
+          <Route path="/ci/capa/verification" element={<RoleProtectedRoute><CIEffectivenessVerification /></RoleProtectedRoute>} />
+          <Route path="/ci/loss/production" element={<RoleProtectedRoute><CIProductionLoss /></RoleProtectedRoute>} />
+          <Route path="/ci/loss/downtime" element={<RoleProtectedRoute><CIDowntimeLoss /></RoleProtectedRoute>} />
+          <Route path="/ci/loss/quality" element={<RoleProtectedRoute><CIQualityLoss /></RoleProtectedRoute>} />
+          <Route path="/ci/loss/yield" element={<RoleProtectedRoute><CIYieldLoss /></RoleProtectedRoute>} />
+          <Route path="/ci/loss/scrap" element={<RoleProtectedRoute><CIScrapReworkLoss /></RoleProtectedRoute>} />
+          <Route path="/ci/projects/list" element={<RoleProtectedRoute><CIProjectsList /></RoleProtectedRoute>} />
+          <Route path="/ci/projects/actions" element={<RoleProtectedRoute><CIProjectActions /></RoleProtectedRoute>} />
+          <Route path="/ci/projects/savings" element={<RoleProtectedRoute><CISavings /></RoleProtectedRoute>} />
+          <Route path="/ci/projects/benefits" element={<RoleProtectedRoute><CIBenefitsVerification /></RoleProtectedRoute>} />
+          <Route path="/ci/standards" element={<RoleProtectedRoute><CIStandards /></RoleProtectedRoute>} />
+          <Route path="/ci/verified-solutions" element={<RoleProtectedRoute><CIVerifiedSolutions /></RoleProtectedRoute>} />
+          <Route path="/ci/engineering" element={<RoleProtectedRoute><CIEngineering /></RoleProtectedRoute>} />
+          <Route path="/ci/reliability" element={<RoleProtectedRoute><CIReliabilityInsights /></RoleProtectedRoute>} />
+          <Route path="/ci/reports" element={<RoleProtectedRoute><CIReports /></RoleProtectedRoute>} />
+          <Route path="/ci/notifications" element={<RoleProtectedRoute><CINotifications /></RoleProtectedRoute>} />
+          <Route path="/ci/profile" element={<RoleProtectedRoute><CIProfile /></RoleProtectedRoute>} />
+
+          {/* Executive Routes */}
+          <Route path="/executive/dashboard" element={<RoleProtectedRoute><ExecutiveDashboard /></RoleProtectedRoute>} />
+          <Route path="/executive/enterprise/kpis" element={<RoleProtectedRoute><ExecMultiPlantKPIs /></RoleProtectedRoute>} />
+          <Route path="/executive/enterprise/oee" element={<RoleProtectedRoute><ExecOEE /></RoleProtectedRoute>} />
+          <Route path="/executive/enterprise/production" element={<RoleProtectedRoute><ExecProduction /></RoleProtectedRoute>} />
+          <Route path="/executive/enterprise/quality" element={<RoleProtectedRoute><ExecQuality /></RoleProtectedRoute>} />
+          <Route path="/executive/enterprise/delivery" element={<RoleProtectedRoute><ExecDelivery /></RoleProtectedRoute>} />
+          <Route path="/executive/finance/manufacturing" element={<RoleProtectedRoute><ExecManufacturingCost /></RoleProtectedRoute>} />
+          <Route path="/executive/finance/variance" element={<RoleProtectedRoute><ExecCostVariance /></RoleProtectedRoute>} />
+          <Route path="/executive/finance/material" element={<RoleProtectedRoute><ExecMaterialCost /></RoleProtectedRoute>} />
+          <Route path="/executive/finance/labour" element={<RoleProtectedRoute><ExecLabourCost /></RoleProtectedRoute>} />
+          <Route path="/executive/finance/machine" element={<RoleProtectedRoute><ExecMachineCost /></RoleProtectedRoute>} />
+          <Route path="/executive/finance/scrap" element={<RoleProtectedRoute><ExecScrapReworkCost /></RoleProtectedRoute>} />
+          <Route path="/executive/finance/ci-savings" element={<RoleProtectedRoute><ExecCISavings /></RoleProtectedRoute>} />
+          <Route path="/executive/business/demand" element={<RoleProtectedRoute><ExecCustomerDemand /></RoleProtectedRoute>} />
+          <Route path="/executive/business/service-level" element={<RoleProtectedRoute><ExecServiceLevel /></RoleProtectedRoute>} />
+          <Route path="/executive/business/shipments" element={<RoleProtectedRoute><ExecShipmentPerformance /></RoleProtectedRoute>} />
+          <Route path="/executive/business/trends" element={<RoleProtectedRoute><ExecTrends /></RoleProtectedRoute>} />
+          <Route path="/executive/risk/risks" element={<RoleProtectedRoute><ExecRisks /></RoleProtectedRoute>} />
+          <Route path="/executive/risk/constraints" element={<RoleProtectedRoute><ExecConstraints /></RoleProtectedRoute>} />
+          <Route path="/executive/risk/opportunities" element={<RoleProtectedRoute><ExecOpportunities /></RoleProtectedRoute>} />
+          <Route path="/executive/risk/recovery" element={<RoleProtectedRoute><ExecRecovery /></RoleProtectedRoute>} />
+          <Route path="/executive/ai/briefing" element={<RoleProtectedRoute><ExecAIBriefing /></RoleProtectedRoute>} />
+          <Route path="/executive/ai/recommendations" element={<RoleProtectedRoute><ExecAIRecommendations /></RoleProtectedRoute>} />
+          <Route path="/executive/ai/agents" element={<RoleProtectedRoute><ExecAIAgents /></RoleProtectedRoute>} />
+          <Route path="/executive/reports" element={<RoleProtectedRoute><ExecReports /></RoleProtectedRoute>} />
+          <Route path="/executive/notifications" element={<RoleProtectedRoute><ExecNotifications /></RoleProtectedRoute>} />
+          <Route path="/executive/profile" element={<RoleProtectedRoute><ExecProfile /></RoleProtectedRoute>} />
 
           {/* Catch-all */}
           <Route path="*" element={<Navigate to={currentRole?.defaultRoute || "/command-center"} replace />} />

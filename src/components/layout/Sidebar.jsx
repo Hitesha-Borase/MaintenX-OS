@@ -35,7 +35,8 @@ import {
   FileCheck,
   Send,
   CheckSquare,
-  ArrowDown
+  ArrowDown,
+  Trash2
 } from "lucide-react";
 import { useRole } from "../../context/RoleContext";
 import { useApp } from "../../context/AppContext";
@@ -74,7 +75,8 @@ const iconMap = {
   FileCheck,
   Send,
   CheckSquare,
-  ArrowDown
+  ArrowDown,
+  Trash2
 };
 
 export function Sidebar() {
