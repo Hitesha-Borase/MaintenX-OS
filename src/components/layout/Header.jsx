@@ -40,26 +40,50 @@ export function Header() {
   const [showNotifications, setShowNotifications] = useState(false);
 
   return (
-    <header className="app-header">
-      {/* Left: Mobile Toggle & Breadcrumbs */}
-      <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-        <button
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="btn btn-ghost"
-          style={{ padding: "6px", display: "flex", alignItems: "center" }}
+    <header className="app-header" style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 24px", position: "sticky", top: 0, zIndex: 40, backdropFilter: "blur(12px)", backgroundColor: "var(--bg-header)", borderBottom: "1px solid var(--border-subtle)", gap: "16px" }}>
+      {/* Far Left: Branding Logo */}
+      <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+        <div
+          style={{
+            width: "34px",
+            height: "34px",
+            borderRadius: "8px",
+            background: "linear-gradient(135deg, #0284C7, #06B6D4)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "#FFFFFF",
+            boxShadow: "0 0 14px rgba(6, 182, 212, 0.4)"
+          }}
         >
-          <Menu size={20} />
-        </button>
-
-        <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-          <Breadcrumbs />
+          <Cpu size={20} />
+        </div>
+        <div style={{ display: "flex", flexDirection: "column" }}>
+          <span style={{ fontSize: "14px", fontWeight: 800, letterSpacing: "0.02em", color: "#FFFFFF" }}>
+            MaintenX <span style={{ color: "#38BDF8" }}>OS</span>
+          </span>
+          <span style={{ fontSize: "10px", color: "var(--text-muted)", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+            Manufacturing OS
+          </span>
         </div>
       </div>
 
-      {/* Center/Right: Facility, Shift, Search, Role Switcher & Actions */}
-      <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-        {/* Plant Selector */}
-        <div style={{ display: "none", alignItems: "center", gap: "6px" }} className="header-plant-select">
+      {/* Center Space: intermediate elements distributed evenly */}
+      <div style={{ display: "flex", alignItems: "center", gap: "20px", flex: 1, justifyContent: "center" }}>
+        {/* Navigation / Mobile Toggle & Breadcrumbs */}
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="btn btn-ghost"
+            style={{ padding: "6px", display: "flex", alignItems: "center" }}
+          >
+            <Menu size={20} />
+          </button>
+          <Breadcrumbs />
+        </div>
+
+        {/* Facility Selector */}
+        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
           <Building2 size={15} color="var(--text-muted)" />
           <select
             className="form-select"
@@ -78,7 +102,7 @@ export function Header() {
           </select>
         </div>
 
-        {/* Shift Badge */}
+        {/* Shift Status Badge */}
         <div
           style={{
             display: "flex",
@@ -97,7 +121,7 @@ export function Header() {
           <span style={{ fontSize: "10px", color: "#34D399" }}>● LIVE</span>
         </div>
 
-        {/* Global Search Trigger */}
+        {/* Search Trigger */}
         <button
           onClick={() => setIsSearchOpen(true)}
           className="btn btn-secondary"
@@ -127,7 +151,10 @@ export function Header() {
             ⌘K
           </kbd>
         </button>
+      </div>
 
+      {/* Far Right: Fast Action & Role Switcher */}
+      <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
         {/* Quick QR Scanner / Label trigger */}
         <Button
           variant="secondary"

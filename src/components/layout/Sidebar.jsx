@@ -174,67 +174,7 @@ export function Sidebar() {
         />
       )}
 
-      <aside className={`app-sidebar ${sidebarCollapsed ? "collapsed" : ""} ${mobileMenuOpen ? "mobile-open" : ""}`}>
-        {/* Brand Logo & App Header */}
-        <div
-          style={{
-            padding: "16px 18px",
-            borderBottom: "1px solid var(--border-subtle)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: "10px",
-            backgroundColor: "var(--bg-card-subtle)"
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", overflow: "hidden" }}>
-            <div
-              style={{
-                width: "34px",
-                height: "34px",
-                borderRadius: "8px",
-                background: "linear-gradient(135deg, #0284C7, #06B6D4)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "#FFFFFF",
-                boxShadow: "0 0 14px rgba(6, 182, 212, 0.4)",
-                flexShrink: 0
-              }}
-            >
-              <Cpu size={20} />
-            </div>
-
-            {!sidebarCollapsed && (
-              <div style={{ display: "flex", flexDirection: "column" }}>
-                <span style={{ fontSize: "14px", fontWeight: 800, letterSpacing: "0.02em", color: "#FFFFFF" }}>
-                  FLOW<span style={{ color: "#38BDF8" }}>STATE</span>
-                </span>
-                <span style={{ fontSize: "10px", color: "var(--text-muted)", letterSpacing: "0.08em", textTransform: "uppercase" }}>
-                  Manufacturing OS
-                </span>
-              </div>
-            )}
-          </div>
-
-          <button
-            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            style={{
-              background: "transparent",
-              border: "none",
-              color: "var(--text-muted)",
-              cursor: "pointer",
-              padding: "4px",
-              borderRadius: "4px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center"
-            }}
-            title={sidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
-          >
-            {sidebarCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
-          </button>
-        </div>
+      <aside className={`app-sidebar ${sidebarCollapsed ? "collapsed" : ""} ${mobileMenuOpen ? "mobile-open" : ""}`} style={{ height: "calc(100vh - 58px)", position: "sticky", top: "58px" }}>
 
         {/* Dynamic Navigation Items List */}
         <div style={{ flex: 1, overflowY: "auto", padding: "12px 10px", display: "flex", flexDirection: "column", gap: "6px" }}>
