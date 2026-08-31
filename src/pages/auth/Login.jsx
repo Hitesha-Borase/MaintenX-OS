@@ -19,7 +19,8 @@ import {
   GraduationCap,
   ShieldAlert,
   CheckCircle2,
-  Settings
+  Settings,
+  Flame
 } from "lucide-react";
 import { Button } from "../../components/common/Button";
 
@@ -49,11 +50,11 @@ export function Login() {
   const [selectedRole, setSelectedRole] = useState("plant_manager");
   const [hoveredRole, setHoveredRole] = useState(null);
 
-  // Generate weightless glowing particles
+  // Generate warm floating particles
   const [particles, setParticles] = useState([]);
   useEffect(() => {
     const list = [];
-    for (let i = 0; i < 25; i++) {
+    for (let i = 0; i < 20; i++) {
       list.push({
         id: i,
         left: `${Math.random() * 100}%`,
@@ -80,37 +81,27 @@ export function Login() {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: "#030712",
-        // Deep space cosmic backplate
-        background: "radial-gradient(circle at 30% 30%, #0c152b 0%, #030712 70%)",
+        backgroundColor: "#F6F3EE",
+        background: "radial-gradient(circle at 30% 30%, #FCFAF7 0%, #F3ECE2 100%)",
         padding: "24px",
         overflow: "hidden",
         position: "relative"
       }}
     >
-      {/* Inline styles for custom futuristic glassmorphism keyframes */}
+      {/* Inline styles for custom amber glassmorphism keyframes */}
       <style>{`
         @keyframes floatWeightless {
-          0% { transform: translateY(0px) translateX(0px); opacity: 0.3; }
-          50% { transform: translateY(-40px) translateX(15px); opacity: 0.8; }
-          100% { transform: translateY(0px) translateX(0px); opacity: 0.3; }
-        }
-        @keyframes pulseGlow {
-          0%, 100% { border-color: rgba(6, 182, 212, 0.25); box-shadow: 0 0 15px rgba(6, 182, 212, 0.1); }
-          50% { border-color: rgba(6, 182, 212, 0.6); box-shadow: 0 0 25px rgba(6, 182, 212, 0.3); }
+          0% { transform: translateY(0px) translateX(0px); opacity: 0.25; }
+          50% { transform: translateY(-35px) translateX(12px); opacity: 0.65; }
+          100% { transform: translateY(0px) translateX(0px); opacity: 0.25; }
         }
         @keyframes subtleScale {
           0%, 100% { transform: translateY(0) scale(1); }
-          50% { transform: translateY(-4px) scale(1.01); }
+          50% { transform: translateY(-4px) scale(1.008); }
         }
-        @keyframes movingEnergy {
-          0% { background-position: 0% 50%; }
-          50% { background-position: 100% 50%; }
-          100% { background-position: 0% 50%; }
-        }
-        .form-input-glow:focus {
-          border-color: #22d3ee !important;
-          box-shadow: 0 0 12px rgba(34, 211, 238, 0.35) !important;
+        .form-input-amber:focus {
+          border-color: #C89547 !important;
+          box-shadow: 0 0 0 3px rgba(200, 149, 71, 0.2) !important;
         }
         .custom-glass-card {
           animation: subtleScale 6s ease-in-out infinite;
@@ -118,13 +109,13 @@ export function Login() {
         .weightless-particle {
           position: absolute;
           border-radius: 50%;
-          background-color: rgba(34, 211, 238, 0.4);
+          background-color: rgba(200, 149, 71, 0.4);
           pointer-events: none;
-          box-shadow: 0 0 8px rgba(34, 211, 238, 0.8);
+          box-shadow: 0 0 8px rgba(200, 149, 71, 0.6);
         }
       `}</style>
 
-      {/* Floating Space Particles */}
+      {/* Floating Amber Particles */}
       {particles.map((p) => (
         <div
           key={p.id}
@@ -140,18 +131,18 @@ export function Login() {
         />
       ))}
 
-      {/* Main Glassmorphism Frame */}
+      {/* Main Amber Glassmorphism Frame */}
       <div
         className="custom-glass-card"
         style={{
           width: "100%",
           maxWidth: "1280px",
-          backgroundColor: "rgba(10, 17, 32, 0.6)",
-          backdropFilter: "blur(18px)",
-          WebkitBackdropFilter: "blur(18px)",
+          backgroundColor: "rgba(255, 255, 255, 0.9)",
+          backdropFilter: "blur(20px)",
+          WebkitBackdropFilter: "blur(20px)",
           borderRadius: "24px",
-          border: "1px solid rgba(6, 182, 212, 0.2)",
-          boxShadow: "0 25px 60px rgba(0, 0, 0, 0.8), 0 0 80px rgba(6, 182, 212, 0.15)",
+          border: "1px solid rgba(200, 149, 71, 0.3)",
+          boxShadow: "0 25px 60px rgba(70, 45, 15, 0.12), 0 0 60px rgba(200, 149, 71, 0.08)",
           overflow: "hidden",
           display: "grid",
           gridTemplateColumns: "1.1fr 1.3fr",
@@ -169,10 +160,10 @@ export function Login() {
             justifyContent: "flex-end",
             padding: "48px",
             minHeight: "720px",
-            borderRight: "1px solid rgba(6, 182, 212, 0.15)"
+            borderRight: "1px solid var(--border-subtle)"
           }}
         >
-          {/* Neon Frosted Glass Overlay */}
+          {/* Amber-Tinted Warm Frosted Glass Overlay */}
           <div
             style={{
               position: "absolute",
@@ -180,12 +171,12 @@ export function Login() {
               left: 0,
               right: 0,
               bottom: 0,
-              background: "linear-gradient(to top, rgba(6, 10, 19, 0.95) 15%, rgba(6, 10, 19, 0.3) 100%)",
+              background: "linear-gradient(to top, rgba(43, 29, 17, 0.92) 15%, rgba(43, 29, 17, 0.3) 100%)",
               zIndex: 1
             }}
           />
 
-          {/* Holographic Factory Info Overlay */}
+          {/* Info Overlay */}
           <div style={{ position: "relative", zIndex: 2, display: "flex", flexDirection: "column", gap: "16px" }}>
             <div
               style={{
@@ -194,30 +185,30 @@ export function Login() {
                 gap: "8px",
                 padding: "6px 14px",
                 borderRadius: "50px",
-                backgroundColor: "rgba(6, 182, 212, 0.15)",
-                border: "1px solid rgba(6, 182, 212, 0.35)",
-                color: "#22D3EE",
+                backgroundColor: "rgba(200, 149, 71, 0.25)",
+                border: "1px solid rgba(226, 182, 112, 0.6)",
+                color: "#E2B670",
                 fontSize: "12px",
-                fontWeight: 700,
+                fontWeight: 800,
                 alignSelf: "flex-start",
-                boxShadow: "0 0 10px rgba(6, 182, 212, 0.2)"
+                boxShadow: "0 0 12px rgba(200, 149, 71, 0.3)"
               }}
             >
               <Cpu size={14} /> ZERO-GRAVITY ENTERPRISE PORTAL
             </div>
 
-            <h2 style={{ fontSize: "36px", fontWeight: 900, color: "#FFFFFF", letterSpacing: "-0.02em", textShadow: "0 0 15px rgba(34, 211, 238, 0.3)" }}>
+            <h2 style={{ fontSize: "36px", fontWeight: 900, color: "#FFFFFF", letterSpacing: "-0.02em" }}>
               MaintenX OS
             </h2>
 
-            <p style={{ fontSize: "14px", color: "rgba(224, 242, 254, 0.8)", lineHeight: 1.6, maxWidth: "420px" }}>
+            <p style={{ fontSize: "14px", color: "rgba(255, 245, 235, 0.85)", lineHeight: 1.6, maxWidth: "420px" }}>
               Orbiting Astro-Manufacturing Operations Suite. Synchronized OEE logistics routing, predictive machine wear tracking, and telemetry feedback.
             </p>
           </div>
         </div>
 
-        {/* Right Panel: Floating Frosted Acrylic glass login box */}
-        <div style={{ padding: "48px 56px", display: "flex", flexDirection: "column", gap: "32px", justifyContent: "center" }}>
+        {/* Right Panel: Floating Warm Acrylic Glass Login Box */}
+        <div style={{ padding: "48px 56px", display: "flex", flexDirection: "column", gap: "28px", justifyContent: "center", backgroundColor: "#FCFAF7" }}>
           {/* Logo & Sub-Branding Header */}
           <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
             <div
@@ -225,46 +216,47 @@ export function Login() {
                 width: "46px",
                 height: "46px",
                 borderRadius: "12px",
-                background: "linear-gradient(135deg, #0891b2 0%, #2563eb 100%)",
+                background: "linear-gradient(135deg, #E2B670 0%, #C89547 50%, #B27E33 100%)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                color: "#FFFFFF",
-                boxShadow: "0 0 20px rgba(6, 182, 212, 0.5)"
+                color: "#261603",
+                boxShadow: "0 4px 14px rgba(200, 149, 71, 0.35)"
               }}
             >
-              <Cpu size={24} />
+              <Flame size={24} />
             </div>
             <div>
-              <h1 style={{ fontSize: "24px", fontWeight: 800, color: "#FFFFFF", letterSpacing: "0.02em", margin: 0, textShadow: "0 0 10px rgba(34, 211, 238, 0.2)" }}>
-                MaintenX <span style={{ color: "#22D3EE" }}>OS</span>
+              <h1 style={{ fontSize: "24px", fontWeight: 900, color: "#2B1D11", letterSpacing: "-0.3px", margin: 0 }}>
+                MaintenX <span style={{ color: "#B27E33" }}>OS</span>
               </h1>
-              <span style={{ fontSize: "10px", color: "#67e8f9", letterSpacing: "0.08em", textTransform: "uppercase", fontWeight: 800 }}>
-                Astro Operations Console
+              <span style={{ fontSize: "10px", color: "var(--text-muted)", letterSpacing: "0.08em", textTransform: "uppercase", fontWeight: 800 }}>
+                Operations Console
               </span>
             </div>
           </div>
 
-          <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+          <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
             {/* Inputs Row */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
-              <div className="form-group">
-                <label className="form-label" style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "11px", fontWeight: 800, color: "#9ca3af", letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: "8px" }}>
-                  <User size={12} color="#22d3ee" /> Corporate Username
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "18px" }}>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label" style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: "6px" }}>
+                  <User size={12} color="#B27E33" /> Corporate Username
                 </label>
                 <input
                   type="email"
-                  className="form-input-glow"
+                  className="form-input-amber"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   style={{
                     width: "100%",
-                    padding: "12px 16px",
-                    borderRadius: "8px",
-                    backgroundColor: "rgba(17, 24, 39, 0.6)",
-                    border: "1px solid rgba(34, 211, 238, 0.25)",
-                    color: "#FFFFFF",
+                    padding: "11px 14px",
+                    borderRadius: "10px",
+                    backgroundColor: "#FFFFFF",
+                    border: "1px solid var(--border-subtle)",
+                    color: "var(--text-primary)",
                     fontSize: "13px",
+                    fontWeight: 600,
                     outline: "none",
                     transition: "all 0.2s ease"
                   }}
@@ -272,23 +264,24 @@ export function Login() {
                 />
               </div>
 
-              <div className="form-group">
-                <label className="form-label" style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "11px", fontWeight: 800, color: "#9ca3af", letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: "8px" }}>
-                  <Lock size={12} color="#22d3ee" /> Security Password
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label" style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: "6px" }}>
+                  <Lock size={12} color="#B27E33" /> Security Password
                 </label>
                 <input
                   type="password"
-                  className="form-input-glow"
+                  className="form-input-amber"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   style={{
                     width: "100%",
-                    padding: "12px 16px",
-                    borderRadius: "8px",
-                    backgroundColor: "rgba(17, 24, 39, 0.6)",
-                    border: "1px solid rgba(34, 211, 238, 0.25)",
-                    color: "#FFFFFF",
+                    padding: "11px 14px",
+                    borderRadius: "10px",
+                    backgroundColor: "#FFFFFF",
+                    border: "1px solid var(--border-subtle)",
+                    color: "var(--text-primary)",
                     fontSize: "13px",
+                    fontWeight: 600,
                     outline: "none",
                     transition: "all 0.2s ease"
                   }}
@@ -298,18 +291,18 @@ export function Login() {
             </div>
 
             {/* Interactive Grid: 3x3 layout for simulated perspectives */}
-            <div className="form-group">
-              <label className="form-label" style={{ fontSize: "11px", fontWeight: 800, color: "#9ca3af", letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: "12px", display: "block" }}>
-                Select Orbiting Dashboard Perspective
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label" style={{ fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: "10px", display: "block" }}>
+                Select Dashboard Perspective
               </label>
               <div
                 style={{
                   display: "grid",
                   gridTemplateColumns: "repeat(3, 1fr)",
-                  gap: "12px",
+                  gap: "10px",
                   maxHeight: "260px",
                   overflowY: "auto",
-                  padding: "4px"
+                  padding: "2px"
                 }}
               >
                 {ROLES.map((role) => {
@@ -324,27 +317,28 @@ export function Login() {
                       onMouseEnter={() => setHoveredRole(role.id)}
                       onMouseLeave={() => setHoveredRole(null)}
                       style={{
-                        padding: "14px 12px",
+                        padding: "12px 10px",
                         borderRadius: "12px",
-                        // Frosted Glass layout
                         backgroundColor: isSelected 
-                          ? "rgba(34, 211, 238, 0.15)" 
-                          : "rgba(17, 24, 39, 0.5)",
+                          ? "rgba(200, 149, 71, 0.15)" 
+                          : isHovered
+                            ? "var(--bg-card-subtle)"
+                            : "#FFFFFF",
                         border: isSelected 
-                          ? "2px solid #22D3EE" 
+                          ? "2px solid #C89547" 
                           : isHovered 
-                            ? "1px solid rgba(34, 211, 238, 0.4)" 
-                            : "1px solid rgba(6, 182, 212, 0.15)",
+                            ? "1px solid #DCCFBF" 
+                            : "1px solid var(--border-subtle)",
                         boxShadow: isSelected 
-                          ? "0 0 15px rgba(34, 211, 238, 0.3)" 
-                          : "none",
+                          ? "0 2px 10px rgba(200, 149, 71, 0.25)" 
+                          : "0 1px 3px rgba(70, 45, 15, 0.03)",
                         cursor: "pointer",
                         display: "flex",
                         flexDirection: "column",
                         alignItems: "center",
-                        gap: "8px",
+                        gap: "6px",
                         textAlign: "center",
-                        transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
+                        transition: "all 0.18s ease",
                         position: "relative"
                       }}
                     >
@@ -353,23 +347,24 @@ export function Login() {
                           width: "30px",
                           height: "30px",
                           borderRadius: "50%",
-                          backgroundColor: isSelected ? "rgba(34, 211, 238, 0.25)" : "rgba(255, 255, 255, 0.03)",
+                          background: isSelected 
+                            ? "linear-gradient(135deg, #E2B670 0%, #C89547 100%)" 
+                            : "var(--bg-card-subtle)",
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
-                          color: isSelected ? "#22D3EE" : "#9CA3AF",
-                          boxShadow: isSelected ? "0 0 8px rgba(34, 211, 238, 0.4)" : "none"
+                          color: isSelected ? "#261603" : "var(--text-secondary)",
+                          boxShadow: isSelected ? "0 2px 6px rgba(178, 126, 51, 0.25)" : "none"
                         }}
                       >
                         <IconComponent size={14} />
                       </div>
-                      <span style={{ fontSize: "11px", fontWeight: 700, color: isSelected ? "#FFFFFF" : "#d1d5db" }}>
+                      <span style={{ fontSize: "11px", fontWeight: isSelected ? 800 : 600, color: isSelected ? "#2B1D11" : "var(--text-secondary)" }}>
                         {role.label}
                       </span>
-                      {/* Floating weightless selection badge */}
                       {isSelected && (
-                        <div style={{ position: "absolute", top: "6px", right: "6px", color: "#22D3EE" }}>
-                          <CheckCircle2 size={12} />
+                        <div style={{ position: "absolute", top: "6px", right: "6px", color: "#B27E33" }}>
+                          <CheckCircle2 size={13} />
                         </div>
                       )}
                     </div>
@@ -378,36 +373,36 @@ export function Login() {
               </div>
             </div>
 
-            {/* Glowing neon pill button with linear gradient animation */}
-            <Button
-              variant="primary"
+            {/* Metallic Amber Gold Submit Button */}
+            <button
               type="submit"
-              icon={Sparkles}
               style={{
                 width: "100%",
-                height: "50px",
+                height: "48px",
+                display: "flex",
+                alignItems: "center",
                 justifyContent: "center",
+                gap: "8px",
                 fontSize: "14px",
                 fontWeight: 800,
-                marginTop: "12px",
-                background: "linear-gradient(270deg, #0284c7, #06b6d4, #3b82f6)",
-                backgroundSize: "200% 200%",
-                animation: "movingEnergy 3s ease infinite",
-                border: "1px solid rgba(34, 211, 238, 0.4)",
-                boxShadow: "0 0 20px rgba(6, 182, 212, 0.4)",
+                marginTop: "6px",
+                background: "linear-gradient(180deg, #E2B670 0%, #C89547 50%, #B27E33 100%)",
+                border: "1px solid #E8C182",
+                boxShadow: "0 4px 14px rgba(178, 126, 51, 0.35)",
                 borderRadius: "50px",
-                color: "#FFFFFF",
+                color: "#261603",
                 cursor: "pointer",
-                transition: "transform 0.15s ease"
+                transition: "transform 0.15s ease",
+                outline: "none"
               }}
-              onMouseEnter={(e) => e.currentTarget.style.transform = "scale(1.02)"}
+              onMouseEnter={(e) => e.currentTarget.style.transform = "scale(1.015)"}
               onMouseLeave={(e) => e.currentTarget.style.transform = "scale(1)"}
             >
-              Authenticate & Start Session
-            </Button>
+              <Sparkles size={16} /> Authenticate & Start Session
+            </button>
           </form>
 
-          <div style={{ textAlign: "center", fontSize: "11px", color: "var(--text-muted)", marginTop: "12px", borderTop: "1px solid var(--border-subtle)", paddingTop: "16px" }}>
+          <div style={{ textAlign: "center", fontSize: "11px", color: "var(--text-muted)", borderTop: "1px solid var(--border-subtle)", paddingTop: "12px", fontWeight: 600 }}>
             ISO 27001 Secured • Authorized Access Only
           </div>
         </div>
