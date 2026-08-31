@@ -31,7 +31,7 @@ export function PlaceholderPage() {
           {pageTitle}
         </h1>
         <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>
-          FlowState Ops Enterprise System Module
+          MaintenX OS Enterprise System Module
         </p>
       </div>
 
