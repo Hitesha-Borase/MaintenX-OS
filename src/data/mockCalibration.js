@@ -73,3 +73,72 @@ export const INITIAL_CALIBRATIONS = [
     statusColor: "emerald"
   }
 ];
+
+export const CALIBRATION_HISTORY = [
+  {
+    id: "CAL-HIST-2026-01",
+    calibrationId: "CAL-2026-088",
+    instrumentId: "INS-TT-401",
+    instrumentName: "Pasteurizer RTD Pt100 Temperature Transmitter",
+    calibrationDate: "2026-05-15",
+    technician: "Sarah Jenkins",
+    standardUsed: "Fluke 754 Calibrator",
+    asFoundError: "+0.11°C",
+    asLeftError: "+0.04°C",
+    result: "Passed - Calibrated",
+    certificateNumber: "CERT-NIST-2026-9912"
+  },
+  {
+    id: "CAL-HIST-2025-04",
+    calibrationId: "CAL-2026-088",
+    instrumentId: "INS-TT-401",
+    instrumentName: "Pasteurizer RTD Pt100 Temperature Transmitter",
+    calibrationDate: "2025-11-15",
+    technician: "Marcus Vance",
+    standardUsed: "Fluke 754 Calibrator",
+    asFoundError: "+0.08°C",
+    asLeftError: "+0.02°C",
+    result: "Passed",
+    certificateNumber: "CERT-NIST-2025-8812"
+  },
+  {
+    id: "CAL-HIST-2026-02",
+    calibrationId: "CAL-2026-082",
+    instrumentId: "INS-FM-012",
+    instrumentName: "Endress+Hauser Promass Coriolis Mass Flowmeter",
+    calibrationDate: "2026-02-10",
+    technician: "External Metrology Lab (TÜV)",
+    standardUsed: "Gravimetric Test Rig Primary Standard",
+    asFoundError: "+0.19%",
+    asLeftError: "+0.05%",
+    result: "Passed - Minor Zero Shift",
+    certificateNumber: "CERT-ISO-2026-4401"
+  },
+  {
+    id: "CAL-HIST-2026-03",
+    calibrationId: "CAL-2026-091",
+    instrumentId: "INS-PT-303",
+    instrumentName: "Sanitary Diaphragm Pressure Transmitter 0-10 bar",
+    calibrationDate: "2026-08-01",
+    technician: "David Kim",
+    standardUsed: "Ametek Hydraulic Deadweight Tester",
+    asFoundError: "-0.04 bar",
+    asLeftError: "-0.01 bar",
+    result: "Passed",
+    certificateNumber: "CERT-CAL-2026-8812"
+  },
+  {
+    id: "CAL-HIST-2026-04",
+    calibrationId: "CAL-2026-079",
+    instrumentId: "INS-TRQ-102",
+    instrumentName: "Mecmesin Digital Capper Torque Analyzer",
+    calibrationDate: "2026-06-20",
+    technician: "Marcus Vance",
+    standardUsed: "Torque Calibration Arm & Class M1 Weights",
+    asFoundError: "+0.025 Nm",
+    asLeftError: "+0.008 Nm",
+    result: "Passed",
+    certificateNumber: "CERT-NIST-2026-1188"
+  }
+];
+

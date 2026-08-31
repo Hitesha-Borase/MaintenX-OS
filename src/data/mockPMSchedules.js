@@ -115,3 +115,71 @@ export const INITIAL_PM_SCHEDULES = [
     complianceRate: "95.0%",
   }
 ];
+
+export const INITIAL_PM_PLANS = [
+  {
+    id: "PLAN-PM-001",
+    name: "Master Aseptic Rotary Filler Maintenance Program",
+    targetAssetType: "Packaging & Bottling",
+    linkedAssetId: "FM-001",
+    linkedAssetName: "High-Speed Rotary Filler 12-Head",
+    leadTechnician: "Marcus Vance",
+    frequency: "Weekly / Monthly / Annual",
+    description: "Standard multi-frequency PM strategy adhering to ISO 22000 and OEM Krones maintenance guidelines.",
+    totalChecklists: 3,
+    estimatedLaborHoursPerMonth: 12.5,
+    requiredSkills: ["Vibration Analysis", "Laser Alignment", "Sanitary Valves"],
+    sopReference: "SOP-MNT-FM01-REV4",
+    status: "Active",
+    createdDate: "2024-01-15"
+  },
+  {
+    id: "PLAN-PM-002",
+    name: "Plate Heat Exchanger & Pasteurizer Thermal Integrity Program",
+    targetAssetType: "Thermal Processing",
+    linkedAssetId: "HT-105",
+    linkedAssetName: "Plate Heat Exchanger & Pasteurizer HTST-300",
+    leadTechnician: "David Kim",
+    frequency: "Monthly / Quarterly",
+    description: "Pressure drop audit, plate pack gasket tensioning, CIP acid wash inspection, and temperature RTD transmitter calibration.",
+    totalChecklists: 2,
+    estimatedLaborHoursPerMonth: 8.0,
+    requiredSkills: ["Thermal Systems", "Hydrostatic Pressure Testing", "Food Safety Hygiene"],
+    sopReference: "SOP-MNT-HTST-REV2",
+    status: "Active",
+    createdDate: "2024-02-10"
+  },
+  {
+    id: "PLAN-PM-003",
+    name: "Rotary Capper Torque & Chuck Slip PM Program",
+    targetAssetType: "Packaging & Bottling",
+    linkedAssetId: "CP-102",
+    linkedAssetName: "Arol Capper Rotary Capping Machine",
+    leadTechnician: "Sarah Jenkins",
+    frequency: "Quarterly",
+    description: "Magnetic slip clutch calibration, torque transducer zeroing, chuck gripping jaw wear inspection.",
+    totalChecklists: 1,
+    estimatedLaborHoursPerMonth: 4.5,
+    requiredSkills: ["Torque Calibration", "Mechanical Drives"],
+    sopReference: "SOP-MNT-CAP-REV1",
+    status: "Active",
+    createdDate: "2024-03-01"
+  },
+  {
+    id: "PLAN-PM-004",
+    name: "Plant Air Compressor & Air Quality Assurance Plan",
+    targetAssetType: "Utilities & Facilities",
+    linkedAssetId: "AC-505",
+    linkedAssetName: "Rotary Air Compressor Atlas Copco GA 75 VSD",
+    leadTechnician: "Marcus Vance",
+    frequency: "Monthly / Annual",
+    description: "Oil separator replacement, dew point sensor verification, intake air filter differential pressure check.",
+    totalChecklists: 2,
+    estimatedLaborHoursPerMonth: 6.0,
+    requiredSkills: ["Compressor Diagnostics", "Pneumatics"],
+    sopReference: "SOP-MNT-COMP-REV3",
+    status: "Active",
+    createdDate: "2024-01-20"
+  }
+];
+

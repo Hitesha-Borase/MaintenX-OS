@@ -16,36 +16,36 @@ export function GlobalSearchModal() {
     const q = query.toLowerCase();
 
     const assetMatches = assets
-      .filter((a) => a.id.toLowerCase().includes(q) || a.name.toLowerCase().includes(q) || a.location.toLowerCase().includes(q))
+      .filter((a) => a.id.toLowerCase().includes(q) || a.name.toLowerCase().includes(q) || a.location?.toLowerCase().includes(q))
       .slice(0, 3)
       .map((a) => ({
         type: "Asset",
         icon: Wrench,
         title: `${a.id} - ${a.name}`,
-        subtitle: `${a.location} • Status: ${a.status} (Health ${a.health}%)`,
-        route: `/maintenance/assets/${a.id}`
+        subtitle: `${a.location || a.line} • Status: ${a.status} (Health ${a.health}%)`,
+        route: `/assets/360?id=${a.id}`
       }));
 
     const woMatches = workOrders
-      .filter((w) => w.id.toLowerCase().includes(q) || w.title.toLowerCase().includes(q) || w.assetName.toLowerCase().includes(q))
+      .filter((w) => w.id.toLowerCase().includes(q) || w.title.toLowerCase().includes(q) || w.assetName?.toLowerCase().includes(q))
       .slice(0, 3)
       .map((w) => ({
         type: "Work Order",
         icon: Activity,
         title: `${w.id} - ${w.title}`,
-        subtitle: `${w.assetName} • ${w.status} • ${w.priority}`,
-        route: `/maintenance/work-orders/${w.id}`
+        subtitle: `${w.assetName || w.assetId} • ${w.status} • ${w.priority}`,
+        route: `/work-orders/open?view=${w.id}`
       }));
 
     const solMatches = solutions
-      .filter((s) => s.problemSymptom.toLowerCase().includes(q) || s.tags.some((t) => t.toLowerCase().includes(q)))
+      .filter((s) => (s.title || s.symptom || "").toLowerCase().includes(q) || (s.failureCode || "").toLowerCase().includes(q))
       .slice(0, 2)
       .map((s) => ({
         type: "Verified Solution",
         icon: ShieldCheck,
-        title: s.problemSymptom,
-        subtitle: `Verified by ${s.verifiedBy} • ${s.successfulUsesCount} successful uses`,
-        route: `/maintenance/verified-solutions`
+        title: s.title || s.symptom,
+        subtitle: `Code: ${s.failureCode || "General"} • ${s.successfulUsesCount || 1} uses`,
+        route: `/troubleshooting?search=${s.failureCode || s.title}`
       }));
 
     return [...assetMatches, ...woMatches, ...solMatches];

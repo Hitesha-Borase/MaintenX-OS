@@ -71,3 +71,4 @@ export function ExceptionProvider({ children }) {
 }
 
 export const useExceptions = () => useContext(ExceptionContext);
+export const useException = () => useContext(ExceptionContext);

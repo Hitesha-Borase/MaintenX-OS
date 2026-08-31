@@ -13,7 +13,17 @@ import {
   ExternalLink,
   ShieldCheck,
   TrendingDown,
-  Layers
+  Layers,
+  Radio,
+  Sliders,
+  Package,
+  FileSpreadsheet,
+  Cpu,
+  Zap,
+  TrendingUp,
+  AlertCircle,
+  CalendarCheck,
+  LifeBuoy
 } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { StatCard } from "../../components/common/StatCard";
@@ -27,37 +37,68 @@ import { useApp } from "../../context/AppContext";
 import { useNavigate } from "react-router-dom";
 
 export function MaintenanceDashboard() {
-  const { assets, workOrders, breakdowns, pmSchedules, reliabilityMetrics, repeatFailures } = useCMMS();
+  const {
+    assets,
+    workOrders,
+    breakdowns,
+    pmSchedules,
+    spareParts,
+    calibrations,
+    iotTelemetry,
+    isLiveTelemetryStreaming,
+    setIsLiveTelemetryStreaming,
+    reliabilityMetrics
+  } = useCMMS();
   const { addToast, setIsQuickActionOpen } = useApp();
   const navigate = useNavigate();
 
-  const [timeRange, setTimeRange] = useState("month");
-
+  // Metrics calculations
   const onlineCount = assets.filter((a) => a.status === "Operational").length;
   const offlineCount = assets.filter((a) => a.status === "Breakdown" || a.status === "Out of Service").length;
+  const degradedCount = assets.filter((a) => a.status === "Degraded").length;
+
+  const activeWOs = workOrders.filter((w) => w.status !== "Closed" && w.status !== "Completed");
+  const criticalWOs = workOrders.filter((w) => w.priority.includes("P1"));
+
   const pmDueCount = pmSchedules.filter((p) => p.status === "Due Today" || p.status === "Upcoming").length;
   const pmOverdueCount = pmSchedules.filter((p) => p.status === "Overdue").length;
-  const activeWOs = workOrders.filter((w) => w.status !== "Closed" && w.status !== "Completed");
-  const activeBDs = breakdowns.filter((b) => b.status !== "Resolved");
+
+  const activeBDs = breakdowns.filter((b) => b.status !== "Resolved" && b.status !== "Closed");
+  const totalDowntimeLostCost = breakdowns.reduce((sum, b) => sum + (b.impact?.downtimeCostUSD || 0), 0);
+
+  const calValidCount = calibrations.filter((c) => c.status === "Valid").length;
+  const calDueCount = calibrations.filter((c) => c.status === "Due Soon" || c.status === "Overdue").length;
+
+  const lowStockParts = spareParts.filter((p) => p.stock <= p.minStock);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-      {/* Header */}
+      {/* Page Title & Quick Actions */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
             <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)" }}>
-              Maintenance & CMMS Dashboard
+              Maintenance Dashboard
             </h1>
-            <Badge variant="cyan">Asset Reliability OS</Badge>
+            <Badge variant="cyan">Real-Time Operational Control</Badge>
           </div>
           <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>
-            Asset health management, PM compliance, active breakdown triage, and MTBF/MTTR analytics.
+            Unified maintenance intelligence across fleet assets, work orders, PM compliance, active breakdowns, downtime cost, calibration, spare parts, IoT, and reliability.
           </p>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-          <Button variant="secondary" icon={Clock} onClick={() => navigate("/maintenance/pm-checklists")}>
+          <Button
+            variant="secondary"
+            icon={Radio}
+            onClick={() => {
+              setIsLiveTelemetryStreaming(!isLiveTelemetryStreaming);
+              addToast(isLiveTelemetryStreaming ? "Live IoT stream paused." : "Live IoT stream active.", "info");
+            }}
+          >
+            {isLiveTelemetryStreaming ? "Pause Live IoT" : "Resume Live IoT"}
+          </Button>
+          <Button variant="secondary" icon={Clock} onClick={() => navigate("/preventive-maintenance/execution")}>
             Execute PM Checklist
           </Button>
           <Button variant="primary" icon={Plus} onClick={() => setIsQuickActionOpen(true)}>
@@ -66,82 +107,183 @@ export function MaintenanceDashboard() {
         </div>
       </div>
 
-      {/* KPI Ticker Grid */}
-      <div className="grid-6">
+      {/* 9 OPERATIONAL PILLARS KPI GRID */}
+      <div className="grid-3" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "16px" }}>
+        
+        {/* 1. Assets Fleet Health */}
         <StatCard
-          title="Assets Fleet Health"
+          title="1. Assets Fleet Health"
           value={`${onlineCount} / ${assets.length}`}
           unit="Online"
-          trend={{ value: `${offlineCount} Offline`, isPositive: offlineCount === 0, text: "status" }}
-          icon={Gauge}
+          trend={{ value: `${offlineCount} Offline, ${degradedCount} Degraded`, isPositive: offlineCount === 0, text: "" }}
+          icon={Layers}
           colorVariant={offlineCount > 0 ? "rose" : "emerald"}
-          onClick={() => navigate("/maintenance/assets")}
+          onClick={() => navigate("/assets/register")}
         />
+
+        {/* 2. Work Orders */}
         <StatCard
-          title="Open Work Orders"
+          title="2. Open Work Orders"
           value={activeWOs.length.toString()}
           unit="Active"
-          trend={{ value: `${workOrders.filter(w => w.priority.includes("P1")).length} Critical`, isPositive: false, text: "priority" }}
+          trend={{ value: `${criticalWOs.length} Critical (P1)`, isPositive: criticalWOs.length === 0, text: "" }}
           icon={Wrench}
-          colorVariant="blue"
-          onClick={() => navigate("/maintenance/work-orders")}
+          colorVariant="amber"
+          onClick={() => navigate("/work-orders/open")}
         />
+
+        {/* 3. Preventive Maintenance */}
         <StatCard
-          title="Active Breakdowns"
-          value={activeBDs.length.toString()}
-          unit="Unplanned"
-          trend={{ value: "HT-105", isPositive: false, text: "in repair" }}
-          icon={AlertOctagon}
-          colorVariant={activeBDs.length > 0 ? "rose" : "emerald"}
-          onClick={() => navigate("/maintenance/breakdowns")}
-        />
-        <StatCard
-          title="PM Compliance"
+          title="3. PM Compliance"
           value={`${reliabilityMetrics.plantOverall.pmComplianceRate}%`}
           unit=""
-          trend={{ value: `${pmOverdueCount} Overdue`, isPositive: pmOverdueCount === 0, text: "schedules" }}
+          trend={{ value: `${pmOverdueCount} Overdue, ${pmDueCount} Upcoming`, isPositive: pmOverdueCount === 0, text: "" }}
           icon={CheckCircle2}
-          colorVariant="emerald"
-          onClick={() => navigate("/maintenance/pm-schedules")}
+          colorVariant={pmOverdueCount > 0 ? "amber" : "emerald"}
+          onClick={() => navigate("/preventive-maintenance/schedule")}
         />
+
+        {/* 4. Breakdowns */}
         <StatCard
-          title="Plant MTBF"
+          title="4. Active Breakdowns"
+          value={activeBDs.length.toString()}
+          unit="Unplanned"
+          trend={{ value: activeBDs.length > 0 ? `${activeBDs[0].assetId} in repair` : "Zero active", isPositive: activeBDs.length === 0, text: "" }}
+          icon={AlertOctagon}
+          colorVariant={activeBDs.length > 0 ? "rose" : "emerald"}
+          onClick={() => navigate("/breakdowns/log")}
+        />
+
+        {/* 5. Downtime Impact */}
+        <StatCard
+          title="5. Downtime Impact"
+          value={`$${totalDowntimeLostCost.toLocaleString()}`}
+          unit="Total Loss"
+          trend={{ value: `${breakdowns.reduce((s, b) => s + (b.impact?.productionLossUnits || 0), 0)} Units lost`, isPositive: false, text: "" }}
+          icon={DollarSign}
+          colorVariant="rose"
+          onClick={() => navigate("/breakdowns/downtime-impact")}
+        />
+
+        {/* 6. Calibration */}
+        <StatCard
+          title="6. Calibration Status"
+          value={`${calValidCount} / ${calibrations.length}`}
+          unit="Certified"
+          trend={{ value: `${calDueCount} Due/Overdue`, isPositive: calDueCount === 0, text: "" }}
+          icon={Sliders}
+          colorVariant={calDueCount > 0 ? "amber" : "emerald"}
+          onClick={() => navigate("/calibration/records")}
+        />
+
+        {/* 7. Spare Parts */}
+        <StatCard
+          title="7. Spare Parts Health"
+          value={`${spareParts.length - lowStockParts.length} / ${spareParts.length}`}
+          unit="In Stock"
+          trend={{ value: `${lowStockParts.length} Reorder required`, isPositive: lowStockParts.length === 0, text: "" }}
+          icon={Package}
+          colorVariant={lowStockParts.length > 0 ? "amber" : "emerald"}
+          onClick={() => navigate("/spare-parts/inventory")}
+        />
+
+        {/* 8. Machine / IoT Live */}
+        <StatCard
+          title="8. Machine / IoT Live"
+          value={`${iotTelemetry.vibration} mm/s`}
+          unit="Vibration"
+          trend={{ value: `${iotTelemetry.temperature}°C | ${iotTelemetry.pressure} bar`, isPositive: iotTelemetry.status === "Normal", text: "" }}
+          icon={Radio}
+          colorVariant={iotTelemetry.status === "Normal" ? "cyan" : "rose"}
+          onClick={() => navigate("/machine-iot")}
+        />
+
+        {/* 9. Reliability (MTBF/MTTR) */}
+        <StatCard
+          title="9. Reliability (MTBF)"
           value={`${reliabilityMetrics.plantOverall.mtbfHours}`}
-          unit="hrs"
-          trend={{ value: "Target 420h", isPositive: false, text: "-34.6h variance" }}
+          unit="hrs MTBF"
+          trend={{ value: `MTTR: ${reliabilityMetrics.plantOverall.mttrHours}h`, isPositive: true, text: "" }}
           icon={Activity}
-          colorVariant="cyan"
-          onClick={() => navigate("/maintenance/reliability")}
-        />
-        <StatCard
-          title="Plant MTTR"
-          value={`${reliabilityMetrics.plantOverall.mttrHours}`}
-          unit="hrs"
-          trend={{ value: "Target 1.2h", isPositive: false, text: "+25m variance" }}
-          icon={Clock}
-          colorVariant="amber"
-          onClick={() => navigate("/maintenance/reliability")}
+          colorVariant="emerald"
+          onClick={() => navigate("/reliability")}
         />
       </div>
 
-      {/* Main Charts: MTBF/MTTR Trends & Downtime Pareto */}
-      <div className="grid-2">
+      {/* IoT LIVE TELEMETRY TICKER BAR */}
+      <Card>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <div
+              style={{
+                width: "10px",
+                height: "10px",
+                borderRadius: "50%",
+                backgroundColor: isLiveTelemetryStreaming ? "#10B981" : "#F59E0B",
+                boxShadow: isLiveTelemetryStreaming ? "0 0 10px #10B981" : "none",
+                animation: isLiveTelemetryStreaming ? "pulse 2s infinite" : "none"
+              }}
+            />
+            <div>
+              <span style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)" }}>
+                Active Machine IoT Stream: High-Speed Rotary Filler 12-Head (FM-001)
+              </span>
+              <span style={{ fontSize: "11px", color: "var(--text-muted)", marginLeft: "8px" }}>
+                Updated: {iotTelemetry.lastUpdated}
+              </span>
+            </div>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap" }}>
+            <div style={{ fontSize: "12px" }}>
+              <span style={{ color: "var(--text-muted)" }}>Vibration: </span>
+              <span style={{ fontWeight: 700, color: iotTelemetry.vibration > 3.0 ? "#EF4444" : "#10B981", fontFamily: "var(--font-mono)" }}>
+                {iotTelemetry.vibration} mm/s
+              </span>
+            </div>
+            <div style={{ fontSize: "12px" }}>
+              <span style={{ color: "var(--text-muted)" }}>Temp: </span>
+              <span style={{ fontWeight: 700, color: iotTelemetry.temperature > 70 ? "#EF4444" : "#38BDF8", fontFamily: "var(--font-mono)" }}>
+                {iotTelemetry.temperature}°C
+              </span>
+            </div>
+            <div style={{ fontSize: "12px" }}>
+              <span style={{ color: "var(--text-muted)" }}>Pressure: </span>
+              <span style={{ fontWeight: 700, color: "#F59E0B", fontFamily: "var(--font-mono)" }}>
+                {iotTelemetry.pressure} bar
+              </span>
+            </div>
+            <div style={{ fontSize: "12px" }}>
+              <span style={{ color: "var(--text-muted)" }}>Speed: </span>
+              <span style={{ fontWeight: 700, color: "#FFFFFF", fontFamily: "var(--font-mono)" }}>
+                {iotTelemetry.rpm} RPM
+              </span>
+            </div>
+            <Button variant="ghost" size="sm" icon={ExternalLink} onClick={() => navigate("/machine-iot")}>
+              Full IoT Center
+            </Button>
+          </div>
+        </div>
+      </Card>
+
+      {/* MAIN CHARTS: MTBF TREND & BREAKDOWN PARETO */}
+      <div className="grid-2" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: "20px" }}>
         <Card>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
             <div>
               <h3 style={{ fontSize: "15px", fontWeight: 700, color: "var(--text-primary)" }}>
-                Monthly MTBF (Reliability Growth Trend)
+                Reliability Growth Trend (Monthly MTBF)
               </h3>
               <p style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-                Mean operating hours between unplanned functional failures
+                Operating hours between functional failures across production lines
               </p>
             </div>
-            <Badge variant="cyan">Target: 420 hrs</Badge>
+            <Badge variant="cyan">Target: 420h</Badge>
           </div>
 
           <AreaChart
             data={reliabilityMetrics.monthlyTrend.map((m) => ({ label: m.month, value: m.mtbf }))}
-            height={200}
+            height={220}
             color="#38BDF8"
             unit="h"
           />
@@ -151,14 +293,14 @@ export function MaintenanceDashboard() {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
             <div>
               <h3 style={{ fontSize: "15px", fontWeight: 700, color: "var(--text-primary)" }}>
-                Top Breakdown Causes by Downtime (Pareto)
+                Top Breakdown Causes by Downtime (Pareto Analysis)
               </h3>
               <p style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-                Failure modes ranked by cumulative operational hours lost
+                Primary root causes by cumulative operational downtime hours lost
               </p>
             </div>
-            <Button variant="ghost" size="sm" icon={ExternalLink} onClick={() => navigate("/maintenance/repeat-failures")}>
-              Repeat Failures
+            <Button variant="ghost" size="sm" icon={ExternalLink} onClick={() => navigate("/breakdowns/analysis")}>
+              Analysis
             </Button>
           </div>
 
@@ -166,30 +308,31 @@ export function MaintenanceDashboard() {
             items={[
               { label: "Gasket Rupture (HYD-002)", count: 36, percentage: 42.0 },
               { label: "Bearing Fatigue (MEC-004)", count: 22, percentage: 68.0 },
-              { label: "Optical Glare (ELE-008)", count: 12, percentage: 82.0 },
+              { label: "Optical Drift (ELE-008)", count: 12, percentage: 82.0 },
               { label: "Belt Guide Jam (MEC-009)", count: 8, percentage: 91.0 },
               { label: "Solenoid Sticking (PNE-003)", count: 7, percentage: 100.0 }
             ]}
-            height={200}
+            height={220}
           />
         </Card>
       </div>
 
-      {/* Critical Tables: Critical Assets & Open Work Orders */}
-      <div className="grid-2">
-        {/* Critical Assets Status Table */}
+      {/* DETAILED TABLES: ASSETS REGISTRY & OPEN WORK ORDERS */}
+      <div className="grid-2" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: "20px" }}>
+        
+        {/* Assets Fleet Status */}
         <Card>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
             <div>
               <h3 style={{ fontSize: "15px", fontWeight: 700, color: "var(--text-primary)" }}>
-                Critical Production Assets Registry
+                Equipment Fleet Health
               </h3>
               <p style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-                Condition monitoring health index, vibration, and temperature
+                Condition index, vibration, and operating status
               </p>
             </div>
-            <Button variant="ghost" size="sm" icon={ExternalLink} onClick={() => navigate("/maintenance/assets")}>
-              View All ({assets.length})
+            <Button variant="ghost" size="sm" icon={ExternalLink} onClick={() => navigate("/assets/register")}>
+              All Assets ({assets.length})
             </Button>
           </div>
 
@@ -197,11 +340,11 @@ export function MaintenanceDashboard() {
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>Asset</th>
+                  <th>Asset ID</th>
                   <th>Status</th>
-                  <th>Health Index</th>
+                  <th>Health</th>
                   <th>Vibration</th>
-                  <th>Actions</th>
+                  <th>Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -214,7 +357,9 @@ export function MaintenanceDashboard() {
                     <tr key={a.id}>
                       <td>
                         <div style={{ fontWeight: 700, color: "#FFFFFF" }}>{a.id}</div>
-                        <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>{a.name}</div>
+                        <div style={{ fontSize: "11px", color: "var(--text-muted)", maxWidth: "140px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                          {a.name}
+                        </div>
                       </td>
                       <td>
                         <Badge variant={badgeVar} dot={isOp || isBD}>
@@ -222,25 +367,16 @@ export function MaintenanceDashboard() {
                         </Badge>
                       </td>
                       <td>
-                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                          <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: a.health > 80 ? "#10B981" : a.health > 60 ? "#F59E0B" : "#EF4444" }}>
-                            {a.health}%
-                          </span>
-                          <div style={{ width: "40px", height: "4px", backgroundColor: "#1E293B", borderRadius: "2px" }}>
-                            <div style={{ width: `${a.health}%`, height: "100%", backgroundColor: a.health > 80 ? "#10B981" : a.health > 60 ? "#F59E0B" : "#EF4444" }} />
-                          </div>
-                        </div>
+                        <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: a.health > 80 ? "#10B981" : a.health > 60 ? "#F59E0B" : "#EF4444" }}>
+                          {a.health}%
+                        </span>
                       </td>
                       <td style={{ fontFamily: "var(--font-mono)", fontSize: "12px", color: a.vibration > 3.0 ? "#EF4444" : "var(--text-primary)" }}>
                         {a.vibration} mm/s
                       </td>
                       <td>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => navigate(`/maintenance/assets/${a.id}`)}
-                        >
-                          Asset 360°
+                        <Button variant="ghost" size="sm" onClick={() => navigate(`/assets/360?id=${a.id}`)}>
+                          Asset 360
                         </Button>
                       </td>
                     </tr>
@@ -251,19 +387,19 @@ export function MaintenanceDashboard() {
           </div>
         </Card>
 
-        {/* Open Work Orders Table */}
+        {/* Open Work Orders Dispatch */}
         <Card>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
             <div>
               <h3 style={{ fontSize: "15px", fontWeight: 700, color: "var(--text-primary)" }}>
-                Active Maintenance Work Orders
+                Active Work Orders Dispatch Queue
               </h3>
               <p style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-                Triage dispatch queue, technicians, and repair progress
+                Priority queue and assigned technicians
               </p>
             </div>
-            <Button variant="ghost" size="sm" icon={ExternalLink} onClick={() => navigate("/maintenance/work-orders")}>
-              View All ({workOrders.length})
+            <Button variant="ghost" size="sm" icon={ExternalLink} onClick={() => navigate("/work-orders/open")}>
+              All WOs ({workOrders.length})
             </Button>
           </div>
 
@@ -275,7 +411,7 @@ export function MaintenanceDashboard() {
                   <th>Priority</th>
                   <th>Status</th>
                   <th>Assigned Tech</th>
-                  <th>Actions</th>
+                  <th>Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -287,26 +423,26 @@ export function MaintenanceDashboard() {
                     <tr key={wo.id}>
                       <td>
                         <div style={{ fontWeight: 700, color: "#FFFFFF" }}>{wo.id}</div>
-                        <div style={{ fontSize: "11px", color: "var(--text-secondary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "160px" }}>
+                        <div style={{ fontSize: "11px", color: "var(--text-secondary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "140px" }}>
                           {wo.title}
                         </div>
                       </td>
                       <td>
                         <Badge variant={isP1 ? "rose" : isP2 ? "amber" : "cyan"}>
-                          {wo.priority}
+                          {wo.priority.split(" - ")[0]}
                         </Badge>
                       </td>
                       <td>
                         <Badge variant="slate">{wo.status}</Badge>
                       </td>
                       <td style={{ fontSize: "12px", color: "#38BDF8" }}>
-                        {wo.assignedTechnician}
+                        {wo.assignedTechnician?.split(" ")[0]} {wo.assignedTechnician?.split(" ")[1]}
                       </td>
                       <td>
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => navigate(`/maintenance/work-orders/${wo.id}`)}
+                          onClick={() => navigate(`/work-orders/open?view=${wo.id}`)}
                         >
                           View
                         </Button>
@@ -319,6 +455,74 @@ export function MaintenanceDashboard() {
           </div>
         </Card>
       </div>
+
+      {/* QUICK DRILL-DOWN TILES */}
+      <Card>
+        <h3 style={{ fontSize: "15px", fontWeight: 700, color: "var(--text-primary)", marginBottom: "14px" }}>
+          Maintenance Hub Quick Navigation
+        </h3>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
+          <button
+            className="btn btn-secondary"
+            style={{ justifyContent: "flex-start", padding: "12px", gap: "10px", textAlign: "left", height: "auto" }}
+            onClick={() => navigate("/assets/hierarchy")}
+          >
+            <Layers size={18} color="#38BDF8" />
+            <div>
+              <div style={{ fontWeight: 700, fontSize: "13px" }}>Asset Hierarchy</div>
+              <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>Plant & Line Tree</div>
+            </div>
+          </button>
+
+          <button
+            className="btn btn-secondary"
+            style={{ justifyContent: "flex-start", padding: "12px", gap: "10px", textAlign: "left", height: "auto" }}
+            onClick={() => navigate("/preventive-maintenance/plans")}
+          >
+            <CalendarCheck size={18} color="#10B981" />
+            <div>
+              <div style={{ fontWeight: 700, fontSize: "13px" }}>PM Plans</div>
+              <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>Master SOP catalog</div>
+            </div>
+          </button>
+
+          <button
+            className="btn btn-secondary"
+            style={{ justifyContent: "flex-start", padding: "12px", gap: "10px", textAlign: "left", height: "auto" }}
+            onClick={() => navigate("/spare-parts/bom")}
+          >
+            <Package size={18} color="#A855F7" />
+            <div>
+              <div style={{ fontWeight: 700, fontSize: "13px" }}>Spare Parts BOM</div>
+              <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>Bill of materials</div>
+            </div>
+          </button>
+
+          <button
+            className="btn btn-secondary"
+            style={{ justifyContent: "flex-start", padding: "12px", gap: "10px", textAlign: "left", height: "auto" }}
+            onClick={() => navigate("/troubleshooting")}
+          >
+            <LifeBuoy size={18} color="#EAB308" />
+            <div>
+              <div style={{ fontWeight: 700, fontSize: "13px" }}>Troubleshooting</div>
+              <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>Diagnostic tree</div>
+            </div>
+          </button>
+
+          <button
+            className="btn btn-secondary"
+            style={{ justifyContent: "flex-start", padding: "12px", gap: "10px", textAlign: "left", height: "auto" }}
+            onClick={() => navigate("/reports")}
+          >
+            <FileSpreadsheet size={18} color="#60A5FA" />
+            <div>
+              <div style={{ fontWeight: 700, fontSize: "13px" }}>Reports Center</div>
+              <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>Export PDF / CSV</div>
+            </div>
+          </button>
+        </div>
+      </Card>
     </div>
   );
 }

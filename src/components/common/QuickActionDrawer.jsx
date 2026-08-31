@@ -5,12 +5,10 @@ import { PlusCircle, Wrench, AlertOctagon, CheckCircle2, Play, FilePlus2 } from 
 import { useNavigate } from "react-router-dom";
 import { useApp } from "../../context/AppContext";
 import { useCMMS } from "../../context/CMMSContext";
-import { useProduction } from "../../context/ProductionContext";
 
 export function QuickActionDrawer() {
   const { isQuickActionOpen, setIsQuickActionOpen, addToast } = useApp();
   const { assets, addWorkOrder, reportBreakdown } = useCMMS();
-  const { productionOrders } = useProduction();
   const navigate = useNavigate();
 
   const [activeForm, setActiveForm] = useState(null); // 'work_order' | 'breakdown' | 'batch'
@@ -47,7 +45,7 @@ export function QuickActionDrawer() {
     setActiveForm(null);
     setWoTitle("");
     setWoDescription("");
-    navigate(`/maintenance/work-orders/${newWO.id}`);
+    navigate(`/work-orders/open?view=${newWO.id}`);
   };
 
   const handleReportBD = (e) => {
@@ -74,7 +72,7 @@ export function QuickActionDrawer() {
     setIsQuickActionOpen(false);
     setActiveForm(null);
     setBdSymptom("");
-    navigate(`/maintenance/breakdowns/${newBD.id}`);
+    navigate(`/breakdowns/log`);
   };
 
   return (
@@ -84,8 +82,8 @@ export function QuickActionDrawer() {
         setIsQuickActionOpen(false);
         setActiveForm(null);
       }}
-      title="Manufacturing Fast Actions"
-      subtitle="Shop-floor fast dispatch, breakdown logs & batch controls"
+      title="Maintenance Fast Actions"
+      subtitle="Shop-floor fast dispatch, breakdown logs & diagnostic tools"
       width="480px"
     >
       {!activeForm ? (
@@ -93,7 +91,7 @@ export function QuickActionDrawer() {
           <div
             className="flow-card flow-card-interactive"
             onClick={() => setActiveForm("work_order")}
-            style={{ display: "flex", alignItems: "center", gap: "16px", padding: "16px" }}
+            style={{ display: "flex", alignItems: "center", gap: "16px", padding: "16px", cursor: "pointer" }}
           >
             <div style={{ padding: "12px", borderRadius: "10px", backgroundColor: "rgba(56, 189, 248, 0.15)", color: "#38BDF8" }}>
               <Wrench size={22} />
@@ -109,7 +107,7 @@ export function QuickActionDrawer() {
           <div
             className="flow-card flow-card-interactive"
             onClick={() => setActiveForm("breakdown")}
-            style={{ display: "flex", alignItems: "center", gap: "16px", padding: "16px" }}
+            style={{ display: "flex", alignItems: "center", gap: "16px", padding: "16px", cursor: "pointer" }}
           >
             <div style={{ padding: "12px", borderRadius: "10px", backgroundColor: "rgba(239, 68, 68, 0.15)", color: "#EF4444" }}>
               <AlertOctagon size={22} />
@@ -126,9 +124,9 @@ export function QuickActionDrawer() {
             className="flow-card flow-card-interactive"
             onClick={() => {
               setIsQuickActionOpen(false);
-              navigate("/maintenance/troubleshooting");
+              navigate("/troubleshooting");
             }}
-            style={{ display: "flex", alignItems: "center", gap: "16px", padding: "16px" }}
+            style={{ display: "flex", alignItems: "center", gap: "16px", padding: "16px", cursor: "pointer" }}
           >
             <div style={{ padding: "12px", borderRadius: "10px", backgroundColor: "rgba(16, 185, 129, 0.15)", color: "#10B981" }}>
               <Play size={22} />
@@ -136,7 +134,7 @@ export function QuickActionDrawer() {
             <div>
               <h4 style={{ fontSize: "14px", fontWeight: 700, color: "var(--text-primary)" }}>Guided Troubleshooting Wizard</h4>
               <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-                7-step symptom-to-solution diagnostic workflow
+                Diagnostic decision tree and verified solutions
               </p>
             </div>
           </div>
@@ -145,17 +143,17 @@ export function QuickActionDrawer() {
             className="flow-card flow-card-interactive"
             onClick={() => {
               setIsQuickActionOpen(false);
-              navigate("/quality");
+              navigate("/preventive-maintenance/execution");
             }}
-            style={{ display: "flex", alignItems: "center", gap: "16px", padding: "16px" }}
+            style={{ display: "flex", alignItems: "center", gap: "16px", padding: "16px", cursor: "pointer" }}
           >
             <div style={{ padding: "12px", borderRadius: "10px", backgroundColor: "rgba(245, 158, 11, 0.15)", color: "#F59E0B" }}>
               <CheckCircle2 size={22} />
             </div>
             <div>
-              <h4 style={{ fontSize: "14px", fontWeight: 700, color: "var(--text-primary)" }}>Log Quality / CCP Inspection</h4>
+              <h4 style={{ fontSize: "14px", fontWeight: 700, color: "var(--text-primary)" }}>Execute PM Checklist</h4>
               <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-                Record Brix, seal pressure, temperature & micro swab results
+                Digital PM inspection checklist & condition verification
               </p>
             </div>
           </div>

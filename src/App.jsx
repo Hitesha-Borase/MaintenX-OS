@@ -1,165 +1,170 @@
 import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AppProvider } from "./context/AppContext";
-import { RoleProvider, useRole } from "./context/RoleContext";
+import { RoleProvider } from "./context/RoleContext";
 import { CMMSProvider } from "./context/CMMSContext";
 import { ProductionProvider } from "./context/ProductionContext";
 import { QualityProvider } from "./context/QualityContext";
 import { InventoryProvider } from "./context/InventoryContext";
 import { ExceptionProvider } from "./context/ExceptionContext";
+import { AdminProvider } from "./context/AdminContext";
 
 import { AppLayout } from "./components/layout/AppLayout";
-import { Login } from "./pages/auth/Login";
-import { AlertOctagon } from "lucide-react";
 
-// Dashboards
-import { CommandCenter } from "./pages/dashboards/CommandCenter";
-import { OEEPerformance } from "./pages/dashboards/OEEPerformance";
-import { KPIAnalytics } from "./pages/dashboards/KPIAnalytics";
-import { AIAnalytics } from "./pages/dashboards/AIAnalytics";
-import { ExceptionControlTower } from "./pages/dashboards/ExceptionControlTower";
-import { MaintenanceDashboard } from "./pages/dashboards/MaintenanceDashboard";
+// 1. Dashboard
+import { AdminDashboard } from "./pages/admin/AdminDashboard";
 
-// CMMS
-import { AssetList } from "./pages/maintenance/AssetList";
-import { Asset360 } from "./pages/maintenance/Asset360";
-import { WorkOrderList } from "./pages/maintenance/WorkOrderList";
-import { WorkOrderDetail } from "./pages/maintenance/WorkOrderDetail";
-import { CreateWorkOrder } from "./pages/maintenance/CreateWorkOrder";
-import { PMScheduleList } from "./pages/maintenance/PMScheduleList";
-import { PMChecklistList } from "./pages/maintenance/PMChecklistList";
-import { PMChecklistExecute } from "./pages/maintenance/PMChecklistExecute";
-import { BreakdownList } from "./pages/maintenance/BreakdownList";
-import { BreakdownDetail } from "./pages/maintenance/BreakdownDetail";
-import { TroubleshootingWizard } from "./pages/maintenance/TroubleshootingWizard";
-import { VerifiedSolutions } from "./pages/maintenance/VerifiedSolutions";
-import { RepeatFailures } from "./pages/maintenance/RepeatFailures";
-import { ReliabilityAnalytics } from "./pages/maintenance/ReliabilityAnalytics";
-import { SparePartsInventory } from "./pages/maintenance/SparePartsInventory";
-import { CalibrationCenter } from "./pages/maintenance/CalibrationCenter";
-import { FailureCodes } from "./pages/maintenance/FailureCodes";
+// 2. User Management
+import { UsersPage } from "./pages/admin/users/UsersPage";
+import { UserInvitationsPage } from "./pages/admin/users/UserInvitationsPage";
+import { UserStatusPage } from "./pages/admin/users/UserStatusPage";
+import { UserActivityPage } from "./pages/admin/users/UserActivityPage";
 
-// Production & Planning
-import { ProductionDashboard } from "./pages/production/ProductionDashboard";
-import { PlanningDashboard } from "./pages/planning/PlanningDashboard";
+// 3. Roles & Permissions
+import { RolesPage } from "./pages/admin/roles/RolesPage";
+import { PermissionsMatrixPage } from "./pages/admin/roles/PermissionsMatrixPage";
+import { RoleMappingPage } from "./pages/admin/roles/RoleMappingPage";
+import { ApprovalPermissionsPage } from "./pages/admin/roles/ApprovalPermissionsPage";
 
-// Quality & Inventory
-import { QualityDashboard } from "./pages/quality/QualityDashboard";
-import { InventoryDashboard } from "./pages/inventory/InventoryDashboard";
+// 4. Organization
+import { CompaniesPage } from "./pages/admin/organization/CompaniesPage";
+import { PlantsPage } from "./pages/admin/organization/PlantsPage";
+import { DepartmentsPage } from "./pages/admin/organization/DepartmentsPage";
+import { LinesPage } from "./pages/admin/organization/LinesPage";
+import { OrgWorkCentersPage } from "./pages/admin/organization/OrgWorkCentersPage";
 
-// Cross-Functional
-import { Batch360Traceability } from "./pages/traceability/Batch360Traceability";
-import { CostingAnalytics } from "./pages/costing/CostingAnalytics";
-import { RCACAPAWizard } from "./pages/rca/RCACAPAWizard";
-import { LabourTrainingMatrix } from "./pages/labour/LabourTrainingMatrix";
-import { PurchasingSupplierHub } from "./pages/purchasing/PurchasingSupplierHub";
-import { DocumentSOPLibrary } from "./pages/documents/DocumentSOPLibrary";
-import { ReportsCenter } from "./pages/reports/ReportsCenter";
-import { MobileShopFloorHub } from "./pages/shopfloor/MobileShopFloorHub";
+// 5. Master Data
+import { ItemMasterPage } from "./pages/admin/masterdata/ItemMasterPage";
+import { ProductFamiliesPage } from "./pages/admin/masterdata/ProductFamiliesPage";
+import { UOMPage } from "./pages/admin/masterdata/UOMPage";
+import { PackagingMasterPage } from "./pages/admin/masterdata/PackagingMasterPage";
+import { BOMRecipesPage } from "./pages/admin/masterdata/BOMRecipesPage";
+import { RoutingsPage } from "./pages/admin/masterdata/RoutingsPage";
+import { OperationsPage } from "./pages/admin/masterdata/OperationsPage";
+import { WorkCentersMasterPage } from "./pages/admin/masterdata/WorkCentersMasterPage";
+import { LineTargetsPage } from "./pages/admin/masterdata/LineTargetsPage";
+import { ChangeoverMatrixPage } from "./pages/admin/masterdata/ChangeoverMatrixPage";
+import { SanitationAllergensPage } from "./pages/admin/masterdata/SanitationAllergensPage";
+import { LabourStandardsPage } from "./pages/admin/masterdata/LabourStandardsPage";
+import { SkillsMasterPage } from "./pages/admin/masterdata/SkillsMasterPage";
+import { QualitySpecsPage } from "./pages/admin/masterdata/QualitySpecsPage";
+import { CCPLimitsPage } from "./pages/admin/masterdata/CCPLimitsPage";
+import { MachineCapabilityPage } from "./pages/admin/masterdata/MachineCapabilityPage";
+import { StorageResourcesPage } from "./pages/admin/masterdata/StorageResourcesPage";
 
-function RoleProtectedRoute({ children, module }) {
-  const { currentRole, canAccessModule } = useRole();
+// 6. Integrations
+import { ERPIntegrationPage } from "./pages/admin/integrations/ERPIntegrationPage";
+import { IoTIntegrationPage } from "./pages/admin/integrations/IoTIntegrationPage";
+import { BarcodeIntegrationPage } from "./pages/admin/integrations/BarcodeIntegrationPage";
+import { APIsIntegrationPage } from "./pages/admin/integrations/APIsIntegrationPage";
 
-  if (!canAccessModule(module)) {
-    return (
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "60vh", padding: "40px", textAlign: "center", gap: "20px" }}>
-        <div style={{ padding: "16px", borderRadius: "50%", backgroundColor: "rgba(239, 68, 68, 0.15)", color: "#EF4444" }}>
-          <AlertOctagon size={48} />
-        </div>
-        <div>
-          <h2 style={{ fontSize: "20px", fontWeight: 800, color: "#FFFFFF" }}>Access Restricted</h2>
-          <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginTop: "8px", maxWidth: "480px", lineHeight: 1.5 }}>
-            Your simulated role perspective (<strong>{currentRole.label}</strong>) does not hold security clearance for the <strong style={{ color: "#38BDF8" }}>{module.toUpperCase()}</strong> module.
-          </p>
-        </div>
-        <div style={{ padding: "14px 18px", borderRadius: "8px", backgroundColor: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)", fontSize: "12px", color: "var(--text-muted)", maxWidth: "440px" }}>
-          To view this dashboard, please switch to a role with higher permission level (e.g. <strong>Plant Manager</strong> or <strong>Executive</strong>) using the switcher in the header above.
-        </div>
-      </div>
-    );
-  }
+// 7. Data Health
+import { MissingDataPage } from "./pages/admin/datahealth/MissingDataPage";
+import { DuplicatesPage } from "./pages/admin/datahealth/DuplicatesPage";
+import { InvalidReferencesPage } from "./pages/admin/datahealth/InvalidReferencesPage";
+import { BrokenRelationshipsPage } from "./pages/admin/datahealth/BrokenRelationshipsPage";
+import { StaleRecordsPage } from "./pages/admin/datahealth/StaleRecordsPage";
+import { DataRemediationPage } from "./pages/admin/datahealth/DataRemediationPage";
 
-  return children;
-}
+// 8. Security
+import { SecurityPage } from "./pages/admin/security/SecurityPage";
 
-function AppContent() {
-  const { isAuthenticated, currentRole } = useRole();
+// 9. Configuration
+import { ConfigurationPage } from "./pages/admin/config/ConfigurationPage";
 
-  if (!isAuthenticated) {
-    return <Login />;
-  }
+// 10. Audit Logs
+import { AuditLogsPage } from "./pages/admin/audit/AuditLogsPage";
 
+// 11. Migration
+import { MigrationPage } from "./pages/admin/migration/MigrationPage";
+
+// 12. System Reports
+import { SystemReportsPage } from "./pages/admin/reports/SystemReportsPage";
+
+export function AppContent() {
   return (
     <BrowserRouter>
       <Routes>
         <Route element={<AppLayout />}>
-          <Route path="/" element={<Navigate to={currentRole?.defaultRoute || "/command-center"} replace />} />
-          
-          {/* Dashboards */}
-          <Route path="/command-center" element={<RoleProtectedRoute module="dashboards"><CommandCenter /></RoleProtectedRoute>} />
-          <Route path="/oee-performance" element={<RoleProtectedRoute module="dashboards"><OEEPerformance /></RoleProtectedRoute>} />
-          <Route path="/kpi-analytics" element={<RoleProtectedRoute module="dashboards"><KPIAnalytics /></RoleProtectedRoute>} />
-          <Route path="/ai-analytics" element={<RoleProtectedRoute module="dashboards"><AIAnalytics /></RoleProtectedRoute>} />
-          <Route path="/exception-control-tower" element={<RoleProtectedRoute module="dashboards"><ExceptionControlTower /></RoleProtectedRoute>} />
+          {/* Default Redirect to Dashboard */}
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
-          {/* CMMS / Maintenance */}
-          <Route path="/maintenance" element={<RoleProtectedRoute module="cmms"><MaintenanceDashboard /></RoleProtectedRoute>} />
-          <Route path="/maintenance/assets" element={<RoleProtectedRoute module="cmms"><AssetList /></RoleProtectedRoute>} />
-          <Route path="/maintenance/assets/:id" element={<RoleProtectedRoute module="cmms"><Asset360 /></RoleProtectedRoute>} />
-          <Route path="/maintenance/work-orders" element={<RoleProtectedRoute module="cmms"><WorkOrderList /></RoleProtectedRoute>} />
-          <Route path="/maintenance/work-orders/new" element={<RoleProtectedRoute module="cmms"><CreateWorkOrder /></RoleProtectedRoute>} />
-          <Route path="/maintenance/work-orders/:id" element={<RoleProtectedRoute module="cmms"><WorkOrderDetail /></RoleProtectedRoute>} />
-          <Route path="/maintenance/pm-schedules" element={<RoleProtectedRoute module="cmms"><PMScheduleList /></RoleProtectedRoute>} />
-          <Route path="/maintenance/pm-checklists" element={<RoleProtectedRoute module="cmms"><PMChecklistList /></RoleProtectedRoute>} />
-          <Route path="/maintenance/checklists/:id" element={<RoleProtectedRoute module="cmms"><PMChecklistExecute /></RoleProtectedRoute>} />
-          <Route path="/maintenance/breakdowns" element={<RoleProtectedRoute module="cmms"><BreakdownList /></RoleProtectedRoute>} />
-          <Route path="/maintenance/breakdowns/:id" element={<RoleProtectedRoute module="cmms"><BreakdownDetail /></RoleProtectedRoute>} />
-          <Route path="/maintenance/troubleshooting" element={<RoleProtectedRoute module="cmms"><TroubleshootingWizard /></RoleProtectedRoute>} />
-          <Route path="/maintenance/verified-solutions" element={<RoleProtectedRoute module="cmms"><VerifiedSolutions /></RoleProtectedRoute>} />
-          <Route path="/maintenance/repeat-failures" element={<RoleProtectedRoute module="cmms"><RepeatFailures /></RoleProtectedRoute>} />
-          <Route path="/maintenance/reliability" element={<RoleProtectedRoute module="cmms"><ReliabilityAnalytics /></RoleProtectedRoute>} />
-          <Route path="/maintenance/spare-parts" element={<RoleProtectedRoute module="cmms"><SparePartsInventory /></RoleProtectedRoute>} />
-          <Route path="/maintenance/calibration" element={<RoleProtectedRoute module="cmms"><CalibrationCenter /></RoleProtectedRoute>} />
-          <Route path="/maintenance/failure-codes" element={<RoleProtectedRoute module="cmms"><FailureCodes /></RoleProtectedRoute>} />
+          {/* 1. Dashboard */}
+          <Route path="/dashboard" element={<AdminDashboard />} />
 
-          {/* Production / MES */}
-          <Route path="/production" element={<RoleProtectedRoute module="production"><ProductionDashboard /></RoleProtectedRoute>} />
+          {/* 2. User Management */}
+          <Route path="/users" element={<UsersPage />} />
+          <Route path="/users/invitations" element={<UserInvitationsPage />} />
+          <Route path="/users/status" element={<UserStatusPage />} />
+          <Route path="/users/activity" element={<UserActivityPage />} />
 
-          {/* Planning / APS / MRP */}
-          <Route path="/planning" element={<RoleProtectedRoute module="planning"><PlanningDashboard /></RoleProtectedRoute>} />
+          {/* 3. Roles & Permissions */}
+          <Route path="/roles" element={<RolesPage />} />
+          <Route path="/roles/permissions" element={<PermissionsMatrixPage />} />
+          <Route path="/roles/mapping" element={<RoleMappingPage />} />
+          <Route path="/roles/approval-permissions" element={<ApprovalPermissionsPage />} />
 
-          {/* Quality / QMS */}
-          <Route path="/quality" element={<RoleProtectedRoute module="quality"><QualityDashboard /></RoleProtectedRoute>} />
+          {/* 4. Organization */}
+          <Route path="/organization" element={<Navigate to="/organization/companies" replace />} />
+          <Route path="/organization/companies" element={<CompaniesPage />} />
+          <Route path="/organization/plants" element={<PlantsPage />} />
+          <Route path="/organization/departments" element={<DepartmentsPage />} />
+          <Route path="/organization/lines" element={<LinesPage />} />
+          <Route path="/organization/work-centers" element={<OrgWorkCentersPage />} />
 
-          {/* Inventory / WMS */}
-          <Route path="/inventory" element={<RoleProtectedRoute module="inventory"><InventoryDashboard /></RoleProtectedRoute>} />
+          {/* 5. Master Data */}
+          <Route path="/master-data" element={<Navigate to="/master-data/items" replace />} />
+          <Route path="/master-data/items" element={<ItemMasterPage />} />
+          <Route path="/master-data/product-families" element={<ProductFamiliesPage />} />
+          <Route path="/master-data/uom" element={<UOMPage />} />
+          <Route path="/master-data/packaging" element={<PackagingMasterPage />} />
+          <Route path="/master-data/bom" element={<BOMRecipesPage />} />
+          <Route path="/master-data/routings" element={<RoutingsPage />} />
+          <Route path="/master-data/operations" element={<OperationsPage />} />
+          <Route path="/master-data/work-centers" element={<WorkCentersMasterPage />} />
+          <Route path="/master-data/line-targets" element={<LineTargetsPage />} />
+          <Route path="/master-data/changeover-matrix" element={<ChangeoverMatrixPage />} />
+          <Route path="/master-data/sanitation-allergens" element={<SanitationAllergensPage />} />
+          <Route path="/master-data/labour-standards" element={<LabourStandardsPage />} />
+          <Route path="/master-data/skills" element={<SkillsMasterPage />} />
+          <Route path="/master-data/quality-specs" element={<QualitySpecsPage />} />
+          <Route path="/master-data/ccp-limits" element={<CCPLimitsPage />} />
+          <Route path="/master-data/machine-capability" element={<MachineCapabilityPage />} />
+          <Route path="/master-data/storage-resources" element={<StorageResourcesPage />} />
 
-          {/* Traceability (Batch 360) */}
-          <Route path="/traceability" element={<RoleProtectedRoute module="traceability"><Batch360Traceability /></RoleProtectedRoute>} />
+          {/* 6. Integrations */}
+          <Route path="/integrations" element={<Navigate to="/integrations/erp" replace />} />
+          <Route path="/integrations/erp" element={<ERPIntegrationPage />} />
+          <Route path="/integrations/iot" element={<IoTIntegrationPage />} />
+          <Route path="/integrations/barcode" element={<BarcodeIntegrationPage />} />
+          <Route path="/integrations/apis" element={<APIsIntegrationPage />} />
 
-          {/* Costing */}
-          <Route path="/costing" element={<RoleProtectedRoute module="costing"><CostingAnalytics /></RoleProtectedRoute>} />
+          {/* 7. Data Health */}
+          <Route path="/data-health" element={<Navigate to="/data-health/missing-data" replace />} />
+          <Route path="/data-health/missing-data" element={<MissingDataPage />} />
+          <Route path="/data-health/duplicates" element={<DuplicatesPage />} />
+          <Route path="/data-health/invalid-references" element={<InvalidReferencesPage />} />
+          <Route path="/data-health/broken-relationships" element={<BrokenRelationshipsPage />} />
+          <Route path="/data-health/stale-records" element={<StaleRecordsPage />} />
+          <Route path="/data-health/remediation" element={<DataRemediationPage />} />
 
-          {/* RCA / CAPA */}
-          <Route path="/rca-capa" element={<RoleProtectedRoute module="rca"><RCACAPAWizard /></RoleProtectedRoute>} />
+          {/* 8. Security */}
+          <Route path="/security" element={<SecurityPage />} />
 
-          {/* Labour & Skills */}
-          <Route path="/labour" element={<RoleProtectedRoute module="labour"><LabourTrainingMatrix /></RoleProtectedRoute>} />
+          {/* 9. Configuration */}
+          <Route path="/configuration" element={<ConfigurationPage />} />
 
-          {/* Purchasing */}
-          <Route path="/purchasing" element={<RoleProtectedRoute module="purchasing"><PurchasingSupplierHub /></RoleProtectedRoute>} />
+          {/* 10. Audit Logs */}
+          <Route path="/audit-logs" element={<AuditLogsPage />} />
 
-          {/* Documents & SOPs */}
-          <Route path="/documents" element={<RoleProtectedRoute module="documents"><DocumentSOPLibrary /></RoleProtectedRoute>} />
+          {/* 11. Migration */}
+          <Route path="/migration" element={<MigrationPage />} />
 
-          {/* Reports */}
-          <Route path="/reports" element={<RoleProtectedRoute module="reports"><ReportsCenter /></RoleProtectedRoute>} />
-
-          {/* Shop Floor Mobile Mode */}
-          <Route path="/shopfloor" element={<RoleProtectedRoute module="shopfloor"><MobileShopFloorHub /></RoleProtectedRoute>} />
+          {/* 12. System Reports */}
+          <Route path="/system-reports" element={<SystemReportsPage />} />
 
           {/* Catch-all */}
-          <Route path="*" element={<Navigate to={currentRole?.defaultRoute || "/command-center"} replace />} />
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Route>
       </Routes>
     </BrowserRouter>
@@ -175,7 +180,9 @@ export default function App() {
             <QualityProvider>
               <InventoryProvider>
                 <ExceptionProvider>
-                  <AppContent />
+                  <AdminProvider>
+                    <AppContent />
+                  </AdminProvider>
                 </ExceptionProvider>
               </InventoryProvider>
             </QualityProvider>
