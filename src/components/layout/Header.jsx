@@ -1,0 +1,229 @@
+import React, { useState } from "react";
+import {
+  Search,
+  Plus,
+  Bell,
+  Building2,
+  Calendar,
+  Clock,
+  UserCheck,
+  ChevronDown,
+  Menu,
+  Sparkles,
+  QrCode,
+  Shield
+} from "lucide-react";
+import { Breadcrumbs } from "./Breadcrumbs";
+import { useApp } from "../../context/AppContext";
+import { useRole } from "../../context/RoleContext";
+import { Button } from "../common/Button";
+import { Badge } from "../common/Badge";
+
+export function Header() {
+  const {
+    selectedPlant,
+    setSelectedPlant,
+    PLANTS,
+    selectedShift,
+    setSelectedShift,
+    SHIFTS,
+    selectedDate,
+    setIsSearchOpen,
+    setIsQuickActionOpen,
+    openQrModal,
+    mobileMenuOpen,
+    setMobileMenuOpen
+  } = useApp();
+
+  const { currentRole, setRoleById, ROLES } = useRole();
+  const [showRoleDropdown, setShowRoleDropdown] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+
+  return (
+    <header className="app-header">
+      {/* Left: Mobile Toggle & Breadcrumbs */}
+      <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+        <button
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          className="btn btn-ghost"
+          style={{ padding: "6px", display: "flex", alignItems: "center" }}
+        >
+          <Menu size={20} />
+        </button>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+          <Breadcrumbs />
+        </div>
+      </div>
+
+      {/* Center/Right: Facility, Shift, Search, Role Switcher & Actions */}
+      <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+        {/* Plant Selector */}
+        <div style={{ display: "none", alignItems: "center", gap: "6px" }} className="header-plant-select">
+          <Building2 size={15} color="var(--text-muted)" />
+          <select
+            className="form-select"
+            style={{ height: "34px", padding: "4px 8px", fontSize: "12px", width: "auto" }}
+            value={selectedPlant.id}
+            onChange={(e) => {
+              const found = PLANTS.find((p) => p.id === e.target.value);
+              if (found) setSelectedPlant(found);
+            }}
+          >
+            {PLANTS.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Shift Badge */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "6px",
+            padding: "4px 10px",
+            borderRadius: "8px",
+            backgroundColor: "var(--bg-card-subtle)",
+            border: "1px solid var(--border-subtle)",
+            fontSize: "12px",
+            color: "var(--text-secondary)"
+          }}
+        >
+          <Clock size={13} color="#34D399" />
+          <span style={{ fontWeight: 600, color: "var(--text-primary)" }}>Shift A</span>
+          <span style={{ fontSize: "10px", color: "#34D399" }}>● LIVE</span>
+        </div>
+
+        {/* Global Search Trigger */}
+        <button
+          onClick={() => setIsSearchOpen(true)}
+          className="btn btn-secondary"
+          style={{
+            height: "34px",
+            padding: "0 12px",
+            fontSize: "12px",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            color: "var(--text-muted)"
+          }}
+          title="Search anything (Cmd+K / Ctrl+K)"
+        >
+          <Search size={14} />
+          <span style={{ display: "none" }} className="search-text-placeholder">Search...</span>
+          <kbd
+            style={{
+              padding: "1px 5px",
+              borderRadius: "4px",
+              backgroundColor: "#1E293B",
+              fontSize: "10px",
+              fontFamily: "var(--font-mono)",
+              color: "#94A3B8"
+            }}
+          >
+            ⌘K
+          </kbd>
+        </button>
+
+        {/* Quick QR Scanner / Label trigger */}
+        <Button
+          variant="secondary"
+          size="sm"
+          icon={QrCode}
+          onClick={() => openQrModal("Line 1 Asset QR Scanner", "FM-001", { name: "High-Speed Rotary Filler 12-Head", location: "Bay 4A - Cleanroom Zone B" })}
+          title="Scan or View Asset QR Code"
+        />
+
+        {/* ROLE SWITCHER DROPDOWN */}
+        <div style={{ position: "relative" }}>
+          <button
+            onClick={() => setShowRoleDropdown(!showRoleDropdown)}
+            className="btn btn-secondary"
+            style={{
+              height: "34px",
+              padding: "0 12px",
+              fontSize: "12px",
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              border: "1px solid #38BDF8",
+              backgroundColor: "rgba(56, 189, 248, 0.1)"
+            }}
+          >
+            <UserCheck size={14} color="#38BDF8" />
+            <span style={{ fontWeight: 600, color: "#FFFFFF" }}>{currentRole.label}</span>
+            <ChevronDown size={14} color="#38BDF8" />
+          </button>
+
+          {showRoleDropdown && (
+            <div
+              style={{
+                position: "absolute",
+                right: 0,
+                top: "40px",
+                width: "260px",
+                backgroundColor: "var(--bg-card)",
+                border: "1px solid var(--border-highlight)",
+                borderRadius: "10px",
+                boxShadow: "var(--shadow-lg)",
+                zIndex: 60,
+                padding: "8px",
+                display: "flex",
+                flexDirection: "column",
+                gap: "2px"
+              }}
+            >
+              <div style={{ padding: "6px 8px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
+                Switch Frontend Role
+              </div>
+              {ROLES.map((r) => (
+                <div
+                  key={r.id}
+                  onClick={() => {
+                    setRoleById(r.id);
+                    setShowRoleDropdown(false);
+                  }}
+                  style={{
+                    padding: "8px 10px",
+                    borderRadius: "6px",
+                    fontSize: "12px",
+                    fontWeight: currentRole.id === r.id ? 700 : 500,
+                    color: currentRole.id === r.id ? "#38BDF8" : "var(--text-primary)",
+                    backgroundColor: currentRole.id === r.id ? "rgba(56, 189, 248, 0.15)" : "transparent",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between"
+                  }}
+                >
+                  <span>{r.label}</span>
+                  {currentRole.id === r.id && <span style={{ fontSize: "10px", color: "#38BDF8" }}>● Active</span>}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Fast Action Drawer Trigger */}
+        <Button
+          variant="primary"
+          size="sm"
+          icon={Plus}
+          onClick={() => setIsQuickActionOpen(true)}
+        >
+          Fast Action
+        </Button>
+      </div>
+
+      <style>{`
+        @media (min-width: 900px) {
+          .header-plant-select { display: flex !important; }
+          .search-text-placeholder { display: inline !important; }
+        }
+      `}</style>
+    </header>
+  );
+}
