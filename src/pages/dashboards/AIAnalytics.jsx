@@ -28,7 +28,7 @@ export function AIAnalytics() {
   const [chatMessages, setChatMessages] = useState([
     {
       sender: "AI",
-      text: "Hello! I am your FlowState Manufacturing Operations Assistant. You can ask me questions about line downtime, equipment FFT vibration anomalies, recipe yields, or shortage risks.",
+      text: "Hello! I am your MaintenX OS Manufacturing Operations Assistant. You can ask me questions about line downtime, equipment FFT vibration anomalies, recipe yields, or shortage risks.",
       time: "10:45 AM",
       tag: null
     }
@@ -267,7 +267,7 @@ export function AIAnalytics() {
             </div>
             <div>
               <h3 style={{ fontSize: "15px", fontWeight: 700, color: "var(--text-primary)" }}>
-                FlowState Operator Q&A Assistant
+                MaintenX OS Operator Q&A Assistant
               </h3>
               <p style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
                 Ask real-time questions about plant diagnostics, downtime logs, and maintenance procedures

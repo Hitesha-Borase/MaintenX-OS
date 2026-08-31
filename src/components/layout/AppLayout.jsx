@@ -12,17 +12,16 @@ export function AppLayout() {
   const { toasts, removeToast } = useApp();
 
   return (
-    <div className="app-container">
-      {/* Global Sidebar */}
-      <Sidebar />
+    <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", width: "100vw", backgroundColor: "var(--bg-main)" }}>
+      {/* Global Header - Full Width */}
+      <Header />
 
-      {/* Main Viewport Area */}
-      <div className="main-viewport">
-        {/* Global Header */}
-        <Header />
+      <div className="app-container" style={{ display: "flex", flex: 1, minHeight: 0, width: "100%" }}>
+        {/* Global Sidebar */}
+        <Sidebar />
 
-        {/* Dynamic Page Content */}
-        <main className="page-content-wrapper">
+        {/* Dynamic Page Content wrapper */}
+        <main className="page-content-wrapper" style={{ flex: 1, overflowY: "auto", minWidth: 0 }}>
           <Outlet />
         </main>
       </div>
