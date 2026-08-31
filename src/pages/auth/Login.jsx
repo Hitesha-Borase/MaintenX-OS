@@ -18,7 +18,8 @@ import {
   CalendarRange,
   GraduationCap,
   ShieldAlert,
-  CheckCircle2
+  CheckCircle2,
+  Settings
 } from "lucide-react";
 import { Button } from "../../components/common/Button";
 
@@ -35,7 +36,8 @@ const iconMap = {
   ShoppingBag: ShoppingBag,
   CalendarRange: CalendarRange,
   GraduationCap: GraduationCap,
-  ShieldAlert: ShieldAlert
+  ShieldAlert: ShieldAlert,
+  Settings: Settings
 };
 
 export function Login() {

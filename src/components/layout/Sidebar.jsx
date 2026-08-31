@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 import {
   LayoutDashboard,
   Gauge,
@@ -22,28 +22,65 @@ import {
   ChevronRight,
   ChevronLeft,
   Smartphone,
-  Cpu
+  Cpu,
+  ShieldAlert,
+  Clock,
+  Layers,
+  Settings,
+  Briefcase,
+  Bell,
+  User
 } from "lucide-react";
 import { useRole } from "../../context/RoleContext";
 import { useApp } from "../../context/AppContext";
 import { useCMMS } from "../../context/CMMSContext";
 import { useExceptions } from "../../context/ExceptionContext";
 
+const iconMap = {
+  LayoutDashboard,
+  Gauge,
+  LineChart,
+  BrainCircuit,
+  AlertTriangle,
+  Wrench,
+  Factory,
+  CalendarRange,
+  ShieldCheck,
+  Package,
+  Boxes,
+  DollarSign,
+  SearchCode,
+  Users,
+  ShoppingBag,
+  FileText,
+  FileSpreadsheet,
+  Smartphone,
+  Cpu,
+  ShieldAlert,
+  Clock,
+  Layers,
+  Settings,
+  Briefcase,
+  Bell,
+  User
+};
+
 export function Sidebar() {
-  const { currentRole, canAccessModule, logout } = useRole();
+  const { currentRole, logout, NAVIGATION_CONFIG } = useRole();
   const { sidebarCollapsed, setSidebarCollapsed, mobileMenuOpen, setMobileMenuOpen, addToast } = useApp();
   const { workOrders, assets } = useCMMS();
   const { exceptions } = useExceptions();
-  const location = useLocation();
 
   // Collapsible sub-navigation groups
   const [openGroups, setOpenGroups] = useState({
-    dashboards: true,
-    maintenance: true,
-    production: false,
-    planning: false,
-    quality: false,
-    inventory: false
+    Production: true,
+    Planning: true,
+    Inventory: true,
+    Quality: true,
+    CMMS: true,
+    Dashboards: true,
+    Settings: true,
+    Analytics: true
   });
 
   const toggleGroup = (groupKey) => {
@@ -84,6 +121,33 @@ export function Sidebar() {
     transition: "all 0.15s ease",
     whiteSpace: "nowrap"
   });
+
+  const roleMenu = NAVIGATION_CONFIG[currentRole.id] || [];
+
+  const renderBadge = (label) => {
+    if (label === "Work Orders" && activeWOCount > 0) {
+      return (
+        <span style={{ fontSize: "10px", backgroundColor: "rgba(56, 189, 248, 0.2)", color: "#38BDF8", padding: "1px 5px", borderRadius: "4px" }}>
+          {activeWOCount}
+        </span>
+      );
+    }
+    if ((label === "Escalations" || label === "Exception Tower") && openP1Count > 0) {
+      return (
+        <span style={{ fontSize: "10px", backgroundColor: "#EF4444", color: "#FFFFFF", padding: "1px 6px", borderRadius: "10px", fontWeight: 700 }}>
+          {openP1Count} P1
+        </span>
+      );
+    }
+    if (label === "Assets Registry") {
+      return (
+        <span style={{ fontSize: "10px", color: "var(--text-muted)" }}>
+          {assets.length}
+        </span>
+      );
+    }
+    return null;
+  };
 
   return (
     <>
@@ -158,299 +222,82 @@ export function Sidebar() {
           </button>
         </div>
 
-        {/* Navigation Items List */}
-        <div style={{ flex: 1, overflowY: "auto", padding: "12px 10px", display: "flex", flexDirection: "column", gap: "4px" }}>
+        {/* Dynamic Navigation Items List */}
+        <div style={{ flex: 1, overflowY: "auto", padding: "12px 10px", display: "flex", flexDirection: "column", gap: "6px" }}>
           
-          {/* Shop Floor Mobile Launcher */}
-          {canAccessModule("shopfloor") && (
-            <>
-              <NavLink to="/shopfloor" end style={navItemStyle} onClick={() => setMobileMenuOpen(false)}>
-                <Smartphone size={17} color="#34D399" />
-                {!sidebarCollapsed && <span>Mobile Shop-Floor Hub</span>}
-              </NavLink>
-              
-              {currentRole.id === "operator" && (
-                <div style={navItemStyle({ isActive: false })} onClick={() => { setMobileMenuOpen(false); addToast("Task execution pending backend integration.", "info"); }}>
-                  <FileText size={17} color="#F59E0B" />
-                  {!sidebarCollapsed && <span>My Tasks</span>}
-                </div>
-              )}
-            </>
-          )}
+          {roleMenu.map((menuItem, idx) => {
+            // Check if it's a Collapsible Group
+            if (menuItem.group) {
+              const isGroupOpen = openGroups[menuItem.group] !== false;
+              return (
+                <div key={idx} style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                  <div
+                    onClick={() => toggleGroup(menuItem.group)}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      padding: "8px 12px",
+                      fontSize: "11px",
+                      fontWeight: 700,
+                      color: "var(--text-muted)",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em",
+                      cursor: "pointer",
+                      marginTop: "6px"
+                    }}
+                  >
+                    {!sidebarCollapsed && <span>{menuItem.group}</span>}
+                    {!sidebarCollapsed && (isGroupOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />)}
+                  </div>
 
-          {/* Dashboards Section */}
-          {canAccessModule("dashboards") && (
-            <div>
-              <div
-                onClick={() => toggleGroup("dashboards")}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  padding: "8px 12px",
-                  fontSize: "11px",
-                  fontWeight: 700,
-                  color: "var(--text-muted)",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.05em",
-                  cursor: "pointer"
-                }}
-              >
-                {!sidebarCollapsed && <span>Control & Dashboards</span>}
-                {!sidebarCollapsed && (openGroups.dashboards ? <ChevronDown size={14} /> : <ChevronRight size={14} />)}
-              </div>
-
-              {(!sidebarCollapsed ? openGroups.dashboards : true) && (
-                <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                  <NavLink to="/command-center" style={navItemStyle} onClick={() => setMobileMenuOpen(false)}>
-                    <LayoutDashboard size={17} />
-                    {!sidebarCollapsed && <span>Command Center</span>}
-                  </NavLink>
-
-                  <NavLink to="/oee-performance" style={navItemStyle} onClick={() => setMobileMenuOpen(false)}>
-                    <Gauge size={17} />
-                    {!sidebarCollapsed && <span>OEE & Performance</span>}
-                  </NavLink>
-
-                  <NavLink to="/kpi-analytics" style={navItemStyle} onClick={() => setMobileMenuOpen(false)}>
-                    <LineChart size={17} />
-                    {!sidebarCollapsed && <span>KPI & Real-Time</span>}
-                  </NavLink>
-
-                  <NavLink to="/ai-analytics" style={navItemStyle} onClick={() => setMobileMenuOpen(false)}>
-                    <BrainCircuit size={17} color="#A855F7" />
-                    {!sidebarCollapsed && <span>AI Decision Support</span>}
-                  </NavLink>
-
-                  <NavLink to="/exception-control-tower" style={navItemStyle} onClick={() => setMobileMenuOpen(false)}>
-                    <AlertTriangle size={17} color={openP1Count > 0 ? "#EF4444" : "#F59E0B"} />
-                    {!sidebarCollapsed && (
-                      <div style={{ display: "flex", alignItems: "center", justifyBox: "space-between", width: "100%" }}>
-                        <span>Exception Tower</span>
-                        {openP1Count > 0 && (
-                          <span style={{ fontSize: "10px", backgroundColor: "#EF4444", color: "#FFFFFF", padding: "1px 6px", borderRadius: "10px", fontWeight: 700, marginLeft: "auto" }}>
-                            {openP1Count} P1
-                          </span>
-                        )}
-                      </div>
-                    )}
-                  </NavLink>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* CMMS / Maintenance Section */}
-          {canAccessModule("cmms") && (
-            <div style={{ marginTop: "8px" }}>
-              <div
-                onClick={() => toggleGroup("maintenance")}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  padding: "8px 12px",
-                  fontSize: "11px",
-                  fontWeight: 700,
-                  color: "var(--text-muted)",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.05em",
-                  cursor: "pointer"
-                }}
-              >
-                {!sidebarCollapsed && <span>Maintenance / CMMS</span>}
-                {!sidebarCollapsed && (openGroups.maintenance ? <ChevronDown size={14} /> : <ChevronRight size={14} />)}
-              </div>
-
-              {(!sidebarCollapsed ? openGroups.maintenance : true) && (
-                <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                  {currentRole.id !== "operator" && (
-                    <NavLink to="/maintenance" end style={navItemStyle} onClick={() => setMobileMenuOpen(false)}>
-                      <Wrench size={17} color="#38BDF8" />
-                      {!sidebarCollapsed && <span>CMMS Dashboard</span>}
-                    </NavLink>
-                  )}
-
-                  {!sidebarCollapsed && (
-                    <>
-                      {currentRole.id !== "operator" && (
-                        <>
-                          <NavLink to="/maintenance/assets" style={subNavItemStyle} onClick={() => setMobileMenuOpen(false)}>
-                            <span>Assets Registry</span>
-                            <span style={{ fontSize: "10px", color: "var(--text-muted)" }}>{assets.length}</span>
+                  {(isGroupOpen || sidebarCollapsed) && (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                      {menuItem.items.map((subItem, sIdx) => {
+                        const Icon = iconMap[subItem.icon] || Wrench;
+                        return (
+                          <NavLink
+                            key={sIdx}
+                            to={subItem.path}
+                            style={sidebarCollapsed ? navItemStyle : subNavItemStyle}
+                            onClick={() => setMobileMenuOpen(false)}
+                          >
+                            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                              {sidebarCollapsed && <Icon size={17} />}
+                              <span>{subItem.label}</span>
+                            </div>
+                            {renderBadge(subItem.label)}
                           </NavLink>
-
-                          <NavLink to="/maintenance/work-orders" style={subNavItemStyle} onClick={() => setMobileMenuOpen(false)}>
-                            <span>Work Orders</span>
-                            <span style={{ fontSize: "10px", backgroundColor: "rgba(56, 189, 248, 0.2)", color: "#38BDF8", padding: "1px 5px", borderRadius: "4px" }}>
-                              {activeWOCount}
-                            </span>
-                          </NavLink>
-
-                          <NavLink to="/maintenance/pm-schedules" style={subNavItemStyle} onClick={() => setMobileMenuOpen(false)}>
-                            <span>PM Scheduling</span>
-                          </NavLink>
-                        </>
-                      )}
-
-                      <NavLink to="/maintenance/pm-checklists" style={subNavItemStyle} onClick={() => setMobileMenuOpen(false)}>
-                        <span>PM Checklists</span>
-                      </NavLink>
-
-                      {currentRole.id !== "operator" && (
-                        <>
-                          <NavLink to="/maintenance/breakdowns" style={subNavItemStyle} onClick={() => setMobileMenuOpen(false)}>
-                            <span>Breakdowns</span>
-                          </NavLink>
-
-                          <NavLink to="/maintenance/troubleshooting" style={subNavItemStyle} onClick={() => setMobileMenuOpen(false)}>
-                            <span>Troubleshooting</span>
-                          </NavLink>
-
-                          <NavLink to="/maintenance/verified-solutions" style={subNavItemStyle} onClick={() => setMobileMenuOpen(false)}>
-                            <span>Verified Solutions</span>
-                          </NavLink>
-
-                          <NavLink to="/maintenance/repeat-failures" style={subNavItemStyle} onClick={() => setMobileMenuOpen(false)}>
-                            <span>Repeat Failures</span>
-                          </NavLink>
-
-                          <NavLink to="/maintenance/reliability" style={subNavItemStyle} onClick={() => setMobileMenuOpen(false)}>
-                            <span>Reliability (MTBF)</span>
-                          </NavLink>
-
-                          <NavLink to="/maintenance/spare-parts" style={subNavItemStyle} onClick={() => setMobileMenuOpen(false)}>
-                            <span>Spare Parts</span>
-                          </NavLink>
-
-                          <NavLink to="/maintenance/calibration" style={subNavItemStyle} onClick={() => setMobileMenuOpen(false)}>
-                            <span>Calibration</span>
-                          </NavLink>
-
-                          <NavLink to="/maintenance/failure-codes" style={subNavItemStyle} onClick={() => setMobileMenuOpen(false)}>
-                            <span>Failure Codes</span>
-                          </NavLink>
-                        </>
-                      )}
-                    </>
+                        );
+                      })}
+                    </div>
                   )}
                 </div>
-              )}
-            </div>
-          )}
+              );
+            }
 
-          {/* Production / MES */}
-          {canAccessModule("production") && (
-            <div style={{ marginTop: "8px" }}>
-              <NavLink to="/production" style={navItemStyle} onClick={() => setMobileMenuOpen(false)}>
-                <Factory size={17} color="#F59E0B" />
-                {!sidebarCollapsed && <span>Production / MES</span>}
+            // Otherwise, render as a Top-Level Menu Link
+            const Icon = iconMap[menuItem.icon] || Wrench;
+            return (
+              <NavLink
+                key={idx}
+                to={menuItem.path}
+                style={navItemStyle}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <Icon size={17} />
+                {!sidebarCollapsed && (
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
+                    <span>{menuItem.label}</span>
+                    {renderBadge(menuItem.label)}
+                  </div>
+                )}
               </NavLink>
-            </div>
-          )}
-
-          {/* Planning / APS / MRP */}
-          {canAccessModule("planning") && (
-            <div>
-              <NavLink to="/planning" style={navItemStyle} onClick={() => setMobileMenuOpen(false)}>
-                <CalendarRange size={17} color="#6366F1" />
-                {!sidebarCollapsed && <span>Planning & MRP</span>}
-              </NavLink>
-            </div>
-          )}
-
-          {/* Quality / QMS */}
-          {canAccessModule("quality") && (
-            <div>
-              <NavLink to="/quality" style={navItemStyle} onClick={() => setMobileMenuOpen(false)}>
-                <ShieldCheck size={17} color="#10B981" />
-                {!sidebarCollapsed && <span>Quality (QMS)</span>}
-              </NavLink>
-            </div>
-          )}
-
-          {/* WMS / Inventory */}
-          {canAccessModule("inventory") && (
-            <div>
-              <NavLink to="/inventory" style={navItemStyle} onClick={() => setMobileMenuOpen(false)}>
-                <Package size={17} />
-                {!sidebarCollapsed && <span>WMS / Inventory</span>}
-              </NavLink>
-            </div>
-          )}
-
-          {/* Traceability (Batch 360) */}
-          {canAccessModule("traceability") && (
-            <div>
-              <NavLink to="/traceability" style={navItemStyle} onClick={() => setMobileMenuOpen(false)}>
-                <Boxes size={17} />
-                {!sidebarCollapsed && <span>Traceability 360°</span>}
-              </NavLink>
-            </div>
-          )}
-
-          {/* Costing */}
-          {canAccessModule("costing") && (
-            <div>
-              <NavLink to="/costing" style={navItemStyle} onClick={() => setMobileMenuOpen(false)}>
-                <DollarSign size={17} />
-                {!sidebarCollapsed && <span>Costing & Variance</span>}
-              </NavLink>
-            </div>
-          )}
-
-          {/* RCA / CAPA */}
-          {canAccessModule("rca") && (
-            <div>
-              <NavLink to="/rca-capa" style={navItemStyle} onClick={() => setMobileMenuOpen(false)}>
-                <SearchCode size={17} />
-                {!sidebarCollapsed && <span>RCA / CAPA</span>}
-              </NavLink>
-            </div>
-          )}
-
-          {/* Labour & Skills */}
-          {canAccessModule("labour") && (
-            <div>
-              <NavLink to="/labour" style={navItemStyle} onClick={() => setMobileMenuOpen(false)}>
-                <Users size={17} />
-                {!sidebarCollapsed && <span>Labour & Skills</span>}
-              </NavLink>
-            </div>
-          )}
-
-          {/* Purchasing */}
-          {canAccessModule("purchasing") && (
-            <div>
-              <NavLink to="/purchasing" style={navItemStyle} onClick={() => setMobileMenuOpen(false)}>
-                <ShoppingBag size={17} />
-                {!sidebarCollapsed && <span>Purchasing Hub</span>}
-              </NavLink>
-            </div>
-          )}
-
-          {/* Documents */}
-          {canAccessModule("documents") && (
-            <div>
-              <NavLink to="/documents" style={navItemStyle} onClick={() => setMobileMenuOpen(false)}>
-                <FileText size={17} />
-                {!sidebarCollapsed && <span>SOPs & Documents</span>}
-              </NavLink>
-            </div>
-          )}
-
-          {/* Reports */}
-          {canAccessModule("reports") && (
-            <div>
-              <NavLink to="/reports" style={navItemStyle} onClick={() => setMobileMenuOpen(false)}>
-                <FileSpreadsheet size={17} />
-                {!sidebarCollapsed && <span>Reports Center</span>}
-              </NavLink>
-            </div>
-          )}
+            );
+          })}
         </div>
 
-        {/* Role Badge in Footer */}
+        {/* Role Badge & Sign Out in Footer */}
         {!sidebarCollapsed && (
           <div style={{ padding: "14px 18px", borderTop: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)", display: "flex", flexDirection: "column", gap: "10px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
