@@ -12,7 +12,9 @@ import {
   Sparkles,
   QrCode,
   Shield,
-  Cpu
+  Cpu,
+  Flame,
+  User
 } from "lucide-react";
 import { Breadcrumbs } from "./Breadcrumbs";
 import { useApp } from "../../context/AppContext";
@@ -33,7 +35,8 @@ export function Header() {
     setIsQuickActionOpen,
     openQrModal,
     mobileMenuOpen,
-    setMobileMenuOpen
+    setMobileMenuOpen,
+    addToast
   } = useApp();
 
   const { currentRole, setRoleById, ROLES } = useRole();
@@ -41,42 +44,43 @@ export function Header() {
   const [showNotifications, setShowNotifications] = useState(false);
 
   return (
-    <header className="app-header" style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 24px", position: "sticky", top: 0, zIndex: 40, backdropFilter: "blur(12px)", backgroundColor: "var(--bg-header)", borderBottom: "1px solid var(--border-subtle)", gap: "16px" }}>
+    <header className="app-header" style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 24px", position: "sticky", top: 0, zIndex: 40, backdropFilter: "blur(14px)", backgroundColor: "var(--bg-header)", borderBottom: "1px solid var(--border-subtle)", gap: "16px" }}>
       {/* Far Left: Branding Logo */}
       <div style={{ display: "flex", alignItems: "center", gap: "12px", flexShrink: 0 }}>
         <div
           style={{
-            width: "34px",
-            height: "34px",
-            borderRadius: "8px",
-            background: "linear-gradient(135deg, #0284C7, #06B6D4)",
+            width: "36px",
+            height: "36px",
+            borderRadius: "10px",
+            background: "linear-gradient(135deg, #E2B670 0%, #C89547 50%, #B27E33 100%)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            color: "#FFFFFF",
-            boxShadow: "0 0 14px rgba(6, 182, 212, 0.4)"
+            color: "#261603",
+            boxShadow: "0 3px 10px rgba(200, 149, 71, 0.35)",
+            flexShrink: 0
           }}
         >
-          <Cpu size={20} />
+          <Flame size={20} />
         </div>
         <div style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
-          <span style={{ fontSize: "14px", fontWeight: 800, letterSpacing: "0.02em", color: "#FFFFFF", lineHeight: 1, marginBottom: "4px", whiteSpace: "nowrap" }}>
-            MaintenX <span style={{ color: "#38BDF8" }}>OS</span>
+          <span style={{ fontSize: "15px", fontWeight: 900, letterSpacing: "-0.2px", color: "var(--text-primary)", lineHeight: 1, marginBottom: "4px", whiteSpace: "nowrap" }}>
+            MaintenX <span style={{ color: "#B27E33" }}>OS</span>
           </span>
-          <span style={{ fontSize: "10px", color: "var(--text-muted)", letterSpacing: "0.08em", textTransform: "uppercase", lineHeight: 1, whiteSpace: "nowrap" }}>
-            Manufacturing OS
+          <span style={{ fontSize: "10px", color: "var(--text-muted)", letterSpacing: "0.08em", textTransform: "uppercase", fontWeight: 700, lineHeight: 1, whiteSpace: "nowrap" }}>
+            Manufacturing Cloud
           </span>
         </div>
       </div>
 
       {/* Center Space: intermediate elements distributed evenly */}
-      <div style={{ display: "flex", alignItems: "center", gap: "20px", flex: 1, justifyContent: "center", minWidth: 0 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "16px", flex: 1, justifyContent: "center", minWidth: 0 }}>
         {/* Navigation / Mobile Toggle & Breadcrumbs */}
-        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="btn btn-ghost"
-            style={{ padding: "6px", display: "flex", alignItems: "center" }}
+            style={{ padding: "6px", display: "flex", alignItems: "center", color: "var(--text-secondary)" }}
           >
             <Menu size={20} />
           </button>
@@ -88,37 +92,43 @@ export function Header() {
         {/* Search Trigger */}
         <button
           onClick={() => setIsSearchOpen(true)}
-          className="btn btn-secondary"
           style={{
-            height: "34px",
-            padding: "0 12px",
+            height: "36px",
+            padding: "0 10px 0 14px",
             fontSize: "12px",
             display: "flex",
             alignItems: "center",
-            gap: "8px",
-            color: "var(--text-muted)"
+            justifyContent: "space-between",
+            gap: "12px",
+            color: "var(--text-muted)",
+            backgroundColor: "#FFFFFF",
+            border: "1px solid var(--border-subtle)",
+            borderRadius: "10px",
+            cursor: "pointer",
+            minWidth: "180px",
+            boxShadow: "0 1px 3px rgba(70, 45, 15, 0.04)"
           }}
           title="Search anything (Cmd+K / Ctrl+K)"
         >
-          <Search size={14} />
-          <span style={{ display: "none" }} className="search-text-placeholder">Search...</span>
-          <kbd
+          <span className="search-text-placeholder" style={{ fontWeight: 500 }}>Search...</span>
+          <div
             style={{
-              padding: "1px 5px",
-              borderRadius: "4px",
-              backgroundColor: "#1E293B",
-              fontSize: "10px",
-              fontFamily: "var(--font-mono)",
-              color: "#94A3B8"
+              padding: "4px 6px",
+              borderRadius: "6px",
+              background: "linear-gradient(180deg, #E2B670 0%, #C89547 100%)",
+              color: "#261603",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center"
             }}
           >
-            ⌘K
-          </kbd>
+            <Search size={13} />
+          </div>
         </button>
       </div>
 
       {/* Far Right: Fast Action & Role Switcher */}
-      <div style={{ display: "flex", alignItems: "center", gap: "12px", flexShrink: 0 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "10px", flexShrink: 0 }}>
         {/* Quick QR Scanner / Label trigger */}
         <Button
           variant="secondary"
@@ -127,26 +137,42 @@ export function Header() {
           onClick={() => openQrModal("Line 1 Asset QR Scanner", "FM-001", { name: "High-Speed Rotary Filler 12-Head", location: "Bay 4A - Cleanroom Zone B" })}
           title="Scan or View Asset QR Code"
         />
-
         {/* ROLE SWITCHER DROPDOWN */}
         <div style={{ position: "relative" }}>
           <button
             onClick={() => setShowRoleDropdown(!showRoleDropdown)}
-            className="btn btn-secondary"
             style={{
-              height: "34px",
+              height: "36px",
               padding: "0 12px",
               fontSize: "12px",
               display: "flex",
               alignItems: "center",
               gap: "8px",
-              border: "1px solid #38BDF8",
-              backgroundColor: "rgba(56, 189, 248, 0.1)"
+              border: "1px solid var(--border-subtle)",
+              backgroundColor: "var(--bg-card-subtle)",
+              borderRadius: "18px",
+              cursor: "pointer",
+              boxShadow: "0 1px 3px rgba(70, 45, 15, 0.04)"
             }}
           >
-            <UserCheck size={14} color="#38BDF8" />
-            <span style={{ fontWeight: 600, color: "#FFFFFF" }}>{currentRole.label}</span>
-            <ChevronDown size={14} color="#38BDF8" />
+            <div
+              style={{
+                width: "22px",
+                height: "22px",
+                borderRadius: "50%",
+                background: "linear-gradient(135deg, #E2B670 0%, #C89547 100%)",
+                color: "#261603",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontWeight: 800,
+                fontSize: "11px"
+              }}
+            >
+              {currentRole?.label?.charAt(0) || "U"}
+            </div>
+            <span style={{ fontWeight: 700, color: "var(--text-primary)" }}>{currentRole.label} - Alexander V.</span>
+            <ChevronDown size={14} color="#B27E33" />
           </button>
 
           {showRoleDropdown && (
@@ -154,11 +180,11 @@ export function Header() {
               style={{
                 position: "absolute",
                 right: 0,
-                top: "40px",
+                top: "42px",
                 width: "260px",
-                backgroundColor: "var(--bg-card)",
+                backgroundColor: "#FFFFFF",
                 border: "1px solid var(--border-highlight)",
-                borderRadius: "10px",
+                borderRadius: "12px",
                 boxShadow: "var(--shadow-lg)",
                 zIndex: 60,
                 padding: "8px",
@@ -167,7 +193,7 @@ export function Header() {
                 gap: "2px"
               }}
             >
-              <div style={{ padding: "6px 8px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
+              <div style={{ padding: "6px 8px", fontSize: "11px", fontWeight: 800, color: "var(--text-muted)", textTransform: "uppercase" }}>
                 Switch Frontend Role
               </div>
               {ROLES.map((r) => (
@@ -179,11 +205,11 @@ export function Header() {
                   }}
                   style={{
                     padding: "8px 10px",
-                    borderRadius: "6px",
+                    borderRadius: "8px",
                     fontSize: "12px",
-                    fontWeight: currentRole.id === r.id ? 700 : 500,
-                    color: currentRole.id === r.id ? "#38BDF8" : "var(--text-primary)",
-                    backgroundColor: currentRole.id === r.id ? "rgba(56, 189, 248, 0.15)" : "transparent",
+                    fontWeight: currentRole.id === r.id ? 800 : 500,
+                    color: currentRole.id === r.id ? "#261603" : "var(--text-primary)",
+                    background: currentRole.id === r.id ? "linear-gradient(180deg, #E2B670 0%, #C89547 100%)" : "transparent",
                     cursor: "pointer",
                     display: "flex",
                     alignItems: "center",
@@ -191,14 +217,55 @@ export function Header() {
                   }}
                 >
                   <span>{r.label}</span>
-                  {currentRole.id === r.id && <span style={{ fontSize: "10px", color: "#38BDF8" }}>● Active</span>}
+                  {currentRole.id === r.id && <span style={{ fontSize: "10px", color: "#261603", fontWeight: 800 }}>● Active</span>}
                 </div>
               ))}
             </div>
           )}
         </div>
 
-        {/* Fast Action Drawer Trigger */}
+        {/* Notification Bell */}
+        <button
+          onClick={() => addToast("1 New PM Task Alert", "info")}
+          style={{
+            width: "36px",
+            height: "36px",
+            borderRadius: "10px",
+            backgroundColor: "#FFFFFF",
+            border: "1px solid var(--border-subtle)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            position: "relative",
+            color: "#6B5B4E",
+            boxShadow: "0 1px 3px rgba(70, 45, 15, 0.04)"
+          }}
+          title="Notifications"
+        >
+          <Bell size={17} />
+          <span
+            style={{
+              position: "absolute",
+              top: "-3px",
+              right: "-3px",
+              width: "16px",
+              height: "16px",
+              borderRadius: "50%",
+              backgroundColor: "#C89547",
+              color: "#FFFFFF",
+              fontSize: "9px",
+              fontWeight: 800,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center"
+            }}
+          >
+            1
+          </span>
+        </button>
+
+        {/* Fast Action */}
         <Button
           variant="primary"
           size="sm"
