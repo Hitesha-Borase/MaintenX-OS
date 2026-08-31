@@ -511,3 +511,15 @@ body {
     font-size: 22px;
   }
 }
+
+/* Override hardcoded white inline colors in light theme to show properly */
+.page-content-wrapper [style*="color: #FFFFFF"],
+.page-content-wrapper [style*="color: #ffffff"],
+.page-content-wrapper [style*="color:#FFFFFF"],
+.page-content-wrapper [style*="color:#ffffff"],
+.page-content-wrapper [style*="color: rgb(255, 255, 255)"],
+.page-content-wrapper [style*="color: rgb(255,255,255)"],
+.page-content-wrapper [style*="color: white"],
+.page-content-wrapper [style*="color:white"] {
+  color: var(--text-primary) !important;
+}
