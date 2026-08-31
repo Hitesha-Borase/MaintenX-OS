@@ -113,14 +113,14 @@ export function BarcodeScan() {
             <h3 style={{ fontSize: "13px", fontWeight: 700, color: "#FFFFFF" }}>
               Simulate Quick Scan Actions
             </h3>
-            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-              <Button variant="secondary" size="sm" icon={Scan} onClick={() => simulateScan("LOT-ORG-442", "lot")}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+              <Button variant="secondary" size="sm" icon={Scan} onClick={() => simulateScan("LOT-ORG-442", "lot")} style={{ width: "fit-content" }}>
                 Scan Ingredient Lot QR
               </Button>
-              <Button variant="secondary" size="sm" icon={Scan} onClick={() => simulateScan("PAL-2026-990", "pallet")}>
+              <Button variant="secondary" size="sm" icon={Scan} onClick={() => simulateScan("PAL-2026-990", "pallet")} style={{ width: "fit-content" }}>
                 Scan Finished Pallet Tag
               </Button>
-              <Button variant="secondary" size="sm" icon={Scan} onClick={() => simulateScan("FM-001", "asset")}>
+              <Button variant="secondary" size="sm" icon={Scan} onClick={() => simulateScan("FM-001", "asset")} style={{ width: "fit-content" }}>
                 Scan Machine Asset Tag
               </Button>
             </div>

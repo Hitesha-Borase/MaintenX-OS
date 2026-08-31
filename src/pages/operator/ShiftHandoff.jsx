@@ -110,7 +110,7 @@ export function ShiftHandoff() {
           </div>
         </Card>
 
-        <Button type="submit" variant="primary" icon={Send}>
+        <Button type="submit" variant="primary" icon={Send} style={{ width: "fit-content", padding: "8px 24px" }}>
           Sign Off & Handover Shift
         </Button>
       </form>
