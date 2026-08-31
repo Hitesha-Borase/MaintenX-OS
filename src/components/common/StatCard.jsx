@@ -6,6 +6,7 @@ export function StatCard({
   title,
   value,
   unit = "",
+  description = "", // Added description
   trend = null, // { value: "+3.2%", isPositive: true, text: "vs target" }
   icon: Icon,
   badge = null,
@@ -63,6 +64,12 @@ export function StatCard({
       </div>
 
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "auto", paddingTop: "4px" }}>
+        {description && !trend && !badge && (
+          <div style={{ fontSize: "12px", color: "var(--text-muted)", fontWeight: 500 }}>
+            {description}
+          </div>
+        )}
+        
         {trend && (
           <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px" }}>
             <span

@@ -43,7 +43,7 @@ export function Header() {
   return (
     <header className="app-header" style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 24px", position: "sticky", top: 0, zIndex: 40, backdropFilter: "blur(12px)", backgroundColor: "var(--bg-header)", borderBottom: "1px solid var(--border-subtle)", gap: "16px" }}>
       {/* Far Left: Branding Logo */}
-      <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "12px", flexShrink: 0 }}>
         <div
           style={{
             width: "34px",
@@ -59,18 +59,18 @@ export function Header() {
         >
           <Cpu size={20} />
         </div>
-        <div style={{ display: "flex", flexDirection: "column" }}>
-          <span style={{ fontSize: "14px", fontWeight: 800, letterSpacing: "0.02em", color: "#FFFFFF" }}>
+        <div style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
+          <span style={{ fontSize: "14px", fontWeight: 800, letterSpacing: "0.02em", color: "#FFFFFF", lineHeight: 1, marginBottom: "4px", whiteSpace: "nowrap" }}>
             MaintenX <span style={{ color: "#38BDF8" }}>OS</span>
           </span>
-          <span style={{ fontSize: "10px", color: "var(--text-muted)", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+          <span style={{ fontSize: "10px", color: "var(--text-muted)", letterSpacing: "0.08em", textTransform: "uppercase", lineHeight: 1, whiteSpace: "nowrap" }}>
             Manufacturing OS
           </span>
         </div>
       </div>
 
       {/* Center Space: intermediate elements distributed evenly */}
-      <div style={{ display: "flex", alignItems: "center", gap: "20px", flex: 1, justifyContent: "center" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "20px", flex: 1, justifyContent: "center", minWidth: 0 }}>
         {/* Navigation / Mobile Toggle & Breadcrumbs */}
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
           <button
@@ -83,44 +83,7 @@ export function Header() {
           <Breadcrumbs />
         </div>
 
-        {/* Facility Selector */}
-        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-          <Building2 size={15} color="var(--text-muted)" />
-          <select
-            className="form-select"
-            style={{ height: "34px", padding: "4px 8px", fontSize: "12px", width: "auto" }}
-            value={selectedPlant.id}
-            onChange={(e) => {
-              const found = PLANTS.find((p) => p.id === e.target.value);
-              if (found) setSelectedPlant(found);
-            }}
-          >
-            {PLANTS.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Shift Status Badge */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "6px",
-            padding: "4px 10px",
-            borderRadius: "8px",
-            backgroundColor: "var(--bg-card-subtle)",
-            border: "1px solid var(--border-subtle)",
-            fontSize: "12px",
-            color: "var(--text-secondary)"
-          }}
-        >
-          <Clock size={13} color="#34D399" />
-          <span style={{ fontWeight: 600, color: "var(--text-primary)" }}>Shift A</span>
-          <span style={{ fontSize: "10px", color: "#34D399" }}>● LIVE</span>
-        </div>
+        {/* Facility and Shift removed to save space */}
 
         {/* Search Trigger */}
         <button
@@ -155,7 +118,7 @@ export function Header() {
       </div>
 
       {/* Far Right: Fast Action & Role Switcher */}
-      <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "12px", flexShrink: 0 }}>
         {/* Quick QR Scanner / Label trigger */}
         <Button
           variant="secondary"

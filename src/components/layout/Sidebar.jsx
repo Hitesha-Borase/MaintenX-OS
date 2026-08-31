@@ -282,76 +282,7 @@ export function Sidebar() {
       >
         {/* TOP BRAND HEADER */}
         <div>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: sidebarCollapsed ? "center" : "space-between",
-              padding: "16px 14px",
-              borderBottom: "1px solid var(--border-subtle)",
-              minHeight: "64px"
-            }}
-          >
-            {!sidebarCollapsed ? (
-              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <div
-                  style={{
-                    width: "32px",
-                    height: "32px",
-                    borderRadius: "8px",
-                    backgroundColor: "#0284C7",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    boxShadow: "0 0 12px rgba(2, 132, 199, 0.5)",
-                    flexShrink: 0
-                  }}
-                >
-                  <Flame size={18} color="#FFFFFF" />
-                </div>
-                <div>
-                  <span style={{ fontSize: "15px", fontWeight: 800, color: "#FFFFFF", letterSpacing: "-0.3px", display: "block", lineHeight: 1.2 }}>
-                    MaintenX-OS
-                  </span>
-                  <span style={{ fontSize: "10px", color: "#38BDF8", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                    {currentRole?.label || "Enterprise Suite"}
-                  </span>
-                </div>
-              </div>
-            ) : (
-              <div
-                style={{
-                  width: "32px",
-                  height: "32px",
-                  borderRadius: "8px",
-                  backgroundColor: "#0284C7",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center"
-                }}
-              >
-                <Flame size={18} color="#FFFFFF" />
-              </div>
-            )}
-
-            <button
-              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              className="btn btn-ghost"
-              style={{
-                padding: "4px",
-                borderRadius: "6px",
-                display: sidebarCollapsed ? "none" : "flex",
-                alignItems: "center",
-                color: "var(--text-muted)",
-                background: "transparent",
-                border: "none",
-                cursor: "pointer"
-              }}
-              title="Toggle Sidebar"
-            >
-              <ChevronLeft size={16} />
-            </button>
-          </div>
+          {/* Header block (logo/collapse button) removed to save space */}
 
           {/* DYNAMIC NAVIGATION MENU ACCORDING TO ROLE */}
           <nav

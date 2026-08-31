@@ -44,7 +44,7 @@ export function LineLeadDashboard() {
   const openP1Count = exceptions ? exceptions.filter((e) => e.location?.includes("Line 1") && e.status !== "Resolved").length : 0;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
       {/* Header */}
       <div>
         <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
