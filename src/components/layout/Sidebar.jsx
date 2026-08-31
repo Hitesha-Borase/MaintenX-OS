@@ -183,12 +183,14 @@ export function Sidebar() {
     display: "flex",
     alignItems: "center",
     gap: "10px",
-    padding: "8px 12px",
-    borderRadius: "8px",
+    padding: "9px 14px",
+    borderRadius: "10px",
     fontSize: "13px",
-    fontWeight: isActive ? 600 : 500,
-    color: isActive ? "#38BDF8" : "var(--text-secondary)",
-    backgroundColor: isActive ? "rgba(56, 189, 248, 0.12)" : "transparent",
+    fontWeight: isActive ? 700 : 500,
+    color: isActive ? "#261603" : "var(--text-secondary)",
+    background: isActive ? "linear-gradient(180deg, #E2B670 0%, #C89547 50%, #B27E33 100%)" : "transparent",
+    boxShadow: isActive ? "0 3px 10px rgba(178, 126, 51, 0.28)" : "none",
+    border: isActive ? "1px solid #E8C182" : "1px solid transparent",
     textDecoration: "none",
     transition: "all 0.15s ease",
     whiteSpace: "nowrap",
@@ -199,12 +201,13 @@ export function Sidebar() {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    padding: "5px 12px 5px 30px",
-    borderRadius: "6px",
+    padding: "6px 12px 6px 32px",
+    borderRadius: "8px",
     fontSize: "12px",
-    fontWeight: isActive ? 600 : 400,
-    color: isActive ? "#38BDF8" : "var(--text-secondary)",
-    backgroundColor: isActive ? "rgba(56, 189, 248, 0.1)" : "transparent",
+    fontWeight: isActive ? 700 : 500,
+    color: isActive ? "#B27E33" : "var(--text-secondary)",
+    backgroundColor: isActive ? "rgba(200, 149, 71, 0.12)" : "transparent",
+    borderLeft: isActive ? "3px solid #C89547" : "3px solid transparent",
     textDecoration: "none",
     transition: "all 0.15s ease",
     whiteSpace: "nowrap"
@@ -214,12 +217,12 @@ export function Sidebar() {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    padding: "8px 12px",
-    borderRadius: "8px",
+    padding: "8px 14px",
+    borderRadius: "10px",
     fontSize: "13px",
-    fontWeight: active ? 600 : 500,
-    color: active ? "#FFFFFF" : "var(--text-secondary)",
-    backgroundColor: active ? "rgba(255, 255, 255, 0.04)" : "transparent",
+    fontWeight: active ? 700 : 600,
+    color: active ? "#2B1D11" : "var(--text-secondary)",
+    backgroundColor: active ? "rgba(200, 149, 71, 0.08)" : "transparent",
     cursor: "pointer",
     userSelect: "none",
     transition: "all 0.15s ease",
@@ -229,7 +232,7 @@ export function Sidebar() {
   const renderBadge = (label) => {
     if (label === "Work Orders" && activeWOCount > 0) {
       return (
-        <span style={{ fontSize: "10px", backgroundColor: "rgba(56, 189, 248, 0.2)", color: "#38BDF8", padding: "1px 5px", borderRadius: "4px" }}>
+        <span style={{ fontSize: "10px", backgroundColor: "rgba(200, 149, 71, 0.18)", color: "#B27E33", padding: "1px 6px", borderRadius: "4px", fontWeight: 700 }}>
           {activeWOCount}
         </span>
       );
@@ -243,7 +246,7 @@ export function Sidebar() {
     }
     if (label === "Assets Registry" || label === "Asset Register") {
       return (
-        <span style={{ fontSize: "10px", color: "var(--text-muted)" }}>
+        <span style={{ fontSize: "10px", color: "var(--text-muted)", fontWeight: 600 }}>
           {assets.length || 24}
         </span>
       );
@@ -260,7 +263,7 @@ export function Sidebar() {
           style={{
             position: "fixed",
             inset: 0,
-            backgroundColor: "rgba(0, 0, 0, 0.6)",
+            backgroundColor: "rgba(43, 29, 17, 0.4)",
             backdropFilter: "blur(4px)",
             zIndex: 45
           }}
@@ -276,8 +279,8 @@ export function Sidebar() {
           flexDirection: "column",
           justifyContent: "space-between",
           zIndex: 50,
-          backgroundColor: "var(--bg-sidebar, #0F172A)",
-          borderRight: "1px solid var(--border-subtle, #1E293B)"
+          backgroundColor: "var(--bg-sidebar)",
+          borderRight: "1px solid var(--border-subtle)"
         }}
       >
         {/* TOP BRAND HEADER */}
@@ -287,7 +290,7 @@ export function Sidebar() {
               display: "flex",
               alignItems: "center",
               justifyContent: sidebarCollapsed ? "center" : "space-between",
-              padding: "16px 14px",
+              padding: "16px 16px",
               borderBottom: "1px solid var(--border-subtle)",
               minHeight: "64px"
             }}
@@ -296,41 +299,44 @@ export function Sidebar() {
               <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                 <div
                   style={{
-                    width: "32px",
-                    height: "32px",
-                    borderRadius: "8px",
-                    backgroundColor: "#0284C7",
+                    width: "34px",
+                    height: "34px",
+                    borderRadius: "10px",
+                    background: "linear-gradient(135deg, #E2B670 0%, #C89547 50%, #B27E33 100%)",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    boxShadow: "0 0 12px rgba(2, 132, 199, 0.5)",
-                    flexShrink: 0
+                    boxShadow: "0 3px 10px rgba(200, 149, 71, 0.35)",
+                    flexShrink: 0,
+                    color: "#261603"
                   }}
                 >
-                  <Flame size={18} color="#FFFFFF" />
+                  <Flame size={19} />
                 </div>
                 <div>
-                  <span style={{ fontSize: "15px", fontWeight: 800, color: "#FFFFFF", letterSpacing: "-0.3px", display: "block", lineHeight: 1.2 }}>
-                    MaintenX-OS
+                  <span style={{ fontSize: "15px", fontWeight: 900, color: "var(--text-primary)", letterSpacing: "-0.3px", display: "block", lineHeight: 1.2 }}>
+                    MaintenX <span style={{ color: "#B27E33" }}>OS</span>
                   </span>
-                  <span style={{ fontSize: "10px", color: "#38BDF8", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                    {currentRole?.label || "Enterprise Suite"}
+                  <span style={{ fontSize: "10px", color: "var(--text-muted)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                    {currentRole?.label || "Manufacturing Suite"}
                   </span>
                 </div>
               </div>
             ) : (
               <div
                 style={{
-                  width: "32px",
-                  height: "32px",
-                  borderRadius: "8px",
-                  backgroundColor: "#0284C7",
+                  width: "34px",
+                  height: "34px",
+                  borderRadius: "10px",
+                  background: "linear-gradient(135deg, #E2B670 0%, #C89547 50%, #B27E33 100%)",
                   display: "flex",
                   alignItems: "center",
-                  justifyContent: "center"
+                  justifyContent: "center",
+                  boxShadow: "0 3px 10px rgba(200, 149, 71, 0.35)",
+                  color: "#261603"
                 }}
               >
-                <Flame size={18} color="#FFFFFF" />
+                <Flame size={19} />
               </div>
             )}
 
@@ -342,7 +348,7 @@ export function Sidebar() {
                 borderRadius: "6px",
                 display: sidebarCollapsed ? "none" : "flex",
                 alignItems: "center",
-                color: "var(--text-muted)",
+                color: "var(--text-secondary)",
                 background: "transparent",
                 border: "none",
                 cursor: "pointer"
@@ -356,7 +362,7 @@ export function Sidebar() {
           {/* DYNAMIC NAVIGATION MENU ACCORDING TO ROLE */}
           <nav
             style={{
-              padding: "12px 8px",
+              padding: "12px 10px",
               display: "flex",
               flexDirection: "column",
               gap: "4px",
@@ -369,7 +375,7 @@ export function Sidebar() {
               <>
                 {/* 1. Dashboard */}
                 <NavLink to="/dashboard" style={navItemStyle} title="Dashboard">
-                  <LayoutDashboard size={18} color="#38BDF8" style={{ flexShrink: 0 }} />
+                  <LayoutDashboard size={18} style={{ flexShrink: 0 }} />
                   {!sidebarCollapsed && <span>1. Dashboard</span>}
                 </NavLink>
 
@@ -381,7 +387,7 @@ export function Sidebar() {
                     title="User Management"
                   >
                     <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                      <Users size={18} color="#60A5FA" style={{ flexShrink: 0 }} />
+                      <Users size={18} color="#B27E33" style={{ flexShrink: 0 }} />
                       {!sidebarCollapsed && <span>2. User Management</span>}
                     </div>
                     {!sidebarCollapsed && (
@@ -415,7 +421,7 @@ export function Sidebar() {
                     title="Roles & Permissions"
                   >
                     <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                      <ShieldCheck size={18} color="#34D399" style={{ flexShrink: 0 }} />
+                      <ShieldCheck size={18} color="#10B981" style={{ flexShrink: 0 }} />
                       {!sidebarCollapsed && <span>3. Roles & Permissions</span>}
                     </div>
                     {!sidebarCollapsed && (
@@ -449,7 +455,7 @@ export function Sidebar() {
                     title="Organization"
                   >
                     <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                      <Building2 size={18} color="#F59E0B" style={{ flexShrink: 0 }} />
+                      <Building2 size={18} color="#C89547" style={{ flexShrink: 0 }} />
                       {!sidebarCollapsed && <span>4. Organization</span>}
                     </div>
                     {!sidebarCollapsed && (
@@ -486,7 +492,7 @@ export function Sidebar() {
                     title="Master Data"
                   >
                     <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                      <Database size={18} color="#A855F7" style={{ flexShrink: 0 }} />
+                      <Database size={18} color="#8B5CF6" style={{ flexShrink: 0 }} />
                       {!sidebarCollapsed && <span>5. Master Data</span>}
                     </div>
                     {!sidebarCollapsed && (
@@ -559,7 +565,7 @@ export function Sidebar() {
                     title="Integrations"
                   >
                     <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                      <Cpu size={18} color="#06B6D4" style={{ flexShrink: 0 }} />
+                      <Cpu size={18} color="#0284C7" style={{ flexShrink: 0 }} />
                       {!sidebarCollapsed && <span>6. Integrations</span>}
                     </div>
                     {!sidebarCollapsed && (
@@ -593,7 +599,7 @@ export function Sidebar() {
                     title="Data Health"
                   >
                     <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                      <HeartPulse size={18} color="#EC4899" style={{ flexShrink: 0 }} />
+                      <HeartPulse size={18} color="#EF4444" style={{ flexShrink: 0 }} />
                       {!sidebarCollapsed && <span>7. Data Health</span>}
                     </div>
                     {!sidebarCollapsed && (
@@ -627,31 +633,31 @@ export function Sidebar() {
 
                 {/* 8. Security */}
                 <NavLink to="/security" style={navItemStyle} title="Security">
-                  <Lock size={18} color="#EF4444" style={{ flexShrink: 0 }} />
+                  <Lock size={18} style={{ flexShrink: 0 }} />
                   {!sidebarCollapsed && <span>8. Security</span>}
                 </NavLink>
 
                 {/* 9. Configuration */}
                 <NavLink to="/configuration" style={navItemStyle} title="Configuration">
-                  <Sliders size={18} color="#FB923C" style={{ flexShrink: 0 }} />
+                  <Sliders size={18} style={{ flexShrink: 0 }} />
                   {!sidebarCollapsed && <span>9. Configuration</span>}
                 </NavLink>
 
                 {/* 10. Audit Logs */}
                 <NavLink to="/audit-logs" style={navItemStyle} title="Audit Logs">
-                  <FileText size={18} color="#38BDF8" style={{ flexShrink: 0 }} />
+                  <FileText size={18} style={{ flexShrink: 0 }} />
                   {!sidebarCollapsed && <span>10. Audit Logs</span>}
                 </NavLink>
 
                 {/* 11. Migration */}
                 <NavLink to="/migration" style={navItemStyle} title="Migration">
-                  <UploadCloud size={18} color="#10B981" style={{ flexShrink: 0 }} />
+                  <UploadCloud size={18} style={{ flexShrink: 0 }} />
                   {!sidebarCollapsed && <span>11. Migration</span>}
                 </NavLink>
 
                 {/* 12. System Reports */}
                 <NavLink to="/system-reports" style={navItemStyle} title="System Reports">
-                  <FileSpreadsheet size={18} color="#60A5FA" style={{ flexShrink: 0 }} />
+                  <FileSpreadsheet size={18} style={{ flexShrink: 0 }} />
                   {!sidebarCollapsed && <span>12. System Reports</span>}
                 </NavLink>
               </>
@@ -671,7 +677,7 @@ export function Sidebar() {
                         title={item.group}
                       >
                         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                          <Layers size={18} color={active ? "#38BDF8" : "var(--text-secondary)"} style={{ flexShrink: 0 }} />
+                          <Layers size={18} color={active ? "#B27E33" : "var(--text-secondary)"} style={{ flexShrink: 0 }} />
                           {!sidebarCollapsed && <span>{item.group}</span>}
                         </div>
                         {!sidebarCollapsed && (
@@ -702,7 +708,7 @@ export function Sidebar() {
                 const IconComp = iconMap[item.icon] || LayoutDashboard;
                 return (
                   <NavLink key={item.path} to={item.path} style={navItemStyle} title={item.label}>
-                    <IconComp size={18} color="var(--text-secondary)" style={{ flexShrink: 0 }} />
+                    <IconComp size={18} style={{ flexShrink: 0 }} />
                     {!sidebarCollapsed && <span>{item.label}</span>}
                     {!sidebarCollapsed && renderBadge(item.label)}
                   </NavLink>
@@ -720,33 +726,34 @@ export function Sidebar() {
             display: "flex",
             alignItems: "center",
             justifyContent: sidebarCollapsed ? "center" : "space-between",
-            backgroundColor: "rgba(0, 0, 0, 0.2)"
+            backgroundColor: "var(--bg-card-subtle)"
           }}
         >
           {!sidebarCollapsed ? (
             <div style={{ display: "flex", alignItems: "center", gap: "10px", overflow: "hidden" }}>
               <div
                 style={{
-                  width: "32px",
-                  height: "32px",
+                  width: "34px",
+                  height: "34px",
                   borderRadius: "50%",
-                  backgroundColor: "rgba(56, 189, 248, 0.15)",
-                  color: "#38BDF8",
+                  background: "linear-gradient(135deg, #E2B670 0%, #C89547 100%)",
+                  color: "#261603",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  fontWeight: 700,
+                  fontWeight: 800,
                   fontSize: "13px",
-                  flexShrink: 0
+                  flexShrink: 0,
+                  boxShadow: "0 2px 6px rgba(178, 126, 51, 0.25)"
                 }}
               >
                 {currentRole?.label?.charAt(0) || "U"}
               </div>
               <div style={{ overflow: "hidden" }}>
-                <div style={{ fontSize: "12px", fontWeight: 700, color: "#FFFFFF", whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}>
+                <div style={{ fontSize: "12px", fontWeight: 800, color: "#2B1D11", whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}>
                   Alexander Vance
                 </div>
-                <div style={{ fontSize: "11px", color: "var(--text-muted)", whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}>
+                <div style={{ fontSize: "11px", color: "var(--text-muted)", fontWeight: 600, whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}>
                   {currentRole?.label}
                 </div>
               </div>
@@ -754,16 +761,17 @@ export function Sidebar() {
           ) : (
             <div
               style={{
-                width: "32px",
-                height: "32px",
+                width: "34px",
+                height: "34px",
                 borderRadius: "50%",
-                backgroundColor: "rgba(56, 189, 248, 0.15)",
-                color: "#38BDF8",
+                background: "linear-gradient(135deg, #E2B670 0%, #C89547 100%)",
+                color: "#261603",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                fontWeight: 700,
-                fontSize: "13px"
+                fontWeight: 800,
+                fontSize: "13px",
+                boxShadow: "0 2px 6px rgba(178, 126, 51, 0.25)"
               }}
               title={`${currentRole?.label} (Alexander Vance)`}
             >
@@ -780,7 +788,7 @@ export function Sidebar() {
               style={{
                 background: "transparent",
                 border: "none",
-                color: "var(--text-muted)",
+                color: "var(--text-secondary)",
                 cursor: "pointer",
                 padding: "6px",
                 borderRadius: "6px"
