@@ -523,3 +523,18 @@ body {
 .page-content-wrapper [style*="color:white"] {
   color: var(--text-primary) !important;
 }
+
+/* Restrict oversized form action/submit buttons (yellow, red, green) from stretching full-width */
+.page-content-wrapper form .btn,
+.page-content-wrapper form button[type="submit"],
+.page-content-wrapper form .btn-primary,
+.page-content-wrapper form .btn-danger,
+.page-content-wrapper form .btn-success,
+form > .btn,
+form > button[type="submit"] {
+  width: fit-content !important;
+  max-width: max-content !important;
+  align-self: flex-start !important;
+  padding: 8px 24px !important;
+  margin-top: 4px;
+}
