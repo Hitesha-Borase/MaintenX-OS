@@ -401,14 +401,14 @@ function RoleProtectedRoute({ children }) {
 }
 
 export function AppContent() {
-  const { currentRole } = useRole();
+  const { currentRole, isAuthenticated } = useRole();
 
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/login" element={<Login />} />
+        <Route path="/login" element={!isAuthenticated ? <Login /> : <Navigate to="/" replace />} />
 
-        <Route element={<AppLayout />}>
+        <Route element={isAuthenticated ? <AppLayout /> : <Navigate to="/login" replace />}>
           {/* Default Route redirects to current role default or /dashboard */}
           <Route path="/" element={<Navigate to={currentRole?.defaultRoute || "/dashboard"} replace />} />
 
