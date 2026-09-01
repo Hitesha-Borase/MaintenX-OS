@@ -199,7 +199,7 @@ export function ExceptionControlTower() {
               type="text"
               className="form-input"
               style={{ paddingLeft: "32px", height: "34px", fontSize: "12px" }}
-              placeholder="Search exceptions, assets, owners, orders..."
+              placeholder=""
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import {
   LifeBuoy,
@@ -59,14 +59,22 @@ export function TroubleshootingPage() {
     }
   }, [searchParam]);
 
-  const filteredSolutions = solutions.filter((s) => {
-    return (
-      s.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.symptom?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.failureCode?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.rootCause?.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  });
+  const filteredSolutions = useMemo(() => {
+    if (!searchQuery.trim()) return solutions;
+    const q = searchQuery.toLowerCase().trim();
+    return solutions.filter((s) => {
+      return (
+        s.id?.toLowerCase().includes(q) ||
+        s.title?.toLowerCase().includes(q) ||
+        s.symptom?.toLowerCase().includes(q) ||
+        s.failureCode?.toLowerCase().includes(q) ||
+        s.rootCause?.toLowerCase().includes(q) ||
+        s.solutionSteps?.toLowerCase().includes(q) ||
+        s.assetType?.toLowerCase().includes(q) ||
+        s.partsRequired?.toLowerCase().includes(q)
+      );
+    });
+  }, [solutions, searchQuery]);
 
   const handleStartDiagnosis = () => {
     if (selectedSymptom === "Vibration / Noise") {
@@ -335,7 +343,7 @@ export function TroubleshootingPage() {
               <Search size={15} color="var(--text-muted)" style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)" }} />
               <input
                 type="text"
-                placeholder="Search solutions by symptom, code (e.g. MEC-004), root cause..."
+                placeholder=""
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="form-input"

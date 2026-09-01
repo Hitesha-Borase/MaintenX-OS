@@ -229,7 +229,7 @@ export function PMPlans() {
             />
             <input
               type="text"
-              placeholder="Search by plan name, linked asset, or SOP code..."
+              placeholder=""
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="form-input"
