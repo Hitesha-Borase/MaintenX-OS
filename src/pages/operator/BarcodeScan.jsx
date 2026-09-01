@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { QrCode, Camera, ShieldCheck, AlertCircle, Scan } from "lucide-react";
+import { QrCode, Camera, ShieldCheck, AlertCircle, Scan, Sparkles, Keyboard, CheckCircle2 } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { Button } from "../../components/common/Button";
 import { Badge } from "../../components/common/Badge";
@@ -61,116 +61,180 @@ export function BarcodeScan() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%" }}>
+      {/* Header */}
       <div>
         <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
           Barcode & QR Code Scanner
         </h1>
-        <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-          Scan ingredient bins, final product pallets, and machine QR codes
-        </p>
       </div>
 
-      <div className="grid-2">
-        {/* Scanner Viewfinder Box */}
-        <Card style={{ display: "flex", flexDirection: "column", gap: "16px", alignItems: "center", justifyContent: "center", minHeight: "300px", position: "relative", overflow: "hidden" }}>
-          <div
-            style={{
-              width: "180px",
-              height: "180px",
-              border: "3px solid #38BDF8",
-              borderRadius: "12px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              position: "relative",
-              backgroundColor: "rgba(56, 189, 248, 0.05)"
-            }}
-          >
-            {scanning && (
-              <div
-                style={{
-                  position: "absolute",
-                  left: 0,
-                  right: 0,
-                  height: "3px",
-                  backgroundColor: "#EF4444",
-                  boxShadow: "0 0 10px #EF4444",
-                  animation: "scanLine 2s linear infinite"
-                }}
-              />
-            )}
-            <Camera size={48} color="var(--text-muted)" />
-          </div>
+      {/* 1. Scanner Viewfinder Card (Full Width) */}
+      <Card
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: "16px",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "36px 20px",
+          backgroundColor: "#FFFFFF",
+          border: "1px solid var(--border-subtle)",
+          boxShadow: "0 2px 8px rgba(70, 45, 15, 0.04)",
+          position: "relative",
+          overflow: "hidden"
+        }}
+      >
+        <div
+          style={{
+            width: "200px",
+            height: "200px",
+            border: "3px solid #C89547",
+            borderRadius: "16px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            position: "relative",
+            backgroundColor: "rgba(200, 149, 71, 0.06)",
+            boxShadow: "0 0 20px rgba(200, 149, 71, 0.15)"
+          }}
+        >
+          {scanning && (
+            <div
+              style={{
+                position: "absolute",
+                left: 0,
+                right: 0,
+                height: "3px",
+                backgroundColor: "#EF4444",
+                boxShadow: "0 0 12px #EF4444",
+                animation: "scanLine 2s linear infinite"
+              }}
+            />
+          )}
+          <Camera size={52} color="#C89547" />
+        </div>
 
-          <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-            {scanning ? "Aligning laser scanner lens..." : "Camera ready. Position barcode inside frame."}
+        <div style={{ textAlign: "center" }}>
+          <span style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)", display: "block" }}>
+            {scanning ? "Aligning laser scanner optical lens..." : "Camera ready. Position barcode inside frame."}
           </span>
-        </Card>
+          <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+            Supports 1D Barcodes, DataMatrix, and GS1-128 QR Standards
+          </span>
+        </div>
+      </Card>
 
-        {/* Action Controls */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-          <Card style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-            <h3 style={{ fontSize: "13px", fontWeight: 700, color: "#FFFFFF" }}>
+      {/* 2. Quick Scan Actions Card (Full Width Stacked Below) */}
+      <Card style={{ display: "flex", flexDirection: "column", gap: "14px", padding: "20px", backgroundColor: "#FFFFFF", border: "1px solid var(--border-subtle)", boxShadow: "0 2px 8px rgba(70, 45, 15, 0.04)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <div style={{ width: "28px", height: "28px", borderRadius: "8px", backgroundColor: "rgba(200, 149, 71, 0.15)", display: "flex", alignItems: "center", justifyContent: "center", color: "#B27E33" }}>
+            <Sparkles size={16} />
+          </div>
+          <div>
+            <h3 style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
               Simulate Quick Scan Actions
             </h3>
-            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-              <Button variant="secondary" size="sm" icon={Scan} onClick={() => simulateScan("LOT-ORG-442", "lot")}>
-                Scan Ingredient Lot QR
-              </Button>
-              <Button variant="secondary" size="sm" icon={Scan} onClick={() => simulateScan("PAL-2026-990", "pallet")}>
-                Scan Finished Pallet Tag
-              </Button>
-              <Button variant="secondary" size="sm" icon={Scan} onClick={() => simulateScan("FM-001", "asset")}>
-                Scan Machine Asset Tag
-              </Button>
-            </div>
-          </Card>
+            <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+              Test barcode parser against shop-floor asset tags and ingredients
+            </span>
+          </div>
+        </div>
 
-          <Card>
-            <h3 style={{ fontSize: "13px", fontWeight: 700, color: "#FFFFFF", marginBottom: "8px" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "10px" }}>
+          <Button
+            variant="secondary"
+            icon={Scan}
+            onClick={() => simulateScan("LOT-ORG-442", "lot")}
+            style={{ justifyContent: "center", padding: "10px 14px", fontWeight: 700 }}
+          >
+            Scan Ingredient Lot QR
+          </Button>
+          <Button
+            variant="secondary"
+            icon={Scan}
+            onClick={() => simulateScan("PAL-2026-990", "pallet")}
+            style={{ justifyContent: "center", padding: "10px 14px", fontWeight: 700 }}
+          >
+            Scan Finished Pallet Tag
+          </Button>
+          <Button
+            variant="secondary"
+            icon={Scan}
+            onClick={() => simulateScan("FM-001", "asset")}
+            style={{ justifyContent: "center", padding: "10px 14px", fontWeight: 700 }}
+          >
+            Scan Machine Asset Tag
+          </Button>
+        </div>
+      </Card>
+
+      {/* 3. Manual Code Entry Card (Full Width Stacked Below) */}
+      <Card style={{ display: "flex", flexDirection: "column", gap: "14px", padding: "20px", backgroundColor: "#FFFFFF", border: "1px solid var(--border-subtle)", boxShadow: "0 2px 8px rgba(70, 45, 15, 0.04)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <div style={{ width: "28px", height: "28px", borderRadius: "8px", backgroundColor: "rgba(107, 91, 78, 0.12)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-secondary)" }}>
+            <Keyboard size={16} />
+          </div>
+          <div>
+            <h3 style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
               Manual Code Entry
             </h3>
-            <form onSubmit={handleManualSubmit} style={{ display: "flex", gap: "8px" }}>
-              <input
-                type="text"
-                placeholder="Enter serial number..."
-                value={manualCode}
-                onChange={(e) => setManualCode(e.target.value)}
-                className="input-field"
-                style={{ flex: 1 }}
-                required
-              />
-              <Button type="submit" variant="primary">
-                Parse
-              </Button>
-            </form>
-          </Card>
+            <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+              Manually type serial identifier or lot barcode number
+            </span>
+          </div>
         </div>
-      </div>
 
-      {/* scan results */}
+        <form onSubmit={handleManualSubmit} style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+          <input
+            type="text"
+            placeholder="Enter serial number (e.g. LOT-ORG-442, PAL-2026-990, FM-001)..."
+            value={manualCode}
+            onChange={(e) => setManualCode(e.target.value)}
+            className="input-field"
+            style={{ flex: "1 1 260px" }}
+            required
+          />
+          <Button type="submit" variant="primary" style={{ padding: "10px 24px" }}>
+            Parse Code
+          </Button>
+        </form>
+      </Card>
+
+      {/* 4. Scan Results Card */}
       {scanResult && (
-        <Card style={{ borderLeft: "4px solid #10B981" }}>
-          <h3 style={{ fontSize: "14px", fontWeight: 700, color: "#FFFFFF", marginBottom: "12px", display: "flex", alignItems: "center", gap: "6px" }}>
-            <ShieldCheck size={16} color="#10B981" /> Parser Decoded Information
+        <Card style={{ borderLeft: "4px solid #10B981", backgroundColor: "#FFFFFF", border: "1px solid var(--border-subtle)", boxShadow: "0 2px 8px rgba(16, 185, 129, 0.08)", padding: "20px" }}>
+          <h3 style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)", marginBottom: "14px", display: "flex", alignItems: "center", gap: "6px" }}>
+            <ShieldCheck size={18} color="#059669" /> Parser Decoded Information
           </h3>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: "8px", fontSize: "13px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "4px" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "10px", fontSize: "13px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "6px" }}>
               <span style={{ color: "var(--text-muted)" }}>Parsed Class Type:</span>
-              <span style={{ fontWeight: 600, color: "#38BDF8" }}>{scanResult.type}</span>
+              <span style={{ fontWeight: 700, color: "#0284C7" }}>{scanResult.type}</span>
             </div>
-            <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "4px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "6px" }}>
               <span style={{ color: "var(--text-muted)" }}>Decoded ID Code:</span>
-              <span style={{ fontWeight: 700, fontFamily: "var(--font-mono)", color: "#FFFFFF" }}>{scanResult.id}</span>
+              <span style={{ fontWeight: 800, fontFamily: "var(--font-mono)", color: "var(--text-primary)" }}>{scanResult.id}</span>
             </div>
-            <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "4px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "6px" }}>
               <span style={{ color: "var(--text-muted)" }}>Linked Master Item:</span>
-              <span style={{ fontWeight: 600 }}>{scanResult.item}</span>
+              <span style={{ fontWeight: 700, color: "var(--text-primary)" }}>{scanResult.item}</span>
             </div>
+            {scanResult.supplier && (
+              <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "6px" }}>
+                <span style={{ color: "var(--text-muted)" }}>Supplier / Origin:</span>
+                <span style={{ fontWeight: 600, color: "var(--text-secondary)" }}>{scanResult.supplier}</span>
+              </div>
+            )}
+            {scanResult.expiryDate && (
+              <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "6px" }}>
+                <span style={{ color: "var(--text-muted)" }}>Expiry Date:</span>
+                <span style={{ fontWeight: 700, fontFamily: "var(--font-mono)", color: "#B27E33" }}>{scanResult.expiryDate}</span>
+              </div>
+            )}
             {scanResult.qaStatus && (
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ color: "var(--text-muted)" }}>QA release status:</span>
+                <span style={{ color: "var(--text-muted)" }}>QA Release Status:</span>
                 <Badge variant="emerald">{scanResult.qaStatus}</Badge>
               </div>
             )}

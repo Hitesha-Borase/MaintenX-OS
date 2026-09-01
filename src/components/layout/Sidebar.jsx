@@ -274,7 +274,7 @@ export function Sidebar() {
             bottom: 0,
             backgroundColor: "rgba(43, 29, 17, 0.45)",
             backdropFilter: "blur(4px)",
-            zIndex: 35
+            zIndex: 998
           }}
         />
       )}
@@ -282,7 +282,13 @@ export function Sidebar() {
       <aside
         className={`app-sidebar ${mobileMenuOpen ? "mobile-open" : ""} ${sidebarCollapsed ? "collapsed" : ""}`}
         style={{
-          justifyContent: "space-between"
+          width: sidebarCollapsed ? "68px" : "260px",
+          transition: "width 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "space-between",
+          backgroundColor: "var(--bg-sidebar)",
+          borderRight: "1px solid var(--border-subtle)"
         }}
       >
         {/* TOP BRAND HEADER */}

@@ -36,9 +36,6 @@ export function ShiftHandoff() {
         <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
           Shift Handoff HMI
         </h1>
-        <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-          Transfer line control and operational notes to incoming shift operators
-        </p>
       </div>
 
       <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
@@ -110,7 +107,7 @@ export function ShiftHandoff() {
           </div>
         </Card>
 
-        <Button type="submit" variant="primary" icon={Send}>
+        <Button type="submit" variant="primary" icon={Send} style={{ width: "fit-content", padding: "8px 24px" }}>
           Sign Off & Handover Shift
         </Button>
       </form>

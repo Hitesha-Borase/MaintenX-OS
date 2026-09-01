@@ -51,23 +51,30 @@ export function QualityChecks() {
         <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
           Hourly Operator Quality Checks
         </h1>
-        <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-          Record Critical Control Point (CCP) and package specifications
-        </p>
       </div>
 
       <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-        <Card style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-          <h3 style={{ fontSize: "14px", fontWeight: 700, color: "#FFFFFF", display: "flex", alignItems: "center", gap: "8px" }}>
-            <ShieldCheck size={16} color="#10B981" /> Parameter Checklist
-          </h3>
+        <Card style={{ display: "flex", flexDirection: "column", gap: "18px", padding: "24px", backgroundColor: "#FFFFFF", border: "1px solid var(--border-subtle)", boxShadow: "0 2px 8px rgba(70, 45, 15, 0.04)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "12px" }}>
+            <div style={{ width: "30px", height: "30px", borderRadius: "8px", backgroundColor: "rgba(16, 185, 129, 0.12)", display: "flex", alignItems: "center", justifyContent: "center", color: "#059669" }}>
+              <ShieldCheck size={16} />
+            </div>
+            <div>
+              <h3 style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                Hourly Parameter Checklist
+              </h3>
+              <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+                Audited against USDA / FDA Bottling Quality Parameters
+              </span>
+            </div>
+          </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "14px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px" }}>
             {/* Brix Check */}
             <div>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
-                <label style={{ fontSize: "12px", fontWeight: 700, color: "#FFFFFF" }}>Brix Concentration</label>
-                <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>Target: 11.5 - 12.1</span>
+                <label style={{ fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Brix Sugar (°Bx)</label>
+                <span style={{ fontSize: "11px", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>11.5 - 12.1</span>
               </div>
               <input
                 type="number"
@@ -75,7 +82,6 @@ export function QualityChecks() {
                 value={brix}
                 onChange={(e) => setBrix(e.target.value)}
                 className="input-field"
-                style={{ width: "100%" }}
                 required
               />
             </div>
@@ -83,8 +89,8 @@ export function QualityChecks() {
             {/* pH Check */}
             <div>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
-                <label style={{ fontSize: "12px", fontWeight: 700, color: "#FFFFFF" }}>pH Acidity</label>
-                <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>Target: 3.60 - 3.80</span>
+                <label style={{ fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>pH Acidity</label>
+                <span style={{ fontSize: "11px", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>3.60 - 3.80</span>
               </div>
               <input
                 type="number"
@@ -92,7 +98,6 @@ export function QualityChecks() {
                 value={ph}
                 onChange={(e) => setPh(e.target.value)}
                 className="input-field"
-                style={{ width: "100%" }}
                 required
               />
             </div>
@@ -100,37 +105,37 @@ export function QualityChecks() {
             {/* Cap Torque */}
             <div>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
-                <label style={{ fontSize: "12px", fontWeight: 700, color: "#FFFFFF" }}>Cap Torque (in-lbs)</label>
-                <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>Target: 12 - 18</span>
+                <label style={{ fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Torque (in-lbs)</label>
+                <span style={{ fontSize: "11px", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>12 - 18</span>
               </div>
               <input
                 type="number"
                 value={torque}
                 onChange={(e) => setTorque(e.target.value)}
                 className="input-field"
-                style={{ width: "100%" }}
                 required
               />
             </div>
 
             {/* Visual Check */}
             <div>
-              <label style={{ fontSize: "12px", fontWeight: 700, color: "#FFFFFF", display: "block", marginBottom: "6px" }}>
-                Visual Induction Seal Inspection
+              <label style={{ fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase", display: "block", marginBottom: "6px" }}>
+                Induction Seal Inspection
               </label>
-              <div style={{ display: "flex", gap: "10px", height: "38px" }}>
+              <div style={{ display: "flex", gap: "8px", height: "42px" }}>
                 <button
                   type="button"
                   onClick={() => setSealPassed(true)}
                   style={{
                     flex: 1,
-                    borderRadius: "6px",
-                    border: sealPassed ? "1px solid #10B981" : "1px solid var(--border-subtle)",
-                    backgroundColor: sealPassed ? "rgba(16, 185, 129, 0.15)" : "transparent",
-                    color: sealPassed ? "#34D399" : "var(--text-secondary)",
+                    borderRadius: "8px",
+                    border: sealPassed ? "2px solid #10B981" : "1px solid var(--border-subtle)",
+                    backgroundColor: sealPassed ? "rgba(16, 185, 129, 0.15)" : "#FFFFFF",
+                    color: sealPassed ? "#059669" : "var(--text-secondary)",
                     cursor: "pointer",
-                    fontWeight: 600,
-                    fontSize: "12px"
+                    fontWeight: 800,
+                    fontSize: "12px",
+                    transition: "all 0.15s ease"
                   }}
                 >
                   PASS
@@ -140,13 +145,14 @@ export function QualityChecks() {
                   onClick={() => setSealPassed(false)}
                   style={{
                     flex: 1,
-                    borderRadius: "6px",
-                    border: !sealPassed ? "1px solid #EF4444" : "1px solid var(--border-subtle)",
-                    backgroundColor: !sealPassed ? "rgba(239, 68, 68, 0.15)" : "transparent",
-                    color: !sealPassed ? "#F87171" : "var(--text-secondary)",
+                    borderRadius: "8px",
+                    border: !sealPassed ? "2px solid #EF4444" : "1px solid var(--border-subtle)",
+                    backgroundColor: !sealPassed ? "rgba(239, 68, 68, 0.15)" : "#FFFFFF",
+                    color: !sealPassed ? "#DC2626" : "var(--text-secondary)",
                     cursor: "pointer",
-                    fontWeight: 600,
-                    fontSize: "12px"
+                    fontWeight: 800,
+                    fontSize: "12px",
+                    transition: "all 0.15s ease"
                   }}
                 >
                   FAIL
@@ -156,40 +162,44 @@ export function QualityChecks() {
           </div>
         </Card>
 
-        <Button type="submit" variant="primary" icon={Send}>
-          Submit Quality Logs
+        <Button type="submit" variant="primary" icon={Send} style={{ width: "fit-content", padding: "10px 28px", alignSelf: "center" }}>
+          Submit Quality Checklist
         </Button>
       </form>
 
-      {/* History Log */}
-      <Card>
-        <h3 style={{ fontSize: "14px", fontWeight: 700, color: "#FFFFFF", marginBottom: "12px" }}>
-          Shift Log History
+      {/* History Log - Single Row Strips matching reference image */}
+      <Card style={{ backgroundColor: "#FFFFFF", border: "1px solid var(--border-subtle)", padding: "20px" }}>
+        <h3 style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)", marginBottom: "12px", margin: "0 0 12px 0" }}>
+          Shift Quality Log History
         </h3>
-        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-          {checkHistory.map((item, idx) => (
-            <div
-              key={idx}
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr 1fr 1fr 1fr",
-                fontSize: "12px",
-                padding: "8px 12px",
-                borderRadius: "6px",
-                backgroundColor: "var(--bg-card-subtle)",
-                border: "1px solid var(--border-subtle)",
-                alignItems: "center"
-              }}
-            >
-              <span style={{ color: "var(--text-muted)" }}>{item.time}</span>
-              <span style={{ fontWeight: 600 }}>{item.brix}</span>
-              <span style={{ fontWeight: 600 }}>{item.ph}</span>
-              <span style={{ fontWeight: 600 }}>{item.torque}</span>
-              <Badge variant={item.seal === "PASS" ? "emerald" : "danger"}>
-                {item.seal}
-              </Badge>
-            </div>
-          ))}
+        
+        <div style={{ overflowX: "auto", width: "100%" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px", minWidth: "340px" }}>
+            {checkHistory.map((item, idx) => (
+              <div
+                key={idx}
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "70px 1fr 1fr 1fr auto",
+                  fontSize: "12px",
+                  padding: "10px 16px",
+                  borderRadius: "8px",
+                  backgroundColor: "var(--bg-card-subtle)",
+                  border: "1px solid var(--border-subtle)",
+                  alignItems: "center",
+                  gap: "10px"
+                }}
+              >
+                <span style={{ color: "var(--text-muted)", fontFamily: "var(--font-mono)", fontWeight: 600 }}>{item.time}</span>
+                <span style={{ fontWeight: 800, color: "var(--text-primary)", fontFamily: "var(--font-mono)" }}>{item.brix}</span>
+                <span style={{ fontWeight: 800, color: "var(--text-primary)", fontFamily: "var(--font-mono)" }}>{item.ph}</span>
+                <span style={{ fontWeight: 800, color: "var(--text-primary)", fontFamily: "var(--font-mono)" }}>{item.torque}</span>
+                <Badge variant={item.seal === "PASS" ? "emerald" : "danger"}>
+                  {item.seal}
+                </Badge>
+              </div>
+            ))}
+          </div>
         </div>
       </Card>
     </div>

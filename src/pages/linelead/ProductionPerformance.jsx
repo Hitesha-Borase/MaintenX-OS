@@ -25,14 +25,12 @@ export function ProductionPerformance() {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "800px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "100%" }}>
       <div>
         <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
           Production Performance & Pace Analytics
         </h1>
-        <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-          Monitor pace deviations, hour-by-hour metrics, and schedule recovery
-        </p>
+
       </div>
 
       {/* Speed Metrics Grid */}
@@ -65,7 +63,7 @@ export function ProductionPerformance() {
           <h3 style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
             Speed Parameters
           </h3>
-          <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "6px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", paddingBottom: "4px" }}>
             <span style={{ color: "var(--text-secondary)" }}>Current Line Speed:</span>
             <span style={{ fontWeight: 700, color: "#FFFFFF" }}>{activeOrder.currentSpeedBPM} BPM</span>
           </div>

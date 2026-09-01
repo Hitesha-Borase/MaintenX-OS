@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Bell, AlertTriangle, Check, Trash2, CheckCircle2 } from "lucide-react";
+import { Bell, AlertTriangle, Check, CheckCheck, CheckCircle2, Trash2, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "../../components/common/Card";
 import { Button } from "../../components/common/Button";
@@ -7,10 +7,12 @@ import { Badge } from "../../components/common/Badge";
 import { useApp } from "../../context/AppContext";
 
 export function Notifications() {
-  const navigate = useNavigate();
   const { addToast } = useApp();
 
   const [activeTab, setActiveTab] = useState("All");
+  const [filterTab, setFilterTab] = useState("all"); // "all", "unread", "read"
+  const [deletingNotification, setDeletingNotification] = useState(null);
+  const [isClearAllModalOpen, setIsClearAllModalOpen] = useState(false);
 
   const [notifications, setNotifications] = useState([
     { 
@@ -41,26 +43,19 @@ export function Notifications() {
       path: "/ci/benefits/verify",
       type: "warning",
       badge: "AUDIT",
-      read: false
+      read: true
+    },
+    { 
+      id: 4, 
+      title: "New RCA Submitted — Line 4 Jam", 
+      msg: "A new Root Cause Analysis has been drafted for the recurring accumulation table jam on Line 4.", 
+      time: "2 days ago", 
+      path: "/ci/5why/rca",
+      type: "info",
+      badge: "RCA",
+      read: true
     }
   ]);
-
-  const unreadCount = notifications.filter(n => !n.read).length;
-
-  const filteredNotifications = notifications.filter(n => {
-    if (activeTab === "Unread") return !n.read;
-    if (activeTab === "Read") return n.read;
-    return true;
-  });
-
-  const handleMarkRead = (id) => {
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
-  };
-
-  const handleDelete = (id) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
-    addToast("Notification deleted.", "info");
-  };
 
   const handleMarkAllRead = () => {
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
@@ -91,7 +86,39 @@ export function Notifications() {
   const getIcon = (type) => {
     if (type === "danger") return AlertTriangle;
     return Bell;
+  const handleMarkAsRead = (id) => {
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, read: true } : n))
+    );
+    addToast("Notification marked as read.", "success");
   };
+
+  const handleMarkAllAsRead = () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    addToast("All notifications marked as read.", "success");
+  };
+
+  const handleConfirmClearAll = () => {
+    setNotifications([]);
+    addToast("All notifications cleared.", "info");
+    setIsClearAllModalOpen(false);
+  };
+
+  const handleConfirmDelete = () => {
+    if (!deletingNotification) return;
+    setNotifications((prev) => prev.filter((n) => n.id !== deletingNotification.id));
+    addToast("Notification removed.", "info");
+    setDeletingNotification(null);
+  };
+
+  const unreadCount = notifications.filter((n) => !n.read).length;
+  const readCount = notifications.filter((n) => n.read).length;
+
+  const filteredNotifs = notifications.filter((n) => {
+    if (filterTab === "unread") return !n.read;
+    if (filterTab === "read") return n.read;
+    return true;
+  });
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "24px", width: "100%" }}>
@@ -113,10 +140,10 @@ export function Notifications() {
           </p>
         </div>
         <div style={{ display: "flex", gap: "12px" }}>
-          <Button variant="outline" size="sm" icon={CheckCircle2} onClick={handleMarkAllRead}>
+          <Button variant="outline" size="sm" icon={CheckCircle2} onClick={handleMarkAllAsRead}>
             Mark All as Read
           </Button>
-          <Button variant="ghost" size="sm" icon={Trash2} onClick={handleClearAll}>
+          <Button variant="ghost" size="sm" icon={Trash2} onClick={() => setIsClearAllModalOpen(true)}>
             Clear All
           </Button>
         </div>
@@ -151,7 +178,7 @@ export function Notifications() {
       </div>
 
       {/* Notification List */}
-      {filteredNotifications.length === 0 ? (
+      {filteredNotifs.length === 0 ? (
         <Card style={{ padding: "48px 24px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: "12px" }}>
           <div style={{ padding: "16px", backgroundColor: "rgba(200, 149, 71, 0.1)", borderRadius: "50%" }}>
             <Bell size={32} color="#C89547" />
@@ -160,7 +187,7 @@ export function Notifications() {
         </Card>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-          {filteredNotifications.map((n) => {
+          {filteredNotifs.map((n) => {
             const IconComponent = getIcon(n.type);
             const color = getSeverityColor(n.type);
             const bg = getSeverityBg(n.type);
@@ -200,15 +227,111 @@ export function Notifications() {
                 
                 <div style={{ display: "flex", gap: "8px", alignItems: "center", paddingTop: "4px" }}>
                   {!n.read && (
-                    <Button variant="outline" size="sm" icon={Check} onClick={() => handleMarkRead(n.id)}>
+                    <Button variant="outline" size="sm" icon={Check} onClick={() => handleMarkAsRead(n.id)}>
                       Mark as Read
                     </Button>
                   )}
-                  <Button variant="ghost" size="sm" icon={Trash2} onClick={() => handleDelete(n.id)} />
+                  <Button variant="ghost" size="sm" icon={Trash2} onClick={() => setDeletingNotification(n)} />
                 </div>
               </Card>
             );
           })}
+        </div>
+      )}
+
+      {/* CONFIRM DELETE INDIVIDUAL NOTIFICATION MODAL */}
+      {deletingNotification && (
+        <div className="modal-backdrop" onClick={() => setDeletingNotification(null)}>
+          <div className="modal-content" style={{ maxWidth: "420px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <div style={{ width: "28px", height: "28px", borderRadius: "50%", backgroundColor: "rgba(220, 38, 38, 0.12)", color: "#DC2626", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <AlertTriangle size={15} />
+                </div>
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)" }}>
+                  Confirm Delete
+                </h2>
+              </div>
+              <button onClick={() => setDeletingNotification(null)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
+              <p style={{ fontSize: "13px", color: "var(--text-primary)", lineHeight: 1.5, margin: 0 }}>
+                Kya aap sach me is notification (<strong>{deletingNotification.title}</strong>) ko delete karna chahte hain?
+              </p>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "6px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
+                <Button variant="secondary" onClick={() => setDeletingNotification(null)}>
+                  Cancel
+                </Button>
+                <button
+                  onClick={handleConfirmDelete}
+                  style={{
+                    padding: "8px 16px",
+                    borderRadius: "6px",
+                    backgroundColor: "#DC2626",
+                    color: "#FFFFFF",
+                    fontWeight: 700,
+                    fontSize: "12px",
+                    border: "none",
+                    cursor: "pointer"
+                  }}
+                >
+                  Yes, Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CONFIRM CLEAR ALL MODAL */}
+      {isClearAllModalOpen && (
+        <div className="modal-backdrop" onClick={() => setIsClearAllModalOpen(false)}>
+          <div className="modal-content" style={{ maxWidth: "420px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <div style={{ width: "28px", height: "28px", borderRadius: "50%", backgroundColor: "rgba(220, 38, 38, 0.12)", color: "#DC2626", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <AlertTriangle size={15} />
+                </div>
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)" }}>
+                  Confirm Clear All
+                </h2>
+              </div>
+              <button onClick={() => setIsClearAllModalOpen(false)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
+              <p style={{ fontSize: "13px", color: "var(--text-primary)", lineHeight: 1.5, margin: 0 }}>
+                Kya aap sach me <strong>sabhi {notifications.length} notifications</strong> ko delete / clear karna chahte hain?
+              </p>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "6px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
+                <Button variant="secondary" onClick={() => setIsClearAllModalOpen(false)}>
+                  Cancel
+                </Button>
+                <button
+                  onClick={handleConfirmClearAll}
+                  style={{
+                    padding: "8px 16px",
+                    borderRadius: "6px",
+                    backgroundColor: "#DC2626",
+                    color: "#FFFFFF",
+                    fontWeight: 700,
+                    fontSize: "12px",
+                    border: "none",
+                    cursor: "pointer"
+                  }}
+                >
+                  Yes, Clear All
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

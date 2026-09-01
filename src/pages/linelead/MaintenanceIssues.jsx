@@ -43,17 +43,15 @@ export function MaintenanceIssues() {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "800px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "100%" }}>
       <div>
         <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
           Line Maintenance Issues
         </h1>
-        <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-          Log corrective hardware breakdowns and monitor open line work orders
-        </p>
+
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "16px" }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
         {/* Active Work Orders */}
         <Card style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
           <h3 style={{ fontSize: "14px", fontWeight: 700, color: "#FFFFFF" }}>
@@ -96,59 +94,63 @@ export function MaintenanceIssues() {
 
         {/* Log WO Form */}
         <form onSubmit={handleSubmit}>
-          <Card style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+          <Card style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
             <h3 style={{ fontSize: "14px", fontWeight: 700, color: "#FFFFFF" }}>
               Log Corrective Defect
             </h3>
 
-            <div>
-              <label style={{ fontSize: "11px", color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
-                Issue Title
-              </label>
-              <input
-                type="text"
-                placeholder="E.g. Scrap belt slip..."
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="input-field"
-                style={{ width: "100%" }}
-                required
-              />
-            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "16px", alignItems: "flex-end" }}>
+              <div>
+                <label style={{ fontSize: "11px", color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
+                  Issue Title
+                </label>
+                <input
+                  type="text"
+                  placeholder="E.g. Scrap belt slip..."
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="input-field"
+                  style={{ width: "100%" }}
+                  required
+                />
+              </div>
 
-            <div>
-              <label style={{ fontSize: "11px", color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
-                Priority Urgency
-              </label>
-              <select
-                value={priority}
-                onChange={(e) => setPriority(e.target.value)}
-                className="input-field"
-                style={{ width: "100%" }}
-              >
-                <option value="P1 - Critical">P1 - Critical (Line Down)</option>
-                <option value="P2 - High">P2 - High (Degraded Performance)</option>
-                <option value="P3 - Medium">P3 - Medium (Minor Issue)</option>
-              </select>
-            </div>
+              <div>
+                <label style={{ fontSize: "11px", color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
+                  Priority Urgency
+                </label>
+                <select
+                  value={priority}
+                  onChange={(e) => setPriority(e.target.value)}
+                  className="input-field"
+                  style={{ width: "100%" }}
+                >
+                  <option value="P1 - Critical">P1 - Critical (Line Down)</option>
+                  <option value="P2 - High">P2 - High (Degraded Performance)</option>
+                  <option value="P3 - Medium">P3 - Medium (Minor Issue)</option>
+                </select>
+              </div>
 
-            <div>
-              <label style={{ fontSize: "11px", color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
-                Symptom Details
-              </label>
-              <textarea
-                placeholder="Describe machine behavior..."
-                value={desc}
-                onChange={(e) => setDesc(e.target.value)}
-                className="input-field"
-                style={{ width: "100%", minHeight: "80px" }}
-                required
-              />
-            </div>
+              <div>
+                <label style={{ fontSize: "11px", color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
+                  Symptom Details
+                </label>
+                <textarea
+                  placeholder="Describe machine behavior..."
+                  value={desc}
+                  onChange={(e) => setDesc(e.target.value)}
+                  className="input-field"
+                  style={{ width: "100%", height: "38px", minHeight: "38px", resize: "vertical" }}
+                  required
+                />
+              </div>
 
-            <Button type="submit" variant="primary" icon={Wrench} style={{ marginTop: "6px" }}>
-              Request Maintenance
-            </Button>
+              <div>
+                <Button type="submit" variant="primary" icon={Wrench} style={{ width: "100%", height: "38px" }}>
+                  Request Maintenance
+                </Button>
+              </div>
+            </div>
           </Card>
         </form>
       </div>

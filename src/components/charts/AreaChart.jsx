@@ -3,7 +3,7 @@ import React, { useState } from "react";
 export function AreaChart({
   data = [], // [{ label: "06:00", value: 85 }]
   height = 180,
-  color = "#38BDF8",
+  color = "#8C5B23",
   gradientId = "areaGradient",
   unit = "%"
 }) {
@@ -32,15 +32,15 @@ export function AreaChart({
       <svg viewBox={`0 0 ${width} ${height}`} style={{ width: "100%", height: `${height}px`, overflow: "visible" }}>
         <defs>
           <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={color} stopOpacity="0.4" />
+            <stop offset="0%" stopColor={color} stopOpacity="0.25" />
             <stop offset="100%" stopColor={color} stopOpacity="0.0" />
           </linearGradient>
         </defs>
 
         {/* Grid lines */}
-        <line x1="20" y1={chartHeight * 0.25} x2={width - 20} y2={chartHeight * 0.25} stroke="#1E293B" strokeDasharray="3 3" />
-        <line x1="20" y1={chartHeight * 0.5} x2={width - 20} y2={chartHeight * 0.5} stroke="#1E293B" strokeDasharray="3 3" />
-        <line x1="20" y1={chartHeight * 0.75} x2={width - 20} y2={chartHeight * 0.75} stroke="#1E293B" strokeDasharray="3 3" />
+        <line x1="20" y1={chartHeight * 0.25} x2={width - 20} y2={chartHeight * 0.25} stroke="#E5E0D8" strokeDasharray="3 3" />
+        <line x1="20" y1={chartHeight * 0.5} x2={width - 20} y2={chartHeight * 0.5} stroke="#E5E0D8" strokeDasharray="3 3" />
+        <line x1="20" y1={chartHeight * 0.75} x2={width - 20} y2={chartHeight * 0.75} stroke="#E5E0D8" strokeDasharray="3 3" />
 
         {/* Area fill */}
         <path d={areaD} fill={`url(#${gradientId})`} />
@@ -55,9 +55,9 @@ export function AreaChart({
               cx={p.x}
               cy={p.y}
               r={hoveredPoint === i ? 6 : 4}
-              fill="#0A0E17"
+              fill="#FFFFFF"
               stroke={color}
-              strokeWidth="2"
+              strokeWidth="2.5"
               style={{ cursor: "pointer", transition: "r 0.15s ease" }}
               onMouseEnter={() => setHoveredPoint(i)}
               onMouseLeave={() => setHoveredPoint(null)}
@@ -65,8 +65,9 @@ export function AreaChart({
             <text
               x={p.x}
               y={height - 5}
-              fill="#64748B"
+              fill="#786C5E"
               fontSize="10"
+              fontWeight="600"
               fontFamily="var(--font-mono)"
               textAnchor="middle"
             >
@@ -82,20 +83,27 @@ export function AreaChart({
             position: "absolute",
             left: `${(points[hoveredPoint].x / width) * 100}%`,
             top: `${(points[hoveredPoint].y / height) * 100}%`,
-            transform: "translate(-50%, -120%)",
-            backgroundColor: "#0F172A",
-            border: "1px solid #38BDF8",
-            padding: "4px 8px",
-            borderRadius: "6px",
-            fontSize: "11px",
+            transform: "translate(-50%, -125%)",
+            backgroundColor: "#FFFFFF",
+            border: "1px solid #E2D9CC",
+            padding: "6px 12px",
+            borderRadius: "8px",
+            fontSize: "12px",
             fontWeight: 700,
-            color: "#FFFFFF",
+            color: "var(--text-primary)",
             pointerEvents: "none",
             whiteSpace: "nowrap",
-            boxShadow: "0 4px 12px rgba(0,0,0,0.6)"
+            boxShadow: "0 8px 24px rgba(44, 30, 15, 0.16), 0 2px 6px rgba(44, 30, 15, 0.08)",
+            display: "flex",
+            alignItems: "center",
+            gap: "6px",
+            zIndex: 30
           }}
         >
-          {points[hoveredPoint].label}: {points[hoveredPoint].value}{unit}
+          <span style={{ color: "var(--text-secondary)", fontSize: "11px", fontWeight: 600 }}>{points[hoveredPoint].label}:</span>
+          <span style={{ color: color || "#8C5B23", fontSize: "13px", fontWeight: 800, fontFamily: "var(--font-mono)" }}>
+            {points[hoveredPoint].value}{unit}
+          </span>
         </div>
       )}
     </div>

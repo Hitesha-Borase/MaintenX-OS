@@ -50,9 +50,7 @@ export function LineLeadDashboard() {
         <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
           Line Lead Control Console
         </h1>
-        <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-          Hour-by-hour operational pace and recovery steering for Line 1
-        </p>
+
       </div>
 
       {/* KPI Ticker Grid */}

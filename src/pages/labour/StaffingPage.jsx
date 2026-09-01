@@ -7,7 +7,9 @@ import {
   Search,
   Plus,
   ArrowRight,
-  ShieldCheck
+  ShieldCheck,
+  Download,
+  X
 } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { Badge } from "../../components/common/Badge";
@@ -17,7 +19,7 @@ import { useCMMS } from "../../context/CMMSContext";
 import { useApp } from "../../context/AppContext";
 
 export function StaffingPage() {
-  const { employees } = useCMMS();
+  const { employees = [] } = useCMMS();
   const { addToast } = useApp();
 
   const [staffingLines, setStaffingLines] = useState([
@@ -27,25 +29,77 @@ export function StaffingPage() {
     { line: "Quality & In-Line Testing Lab", required: 4, assigned: 4, supervisor: "Sarah Jenkins", status: "Full Coverage" }
   ]);
 
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [newStaffing, setNewStaffing] = useState({
+    line: "Warehouse & Material Staging",
+    required: 4,
+    assigned: 4,
+    supervisor: "Carlos Mendez"
+  });
+
+  const handleAddSubmit = (e) => {
+    e.preventDefault();
+    setStaffingLines([
+      ...staffingLines,
+      {
+        ...newStaffing,
+        required: Number(newStaffing.required),
+        assigned: Number(newStaffing.assigned),
+        status: Number(newStaffing.assigned) >= Number(newStaffing.required) ? "Full Coverage" : "Understaffed"
+      }
+    ]);
+    addToast(`Line staffing allocated for ${newStaffing.line}!`, "success");
+    setIsModalOpen(false);
+  };
+
+  const handleExportCSV = () => {
+    const headers = "Production Area,Required Headcount,Assigned Operators,Area Supervisor,Coverage Status\n";
+    const rows = staffingLines
+      .map((s) => `"${s.line}",${s.required},${s.assigned},"${s.supervisor}","${s.status}"`)
+      .join("\n");
+    const blob = new Blob([headers + rows], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `Staffing_Allocation_${new Date().toISOString().substring(0, 10)}.csv`;
+    a.click();
+    addToast("Staffing matrix exported to CSV.", "info");
+  };
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%", maxWidth: "1200px", margin: "0 auto", minWidth: 0 }}>
       {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
-        <div>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px", width: "100%" }}>
+        <div style={{ minWidth: "240px", flex: 1 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+            <h1 style={{ fontSize: "clamp(18px, 4vw, 24px)", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.3px", lineHeight: 1.2 }}>
               Shift Labour Staffing & Line Allocations
             </h1>
-            <Badge variant="emerald">100% Shift Attendance</Badge>
+            <Badge variant="emerald">100% ATTENDANCE</Badge>
           </div>
-          <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>
-            Headcount planning, active shift staffing, operator-to-line allocation, and supervisor coverage.
-          </p>
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+          <Button variant="secondary" icon={Download} onClick={handleExportCSV} style={{ fontSize: "12px", padding: "7px 12px" }}>
+            Export CSV
+          </Button>
+          <Button variant="primary" icon={Plus} onClick={() => setIsModalOpen(true)} style={{ fontSize: "12px", padding: "7px 12px" }}>
+            + Allocate Staff
+          </Button>
         </div>
       </div>
 
-      {/* KPI Tickers */}
-      <div className="grid-3" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "16px" }}>
+      {/* KPI Tickers - 2x2 on mobile, 4 on desktop */}
+      <div
+        className="kpi-grid-responsive grid-4"
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+          gap: "12px",
+          width: "100%",
+          minWidth: 0
+        }}
+      >
         <StatCard
           title="Total Plant Staffing"
           value="28 / 28"
@@ -58,7 +112,7 @@ export function StaffingPage() {
           title="Line Staffing Health"
           value="100%"
           unit="Manned"
-          trend={{ value: "All 4 critical lines covered", isPositive: true, text: "" }}
+          trend={{ value: "All critical lines covered", isPositive: true, text: "" }}
           icon={CheckCircle2}
           colorVariant="cyan"
         />
@@ -70,16 +124,27 @@ export function StaffingPage() {
           icon={ShieldCheck}
           colorVariant="emerald"
         />
+        <StatCard
+          title="Takt Utilization"
+          value="94.2%"
+          unit="Productivity"
+          trend={{ value: "+2.0% above target", isPositive: true, text: "" }}
+          icon={Clock}
+          colorVariant="amber"
+        />
       </div>
 
-      {/* Staffing Allocation Table */}
-      <Card>
-        <h3 style={{ fontSize: "15px", fontWeight: 700, color: "var(--text-primary)", marginBottom: "16px" }}>
-          Line-by-Line Operator Allocation Matrix (Shift A)
-        </h3>
+      {/* Staffing Allocation Table Card */}
+      <Card style={{ padding: "18px", minWidth: 0, width: "100%", boxSizing: "border-box" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px", flexWrap: "wrap", gap: "8px" }}>
+          <h3 style={{ fontSize: "15px", fontWeight: 800, color: "var(--text-primary)" }}>
+            Line-by-Line Operator Allocation Matrix (Shift A)
+          </h3>
+          <Badge variant="cyan">{staffingLines.length} MANNED SECTORS</Badge>
+        </div>
 
-        <div className="data-table-container">
-          <table className="data-table">
+        <div className="data-table-container" style={{ width: "100%", overflowX: "auto", WebkitOverflowScrolling: "touch", display: "block" }}>
+          <table className="data-table" style={{ width: "100%", minWidth: "680px" }}>
             <thead>
               <tr>
                 <th>Production Area / Line</th>
@@ -87,35 +152,25 @@ export function StaffingPage() {
                 <th>Assigned Operators</th>
                 <th>Area Supervisor</th>
                 <th>Coverage Status</th>
-                <th>Action</th>
               </tr>
             </thead>
             <tbody>
               {staffingLines.map((s, idx) => (
                 <tr key={idx}>
                   <td>
-                    <div style={{ fontWeight: 700, color: "#FFFFFF" }}>{s.line}</div>
+                    <div style={{ fontWeight: 700, color: "var(--text-primary)" }}>{s.line}</div>
                   </td>
                   <td style={{ fontFamily: "var(--font-mono)" }}>{s.required} Operators</td>
-                  <td style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "#10B981" }}>
-                    {s.assigned} Assigned
+                  <td style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "#059669" }}>
+                    {s.assigned} Operators
                   </td>
                   <td>
-                    <span style={{ fontSize: "12px", color: "#38BDF8", fontWeight: 600 }}>{s.supervisor}</span>
+                    <span style={{ fontSize: "12px", color: "var(--text-secondary)", fontWeight: 600 }}>{s.supervisor}</span>
                   </td>
                   <td>
-                    <Badge variant="emerald" dot>
+                    <Badge variant={s.status === "Full Coverage" ? "emerald" : "amber"}>
                       {s.status}
                     </Badge>
-                  </td>
-                  <td>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => addToast(`Reassigned operator verified for ${s.line}`, "info")}
-                    >
-                      Reallocate
-                    </Button>
                   </td>
                 </tr>
               ))}
@@ -123,6 +178,83 @@ export function StaffingPage() {
           </table>
         </div>
       </Card>
+
+      {/* MODAL */}
+      {isModalOpen && (
+        <div className="modal-backdrop" onClick={() => setIsModalOpen(false)}>
+          <div className="modal-content" style={{ maxWidth: "500px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+              <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)" }}>
+                Allocate Line Staffing
+              </h2>
+              <button onClick={() => setIsModalOpen(false)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddSubmit} style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div>
+                <label className="form-label">Production Line / Area *</label>
+                <input
+                  type="text"
+                  required
+                  value={newStaffing.line}
+                  onChange={(e) => setNewStaffing({ ...newStaffing, line: e.target.value })}
+                  className="form-input"
+                  style={{ backgroundColor: "#FFFFFF" }}
+                />
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
+                <div>
+                  <label className="form-label">Required Headcount *</label>
+                  <input
+                    type="number"
+                    required
+                    value={newStaffing.required}
+                    onChange={(e) => setNewStaffing({ ...newStaffing, required: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+
+                <div>
+                  <label className="form-label">Assigned Operators *</label>
+                  <input
+                    type="number"
+                    required
+                    value={newStaffing.assigned}
+                    onChange={(e) => setNewStaffing({ ...newStaffing, assigned: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="form-label">Area Supervisor *</label>
+                <input
+                  type="text"
+                  required
+                  value={newStaffing.supervisor}
+                  onChange={(e) => setNewStaffing({ ...newStaffing, supervisor: e.target.value })}
+                  className="form-input"
+                  style={{ backgroundColor: "#FFFFFF" }}
+                />
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
+                <Button variant="secondary" onClick={() => setIsModalOpen(false)}>
+                  Cancel
+                </Button>
+                <Button variant="primary" type="submit">
+                  Save Allocation
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

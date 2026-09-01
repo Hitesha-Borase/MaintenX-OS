@@ -3,13 +3,17 @@ import {
   FileSpreadsheet,
   Download,
   Calendar,
-  Eye,
   Filter,
   CheckCircle2,
   FileText,
+  Clock,
+  Sparkles,
   Printer,
+  Eye,
   X,
-  Layers
+  Layers,
+  Search,
+  ArrowRight
 } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { Badge } from "../../components/common/Badge";
@@ -19,29 +23,72 @@ import { useCMMS } from "../../context/CMMSContext";
 import { useApp } from "../../context/AppContext";
 
 export function ReportsPage() {
-  const { reportTemplates, workOrders, breakdowns, pmSchedules, spareParts, calibrations, assets } = useCMMS();
+  const { assets, workOrders, breakdowns, pmSchedules, spareParts, calibrations } = useCMMS();
   const { addToast } = useApp();
 
-  const [selectedFormat, setSelectedFormat] = useState("CSV");
   const [selectedDateRange, setSelectedDateRange] = useState("Month");
+  const [selectedFormat, setSelectedFormat] = useState("CSV");
   const [previewReport, setPreviewReport] = useState(null);
+
+  const reportTemplates = [
+    {
+      id: "RPT-001",
+      name: "Equipment MTBF & MTTR Reliability Summary",
+      category: "Reliability Engineering",
+      description: "Mean Time Between Failures (MTBF) and Mean Time to Repair (MTTR) by production line and functional asset group.",
+      frequency: "Monthly",
+      dataPoints: assets.length
+    },
+    {
+      id: "RPT-002",
+      name: "Preventive Maintenance (PM) Compliance & Overdue Audit",
+      category: "Maintenance Compliance",
+      description: "Audit trail of scheduled vs completed PM work orders, 10% rule compliance, and technician sign-offs.",
+      frequency: "Weekly",
+      dataPoints: pmSchedules.length
+    },
+    {
+      id: "RPT-003",
+      name: "Plant Breakdown Downtime & Production Loss Valuation",
+      category: "Financial & Loss",
+      description: "Financial quantification of unplanned outages, lost product output units, and emergency labor spend.",
+      frequency: "Monthly",
+      dataPoints: breakdowns.length
+    },
+    {
+      id: "RPT-004",
+      name: "Critical Spare Parts Stockout Risk & Consumption Ledger",
+      category: "Inventory & Supply",
+      description: "Fast-moving parts consumption, reorder trigger breaches, min/max thresholds, and lead time forecasting.",
+      frequency: "Weekly",
+      dataPoints: spareParts.length
+    },
+    {
+      id: "RPT-005",
+      name: "Calibration & Metrology Compliance Register",
+      category: "Regulatory & ISO",
+      description: "Calibration certificate validity, NIST traceable standard records, and due date forecasting.",
+      frequency: "Quarterly",
+      dataPoints: calibrations.length
+    }
+  ];
 
   const handleGenerateReport = (template, format = "CSV") => {
     let content = "";
-    let filename = `${template.id}_${new Date().toISOString().substring(0, 10)}.csv`;
+    let filename = `${template.id}_${new Date().toISOString().substring(0, 10)}.${format.toLowerCase()}`;
 
-    if (template.id.includes("MTBF") || template.id.includes("CMMS")) {
-      content =
-        "Asset ID,Asset Name,MTBF (hrs),MTTR (hrs),Health Index (%),Status\n" +
-        assets.map((a) => `"${a.id}","${a.name}",${a.mtbf || 350},${a.mttr || 1.4},${a.health},"${a.status}"`).join("\n");
-    } else if (template.id.includes("OEE") || template.id.includes("Downtime")) {
-      content =
-        "Incident ID,Asset,Failure Category,Downtime Minutes,Cost Loss ($),Status\n" +
-        breakdowns.map((b) => `"${b.id}","${b.assetName}","${b.failureCategory}",${b.durationMinutes},${b.impact?.downtimeCostUSD || 0},"${b.status}"`).join("\n");
+    if (template.id === "RPT-001") {
+      content = "Asset ID,Name,Criticality,Health Score,Status,Vibration (mm/s)\n" +
+        assets.map(a => `"${a.id}","${a.name}","${a.criticality}",${a.health},"${a.status}",${a.vibration}`).join("\n");
+    } else if (template.id === "RPT-002") {
+      content = "PM Code,Title,Asset ID,Frequency,Status,Next Due\n" +
+        pmSchedules.map(p => `"${p.id}","${p.title}","${p.assetId}","${p.frequency}","${p.status}","${p.nextDue}"`).join("\n");
+    } else if (template.id === "RPT-003") {
+      content = "Breakdown ID,Asset ID,Failure Code,Duration (mins),Production Loss ($)\n" +
+        breakdowns.map(b => `"${b.id}","${b.assetId}","${b.failureCode}",${b.durationMinutes || 45},${b.impact?.downtimeCostUSD || 2500}`).join("\n");
     } else {
-      content =
-        "Schedule ID,Task Title,Asset,Next Due Date,Frequency,Status\n" +
-        pmSchedules.map((s) => `"${s.id}","${s.title}","${s.assetName}","${s.dueNext}","${s.frequency}","${s.status}"`).join("\n");
+      content = "Record ID,Title,Category,Timestamp,Status\n" +
+        workOrders.slice(0, 10).map(w => `"${w.id}","${w.title}","${w.type}","${w.createdAt}","${w.status}"`).join("\n");
     }
 
     if (format === "CSV") {
@@ -63,42 +110,39 @@ export function ReportsPage() {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%", maxWidth: "1200px", margin: "0 auto", minWidth: 0 }}>
       {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
-        <div>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px", width: "100%" }}>
+        <div style={{ minWidth: "240px", flex: 1 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+            <h1 style={{ fontSize: "clamp(18px, 4vw, 24px)", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.3px", lineHeight: 1.2 }}>
               Maintenance Reports & Analytics Center
             </h1>
-            <Badge variant="cyan">Executive & Regulatory Exports</Badge>
+            <Badge variant="cyan">AUDIT READY</Badge>
           </div>
-          <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>
-            Generate automated compliance audit reports, MTBF reliability growth curves, downtime losses, and parts utilization.
-          </p>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-            <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>Time Range:</span>
+            <span style={{ fontSize: "11px", color: "var(--text-muted)", fontWeight: 700 }}>Range:</span>
             <select
               className="form-select"
-              style={{ height: "36px", fontSize: "12px" }}
+              style={{ height: "36px", fontSize: "12px", backgroundColor: "#FFFFFF" }}
               value={selectedDateRange}
               onChange={(e) => setSelectedDateRange(e.target.value)}
             >
-              <option value="Today">Today (Active Shift)</option>
+              <option value="Today">Today</option>
               <option value="Week">Last 7 Days</option>
-              <option value="Month">Current Month (August 2026)</option>
+              <option value="Month">Current Month</option>
               <option value="Quarter">Last 90 Days</option>
             </select>
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-            <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>Format:</span>
+            <span style={{ fontSize: "11px", color: "var(--text-muted)", fontWeight: 700 }}>Format:</span>
             <select
               className="form-select"
-              style={{ height: "36px", fontSize: "12px" }}
+              style={{ height: "36px", fontSize: "12px", backgroundColor: "#FFFFFF" }}
               value={selectedFormat}
               onChange={(e) => setSelectedFormat(e.target.value)}
             >
@@ -109,12 +153,21 @@ export function ReportsPage() {
         </div>
       </div>
 
-      {/* KPI Summary */}
-      <div className="grid-3" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "16px" }}>
+      {/* KPI Summary - 2x2 on mobile, 4 on desktop */}
+      <div
+        className="kpi-grid-responsive grid-4"
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+          gap: "12px",
+          width: "100%",
+          minWidth: 0
+        }}
+      >
         <StatCard
           title="Automated Templates"
           value={reportTemplates.length.toString()}
-          unit="Standard Reports"
+          unit="Reports"
           trend={{ value: "ISO & FDA Audit Ready", isPositive: true, text: "" }}
           icon={FileSpreadsheet}
           colorVariant="cyan"
@@ -135,19 +188,27 @@ export function ReportsPage() {
           icon={FileText}
           colorVariant="emerald"
         />
+        <StatCard
+          title="Data Integrity"
+          value="99.9%"
+          unit="Verified"
+          trend={{ value: "Zero telemetry drops", isPositive: true, text: "" }}
+          icon={Sparkles}
+          colorVariant="amber"
+        />
       </div>
 
       {/* Report Templates Grid */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: "20px" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "14px", width: "100%" }}>
         {reportTemplates.map((rep) => (
-          <Card key={rep.id} style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", gap: "14px" }}>
+          <Card key={rep.id} style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", gap: "14px", padding: "18px", boxSizing: "border-box" }}>
             <div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px" }}>
                 <Badge variant="cyan">{rep.category}</Badge>
                 <span style={{ fontSize: "11px", fontFamily: "var(--font-mono)", color: "var(--text-muted)" }}>{rep.id}</span>
               </div>
 
-              <h3 style={{ fontSize: "16px", fontWeight: 800, color: "#FFFFFF" }}>
+              <h3 style={{ fontSize: "15px", fontWeight: 800, color: "var(--text-primary)" }}>
                 {rep.name}
               </h3>
 
@@ -156,9 +217,9 @@ export function ReportsPage() {
               </p>
             </div>
 
-            <div style={{ borderTop: "1px solid var(--border-subtle)", paddingTop: "12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ borderTop: "1px solid var(--border-subtle)", paddingTop: "12px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
               <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>
-                Frequency: <strong>{rep.frequency}</strong>
+                Cadence: <strong>{rep.frequency}</strong>
               </div>
 
               <div style={{ display: "flex", gap: "8px" }}>
@@ -167,6 +228,7 @@ export function ReportsPage() {
                   size="sm"
                   icon={Eye}
                   onClick={() => handleGenerateReport(rep, "PDF")}
+                  style={{ fontSize: "11px", padding: "5px 10px" }}
                 >
                   Preview
                 </Button>
@@ -175,6 +237,7 @@ export function ReportsPage() {
                   size="sm"
                   icon={Download}
                   onClick={() => handleGenerateReport(rep, "CSV")}
+                  style={{ fontSize: "11px", padding: "5px 10px" }}
                 >
                   Export CSV
                 </Button>
@@ -186,12 +249,12 @@ export function ReportsPage() {
 
       {/* REPORT PREVIEW MODAL */}
       {previewReport && (
-        <div className="modal-backdrop">
-          <div className="modal-content" style={{ maxWidth: "680px", maxHeight: "85vh", overflowY: "auto" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>
+        <div className="modal-backdrop" onClick={() => setPreviewReport(null)}>
+          <div className="modal-content" style={{ maxWidth: "680px", maxHeight: "85vh", overflowY: "auto", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
               <div>
                 <Badge variant="cyan">{previewReport.template.category} Report</Badge>
-                <h2 style={{ fontSize: "18px", fontWeight: 800, color: "#FFFFFF", marginTop: "4px" }}>
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", marginTop: "4px" }}>
                   {previewReport.template.name}
                 </h2>
                 <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>
@@ -203,11 +266,13 @@ export function ReportsPage() {
               </button>
             </div>
 
-            <div style={{ backgroundColor: "#0F172A", padding: "16px", borderRadius: "8px", border: "1px solid var(--border-subtle)", fontFamily: "var(--font-mono)", fontSize: "12px", color: "#38BDF8", overflowX: "auto", whiteSpace: "pre-wrap", maxHeight: "350px" }}>
-              {previewReport.rawContent}
+            <div style={{ padding: "16px 20px" }}>
+              <div style={{ backgroundColor: "var(--bg-card-subtle)", padding: "16px", borderRadius: "8px", border: "1px solid var(--border-subtle)", fontFamily: "var(--font-mono)", fontSize: "12px", color: "#8C5B23", overflowX: "auto", whiteSpace: "pre-wrap", maxHeight: "350px" }}>
+                {previewReport.rawContent}
+              </div>
             </div>
 
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px", marginTop: "16px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid var(--border-subtle)", padding: "14px 20px", backgroundColor: "var(--bg-card-subtle)", flexWrap: "wrap", gap: "10px" }}>
               <Button
                 variant="secondary"
                 icon={Printer}

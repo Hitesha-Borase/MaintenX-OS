@@ -28,14 +28,12 @@ export function Risks() {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "1000px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%" }}>
       <div>
         <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
           Enterprise Risk Registry
         </h1>
-        <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-          Log and monitor high-level supply chain, compliance, and equipment breakdown risks
-        </p>
+
       </div>
 
       <div className="grid-3">

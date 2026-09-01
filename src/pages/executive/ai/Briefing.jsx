@@ -24,15 +24,13 @@ export function Briefing() {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "1000px" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%" }}>
+      <div className="mobile-flex-col" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "16px" }}>
         <div>
           <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
             Executive AI Briefing Hub
           </h1>
-          <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-            Generative AI summaries of cross-plant operations, financial variances, and risk mitigations
-          </p>
+
         </div>
         <Button variant="primary" icon={RefreshCw} onClick={handleGenerate} style={{ animation: generating ? "spin 1s linear infinite" : "none" }}>
           Regenerate Briefing

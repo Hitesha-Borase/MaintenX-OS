@@ -7,7 +7,9 @@ import {
   AlertTriangle,
   Save,
   Globe,
-  Sliders
+  Sliders,
+  ShieldAlert,
+  Server
 } from "lucide-react";
 import { Card } from "../../../components/common/Card";
 import { Badge } from "../../../components/common/Badge";
@@ -33,30 +35,36 @@ export function SecurityPage() {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%", maxWidth: "1200px", margin: "0 auto", minWidth: 0 }}>
       {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
-        <div>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)" }}>
-              Enterprise Security, SSO & Authentication Policies
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px", width: "100%" }}>
+        <div style={{ minWidth: "240px", flex: 1 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+            <h1 style={{ fontSize: "clamp(18px, 4vw, 24px)", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.3px", lineHeight: 1.2 }}>
+              Enterprise Security & Authentication
             </h1>
-            <Badge variant="emerald">SOC 2 Type II Compliant</Badge>
+            <Badge variant="emerald">SOC 2 TYPE II COMPLIANT</Badge>
           </div>
-          <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>
-            Multi-Factor Authentication (MFA), SAML 2.0 Single Sign-On, IP Whitelisting, and password complexity controls.
-          </p>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-          <Button variant="primary" icon={Save} onClick={handleSave}>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+          <Button variant="primary" icon={Save} onClick={handleSave} style={{ fontSize: "12px", padding: "7px 14px" }}>
             Save Security Policies
           </Button>
         </div>
       </div>
 
-      {/* KPI Tickers */}
-      <div className="grid-3" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "16px" }}>
+      {/* KPI Tickers - 2x2 on mobile, 4 on desktop */}
+      <div
+        className="kpi-grid-responsive grid-4"
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+          gap: "12px",
+          width: "100%",
+          minWidth: 0
+        }}
+      >
         <StatCard
           title="MFA Enforcement Rate"
           value="100%"
@@ -75,48 +83,56 @@ export function SecurityPage() {
         />
         <StatCard
           title="IP Protection"
-          value="Whitelisted"
-          unit="2 Subnets"
+          value="2 Subnets"
+          unit="Whitelisted"
           trend={{ value: "Plant VLANs isolated", isPositive: true, text: "" }}
           icon={Globe}
+          colorVariant="amber"
+        />
+        <StatCard
+          title="SOC 2 Type II"
+          value="Certified"
+          unit="Audited"
+          trend={{ value: "Annual third-party audit pass", isPositive: true, text: "" }}
+          icon={ShieldCheck}
           colorVariant="emerald"
         />
       </div>
 
       {/* Security Form Card */}
-      <Card>
-        <h3 style={{ fontSize: "15px", fontWeight: 700, color: "var(--text-primary)", marginBottom: "16px" }}>
+      <Card style={{ padding: "20px", minWidth: 0, width: "100%", boxSizing: "border-box" }}>
+        <h3 style={{ fontSize: "15px", fontWeight: 800, color: "var(--text-primary)", marginBottom: "16px" }}>
           Authentication & Access Control Policy Matrix
         </h3>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px", backgroundColor: "var(--bg-card-subtle)", borderRadius: "8px" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px", backgroundColor: "var(--bg-card-subtle)", borderRadius: "8px", border: "1px solid var(--border-subtle)", flexWrap: "wrap", gap: "10px" }}>
             <div>
-              <strong style={{ color: "#FFFFFF", fontSize: "13px" }}>Enforce Multi-Factor Authentication (2FA/MFA)</strong>
-              <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>Requires TOTP Authenticator app on all employee sign-ins</div>
+              <strong style={{ color: "var(--text-primary)", fontSize: "13px" }}>Enforce Multi-Factor Authentication (2FA/MFA)</strong>
+              <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>Requires TOTP Authenticator app on all employee sign-ins</div>
             </div>
             <input
               type="checkbox"
               checked={securityConfig.enforceMFA}
               onChange={(e) => setSecurityConfig({ ...securityConfig, enforceMFA: e.target.checked })}
-              style={{ width: "18px", height: "18px", accentColor: "#38BDF8", cursor: "pointer" }}
+              style={{ width: "18px", height: "18px", accentColor: "#8C5B23", cursor: "pointer" }}
             />
           </div>
 
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px", backgroundColor: "var(--bg-card-subtle)", borderRadius: "8px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px", backgroundColor: "var(--bg-card-subtle)", borderRadius: "8px", border: "1px solid var(--border-subtle)", flexWrap: "wrap", gap: "10px" }}>
             <div>
-              <strong style={{ color: "#FFFFFF", fontSize: "13px" }}>Corporate SAML 2.0 Single Sign-On (SSO)</strong>
-              <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>Authenticate against Okta / Microsoft Entra ID / Google Workspace</div>
+              <strong style={{ color: "var(--text-primary)", fontSize: "13px" }}>Corporate SAML 2.0 Single Sign-On (SSO)</strong>
+              <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>Authenticate against Okta / Microsoft Entra ID / Google Workspace</div>
             </div>
             <input
               type="checkbox"
               checked={securityConfig.ssoEnabled}
               onChange={(e) => setSecurityConfig({ ...securityConfig, ssoEnabled: e.target.checked })}
-              style={{ width: "18px", height: "18px", accentColor: "#38BDF8", cursor: "pointer" }}
+              style={{ width: "18px", height: "18px", accentColor: "#8C5B23", cursor: "pointer" }}
             />
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "12px" }}>
             <div>
               <label className="form-label">Inactivity Session Timeout (Minutes)</label>
               <input
@@ -124,6 +140,7 @@ export function SecurityPage() {
                 value={securityConfig.sessionTimeoutMins}
                 onChange={(e) => setSecurityConfig({ ...securityConfig, sessionTimeoutMins: Number(e.target.value) })}
                 className="form-input"
+                style={{ backgroundColor: "#FFFFFF" }}
               />
             </div>
 
@@ -134,6 +151,7 @@ export function SecurityPage() {
                 value={securityConfig.passwordMinLength}
                 onChange={(e) => setSecurityConfig({ ...securityConfig, passwordMinLength: Number(e.target.value) })}
                 className="form-input"
+                style={{ backgroundColor: "#FFFFFF" }}
               />
             </div>
           </div>
@@ -145,6 +163,7 @@ export function SecurityPage() {
               value={securityConfig.ipWhitelist}
               onChange={(e) => setSecurityConfig({ ...securityConfig, ipWhitelist: e.target.value })}
               className="form-input"
+              style={{ backgroundColor: "#FFFFFF" }}
             />
           </div>
         </div>

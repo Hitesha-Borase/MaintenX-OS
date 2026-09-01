@@ -684,6 +684,7 @@ export function CMMSProvider({ children }) {
 
         // Breakdowns
         breakdowns,
+        setBreakdowns,
         reportBreakdown,
         resolveBreakdown,
 

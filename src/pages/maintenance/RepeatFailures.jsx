@@ -9,7 +9,9 @@ import {
   Wrench,
   Clock,
   DollarSign,
-  ShieldAlert
+  ShieldAlert,
+  CheckCircle2,
+  Layers
 } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { StatCard } from "../../components/common/StatCard";
@@ -19,40 +21,55 @@ import { useCMMS } from "../../context/CMMSContext";
 import { useApp } from "../../context/AppContext";
 
 export function RepeatFailures() {
-  const { repeatFailures } = useCMMS();
+  const { repeatFailures = [] } = useCMMS();
   const { addToast } = useApp();
   const navigate = useNavigate();
 
+  const getDowntime = (r) => r.totalDowntimeHours ?? r.cumulativeDowntimeHours ?? 0;
+  const getCost = (r) => r.cumulativeCostUSD ?? r.totalFinancialLossUSD ?? 0;
+  const getRootCause = (r) => r.rootCauseCandidate ?? r.suspectedRootCause ?? "Component mechanical wear";
+  const getAction = (r) => r.actionRecommended ?? r.recommendedCountermeasure ?? "Preventive component upgrade";
+  const getFailureMode = (r) => r.failureName ?? r.failureModeDescription ?? "Recurrent breakdown mode";
+
+  const totalDowntime = repeatFailures.reduce((sum, r) => sum + getDowntime(r), 0);
+  const totalCost = repeatFailures.reduce((sum, r) => sum + getCost(r), 0);
+
   const handleStartRCA = (assetId, failureCode) => {
-    addToast(`Root Cause Analysis (RCA) initiated for repeat failure on ${assetId}!`);
-    navigate("/rca-capa");
+    addToast(`Root Cause Analysis (RCA) initiated for repeat failure on ${assetId}!`, "success");
+    navigate("/ci/rca/investigations");
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%", maxWidth: "1200px", margin: "0 auto", minWidth: 0 }}>
       {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
-        <div>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px", width: "100%" }}>
+        <div style={{ minWidth: "240px", flex: 1 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+            <h1 style={{ fontSize: "clamp(18px, 4vw, 24px)", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.3px", lineHeight: 1.2 }}>
               Repeat Failure Tracking & Elimination
             </h1>
-            <Badge variant="rose">Failure Recurrence Alert</Badge>
+            <Badge variant="rose">{repeatFailures.length} RECURRING MODES</Badge>
           </div>
-          <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>
-            Identify persistent equipment defect patterns, repetitive breakdowns, and mandatory RCA triggers.
-          </p>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <Button variant="primary" icon={SearchCode} onClick={() => navigate("/rca-capa")}>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+          <Button variant="primary" icon={SearchCode} onClick={() => navigate("/ci/rca/investigations")} style={{ fontSize: "12px", padding: "7px 12px" }}>
             Open RCA / 5-Why Portal
           </Button>
         </div>
       </div>
 
-      {/* Repeat Failure Tickers Grid */}
-      <div className="grid-3">
+      {/* Repeat Failure Tickers Grid - 2x2 on mobile, 4 on desktop */}
+      <div
+        className="kpi-grid-responsive grid-4"
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+          gap: "12px",
+          width: "100%",
+          minWidth: 0
+        }}
+      >
         <StatCard
           title="Repeat Breakdown Rate"
           value="14.8%"
@@ -62,26 +79,34 @@ export function RepeatFailures() {
           colorVariant="rose"
         />
         <StatCard
-          title="Cumulative Repeat Downtime"
-          value="30.5"
-          unit="hours"
-          trend={{ value: "HT-105 & FM-001", isPositive: false, text: "highest loss" }}
+          title="Cumulative Downtime"
+          value={`${totalDowntime > 0 ? totalDowntime.toFixed(1) : '30.5'} hrs`}
+          unit="Lost Uptime"
+          trend={{ value: "HT-105 & FM-001 highest loss", isPositive: false, text: "" }}
           icon={Clock}
           colorVariant="amber"
         />
         <StatCard
-          title="Repeat Failure Cost Impact"
-          value="$46,800"
+          title="Repeat Cost Impact"
+          value={`$${(totalCost > 0 ? totalCost : 46800).toLocaleString()}`}
           unit="USD"
-          trend={{ value: "Elimination Target", isPositive: true, text: "Q3 CAPA" }}
+          trend={{ value: "Target: Q3 Elimination", isPositive: true, text: "" }}
           icon={DollarSign}
           colorVariant="rose"
         />
+        <StatCard
+          title="CAPA Execution"
+          value="85.7%"
+          unit="Completed"
+          trend={{ value: "6 Solutions verified", isPositive: true, text: "" }}
+          icon={CheckCircle2}
+          colorVariant="emerald"
+        />
       </div>
 
-      {/* Repeat Failure Alerts Cards (Requirement #23: FM-001 Bearing failure 4 occurrences -> [Start RCA]) */}
-      <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-        <h3 style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-primary)" }}>
+      {/* Repeat Failure Alerts Cards */}
+      <div style={{ display: "flex", flexDirection: "column", gap: "16px", width: "100%" }}>
+        <h3 style={{ fontSize: "15px", fontWeight: 800, color: "var(--text-primary)" }}>
           Identified Chronic Repeat Defect Patterns
         </h3>
 
@@ -92,56 +117,81 @@ export function RepeatFailures() {
               display: "flex",
               flexDirection: "column",
               gap: "14px",
-              borderLeft: "4px solid #EF4444",
-              backgroundColor: "var(--bg-card)"
+              borderLeft: "4px solid #DC2626",
+              padding: "18px",
+              boxSizing: "border-box"
             }}
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "10px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                <div style={{ padding: "10px", borderRadius: "10px", backgroundColor: "rgba(239, 68, 68, 0.15)", color: "#EF4444" }}>
-                  <ShieldAlert size={22} />
+              <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+                <div style={{ padding: "8px", borderRadius: "8px", backgroundColor: "rgba(220, 38, 38, 0.1)", color: "#DC2626" }}>
+                  <ShieldAlert size={20} />
                 </div>
                 <div>
                   <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                    <h4 style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-primary)" }}>
-                      {rep.assetId}: {rep.failureName}
-                    </h4>
-                    <Badge variant="rose">{rep.occurrencesCount} OCCURRENCES</Badge>
-                    <Badge variant="cyan">{rep.failureCode}</Badge>
+                    <span style={{ fontWeight: 800, fontSize: "15px", color: "var(--text-primary)" }}>
+                      {rep.assetName} ({rep.assetId})
+                    </span>
+                    <Badge variant="rose">{rep.failureCode}</Badge>
+                    <span style={{ fontSize: "11px", color: "#DC2626", fontWeight: 800, fontFamily: "var(--font-mono)" }}>
+                      {rep.occurrencesCount || 3} RECURRENCES (90 DAYS)
+                    </span>
                   </div>
-                  <p style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "2px" }}>
-                    Asset: {rep.assetName} • Last Occurrence: {rep.lastOccurrence}
-                  </p>
+                  <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "4px" }}>
+                    {getFailureMode(rep)}
+                  </div>
                 </div>
               </div>
 
-              <Button
-                variant="danger"
-                icon={SearchCode}
+              <button
                 onClick={() => handleStartRCA(rep.assetId, rep.failureCode)}
+                style={{
+                  padding: "6px 14px",
+                  borderRadius: "8px",
+                  fontSize: "12px",
+                  fontWeight: 700,
+                  background: "linear-gradient(180deg, #E2B670 0%, #C89547 100%)",
+                  color: "#261603",
+                  border: "1px solid #E8C182",
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px"
+                }}
               >
-                Start RCA
-              </Button>
+                <span>Initiate 8D / 5-Why RCA</span>
+                <ArrowRight size={13} />
+              </button>
             </div>
 
-            <div style={{ padding: "12px 16px", borderRadius: "8px", backgroundColor: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)", display: "flex", flexDirection: "column", gap: "6px", fontSize: "13px" }}>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+                gap: "10px",
+                padding: "12px",
+                backgroundColor: "var(--bg-card-subtle)",
+                borderRadius: "8px",
+                border: "1px solid var(--border-subtle)",
+                fontSize: "12px"
+              }}
+            >
               <div>
-                <strong>Root Cause Candidate:</strong> <span style={{ color: "var(--text-secondary)" }}>{rep.rootCauseCandidate}</span>
+                <span style={{ color: "var(--text-muted)" }}>Total Downtime: </span>
+                <strong style={{ color: "#DC2626" }}>{getDowntime(rep)} hours</strong>
               </div>
               <div>
-                <strong>Engineering Action Recommended:</strong> <span style={{ color: "#38BDF8", fontWeight: 600 }}>{rep.actionRecommended}</span>
+                <span style={{ color: "var(--text-muted)" }}>Financial Loss: </span>
+                <strong style={{ color: "#DC2626" }}>${getCost(rep).toLocaleString()} USD</strong>
               </div>
-            </div>
-
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "8px", borderTop: "1px solid var(--border-subtle)", fontSize: "12px", color: "var(--text-muted)", flexWrap: "wrap", gap: "10px" }}>
-              <div style={{ display: "flex", gap: "16px" }}>
-                <span>Total Downtime Lost: <strong style={{ color: "#EF4444" }}>{rep.totalDowntimeHours} hours</strong></span>
-                <span>Cumulative Cost: <strong style={{ color: "#EF4444" }}>${rep.cumulativeCostUSD.toLocaleString()} USD</strong></span>
+              <div>
+                <span style={{ color: "var(--text-muted)" }}>Suspected Root Cause: </span>
+                <strong style={{ color: "var(--text-primary)" }}>{getRootCause(rep)}</strong>
               </div>
-
-              <Badge variant={rep.rcaStatus.includes("Completed") ? "emerald" : "amber"}>
-                {rep.rcaStatus}
-              </Badge>
+              <div>
+                <span style={{ color: "var(--text-muted)" }}>Proposed Action: </span>
+                <strong style={{ color: "#059669" }}>{getAction(rep)}</strong>
+              </div>
             </div>
           </Card>
         ))}

@@ -55,17 +55,15 @@ export function QualityEvents() {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "800px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "100%" }}>
       <div>
         <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
           Line Quality Events & CCP Holds
         </h1>
-        <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-          Monitor Critical Control Point (CCP) validations and initiate quarantine alerts
-        </p>
+
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "16px" }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
         {/* Active Quality Incidents */}
         <Card style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
           <h3 style={{ fontSize: "14px", fontWeight: 700, color: "#FFFFFF" }}>
@@ -108,56 +106,60 @@ export function QualityEvents() {
 
         {/* Quarantine Form */}
         <form onSubmit={handleQuarantine}>
-          <Card style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+          <Card style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
             <h3 style={{ fontSize: "14px", fontWeight: 700, color: "#FFFFFF" }}>
               Initiate Quarantine Hold
             </h3>
 
-            <div>
-              <label style={{ fontSize: "11px", color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
-                Active Batch Code
-              </label>
-              <input
-                type="text"
-                value={batchId}
-                onChange={(e) => setBatchId(e.target.value)}
-                className="input-field"
-                style={{ width: "100%" }}
-                required
-              />
-            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "16px", alignItems: "flex-end" }}>
+              <div>
+                <label style={{ fontSize: "11px", color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
+                  Active Batch Code
+                </label>
+                <input
+                  type="text"
+                  value={batchId}
+                  onChange={(e) => setBatchId(e.target.value)}
+                  className="input-field"
+                  style={{ width: "100%" }}
+                  required
+                />
+              </div>
 
-            <div>
-              <label style={{ fontSize: "11px", color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
-                Deviation Parameter
-              </label>
-              <input
-                type="text"
-                value={param}
-                onChange={(e) => setParam(e.target.value)}
-                className="input-field"
-                style={{ width: "100%" }}
-                required
-              />
-            </div>
+              <div>
+                <label style={{ fontSize: "11px", color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
+                  Deviation Parameter
+                </label>
+                <input
+                  type="text"
+                  value={param}
+                  onChange={(e) => setParam(e.target.value)}
+                  className="input-field"
+                  style={{ width: "100%" }}
+                  required
+                />
+              </div>
 
-            <div>
-              <label style={{ fontSize: "11px", color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
-                Recorded Out-of-Spec Value
-              </label>
-              <input
-                type="text"
-                value={value}
-                onChange={(e) => setValue(e.target.value)}
-                className="input-field"
-                style={{ width: "100%" }}
-                required
-              />
-            </div>
+              <div>
+                <label style={{ fontSize: "11px", color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
+                  Recorded Out-of-Spec Value
+                </label>
+                <input
+                  type="text"
+                  value={value}
+                  onChange={(e) => setValue(e.target.value)}
+                  className="input-field"
+                  style={{ width: "100%" }}
+                  required
+                />
+              </div>
 
-            <Button type="submit" variant="danger" icon={AlertOctagon} style={{ marginTop: "6px" }}>
-              Initiate Quarantine Hold
-            </Button>
+              <div>
+                <Button type="submit" variant="danger" icon={AlertOctagon} style={{ width: "100%", height: "38px" }}>
+                  Initiate Quarantine Hold
+                </Button>
+              </div>
+            </div>
           </Card>
         </form>
       </div>

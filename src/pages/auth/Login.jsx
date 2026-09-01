@@ -75,20 +75,8 @@ export function Login() {
   };
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        backgroundColor: "#F6F3EE",
-        background: "radial-gradient(circle at 30% 30%, #FCFAF7 0%, #F3ECE2 100%)",
-        padding: "24px",
-        overflow: "hidden",
-        position: "relative"
-      }}
-    >
-      {/* Inline styles for custom amber glassmorphism keyframes and responsiveness */}
+    <div className="login-page-wrapper">
+      {/* Inline styles for custom amber glassmorphism keyframes and responsive layout */}
       <style>{`
         @keyframes floatWeightless {
           0% { transform: translateY(0px) translateX(0px); opacity: 0.25; }
@@ -113,33 +101,132 @@ export function Login() {
           pointer-events: none;
           box-shadow: 0 0 8px rgba(200, 149, 71, 0.6);
         }
-        
-        /* Mobile Responsiveness */
-        @media (max-width: 900px) {
-          .login-main-frame {
-            grid-template-columns: 1fr !important;
-            max-width: 600px !important;
+        .login-page-wrapper {
+          min-height: 100vh;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background-color: #F6F3EE;
+          background: radial-gradient(circle at 30% 30%, #FCFAF7 0%, #F3ECE2 100%);
+          padding: 24px;
+          overflow-x: hidden;
+          position: relative;
+        }
+        .login-card-container {
+          width: 100%;
+          max-width: 1280px;
+          background-color: rgba(255, 255, 255, 0.9);
+          backdrop-filter: blur(20px);
+          -webkit-backdrop-filter: blur(20px);
+          border-radius: 24px;
+          border: 1px solid rgba(200, 149, 71, 0.3);
+          box-shadow: 0 25px 60px rgba(70, 45, 15, 0.12), 0 0 60px rgba(200, 149, 71, 0.08);
+          overflow: hidden;
+          display: grid;
+          grid-template-columns: 1.1fr 1.3fr;
+          position: relative;
+          z-index: 10;
+        }
+        .login-left-panel {
+          position: relative;
+          background: url('/maintenx_astro_factory.jpg') center/cover no-repeat;
+          display: flex;
+          flex-direction: column;
+          justify-content: flex-end;
+          padding: 48px;
+          min-height: 720px;
+          border-right: 1px solid var(--border-subtle);
+        }
+        .login-hero-title {
+          font-size: 36px;
+          font-weight: 900;
+          color: #FFFFFF;
+          letter-spacing: -0.02em;
+          margin: 0;
+        }
+        .login-hero-desc {
+          font-size: 14px;
+          color: rgba(255, 245, 235, 0.85);
+          line-height: 1.6;
+          max-width: 420px;
+          margin: 0;
+        }
+        .login-right-panel {
+          padding: 48px 56px;
+          display: flex;
+          flex-direction: column;
+          gap: 28px;
+          justify-content: center;
+          background-color: #FCFAF7;
+        }
+        .login-inputs-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 18px;
+        }
+        .login-roles-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 10px;
+          max-height: 260px;
+          overflow-y: auto;
+          padding: 2px;
+        }
+
+        @media (max-width: 960px) {
+          .login-page-wrapper {
+            padding: 12px;
+            align-items: flex-start;
+            overflow-y: auto;
+          }
+          .login-card-container {
+            display: flex;
+            flex-direction: column;
+            border-radius: 18px;
+            margin: 8px 0;
           }
           .login-left-panel {
-            display: none !important;
+            min-height: 200px;
+            padding: 24px 18px;
+            border-right: none;
+            border-bottom: 1px solid var(--border-subtle);
+          }
+          .login-hero-title {
+            font-size: 24px;
+          }
+          .login-hero-desc {
+            font-size: 12px;
+            line-height: 1.4;
           }
           .login-right-panel {
-            padding: 32px 24px !important;
+            padding: 24px 18px;
+            gap: 20px;
+          }
+          .login-inputs-grid {
+            grid-template-columns: 1fr;
+            gap: 14px;
+          }
+          .login-roles-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            max-height: 220px;
           }
         }
-        
-        @media (max-width: 600px) {
-          .login-inputs-row {
-            grid-template-columns: 1fr !important;
+        @media (max-width: 480px) {
+          .login-left-panel {
+            min-height: 160px;
+            padding: 18px 14px;
           }
-          .roles-grid {
-            grid-template-columns: repeat(2, 1fr) !important;
+          .login-hero-title {
+            font-size: 20px;
           }
-        }
-        
-        @media (max-width: 400px) {
-          .roles-grid {
-            grid-template-columns: 1fr !important;
+          .login-right-panel {
+            padding: 18px 12px;
+          }
+          .login-roles-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 6px;
+          }
           }
         }
       `}</style>
@@ -161,38 +248,9 @@ export function Login() {
       ))}
 
       {/* Main Amber Glassmorphism Frame */}
-      <div
-        className="custom-glass-card login-main-frame"
-        style={{
-          width: "100%",
-          maxWidth: "1280px",
-          backgroundColor: "rgba(255, 255, 255, 0.9)",
-          backdropFilter: "blur(20px)",
-          WebkitBackdropFilter: "blur(20px)",
-          borderRadius: "24px",
-          border: "1px solid rgba(200, 149, 71, 0.3)",
-          boxShadow: "0 25px 60px rgba(70, 45, 15, 0.12), 0 0 60px rgba(200, 149, 71, 0.08)",
-          overflow: "hidden",
-          display: "grid",
-          gridTemplateColumns: "1.1fr 1.3fr",
-          position: "relative",
-          zIndex: 10
-        }}
-      >
+      <div className="custom-glass-card login-card-container">
         {/* Left Panel: Translucent Astro Smart Factory Analytics Layout */}
-        <div
-          className="login-left-panel"
-          style={{
-            position: "relative",
-            background: "url('/maintenx_astro_factory.jpg') center/cover no-repeat",
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "flex-end",
-            padding: "48px",
-            minHeight: "720px",
-            borderRight: "1px solid var(--border-subtle)"
-          }}
-        >
+        <div className="login-left-panel">
           {/* Amber-Tinted Warm Frosted Glass Overlay */}
           <div
             style={{
@@ -207,7 +265,7 @@ export function Login() {
           />
 
           {/* Info Overlay */}
-          <div style={{ position: "relative", zIndex: 2, display: "flex", flexDirection: "column", gap: "16px" }}>
+          <div style={{ position: "relative", zIndex: 2, display: "flex", flexDirection: "column", gap: "12px" }}>
             <div
               style={{
                 display: "inline-flex",
@@ -218,7 +276,7 @@ export function Login() {
                 backgroundColor: "rgba(200, 149, 71, 0.25)",
                 border: "1px solid rgba(226, 182, 112, 0.6)",
                 color: "#E2B670",
-                fontSize: "12px",
+                fontSize: "11px",
                 fontWeight: 800,
                 alignSelf: "flex-start",
                 boxShadow: "0 0 12px rgba(200, 149, 71, 0.3)"
@@ -227,18 +285,18 @@ export function Login() {
               <Cpu size={14} /> ZERO-GRAVITY ENTERPRISE PORTAL
             </div>
 
-            <h2 style={{ fontSize: "36px", fontWeight: 900, color: "#FFFFFF", letterSpacing: "-0.02em" }}>
+            <h2 className="login-hero-title">
               MaintenX OS
             </h2>
 
-            <p style={{ fontSize: "14px", color: "rgba(255, 245, 235, 0.85)", lineHeight: 1.6, maxWidth: "420px" }}>
+            <p className="login-hero-desc">
               Orbiting Astro-Manufacturing Operations Suite. Synchronized OEE logistics routing, predictive machine wear tracking, and telemetry feedback.
             </p>
           </div>
         </div>
 
         {/* Right Panel: Floating Warm Acrylic Glass Login Box */}
-        <div className="login-right-panel" style={{ padding: "48px 56px", display: "flex", flexDirection: "column", gap: "28px", justifyContent: "center", backgroundColor: "#FCFAF7" }}>
+        <div className="login-right-panel">
           {/* Logo & Sub-Branding Header */}
           <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
             <div
@@ -251,13 +309,14 @@ export function Login() {
                 alignItems: "center",
                 justifyContent: "center",
                 color: "#261603",
-                boxShadow: "0 4px 14px rgba(200, 149, 71, 0.35)"
+                boxShadow: "0 4px 14px rgba(200, 149, 71, 0.35)",
+                flexShrink: 0
               }}
             >
               <Flame size={24} />
             </div>
             <div>
-              <h1 style={{ fontSize: "24px", fontWeight: 900, color: "#2B1D11", letterSpacing: "-0.3px", margin: 0 }}>
+              <h1 style={{ fontSize: "22px", fontWeight: 900, color: "#2B1D11", letterSpacing: "-0.3px", margin: 0 }}>
                 MaintenX <span style={{ color: "#B27E33" }}>OS</span>
               </h1>
               <span style={{ fontSize: "10px", color: "var(--text-muted)", letterSpacing: "0.08em", textTransform: "uppercase", fontWeight: 800 }}>
@@ -268,7 +327,7 @@ export function Login() {
 
           <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
             {/* Inputs Row */}
-            <div className="login-inputs-row" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "18px" }}>
+            <div className="login-inputs-grid">
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label" style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: "6px" }}>
                   <User size={12} color="#B27E33" /> Corporate Username
@@ -325,17 +384,7 @@ export function Login() {
               <label className="form-label" style={{ fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: "10px", display: "block" }}>
                 Select Dashboard Perspective
               </label>
-              <div
-                className="roles-grid"
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(3, 1fr)",
-                  gap: "10px",
-                  maxHeight: "260px",
-                  overflowY: "auto",
-                  padding: "2px"
-                }}
-              >
+              <div className="login-roles-grid">
                 {ROLES.map((role) => {
                   const IconComponent = iconMap[role.icon] || ShieldCheck;
                   const isSelected = selectedRole === role.id;

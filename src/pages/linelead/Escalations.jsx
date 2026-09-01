@@ -10,7 +10,7 @@ export function Escalations() {
   const { exceptions, addException } = useExceptions();
   const { addToast } = useApp();
 
-  const activeEscalations = exceptions.filter((e) => e.location.includes("Line 1") || e.severity === "P1");
+  const activeEscalations = exceptions ? exceptions.filter((e) => e.location?.includes("Line 1") || e.severity === "P1") : [];
 
   const [targetRole, setTargetRole] = useState("Plant Manager");
   const [subject, setSubject] = useState("");
@@ -35,17 +35,15 @@ export function Escalations() {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "800px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "100%" }}>
       <div>
         <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
           Line Lead Escalation Console
         </h1>
-        <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-          Escalate safety hazards, chronic mechanical faults, or material deficits directly to upper management
-        </p>
+
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "16px" }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
         {/* Active Escalations */}
         <Card style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
           <h3 style={{ fontSize: "14px", fontWeight: 700, color: "#FFFFFF" }}>
@@ -73,7 +71,7 @@ export function Escalations() {
                 </div>
                 <div style={{ fontWeight: 600, color: "#F87171" }}>{ex.title}</div>
                 <div style={{ color: "var(--text-secondary)" }}>Escalated To: {ex.owner}</div>
-                <div style={{ fontStyle: "italic", color: "var(--text-muted)", marginTop: "4px" }}>"{ex.details}"</div>
+                <div style={{ fontStyle: "italic", color: "var(--text-muted)", marginTop: "4px" }}>"{ex.details || ex.impactDescription}"</div>
               </div>
             ))}
           </div>
@@ -81,60 +79,64 @@ export function Escalations() {
 
         {/* New Escalation Form */}
         <form onSubmit={handleSubmit}>
-          <Card style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+          <Card style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
             <h3 style={{ fontSize: "14px", fontWeight: 700, color: "#FFFFFF" }}>
               Dispatch Escalation
             </h3>
 
-            <div>
-              <label style={{ fontSize: "11px", color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
-                Escalate Target Role
-              </label>
-              <select
-                value={targetRole}
-                onChange={(e) => setTargetRole(e.target.value)}
-                className="input-field"
-                style={{ width: "100%" }}
-              >
-                <option value="Plant Manager">Plant Manager</option>
-                <option value="Maintenance Lead / Planner">Maintenance Lead / Planner</option>
-                <option value="Warehouse & Logistics Lead">Warehouse & Logistics Lead</option>
-                <option value="Quality QA Manager">Quality QA Manager</option>
-              </select>
-            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "16px", alignItems: "flex-end" }}>
+              <div>
+                <label style={{ fontSize: "11px", color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
+                  Escalate Target Role
+                </label>
+                <select
+                  value={targetRole}
+                  onChange={(e) => setTargetRole(e.target.value)}
+                  className="input-field"
+                  style={{ width: "100%" }}
+                >
+                  <option value="Plant Manager">Plant Manager</option>
+                  <option value="Maintenance Lead / Planner">Maintenance Lead / Planner</option>
+                  <option value="Warehouse & Logistics Lead">Warehouse & Logistics Lead</option>
+                  <option value="Quality QA Manager">Quality QA Manager</option>
+                </select>
+              </div>
 
-            <div>
-              <label style={{ fontSize: "11px", color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
-                Escalation Subject
-              </label>
-              <input
-                type="text"
-                placeholder="E.g. Safety hazard near filler..."
-                value={subject}
-                onChange={(e) => setSubject(e.target.value)}
-                className="input-field"
-                style={{ width: "100%" }}
-                required
-              />
-            </div>
+              <div>
+                <label style={{ fontSize: "11px", color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
+                  Escalation Subject
+                </label>
+                <input
+                  type="text"
+                  placeholder="E.g. Safety hazard near filler..."
+                  value={subject}
+                  onChange={(e) => setSubject(e.target.value)}
+                  className="input-field"
+                  style={{ width: "100%" }}
+                  required
+                />
+              </div>
 
-            <div>
-              <label style={{ fontSize: "11px", color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
-                Details & Justification
-              </label>
-              <textarea
-                placeholder="Provide details for why this is escalated..."
-                value={details}
-                onChange={(e) => setDetails(e.target.value)}
-                className="input-field"
-                style={{ width: "100%", minHeight: "80px" }}
-                required
-              />
-            </div>
+              <div>
+                <label style={{ fontSize: "11px", color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
+                  Details & Justification
+                </label>
+                <textarea
+                  placeholder="Provide details for why this is escalated..."
+                  value={details}
+                  onChange={(e) => setDetails(e.target.value)}
+                  className="input-field"
+                  style={{ width: "100%", height: "38px", minHeight: "38px", resize: "vertical" }}
+                  required
+                />
+              </div>
 
-            <Button type="submit" variant="danger" icon={Send} style={{ marginTop: "6px" }}>
-              Dispatch Escalation
-            </Button>
+              <div>
+                <Button type="submit" variant="danger" icon={Send} style={{ width: "100%", height: "38px" }}>
+                  Dispatch Escalation
+                </Button>
+              </div>
+            </div>
           </Card>
         </form>
       </div>

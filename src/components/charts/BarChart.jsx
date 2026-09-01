@@ -3,8 +3,8 @@ import React, { useState } from "react";
 export function BarChart({
   data = [], // [{ label: '06:00', actual: 580, target: 600 }]
   height = 200,
-  barColor = "#38BDF8",
-  targetColor = "#F59E0B",
+  barColor = "#8C5B23",
+  targetColor = "#D97706",
   yAxisUnit = "BPM"
 }) {
   const [hoveredIdx, setHoveredIdx] = useState(null);
@@ -17,10 +17,10 @@ export function BarChart({
     <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: "10px" }}>
       <div style={{ display: "flex", alignItems: "flex-end", height: `${height}px`, gap: "12px", paddingBottom: "24px", position: "relative", borderBottom: "1px solid var(--border-subtle)" }}>
         {/* Background grid lines */}
-        <div style={{ position: "absolute", inset: "0 0 24px 0", display: "flex", flexDirection: "column", justifyContent: "space-between", pointerEvents: "none", opacity: 0.15 }}>
-          <div style={{ borderTop: "1px dashed var(--text-muted)", width: "100%" }} />
-          <div style={{ borderTop: "1px dashed var(--text-muted)", width: "100%" }} />
-          <div style={{ borderTop: "1px dashed var(--text-muted)", width: "100%" }} />
+        <div style={{ position: "absolute", inset: "0 0 24px 0", display: "flex", flexDirection: "column", justifyContent: "space-between", pointerEvents: "none", opacity: 0.25 }}>
+          <div style={{ borderTop: "1px dashed var(--border-subtle)", width: "100%" }} />
+          <div style={{ borderTop: "1px dashed var(--border-subtle)", width: "100%" }} />
+          <div style={{ borderTop: "1px dashed var(--border-subtle)", width: "100%" }} />
         </div>
 
         {data.map((item, idx) => {
@@ -49,21 +49,30 @@ export function BarChart({
                 <div
                   style={{
                     position: "absolute",
-                    bottom: `${Math.max(actualHeight, targetHeight) + 10}px`,
-                    backgroundColor: "#0F172A",
-                    border: "1px solid var(--border-highlight)",
-                    borderRadius: "6px",
-                    padding: "6px 10px",
-                    boxShadow: "0 4px 12px rgba(0,0,0,0.5)",
-                    zIndex: 20,
+                    bottom: `${Math.max(actualHeight, targetHeight) + 12}px`,
+                    backgroundColor: "#FFFFFF",
+                    border: "1px solid #E2D9CC",
+                    borderRadius: "8px",
+                    padding: "8px 12px",
+                    boxShadow: "0 8px 24px rgba(44, 30, 15, 0.16), 0 2px 6px rgba(44, 30, 15, 0.08)",
+                    zIndex: 30,
                     whiteSpace: "nowrap",
-                    fontSize: "11px",
-                    pointerEvents: "none"
+                    fontSize: "12px",
+                    pointerEvents: "none",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "2px"
                   }}
                 >
-                  <div style={{ fontWeight: 700, color: "var(--text-primary)" }}>{item.label}</div>
-                  <div style={{ color: barColor }}>Actual: {item.actual} {yAxisUnit}</div>
-                  {item.target && <div style={{ color: targetColor }}>Target: {item.target} {yAxisUnit}</div>}
+                  <div style={{ fontWeight: 800, color: "var(--text-primary)" }}>{item.label}</div>
+                  <div style={{ color: barColor, fontWeight: 700, fontFamily: "var(--font-mono)" }}>
+                    Actual: {item.actual} {yAxisUnit}
+                  </div>
+                  {item.target && (
+                    <div style={{ color: targetColor, fontWeight: 700, fontFamily: "var(--font-mono)", fontSize: "11px" }}>
+                      Target: {item.target} {yAxisUnit}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -75,7 +84,7 @@ export function BarChart({
                       width: "35%",
                       maxWidth: "14px",
                       height: `${targetHeight}px`,
-                      backgroundColor: "rgba(245, 158, 11, 0.3)",
+                      backgroundColor: "rgba(217, 119, 6, 0.25)",
                       borderTop: `2px solid ${targetColor}`,
                       borderRadius: "2px 2px 0 0"
                     }}
@@ -86,7 +95,7 @@ export function BarChart({
                     width: item.target ? "45%" : "70%",
                     maxWidth: "20px",
                     height: `${actualHeight}px`,
-                    backgroundColor: isHovered ? "#0284C7" : barColor,
+                    backgroundColor: isHovered ? "#6F4217" : barColor,
                     borderRadius: "3px 3px 0 0",
                     transition: "all 0.2s ease"
                   }}
@@ -99,9 +108,11 @@ export function BarChart({
                   position: "absolute",
                   bottom: "-20px",
                   fontSize: "10px",
-                  color: isHovered ? "var(--text-primary)" : "var(--text-muted)",
-                  fontFamily: "var(--font-mono)",
-                  fontWeight: isHovered ? 700 : 500
+                  fontWeight: "600",
+                  color: isHovered ? "var(--text-primary)" : "#786C5E",
+                  textAlign: "center",
+                  whiteSpace: "nowrap",
+                  fontFamily: "var(--font-mono)"
                 }}
               >
                 {item.label}
@@ -111,18 +122,15 @@ export function BarChart({
         })}
       </div>
 
-      {/* Legend */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "16px", fontSize: "11px", color: "var(--text-secondary)" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-          <span style={{ width: "10px", height: "10px", backgroundColor: barColor, borderRadius: "2px" }} />
-          <span>Actual Throughput ({yAxisUnit})</span>
-        </div>
-        {data.some((d) => d.target) && (
-          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-            <span style={{ width: "10px", height: "10px", backgroundColor: "rgba(245, 158, 11, 0.4)", borderTop: `2px solid ${targetColor}`, borderRadius: "2px" }} />
-            <span>Target Plan</span>
-          </div>
-        )}
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", color: "var(--text-secondary)" }}>
+        <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+          <span style={{ width: "8px", height: "8px", borderRadius: "2px", backgroundColor: barColor, display: "inline-block" }} />
+          Actual Run Rate
+        </span>
+        <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+          <span style={{ width: "8px", height: "8px", borderRadius: "2px", backgroundColor: "rgba(217, 119, 6, 0.5)", borderTop: `2px solid ${targetColor}`, display: "inline-block" }} />
+          Target Plan
+        </span>
       </div>
     </div>
   );

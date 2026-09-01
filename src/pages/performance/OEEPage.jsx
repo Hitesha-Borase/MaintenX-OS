@@ -1,15 +1,15 @@
-import React, { useState } from "react";
+import React from "react";
 import {
   Gauge,
-  Activity,
-  CheckCircle2,
   TrendingUp,
+  Activity,
+  ShieldCheck,
+  Zap,
   Download,
   Filter,
-  Layers,
-  ArrowRight,
-  ShieldCheck,
-  AlertTriangle
+  CheckCircle2,
+  Clock,
+  Layers
 } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { Badge } from "../../components/common/Badge";
@@ -21,25 +21,24 @@ import { useApp } from "../../context/AppContext";
 
 export function OEEPage() {
   const { addToast } = useApp();
-  const [selectedLine, setSelectedLine] = useState("ALL");
 
   const lineOEE = [
-    { line: "Line 1 — Aseptic Bottling (FM-001)", oee: 88.2, avail: 94.0, perf: 95.5, qual: 98.4, status: "Optimal" },
-    { line: "Line 2 — Formulation & Pasteurizer (HT-105)", oee: 82.5, avail: 89.2, perf: 94.0, qual: 98.0, status: "Degraded" },
-    { line: "Line 3 — Canning & Secondary Packaging", oee: 89.4, avail: 93.5, perf: 96.8, qual: 98.8, status: "Optimal" }
+    { line: "Line 1 (Aseptic Bottling 500ml)", oee: 88.4, avail: 94.0, perf: 96.0, qual: 98.0, status: "Optimal" },
+    { line: "Line 2 (Formulation & Blending)", oee: 84.1, avail: 88.0, perf: 97.0, qual: 98.5, status: "Thermal Loss" },
+    { line: "Line 3 (Canning & Seaming 330ml)", oee: 86.8, avail: 94.5, perf: 94.5, qual: 97.8, status: "Optimal" }
   ];
 
   const sixBigLosses = [
-    { label: "1. Equipment Failure (Unplanned)", value: 4.2 },
-    { label: "2. Setup & Adjustments (Changeovers)", value: 3.8 },
-    { label: "3. Idling & Minor Stops (< 5 min)", value: 2.5 },
-    { label: "4. Reduced Speed (Derated Speed)", value: 1.8 },
-    { label: "5. Process Defects & Scrapped Bottles", value: 0.9 },
-    { label: "6. Reduced Yield (Startup Flushes)", value: 0.4 }
+    { label: "Unplanned Stoppages", value: 4.8 },
+    { label: "Changeovers / Setup", value: 3.1 },
+    { label: "Minor Idling / Micro-jams", value: 2.2 },
+    { label: "Speed Reduction Loss", value: 2.0 },
+    { label: "Startup Scrap & Rejects", value: 0.9 },
+    { label: "In-Process Defect Loss", value: 0.6 }
   ];
 
   const handleExportCSV = () => {
-    const headers = "Production Line,OEE (%),Availability (%),Performance (%),Quality (%),Status\n";
+    const headers = "Line,OEE %,Availability %,Performance %,Quality %,Status\n";
     const rows = lineOEE
       .map((l) => `"${l.line}",${l.oee},${l.avail},${l.perf},${l.qual},"${l.status}"`)
       .join("\n");
@@ -53,30 +52,36 @@ export function OEEPage() {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%", maxWidth: "1200px", margin: "0 auto", minWidth: 0 }}>
       {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
-        <div>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px", width: "100%" }}>
+        <div style={{ minWidth: "240px", flex: 1 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+            <h1 style={{ fontSize: "clamp(18px, 4vw, 24px)", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.3px", lineHeight: 1.2 }}>
               Overall Equipment Effectiveness (OEE)
             </h1>
-            <Badge variant="emerald">World-Class Target: 85%+</Badge>
+            <Badge variant="emerald">WORLD-CLASS: 85%+</Badge>
           </div>
-          <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>
-            Comprehensive Availability, Performance, and Quality factor decomposition across all plant manufacturing lines.
-          </p>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-          <Button variant="secondary" icon={Download} onClick={handleExportCSV}>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+          <Button variant="secondary" icon={Download} onClick={handleExportCSV} style={{ fontSize: "12px", padding: "7px 12px" }}>
             Export OEE Deck
           </Button>
         </div>
       </div>
 
-      {/* 4 OEE Factor KPI Tickers */}
-      <div className="grid-4" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px" }}>
+      {/* 4 OEE Factor KPI Tickers - 2x2 on mobile, 4 on desktop */}
+      <div
+        className="kpi-grid-responsive grid-4"
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+          gap: "12px",
+          width: "100%",
+          minWidth: 0
+        }}
+      >
         <StatCard
           title="Overall Plant OEE"
           value="86.4%"
@@ -99,7 +104,7 @@ export function OEEPage() {
           unit="Speed Efficiency"
           trend={{ value: "Rated vs Operating speed", isPositive: true, text: "" }}
           icon={TrendingUp}
-          colorVariant="blue"
+          colorVariant="cyan"
         />
         <StatCard
           title="Quality Rate"
@@ -112,24 +117,18 @@ export function OEEPage() {
       </div>
 
       {/* Main Grid: Line-by-Line Breakdown & Six Big Losses */}
-      <div className="grid-2" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: "20px" }}>
-        
+      <div className="grid-2" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: "20px", width: "100%", minWidth: 0 }}>
         {/* Line by Line OEE Table */}
-        <Card>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
-            <div>
-              <h3 style={{ fontSize: "15px", fontWeight: 700, color: "var(--text-primary)" }}>
-                Line-by-Line OEE Breakdown
-              </h3>
-              <p style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-                Factor decomposition across active packaging & processing halls
-              </p>
-            </div>
+        <Card style={{ padding: "18px", minWidth: 0, width: "100%", boxSizing: "border-box" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px", flexWrap: "wrap", gap: "8px" }}>
+            <h3 style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)" }}>
+              Line-by-Line OEE Breakdown
+            </h3>
             <Badge variant="cyan">3 Active Lines</Badge>
           </div>
 
-          <div className="data-table-container">
-            <table className="data-table">
+          <div className="data-table-container" style={{ width: "100%", overflowX: "auto", WebkitOverflowScrolling: "touch", display: "block" }}>
+            <table className="data-table" style={{ width: "100%", minWidth: "480px" }}>
               <thead>
                 <tr>
                   <th>Production Line</th>
@@ -143,15 +142,15 @@ export function OEEPage() {
                 {lineOEE.map((l, idx) => (
                   <tr key={idx}>
                     <td>
-                      <div style={{ fontWeight: 700, color: "#FFFFFF" }}>{l.line}</div>
+                      <div style={{ fontWeight: 700, color: "var(--text-primary)" }}>{l.line}</div>
                       <div style={{ fontSize: "10px", color: "var(--text-muted)" }}>Status: {l.status}</div>
                     </td>
-                    <td style={{ fontFamily: "var(--font-mono)", fontWeight: 800, color: l.oee >= 85 ? "#10B981" : "#F59E0B", fontSize: "14px" }}>
+                    <td style={{ fontFamily: "var(--font-mono)", fontWeight: 800, color: l.oee >= 85 ? "#059669" : "#D97706", fontSize: "14px" }}>
                       {l.oee}%
                     </td>
                     <td style={{ fontFamily: "var(--font-mono)", fontSize: "12px" }}>{l.avail}%</td>
                     <td style={{ fontFamily: "var(--font-mono)", fontSize: "12px" }}>{l.perf}%</td>
-                    <td style={{ fontFamily: "var(--font-mono)", fontSize: "12px", color: "#10B981" }}>{l.qual}%</td>
+                    <td style={{ fontFamily: "var(--font-mono)", fontSize: "12px", color: "#059669" }}>{l.qual}%</td>
                   </tr>
                 ))}
               </tbody>
@@ -160,40 +159,30 @@ export function OEEPage() {
         </Card>
 
         {/* Six Big Losses Pareto Chart */}
-        <Card>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
-            <div>
-              <h3 style={{ fontSize: "15px", fontWeight: 700, color: "var(--text-primary)" }}>
-                Six Big Losses Impact (% of Planned Production)
-              </h3>
-              <p style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-                Root cause loss drivers impacting availability and speed
-              </p>
-            </div>
-            <Badge variant="rose">Total Loss: 13.6%</Badge>
+        <Card style={{ padding: "18px", minWidth: 0, width: "100%", boxSizing: "border-box" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px", flexWrap: "wrap", gap: "8px" }}>
+            <h3 style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)" }}>
+              Six Big Losses Impact (% of Production)
+            </h3>
+            <Badge variant="rose">Loss: 13.6%</Badge>
           </div>
 
           <BarChart
             data={sixBigLosses}
             height={220}
-            color="#EF4444"
+            color="#DC2626"
             unit="%"
           />
         </Card>
       </div>
 
       {/* Hourly OEE Trend */}
-      <Card>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
-          <div>
-            <h3 style={{ fontSize: "15px", fontWeight: 700, color: "var(--text-primary)" }}>
-              24-Hour Rolling OEE Trend Curve
-            </h3>
-            <p style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-              Continuous automated telemetry from PLC run-signals
-            </p>
-          </div>
-          <Badge variant="emerald">Upper Control Limit: 92%</Badge>
+      <Card style={{ padding: "18px", minWidth: 0, width: "100%", boxSizing: "border-box" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px", flexWrap: "wrap", gap: "8px" }}>
+          <h3 style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)" }}>
+            24-Hour Rolling OEE Trend Curve
+          </h3>
+          <Badge variant="emerald">UCL: 92%</Badge>
         </div>
 
         <AreaChart
@@ -207,7 +196,7 @@ export function OEEPage() {
             { label: "18:00", value: 86.4 }
           ]}
           height={200}
-          color="#10B981"
+          color="#059669"
           unit="%"
         />
       </Card>

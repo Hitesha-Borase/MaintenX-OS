@@ -34,9 +34,7 @@ export function Staffing() {
           <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
             Shift Staffing Allocations
           </h1>
-          <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-            Allocate and authorize operator positions on the production lines
-          </p>
+
         </div>
 
         {!approved ? (
