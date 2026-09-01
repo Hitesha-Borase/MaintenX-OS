@@ -15,9 +15,7 @@ export function ProductionPerformance() {
         <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
           Departmental OEE & Performance
         </h1>
-        <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-          Track availability, performance rate, and hourly target compliance
-        </p>
+
       </div>
 
       <div className="grid-3">

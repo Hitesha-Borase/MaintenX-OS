@@ -32,9 +32,6 @@ export function WorkInstructions() {
           <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
             Work Instructions & SOPs
           </h1>
-          <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-            Operational SOP safety manuals for the active line
-          </p>
         </div>
 
         <Button variant="secondary" icon={Printer} onClick={() => window.print()}>

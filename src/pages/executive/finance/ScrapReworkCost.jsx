@@ -19,14 +19,12 @@ export function ScrapReworkCost() {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "1000px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%" }}>
       <div>
         <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
           Scrap & Rework Costing
         </h1>
-        <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-          Track waste scrap value, rework line fees, and final quality loss margins
-        </p>
+
       </div>
 
       <div className="grid-3">
@@ -39,15 +37,15 @@ export function ScrapReworkCost() {
         <h3 style={{ fontSize: "14px", fontWeight: 700, color: "#FFFFFF", marginBottom: "16px" }}>Scrap & Rework Ledger</h3>
         <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
           {scrapEvents.map((ev, idx) => (
-            <div key={idx} style={{ padding: "12px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div key={idx} className="mobile-flex-col" style={{ padding: "12px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)", display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "12px" }}>
               <div>
-                <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
                   <span style={{ fontSize: "13px", fontWeight: 700, color: "#FFFFFF" }}>{ev.id} ({ev.batch})</span>
                   <Badge variant={ev.status === "Closed" ? "emerald" : "warning"}>{ev.status}</Badge>
                 </div>
                 <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "4px" }}>Reason: {ev.reason}</p>
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "15px", flexWrap: "wrap" }}>
                 <span style={{ fontSize: "14px", fontWeight: 800, color: "#EF4444" }}>{ev.cost}</span>
                 <Button variant="secondary" size="xs" onClick={() => handleReview(ev.id)}>Audit Log</Button>
               </div>

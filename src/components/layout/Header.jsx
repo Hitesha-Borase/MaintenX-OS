@@ -215,49 +215,65 @@ export function Header() {
     }
   };
 
-  const handleToggleSidebar = () => {
-    if (window.innerWidth <= 768) {
-      setMobileMenuOpen(!mobileMenuOpen);
-    } else {
-      setSidebarCollapsed(!sidebarCollapsed);
-    }
-  };
-
   return (
-    <header className="app-header" style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 18px", position: "sticky", top: 0, zIndex: 40, backdropFilter: "blur(14px)", backgroundColor: "var(--bg-header)", borderBottom: "1px solid var(--border-subtle)", gap: "10px" }}>
-      {/* Far Left: Branding Logo & Sidebar Toggle */}
-      <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
-        <div
+    <header className="app-header" style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 24px", position: "sticky", top: 0, zIndex: 40, backdropFilter: "blur(14px)", backgroundColor: "var(--bg-header)", borderBottom: "1px solid var(--border-subtle)", gap: "16px" }}>
+      {/* Far Left: Branding Logo & Sidebar Collapse Toggle */}
+      <div className="header-left-section" style={{ display: "flex", alignItems: "center", gap: "10px", flexShrink: 0 }}>
+        {/* Mobile Hamburger Menu Toggle */}
+        <button
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          className="mobile-menu-toggle"
           style={{
-            width: "34px",
-            height: "34px",
+            width: "36px",
+            height: "36px",
+            borderRadius: "10px",
+            backgroundColor: "var(--bg-card-subtle)",
+            border: "1px solid var(--border-subtle)",
+            display: "none",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            color: "var(--text-secondary)",
+            marginRight: "4px"
+          }}
+          title="Toggle Navigation Menu"
+        >
+          <Menu size={18} />
+        </button>
+
+        <div
+          className="header-brand-logo"
+          style={{
+            width: "36px",
+            height: "36px",
             borderRadius: "10px",
             background: "linear-gradient(135deg, #E2B670 0%, #C89547 50%, #B27E33 100%)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             color: "#261603",
-            boxShadow: "0 2px 8px rgba(200, 149, 71, 0.3)",
+            boxShadow: "0 3px 10px rgba(200, 149, 71, 0.35)",
             flexShrink: 0
           }}
         >
-          <Flame size={18} />
+          <Flame size={20} />
         </div>
-        <div style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
-          <span className="header-brand-title" style={{ fontSize: "14px", fontWeight: 900, letterSpacing: "-0.2px", color: "var(--text-primary)", lineHeight: 1.1, whiteSpace: "nowrap" }}>
+        <div className="header-brand-text" style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
+          <span style={{ fontSize: "15px", fontWeight: 900, letterSpacing: "-0.2px", color: "var(--text-primary)", lineHeight: 1, marginBottom: "4px", whiteSpace: "nowrap" }}>
             MaintenX <span style={{ color: "#B27E33" }}>OS</span>
           </span>
-          <span className="header-brand-subtitle" style={{ fontSize: "9px", color: "var(--text-muted)", letterSpacing: "0.08em", textTransform: "uppercase", fontWeight: 700, lineHeight: 1, marginTop: "2px", whiteSpace: "nowrap" }}>
+          <span className="header-subtitle" style={{ fontSize: "10px", color: "var(--text-muted)", letterSpacing: "0.08em", textTransform: "uppercase", fontWeight: 700, lineHeight: 1, whiteSpace: "nowrap" }}>
             Manufacturing Cloud
           </span>
         </div>
 
-        {/* Sidebar Collapse / Mobile Drawer Toggle Button */}
+        {/* Sidebar Collapse Button */}
         <button
-          onClick={handleToggleSidebar}
+          onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+          className="desktop-sidebar-toggle"
           style={{
-            width: "30px",
-            height: "30px",
+            width: "32px",
+            height: "32px",
             borderRadius: "8px",
             backgroundColor: "var(--bg-card-subtle)",
             border: "1px solid var(--border-subtle)",
@@ -266,25 +282,24 @@ export function Header() {
             justifyContent: "center",
             cursor: "pointer",
             color: "var(--text-secondary)",
-            marginLeft: "4px",
+            marginLeft: "6px",
             transition: "all 0.15s ease",
-            boxShadow: "0 1px 2px rgba(70, 45, 15, 0.04)",
-            flexShrink: 0
+            boxShadow: "0 1px 3px rgba(70, 45, 15, 0.04)"
           }}
-          title="Toggle Navigation"
+          title={sidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
         >
-          {sidebarCollapsed || mobileMenuOpen ? <ChevronRight size={15} /> : <ChevronLeft size={15} />}
+          {sidebarCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
         </button>
       </div>
 
-      {/* Center Space: Live Interactive Global Search Bar (Desktop) */}
+      {/* Center Space: Live Interactive Global Search Bar */}
       <div
         ref={searchContainerRef}
-        className="header-search-desktop"
+        className="header-search-container"
         style={{
           display: "flex",
           alignItems: "center",
-          gap: "12px",
+          gap: "16px",
           flex: 1,
           justifyContent: "center",
           minWidth: 0,
@@ -295,25 +310,25 @@ export function Header() {
           style={{
             position: "relative",
             width: "100%",
-            maxWidth: "380px"
+            maxWidth: "420px"
           }}
         >
           <div
             style={{
               display: "flex",
               alignItems: "center",
-              height: "36px",
+              height: "38px",
               backgroundColor: "#FFFFFF",
               border: isSearchFocused ? "1.5px solid #C89547" : "1px solid var(--border-subtle)",
               borderRadius: "12px",
-              padding: "0 6px 0 12px",
-              boxShadow: isSearchFocused ? "0 0 0 3px rgba(200, 149, 71, 0.2)" : "0 1px 3px rgba(70, 45, 15, 0.04)",
+              padding: "0 6px 0 14px",
+              boxShadow: isSearchFocused ? "0 0 0 3px rgba(200, 149, 71, 0.2)" : "0 1px 4px rgba(70, 45, 15, 0.04)",
               transition: "all 0.18s ease"
             }}
           >
             <input
               type="text"
-              placeholder="Global Search (Assets, SKUs, Recipes, Modules)..."
+              placeholder="Global Search (Assets, Work Orders, SKUs, Recipes, Modules)..."
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
@@ -325,7 +340,7 @@ export function Header() {
                 flex: 1,
                 border: "none",
                 outline: "none",
-                fontSize: "12px",
+                fontSize: "13px",
                 color: "var(--text-primary)",
                 fontFamily: "inherit",
                 backgroundColor: "transparent"
@@ -345,7 +360,7 @@ export function Header() {
                   alignItems: "center"
                 }}
               >
-                <X size={13} />
+                <X size={14} />
               </button>
             )}
 
@@ -358,9 +373,9 @@ export function Header() {
                 }
               }}
               style={{
-                width: "26px",
-                height: "26px",
-                borderRadius: "6px",
+                width: "28px",
+                height: "28px",
+                borderRadius: "7px",
                 background: "linear-gradient(180deg, #E2B670 0%, #C89547 100%)",
                 color: "#261603",
                 display: "flex",
@@ -369,12 +384,12 @@ export function Header() {
                 border: "none",
                 cursor: "pointer",
                 boxShadow: "0 2px 6px rgba(178, 126, 51, 0.25)",
-                marginLeft: "4px",
+                marginLeft: "6px",
                 flexShrink: 0
               }}
               title="Execute Global Search"
             >
-              <Search size={13} />
+              <Search size={14} />
             </button>
           </div>
 
@@ -383,14 +398,14 @@ export function Header() {
             <div
               style={{
                 position: "absolute",
-                top: "42px",
+                top: "44px",
                 left: 0,
                 right: 0,
                 backgroundColor: "#FFFFFF",
                 border: "1px solid var(--border-highlight)",
                 borderRadius: "14px",
                 boxShadow: "0 12px 32px rgba(70, 45, 15, 0.15)",
-                maxHeight: "360px",
+                maxHeight: "380px",
                 overflowY: "auto",
                 zIndex: 100,
                 padding: "8px",
@@ -414,8 +429,8 @@ export function Header() {
                   alignItems: "center"
                 }}
               >
-                <span>Matches ({searchResults.length})</span>
-                <span style={{ fontSize: "10px", color: "#B27E33", fontWeight: 700 }}>Press Enter ↵ to open</span>
+                <span>Matching Results ({searchResults.length})</span>
+                <span style={{ fontSize: "10px", color: "#B27E33", fontWeight: 700 }}>Press Enter ↵ to open top match</span>
               </div>
 
               {searchResults.length > 0 ? (
@@ -426,13 +441,13 @@ export function Header() {
                       key={idx}
                       onClick={() => handleSelectResult(item.path)}
                       style={{
-                        padding: "8px 10px",
+                        padding: "8px 12px",
                         borderRadius: "8px",
                         cursor: "pointer",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "space-between",
-                        gap: "8px",
+                        gap: "10px",
                         transition: "all 0.12s ease",
                         backgroundColor: idx === 0 ? "rgba(200, 149, 71, 0.08)" : "transparent"
                       }}
@@ -443,11 +458,11 @@ export function Header() {
                         e.currentTarget.style.backgroundColor = idx === 0 ? "rgba(200, 149, 71, 0.08)" : "transparent";
                       }}
                     >
-                      <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0 }}>
                         <div
                           style={{
-                            width: "26px",
-                            height: "26px",
+                            width: "28px",
+                            height: "28px",
                             borderRadius: "6px",
                             backgroundColor: "var(--bg-card-subtle)",
                             color: "#B27E33",
@@ -457,37 +472,39 @@ export function Header() {
                             flexShrink: 0
                           }}
                         >
-                          <IconComp size={13} />
+                          <IconComp size={14} />
                         </div>
                         <div style={{ minWidth: 0, overflow: "hidden" }}>
-                          <div style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-primary)", whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}>
+                          <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)", whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}>
                             {item.title}
                           </div>
-                          <div style={{ fontSize: "10px", color: "var(--text-secondary)", whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}>
+                          <div style={{ fontSize: "11px", color: "var(--text-secondary)", whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}>
                             {item.desc}
                           </div>
                         </div>
                       </div>
 
-                      <span
-                        style={{
-                          fontSize: "9px",
-                          fontWeight: 700,
-                          padding: "2px 6px",
-                          borderRadius: "4px",
-                          backgroundColor: "var(--bg-card-subtle)",
-                          color: "#8C5B23",
-                          flexShrink: 0
-                        }}
-                      >
-                        {item.category}
-                      </span>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
+                        <span
+                          style={{
+                            fontSize: "10px",
+                            fontWeight: 700,
+                            padding: "2px 7px",
+                            borderRadius: "5px",
+                            backgroundColor: "var(--bg-card-subtle)",
+                            color: "#8C5B23"
+                          }}
+                        >
+                          {item.category}
+                        </span>
+                        <ArrowRight size={13} color="var(--text-muted)" />
+                      </div>
                     </div>
                   );
                 })
               ) : (
-                <div style={{ padding: "16px", textAlign: "center", color: "var(--text-muted)", fontSize: "12px" }}>
-                  No matches for "<strong>{searchQuery}</strong>"
+                <div style={{ padding: "20px", textAlign: "center", color: "var(--text-muted)", fontSize: "13px" }}>
+                  No matches found for "<strong>{searchQuery}</strong>". Try searching for <em>FM-001, BOM, Users, CIP, Lines, or Reports</em>.
                 </div>
               )}
             </div>
@@ -495,37 +512,38 @@ export function Header() {
         </div>
       </div>
 
-      {/* Far Right: Mobile Search Button, Notification & Profile Button */}
-      <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
-        {/* Mobile Search Button */}
+      {/* Far Right: Notification & Profile Button */}
+      <div className="header-right-section" style={{ display: "flex", alignItems: "center", gap: "10px", flexShrink: 0 }}>
+        {/* Mobile Search Trigger */}
         <button
-          className="header-search-mobile-btn"
           onClick={() => setIsSearchOpen(true)}
+          className="mobile-search-trigger"
           style={{
-            display: "none",
-            width: "32px",
-            height: "32px",
-            borderRadius: "8px",
+            width: "36px",
+            height: "36px",
+            borderRadius: "10px",
             backgroundColor: "#FFFFFF",
             border: "1px solid var(--border-subtle)",
+            display: "none",
             alignItems: "center",
             justifyContent: "center",
             cursor: "pointer",
             color: "#6B5B4E",
-            boxShadow: "0 1px 2px rgba(70, 45, 15, 0.04)"
+            boxShadow: "0 1px 3px rgba(70, 45, 15, 0.04)"
           }}
-          title="Search"
+          title="Search System"
         >
-          <Search size={15} />
+          <Search size={16} />
         </button>
 
         {/* Notification Bell */}
         <button
           onClick={() => addToast("1 New PM Task Alert for Line 1", "info")}
+          className="header-notification-btn"
           style={{
-            width: "32px",
-            height: "32px",
-            borderRadius: "8px",
+            width: "36px",
+            height: "36px",
+            borderRadius: "10px",
             backgroundColor: "#FFFFFF",
             border: "1px solid var(--border-subtle)",
             display: "flex",
@@ -534,22 +552,22 @@ export function Header() {
             cursor: "pointer",
             position: "relative",
             color: "#6B5B4E",
-            boxShadow: "0 1px 2px rgba(70, 45, 15, 0.04)"
+            boxShadow: "0 1px 3px rgba(70, 45, 15, 0.04)"
           }}
           title="Notifications"
         >
-          <Bell size={15} />
+          <Bell size={17} />
           <span
             style={{
               position: "absolute",
               top: "-3px",
               right: "-3px",
-              width: "14px",
-              height: "14px",
+              width: "16px",
+              height: "16px",
               borderRadius: "50%",
               backgroundColor: "#C89547",
               color: "#FFFFFF",
-              fontSize: "8px",
+              fontSize: "9px",
               fontWeight: 800,
               display: "flex",
               alignItems: "center",
@@ -566,9 +584,9 @@ export function Header() {
           size="sm"
           icon={Plus}
           onClick={() => setIsQuickActionOpen(true)}
-          style={{ padding: "6px 10px" }}
+          className="header-fast-action"
         >
-          <span className="fast-action-label">Fast Action</span>
+          <span className="btn-text">Fast Action</span>
         </Button>
 
         {/* SLEEK PROFILE AVATAR BUTTON & DROPDOWN */}
@@ -578,24 +596,26 @@ export function Header() {
               setShowProfileMenu(!showProfileMenu);
               setShowRoleSubmenu(false);
             }}
+            className="header-profile-btn"
             style={{
               display: "flex",
               alignItems: "center",
-              gap: "6px",
-              padding: "3px 8px 3px 3px",
-              borderRadius: "20px",
+              gap: "8px",
+              padding: "4px 10px 4px 4px",
+              borderRadius: "24px",
               backgroundColor: showProfileMenu ? "rgba(200, 149, 71, 0.15)" : "var(--bg-card-subtle)",
               border: showProfileMenu ? "1px solid #C89547" : "1px solid var(--border-subtle)",
               cursor: "pointer",
               transition: "all 0.18s ease",
-              boxShadow: "0 1px 2px rgba(70, 45, 15, 0.04)"
+              boxShadow: "0 1px 3px rgba(70, 45, 15, 0.04)"
             }}
             title="User Profile & Settings"
           >
             <div
+              className="header-profile-avatar"
               style={{
-                width: "26px",
-                height: "26px",
+                width: "28px",
+                height: "28px",
                 borderRadius: "50%",
                 background: "linear-gradient(135deg, #E2B670 0%, #C89547 100%)",
                 color: "#261603",
@@ -603,13 +623,13 @@ export function Header() {
                 alignItems: "center",
                 justifyContent: "center",
                 fontWeight: 800,
-                fontSize: "11px",
+                fontSize: "12px",
                 boxShadow: "0 2px 6px rgba(178, 126, 51, 0.25)"
               }}
             >
               {currentRole?.label?.charAt(0) || "U"}
             </div>
-            <ChevronDown size={13} color="#B27E33" style={{ transform: showProfileMenu ? "rotate(180deg)" : "none", transition: "transform 0.15s ease" }} />
+            <ChevronDown className="profile-chevron" size={14} color="#B27E33" style={{ transform: showProfileMenu ? "rotate(180deg)" : "none", transition: "transform 0.15s ease" }} />
           </button>
 
           {/* PROFILE & LOGOUT DROPDOWN MENU */}
@@ -618,8 +638,8 @@ export function Header() {
               style={{
                 position: "absolute",
                 right: 0,
-                top: "40px",
-                width: "240px",
+                top: "44px",
+                width: "250px",
                 backgroundColor: "#FFFFFF",
                 border: "1px solid var(--border-highlight)",
                 borderRadius: "14px",
@@ -646,8 +666,8 @@ export function Header() {
               >
                 <div
                   style={{
-                    width: "34px",
-                    height: "34px",
+                    width: "36px",
+                    height: "36px",
                     borderRadius: "50%",
                     background: "linear-gradient(135deg, #E2B670 0%, #C89547 100%)",
                     color: "#261603",
@@ -655,17 +675,17 @@ export function Header() {
                     alignItems: "center",
                     justifyContent: "center",
                     fontWeight: 900,
-                    fontSize: "13px",
+                    fontSize: "14px",
                     flexShrink: 0
                   }}
                 >
                   {currentRole?.label?.charAt(0) || "U"}
                 </div>
                 <div style={{ overflow: "hidden" }}>
-                  <div style={{ fontSize: "12px", fontWeight: 800, color: "var(--text-primary)", whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}>
+                  <div style={{ fontSize: "13px", fontWeight: 800, color: "var(--text-primary)", whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}>
                     Alexander Vance
                   </div>
-                  <div style={{ fontSize: "10px", color: "#8C5B23", fontWeight: 700, whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}>
+                  <div style={{ fontSize: "11px", color: "#8C5B23", fontWeight: 700, whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}>
                     {currentRole?.label}
                   </div>
                 </div>
@@ -678,21 +698,21 @@ export function Header() {
                   navigate("/profile");
                 }}
                 style={{
-                  padding: "8px 10px",
+                  padding: "9px 12px",
                   borderRadius: "8px",
-                  fontSize: "12px",
+                  fontSize: "13px",
                   fontWeight: 600,
                   color: "var(--text-primary)",
                   cursor: "pointer",
                   display: "flex",
                   alignItems: "center",
-                  gap: "8px",
+                  gap: "10px",
                   transition: "background-color 0.12s ease"
                 }}
                 onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "var(--bg-card-subtle)")}
                 onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
               >
-                <User size={14} color="#B27E33" />
+                <User size={15} color="#B27E33" />
                 <span>My Profile</span>
               </div>
 
@@ -700,9 +720,9 @@ export function Header() {
               <div
                 onClick={() => setShowRoleSubmenu(!showRoleSubmenu)}
                 style={{
-                  padding: "8px 10px",
+                  padding: "9px 12px",
                   borderRadius: "8px",
-                  fontSize: "12px",
+                  fontSize: "13px",
                   fontWeight: 600,
                   color: "var(--text-primary)",
                   cursor: "pointer",
@@ -714,18 +734,18 @@ export function Header() {
                 onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "var(--bg-card-subtle)")}
                 onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
               >
-                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <RefreshCw size={14} color="#0284C7" />
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <RefreshCw size={15} color="#0284C7" />
                   <span>Switch Role</span>
                 </div>
-                <ChevronRight size={12} color="var(--text-muted)" style={{ transform: showRoleSubmenu ? "rotate(90deg)" : "none", transition: "transform 0.15s ease" }} />
+                <ChevronRight size={13} color="var(--text-muted)" style={{ transform: showRoleSubmenu ? "rotate(90deg)" : "none", transition: "transform 0.15s ease" }} />
               </div>
 
               {/* Nested Role Submenu */}
               {showRoleSubmenu && (
                 <div
                   style={{
-                    maxHeight: "150px",
+                    maxHeight: "160px",
                     overflowY: "auto",
                     backgroundColor: "var(--bg-card-subtle)",
                     borderRadius: "8px",
@@ -745,9 +765,9 @@ export function Header() {
                         setShowRoleSubmenu(false);
                       }}
                       style={{
-                        padding: "5px 8px",
+                        padding: "6px 10px",
                         borderRadius: "6px",
-                        fontSize: "11px",
+                        fontSize: "12px",
                         fontWeight: currentRole.id === r.id ? 800 : 500,
                         color: currentRole.id === r.id ? "#261603" : "var(--text-primary)",
                         background: currentRole.id === r.id ? "linear-gradient(180deg, #E2B670 0%, #C89547 100%)" : "transparent",
@@ -758,7 +778,7 @@ export function Header() {
                       }}
                     >
                       <span>{r.label}</span>
-                      {currentRole.id === r.id && <span style={{ fontSize: "8px", color: "#261603", fontWeight: 800 }}>● Active</span>}
+                      {currentRole.id === r.id && <span style={{ fontSize: "9px", color: "#261603", fontWeight: 800 }}>● Active</span>}
                     </div>
                   ))}
                 </div>
@@ -771,21 +791,21 @@ export function Header() {
                   navigate("/configuration");
                 }}
                 style={{
-                  padding: "8px 10px",
+                  padding: "9px 12px",
                   borderRadius: "8px",
-                  fontSize: "12px",
+                  fontSize: "13px",
                   fontWeight: 600,
                   color: "var(--text-primary)",
                   cursor: "pointer",
                   display: "flex",
                   alignItems: "center",
-                  gap: "8px",
+                  gap: "10px",
                   transition: "background-color 0.12s ease"
                 }}
                 onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "var(--bg-card-subtle)")}
                 onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
               >
-                <SettingsIcon size={14} color="#6B5B4E" />
+                <SettingsIcon size={15} color="#6B5B4E" />
                 <span>Account Settings</span>
               </div>
 
@@ -800,21 +820,21 @@ export function Header() {
                   addToast("Logged out successfully.", "info");
                 }}
                 style={{
-                  padding: "8px 10px",
+                  padding: "9px 12px",
                   borderRadius: "8px",
-                  fontSize: "12px",
+                  fontSize: "13px",
                   fontWeight: 700,
                   color: "#DC2626",
                   cursor: "pointer",
                   display: "flex",
                   alignItems: "center",
-                  gap: "8px",
+                  gap: "10px",
                   transition: "background-color 0.12s ease"
                 }}
                 onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgba(239, 68, 68, 0.1)")}
                 onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
               >
-                <LogOut size={14} color="#DC2626" />
+                <LogOut size={15} color="#DC2626" />
                 <span>Sign Out</span>
               </div>
             </div>

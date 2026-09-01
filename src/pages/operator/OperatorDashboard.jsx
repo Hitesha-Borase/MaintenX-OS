@@ -48,9 +48,6 @@ export function OperatorDashboard() {
               HMI Console & Shop-Floor HMI
             </h1>
           </div>
-          <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-            Real-time HMI operator terminal for Line 1 - Aseptic Bottling
-          </p>
         </div>
 
         <div style={{ display: "flex", gap: "10px" }}>
@@ -133,27 +130,27 @@ export function OperatorDashboard() {
       {/* Operational Details Grid */}
       <div className="grid-2">
         {/* HB Speed and Machine Telemetry */}
-        <Card style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-          <h3 style={{ fontSize: "14px", fontWeight: 700, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "6px" }}>
-            <Cpu size={16} color="#38BDF8" /> Machine Status & SCADA Telemetry
+        <Card style={{ display: "flex", flexDirection: "column", gap: "16px", backgroundColor: "#FFFFFF", border: "1px solid var(--border-subtle)" }}>
+          <h3 style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "6px" }}>
+            <Cpu size={16} color="#0284C7" /> Machine Status & SCADA Telemetry
           </h3>
 
           <div style={{ display: "flex", flexDirection: "column", gap: "8px", fontSize: "13px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid var(--border-subtle)" }}>
-              <span style={{ color: "var(--text-muted)" }}>Current HB Target (Hour):</span>
-              <span style={{ fontWeight: 700, fontFamily: "var(--font-mono)", color: "#FFFFFF" }}>36,000 bottles/hr</span>
+            <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0" }}>
+              <span style={{ color: "var(--text-secondary)" }}>Current HB Target (Hour):</span>
+              <span style={{ fontWeight: 700, fontFamily: "var(--font-mono)", color: "var(--text-primary)" }}>36,000 bottles/hr</span>
             </div>
-            <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid var(--border-subtle)" }}>
-              <span style={{ color: "var(--text-muted)" }}>Actual Attainment:</span>
-              <span style={{ fontWeight: 700, fontFamily: "var(--font-mono)", color: "#10B981" }}>34,800 bottles/hr</span>
+            <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0" }}>
+              <span style={{ color: "var(--text-secondary)" }}>Actual Attainment:</span>
+              <span style={{ fontWeight: 700, fontFamily: "var(--font-mono)", color: "#059669" }}>34,800 bottles/hr</span>
             </div>
-            <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid var(--border-subtle)" }}>
-              <span style={{ color: "var(--text-muted)" }}>Vibration:</span>
-              <span style={{ fontWeight: 600, color: activeMachine.vibration > 3.0 ? "#EF4444" : "#FFFFFF" }}>{activeMachine.vibration} mm/s RMS</span>
+            <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0" }}>
+              <span style={{ color: "var(--text-secondary)" }}>Vibration:</span>
+              <span style={{ fontWeight: 600, color: activeMachine.vibration > 3.0 ? "#DC2626" : "var(--text-primary)" }}>{activeMachine.vibration} mm/s RMS</span>
             </div>
-            <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 0" }}>
-              <span style={{ color: "var(--text-muted)" }}>Temperature:</span>
-              <span style={{ fontWeight: 600 }}>{activeMachine.temperature}°C</span>
+            <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0" }}>
+              <span style={{ color: "var(--text-secondary)" }}>Temperature:</span>
+              <span style={{ fontWeight: 600, color: "var(--text-primary)" }}>{activeMachine.temperature}°C</span>
             </div>
           </div>
         </Card>

@@ -68,9 +68,7 @@ export function QualityEvents() {
           <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
             Departmental Quality Logs
           </h1>
-          <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-            Critical Control Point (CCP) audits, deviations, and sanitation verification logs
-          </p>
+
         </div>
 
         {/* Tab Controls */}
@@ -237,7 +235,7 @@ export function QualityEvents() {
             </h3>
 
             {/* Selection Grid */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+            <div className="grid-2-responsive">
               <div>
                 <label style={{ fontSize: "12px", fontWeight: 700, color: "#FFFFFF", display: "block", marginBottom: "6px" }}>
                   Checklist Type
@@ -272,7 +270,7 @@ export function QualityEvents() {
               </div>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+            <div className="grid-2-responsive">
               <div>
                 <label style={{ fontSize: "12px", fontWeight: 700, color: "#FFFFFF", display: "block", marginBottom: "6px" }}>
                   Sample Point / Location

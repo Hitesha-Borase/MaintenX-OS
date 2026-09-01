@@ -26,18 +26,16 @@ export function ExecutiveDashboard() {
   ];
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "24px", padding: "10px", maxWidth: "1200px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "24px", width: "100%" }}>
       {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <div className="mobile-flex-col" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "16px" }}>
         <div>
           <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)" }}>
             Executive Dashboard
           </h1>
-          <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>
-            Enterprise performance, corporate finance, and strategic planning across all plants.
-          </p>
+
         </div>
-        <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+        <div className="mobile-flex-col" style={{ display: "flex", gap: "12px", alignItems: "center" }}>
           <select
             value={selectedPlant}
             onChange={(e) => setSelectedPlant(e.target.value)}
@@ -101,7 +99,7 @@ export function ExecutiveDashboard() {
       </div>
 
       {/* Main Content Layout */}
-      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "24px" }}>
+      <div className="dashboard-grid-layout">
         
         {/* Left Side: Plant Performance & Financial Impact */}
         <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
@@ -116,10 +114,12 @@ export function ExecutiveDashboard() {
               {plants.map((plant, idx) => (
                 <div
                   key={idx}
+                  className="mobile-flex-col"
                   style={{
                     display: "flex",
                     justifyContent: "space-between",
                     alignItems: "center",
+                    gap: "16px",
                     padding: "12px 16px",
                     borderRadius: "8px",
                     backgroundColor: "var(--bg-card-subtle)",
@@ -160,8 +160,9 @@ export function ExecutiveDashboard() {
           {/* Cost Variance / Standards Breakdown */}
           <Card>
             <h3 style={{ fontSize: "15px", fontWeight: 700, color: "#FFFFFF", marginBottom: "16px" }}>Standard vs. Actual Manufacturing Cost</h3>
-            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-              {[
+            <div style={{ overflowX: "auto", margin: "0 -4px", padding: "0 4px" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "10px", minWidth: "500px" }}>
+                {[
                 { category: "Raw Materials", std: "$180,000", act: "$185,200", var: "+$5,200", status: "Over" },
                 { category: "Packaging Materials", std: "$45,000", act: "$44,100", var: "-$900", status: "Under" },
                 { category: "Direct Labour", std: "$110,000", act: "$118,500", var: "+$8,500", status: "Over" },
@@ -174,7 +175,8 @@ export function ExecutiveDashboard() {
                   <span style={{ color: "var(--text-secondary)" }}>Act: {item.act}</span>
                   <span style={{ color: item.status === "Over" ? "#EF4444" : "#10B981", fontWeight: 700, textAlign: "right" }}>{item.var}</span>
                 </div>
-              ))}
+                ))}
+              </div>
             </div>
           </Card>
         </div>
