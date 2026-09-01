@@ -44,8 +44,8 @@ export function PromotionsUplift() {
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "16px" }}>
         {/* Active Promos */}
-        <Card style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-          <h3 style={{ fontSize: "14px", fontWeight: 700, color: "#FFFFFF" }}>
+        <Card style={{ display: "flex", flexDirection: "column", gap: "16px", padding: "24px" }}>
+          <h3 style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-primary)" }}>
             Configured Promo Events
           </h3>
 
@@ -62,7 +62,7 @@ export function PromotionsUplift() {
                 }}
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
-                  <span style={{ fontWeight: 750, color: "#FFFFFF" }}>{p.name}</span>
+                  <span style={{ fontWeight: 750, color: "var(--text-primary)" }}>{p.name}</span>
                   <Badge variant="emerald">{p.uplift}</Badge>
                 </div>
                 <div style={{ color: "var(--text-secondary)" }}>SKU: {p.sku}</div>
@@ -74,8 +74,8 @@ export function PromotionsUplift() {
 
         {/* Promo Form */}
         <form onSubmit={handleCreate}>
-          <Card style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-            <h3 style={{ fontSize: "14px", fontWeight: 700, color: "#FFFFFF" }}>
+          <Card style={{ display: "flex", flexDirection: "column", gap: "16px", padding: "24px" }}>
+            <h3 style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-primary)" }}>
               Configure Promo Event
             </h3>
 

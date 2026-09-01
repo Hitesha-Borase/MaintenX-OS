@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Boxes, Plus, Check } from "lucide-react";
+import { Boxes, Check } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { Button } from "../../components/common/Button";
 import { Badge } from "../../components/common/Badge";
@@ -22,34 +22,48 @@ export function PalletsContainers() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "800px" }}>
-      <div>
-        <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
+      <div style={{ marginBottom: "8px" }}>
+        <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>
           Pallets & Cargo Containers
         </h1>
-        <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
+        <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginTop: "4px", fontWeight: 500 }}>
           Monitor finished cargo pallets staged in shipping docks
         </p>
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
         {pallets.map((p) => (
-          <Card key={p.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <Boxes size={16} color="#10B981" />
-                <span style={{ fontSize: "14px", fontWeight: 700, color: "#FFFFFF" }}>{p.id}</span>
-                <Badge variant={p.status === "Loaded Carrier" ? "emerald" : "warning"}>{p.status}</Badge>
+          <Card 
+            key={p.id} 
+            style={{ 
+              display: "flex", 
+              justifyContent: "space-between", 
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "16px",
+              padding: "20px"
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "16px", flex: 1, minWidth: "250px" }}>
+              <div style={{ padding: "10px", backgroundColor: "rgba(200, 149, 71, 0.1)", borderRadius: "10px", flexShrink: 0, height: "fit-content" }}>
+                <Boxes size={24} color="#C89547" />
               </div>
-              <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "4px" }}>
-                SKU: {p.sku} • Contents: {p.description}
-              </div>
+              <span style={{ fontSize: "16px", color: "var(--text-primary)", fontWeight: 500, lineHeight: 1.5 }}>
+                {p.id} <br/>
+                <span style={{ fontSize: "14px", color: "var(--text-secondary)" }}>SKU: {p.sku} <span style={{ margin: "0 4px" }}>•</span> Contents: {p.description}</span>
+              </span>
             </div>
 
-            {p.status === "Staged WH-B" && (
-              <Button variant="success" size="sm" icon={Check} onClick={() => handleStage(p.id)}>
-                Load Cargo
-              </Button>
-            )}
+            <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+              <Badge variant={p.status === "Loaded Carrier" ? "emerald" : "warning"}>
+                {p.status.toUpperCase()}
+              </Badge>
+              {p.status === "Staged WH-B" && (
+                <Button variant="success" size="sm" icon={Check} onClick={() => handleStage(p.id)}>
+                  Load Cargo
+                </Button>
+              )}
+            </div>
           </Card>
         ))}
       </div>

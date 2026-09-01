@@ -1,7 +1,7 @@
 import React from "react";
+import { Layers } from "lucide-react";
 import { Card } from "../../../components/common/Card";
 import { Badge } from "../../../components/common/Badge";
-import { Layers } from "lucide-react";
 
 export function PackagingMaterials() {
   const packaging = [
@@ -11,28 +11,46 @@ export function PackagingMaterials() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "800px" }}>
-      <div>
-        <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
+      <div style={{ marginBottom: "8px" }}>
+        <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>
           Packaging Inventory
         </h1>
-        <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
+        <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginTop: "4px", fontWeight: 500 }}>
           Monitor glass bottles, caps, labels, and cardboard box stocks
         </p>
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-        {packaging.map((p, idx) => (
-          <Card key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <Layers size={18} color="#A855F7" />
-              <div>
-                <h4 style={{ fontSize: "14px", fontWeight: 700, color: "#FFFFFF" }}>{p.name}</h4>
-                <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>SKU: {p.sku} • On-Hand: {p.qty}</span>
+        {packaging.map((p, idx) => {
+          const isLowStock = p.status.toLowerCase().includes("low");
+          return (
+            <Card 
+              key={idx} 
+              style={{ 
+                display: "flex", 
+                justifyContent: "space-between", 
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: "16px",
+                padding: "20px"
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "16px", flex: 1, minWidth: "250px" }}>
+                <div style={{ padding: "10px", backgroundColor: "rgba(200, 149, 71, 0.1)", borderRadius: "10px", flexShrink: 0, height: "fit-content" }}>
+                  <Layers size={24} color="#C89547" />
+                </div>
+                <span style={{ fontSize: "16px", color: "var(--text-primary)", fontWeight: 500, lineHeight: 1.5 }}>
+                  {p.name} <br/>
+                  <span style={{ fontSize: "14px", color: "var(--text-secondary)" }}>SKU: {p.sku} <span style={{ margin: "0 4px" }}>•</span> On-Hand: {p.qty}</span>
+                </span>
               </div>
-            </div>
-            <Badge variant={p.status.includes("Low") ? "warning" : "emerald"}>{p.status}</Badge>
-          </Card>
-        ))}
+              
+              <Badge variant={isLowStock ? "slate" : "emerald"}>
+                {p.status.toUpperCase()}
+              </Badge>
+            </Card>
+          );
+        })}
       </div>
     </div>
   );

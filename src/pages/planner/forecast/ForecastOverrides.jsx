@@ -44,8 +44,8 @@ export function ForecastOverrides() {
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "16px" }}>
         {/* Active Overrides */}
-        <Card style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-          <h3 style={{ fontSize: "14px", fontWeight: 700, color: "#FFFFFF" }}>
+        <Card style={{ display: "flex", flexDirection: "column", gap: "16px", padding: "24px" }}>
+          <h3 style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-primary)" }}>
             Adjusted Demand Values
           </h3>
 
@@ -61,7 +61,7 @@ export function ForecastOverrides() {
                   fontSize: "12px"
                 }}
               >
-                <div style={{ fontWeight: 700, color: "#FFFFFF", marginBottom: "4px" }}>{ov.period}</div>
+                <div style={{ fontWeight: 700, color: "var(--text-primary)", marginBottom: "4px", fontSize: "13px" }}>{ov.period}</div>
                 <div style={{ color: "var(--text-secondary)" }}>
                   Baseline: {ov.baseline.toLocaleString()} ➔ Adjusted: <strong style={{ color: "#38BDF8" }}>{ov.adjusted.toLocaleString()}</strong>
                 </div>
@@ -73,8 +73,8 @@ export function ForecastOverrides() {
 
         {/* Override Form */}
         <form onSubmit={handleSave}>
-          <Card style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-            <h3 style={{ fontSize: "14px", fontWeight: 700, color: "#FFFFFF" }}>
+          <Card style={{ display: "flex", flexDirection: "column", gap: "16px", padding: "24px" }}>
+            <h3 style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-primary)" }}>
               Apply Demand Override
             </h3>
 

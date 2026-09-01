@@ -10,27 +10,33 @@ export function ProductChecks() {
   ];
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "800px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "24px", maxWidth: "900px" }}>
       <div>
-        <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
+        <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)" }}>
           Finished Product Checks
         </h1>
-        <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
+        <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginTop: "4px" }}>
           Monitor brix parameters, ph acidity, and seal torque validation tests
         </p>
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
         {products.map((p, idx) => (
-          <Card key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <Package size={18} color="#A855F7" />
-              <div>
-                <h4 style={{ fontSize: "14px", fontWeight: 700, color: "#FFFFFF" }}>{p.name}</h4>
-                <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-                  Target: {p.target} | Recorded: {p.actual}
-                </span>
-              </div>
+          <Card 
+            key={idx} 
+            style={{ 
+              display: "flex", 
+              justifyContent: "space-between", 
+              alignItems: "center",
+              padding: "20px 24px",
+              borderRadius: "16px"
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <Package size={22} color="#A855F7" strokeWidth={2} />
+              <span style={{ fontSize: "14px", color: "var(--text-secondary)", fontWeight: 500 }}>
+                Target: {p.target} | Recorded: {p.actual}
+              </span>
             </div>
             <Badge variant="emerald">{p.status}</Badge>
           </Card>

@@ -1,7 +1,7 @@
 import React from "react";
+import { FileText } from "lucide-react";
 import { Card } from "../../../components/common/Card";
 import { Badge } from "../../../components/common/Badge";
-import { FileText } from "lucide-react";
 
 export function PickLists() {
   const lists = [
@@ -11,30 +11,46 @@ export function PickLists() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "800px" }}>
-      <div>
-        <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
+      <div style={{ marginBottom: "8px" }}>
+        <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>
           Warehouse Pick Lists
         </h1>
-        <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
+        <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginTop: "4px", fontWeight: 500 }}>
           Monitor staging requirements for scheduled production line runs
         </p>
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-        {lists.map((l) => (
-          <Card key={l.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <FileText size={18} color="#38BDF8" />
-              <div>
-                <h4 style={{ fontSize: "14px", fontWeight: 700, color: "#FFFFFF" }}>{l.id} (Order: {l.order})</h4>
-                <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-                  Payload: {l.itemsCount} • Created: {l.date}
+        {lists.map((l) => {
+          const isActive = l.status === "Active";
+          return (
+            <Card 
+              key={l.id} 
+              style={{ 
+                display: "flex", 
+                justifyContent: "space-between", 
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: "16px",
+                padding: "20px"
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "16px", flex: 1, minWidth: "250px" }}>
+                <div style={{ padding: "10px", backgroundColor: "rgba(200, 149, 71, 0.1)", borderRadius: "10px", flexShrink: 0, height: "fit-content" }}>
+                  <FileText size={24} color="#C89547" />
+                </div>
+                <span style={{ fontSize: "16px", color: "var(--text-primary)", fontWeight: 500, lineHeight: 1.5 }}>
+                  Pick List: {l.id} <span style={{ margin: "0 4px" }}>•</span> Order: {l.order} <br/>
+                  <span style={{ fontSize: "14px", color: "var(--text-secondary)" }}>Payload: {l.itemsCount} <span style={{ margin: "0 4px" }}>•</span> Created: {l.date}</span>
                 </span>
               </div>
-            </div>
-            <Badge variant={l.status === "Active" ? "cyan" : "emerald"}>{l.status}</Badge>
-          </Card>
-        ))}
+              
+              <Badge variant={isActive ? "cyan" : "emerald"}>
+                {l.status.toUpperCase()}
+              </Badge>
+            </Card>
+          );
+        })}
       </div>
     </div>
   );

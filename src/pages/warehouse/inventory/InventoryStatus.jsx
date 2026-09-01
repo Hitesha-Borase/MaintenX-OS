@@ -1,7 +1,7 @@
 import React from "react";
+import { ShieldAlert } from "lucide-react";
 import { Card } from "../../../components/common/Card";
 import { Badge } from "../../../components/common/Badge";
-import { ShieldAlert } from "lucide-react";
 
 export function InventoryStatus() {
   const status = [
@@ -11,26 +11,41 @@ export function InventoryStatus() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "800px" }}>
-      <div>
-        <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
+      <div style={{ marginBottom: "8px" }}>
+        <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>
           Inventory Buffers & Safety Status
         </h1>
-        <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
+        <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginTop: "4px", fontWeight: 500 }}>
           Reconcile on-hand materials against scheduling buffers
         </p>
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
         {status.map((st, idx) => (
-          <Card key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <ShieldAlert size={18} color={st.bufferStatus === "OK" ? "#10B981" : "#F59E0B"} />
-              <div>
-                <h4 style={{ fontSize: "14px", fontWeight: 700, color: "#FFFFFF" }}>{st.sku}</h4>
-                <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>Stock: {st.level}</span>
+          <Card 
+            key={idx} 
+            style={{ 
+              display: "flex", 
+              justifyContent: "space-between", 
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "16px",
+              padding: "20px"
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "16px", flex: 1, minWidth: "250px" }}>
+              <div style={{ padding: "10px", backgroundColor: "rgba(200, 149, 71, 0.1)", borderRadius: "10px", flexShrink: 0, height: "fit-content" }}>
+                <ShieldAlert size={24} color="#C89547" />
               </div>
+              <span style={{ fontSize: "16px", color: "var(--text-primary)", fontWeight: 500, lineHeight: 1.5 }}>
+                {st.sku} <br/>
+                <span style={{ fontSize: "14px", color: "var(--text-secondary)" }}>Stock: {st.level}</span>
+              </span>
             </div>
-            <Badge variant={st.bufferStatus === "OK" ? "emerald" : "warning"}>{st.bufferStatus}</Badge>
+            
+            <Badge variant={st.bufferStatus === "OK" ? "emerald" : "warning"}>
+              {st.bufferStatus.toUpperCase()}
+            </Badge>
           </Card>
         ))}
       </div>

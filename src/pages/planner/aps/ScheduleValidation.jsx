@@ -34,19 +34,19 @@ export function ScheduleValidation() {
         </Button>
       </div>
 
-      <Card>
-        <h3 style={{ fontSize: "14px", fontWeight: 700, color: "#FFFFFF", marginBottom: "12px" }}>
+      <Card style={{ padding: "24px" }}>
+        <h3 style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-primary)", marginBottom: "16px" }}>
           Validation Criteria Status
         </h3>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: "8px", fontSize: "13px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "6px" }}>
-            <span style={{ color: "var(--text-muted)" }}>Raw Material Feasibility:</span>
-            <Badge variant={validated ? "emerald" : "warning"}>{validated ? "Passed" : "Not Audited"}</Badge>
+        <div style={{ display: "flex", flexDirection: "column", gap: "12px", fontSize: "13px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "8px" }}>
+            <span style={{ color: "var(--text-primary)", fontWeight: 500 }}>Raw Material Feasibility:</span>
+            <Badge variant={validated ? "emerald" : "slate"}>{validated ? "Passed" : "Not Audited"}</Badge>
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "6px" }}>
-            <span style={{ color: "var(--text-muted)" }}>Labor Headcount Fit:</span>
-            <Badge variant={validated ? "emerald" : "warning"}>{validated ? "Passed" : "Not Audited"}</Badge>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "8px" }}>
+            <span style={{ color: "var(--text-primary)", fontWeight: 500 }}>Labor Headcount Fit:</span>
+            <Badge variant={validated ? "emerald" : "slate"}>{validated ? "Passed" : "Not Audited"}</Badge>
           </div>
         </div>
       </Card>

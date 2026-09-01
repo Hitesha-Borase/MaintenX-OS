@@ -21,26 +21,30 @@ export function ServiceRisk() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "800px" }}>
-      <div>
-        <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
+      <div style={{ marginBottom: "8px" }}>
+        <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>
           Fulfillment Service Risks
         </h1>
-        <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
+        <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginTop: "4px", fontWeight: 500 }}>
           Monitor and mitigate potential On-Time-In-Full (OTIF) delivery penalties
         </p>
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
         {risks.map((r) => (
-          <Card key={r.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderLeft: r.status === "Active" ? "4px solid #EF4444" : "4px solid #10B981" }}>
-            <div>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <ShieldAlert size={16} color={r.status === "Active" ? "#EF4444" : "#10B981"} />
-                <span style={{ fontSize: "14px", fontWeight: 700, color: "#FFFFFF" }}>{r.id}: {r.title}</span>
-                <Badge variant={r.status === "Active" ? "danger" : "emerald"}>{r.status}</Badge>
+          <Card key={r.id} style={{ display: "flex", flexWrap: "wrap", gap: "16px", justifyContent: "space-between", alignItems: "center", borderLeft: r.status === "Active" ? "4px solid #EF4444" : "4px solid #10B981", padding: "20px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+              <div style={{ padding: "10px", backgroundColor: r.status === "Active" ? "rgba(239, 68, 68, 0.1)" : "rgba(16, 185, 129, 0.1)", borderRadius: "10px", flexShrink: 0 }}>
+                <ShieldAlert size={24} color={r.status === "Active" ? "#EF4444" : "#10B981"} />
               </div>
-              <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "4px" }}>
-                Reason: {r.reason} | Severity: <strong style={{ color: "#EF4444" }}>{r.severity}</strong>
+              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                  <span style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-primary)" }}>{r.id}: {r.title}</span>
+                  <Badge variant={r.status === "Active" ? "danger" : "emerald"}>{r.status}</Badge>
+                </div>
+                <div style={{ fontSize: "14px", color: "var(--text-secondary)", marginTop: "2px", fontWeight: 500 }}>
+                  Reason: {r.reason} | Severity: <strong style={{ color: r.status === "Active" ? "#EF4444" : "inherit" }}>{r.severity}</strong>
+                </div>
               </div>
             </div>
 

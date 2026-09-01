@@ -11,27 +11,35 @@ export function Reports() {
   ];
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "800px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "24px", maxWidth: "900px" }}>
       <div>
-        <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
+        <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)" }}>
           Quality Assurance Reports
         </h1>
-        <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
+        <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginTop: "4px" }}>
           Access CCP logs, batch release summaries, and quality events reports
         </p>
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
         {reports.map((rep, idx) => (
-          <Card key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <FileSpreadsheet size={18} color="#38BDF8" />
-              <div>
-                <h4 style={{ fontSize: "14px", fontWeight: 700, color: "#FFFFFF" }}>{rep.name}</h4>
-                <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>Date: {rep.date}</span>
-              </div>
+          <Card 
+            key={idx} 
+            style={{ 
+              display: "flex", 
+              justifyContent: "space-between", 
+              alignItems: "center",
+              padding: "20px 24px",
+              borderRadius: "16px"
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <FileSpreadsheet size={22} color="#38BDF8" strokeWidth={2} style={{ flexShrink: 0 }} />
+              <span style={{ fontSize: "14px", color: "var(--text-secondary)", fontWeight: 500 }}>
+                <strong style={{ color: "var(--text-primary)", fontWeight: 600 }}>{rep.name}</strong> &bull; Date: {rep.date}
+              </span>
             </div>
-            <Button variant="secondary" size="sm" icon={Printer} onClick={() => window.print()}>
+            <Button variant="secondary" size="md" icon={Printer} onClick={() => window.print()}>
               Print
             </Button>
           </Card>

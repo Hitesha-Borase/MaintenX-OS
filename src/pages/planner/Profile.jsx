@@ -1,72 +1,89 @@
 import React from "react";
-import { User, Award, ShieldCheck } from "lucide-react";
+import { Award } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { Badge } from "../../components/common/Badge";
 
 export function Profile() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "800px" }}>
-      <div>
-        <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
+      <div style={{ marginBottom: "8px" }}>
+        <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>
           Supply Planner / Scheduler Profile
         </h1>
-        <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
+        <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginTop: "4px", fontWeight: 500 }}>
           Verify credentials and trade qualifications
         </p>
       </div>
 
-      <div className="grid-3">
-        <Card style={{ gridColumn: "span 2", display: "flex", gap: "16px", alignItems: "center" }}>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "20px" }}>
+        {/* Left Profile Card */}
+        <Card style={{ 
+          display: "flex", 
+          gap: "24px", 
+          alignItems: "center",
+          padding: "32px",
+          flex: "1 1 350px"
+        }}>
           <div
             style={{
-              width: "60px",
-              height: "60px",
+              width: "72px",
+              height: "72px",
               borderRadius: "50%",
-              backgroundColor: "#0284C7",
+              backgroundColor: "#C89547",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              color: "#FFFFFF",
-              fontSize: "24px",
-              fontWeight: 800
+              color: "#ffffff",
+              fontSize: "28px",
+              fontWeight: 800,
+              flexShrink: 0
             }}
           >
             SM
           </div>
-          <div>
-            <h3 style={{ fontSize: "16px", fontWeight: 800, color: "#FFFFFF" }}>Stephen Miller</h3>
-            <span style={{ fontSize: "12px", color: "var(--text-muted)", display: "block" }}>Lead Production Scheduler</span>
-            <div style={{ display: "flex", gap: "6px", marginTop: "6px" }}>
-              <Badge variant="cyan">APS Planner</Badge>
-              <Badge variant="purple">MRP Lead</Badge>
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            <h2 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>Sarah Miller</h2>
+            <span style={{ fontSize: "15px", color: "var(--text-secondary)", fontWeight: 500 }}>Lead Production Scheduler</span>
+            <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+              <Badge variant="cyan">APS PLANNER</Badge>
+              <Badge variant="slate">MRP LEAD</Badge>
             </div>
           </div>
         </Card>
 
-        <Card style={{ display: "flex", flexDirection: "column", justifyContent: "center", gap: "8px" }}>
+        {/* Right Stats Card */}
+        <Card style={{ 
+          display: "flex", 
+          flexDirection: "column", 
+          justifyContent: "center", 
+          gap: "16px",
+          padding: "32px",
+          flex: "1 1 200px"
+        }}>
           <div>
-            <span style={{ fontSize: "11px", color: "var(--text-muted)", display: "block" }}>OTIF Compliance Rate:</span>
-            <span style={{ fontSize: "18px", fontWeight: 800, color: "#10B981" }}>98.9%</span>
+            <span style={{ fontSize: "14px", color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>OTIF Compliance Rate:</span>
+            <span style={{ fontSize: "24px", fontWeight: 800, color: "#10b981" }}>98.9%</span>
           </div>
           <div>
-            <span style={{ fontSize: "11px", color: "var(--text-muted)", display: "block" }}>Planning Cycles Complete:</span>
-            <span style={{ fontSize: "18px", fontWeight: 800, color: "#38BDF8" }}>240</span>
+            <span style={{ fontSize: "14px", color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>Planning Cycles Complete:</span>
+            <span style={{ fontSize: "24px", fontWeight: 800, color: "#38BDF8" }}>240</span>
           </div>
         </Card>
       </div>
 
-      <Card>
-        <h3 style={{ fontSize: "14px", fontWeight: 700, color: "#FFFFFF", marginBottom: "12px", display: "flex", alignItems: "center", gap: "6px" }}>
-          <Award size={16} color="#F59E0B" /> Trade Qualifications
-        </h3>
-        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)" }}>
-            <span style={{ fontSize: "13px", fontWeight: 600, color: "#FFFFFF" }}>APICS CPIM Certification</span>
-            <Badge variant="emerald">Certified</Badge>
+      {/* Qualifications Card */}
+      <Card style={{ padding: "24px", display: "flex", flexDirection: "column", gap: "16px" }}>
+        <div style={{ display: "flex", alignItems: "flex-start", marginBottom: "4px" }}>
+          <Award size={24} color="#C89547" />
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+          <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: "16px", padding: "16px 20px", borderRadius: "12px", backgroundColor: "rgba(200, 149, 71, 0.05)", border: "1px solid rgba(200, 149, 71, 0.2)" }}>
+            <span style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-primary)" }}>APICS CPIM Certification</span>
+            <Badge variant="emerald">CERTIFIED</Badge>
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)" }}>
-            <span style={{ fontSize: "13px", fontWeight: 600, color: "#FFFFFF" }}>Advanced Production Sequencing (APS)</span>
-            <Badge variant="emerald">Expert</Badge>
+          <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: "16px", padding: "16px 20px", borderRadius: "12px", backgroundColor: "rgba(200, 149, 71, 0.05)", border: "1px solid rgba(200, 149, 71, 0.2)" }}>
+            <span style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-primary)" }}>Advanced Production Sequencing (APS)</span>
+            <Badge variant="emerald">EXPERT</Badge>
           </div>
         </div>
       </Card>

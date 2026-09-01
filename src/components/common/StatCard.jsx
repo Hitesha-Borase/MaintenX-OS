@@ -55,7 +55,7 @@ export function StatCard({
       </div>
 
       <div style={{ display: "flex", alignItems: "baseline", gap: "6px", margin: "4px 0" }}>
-        <span className="stat-value">{value}</span>
+        <span className="stat-value" style={{ fontFamily: "var(--font-sans)" }}>{value}</span>
         {unit && (
           <span style={{ fontSize: "14px", fontWeight: 500, color: "var(--text-muted)", fontFamily: "var(--font-sans)" }}>
             {unit}
@@ -75,8 +75,7 @@ export function StatCard({
             <span
               style={{
                 color: trend.isPositive ? "#34D399" : "#F87171",
-                fontWeight: 600,
-                fontFamily: "var(--font-mono)"
+                fontWeight: 600
               }}
             >
               {trend.value}

@@ -88,7 +88,7 @@ export function Login() {
         position: "relative"
       }}
     >
-      {/* Inline styles for custom amber glassmorphism keyframes */}
+      {/* Inline styles for custom amber glassmorphism keyframes and responsiveness */}
       <style>{`
         @keyframes floatWeightless {
           0% { transform: translateY(0px) translateX(0px); opacity: 0.25; }
@@ -113,6 +113,35 @@ export function Login() {
           pointer-events: none;
           box-shadow: 0 0 8px rgba(200, 149, 71, 0.6);
         }
+        
+        /* Mobile Responsiveness */
+        @media (max-width: 900px) {
+          .login-main-frame {
+            grid-template-columns: 1fr !important;
+            max-width: 600px !important;
+          }
+          .login-left-panel {
+            display: none !important;
+          }
+          .login-right-panel {
+            padding: 32px 24px !important;
+          }
+        }
+        
+        @media (max-width: 600px) {
+          .login-inputs-row {
+            grid-template-columns: 1fr !important;
+          }
+          .roles-grid {
+            grid-template-columns: repeat(2, 1fr) !important;
+          }
+        }
+        
+        @media (max-width: 400px) {
+          .roles-grid {
+            grid-template-columns: 1fr !important;
+          }
+        }
       `}</style>
 
       {/* Floating Amber Particles */}
@@ -133,7 +162,7 @@ export function Login() {
 
       {/* Main Amber Glassmorphism Frame */}
       <div
-        className="custom-glass-card"
+        className="custom-glass-card login-main-frame"
         style={{
           width: "100%",
           maxWidth: "1280px",
@@ -152,6 +181,7 @@ export function Login() {
       >
         {/* Left Panel: Translucent Astro Smart Factory Analytics Layout */}
         <div
+          className="login-left-panel"
           style={{
             position: "relative",
             background: "url('/maintenx_astro_factory.jpg') center/cover no-repeat",
@@ -208,7 +238,7 @@ export function Login() {
         </div>
 
         {/* Right Panel: Floating Warm Acrylic Glass Login Box */}
-        <div style={{ padding: "48px 56px", display: "flex", flexDirection: "column", gap: "28px", justifyContent: "center", backgroundColor: "#FCFAF7" }}>
+        <div className="login-right-panel" style={{ padding: "48px 56px", display: "flex", flexDirection: "column", gap: "28px", justifyContent: "center", backgroundColor: "#FCFAF7" }}>
           {/* Logo & Sub-Branding Header */}
           <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
             <div
@@ -238,7 +268,7 @@ export function Login() {
 
           <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
             {/* Inputs Row */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "18px" }}>
+            <div className="login-inputs-row" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "18px" }}>
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label" style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: "6px" }}>
                   <User size={12} color="#B27E33" /> Corporate Username
@@ -296,6 +326,7 @@ export function Login() {
                 Select Dashboard Perspective
               </label>
               <div
+                className="roles-grid"
                 style={{
                   display: "grid",
                   gridTemplateColumns: "repeat(3, 1fr)",

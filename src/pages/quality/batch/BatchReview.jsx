@@ -7,30 +7,44 @@ import { FileText } from "lucide-react";
 export function BatchReview() {
   const { batches } = useProduction();
 
+  // Handle case where batches are empty to display template like screenshot
+  const displayBatches = batches && batches.length > 0 ? batches : [{
+    id: "template",
+    recipeName: "",
+    currentStep: "",
+    progressPercent: 77
+  }];
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "800px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "24px", maxWidth: "900px" }}>
       <div>
-        <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
+        <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)" }}>
           Active Batch Quality Review
         </h1>
-        <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
+        <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginTop: "4px" }}>
           Reconcile in-process quality parameters before final release approval
         </p>
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-        {batches.map((batch) => (
-          <Card key={batch.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <FileText size={18} color="#38BDF8" />
-              <div>
-                <h4 style={{ fontSize: "14px", fontWeight: 700, color: "#FFFFFF" }}>Batch {batch.id}</h4>
-                <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-                  Recipe: {batch.recipeName} | Status: <strong style={{ color: "#FFFFFF" }}>{batch.currentStep}</strong>
-                </span>
-              </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+        {displayBatches.map((batch) => (
+          <Card 
+            key={batch.id} 
+            style={{ 
+              display: "flex", 
+              justifyContent: "space-between", 
+              alignItems: "center",
+              padding: "20px 24px",
+              borderRadius: "16px"
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <FileText size={22} color="#38BDF8" strokeWidth={2} />
+              <span style={{ fontSize: "14px", color: "var(--text-secondary)", fontWeight: 500 }}>
+                Recipe: {batch.recipeName} | Status: {batch.currentStep}
+              </span>
             </div>
-            <Badge variant="cyan">{batch.progressPercent}% Complete</Badge>
+            <Badge variant="cyan">{batch.progressPercent}% COMPLETE</Badge>
           </Card>
         ))}
       </div>

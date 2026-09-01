@@ -20,19 +20,19 @@ export function CapacityPlanning() {
         </p>
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
         {centers.map((c, idx) => (
-          <Card key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <Card key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "24px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
               <CalendarRange size={18} color="#38BDF8" />
               <div>
-                <h4 style={{ fontSize: "14px", fontWeight: 700, color: "#FFFFFF" }}>{c.name}</h4>
+                <h4 style={{ fontSize: "15px", fontWeight: 700, color: "var(--text-primary)", marginBottom: "4px" }}>{c.name}</h4>
                 <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
                   Scheduled: {c.scheduledLoad} | Available: {c.availableHrs}
                 </span>
               </div>
             </div>
-            <Badge variant={c.status.includes("Highly") ? "warning" : "emerald"}>{c.status}</Badge>
+            <Badge variant={c.status.includes("Highly") ? "slate" : "emerald"}>{c.status}</Badge>
           </Card>
         ))}
       </div>

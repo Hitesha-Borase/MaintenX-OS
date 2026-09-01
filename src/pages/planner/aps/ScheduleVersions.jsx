@@ -31,16 +31,16 @@ export function ScheduleVersions() {
         </p>
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
         {versions.map((v) => (
-          <Card key={v.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <Card key={v.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "24px" }}>
             <div>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <FileText size={16} color="#A855F7" />
-                <span style={{ fontSize: "14px", fontWeight: 700, color: "#FFFFFF" }}>Version {v.id}</span>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "8px" }}>
+                <FileText size={18} color="#A855F7" />
+                <span style={{ fontSize: "15px", fontWeight: 700, color: "var(--text-primary)" }}>Version {v.id}</span>
                 <Badge variant={v.status.includes("Active") ? "emerald" : "slate"}>{v.status}</Badge>
               </div>
-              <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "4px" }}>
+              <div style={{ fontSize: "13px", color: "var(--text-secondary)" }}>
                 Author: {v.author} • Saved: {v.timestamp}
               </div>
             </div>

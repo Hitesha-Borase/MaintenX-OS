@@ -1,7 +1,5 @@
 import React, { useState } from "react";
 import { BrainCircuit, Send, Sparkles, Check } from "lucide-react";
-import { Card } from "../../components/common/Card";
-import { Button } from "../../components/common/Button";
 import { useApp } from "../../context/AppContext";
 
 export function AIPlanningAssistant() {
@@ -40,39 +38,83 @@ export function AIPlanningAssistant() {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "800px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "24px", maxWidth: "900px", fontFamily: "system-ui, -apple-system, sans-serif" }}>
       <div>
-        <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
+        {/* Title is partially cut off in screenshot, assuming standard style */}
+        <h1 style={{ fontSize: "24px", fontWeight: 800, color: "#2d2825", margin: "0 0 8px 0" }}>
           AI Supply Chain Planning Assistant
         </h1>
-        <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
+        <p style={{ fontSize: "15px", color: "#7a7571", margin: 0 }}>
           Leverage predictive models to sequence production orders and optimize capacity constraints
         </p>
       </div>
 
-      {/* Recommended Action */}
-      <Card style={{ borderLeft: "4px solid #06B6D4", display: "flex", flexDirection: "column", gap: "12px" }}>
-        <h3 style={{ fontSize: "14px", fontWeight: 700, color: "#FFFFFF", display: "flex", alignItems: "center", gap: "6px" }}>
-          <Sparkles size={16} color="#06B6D4" /> Feasibility Sequence Optimization
-        </h3>
-        <p style={{ fontSize: "13px", color: "var(--text-secondary)" }}>
+      {/* Recommended Action Card */}
+      <div style={{ 
+        backgroundColor: "#ffffff",
+        padding: "24px",
+        borderRadius: "16px",
+        border: "1px solid #e8e6e1",
+        borderLeft: "6px solid #00c2d1",
+        boxShadow: "0 2px 8px rgba(0,0,0,0.02)",
+        display: "flex", 
+        flexDirection: "column", 
+        gap: "16px",
+        overflow: "hidden"
+      }}>
+        <div style={{ display: "flex", alignItems: "flex-start" }}>
+          <Sparkles size={20} color="#00c2d1" strokeWidth={2.5} />
+        </div>
+        
+        <p style={{ fontSize: "15px", color: "#5a5550", margin: 0, lineHeight: 1.6 }}>
           Concentration sweetener levels are low for Tuesday. Recommend alternate Stage Lot staging or delaying Blending Order #ORD-905 by 12 hours.
         </p>
 
         {!recAccepted ? (
-          <Button variant="primary" size="sm" icon={BrainCircuit} onClick={handleAcceptRec} style={{ width: "fit-content" }}>
+          <button 
+            onClick={handleAcceptRec} 
+            style={{ 
+              display: "flex", 
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "8px",
+              width: "100%",
+              padding: "12px",
+              background: "linear-gradient(to right, #cf9742, #b87c29)",
+              color: "#1a1614",
+              border: "none",
+              borderRadius: "12px",
+              fontSize: "14px",
+              fontWeight: 700,
+              cursor: "pointer",
+              boxShadow: "0 2px 4px rgba(207, 151, 66, 0.3)",
+              transition: "opacity 0.2s"
+            }}
+            onMouseOver={(e) => e.currentTarget.style.opacity = '0.9'}
+            onMouseOut={(e) => e.currentTarget.style.opacity = '1'}
+          >
+            <BrainCircuit size={16} strokeWidth={2.5} />
             Accept & Stage Alternative Lot
-          </Button>
+          </button>
         ) : (
-          <div style={{ color: "#10B981", fontSize: "12px", fontWeight: 700, display: "flex", alignItems: "center", gap: "4px" }}>
-            <Check size={14} /> Alternative lot staging request dispatched to Warehouse.
+          <div style={{ color: "#10b981", fontSize: "14px", fontWeight: 700, display: "flex", alignItems: "center", gap: "6px" }}>
+            <Check size={16} /> Alternative lot staging request dispatched to Warehouse.
           </div>
         )}
-      </Card>
+      </div>
 
-      {/* Chat Area */}
-      <Card style={{ display: "flex", flexDirection: "column", gap: "14px", height: "350px" }}>
-        <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: "12px", padding: "10px 0" }}>
+      {/* Chat Area Card */}
+      <div style={{ 
+        display: "flex", 
+        flexDirection: "column", 
+        height: "400px",
+        backgroundColor: "#ffffff",
+        padding: "24px",
+        borderRadius: "16px",
+        border: "1px solid #e8e6e1",
+        boxShadow: "0 2px 8px rgba(0,0,0,0.02)",
+      }}>
+        <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: "16px", paddingBottom: "24px" }}>
           {chat.map((msg, idx) => {
             const isUser = msg.sender === "user";
             return (
@@ -80,14 +122,13 @@ export function AIPlanningAssistant() {
                 key={idx}
                 style={{
                   alignSelf: isUser ? "flex-end" : "flex-start",
-                  backgroundColor: isUser ? "#0284C7" : "var(--bg-card-subtle)",
-                  color: isUser ? "#FFFFFF" : "var(--text-primary)",
-                  padding: "10px 14px",
-                  borderRadius: "8px",
-                  border: isUser ? "none" : "1px solid var(--border-subtle)",
-                  maxWidth: "80%",
-                  fontSize: "13px",
-                  lineHeight: 1.5
+                  backgroundColor: isUser ? "#0284c7" : "#f5f3ef",
+                  color: isUser ? "#ffffff" : "#302b28",
+                  padding: "16px 20px",
+                  borderRadius: "12px",
+                  maxWidth: "85%",
+                  fontSize: "14.5px",
+                  lineHeight: 1.6
                 }}
               >
                 {msg.msg}
@@ -95,25 +136,56 @@ export function AIPlanningAssistant() {
             );
           })}
           {loading && (
-            <div style={{ alignSelf: "flex-start", color: "var(--text-muted)", fontSize: "12px", fontStyle: "italic" }}>
+            <div style={{ alignSelf: "flex-start", color: "#a19b95", fontSize: "14px", fontStyle: "italic", padding: "0 20px" }}>
               AI is analyzing capacity models...
             </div>
           )}
         </div>
 
-        <form onSubmit={handleQuery} style={{ display: "flex", gap: "8px", borderTop: "1px solid var(--border-subtle)", paddingTop: "12px" }}>
+        <form onSubmit={handleQuery} style={{ display: "flex", gap: "12px", borderTop: "1px solid #e8e6e1", paddingTop: "24px" }}>
           <input
             type="text"
             placeholder="Ask AI Planning Assistant..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="input-field"
-            style={{ flex: 1 }}
+            style={{ 
+              flex: 1,
+              padding: "14px 20px",
+              backgroundColor: "#f9f8f6",
+              border: "1px solid #e8e6e1",
+              borderRadius: "12px",
+              fontSize: "15px",
+              color: "#2d2825",
+              outline: "none"
+            }}
+            onFocus={(e) => e.target.style.borderColor = '#cf9742'}
+            onBlur={(e) => e.target.style.borderColor = '#e8e6e1'}
             required
           />
-          <Button type="submit" variant="primary" icon={Send} disabled={loading} />
+          <button 
+            type="submit" 
+            disabled={loading}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: "50px",
+              height: "50px",
+              background: "linear-gradient(to right, #cf9742, #b87c29)",
+              color: "#1a1614",
+              border: "none",
+              borderRadius: "12px",
+              cursor: loading ? "default" : "pointer",
+              opacity: loading ? 0.6 : 1,
+              transition: "opacity 0.2s"
+            }}
+            onMouseOver={(e) => !loading && (e.currentTarget.style.opacity = '0.9')}
+            onMouseOut={(e) => !loading && (e.currentTarget.style.opacity = '1')}
+          >
+            <Send size={20} strokeWidth={2.5} style={{ marginLeft: "4px" }} />
+          </button>
         </form>
-      </Card>
+      </div>
     </div>
   );
 }

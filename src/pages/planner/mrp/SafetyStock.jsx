@@ -11,11 +11,11 @@ export function SafetyStock() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "800px" }}>
-      <div>
-        <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
+      <div style={{ marginBottom: "8px" }}>
+        <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>
           Inventory Safety Buffers
         </h1>
-        <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
+        <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginTop: "4px", fontWeight: 500 }}>
           Monitor on-hand raw stocks against minimum safety buffers to prevent stockouts
         </p>
       </div>
@@ -24,13 +24,15 @@ export function SafetyStock() {
         {safety.map((s, idx) => {
           const isLow = s.current < s.safetyMin;
           return (
-            <Card key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <Package size={18} color={isLow ? "#F59E0B" : "#10B981"} />
-                <div>
-                  <h4 style={{ fontSize: "14px", fontWeight: 700, color: "#FFFFFF" }}>{s.part}</h4>
-                  <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-                    Minimum Safety Limit: {s.safetyMin.toLocaleString()} | Current Stock: {s.current.toLocaleString()}
+            <Card key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "20px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+                <div style={{ padding: "10px", backgroundColor: isLow ? "rgba(245, 158, 11, 0.1)" : "rgba(16, 185, 129, 0.1)", borderRadius: "10px" }}>
+                  <Package size={24} color={isLow ? "#F59E0B" : "#10B981"} />
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                  <h4 style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-primary)" }}>{s.part}</h4>
+                  <span style={{ fontSize: "14px", color: "var(--text-secondary)", fontWeight: 500 }}>
+                    Minimum Safety Limit: {s.safetyMin.toLocaleString()} | Current Stock: <span style={{ color: isLow ? "#F59E0B" : "inherit", fontWeight: isLow ? 700 : 500 }}>{s.current.toLocaleString()}</span>
                   </span>
                 </div>
               </div>

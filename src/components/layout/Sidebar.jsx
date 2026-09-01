@@ -118,6 +118,12 @@ export function Sidebar() {
   const { sidebarCollapsed, setSidebarCollapsed, mobileMenuOpen, setMobileMenuOpen, addToast } = useApp();
   const location = useLocation();
 
+  React.useEffect(() => {
+    if (mobileMenuOpen) {
+      setMobileMenuOpen(false);
+    }
+  }, [location.pathname]);
+
   const cmmsContext = useCMMS ? useCMMS() : { workOrders: [], assets: [] };
   const { workOrders = [], assets = [] } = cmmsContext || {};
 
@@ -262,25 +268,21 @@ export function Sidebar() {
           onClick={() => setMobileMenuOpen(false)}
           style={{
             position: "fixed",
-            inset: 0,
-            backgroundColor: "rgba(43, 29, 17, 0.4)",
+            top: "61px",
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(43, 29, 17, 0.45)",
             backdropFilter: "blur(4px)",
-            zIndex: 45
+            zIndex: 35
           }}
         />
       )}
 
       <aside
-        className={`app-sidebar ${mobileMenuOpen ? "mobile-open" : ""}`}
+        className={`app-sidebar ${mobileMenuOpen ? "mobile-open" : ""} ${sidebarCollapsed ? "collapsed" : ""}`}
         style={{
-          width: sidebarCollapsed ? "68px" : "260px",
-          transition: "width 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "space-between",
-          zIndex: 50,
-          backgroundColor: "var(--bg-sidebar)",
-          borderRight: "1px solid var(--border-subtle)"
+          justifyContent: "space-between"
         }}
       >
         {/* TOP BRAND HEADER */}

@@ -35,8 +35,8 @@ export function APSScheduler() {
         </Button>
       </div>
 
-      <Card>
-        <h3 style={{ fontSize: "14px", fontWeight: 700, color: "#FFFFFF", marginBottom: "10px" }}>
+      <Card style={{ padding: "24px" }}>
+        <h3 style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-primary)", marginBottom: "16px" }}>
           Current Optimization Constraints
         </h3>
         <p style={{ fontSize: "13px", color: "var(--text-secondary)", lineHeight: 1.5 }}>

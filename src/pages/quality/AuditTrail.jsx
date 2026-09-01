@@ -1,6 +1,5 @@
 import React from "react";
 import { Card } from "../../components/common/Card";
-import { Badge } from "../../components/common/Badge";
 import { Clock } from "lucide-react";
 
 export function AuditTrail() {
@@ -11,27 +10,35 @@ export function AuditTrail() {
   ];
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "800px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "24px", maxWidth: "900px" }}>
       <div>
-        <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
+        <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)" }}>
           QA Audit Trail
         </h1>
-        <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
+        <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginTop: "4px" }}>
           Immutable log of all QA authorizations, holds, and release decisions
         </p>
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
         {events.map((e, idx) => (
-          <Card key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <Clock size={18} color="#38BDF8" />
-              <div>
-                <h4 style={{ fontSize: "13px", fontWeight: 700, color: "#FFFFFF" }}>{e.action}</h4>
-                <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>By: {e.user}</span>
-              </div>
+          <Card 
+            key={idx} 
+            style={{ 
+              display: "flex", 
+              justifyContent: "space-between", 
+              alignItems: "center",
+              padding: "20px 24px",
+              borderRadius: "16px"
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <Clock size={22} color="#38BDF8" strokeWidth={2} style={{ flexShrink: 0 }} />
+              <span style={{ fontSize: "14px", color: "var(--text-secondary)", fontWeight: 500 }}>
+                <strong style={{ color: "var(--text-primary)", fontWeight: 600 }}>{e.action}</strong> &bull; By: {e.user}
+              </span>
             </div>
-            <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>{e.time}</span>
+            <span style={{ fontSize: "14px", color: "var(--text-secondary)", fontWeight: 500 }}>{e.time}</span>
           </Card>
         ))}
       </div>

@@ -38,19 +38,19 @@ export function PublishSchedule() {
         )}
       </div>
 
-      <Card>
-        <h3 style={{ fontSize: "14px", fontWeight: 700, color: "#FFFFFF", marginBottom: "12px" }}>
+      <Card style={{ padding: "24px" }}>
+        <h3 style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-primary)", marginBottom: "16px" }}>
           Target Dispatch Lines
         </h3>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: "8px", fontSize: "13px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "6px" }}>
-            <span style={{ color: "var(--text-muted)" }}>Line 1 Aseptic HMI:</span>
-            <Badge variant={published ? "emerald" : "warning"}>{published ? "Synced" : "Out of Sync"}</Badge>
+        <div style={{ display: "flex", flexDirection: "column", gap: "12px", fontSize: "13px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "8px" }}>
+            <span style={{ color: "var(--text-primary)", fontWeight: 500 }}>Line 1 Aseptic HMI:</span>
+            <Badge variant={published ? "emerald" : "slate"}>{published ? "Synced" : "Out of Sync"}</Badge>
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "6px" }}>
-            <span style={{ color: "var(--text-muted)" }}>Line 2 Formulation panel:</span>
-            <Badge variant={published ? "emerald" : "warning"}>{published ? "Synced" : "Out of Sync"}</Badge>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "8px" }}>
+            <span style={{ color: "var(--text-primary)", fontWeight: 500 }}>Line 2 Formulation panel:</span>
+            <Badge variant={published ? "emerald" : "slate"}>{published ? "Synced" : "Out of Sync"}</Badge>
           </div>
         </div>
       </Card>

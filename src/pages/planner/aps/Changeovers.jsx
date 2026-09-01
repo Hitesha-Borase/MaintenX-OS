@@ -19,13 +19,13 @@ export function Changeovers() {
         </p>
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
         {transitions.map((t, idx) => (
-          <Card key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <Card key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "24px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
               <Shuffle size={18} color="#EF4444" />
               <div>
-                <h4 style={{ fontSize: "14px", fontWeight: 700, color: "#FFFFFF" }}>
+                <h4 style={{ fontSize: "15px", fontWeight: 700, color: "var(--text-primary)", marginBottom: "4px" }}>
                   {t.from} ➔ {t.to}
                 </h4>
                 <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>

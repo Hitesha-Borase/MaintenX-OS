@@ -21,29 +21,33 @@ export function MaterialShortages() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "800px" }}>
-      <div>
-        <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
+      <div style={{ marginBottom: "8px" }}>
+        <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>
           Supply Shortages Alert
         </h1>
-        <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
+        <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginTop: "4px", fontWeight: 500 }}>
           Critical inventory safety shortages detected on scheduled manufacturing runs
         </p>
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
         {shortages.map((s) => (
-          <Card key={s.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderLeft: s.status === "Critical" ? "4px solid #EF4444" : "4px solid #38BDF8" }}>
-            <div>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <AlertTriangle size={16} color="#EF4444" />
-                <span style={{ fontSize: "14px", fontWeight: 700, color: "#FFFFFF" }}>{s.part}</span>
-                <Badge variant={s.status === "Critical" ? "danger" : "cyan"}>{s.status}</Badge>
+          <Card key={s.id} style={{ display: "flex", flexWrap: "wrap", gap: "16px", justifyContent: "space-between", alignItems: "center", borderLeft: s.status === "Critical" ? "4px solid #EF4444" : "4px solid #38BDF8", padding: "20px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+              <div style={{ padding: "10px", backgroundColor: "rgba(239, 68, 68, 0.1)", borderRadius: "10px", flexShrink: 0 }}>
+                <AlertTriangle size={24} color="#EF4444" />
               </div>
-              <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "4px" }}>
-                Deficit Quantity: <strong style={{ color: "#EF4444" }}>{s.deficit}</strong> | Deficit Period: {s.weekDeficit}
-              </div>
-              <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>
-                Vendor: {s.supplier}
+              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                  <span style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-primary)" }}>{s.part}</span>
+                  <Badge variant={s.status === "Critical" ? "danger" : "cyan"}>{s.status}</Badge>
+                </div>
+                <div style={{ fontSize: "14px", color: "var(--text-secondary)", marginTop: "2px", fontWeight: 500 }}>
+                  Deficit Quantity: <strong style={{ color: "#EF4444" }}>{s.deficit}</strong> | Deficit Period: {s.weekDeficit}
+                </div>
+                <div style={{ fontSize: "13px", color: "var(--text-muted)", marginTop: "2px" }}>
+                  Vendor: {s.supplier}
+                </div>
               </div>
             </div>
 

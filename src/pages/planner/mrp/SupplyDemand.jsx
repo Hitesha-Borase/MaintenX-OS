@@ -10,28 +10,30 @@ export function SupplyDemand() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "800px" }}>
-      <div>
-        <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
+      <div style={{ marginBottom: "8px" }}>
+        <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>
           Supply & Demand Balance Sheet
         </h1>
-        <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
+        <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginTop: "4px", fontWeight: 500 }}>
           Reconcile total available supply with customer demand commitments
         </p>
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
         {data.map((d, idx) => (
-          <Card key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <Boxes size={18} color="#38BDF8" />
-              <div>
-                <h4 style={{ fontSize: "14px", fontWeight: 700, color: "#FFFFFF" }}>{d.sku}</h4>
-                <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
+          <Card key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "20px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+              <div style={{ padding: "10px", backgroundColor: "rgba(200, 149, 71, 0.1)", borderRadius: "10px" }}>
+                <Boxes size={24} color="#C89547" />
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                <h4 style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-primary)" }}>{d.sku}</h4>
+                <span style={{ fontSize: "14px", color: "var(--text-secondary)", fontWeight: 500 }}>
                   Supply: {d.supplyTotal} | Demand: {d.demandTotal}
                 </span>
               </div>
             </div>
-            <span style={{ fontSize: "13px", fontWeight: 750, color: d.netStatus.includes("Deficit") ? "#EF4444" : "#10B981" }}>
+            <span style={{ fontSize: "14px", fontWeight: 800, color: d.netStatus.includes("Deficit") ? "#EF4444" : "#10B981" }}>
               {d.netStatus}
             </span>
           </Card>

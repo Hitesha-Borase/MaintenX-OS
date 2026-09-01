@@ -20,13 +20,13 @@ export function WorkCenterCapacity() {
         </p>
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
         {centers.map((c) => (
-          <Card key={c.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <Card key={c.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "24px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
               <Factory size={18} color="#A855F7" />
               <div>
-                <h4 style={{ fontSize: "14px", fontWeight: 700, color: "#FFFFFF" }}>{c.name} ({c.id})</h4>
+                <h4 style={{ fontSize: "15px", fontWeight: 700, color: "var(--text-primary)", marginBottom: "4px" }}>{c.name} ({c.id})</h4>
                 <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
                   Scheduled Limit: {c.maxHrs} • Line: {c.line}
                 </span>

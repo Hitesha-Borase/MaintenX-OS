@@ -44,7 +44,7 @@ export function Header() {
   const [showNotifications, setShowNotifications] = useState(false);
 
   return (
-    <header className="app-header" style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 24px", position: "sticky", top: 0, zIndex: 40, backdropFilter: "blur(14px)", backgroundColor: "var(--bg-header)", borderBottom: "1px solid var(--border-subtle)", gap: "16px" }}>
+    <header className="app-header" style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 40, backdropFilter: "blur(14px)", backgroundColor: "var(--bg-header)", borderBottom: "1px solid var(--border-subtle)" }}>
       {/* Far Left: Branding Logo */}
       <div style={{ display: "flex", alignItems: "center", gap: "12px", flexShrink: 0 }}>
         <div
@@ -63,7 +63,7 @@ export function Header() {
         >
           <Flame size={20} />
         </div>
-        <div style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
+        <div className="header-logo-text" style={{ flexDirection: "column", justifyContent: "center" }}>
           <span style={{ fontSize: "15px", fontWeight: 900, letterSpacing: "-0.2px", color: "var(--text-primary)", lineHeight: 1, marginBottom: "4px", whiteSpace: "nowrap" }}>
             MaintenX <span style={{ color: "#B27E33" }}>OS</span>
           </span>
@@ -84,34 +84,34 @@ export function Header() {
           >
             <Menu size={20} />
           </button>
-          <Breadcrumbs />
+          <div className="header-breadcrumbs">
+            <Breadcrumbs />
+          </div>
         </div>
 
         {/* Facility and Shift removed to save space */}
 
         {/* Search Trigger */}
         <button
+          className="header-search-btn"
           onClick={() => setIsSearchOpen(true)}
           style={{
             height: "36px",
-            padding: "0 10px 0 14px",
             fontSize: "12px",
             display: "flex",
             alignItems: "center",
-            justifyContent: "space-between",
-            gap: "12px",
             color: "var(--text-muted)",
             backgroundColor: "#FFFFFF",
             border: "1px solid var(--border-subtle)",
             borderRadius: "10px",
             cursor: "pointer",
-            minWidth: "180px",
             boxShadow: "0 1px 3px rgba(70, 45, 15, 0.04)"
           }}
           title="Search anything (Cmd+K / Ctrl+K)"
         >
           <span className="search-text-placeholder" style={{ fontWeight: 500 }}>Search...</span>
           <div
+            className="search-icon-wrapper"
             style={{
               padding: "4px 6px",
               borderRadius: "6px",
@@ -130,20 +130,23 @@ export function Header() {
       {/* Far Right: Fast Action & Role Switcher */}
       <div style={{ display: "flex", alignItems: "center", gap: "10px", flexShrink: 0 }}>
         {/* Quick QR Scanner / Label trigger */}
-        <Button
-          variant="secondary"
-          size="sm"
-          icon={QrCode}
-          onClick={() => openQrModal("Line 1 Asset QR Scanner", "FM-001", { name: "High-Speed Rotary Filler 12-Head", location: "Bay 4A - Cleanroom Zone B" })}
-          title="Scan or View Asset QR Code"
-        />
+        <div className="header-qr-btn">
+          <Button
+            variant="secondary"
+            size="sm"
+            icon={QrCode}
+            onClick={() => openQrModal("Line 1 Asset QR Scanner", "FM-001", { name: "High-Speed Rotary Filler 12-Head", location: "Bay 4A - Cleanroom Zone B" })}
+            title="Scan or View Asset QR Code"
+          />
+        </div>
+        
         {/* ROLE SWITCHER DROPDOWN */}
         <div style={{ position: "relative" }}>
           <button
+            className="header-role-btn"
             onClick={() => setShowRoleDropdown(!showRoleDropdown)}
             style={{
               height: "36px",
-              padding: "0 12px",
               fontSize: "12px",
               display: "flex",
               alignItems: "center",
@@ -166,13 +169,16 @@ export function Header() {
                 alignItems: "center",
                 justifyContent: "center",
                 fontWeight: 800,
-                fontSize: "11px"
+                fontSize: "11px",
+                flexShrink: 0
               }}
             >
               {currentRole?.label?.charAt(0) || "U"}
             </div>
-            <span style={{ fontWeight: 700, color: "var(--text-primary)" }}>{currentRole.label} - Alexander V.</span>
-            <ChevronDown size={14} color="#B27E33" />
+            <span className="header-role-text" style={{ fontWeight: 700, color: "var(--text-primary)" }}>{currentRole.label} - Alexander V.</span>
+            <div className="header-role-chevron" style={{ display: "flex" }}>
+              <ChevronDown size={14} color="#B27E33" />
+            </div>
           </button>
 
           {showRoleDropdown && (
@@ -239,7 +245,8 @@ export function Header() {
             cursor: "pointer",
             position: "relative",
             color: "#6B5B4E",
-            boxShadow: "0 1px 3px rgba(70, 45, 15, 0.04)"
+            boxShadow: "0 1px 3px rgba(70, 45, 15, 0.04)",
+            flexShrink: 0
           }}
           title="Notifications"
         >
@@ -266,20 +273,78 @@ export function Header() {
         </button>
 
         {/* Fast Action */}
-        <Button
-          variant="primary"
-          size="sm"
-          icon={Plus}
-          onClick={() => setIsQuickActionOpen(true)}
-        >
-          Fast Action
-        </Button>
+        <div className="header-fast-action">
+          <Button
+            variant="primary"
+            size="sm"
+            icon={Plus}
+            onClick={() => setIsQuickActionOpen(true)}
+          >
+            Fast Action
+          </Button>
+        </div>
       </div>
 
       <style>{`
-        @media (min-width: 900px) {
-          .header-plant-select { display: flex !important; }
+        /* Mobile defaults (up to 767px) */
+        @media (max-width: 767px) {
+          .header-logo-text { display: none !important; }
+          .header-breadcrumbs { display: none !important; }
+          .search-text-placeholder { display: none !important; }
+          
+          /* Make search button circular/icon only on mobile */
+          .header-search-btn { 
+            width: 36px !important; 
+            min-width: 36px !important; 
+            padding: 0 !important; 
+            justify-content: center !important; 
+            border: none !important; 
+            background: transparent !important;
+            box-shadow: none !important;
+          }
+          .search-icon-wrapper { padding: 8px !important; border-radius: 10px !important; }
+          
+          .header-qr-btn { display: none !important; }
+          .header-role-text { display: none !important; }
+          .header-role-chevron { display: none !important; }
+          
+          /* Avatar circle only on mobile */
+          .header-role-btn { 
+            padding: 0 !important; 
+            width: 36px !important; 
+            justify-content: center !important; 
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+          }
+          
+          .header-fast-action { display: none !important; }
+          
+          /* Tighter header padding for mobile */
+          .app-header { padding: 12px 16px !important; gap: 8px !important; }
+        }
+
+        /* Tablet/Desktop defaults */
+        @media (min-width: 768px) {
+          .header-logo-text { display: flex !important; }
+          .header-breadcrumbs { display: block !important; }
           .search-text-placeholder { display: inline !important; }
+          
+          .header-search-btn { 
+            min-width: 180px !important; 
+            padding: 0 10px 0 14px !important; 
+            justify-content: space-between !important; 
+          }
+          
+          .header-qr-btn { display: block !important; }
+          .header-role-text { display: inline !important; }
+          .header-role-chevron { display: block !important; }
+          
+          .header-role-btn { padding: 0 12px !important; }
+          
+          .header-fast-action { display: block !important; }
+          
+          .app-header { padding: 12px 24px !important; gap: 16px !important; }
         }
       `}</style>
     </header>
