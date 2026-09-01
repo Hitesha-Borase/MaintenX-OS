@@ -319,16 +319,15 @@ export function Header() {
               alignItems: "center",
               height: "38px",
               backgroundColor: "#FFFFFF",
-              border: isSearchFocused ? "1.5px solid #C89547" : "1px solid var(--border-subtle)",
+              border: "1px solid var(--border-subtle)",
               borderRadius: "12px",
               padding: "0 6px 0 14px",
-              boxShadow: isSearchFocused ? "0 0 0 3px rgba(200, 149, 71, 0.2)" : "0 1px 4px rgba(70, 45, 15, 0.04)",
-              transition: "all 0.18s ease"
+              boxShadow: "0 1px 4px rgba(70, 45, 15, 0.04)"
             }}
           >
             <input
               type="text"
-              placeholder="Global Search (Assets, Work Orders, SKUs, Recipes, Modules)..."
+              placeholder=""
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
@@ -600,11 +599,13 @@ export function Header() {
             style={{
               display: "flex",
               alignItems: "center",
-              gap: "8px",
-              padding: "4px 10px 4px 4px",
-              borderRadius: "24px",
-              backgroundColor: showProfileMenu ? "rgba(200, 149, 71, 0.15)" : "var(--bg-card-subtle)",
-              border: showProfileMenu ? "1px solid #C89547" : "1px solid var(--border-subtle)",
+              justifyContent: "center",
+              width: "34px",
+              height: "34px",
+              padding: 0,
+              borderRadius: "50%",
+              backgroundColor: showProfileMenu ? "rgba(200, 149, 71, 0.18)" : "var(--bg-card-subtle)",
+              border: showProfileMenu ? "1.5px solid #C89547" : "1px solid var(--border-subtle)",
               cursor: "pointer",
               transition: "all 0.18s ease",
               boxShadow: "0 1px 3px rgba(70, 45, 15, 0.04)"
@@ -629,7 +630,6 @@ export function Header() {
             >
               {currentRole?.label?.charAt(0) || "U"}
             </div>
-            <ChevronDown className="profile-chevron" size={14} color="#B27E33" style={{ transform: showProfileMenu ? "rotate(180deg)" : "none", transition: "transform 0.15s ease" }} />
           </button>
 
           {/* PROFILE & LOGOUT DROPDOWN MENU */}

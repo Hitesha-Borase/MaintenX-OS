@@ -464,6 +464,15 @@ export function RoleProvider({ children }) {
       allowedPaths.push(currentRole.defaultRoute);
     }
 
+    // Direct module aliases across roles
+    if (currentRole.id === "maintenance") {
+      allowedPaths.push("/work-orders", "/assets", "/breakdowns", "/pm", "/spare-parts", "/calibration", "/troubleshooting", "/cmms");
+    } else if (currentRole.id === "plant_manager") {
+      allowedPaths.push("/work-orders", "/assets", "/breakdowns", "/pm", "/spare-parts", "/calibration", "/troubleshooting", "/planning", "/production", "/quality", "/inventory", "/labour", "/maintenance", "/performance", "/cmms");
+    } else if (currentRole.id === "ci_engineer") {
+      allowedPaths.push("/ci", "/quality", "/rca", "/capa");
+    }
+
     allowedPaths.push("/");
 
     const cleanPath = path.split("?")[0].split("#")[0];

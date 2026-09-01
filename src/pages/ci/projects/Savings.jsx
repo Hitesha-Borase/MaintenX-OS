@@ -1,16 +1,14 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   DollarSign,
   Download,
   TrendingUp,
   ArrowRight,
-  Sparkles,
   CheckCircle2,
-  Check,
-  Percent,
-  Layers,
-  Award
+  Award,
+  Search,
+  Filter
 } from "lucide-react";
 import { Card } from "../../../components/common/Card";
 import { StatCard } from "../../../components/common/StatCard";
@@ -22,7 +20,7 @@ export function Savings() {
   const navigate = useNavigate();
   const { addToast } = useApp();
 
-  const [projects, setProjects] = useState([
+  const [projects] = useState([
     {
       id: "CI-001",
       title: "OEE Improvement — Line 1 Filler",
@@ -49,6 +47,9 @@ export function Savings() {
     }
   ]);
 
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterStatus, setFilterStatus] = useState("ALL");
+
   const handleExportCSV = () => {
     const headers = "Project ID,Project Title,Projected Savings,Actual Realized,Realization %,Benefits Verified\n";
     const rows = projects
@@ -63,8 +64,27 @@ export function Savings() {
     addToast("CI Savings Audit exported to CSV.", "info");
   };
 
+  const filteredProjects = useMemo(() => {
+    return projects.filter((p) => {
+      const matchesVerification =
+        filterStatus === "ALL" ||
+        (filterStatus === "VERIFIED" && p.verified) ||
+        (filterStatus === "PENDING" && !p.verified);
+
+      const q = searchQuery.toLowerCase().trim();
+      const matchesSearch =
+        !q ||
+        p.id?.toLowerCase().includes(q) ||
+        p.title?.toLowerCase().includes(q) ||
+        p.projected?.toLowerCase().includes(q) ||
+        p.actual?.toLowerCase().includes(q);
+
+      return matchesVerification && matchesSearch;
+    });
+  }, [projects, searchQuery, filterStatus]);
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%", maxWidth: "1200px", margin: "0 auto", minWidth: 0 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%", maxWidth: "1600px", margin: "0 auto", minWidth: 0 }}>
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px", width: "100%" }}>
         <div style={{ minWidth: "240px", flex: 1 }}>
@@ -89,7 +109,7 @@ export function Savings() {
         </div>
       </div>
 
-      {/* KPI Tickers - 2x2 on mobile, 4 on desktop */}
+      {/* KPI Tickers */}
       <div
         className="kpi-grid-responsive grid-4"
         style={{
@@ -134,73 +154,145 @@ export function Savings() {
         />
       </div>
 
-      {/* Savings Breakdown List Card */}
+      {/* Savings Breakdown Table Card */}
       <Card style={{ padding: "18px", minWidth: 0, width: "100%", boxSizing: "border-box" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px", flexWrap: "wrap", gap: "8px" }}>
-          <h3 style={{ fontSize: "15px", fontWeight: 800, color: "var(--text-primary)" }}>
-            Project Savings Realization Breakdown
-          </h3>
-          <Badge variant="cyan">{projects.length} PROJECTS AUDITED</Badge>
+        {/* Table Toolbar */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "12px" }}>
+          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", flex: 1, minWidth: "240px" }}>
+            <div style={{ position: "relative", minWidth: "220px", flex: 1 }}>
+              <Search size={15} color="var(--text-muted)" style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)" }} />
+              <input
+                type="text"
+                placeholder=""
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="form-input"
+                style={{ paddingLeft: "32px", height: "36px", fontSize: "12px", backgroundColor: "#FFFFFF" }}
+              />
+            </div>
+
+            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <Filter size={14} color="var(--text-muted)" />
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="form-input"
+                style={{ height: "36px", fontSize: "12px", width: "170px", backgroundColor: "#FFFFFF" }}
+              >
+                <option value="ALL">All Audit Statuses</option>
+                <option value="VERIFIED">Verified Benefits</option>
+                <option value="PENDING">Pending Audit</option>
+              </select>
+            </div>
+          </div>
+
+          <div style={{ fontSize: "12px", color: "var(--text-muted)", fontWeight: 600 }}>
+            Showing <strong>{filteredProjects.length}</strong> of {projects.length} Projects Audited
+          </div>
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-          {projects.map((p) => (
-            <div
-              key={p.id}
-              style={{
-                padding: "14px 16px",
-                borderRadius: "10px",
-                backgroundColor: "var(--bg-card-subtle)",
-                border: "1px solid var(--border-subtle)",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                flexWrap: "wrap",
-                gap: "12px"
-              }}
-            >
-              <div style={{ minWidth: "220px", flex: 1 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                  <span style={{ fontSize: "13px", fontWeight: 800, color: "var(--text-primary)", fontFamily: "var(--font-mono)" }}>
-                    {p.id}
-                  </span>
-                  <span style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)" }}>
-                    {p.title}
-                  </span>
-                  {p.verified && <Badge variant="emerald">✓ BENEFITS VERIFIED</Badge>}
-                </div>
+        {/* Structured Data Table */}
+        <div className="data-table-container" style={{ overflowX: "auto", border: "1px solid var(--border-subtle)", borderRadius: "10px" }}>
+          <table className="data-table" style={{ width: "100%", borderCollapse: "collapse", minWidth: "800px" }}>
+            <thead>
+              <tr style={{ backgroundColor: "var(--bg-card-subtle)", borderBottom: "1.5px solid var(--border-subtle)" }}>
+                <th style={{ padding: "12px 14px", textAlign: "left", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Project ID</th>
+                <th style={{ padding: "12px 14px", textAlign: "left", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Project Title & Scope</th>
+                <th style={{ padding: "12px 14px", textAlign: "right", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Projected Target</th>
+                <th style={{ padding: "12px 14px", textAlign: "right", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Realized Savings</th>
+                <th style={{ padding: "12px 14px", textAlign: "left", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase", width: "170px" }}>Capture Rate</th>
+                <th style={{ padding: "12px 14px", textAlign: "center", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Audit Status</th>
+                <th style={{ padding: "12px 14px", textAlign: "right", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredProjects.length > 0 ? (
+                filteredProjects.map((p) => {
+                  return (
+                    <tr
+                      key={p.id}
+                      style={{
+                        borderBottom: "1px solid var(--border-subtle)",
+                        transition: "background-color 0.12s ease"
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgba(200, 149, 71, 0.04)")}
+                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
+                    >
+                      <td style={{ padding: "12px 14px", whiteSpace: "nowrap" }}>
+                        <span style={{ fontSize: "12px", fontFamily: "var(--font-mono)", fontWeight: 800, color: "#0284C7" }}>
+                          {p.id}
+                        </span>
+                      </td>
 
-                <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "6px", display: "flex", gap: "14px", flexWrap: "wrap" }}>
-                  <span>Projected Target: <strong style={{ color: "var(--text-primary)" }}>{p.projected}</strong></span>
-                  <span>Realized Savings: <strong style={{ color: "#059669" }}>{p.actual}</strong></span>
-                  <span>Capture Rate: <strong style={{ color: "#8C5B23" }}>{p.progress}%</strong></span>
-                </div>
-              </div>
+                      <td style={{ padding: "12px 14px" }}>
+                        <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)" }}>
+                          {p.title}
+                        </div>
+                      </td>
 
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                <button
-                  onClick={() => navigate("/ci/projects/benefits")}
-                  style={{
-                    padding: "6px 14px",
-                    borderRadius: "8px",
-                    fontSize: "12px",
-                    fontWeight: 700,
-                    backgroundColor: "var(--bg-card-subtle)",
-                    color: "var(--text-primary)",
-                    border: "1px solid var(--border-subtle)",
-                    cursor: "pointer",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "4px",
-                    whiteSpace: "nowrap"
-                  }}
-                >
-                  <span>Verify Benefits</span>
-                  <ArrowRight size={12} />
-                </button>
-              </div>
-            </div>
-          ))}
+                      <td style={{ padding: "12px 14px", textAlign: "right", whiteSpace: "nowrap" }}>
+                        <span style={{ fontSize: "13px", fontWeight: 700, color: "#8C5B23" }}>
+                          {p.projected}
+                        </span>
+                      </td>
+
+                      <td style={{ padding: "12px 14px", textAlign: "right", whiteSpace: "nowrap" }}>
+                        <span style={{ fontSize: "13px", fontWeight: 700, color: "#059669" }}>
+                          {p.actual}
+                        </span>
+                      </td>
+
+                      <td style={{ padding: "12px 14px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                          <div style={{ flex: 1, height: "6px", backgroundColor: "var(--bg-card-subtle)", borderRadius: "3px", overflow: "hidden", border: "1px solid var(--border-subtle)" }}>
+                            <div
+                              style={{
+                                width: `${p.progress}%`,
+                                height: "100%",
+                                background: p.verified
+                                  ? "linear-gradient(90deg, #10B981 0%, #059669 100%)"
+                                  : "linear-gradient(90deg, #E2B670 0%, #C89547 100%)",
+                                borderRadius: "3px"
+                              }}
+                            />
+                          </div>
+                          <span style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", minWidth: "32px" }}>
+                            {p.progress}%
+                          </span>
+                        </div>
+                      </td>
+
+                      <td style={{ padding: "12px 14px", textAlign: "center", whiteSpace: "nowrap" }}>
+                        {p.verified ? (
+                          <Badge variant="emerald">✓ BENEFITS VERIFIED</Badge>
+                        ) : (
+                          <Badge variant="amber">⏳ PENDING AUDIT</Badge>
+                        )}
+                      </td>
+
+                      <td style={{ padding: "12px 14px", textAlign: "right", whiteSpace: "nowrap" }}>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          icon={ArrowRight}
+                          onClick={() => navigate("/ci/projects/benefits")}
+                          style={{ fontSize: "11px", padding: "4px 10px" }}
+                        >
+                          Verify Benefits
+                        </Button>
+                      </td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan={7} style={{ padding: "32px", textAlign: "center", color: "var(--text-muted)", fontSize: "13px" }}>
+                    No savings records match the search or filter criteria.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </Card>
     </div>

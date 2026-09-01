@@ -158,7 +158,7 @@ export function PartsRequestsPage() {
             <Search size={15} color="var(--text-muted)" style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)" }} />
             <input
               type="text"
-              placeholder="Search request ID, part SKU, technician..."
+              placeholder=""
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="form-input"

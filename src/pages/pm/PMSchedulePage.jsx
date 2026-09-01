@@ -218,7 +218,7 @@ export function PMSchedulePage() {
             />
             <input
               type="text"
-              placeholder="Search schedule, machine, technician..."
+              placeholder=""
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="form-input"

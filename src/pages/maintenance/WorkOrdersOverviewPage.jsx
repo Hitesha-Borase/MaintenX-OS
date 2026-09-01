@@ -93,7 +93,7 @@ export function WorkOrdersOverviewPage() {
             <Search size={15} color="var(--text-muted)" style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)" }} />
             <input
               type="text"
-              placeholder="Search work order ID, title, target machine..."
+              placeholder=""
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="form-input"

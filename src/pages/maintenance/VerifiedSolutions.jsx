@@ -150,7 +150,7 @@ export function VerifiedSolutions() {
             type="text"
             className="form-input"
             style={{ paddingLeft: "42px", height: "42px", fontSize: "13px", backgroundColor: "#FFFFFF" }}
-            placeholder="Search verified solutions by symptom (e.g. 'vibration', 'pressure drop', 'sensor glare')..."
+            placeholder=""
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />

@@ -7,7 +7,7 @@ export function DataTable({
   columns = [],
   data = [],
   searchable = true,
-  searchPlaceholder = "Search records...",
+  searchPlaceholder = "",
   filterKey = null,
   filterOptions = [],
   pageSize = 8,
@@ -135,7 +135,7 @@ export function DataTable({
                 type="text"
                 className="form-input"
                 style={{ paddingLeft: "32px", fontSize: "12px", height: "34px" }}
-                placeholder={searchPlaceholder}
+                placeholder=""
                 value={searchQuery}
                 onChange={(e) => {
                   setSearchQuery(e.target.value);
