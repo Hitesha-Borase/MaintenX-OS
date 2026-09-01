@@ -9,7 +9,11 @@ import {
   User,
   Settings,
   LogOut,
-  RefreshCw
+  RefreshCw,
+  CheckCheck,
+  AlertTriangle,
+  CheckCircle,
+  Clock
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useApp } from "../../context/AppContext";
@@ -31,14 +35,25 @@ export function Header() {
   const { currentRole, setRoleById, ROLES, logout } = useRole();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showRoleSubmenu, setShowRoleSubmenu] = useState(false);
-  const profileDropdownRef = useRef(null);
+  const [showNotificationsMenu, setShowNotificationsMenu] = useState(false);
+  const [notifications, setNotifications] = useState([
+    { id: 1, title: "Line 1 PM Task Alert", desc: "High-Speed Rotary Filler PM due in 30 mins", time: "2m ago", type: "warning", unread: true },
+    { id: 2, title: "Batch Formulation Completed", desc: "BAT-2026-0892 bottle filling at 77% attainment", time: "15m ago", type: "success", unread: false },
+    { id: 3, title: "CCP Thermal Check", desc: "Limit 83.5°C thermal threshold check verified", time: "1h ago", type: "info", unread: false }
+  ]);
 
-  // Close profile dropdown when clicking outside
+  const profileDropdownRef = useRef(null);
+  const notificationsDropdownRef = useRef(null);
+
+  // Close dropdowns when clicking outside
   useEffect(() => {
     function handleClickOutside(e) {
       if (profileDropdownRef.current && !profileDropdownRef.current.contains(e.target)) {
         setShowProfileMenu(false);
         setShowRoleSubmenu(false);
+      }
+      if (notificationsDropdownRef.current && !notificationsDropdownRef.current.contains(e.target)) {
+        setShowNotificationsMenu(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -55,6 +70,13 @@ export function Header() {
     addToast("Logged out successfully.", "info");
     navigate("/login");
   };
+
+  const markAllRead = () => {
+    setNotifications(prev => prev.map(n => ({ ...n, unread: false })));
+    addToast("All notifications marked as read.", "success");
+  };
+
+  const unreadCount = notifications.filter(n => n.unread).length;
 
   return (
     <header
@@ -139,6 +161,7 @@ export function Header() {
       <div style={{ flex: 1, display: "flex", justifyContent: "center", maxWidth: "600px", minWidth: 0 }}>
         <div
           onClick={() => setIsSearchOpen(true)}
+          className="header-search-box"
           style={{
             width: "100%",
             height: "36px",
@@ -156,10 +179,11 @@ export function Header() {
           }}
           title="Search anything (Cmd+K / Ctrl+K)"
         >
-          <span style={{ fontSize: "12px", color: "var(--text-muted, #A09082)", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          <span className="header-search-text" style={{ fontSize: "12px", color: "var(--text-muted, #A09082)", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             Search...
           </span>
           <div
+            className="header-search-icon-btn"
             style={{
               width: "28px",
               height: "28px",
@@ -179,47 +203,151 @@ export function Header() {
 
       {/* Far Right: Notification Bell, Fast Action Button, Profile Avatar */}
       <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
-        {/* Notification Bell */}
-        <button
-          onClick={() => addToast("1 New PM Task Alert", "info")}
-          style={{
-            width: "34px",
-            height: "34px",
-            borderRadius: "10px",
-            backgroundColor: "#FFFFFF",
-            border: "1px solid var(--border-subtle, #EFEAE2)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer",
-            position: "relative",
-            color: "#6B5B4E",
-            boxShadow: "0 1px 3px rgba(70, 45, 15, 0.04)",
-            flexShrink: 0
-          }}
-          title="Notifications"
-        >
-          <Bell size={16} />
-          <span
+
+        {/* Notification Bell Dropdown */}
+        <div ref={notificationsDropdownRef} style={{ position: "relative", flexShrink: 0 }}>
+          <button
+            onClick={() => {
+              setShowNotificationsMenu(!showNotificationsMenu);
+              setShowProfileMenu(false);
+            }}
             style={{
-              position: "absolute",
-              top: "-3px",
-              right: "-3px",
-              width: "15px",
-              height: "15px",
-              borderRadius: "50%",
-              backgroundColor: "#C89547",
-              color: "#FFFFFF",
-              fontSize: "9px",
-              fontWeight: 800,
+              width: "34px",
+              height: "34px",
+              borderRadius: "10px",
+              backgroundColor: showNotificationsMenu ? "var(--bg-card-subtle, #FAF6F0)" : "#FFFFFF",
+              border: showNotificationsMenu ? "1.5px solid #C89547" : "1px solid var(--border-subtle, #EFEAE2)",
               display: "flex",
               alignItems: "center",
-              justifyContent: "center"
+              justifyContent: "center",
+              cursor: "pointer",
+              position: "relative",
+              color: "#6B5B4E",
+              boxShadow: "0 1px 3px rgba(70, 45, 15, 0.04)",
+              flexShrink: 0,
+              transition: "all 0.15s ease"
             }}
+            title="Notifications"
           >
-            1
-          </span>
-        </button>
+            <Bell size={16} />
+            {unreadCount > 0 && (
+              <span
+                style={{
+                  position: "absolute",
+                  top: "-3px",
+                  right: "-3px",
+                  width: "15px",
+                  height: "15px",
+                  borderRadius: "50%",
+                  backgroundColor: "#C89547",
+                  color: "#FFFFFF",
+                  fontSize: "9px",
+                  fontWeight: 800,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center"
+                }}
+              >
+                {unreadCount}
+              </span>
+            )}
+          </button>
+
+          {/* Notifications Popover Dropdown */}
+          {showNotificationsMenu && (
+            <div
+              className="notifications-dropdown-popover"
+              style={{
+                position: "absolute",
+                right: 0,
+                top: "44px",
+                width: "310px",
+                backgroundColor: "#FFFFFF",
+                border: "1px solid var(--border-highlight, #E2B670)",
+                borderRadius: "14px",
+                boxShadow: "0 14px 36px rgba(70, 45, 15, 0.15)",
+                zIndex: 100,
+                padding: "10px",
+                display: "flex",
+                flexDirection: "column",
+                gap: "8px",
+                animation: "fadeIn 0.15s ease-out"
+              }}
+            >
+              {/* Notifications Header */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--border-subtle, #EFEAE2)", paddingBottom: "8px" }}>
+                <span style={{ fontSize: "13px", fontWeight: 800, color: "var(--text-primary, #261603)" }}>
+                  Notifications ({notifications.length})
+                </span>
+                <button
+                  onClick={markAllRead}
+                  style={{ background: "none", border: "none", color: "#B27E33", fontSize: "11px", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: "4px" }}
+                >
+                  <CheckCheck size={12} />
+                  Mark all read
+                </button>
+              </div>
+
+              {/* Notification List */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px", maxHeight: "240px", overflowY: "auto" }}>
+                {notifications.map((n) => (
+                  <div
+                    key={n.id}
+                    onClick={() => {
+                      setNotifications(prev => prev.map(item => item.id === n.id ? { ...item, unread: false } : item));
+                    }}
+                    style={{
+                      padding: "8px 10px",
+                      borderRadius: "8px",
+                      backgroundColor: n.unread ? "rgba(200, 149, 71, 0.08)" : "var(--bg-card-subtle, #FAF6F0)",
+                      border: "1px solid var(--border-subtle, #EFEAE2)",
+                      display: "flex",
+                      gap: "8px",
+                      cursor: "pointer"
+                    }}
+                  >
+                    <div style={{ marginTop: "2px", flexShrink: 0 }}>
+                      {n.type === "warning" && <AlertTriangle size={14} color="#D97706" />}
+                      {n.type === "success" && <CheckCircle size={14} color="#059669" />}
+                      {n.type === "info" && <Clock size={14} color="#0284C7" />}
+                    </div>
+                    <div style={{ flex: 1, overflow: "hidden" }}>
+                      <div style={{ fontSize: "12px", fontWeight: n.unread ? 800 : 600, color: "var(--text-primary, #261603)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{n.title}</span>
+                        <span style={{ fontSize: "10px", color: "var(--text-muted, #8C7B6E)", fontWeight: 500, flexShrink: 0 }}>{n.time}</span>
+                      </div>
+                      <p style={{ fontSize: "11px", color: "var(--text-secondary, #6B5B4E)", margin: "2px 0 0 0", lineHeight: 1.3 }}>
+                        {n.desc}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* View Notifications Page */}
+              <button
+                onClick={() => {
+                  setShowNotificationsMenu(false);
+                  navigate(`/${currentRole.id}/notifications`);
+                }}
+                style={{
+                  width: "100%",
+                  padding: "8px",
+                  borderRadius: "8px",
+                  backgroundColor: "var(--bg-card-subtle, #FAF6F0)",
+                  border: "1px solid var(--border-subtle, #EFEAE2)",
+                  color: "#B27E33",
+                  fontSize: "12px",
+                  fontWeight: 800,
+                  cursor: "pointer",
+                  textAlign: "center"
+                }}
+              >
+                View Notifications Center →
+              </button>
+            </div>
+          )}
+        </div>
 
         {/* + Fast Action Button */}
         <Button
@@ -252,6 +380,7 @@ export function Header() {
             onClick={() => {
               setShowProfileMenu(!showProfileMenu);
               setShowRoleSubmenu(false);
+              setShowNotificationsMenu(false);
             }}
             style={{
               display: "flex",
@@ -278,6 +407,7 @@ export function Header() {
           {/* Profile Dropdown Menu */}
           {showProfileMenu && (
             <div
+              className="profile-dropdown-popover"
               style={{
                 position: "absolute",
                 right: 0,
@@ -407,6 +537,24 @@ export function Header() {
           .header-logo-subtext {
             display: none !important;
           }
+          .header-search-text {
+            display: none !important;
+          }
+          .header-search-box {
+            width: 34px !important;
+            min-width: 34px !important;
+            padding: 0 !important;
+            justify-content: center !important;
+            border: none !important;
+            background: transparent !important;
+            box-shadow: none !important;
+            flex: none !important;
+          }
+          .header-search-icon-btn {
+            width: 34px !important;
+            height: 34px !important;
+            border-radius: 10px !important;
+          }
           .header-fast-action-text {
             display: none !important;
           }
@@ -420,6 +568,17 @@ export function Header() {
           .app-header {
             padding: 8px 12px !important;
             gap: 8px !important;
+          }
+          .notifications-dropdown-popover,
+          .profile-dropdown-popover {
+            position: fixed !important;
+            top: 54px !important;
+            left: 12px !important;
+            right: 12px !important;
+            width: auto !important;
+            max-width: none !important;
+            box-shadow: 0 10px 30px rgba(43, 29, 17, 0.25) !important;
+            z-index: 1000 !important;
           }
         }
       `}</style>
