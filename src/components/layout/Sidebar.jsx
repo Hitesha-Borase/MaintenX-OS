@@ -118,6 +118,12 @@ export function Sidebar() {
   const { sidebarCollapsed, setSidebarCollapsed, mobileMenuOpen, setMobileMenuOpen, addToast } = useApp();
   const location = useLocation();
 
+  React.useEffect(() => {
+    if (mobileMenuOpen) {
+      setMobileMenuOpen(false);
+    }
+  }, [location.pathname]);
+
   const cmmsContext = useCMMS ? useCMMS() : { workOrders: [], assets: [] };
   const { workOrders = [], assets = [] } = cmmsContext || {};
 
@@ -263,7 +269,10 @@ export function Sidebar() {
           onClick={() => setMobileMenuOpen(false)}
           style={{
             position: "fixed",
-            inset: 0,
+            top: "61px",
+            left: 0,
+            right: 0,
+            bottom: 0,
             backgroundColor: "rgba(43, 29, 17, 0.45)",
             backdropFilter: "blur(4px)",
             zIndex: 998
@@ -272,7 +281,7 @@ export function Sidebar() {
       )}
 
       <aside
-        className={`app-sidebar ${mobileMenuOpen ? "mobile-open" : ""}`}
+        className={`app-sidebar ${mobileMenuOpen ? "mobile-open" : ""} ${sidebarCollapsed ? "collapsed" : ""}`}
         style={{
           width: sidebarCollapsed ? "68px" : "260px",
           transition: "width 0.2s cubic-bezier(0.4, 0, 0.2, 1)",

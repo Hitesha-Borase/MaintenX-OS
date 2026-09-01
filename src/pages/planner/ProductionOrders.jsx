@@ -51,8 +51,8 @@ export function ProductionOrders() {
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "16px" }}>
         {/* PO List */}
-        <Card style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-          <h3 style={{ fontSize: "14px", fontWeight: 700, color: "#FFFFFF" }}>
+        <Card style={{ display: "flex", flexDirection: "column", gap: "16px", padding: "24px" }}>
+          <h3 style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-primary)" }}>
             Scheduled Production Orders ({productionOrders.length})
           </h3>
 
@@ -68,8 +68,8 @@ export function ProductionOrders() {
                   fontSize: "12px"
                 }}
               >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontWeight: 700, color: "#FFFFFF" }}>{po.orderNumber}</span>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+                  <span style={{ fontWeight: 800, color: "var(--text-primary)", fontSize: "13px" }}>{po.orderNumber}</span>
                   <Badge variant={po.status === "Running" ? "emerald" : "cyan"}>{po.status}</Badge>
                 </div>
                 <div style={{ fontWeight: 600, marginTop: "4px" }}>{po.productName}</div>
@@ -81,8 +81,8 @@ export function ProductionOrders() {
 
         {/* Create PO Form */}
         <form onSubmit={handleCreateOrder}>
-          <Card style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-            <h3 style={{ fontSize: "14px", fontWeight: 700, color: "#FFFFFF" }}>
+          <Card style={{ display: "flex", flexDirection: "column", gap: "16px", padding: "24px" }}>
+            <h3 style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-primary)" }}>
               Release New Production Run
             </h3>
 

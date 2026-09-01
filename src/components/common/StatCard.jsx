@@ -62,7 +62,7 @@ export function StatCard({
       </div>
 
       <div style={{ display: "flex", alignItems: "baseline", gap: "6px", margin: "2px 0 0 0" }}>
-        <span className="stat-value" style={{ fontSize: "20px", fontWeight: 800, lineHeight: 1.2, color: "var(--text-primary)" }}>
+        <span className="stat-value" style={{ fontFamily: "var(--font-sans)", fontSize: "20px", fontWeight: 800, lineHeight: 1.2, color: "var(--text-primary)" }}>
           {value}
         </span>
         {unit && (
@@ -72,13 +72,35 @@ export function StatCard({
         )}
       </div>
 
-      {badge && (
-        <div style={{ marginTop: "2px" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "auto", paddingTop: "4px" }}>
+        {description && !trend && !badge && (
+          <div style={{ fontSize: "12px", color: "var(--text-muted)", fontWeight: 500 }}>
+            {description}
+          </div>
+        )}
+        
+        {trend && (
+          <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px" }}>
+            <span
+              style={{
+                color: trend.isPositive ? "#34D399" : "#F87171",
+                fontWeight: 600
+              }}
+            >
+              {trend.value}
+            </span>
+            <span style={{ color: "var(--text-muted)" }}>{trend.text}</span>
+          </div>
+        )}
+
+        {badge && (
+          <div style={{ marginTop: "2px" }}>
           <Badge variant={badge.variant || "slate"} dot={badge.dot}>
             {badge.label}
           </Badge>
         </div>
-      )}
+        )}
+      </div>
     </Card>
   );
 }

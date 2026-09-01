@@ -230,6 +230,7 @@ export function Login() {
             grid-template-columns: repeat(2, 1fr);
             gap: 6px;
           }
+          }
         }
       `}</style>
 

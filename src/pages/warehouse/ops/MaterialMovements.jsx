@@ -1,7 +1,6 @@
 import React from "react";
-import { Card } from "../../../components/common/Card";
-import { Badge } from "../../../components/common/Badge";
 import { Clock } from "lucide-react";
+import { Card } from "../../../components/common/Card";
 
 export function MaterialMovements() {
   const movements = [
@@ -10,29 +9,41 @@ export function MaterialMovements() {
   ];
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "800px" }}>
-      <div>
-        <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "100%" }}>
+      <div style={{ marginBottom: "8px" }}>
+        <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>
           Material Movements Logs
         </h1>
-        <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
+        <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginTop: "4px", fontWeight: 500 }}>
           Reconcile warehouse lot displacements and active material movements
         </p>
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
         {movements.map((m, idx) => (
-          <Card key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <Clock size={18} color="#38BDF8" />
-              <div>
-                <h4 style={{ fontSize: "14px", fontWeight: 700, color: "#FFFFFF" }}>{m.lot} ({m.type})</h4>
-                <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-                  Moved: {m.qty} • From: {m.from} ➔ To: {m.to}
-                </span>
+          <Card 
+            key={idx} 
+            style={{ 
+              display: "flex", 
+              justifyContent: "space-between", 
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "16px",
+              padding: "20px"
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "16px", flex: 1, minWidth: "250px" }}>
+              <div style={{ padding: "10px", backgroundColor: "rgba(200, 149, 71, 0.1)", borderRadius: "10px", flexShrink: 0, height: "fit-content" }}>
+                <Clock size={24} color="#C89547" />
               </div>
+              <span style={{ fontSize: "16px", color: "var(--text-primary)", fontWeight: 500, lineHeight: 1.5 }}>
+                Moved: {m.qty} <span style={{ margin: "0 4px" }}>•</span> {m.type} <br/>
+                <span style={{ fontSize: "14px", color: "var(--text-secondary)" }}>From: {m.from} → To: {m.to}</span>
+              </span>
             </div>
-            <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>{m.date}</span>
+            <span style={{ fontSize: "14px", color: "var(--text-muted)", fontWeight: 600 }}>
+              {m.date}
+            </span>
           </Card>
         ))}
       </div>

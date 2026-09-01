@@ -1,5 +1,4 @@
-import React, { useState, useMemo, useRef, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState } from "react";
 import {
   Search,
   Plus,
@@ -9,41 +8,21 @@ import {
   Clock,
   UserCheck,
   ChevronDown,
-  ChevronLeft,
-  ChevronRight,
+  Menu,
   Sparkles,
+  QrCode,
   Shield,
   Cpu,
   Flame,
-  User,
-  Wrench,
-  Activity,
-  Layers,
-  ShieldCheck,
-  FileText,
-  Database,
-  Lock,
-  Sliders,
-  UploadCloud,
-  FileSpreadsheet,
-  AlertTriangle,
-  ArrowRight,
-  X,
-  LogOut,
-  Settings as SettingsIcon,
-  RefreshCw,
-  Menu
+  User
 } from "lucide-react";
+import { Breadcrumbs } from "./Breadcrumbs";
 import { useApp } from "../../context/AppContext";
 import { useRole } from "../../context/RoleContext";
-import { useCMMS } from "../../context/CMMSContext";
-import { useAdmin } from "../../context/AdminContext";
 import { Button } from "../common/Button";
 import { Badge } from "../common/Badge";
 
 export function Header() {
-  const navigate = useNavigate();
-
   const {
     selectedPlant,
     setSelectedPlant,
@@ -54,195 +33,21 @@ export function Header() {
     selectedDate,
     setIsSearchOpen,
     setIsQuickActionOpen,
-    sidebarCollapsed,
-    setSidebarCollapsed,
+    openQrModal,
     mobileMenuOpen,
     setMobileMenuOpen,
     addToast
   } = useApp();
 
-  const { currentRole, setRoleById, ROLES, logout } = useRole();
-  const [showProfileMenu, setShowProfileMenu] = useState(false);
-  const [showRoleSubmenu, setShowRoleSubmenu] = useState(false);
-
-  // Live Global Search State
-  const [searchQuery, setSearchQuery] = useState("");
-  const [isSearchFocused, setIsSearchFocused] = useState(false);
-  const searchContainerRef = useRef(null);
-  const profileDropdownRef = useRef(null);
-
-  const cmmsContext = useCMMS ? useCMMS() : { assets: [], workOrders: [], solutions: [] };
-  const { assets = [], workOrders = [], solutions = [] } = cmmsContext || {};
-
-  const adminContext = useAdmin ? useAdmin() : { skuItems: [], users: [] };
-  const { skuItems = [], users = [] } = adminContext || {};
-
-  // Comprehensive static index of all application modules & master data pages
-  const ALL_SYSTEM_PAGES = useMemo(() => [
-    { title: "Dashboard", category: "Navigation", path: "/dashboard", icon: Layers, desc: "Executive Governance & Operational Overview" },
-    { title: "Users Directory", category: "User Management", path: "/users", icon: User, desc: "User provisioning and account control" },
-    { title: "User Invitations", category: "User Management", path: "/users/invitations", icon: User, desc: "Pending team invites and onboarding" },
-    { title: "User Activity Logs", category: "User Management", path: "/users/activity", icon: Activity, desc: "Live user mutations & IP audit" },
-    { title: "Roles & Permissions", category: "Security", path: "/roles", icon: ShieldCheck, desc: "RBAC roles and access rights" },
-    { title: "Permissions Matrix", category: "Security", path: "/roles/permissions", icon: ShieldCheck, desc: "Module read/write/delete matrix" },
-    { title: "Companies", category: "Organization", path: "/organization/companies", icon: Building2, desc: "Legal enterprise entities & tax IDs" },
-    { title: "Plants & Facilities", category: "Organization", path: "/organization/plants", icon: Building2, desc: "Plant sites (Austin, Dallas)" },
-    { title: "Production Lines", category: "Organization", path: "/organization/lines", icon: Building2, desc: "Packaging & bottling lines" },
-    { title: "Work Centers", category: "Organization", path: "/organization/work-centers", icon: Building2, desc: "Machine cells and work centers" },
-    { title: "Item / SKU Master", category: "Master Data", path: "/master-data/items", icon: Database, desc: "Finished goods, packaging, ingredients" },
-    { title: "Product Families", category: "Master Data", path: "/master-data/product-families", icon: Database, desc: "Beverage families and brands" },
-    { title: "Units of Measure (UOM)", category: "Master Data", path: "/master-data/uom", icon: Database, desc: "UOM conversion rates (EA, CS, PLT, L, KG)" },
-    { title: "Packaging Master", category: "Master Data", path: "/master-data/packaging", icon: Database, desc: "Bottles, cans, preforms, closures" },
-    { title: "BOM & Recipes", category: "Master Data", path: "/master-data/bom", icon: Database, desc: "Liquid blending formulas & Bill of Materials" },
-    { title: "Manufacturing Routings", category: "Master Data", path: "/master-data/routings", icon: Database, desc: "Step-by-step production routings" },
-    { title: "Operations Catalogue", category: "Master Data", path: "/master-data/operations", icon: Database, desc: "Standard operating cycle steps" },
-    { title: "Line Targets & OEE", category: "Master Data", path: "/master-data/line-targets", icon: Database, desc: "Benchmark speed & OEE targets" },
-    { title: "Changeover Matrix (SMED)", category: "Master Data", path: "/master-data/changeover-matrix", icon: Database, desc: "SKU transition matrix & SMED standards" },
-    { title: "Sanitation & Allergen CIP", category: "Master Data", path: "/master-data/sanitation-allergens", icon: Database, desc: "CIP wash cycles and chemical specs" },
-    { title: "Labour Standards", category: "Master Data", path: "/master-data/labour-standards", icon: Database, desc: "Standard crew sizes and labor hours" },
-    { title: "Skills & Qualifications", category: "Master Data", path: "/master-data/skills", icon: Database, desc: "Operator certification tiers" },
-    { title: "Quality Specifications", category: "Master Data", path: "/master-data/quality-specs", icon: Database, desc: "Brix, pH, torque LCL/UCL limits" },
-    { title: "HACCP CCP Limits", category: "Master Data", path: "/master-data/ccp-limits", icon: Database, desc: "Critical control point thresholds" },
-    { title: "Machine Capabilities", category: "Master Data", path: "/master-data/machine-capability", icon: Database, desc: "Rated speeds, mechanical envelopes" },
-    { title: "Storage Resources & Silos", category: "Master Data", path: "/master-data/storage-resources", icon: Database, desc: "Bulk liquid holding tanks & racking" },
-    { title: "ERP Connector (SAP)", category: "Integrations", path: "/integrations/erp", icon: Cpu, desc: "SAP S/4HANA live sync adapter" },
-    { title: "Industrial IoT & Telemetry", category: "Integrations", path: "/integrations/iot", icon: Cpu, desc: "OPC-UA and MQTT edge gateways" },
-    { title: "Barcode & GS1 Engine", category: "Integrations", path: "/integrations/barcode", icon: Cpu, desc: "GS1-128 & 2D DataMatrix symbologies" },
-    { title: "REST APIs & API Keys", category: "Integrations", path: "/integrations/apis", icon: Cpu, desc: "Machine authentication tokens & webhooks" },
-    { title: "Missing Data Radar", category: "Data Health", path: "/data-health/missing-data", icon: Activity, desc: "Unpopulated fields & missing attributes" },
-    { title: "Deduplication Engine", category: "Data Health", path: "/data-health/duplicates", icon: Activity, desc: "Fuzzy duplicate detection & merging" },
-    { title: "Invalid References", category: "Data Health", path: "/data-health/invalid-references", icon: Activity, desc: "Orphaned foreign keys scanner" },
-    { title: "Broken Relationships", category: "Data Health", path: "/data-health/broken-relationships", icon: Activity, desc: "Unlinked entity graph healer" },
-    { title: "Stale Records Archive", category: "Data Health", path: "/data-health/stale-records", icon: Activity, desc: "Dormant SKU & vendor archiving" },
-    { title: "Automated Data Remediation", category: "Data Health", path: "/data-health/remediation", icon: Activity, desc: "1-Click Self-Healing Master Engine" },
-    { title: "Enterprise Security & MFA", category: "Security", path: "/security", icon: Lock, desc: "SAML 2.0 SSO, 2FA & IP Whitelist" },
-    { title: "System Configuration", category: "Configuration", path: "/configuration", icon: Sliders, desc: "Timezone, shift schedules & constants" },
-    { title: "Compliance Audit Logs", category: "Audit", path: "/audit-logs", icon: FileText, desc: "21 CFR Part 11 immutable audit trail" },
-    { title: "Data Migration Engine", category: "Migration", path: "/migration", icon: UploadCloud, desc: "Bulk CSV/Excel master data importer" },
-    { title: "System Governance Reports", category: "Reports", path: "/system-reports", icon: FileSpreadsheet, desc: "SLA uptime, database size & API stats" },
-    { title: "Asset Register", category: "Maintenance", path: "/assets/register", icon: Wrench, desc: "Master machinery register & tag list" },
-    { title: "Asset Hierarchy", category: "Maintenance", path: "/assets/hierarchy", icon: Wrench, desc: "Parent-child equipment tree" },
-    { title: "Asset 360", category: "Maintenance", path: "/assets/360", icon: Wrench, desc: "360° Machine telemetry, MTBF, health" },
-    { title: "Work Orders", category: "Maintenance", path: "/work-orders", icon: Wrench, desc: "Corrective and preventive work orders" },
-    { title: "Breakdown Log", category: "Maintenance", path: "/breakdowns/log", icon: AlertTriangle, desc: "Unplanned stoppage log & root cause" },
-    { title: "Preventive Maintenance Plans", category: "Maintenance", path: "/pm/plans", icon: Wrench, desc: "Recurring PM checklists & intervals" },
-    { title: "Spare Parts Inventory", category: "Maintenance", path: "/spare-parts/inventory", icon: Wrench, desc: "Critical replacement parts stock" },
-    { title: "Calibration Schedule", category: "Maintenance", path: "/calibration/schedule", icon: Wrench, desc: "Instrument calibration standards" },
-    { title: "Command Center", category: "Plant Manager", path: "/command-center", icon: Layers, desc: "Live plant OEE & dispatch radar" }
-  ], []);
-
-  // Filter Search Results Across All Domains
-  const searchResults = useMemo(() => {
-    if (!searchQuery.trim()) return [];
-    const q = searchQuery.toLowerCase().trim();
-
-    // 1. Match system pages & modules
-    const matchedPages = ALL_SYSTEM_PAGES.filter(
-      (p) =>
-        p.title.toLowerCase().includes(q) ||
-        p.category.toLowerCase().includes(q) ||
-        p.desc.toLowerCase().includes(q) ||
-        p.path.toLowerCase().includes(q)
-    ).slice(0, 5);
-
-    // 2. Match CMMS Assets
-    const matchedAssets = (assets || [])
-      .filter((a) => a.id?.toLowerCase().includes(q) || a.name?.toLowerCase().includes(q) || a.location?.toLowerCase().includes(q))
-      .slice(0, 3)
-      .map((a) => ({
-        title: `${a.id} • ${a.name}`,
-        category: "Asset",
-        path: `/assets/360?id=${a.id}`,
-        icon: Wrench,
-        desc: `${a.location || a.line || "Plant 1"} • Health: ${a.health || 95}%`
-      }));
-
-    // 3. Match Work Orders
-    const matchedWOs = (workOrders || [])
-      .filter((w) => w.id?.toLowerCase().includes(q) || w.title?.toLowerCase().includes(q) || w.assetName?.toLowerCase().includes(q))
-      .slice(0, 3)
-      .map((w) => ({
-        title: `${w.id} • ${w.title}`,
-        category: "Work Order",
-        path: `/work-orders?view=${w.id}`,
-        icon: Activity,
-        desc: `${w.assetName || "Machine"} • ${w.status} (${w.priority})`
-      }));
-
-    // 4. Match SKU Master Items
-    const matchedSKUs = (skuItems || [])
-      .filter((s) => s.id?.toLowerCase().includes(q) || s.name?.toLowerCase().includes(q) || s.category?.toLowerCase().includes(q))
-      .slice(0, 3)
-      .map((s) => ({
-        title: `${s.id} • ${s.name}`,
-        category: "SKU Master",
-        path: `/master-data/items`,
-        icon: Database,
-        desc: `${s.category} • Cost: ${s.stdCost} / ${s.uom}`
-      }));
-
-    return [...matchedPages, ...matchedAssets, ...matchedWOs, ...matchedSKUs];
-  }, [searchQuery, ALL_SYSTEM_PAGES, assets, workOrders, skuItems]);
-
-  // Handle clicking on a search result
-  const handleSelectResult = (path) => {
-    navigate(path);
-    setSearchQuery("");
-    setIsSearchFocused(false);
-  };
-
-  // Close dropdown on outside click
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target)) {
-        setIsSearchFocused(false);
-      }
-      if (profileDropdownRef.current && !profileDropdownRef.current.contains(e.target)) {
-        setShowProfileMenu(false);
-        setShowRoleSubmenu(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  const handleKeyDown = (e) => {
-    if (e.key === "Enter" && searchResults.length > 0) {
-      handleSelectResult(searchResults[0].path);
-    }
-    if (e.key === "Escape") {
-      setIsSearchFocused(false);
-    }
-  };
+  const { currentRole, setRoleById, ROLES } = useRole();
+  const [showRoleDropdown, setShowRoleDropdown] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   return (
-    <header className="app-header" style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 24px", position: "sticky", top: 0, zIndex: 40, backdropFilter: "blur(14px)", backgroundColor: "var(--bg-header)", borderBottom: "1px solid var(--border-subtle)", gap: "16px" }}>
-      {/* Far Left: Branding Logo & Sidebar Collapse Toggle */}
-      <div className="header-left-section" style={{ display: "flex", alignItems: "center", gap: "10px", flexShrink: 0 }}>
-        {/* Mobile Hamburger Menu Toggle */}
-        <button
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="mobile-menu-toggle"
-          style={{
-            width: "36px",
-            height: "36px",
-            borderRadius: "10px",
-            backgroundColor: "var(--bg-card-subtle)",
-            border: "1px solid var(--border-subtle)",
-            display: "none",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer",
-            color: "var(--text-secondary)",
-            marginRight: "4px"
-          }}
-          title="Toggle Navigation Menu"
-        >
-          <Menu size={18} />
-        </button>
-
+    <header className="app-header" style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 40, backdropFilter: "blur(14px)", backgroundColor: "var(--bg-header)", borderBottom: "1px solid var(--border-subtle)" }}>
+      {/* Far Left: Branding Logo */}
+      <div style={{ display: "flex", alignItems: "center", gap: "12px", flexShrink: 0 }}>
         <div
-          className="header-brand-logo"
           style={{
             width: "36px",
             height: "36px",
@@ -258,63 +63,91 @@ export function Header() {
         >
           <Flame size={20} />
         </div>
-        <div className="header-brand-text" style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
+        <div className="header-logo-text" style={{ flexDirection: "column", justifyContent: "center" }}>
           <span style={{ fontSize: "15px", fontWeight: 900, letterSpacing: "-0.2px", color: "var(--text-primary)", lineHeight: 1, marginBottom: "4px", whiteSpace: "nowrap" }}>
             MaintenX <span style={{ color: "#B27E33" }}>OS</span>
           </span>
-          <span className="header-subtitle" style={{ fontSize: "10px", color: "var(--text-muted)", letterSpacing: "0.08em", textTransform: "uppercase", fontWeight: 700, lineHeight: 1, whiteSpace: "nowrap" }}>
+          <span style={{ fontSize: "10px", color: "var(--text-muted)", letterSpacing: "0.08em", textTransform: "uppercase", fontWeight: 700, lineHeight: 1, whiteSpace: "nowrap" }}>
             Manufacturing Cloud
           </span>
         </div>
+      </div>
 
-        {/* Sidebar Collapse Button */}
+      {/* Center Space: intermediate elements distributed evenly */}
+      <div style={{ display: "flex", alignItems: "center", gap: "16px", flex: 1, justifyContent: "center", minWidth: 0 }}>
+        {/* Navigation / Mobile Toggle & Breadcrumbs */}
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="btn btn-ghost"
+            style={{ padding: "6px", display: "flex", alignItems: "center", color: "var(--text-secondary)" }}
+          >
+            <Menu size={20} />
+          </button>
+          <div className="header-breadcrumbs">
+            <Breadcrumbs />
+          </div>
+        </div>
+
+        {/* Facility and Shift removed to save space */}
+
+        {/* Search Trigger */}
         <button
-          onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-          className="desktop-sidebar-toggle"
+          className="header-search-btn"
+          onClick={() => setIsSearchOpen(true)}
           style={{
-            width: "32px",
-            height: "32px",
-            borderRadius: "8px",
-            backgroundColor: "var(--bg-card-subtle)",
-            border: "1px solid var(--border-subtle)",
+            height: "36px",
+            fontSize: "12px",
             display: "flex",
             alignItems: "center",
-            justifyContent: "center",
+            color: "var(--text-muted)",
+            backgroundColor: "#FFFFFF",
+            border: "1px solid var(--border-subtle)",
+            borderRadius: "10px",
             cursor: "pointer",
-            color: "var(--text-secondary)",
-            marginLeft: "6px",
-            transition: "all 0.15s ease",
             boxShadow: "0 1px 3px rgba(70, 45, 15, 0.04)"
           }}
-          title={sidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+          title="Search anything (Cmd+K / Ctrl+K)"
         >
-          {sidebarCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+          <span className="search-text-placeholder" style={{ fontWeight: 500 }}>Search...</span>
+          <div
+            className="search-icon-wrapper"
+            style={{
+              padding: "4px 6px",
+              borderRadius: "6px",
+              background: "linear-gradient(180deg, #E2B670 0%, #C89547 100%)",
+              color: "#261603",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center"
+            }}
+          >
+            <Search size={13} />
+          </div>
         </button>
       </div>
 
-      {/* Center Space: Live Interactive Global Search Bar */}
-      <div
-        ref={searchContainerRef}
-        className="header-search-container"
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "16px",
-          flex: 1,
-          justifyContent: "center",
-          minWidth: 0,
-          position: "relative"
-        }}
-      >
-        <div
-          style={{
-            position: "relative",
-            width: "100%",
-            maxWidth: "420px"
-          }}
-        >
-          <div
+      {/* Far Right: Fast Action & Role Switcher */}
+      <div style={{ display: "flex", alignItems: "center", gap: "10px", flexShrink: 0 }}>
+        {/* Quick QR Scanner / Label trigger */}
+        <div className="header-qr-btn">
+          <Button
+            variant="secondary"
+            size="sm"
+            icon={QrCode}
+            onClick={() => openQrModal("Line 1 Asset QR Scanner", "FM-001", { name: "High-Speed Rotary Filler 12-Head", location: "Bay 4A - Cleanroom Zone B" })}
+            title="Scan or View Asset QR Code"
+          />
+        </div>
+        
+        {/* ROLE SWITCHER DROPDOWN */}
+        <div style={{ position: "relative" }}>
+          <button
+            className="header-role-btn"
+            onClick={() => setShowRoleDropdown(!showRoleDropdown)}
             style={{
+              height: "36px",
+              fontSize: "12px",
               display: "flex",
               alignItems: "center",
               height: "38px",
@@ -336,209 +169,79 @@ export function Header() {
               onFocus={() => setIsSearchFocused(true)}
               onKeyDown={handleKeyDown}
               style={{
-                flex: 1,
-                border: "none",
-                outline: "none",
-                fontSize: "13px",
-                color: "var(--text-primary)",
-                fontFamily: "inherit",
-                backgroundColor: "transparent"
-              }}
-            />
-
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery("")}
-                style={{
-                  background: "transparent",
-                  border: "none",
-                  color: "var(--text-muted)",
-                  cursor: "pointer",
-                  padding: "4px",
-                  display: "flex",
-                  alignItems: "center"
-                }}
-              >
-                <X size={14} />
-              </button>
-            )}
-
-            <button
-              onClick={() => {
-                if (searchResults.length > 0) {
-                  handleSelectResult(searchResults[0].path);
-                } else if (searchQuery.trim()) {
-                  addToast(`No results found for "${searchQuery}"`, "warning");
-                }
-              }}
-              style={{
-                width: "28px",
-                height: "28px",
-                borderRadius: "7px",
-                background: "linear-gradient(180deg, #E2B670 0%, #C89547 100%)",
+                width: "22px",
+                height: "22px",
+                borderRadius: "50%",
+                background: "linear-gradient(135deg, #E2B670 0%, #C89547 100%)",
                 color: "#261603",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                border: "none",
-                cursor: "pointer",
-                boxShadow: "0 2px 6px rgba(178, 126, 51, 0.25)",
-                marginLeft: "6px",
+                fontWeight: 800,
+                fontSize: "11px",
                 flexShrink: 0
               }}
-              title="Execute Global Search"
             >
-              <Search size={14} />
-            </button>
-          </div>
+              {currentRole?.label?.charAt(0) || "U"}
+            </div>
+            <span className="header-role-text" style={{ fontWeight: 700, color: "var(--text-primary)" }}>{currentRole.label} - Alexander V.</span>
+            <div className="header-role-chevron" style={{ display: "flex" }}>
+              <ChevronDown size={14} color="#B27E33" />
+            </div>
+          </button>
 
-          {/* LIVE GLOBAL SEARCH RESULTS DROPDOWN */}
-          {isSearchFocused && searchQuery.trim().length > 0 && (
+          {showRoleDropdown && (
             <div
               style={{
                 position: "absolute",
-                top: "44px",
-                left: 0,
                 right: 0,
+                top: "42px",
+                width: "260px",
                 backgroundColor: "#FFFFFF",
                 border: "1px solid var(--border-highlight)",
-                borderRadius: "14px",
-                boxShadow: "0 12px 32px rgba(70, 45, 15, 0.15)",
-                maxHeight: "380px",
-                overflowY: "auto",
-                zIndex: 100,
+                borderRadius: "12px",
+                boxShadow: "var(--shadow-lg)",
+                zIndex: 60,
                 padding: "8px",
                 display: "flex",
                 flexDirection: "column",
-                gap: "3px",
-                animation: "fadeIn 0.15s ease-out"
+                gap: "2px"
               }}
             >
-              <div
-                style={{
-                  padding: "6px 10px",
-                  fontSize: "11px",
-                  fontWeight: 800,
-                  color: "var(--text-muted)",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.05em",
-                  borderBottom: "1px solid var(--border-subtle)",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center"
-                }}
-              >
-                <span>Matching Results ({searchResults.length})</span>
-                <span style={{ fontSize: "10px", color: "#B27E33", fontWeight: 700 }}>Press Enter ↵ to open top match</span>
+              <div style={{ padding: "6px 8px", fontSize: "11px", fontWeight: 800, color: "var(--text-muted)", textTransform: "uppercase" }}>
+                Switch Frontend Role
               </div>
-
-              {searchResults.length > 0 ? (
-                searchResults.map((item, idx) => {
-                  const IconComp = item.icon || Layers;
-                  return (
-                    <div
-                      key={idx}
-                      onClick={() => handleSelectResult(item.path)}
-                      style={{
-                        padding: "8px 12px",
-                        borderRadius: "8px",
-                        cursor: "pointer",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        gap: "10px",
-                        transition: "all 0.12s ease",
-                        backgroundColor: idx === 0 ? "rgba(200, 149, 71, 0.08)" : "transparent"
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = "rgba(200, 149, 71, 0.14)";
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = idx === 0 ? "rgba(200, 149, 71, 0.08)" : "transparent";
-                      }}
-                    >
-                      <div style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0 }}>
-                        <div
-                          style={{
-                            width: "28px",
-                            height: "28px",
-                            borderRadius: "6px",
-                            backgroundColor: "var(--bg-card-subtle)",
-                            color: "#B27E33",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            flexShrink: 0
-                          }}
-                        >
-                          <IconComp size={14} />
-                        </div>
-                        <div style={{ minWidth: 0, overflow: "hidden" }}>
-                          <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)", whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}>
-                            {item.title}
-                          </div>
-                          <div style={{ fontSize: "11px", color: "var(--text-secondary)", whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}>
-                            {item.desc}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
-                        <span
-                          style={{
-                            fontSize: "10px",
-                            fontWeight: 700,
-                            padding: "2px 7px",
-                            borderRadius: "5px",
-                            backgroundColor: "var(--bg-card-subtle)",
-                            color: "#8C5B23"
-                          }}
-                        >
-                          {item.category}
-                        </span>
-                        <ArrowRight size={13} color="var(--text-muted)" />
-                      </div>
-                    </div>
-                  );
-                })
-              ) : (
-                <div style={{ padding: "20px", textAlign: "center", color: "var(--text-muted)", fontSize: "13px" }}>
-                  No matches found for "<strong>{searchQuery}</strong>". Try searching for <em>FM-001, BOM, Users, CIP, Lines, or Reports</em>.
+              {ROLES.map((r) => (
+                <div
+                  key={r.id}
+                  onClick={() => {
+                    setRoleById(r.id);
+                    setShowRoleDropdown(false);
+                  }}
+                  style={{
+                    padding: "8px 10px",
+                    borderRadius: "8px",
+                    fontSize: "12px",
+                    fontWeight: currentRole.id === r.id ? 800 : 500,
+                    color: currentRole.id === r.id ? "#261603" : "var(--text-primary)",
+                    background: currentRole.id === r.id ? "linear-gradient(180deg, #E2B670 0%, #C89547 100%)" : "transparent",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between"
+                  }}
+                >
+                  <span>{r.label}</span>
+                  {currentRole.id === r.id && <span style={{ fontSize: "10px", color: "#261603", fontWeight: 800 }}>● Active</span>}
                 </div>
-              )}
+              ))}
             </div>
           )}
         </div>
-      </div>
-
-      {/* Far Right: Notification & Profile Button */}
-      <div className="header-right-section" style={{ display: "flex", alignItems: "center", gap: "10px", flexShrink: 0 }}>
-        {/* Mobile Search Trigger */}
-        <button
-          onClick={() => setIsSearchOpen(true)}
-          className="mobile-search-trigger"
-          style={{
-            width: "36px",
-            height: "36px",
-            borderRadius: "10px",
-            backgroundColor: "#FFFFFF",
-            border: "1px solid var(--border-subtle)",
-            display: "none",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer",
-            color: "#6B5B4E",
-            boxShadow: "0 1px 3px rgba(70, 45, 15, 0.04)"
-          }}
-          title="Search System"
-        >
-          <Search size={16} />
-        </button>
 
         {/* Notification Bell */}
         <button
-          onClick={() => addToast("1 New PM Task Alert for Line 1", "info")}
-          className="header-notification-btn"
+          onClick={() => addToast("1 New PM Task Alert", "info")}
           style={{
             width: "36px",
             height: "36px",
@@ -551,7 +254,8 @@ export function Header() {
             cursor: "pointer",
             position: "relative",
             color: "#6B5B4E",
-            boxShadow: "0 1px 3px rgba(70, 45, 15, 0.04)"
+            boxShadow: "0 1px 3px rgba(70, 45, 15, 0.04)",
+            flexShrink: 0
           }}
           title="Notifications"
         >
@@ -841,6 +545,69 @@ export function Header() {
           )}
         </div>
       </div>
+
+      <style>{`
+        /* Mobile defaults (up to 767px) */
+        @media (max-width: 767px) {
+          .header-logo-text { display: none !important; }
+          .header-breadcrumbs { display: none !important; }
+          .search-text-placeholder { display: none !important; }
+          
+          /* Make search button circular/icon only on mobile */
+          .header-search-btn { 
+            width: 36px !important; 
+            min-width: 36px !important; 
+            padding: 0 !important; 
+            justify-content: center !important; 
+            border: none !important; 
+            background: transparent !important;
+            box-shadow: none !important;
+          }
+          .search-icon-wrapper { padding: 8px !important; border-radius: 10px !important; }
+          
+          .header-qr-btn { display: none !important; }
+          .header-role-text { display: none !important; }
+          .header-role-chevron { display: none !important; }
+          
+          /* Avatar circle only on mobile */
+          .header-role-btn { 
+            padding: 0 !important; 
+            width: 36px !important; 
+            justify-content: center !important; 
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+          }
+          
+          .header-fast-action { display: none !important; }
+          
+          /* Tighter header padding for mobile */
+          .app-header { padding: 12px 16px !important; gap: 8px !important; }
+        }
+
+        /* Tablet/Desktop defaults */
+        @media (min-width: 768px) {
+          .header-logo-text { display: flex !important; }
+          .header-breadcrumbs { display: block !important; }
+          .search-text-placeholder { display: inline !important; }
+          
+          .header-search-btn { 
+            min-width: 180px !important; 
+            padding: 0 10px 0 14px !important; 
+            justify-content: space-between !important; 
+          }
+          
+          .header-qr-btn { display: block !important; }
+          .header-role-text { display: inline !important; }
+          .header-role-chevron { display: block !important; }
+          
+          .header-role-btn { padding: 0 12px !important; }
+          
+          .header-fast-action { display: block !important; }
+          
+          .app-header { padding: 12px 24px !important; gap: 16px !important; }
+        }
+      `}</style>
     </header>
   );
 }

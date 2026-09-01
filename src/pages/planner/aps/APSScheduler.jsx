@@ -19,7 +19,7 @@ export function APSScheduler() {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "800px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "100%" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
         <div>
           <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
@@ -35,8 +35,8 @@ export function APSScheduler() {
         </Button>
       </div>
 
-      <Card>
-        <h3 style={{ fontSize: "14px", fontWeight: 700, color: "#FFFFFF", marginBottom: "10px" }}>
+      <Card style={{ padding: "24px" }}>
+        <h3 style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-primary)", marginBottom: "16px" }}>
           Current Optimization Constraints
         </h3>
         <p style={{ fontSize: "13px", color: "var(--text-secondary)", lineHeight: 1.5 }}>

@@ -1,38 +1,69 @@
-import React from "react";
+import React, { useState } from "react";
 import { Card } from "../../../components/common/Card";
 import { Badge } from "../../../components/common/Badge";
 import { ShieldCheck } from "lucide-react";
+import { useApp } from "../../../context/AppContext";
 
 export function ApprovedReleases() {
-  const releases = [
-    { batch: "BAT-2026-0888", recipe: "Organic Orange Juice 1L", approvedBy: "Maria Santos (QA Lead)", date: "2026-08-30" },
-    { batch: "BAT-2026-0889", recipe: "Organic Orange Juice 500ml", approvedBy: "Maria Santos (QA Lead)", date: "2026-08-30" }
-  ];
+  const { addToast } = useApp();
+
+  const [releases, setReleases] = useState([
+    { id: 1, batch: "BAT-2026-0888", recipe: "Organic Orange Juice 1L", approvedBy: "Maria Santos (QA Lead)", date: "2026-08-30", status: "APPROVED" },
+    { id: 2, batch: "BAT-2026-0889", recipe: "Organic Orange Juice 500ml", approvedBy: "Maria Santos (QA Lead)", date: "2026-08-30", status: "APPROVED" }
+  ]);
+
+  const handleToggleStatus = (id, currentStatus) => {
+    setReleases(prev => prev.map(r => {
+      if (r.id === id) {
+        if (currentStatus === "APPROVED") {
+          addToast(`Approval revoked for ${r.batch}.`, "error");
+          return { ...r, status: "REVOKED" };
+        } else {
+          addToast(`Batch ${r.batch} APPROVED.`, "success");
+          return { ...r, status: "APPROVED" };
+        }
+      }
+      return r;
+    }));
+  };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "800px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "24px", maxWidth: "100%" }}>
       <div>
-        <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
+        <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)" }}>
           Approved QA Releases
         </h1>
-        <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
+        <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginTop: "4px" }}>
           Historical record of human-approved batch quality releases
         </p>
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-        {releases.map((r, idx) => (
-          <Card key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <ShieldCheck size={18} color="#10B981" />
-              <div>
-                <h4 style={{ fontSize: "14px", fontWeight: 700, color: "#FFFFFF" }}>Batch {r.batch}</h4>
-                <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-                  {r.recipe} • Approved by: {r.approvedBy} • {r.date}
-                </span>
-              </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+        {releases.map((r) => (
+          <Card 
+            key={r.id} 
+            style={{ 
+              display: "flex", 
+              justifyContent: "space-between", 
+              alignItems: "center",
+              padding: "20px 24px",
+              borderRadius: "16px"
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <ShieldCheck size={22} color="#10B981" strokeWidth={2} />
+              <span style={{ fontSize: "14px", color: "var(--text-secondary)", fontWeight: 500 }}>
+                {r.recipe} &bull; Approved by: {r.approvedBy} &bull; {r.date}
+              </span>
             </div>
-            <Badge variant="emerald">Approved</Badge>
+            <div 
+              style={{ cursor: "pointer", transition: "opacity 0.2s" }}
+              onClick={() => handleToggleStatus(r.id, r.status)}
+              onMouseOver={(e) => e.currentTarget.style.opacity = 0.8}
+              onMouseOut={(e) => e.currentTarget.style.opacity = 1}
+            >
+              <Badge variant={r.status === "APPROVED" ? "emerald" : "destructive"}>{r.status}</Badge>
+            </div>
           </Card>
         ))}
       </div>

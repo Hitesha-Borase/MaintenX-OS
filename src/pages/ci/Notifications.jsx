@@ -1,13 +1,6 @@
 import React, { useState } from "react";
-import {
-  Bell,
-  AlertTriangle,
-  Check,
-  CheckCheck,
-  CheckCircle2,
-  Trash2,
-  X
-} from "lucide-react";
+import { Bell, AlertTriangle, Check, CheckCheck, CheckCircle2, Trash2, X } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Card } from "../../components/common/Card";
 import { Button } from "../../components/common/Button";
 import { Badge } from "../../components/common/Badge";
@@ -16,40 +9,84 @@ import { useApp } from "../../context/AppContext";
 export function Notifications() {
   const { addToast } = useApp();
 
+  const [activeTab, setActiveTab] = useState("All");
   const [filterTab, setFilterTab] = useState("all"); // "all", "unread", "read"
   const [deletingNotification, setDeletingNotification] = useState(null);
   const [isClearAllModalOpen, setIsClearAllModalOpen] = useState(false);
 
   const [notifications, setNotifications] = useState([
-    {
-      id: 1,
-      title: "CAPA Overdue — CA-301",
-      msg: "Corrective action CA-301 (Viton diaphragm replacement) is past its due date. Responsible: Pedro Alves.",
-      time: "1 hr ago",
-      type: "Overdue",
-      severity: "critical",
+    { 
+      id: 1, 
+      title: "CAPA Overdue — CA-301", 
+      msg: "Corrective action CA-301 (Viton diaphragm replacement) is past its due date. Responsible: Pedro Alves.", 
+      time: "1 hr ago", 
+      path: "/ci/capa/corrective",
+      type: "danger",
+      badge: "OVERDUE",
       read: false
     },
-    {
-      id: 2,
-      title: "CI Project Action Milestone — CI-001",
-      msg: "Filler nozzle dynamic laser flow rate calibration (ACT-01) due in 2 days.",
-      time: "4 hrs ago",
-      type: "Milestone",
-      severity: "warning",
+    { 
+      id: 2, 
+      title: "CI Project Action Milestone — CI-001", 
+      msg: "Filler nozzle dynamic laser flow rate calibration (ACT-01) due in 2 days.", 
+      time: "4 hrs ago", 
+      path: "/ci/projects/actions",
+      type: "warning",
+      badge: "MILESTONE",
       read: false
     },
-    {
-      id: 3,
-      title: "Benefits Verification Required — CI-003",
-      msg: "60-day trial window for Label Application Defect Elimination concluded. Ready for finance sign-off.",
-      time: "1 day ago",
-      type: "Audit",
-      severity: "info",
-      read: false
+    { 
+      id: 3, 
+      title: "Benefits Verification Required — CI-003", 
+      msg: "90-day trial window for Label Application Defect Elimination concluded. Ready for finance sign-off.", 
+      time: "1 day ago", 
+      path: "/ci/benefits/verify",
+      type: "warning",
+      badge: "AUDIT",
+      read: true
+    },
+    { 
+      id: 4, 
+      title: "New RCA Submitted — Line 4 Jam", 
+      msg: "A new Root Cause Analysis has been drafted for the recurring accumulation table jam on Line 4.", 
+      time: "2 days ago", 
+      path: "/ci/5why/rca",
+      type: "info",
+      badge: "RCA",
+      read: true
     }
   ]);
 
+  const handleMarkAllRead = () => {
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    addToast("All notifications marked as read.", "success");
+  };
+
+  const handleClearAll = () => {
+    setNotifications([]);
+    addToast("All notifications cleared.", "info");
+  };
+
+  const getSeverityColor = (type) => {
+    switch (type) {
+      case "danger": return "var(--red-500, #EF4444)";
+      case "warning": return "var(--amber-500, #F59E0B)";
+      default: return "var(--primary-500, #C89547)";
+    }
+  };
+
+  const getSeverityBg = (type) => {
+    switch (type) {
+      case "danger": return "rgba(239, 68, 68, 0.1)";
+      case "warning": return "rgba(245, 158, 11, 0.1)";
+      default: return "rgba(200, 149, 71, 0.1)";
+    }
+  };
+
+  const getIcon = (type) => {
+    if (type === "danger") return AlertTriangle;
+    return Bell;
+  };
   const handleMarkAsRead = (id) => {
     setNotifications((prev) =>
       prev.map((n) => (n.id === id ? { ...n, read: true } : n))
@@ -85,254 +122,117 @@ export function Notifications() {
   });
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%", maxWidth: "1200px", margin: "0 auto", minWidth: 0 }}>
-      {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px", width: "100%" }}>
-        <div style={{ minWidth: "240px", flex: 1 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-            <h1 style={{ fontSize: "clamp(18px, 4vw, 24px)", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.3px", lineHeight: 1.2 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "24px", width: "100%" }}>
+      {/* Header and Actions */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>
               CI / Engineering Notifications
             </h1>
-            {unreadCount > 0 ? (
-              <Badge variant="rose">{unreadCount} UNREAD</Badge>
-            ) : (
-              <Badge variant="emerald">ALL READ</Badge>
+            {unreadCount > 0 && (
+              <span style={{ padding: "4px 8px", backgroundColor: "rgba(239, 68, 68, 0.1)", color: "#EF4444", borderRadius: "6px", fontSize: "12px", fontWeight: 700, letterSpacing: "0.5px" }}>
+                {unreadCount} UNREAD
+              </span>
             )}
           </div>
+          <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginTop: "4px", fontWeight: 500 }}>
+            CAPA overdue alerts, RCA phase updates, and CI project action reminders
+          </p>
         </div>
-
-        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-          {unreadCount > 0 && (
-            <Button
-              variant="secondary"
-              icon={CheckCheck}
-              onClick={handleMarkAllAsRead}
-              style={{ fontSize: "12px", padding: "7px 12px" }}
-            >
-              Mark All as Read
-            </Button>
-          )}
-          {notifications.length > 0 && (
-            <Button
-              variant="secondary"
-              icon={Trash2}
-              onClick={() => setIsClearAllModalOpen(true)}
-              style={{ fontSize: "12px", padding: "7px 12px" }}
-            >
-              Clear All
-            </Button>
-          )}
+        <div style={{ display: "flex", gap: "12px" }}>
+          <Button variant="outline" size="sm" icon={CheckCircle2} onClick={handleMarkAllAsRead}>
+            Mark All as Read
+          </Button>
+          <Button variant="ghost" size="sm" icon={Trash2} onClick={() => setIsClearAllModalOpen(true)}>
+            Clear All
+          </Button>
         </div>
       </div>
 
-      {/* Filter Tabs */}
-      <div style={{ display: "flex", gap: "8px", alignItems: "center", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "10px", flexWrap: "wrap" }}>
-        <button
-          onClick={() => setFilterTab("all")}
-          style={{
-            padding: "6px 14px",
-            borderRadius: "6px",
-            fontSize: "12px",
-            fontWeight: 700,
-            cursor: "pointer",
-            border: "none",
-            backgroundColor: filterTab === "all" ? "var(--color-primary)" : "var(--bg-card-subtle)",
-            color: filterTab === "all" ? "#FFFFFF" : "var(--text-secondary)"
-          }}
-        >
-          All ({notifications.length})
-        </button>
-
-        <button
-          onClick={() => setFilterTab("unread")}
-          style={{
-            padding: "6px 14px",
-            borderRadius: "6px",
-            fontSize: "12px",
-            fontWeight: 700,
-            cursor: "pointer",
-            border: "none",
-            backgroundColor: filterTab === "unread" ? "var(--color-primary)" : "var(--bg-card-subtle)",
-            color: filterTab === "unread" ? "#FFFFFF" : "var(--text-secondary)"
-          }}
-        >
-          Unread ({unreadCount})
-        </button>
-
-        <button
-          onClick={() => setFilterTab("read")}
-          style={{
-            padding: "6px 14px",
-            borderRadius: "6px",
-            fontSize: "12px",
-            fontWeight: 700,
-            cursor: "pointer",
-            border: "none",
-            backgroundColor: filterTab === "read" ? "var(--color-primary)" : "var(--bg-card-subtle)",
-            color: filterTab === "read" ? "#FFFFFF" : "var(--text-secondary)"
-          }}
-        >
-          Read ({readCount})
-        </button>
+      {/* Tabs */}
+      <div style={{ display: "flex", gap: "24px", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "12px", marginTop: "8px" }}>
+        {["All", "Unread", "Read"].map(tab => {
+          const count = tab === "All" ? notifications.length : tab === "Unread" ? unreadCount : notifications.length - unreadCount;
+          const isActive = activeTab === tab;
+          return (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              style={{
+                background: "none",
+                border: "none",
+                padding: "0 0 12px 0",
+                marginBottom: "-13px",
+                fontSize: "14px",
+                fontWeight: isActive ? 700 : 600,
+                color: isActive ? "var(--text-primary)" : "var(--text-muted)",
+                borderBottom: isActive ? "2px solid var(--text-primary)" : "2px solid transparent",
+                cursor: "pointer",
+                transition: "all 0.2s"
+              }}
+            >
+              {tab} ({count})
+            </button>
+          );
+        })}
       </div>
 
-      {/* Notifications Feed */}
+      {/* Notification List */}
       {filteredNotifs.length === 0 ? (
-        <Card style={{ padding: "40px 20px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: "8px" }}>
-          <CheckCircle2 size={32} color="#059669" />
-          <h3 style={{ fontSize: "15px", fontWeight: 800, color: "var(--text-primary)" }}>
-            {filterTab === "unread" ? "No unread notifications" : "No notifications found"}
-          </h3>
-          <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>
-            All your CI alerts and engineering updates are up to date.
-          </span>
+        <Card style={{ padding: "48px 24px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: "12px" }}>
+          <div style={{ padding: "16px", backgroundColor: "rgba(200, 149, 71, 0.1)", borderRadius: "50%" }}>
+            <Bell size={32} color="#C89547" />
+          </div>
+          <span style={{ fontSize: "15px", color: "var(--text-secondary)", fontWeight: 500 }}>No notifications found in this view.</span>
         </Card>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: "10px", width: "100%" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
           {filteredNotifs.map((n) => {
-            const isOverdue = n.type === "Overdue";
-            const isUnread = !n.read;
-
+            const IconComponent = getIcon(n.type);
+            const color = getSeverityColor(n.type);
+            const bg = getSeverityBg(n.type);
+            
             return (
-              <Card
-                key={n.id}
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
+              <Card 
+                key={n.id} 
+                style={{ 
+                  display: "flex", 
+                  alignItems: "flex-start", 
+                  justifyContent: "space-between", 
+                  gap: "16px", 
+                  padding: "16px 20px",
+                  borderLeft: `4px solid ${color}`,
                   flexWrap: "wrap",
-                  gap: "12px",
-                  padding: "14px 16px",
-                  borderLeft: isUnread
-                    ? `4px solid ${isOverdue ? "#DC2626" : "#D97706"}`
-                    : "4px solid var(--border-subtle)",
-                  backgroundColor: isUnread ? "var(--bg-card)" : "var(--bg-card-subtle)",
-                  opacity: isUnread ? 1 : 0.85,
-                  boxSizing: "border-box",
-                  minWidth: 0,
-                  width: "100%",
-                  borderRadius: "8px"
+                  opacity: n.read ? 0.7 : 1
                 }}
               >
-                <div style={{ display: "flex", gap: "12px", alignItems: "flex-start", minWidth: "220px", flex: 1 }}>
-                  <div
-                    style={{
-                      width: "32px",
-                      height: "32px",
-                      borderRadius: "6px",
-                      backgroundColor: isUnread
-                        ? isOverdue
-                          ? "rgba(220, 38, 38, 0.12)"
-                          : "rgba(217, 119, 6, 0.12)"
-                        : "var(--bg-card-subtle)",
-                      color: isUnread ? (isOverdue ? "#DC2626" : "#D97706") : "var(--text-muted)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      flexShrink: 0
-                    }}
-                  >
-                    {isOverdue ? <AlertTriangle size={16} /> : <Bell size={16} />}
+                <div style={{ display: "flex", gap: "16px", flex: 1, minWidth: "280px" }}>
+                  <div style={{ display: "flex", alignItems: "center", paddingTop: "8px", width: "12px" }}>
+                    {!n.read && <div style={{ width: "8px", height: "8px", borderRadius: "50%", backgroundColor: color }} />}
                   </div>
-
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                      {isUnread && (
-                        <span
-                          style={{
-                            width: "7px",
-                            height: "7px",
-                            borderRadius: "50%",
-                            backgroundColor: "#DC2626",
-                            display: "inline-block"
-                          }}
-                          title="Unread"
-                        />
-                      )}
-                      <h4
-                        style={{
-                          fontSize: "13px",
-                          fontWeight: isUnread ? 800 : 600,
-                          color: isUnread ? "var(--text-primary)" : "var(--text-secondary)"
-                        }}
-                      >
-                        {n.title}
-                      </h4>
-                      <Badge variant={isOverdue ? "rose" : "amber"}>{n.type}</Badge>
-                      <span style={{ fontSize: "11px", color: "var(--text-muted)", fontWeight: 500 }}>
-                        {n.time}
-                      </span>
+                  
+                  <div style={{ width: "40px", height: "40px", borderRadius: "10px", backgroundColor: bg, display: "flex", alignItems: "center", justifyContent: "center", color: color, flexShrink: 0 }}>
+                    <IconComponent size={20} />
+                  </div>
+                  
+                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+                      <h4 style={{ fontSize: "15px", fontWeight: 700, color: "var(--text-primary)", margin: 0 }}>{n.title}</h4>
+                      {n.badge && <Badge variant={n.type === "danger" ? "danger" : "warning"}>{n.badge}</Badge>}
+                      <span style={{ fontSize: "13px", color: "var(--text-muted)", fontWeight: 500 }}>{n.time}</span>
                     </div>
-
-                    <div
-                      style={{
-                        fontSize: "12px",
-                        color: isUnread ? "var(--text-secondary)" : "var(--text-muted)",
-                        marginTop: "4px",
-                        lineHeight: 1.4
-                      }}
-                    >
-                      {n.msg}
-                    </div>
+                    <p style={{ fontSize: "14px", color: "var(--text-secondary)", margin: 0, lineHeight: 1.5 }}>{n.msg}</p>
                   </div>
                 </div>
-
-                <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-                  {isUnread ? (
-                    <button
-                      onClick={() => handleMarkAsRead(n.id)}
-                      title="Mark as Read"
-                      style={{
-                        padding: "5px 10px",
-                        borderRadius: "6px",
-                        fontSize: "11px",
-                        fontWeight: 700,
-                        backgroundColor: "var(--bg-card-subtle)",
-                        color: "var(--text-primary)",
-                        border: "1px solid var(--border-subtle)",
-                        cursor: "pointer",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "4px"
-                      }}
-                    >
-                      <Check size={12} color="#059669" />
+                
+                <div style={{ display: "flex", gap: "8px", alignItems: "center", paddingTop: "4px" }}>
+                  {!n.read && (
+                    <Button variant="outline" size="sm" icon={Check} onClick={() => handleMarkAsRead(n.id)}>
                       Mark as Read
-                    </button>
-                  ) : (
-                    <span
-                      style={{
-                        fontSize: "11px",
-                        color: "var(--text-muted)",
-                        fontWeight: 600,
-                        padding: "4px 8px",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "4px"
-                      }}
-                    >
-                      <Check size={12} color="#059669" /> Read
-                    </span>
+                    </Button>
                   )}
-
-                  <button
-                    onClick={() => setDeletingNotification(n)}
-                    title="Delete Notification"
-                    style={{
-                      width: "28px",
-                      height: "28px",
-                      borderRadius: "6px",
-                      background: "transparent",
-                      border: "1px solid var(--border-subtle)",
-                      color: "var(--text-muted)",
-                      cursor: "pointer",
-                      display: "inline-flex",
-                      alignItems: "center",
-                      justifyContent: "center"
-                    }}
-                  >
-                    <Trash2 size={12} />
-                  </button>
+                  <Button variant="ghost" size="sm" icon={Trash2} onClick={() => setDeletingNotification(n)} />
                 </div>
               </Card>
             );

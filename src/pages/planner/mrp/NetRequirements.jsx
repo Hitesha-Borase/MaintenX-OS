@@ -10,7 +10,7 @@ export function NetRequirements() {
   ];
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "800px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "100%" }}>
       <div>
         <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
           Net Material Requirements (MRP)
@@ -20,13 +20,13 @@ export function NetRequirements() {
         </p>
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
         {requirements.map((r, idx) => (
-          <Card key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <Card key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "24px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
               <Layers size={18} color="#A855F7" />
               <div>
-                <h4 style={{ fontSize: "14px", fontWeight: 700, color: "#FFFFFF" }}>{r.part}</h4>
+                <h4 style={{ fontSize: "15px", fontWeight: 700, color: "var(--text-primary)", marginBottom: "4px" }}>{r.part}</h4>
                 <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
                   Stock on Hand: {r.onHand.toLocaleString()} | Total Demand: {r.demand.toLocaleString()}
                 </span>

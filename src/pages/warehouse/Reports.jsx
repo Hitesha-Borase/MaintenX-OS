@@ -1,39 +1,76 @@
 import React from "react";
 import { FileSpreadsheet, Printer } from "lucide-react";
-import { Card } from "../../components/common/Card";
-import { Button } from "../../components/common/Button";
+import { useApp } from "../../context/AppContext";
 
 export function Reports() {
+  const { addToast } = useApp();
+
   const reports = [
     { name: "Inbound Deliveries Logs", date: "2026-08-31" },
     { name: "Cycle Stock Variance Audit", date: "2026-08-31" }
   ];
 
+  const handlePrint = (name) => {
+    addToast(`Preparing ${name} for printing...`, "info");
+    setTimeout(() => window.print(), 500);
+  };
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "800px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "24px", maxWidth: "100%", fontFamily: "system-ui, -apple-system, sans-serif" }}>
       <div>
-        <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
+        <h1 style={{ fontSize: "24px", fontWeight: 800, color: "#2d2825", margin: "0 0 8px 0" }}>
           Warehouse Inventory Reports
         </h1>
-        <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
+        <p style={{ fontSize: "15px", color: "#7a7571", margin: 0 }}>
           Access stock adjustments logs, cycle counts audit results, and delivery histories
         </p>
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
         {reports.map((rep, idx) => (
-          <Card key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <FileSpreadsheet size={18} color="#38BDF8" />
-              <div>
-                <h4 style={{ fontSize: "14px", fontWeight: 700, color: "#FFFFFF" }}>{rep.name}</h4>
-                <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>Logged: {rep.date}</span>
-              </div>
+          <div 
+            key={idx} 
+            style={{ 
+              display: "flex", 
+              justifyContent: "space-between", 
+              alignItems: "center",
+              backgroundColor: "#ffffff",
+              padding: "24px",
+              borderRadius: "16px",
+              border: "1px solid #e8e6e1",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.02)"
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+              <FileSpreadsheet size={24} color="#38bdf8" strokeWidth={2} />
+              <span style={{ fontSize: "15px", color: "#71717a" }}>
+                Logged: {rep.date}
+              </span>
             </div>
-            <Button variant="secondary" size="sm" icon={Printer} onClick={() => window.print()}>
+            
+            <button 
+              onClick={() => handlePrint(rep.name)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                padding: "8px 16px",
+                backgroundColor: "#f5f1ea",
+                color: "#524f4a",
+                border: "1px solid #e8e3dc",
+                borderRadius: "16px",
+                fontSize: "14px",
+                fontWeight: 600,
+                cursor: "pointer",
+                transition: "background-color 0.2s"
+              }}
+              onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#ebe5dc'}
+              onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#f5f1ea'}
+            >
+              <Printer size={16} strokeWidth={2} />
               Print Report
-            </Button>
-          </Card>
+            </button>
+          </div>
         ))}
       </div>
     </div>

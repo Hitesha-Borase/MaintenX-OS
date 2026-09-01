@@ -584,10 +584,10 @@ body {
   }
   .app-sidebar {
     position: fixed !important;
-    top: 0 !important;
+    top: 61px !important;
     bottom: 0 !important;
     left: 0 !important;
-    height: 100vh !important;
+    height: calc(100vh - 61px) !important;
     width: 280px !important;
     max-width: 82vw !important;
     transform: translateX(-100%) !important;
@@ -633,9 +633,30 @@ body {
   .stat-card {
     padding: 12px 14px !important;
   }
+  .grid-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
   .stat-value {
     font-size: 18px !important;
   }
+}
+
+/* Input Fields */
+.input-field {
+  width: 100%;
+  padding: 8px 12px;
+  background-color: var(--bg-main);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  transition: all 0.2s ease;
+  outline: none;
+}
+.input-field:focus {
+  border-color: var(--accent-amber);
+  box-shadow: 0 0 0 2px rgba(200, 149, 71, 0.15);
 }
 
 @media (max-width: 480px) {
@@ -698,116 +719,7 @@ form > button[type="submit"] {
   margin-top: 4px;
 }
 
-/* Custom Responsive Styles */
-@media (max-width: 768px) {
-  .app-header {
-    padding: 8px 12px !important;
-    gap: 8px !important;
-  }
-  .app-sidebar {
-    z-index: 50 !important;
-  }
-  .header-left-section {
-    gap: 6px !important;
-  }
-  .mobile-menu-toggle {
-    display: flex !important;
-    width: 32px !important;
-    height: 32px !important;
-    margin-right: 0 !important;
-    border-radius: 8px !important;
-  }
-  .header-brand-logo {
-    width: 32px !important;
-    height: 32px !important;
-    border-radius: 8px !important;
-  }
-  .header-brand-logo svg {
-    width: 18px !important;
-    height: 18px !important;
-  }
-  .header-brand-text span {
-    font-size: 14px !important;
-  }
-  .desktop-sidebar-toggle {
-    display: none !important;
-  }
-  .header-subtitle {
-    display: none !important;
-  }
-  .header-search-container {
-    display: none !important;
-  }
-  .header-right-section {
-    gap: 6px !important;
-  }
-  .mobile-search-trigger {
-    display: flex !important;
-    width: 32px !important;
-    height: 32px !important;
-    border-radius: 8px !important;
-  }
-  .header-notification-btn {
-    width: 32px !important;
-    height: 32px !important;
-    border-radius: 8px !important;
-  }
-  .header-fast-action .btn-text {
-    display: none !important;
-  }
-  .header-fast-action {
-    padding: 0 !important;
-    width: 32px !important;
-    height: 32px !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    border-radius: 8px !important;
-  }
-  .header-profile-btn {
-    padding: 2px !important;
-    border-radius: 50% !important;
-  }
-  .header-profile-btn .profile-chevron {
-    display: none !important;
-  }
-  .header-profile-avatar {
-    width: 28px !important;
-    height: 28px !important;
-    font-size: 11px !important;
-  }
-  .grid-2-responsive {
-    grid-template-columns: repeat(1, minmax(0, 1fr)) !important;
-  }
-  .dashboard-grid-layout {
-    grid-template-columns: 1fr !important;
-  }
-}
-
-.dashboard-grid-layout {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 24px;
-}
-
-.grid-2-responsive {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-}
-
-@media (max-width: 480px) {
-  .mobile-flex-col {
-    flex-direction: column !important;
-    align-items: stretch !important;
-  }
-  .mobile-flex-col button, .mobile-flex-col .btn {
-    width: 100% !important;
-  }
-}
-
 /* Universal Form Input Styling */
-.input-field,
 input[type="text"],
 input[type="number"],
 input[type="email"],
@@ -829,7 +741,6 @@ textarea.input-field {
   box-shadow: 0 1px 2px rgba(70, 45, 15, 0.03);
 }
 
-.input-field:focus,
 input[type="text"]:focus,
 input[type="number"]:focus,
 input[type="email"]:focus,
