@@ -20,7 +20,9 @@ import {
   ShieldAlert,
   CheckCircle2,
   Settings,
-  Flame
+  Flame,
+  Eye,
+  EyeOff
 } from "lucide-react";
 import { Button } from "../../components/common/Button";
 
@@ -46,7 +48,8 @@ export function Login() {
   const { addToast } = useApp();
 
   const [username, setUsername] = useState("admin@maintenx.ops");
-  const [password, setPassword] = useState("••••••••");
+  const [password, setPassword] = useState("MaintenX@2026");
+  const [showPassword, setShowPassword] = useState(false);
   const [selectedRole, setSelectedRole] = useState("plant_manager");
   const [hoveredRole, setHoveredRole] = useState(null);
 
@@ -357,25 +360,46 @@ export function Login() {
                 <label className="form-label" style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: "6px" }}>
                   <Lock size={12} color="#B27E33" /> Security Password
                 </label>
-                <input
-                  type="password"
-                  className="form-input-amber"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "11px 14px",
-                    borderRadius: "10px",
-                    backgroundColor: "#FFFFFF",
-                    border: "1px solid var(--border-subtle)",
-                    color: "var(--text-primary)",
-                    fontSize: "13px",
-                    fontWeight: 600,
-                    outline: "none",
-                    transition: "all 0.2s ease"
-                  }}
-                  required
-                />
+                <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    className="form-input-amber"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    style={{
+                      width: "100%",
+                      padding: "11px 40px 11px 14px",
+                      borderRadius: "10px",
+                      backgroundColor: "#FFFFFF",
+                      border: "1px solid var(--border-subtle)",
+                      color: "var(--text-primary)",
+                      fontSize: "13px",
+                      fontWeight: 600,
+                      outline: "none",
+                      transition: "all 0.2s ease"
+                    }}
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    style={{
+                      position: "absolute",
+                      right: "12px",
+                      background: "transparent",
+                      border: "none",
+                      color: "var(--text-muted)",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      padding: "4px"
+                    }}
+                    title={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? <EyeOff size={16} color="#8C5B23" /> : <Eye size={16} color="var(--text-muted)" />}
+                  </button>
+                </div>
               </div>
             </div>
 

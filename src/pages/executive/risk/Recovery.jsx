@@ -45,9 +45,9 @@ export function Recovery() {
             { name: "Secondary Apple Concentrate Supplier Routing", scope: "Chicago & Austin Processing Lines", latency: "2 hr contract activation lag", status: "Ready" },
             { name: "Utility Generator Backup Grid Sync", scope: "Austin Packaging Lines 1 & 2", latency: "15 min emergency transition window", status: "Ready" }
           ].map((item, idx) => (
-            <div key={idx} style={{ padding: "12px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div>
-                <span style={{ fontSize: "13px", fontWeight: 700, color: "#FFFFFF" }}>{item.name}</span>
+            <div key={idx} style={{ padding: "14px 16px", borderRadius: "8px", backgroundColor: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)", display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px" }}>
+              <div style={{ flex: 1, minWidth: "200px" }}>
+                <span style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)", display: "block" }}>{item.name}</span>
                 <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "4px" }}>Scope: {item.scope}</p>
                 <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>Latency: {item.latency}</span>
               </div>

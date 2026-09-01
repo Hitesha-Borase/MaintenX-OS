@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   FileCheck,
@@ -6,11 +6,11 @@ import {
   Download,
   ArrowRight,
   ShieldCheck,
-  Award,
-  DollarSign,
   Clock,
   Check,
-  TrendingUp
+  TrendingUp,
+  Search,
+  Filter
 } from "lucide-react";
 import { Card } from "../../../components/common/Card";
 import { StatCard } from "../../../components/common/StatCard";
@@ -41,6 +41,9 @@ export function BenefitsVerification() {
     }
   ]);
 
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL");
+
   const handleVerify = (id) => {
     setVerifications((prev) =>
       prev.map((v) => (v.id === id ? { ...v, status: "Verified" } : v))
@@ -62,11 +65,27 @@ export function BenefitsVerification() {
     addToast("Benefits verification dossier exported to CSV.", "info");
   };
 
+  const filteredVerifications = useMemo(() => {
+    return verifications.filter((v) => {
+      const matchesStatus = statusFilter === "ALL" || v.status === statusFilter;
+      const q = searchQuery.toLowerCase().trim();
+      const matchesSearch =
+        !q ||
+        v.id?.toLowerCase().includes(q) ||
+        v.title?.toLowerCase().includes(q) ||
+        v.savings?.toLowerCase().includes(q) ||
+        v.criteria?.toLowerCase().includes(q) ||
+        v.evidence?.toLowerCase().includes(q);
+
+      return matchesStatus && matchesSearch;
+    });
+  }, [verifications, searchQuery, statusFilter]);
+
   const verifiedCount = verifications.filter((v) => v.status === "Verified").length;
   const pendingCount = verifications.filter((v) => v.status === "Pending").length;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%", maxWidth: "1200px", margin: "0 auto", minWidth: 0 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%", maxWidth: "1600px", margin: "0 auto", minWidth: 0 }}>
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px", width: "100%" }}>
         <div style={{ minWidth: "240px", flex: 1 }}>
@@ -136,90 +155,147 @@ export function BenefitsVerification() {
         />
       </div>
 
-      {/* Verifications List */}
-      <div style={{ display: "flex", flexDirection: "column", gap: "12px", width: "100%" }}>
-        {verifications.map((v) => {
-          const isVerified = v.status === "Verified";
+      {/* Structured Benefits Table Card */}
+      <Card style={{ padding: "18px", minWidth: 0, width: "100%", boxSizing: "border-box" }}>
+        {/* Table Toolbar */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "12px" }}>
+          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", flex: 1, minWidth: "240px" }}>
+            <div style={{ position: "relative", minWidth: "220px", flex: 1 }}>
+              <Search size={15} color="var(--text-muted)" style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)" }} />
+              <input
+                type="text"
+                placeholder=""
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="form-input"
+                style={{ paddingLeft: "32px", height: "36px", fontSize: "12px", backgroundColor: "#FFFFFF" }}
+              />
+            </div>
 
-          return (
-            <Card
-              key={v.id}
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "12px",
-                padding: "16px",
-                borderLeft: `4px solid ${isVerified ? "#059669" : "#D97706"}`,
-                boxSizing: "border-box",
-                minWidth: 0,
-                width: "100%"
-              }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "10px" }}>
-                <div style={{ minWidth: "220px", flex: 1 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                    <FileCheck size={16} color={isVerified ? "#059669" : "#D97706"} />
-                    <span style={{ fontSize: "13px", fontWeight: 800, color: "var(--text-primary)", fontFamily: "var(--font-mono)" }}>
-                      {v.id}
-                    </span>
-                    <Badge variant={isVerified ? "emerald" : "amber"}>{v.status}</Badge>
-                    <Badge variant="cyan">{v.savings} SAVINGS</Badge>
-                  </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <Filter size={14} color="var(--text-muted)" />
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="form-input"
+                style={{ height: "36px", fontSize: "12px", width: "150px", backgroundColor: "#FFFFFF" }}
+              >
+                <option value="ALL">All Statuses</option>
+                <option value="Pending">Pending Audit</option>
+                <option value="Verified">Verified & Locked</option>
+              </select>
+            </div>
+          </div>
 
-                  <h3 style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)", marginTop: "6px", lineHeight: 1.4 }}>
-                    {v.title}
-                  </h3>
-                </div>
+          <div style={{ fontSize: "12px", color: "var(--text-muted)", fontWeight: 600 }}>
+            Showing <strong>{filteredVerifications.length}</strong> of {verifications.length} Audit Records
+          </div>
+        </div>
 
-                <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                  {!isVerified ? (
-                    <button
-                      onClick={() => handleVerify(v.id)}
+        {/* Structured Data Table */}
+        <div className="data-table-container" style={{ overflowX: "auto", border: "1px solid var(--border-subtle)", borderRadius: "10px" }}>
+          <table className="data-table" style={{ width: "100%", borderCollapse: "collapse", minWidth: "900px" }}>
+            <thead>
+              <tr style={{ backgroundColor: "var(--bg-card-subtle)", borderBottom: "1.5px solid var(--border-subtle)" }}>
+                <th style={{ padding: "12px 14px", textAlign: "left", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Project ID</th>
+                <th style={{ padding: "12px 14px", textAlign: "left", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Project Title & Scope</th>
+                <th style={{ padding: "12px 14px", textAlign: "right", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Savings Amount</th>
+                <th style={{ padding: "12px 14px", textAlign: "left", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Validation Criteria</th>
+                <th style={{ padding: "12px 14px", textAlign: "left", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Empirical Audit Evidence</th>
+                <th style={{ padding: "12px 14px", textAlign: "center", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Status</th>
+                <th style={{ padding: "12px 14px", textAlign: "right", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredVerifications.length > 0 ? (
+                filteredVerifications.map((v) => {
+                  const isVerified = v.status === "Verified";
+                  return (
+                    <tr
+                      key={v.id}
                       style={{
-                        padding: "6px 14px",
-                        borderRadius: "8px",
-                        fontSize: "12px",
-                        fontWeight: 700,
-                        background: "linear-gradient(180deg, #E2B670 0%, #C89547 100%)",
-                        color: "#261603",
-                        border: "1px solid #E8C182",
-                        boxShadow: "0 2px 6px rgba(178, 126, 51, 0.25)",
-                        cursor: "pointer",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "6px",
-                        whiteSpace: "nowrap"
+                        borderBottom: "1px solid var(--border-subtle)",
+                        transition: "background-color 0.12s ease"
                       }}
+                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgba(200, 149, 71, 0.04)")}
+                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
                     >
-                      <Check size={14} /> Verify & Lock Benefits
-                    </button>
-                  ) : (
-                    <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "#059669", fontWeight: 700, fontSize: "12px" }}>
-                      <CheckCircle2 size={16} /> Formally Validated & Signed
-                    </div>
-                  )}
-                </div>
-              </div>
+                      <td style={{ padding: "12px 14px", whiteSpace: "nowrap" }}>
+                        <span style={{ fontSize: "12px", fontFamily: "var(--font-mono)", fontWeight: 800, color: "#0284C7" }}>
+                          {v.id}
+                        </span>
+                      </td>
 
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "10px", fontSize: "12px", backgroundColor: "var(--bg-card-subtle)", padding: "12px", borderRadius: "8px", border: "1px solid var(--border-subtle)" }}>
-                <div>
-                  <span style={{ color: "var(--text-muted)", fontSize: "10px", fontWeight: 800, textTransform: "uppercase" }}>Financial Validation Criteria:</span>
-                  <div style={{ color: "var(--text-primary)", marginTop: "2px", lineHeight: 1.4, fontWeight: 500 }}>
-                    {v.criteria}
-                  </div>
-                </div>
+                      <td style={{ padding: "12px 14px" }}>
+                        <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)" }}>
+                          {v.title}
+                        </div>
+                      </td>
 
-                <div>
-                  <span style={{ color: "var(--text-muted)", fontSize: "10px", fontWeight: 800, textTransform: "uppercase" }}>Empirical Validation Evidence:</span>
-                  <div style={{ color: isVerified ? "#059669" : "var(--text-secondary)", fontWeight: 600, marginTop: "2px", lineHeight: 1.4 }}>
-                    {v.evidence}
-                  </div>
-                </div>
-              </div>
-            </Card>
-          );
-        })}
-      </div>
+                      <td style={{ padding: "12px 14px", textAlign: "right", whiteSpace: "nowrap" }}>
+                        <span style={{ fontSize: "13px", fontWeight: 800, color: "#059669" }}>
+                          {v.savings}
+                        </span>
+                      </td>
+
+                      <td style={{ padding: "12px 14px" }}>
+                        <div style={{ fontSize: "12px", color: "var(--text-secondary)", lineHeight: 1.4 }}>
+                          {v.criteria}
+                        </div>
+                      </td>
+
+                      <td style={{ padding: "12px 14px" }}>
+                        <div style={{ fontSize: "12px", color: isVerified ? "#059669" : "var(--text-primary)", fontWeight: isVerified ? 600 : 500, lineHeight: 1.4 }}>
+                          {v.evidence}
+                        </div>
+                      </td>
+
+                      <td style={{ padding: "12px 14px", textAlign: "center", whiteSpace: "nowrap" }}>
+                        <Badge variant={isVerified ? "emerald" : "amber"}>{v.status}</Badge>
+                      </td>
+
+                      <td style={{ padding: "12px 14px", textAlign: "right", whiteSpace: "nowrap" }}>
+                        {!isVerified ? (
+                          <button
+                            onClick={() => handleVerify(v.id)}
+                            style={{
+                              padding: "6px 12px",
+                              borderRadius: "7px",
+                              fontSize: "11px",
+                              fontWeight: 700,
+                              background: "linear-gradient(180deg, #E2B670 0%, #C89547 100%)",
+                              color: "#261603",
+                              border: "1px solid #E8C182",
+                              boxShadow: "0 2px 5px rgba(178, 126, 51, 0.22)",
+                              cursor: "pointer",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "4px",
+                              whiteSpace: "nowrap"
+                            }}
+                          >
+                            <Check size={13} /> Verify & Lock
+                          </button>
+                        ) : (
+                          <div style={{ display: "inline-flex", alignItems: "center", gap: "4px", color: "#059669", fontWeight: 700, fontSize: "12px" }}>
+                            <CheckCircle2 size={15} /> Validated & Signed
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan={7} style={{ padding: "32px", textAlign: "center", color: "var(--text-muted)", fontSize: "13px" }}>
+                    No benefit audit records match the selected filter.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </Card>
     </div>
   );
 }

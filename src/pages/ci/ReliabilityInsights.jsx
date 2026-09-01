@@ -1,15 +1,15 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Activity,
   Download,
   AlertOctagon,
   ArrowRight,
-  TrendingUp,
   Clock,
-  Sparkles,
   SearchCode,
-  Gauge
+  Gauge,
+  Search,
+  Filter
 } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { StatCard } from "../../components/common/StatCard";
@@ -21,13 +21,13 @@ export function ReliabilityInsights() {
   const navigate = useNavigate();
   const { addToast } = useApp();
 
-  const assets = [
+  const [assets] = useState([
     {
       asset: "HTST Pasteurizer — Line 1",
       mtbf: "88 hrs",
       mttr: "45 min",
       failures: 2,
-      availability: "91.2%",
+      availability: 91.2,
       criticality: "Critical"
     },
     {
@@ -35,7 +35,7 @@ export function ReliabilityInsights() {
       mtbf: "102 hrs",
       mttr: "38 min",
       failures: 1,
-      availability: "94.6%",
+      availability: 94.6,
       criticality: "High"
     },
     {
@@ -43,15 +43,18 @@ export function ReliabilityInsights() {
       mtbf: "148 hrs",
       mttr: "22 min",
       failures: 1,
-      availability: "97.5%",
+      availability: 97.5,
       criticality: "Medium"
     }
-  ];
+  ]);
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const [criticalityFilter, setCriticalityFilter] = useState("ALL");
 
   const handleExportCSV = () => {
     const headers = "Asset Name,MTBF (hrs),MTTR (min),Failure Count,Availability %,Criticality\n";
     const rows = assets
-      .map((a) => `"${a.asset}","${a.mtbf}","${a.mttr}",${a.failures},"${a.availability}","${a.criticality}"`)
+      .map((a) => `"${a.asset}","${a.mtbf}","${a.mttr}",${a.failures},"${a.availability}%","${a.criticality}"`)
       .join("\n");
     const blob = new Blob([headers + rows], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
@@ -62,8 +65,23 @@ export function ReliabilityInsights() {
     addToast("Reliability analytics exported to CSV.", "info");
   };
 
+  const filteredAssets = useMemo(() => {
+    return assets.filter((a) => {
+      const matchesCriticality = criticalityFilter === "ALL" || a.criticality === criticalityFilter;
+      const q = searchQuery.toLowerCase().trim();
+      const matchesSearch =
+        !q ||
+        a.asset?.toLowerCase().includes(q) ||
+        a.mtbf?.toLowerCase().includes(q) ||
+        a.mttr?.toLowerCase().includes(q) ||
+        a.criticality?.toLowerCase().includes(q);
+
+      return matchesCriticality && matchesSearch;
+    });
+  }, [assets, searchQuery, criticalityFilter]);
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%", maxWidth: "1200px", margin: "0 auto", minWidth: 0 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%", maxWidth: "1600px", margin: "0 auto", minWidth: 0 }}>
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px", width: "100%" }}>
         <div style={{ minWidth: "240px", flex: 1 }}>
@@ -135,74 +153,156 @@ export function ReliabilityInsights() {
 
       {/* Top Assets Reliability Table Card */}
       <Card style={{ padding: "18px", minWidth: 0, width: "100%", boxSizing: "border-box" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px", flexWrap: "wrap", gap: "8px" }}>
-          <h3 style={{ fontSize: "15px", fontWeight: 800, color: "var(--text-primary)" }}>
-            Top Fleet Assets by Downtime Frequency
-          </h3>
-          <Badge variant="cyan">{assets.length} MONITORED ASSETS</Badge>
+        {/* Table Toolbar */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "12px" }}>
+          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", flex: 1, minWidth: "240px" }}>
+            <div style={{ position: "relative", minWidth: "220px", flex: 1 }}>
+              <Search size={15} color="var(--text-muted)" style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)" }} />
+              <input
+                type="text"
+                placeholder=""
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="form-input"
+                style={{ paddingLeft: "32px", height: "36px", fontSize: "12px", backgroundColor: "#FFFFFF" }}
+              />
+            </div>
+
+            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <Filter size={14} color="var(--text-muted)" />
+              <select
+                value={criticalityFilter}
+                onChange={(e) => setCriticalityFilter(e.target.value)}
+                className="form-input"
+                style={{ height: "36px", fontSize: "12px", width: "160px", backgroundColor: "#FFFFFF" }}
+              >
+                <option value="ALL">All Criticalities</option>
+                <option value="Critical">Critical</option>
+                <option value="High">High</option>
+                <option value="Medium">Medium</option>
+              </select>
+            </div>
+          </div>
+
+          <div style={{ fontSize: "12px", color: "var(--text-muted)", fontWeight: 600 }}>
+            Showing <strong>{filteredAssets.length}</strong> of {assets.length} Monitored Assets
+          </div>
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-          {assets.map((a, idx) => {
-            const isCritical = a.criticality === "Critical";
+        {/* Structured Data Table */}
+        <div className="data-table-container" style={{ overflowX: "auto", border: "1px solid var(--border-subtle)", borderRadius: "10px" }}>
+          <table className="data-table" style={{ width: "100%", borderCollapse: "collapse", minWidth: "850px" }}>
+            <thead>
+              <tr style={{ backgroundColor: "var(--bg-card-subtle)", borderBottom: "1.5px solid var(--border-subtle)" }}>
+                <th style={{ padding: "12px 14px", textAlign: "left", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Asset / Machine Name</th>
+                <th style={{ padding: "12px 14px", textAlign: "center", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Criticality</th>
+                <th style={{ padding: "12px 14px", textAlign: "right", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>MTBF (Mean Time)</th>
+                <th style={{ padding: "12px 14px", textAlign: "right", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>MTTR (Avg Repair)</th>
+                <th style={{ padding: "12px 14px", textAlign: "center", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Weekly Outages</th>
+                <th style={{ padding: "12px 14px", textAlign: "left", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase", width: "170px" }}>Availability</th>
+                <th style={{ padding: "12px 14px", textAlign: "right", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredAssets.length > 0 ? (
+                filteredAssets.map((a, idx) => {
+                  const isCritical = a.criticality === "Critical";
+                  const isHigh = a.criticality === "High";
+                  return (
+                    <tr
+                      key={idx}
+                      style={{
+                        borderBottom: "1px solid var(--border-subtle)",
+                        transition: "background-color 0.12s ease"
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgba(200, 149, 71, 0.04)")}
+                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
+                    >
+                      <td style={{ padding: "12px 14px" }}>
+                        <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)" }}>
+                          {a.asset}
+                        </div>
+                      </td>
 
-            return (
-              <div
-                key={idx}
-                style={{
-                  padding: "12px 14px",
-                  borderRadius: "10px",
-                  backgroundColor: "var(--bg-card-subtle)",
-                  border: isCritical ? "1px solid rgba(220, 38, 38, 0.3)" : "1px solid var(--border-subtle)",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  flexWrap: "wrap",
-                  gap: "10px"
-                }}
-              >
-                <div style={{ minWidth: "220px", flex: 1 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                    <span style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)" }}>
-                      {a.asset}
-                    </span>
-                    <Badge variant={isCritical ? "rose" : "amber"}>{a.criticality}</Badge>
-                    <Badge variant="emerald">{a.availability} UPTIME</Badge>
-                  </div>
+                      <td style={{ padding: "12px 14px", textAlign: "center", whiteSpace: "nowrap" }}>
+                        <Badge variant={isCritical ? "rose" : isHigh ? "amber" : "cyan"}>
+                          {a.criticality}
+                        </Badge>
+                      </td>
 
-                  <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "4px", display: "flex", gap: "14px", flexWrap: "wrap" }}>
-                    <span>Mean Time Between Failure: <strong style={{ color: "#059669" }}>{a.mtbf}</strong></span>
-                    <span>Mean Time to Repair: <strong style={{ color: "#0284C7" }}>{a.mttr}</strong></span>
-                    <span>Weekly Outages: <strong style={{ color: isCritical ? "#DC2626" : "var(--text-primary)" }}>{a.failures}</strong></span>
-                  </div>
-                </div>
+                      <td style={{ padding: "12px 14px", textAlign: "right", whiteSpace: "nowrap" }}>
+                        <span style={{ fontSize: "13px", fontWeight: 800, color: "#059669" }}>
+                          {a.mtbf}
+                        </span>
+                      </td>
 
-                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <button
-                    onClick={() => navigate("/ci/rca/investigations")}
-                    style={{
-                      padding: "6px 12px",
-                      borderRadius: "8px",
-                      fontSize: "12px",
-                      fontWeight: 700,
-                      background: "linear-gradient(180deg, #E2B670 0%, #C89547 100%)",
-                      color: "#261603",
-                      border: "1px solid #E8C182",
-                      boxShadow: "0 2px 6px rgba(178, 126, 51, 0.25)",
-                      cursor: "pointer",
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "4px",
-                      whiteSpace: "nowrap"
-                    }}
-                  >
-                    <SearchCode size={13} />
-                    <span>Initiate RCA</span>
-                  </button>
-                </div>
-              </div>
-            );
-          })}
+                      <td style={{ padding: "12px 14px", textAlign: "right", whiteSpace: "nowrap" }}>
+                        <span style={{ fontSize: "13px", fontWeight: 800, color: "#0284C7" }}>
+                          {a.mttr}
+                        </span>
+                      </td>
+
+                      <td style={{ padding: "12px 14px", textAlign: "center", whiteSpace: "nowrap" }}>
+                        <span style={{ fontSize: "13px", fontWeight: 800, color: isCritical ? "#DC2626" : "var(--text-primary)" }}>
+                          {a.failures}
+                        </span>
+                      </td>
+
+                      <td style={{ padding: "12px 14px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                          <div style={{ flex: 1, height: "6px", backgroundColor: "var(--bg-card-subtle)", borderRadius: "3px", overflow: "hidden", border: "1px solid var(--border-subtle)" }}>
+                            <div
+                              style={{
+                                width: `${a.availability}%`,
+                                height: "100%",
+                                background: a.availability >= 95
+                                  ? "linear-gradient(90deg, #10B981 0%, #059669 100%)"
+                                  : "linear-gradient(90deg, #F59E0B 0%, #D97706 100%)",
+                                borderRadius: "3px"
+                              }}
+                            />
+                          </div>
+                          <span style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", minWidth: "38px" }}>
+                            {a.availability}%
+                          </span>
+                        </div>
+                      </td>
+
+                      <td style={{ padding: "12px 14px", textAlign: "right", whiteSpace: "nowrap" }}>
+                        <button
+                          onClick={() => navigate("/ci/rca/investigations")}
+                          style={{
+                            padding: "5px 12px",
+                            borderRadius: "7px",
+                            fontSize: "11px",
+                            fontWeight: 700,
+                            background: "linear-gradient(180deg, #E2B670 0%, #C89547 100%)",
+                            color: "#261603",
+                            border: "1px solid #E8C182",
+                            boxShadow: "0 2px 5px rgba(178, 126, 51, 0.22)",
+                            cursor: "pointer",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "4px",
+                            whiteSpace: "nowrap"
+                          }}
+                        >
+                          <SearchCode size={13} />
+                          <span>Initiate RCA</span>
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan={7} style={{ padding: "32px", textAlign: "center", color: "var(--text-muted)", fontSize: "13px" }}>
+                    No fleet assets match the selected filter.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </Card>
     </div>

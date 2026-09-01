@@ -117,6 +117,7 @@ export function Sidebar() {
   const { currentRole, logout, NAVIGATION_CONFIG } = useRole();
   const { sidebarCollapsed, setSidebarCollapsed, mobileMenuOpen, setMobileMenuOpen, addToast } = useApp();
   const location = useLocation();
+  const isCollapsed = sidebarCollapsed && !mobileMenuOpen;
 
   React.useEffect(() => {
     if (mobileMenuOpen) {
@@ -189,14 +190,14 @@ export function Sidebar() {
     display: "flex",
     alignItems: "center",
     gap: "10px",
-    padding: "9px 14px",
+    padding: "10px 14px",
     borderRadius: "10px",
     fontSize: "13px",
-    fontWeight: isActive ? 700 : 500,
-    color: isActive ? "#261603" : "var(--text-secondary)",
-    background: isActive ? "linear-gradient(180deg, #E2B670 0%, #C89547 50%, #B27E33 100%)" : "transparent",
-    boxShadow: isActive ? "0 3px 10px rgba(178, 126, 51, 0.28)" : "none",
-    border: isActive ? "1px solid #E8C182" : "1px solid transparent",
+    fontWeight: isActive ? 800 : 500,
+    color: isActive ? "#1A0F02" : "var(--text-secondary)",
+    background: isActive ? "linear-gradient(180deg, #C99649 0%, #B17E32 100%)" : "transparent",
+    boxShadow: isActive ? "0 4px 14px rgba(177, 126, 50, 0.35)" : "none",
+    border: isActive ? "1px solid #DFAC5E" : "1px solid transparent",
     textDecoration: "none",
     transition: "all 0.15s ease",
     whiteSpace: "nowrap",
@@ -207,13 +208,14 @@ export function Sidebar() {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    padding: "6px 12px 6px 32px",
+    padding: "8px 12px 8px 24px",
     borderRadius: "8px",
     fontSize: "12px",
-    fontWeight: isActive ? 700 : 500,
-    color: isActive ? "#B27E33" : "var(--text-secondary)",
-    backgroundColor: isActive ? "rgba(200, 149, 71, 0.12)" : "transparent",
-    borderLeft: isActive ? "3px solid #C89547" : "3px solid transparent",
+    fontWeight: isActive ? 800 : 500,
+    color: isActive ? "#1A0F02" : "var(--text-secondary)",
+    background: isActive ? "linear-gradient(180deg, #C99649 0%, #B17E32 100%)" : "transparent",
+    boxShadow: isActive ? "0 3px 10px rgba(177, 126, 50, 0.3)" : "none",
+    border: isActive ? "1px solid #DFAC5E" : "1px solid transparent",
     textDecoration: "none",
     transition: "all 0.15s ease",
     whiteSpace: "nowrap"
@@ -265,6 +267,7 @@ export function Sidebar() {
       {/* Mobile Backdrop */}
       {mobileMenuOpen && (
         <div
+          className="mobile-backdrop-overlay"
           onClick={() => setMobileMenuOpen(false)}
           style={{
             position: "fixed",
@@ -280,9 +283,9 @@ export function Sidebar() {
       )}
 
       <aside
-        className={`app-sidebar ${mobileMenuOpen ? "mobile-open" : ""} ${sidebarCollapsed ? "collapsed" : ""}`}
+        className={`app-sidebar ${mobileMenuOpen ? "mobile-open" : ""} ${isCollapsed ? "collapsed" : ""}`}
         style={{
-          width: sidebarCollapsed ? "68px" : "260px",
+          width: isCollapsed ? "68px" : "260px",
           transition: "width 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
           display: "flex",
           flexDirection: "column",
@@ -310,7 +313,7 @@ export function Sidebar() {
             {currentRole?.id === "admin" ? (
               <>
                 {/* 1. Dashboard */}
-                <NavLink to="/dashboard" style={navItemStyle} title="Dashboard">
+                <NavLink to="/dashboard" end style={navItemStyle} title="Dashboard">
                   <LayoutDashboard size={18} style={{ flexShrink: 0 }} />
                   {!sidebarCollapsed && <span>1. Dashboard</span>}
                 </NavLink>
@@ -336,13 +339,13 @@ export function Sidebar() {
                       <NavLink to="/users" end style={subNavItemStyle}>
                         <span>Users</span>
                       </NavLink>
-                      <NavLink to="/users/invitations" style={subNavItemStyle}>
+                      <NavLink to="/users/invitations" end style={subNavItemStyle}>
                         <span>User Invitations</span>
                       </NavLink>
-                      <NavLink to="/users/status" style={subNavItemStyle}>
+                      <NavLink to="/users/status" end style={subNavItemStyle}>
                         <span>User Status</span>
                       </NavLink>
-                      <NavLink to="/users/activity" style={subNavItemStyle}>
+                      <NavLink to="/users/activity" end style={subNavItemStyle}>
                         <span>User Activity</span>
                       </NavLink>
                     </div>
@@ -370,13 +373,13 @@ export function Sidebar() {
                       <NavLink to="/roles" end style={subNavItemStyle}>
                         <span>Roles</span>
                       </NavLink>
-                      <NavLink to="/roles/permissions" style={subNavItemStyle}>
+                      <NavLink to="/roles/permissions" end style={subNavItemStyle}>
                         <span>Permissions</span>
                       </NavLink>
-                      <NavLink to="/roles/mapping" style={subNavItemStyle}>
+                      <NavLink to="/roles/mapping" end style={subNavItemStyle}>
                         <span>Role Mapping</span>
                       </NavLink>
-                      <NavLink to="/roles/approval-permissions" style={subNavItemStyle}>
+                      <NavLink to="/roles/approval-permissions" end style={subNavItemStyle}>
                         <span>Approval Permissions</span>
                       </NavLink>
                     </div>
@@ -401,19 +404,19 @@ export function Sidebar() {
 
                   {!sidebarCollapsed && openGroups.org && (
                     <div style={{ display: "flex", flexDirection: "column", gap: "2px", marginTop: "2px" }}>
-                      <NavLink to="/organization/companies" style={subNavItemStyle}>
+                      <NavLink to="/organization/companies" end style={subNavItemStyle}>
                         <span>Companies</span>
                       </NavLink>
-                      <NavLink to="/organization/plants" style={subNavItemStyle}>
+                      <NavLink to="/organization/plants" end style={subNavItemStyle}>
                         <span>Plants</span>
                       </NavLink>
-                      <NavLink to="/organization/departments" style={subNavItemStyle}>
+                      <NavLink to="/organization/departments" end style={subNavItemStyle}>
                         <span>Departments</span>
                       </NavLink>
-                      <NavLink to="/organization/lines" style={subNavItemStyle}>
+                      <NavLink to="/organization/lines" end style={subNavItemStyle}>
                         <span>Lines</span>
                       </NavLink>
-                      <NavLink to="/organization/work-centers" style={subNavItemStyle}>
+                      <NavLink to="/organization/work-centers" end style={subNavItemStyle}>
                         <span>Work Centers</span>
                       </NavLink>
                     </div>
@@ -438,55 +441,55 @@ export function Sidebar() {
 
                   {!sidebarCollapsed && openGroups.masterData && (
                     <div style={{ display: "flex", flexDirection: "column", gap: "2px", marginTop: "2px" }}>
-                      <NavLink to="/master-data/items" style={subNavItemStyle}>
+                      <NavLink to="/master-data/items" end style={subNavItemStyle}>
                         <span>Item / SKU Master</span>
                       </NavLink>
-                      <NavLink to="/master-data/product-families" style={subNavItemStyle}>
+                      <NavLink to="/master-data/product-families" end style={subNavItemStyle}>
                         <span>Product Families</span>
                       </NavLink>
-                      <NavLink to="/master-data/uom" style={subNavItemStyle}>
+                      <NavLink to="/master-data/uom" end style={subNavItemStyle}>
                         <span>UOM</span>
                       </NavLink>
-                      <NavLink to="/master-data/packaging" style={subNavItemStyle}>
+                      <NavLink to="/master-data/packaging" end style={subNavItemStyle}>
                         <span>Packaging</span>
                       </NavLink>
-                      <NavLink to="/master-data/bom" style={subNavItemStyle}>
+                      <NavLink to="/master-data/bom" end style={subNavItemStyle}>
                         <span>BOM / Recipes</span>
                       </NavLink>
-                      <NavLink to="/master-data/routings" style={subNavItemStyle}>
+                      <NavLink to="/master-data/routings" end style={subNavItemStyle}>
                         <span>Routings</span>
                       </NavLink>
-                      <NavLink to="/master-data/operations" style={subNavItemStyle}>
+                      <NavLink to="/master-data/operations" end style={subNavItemStyle}>
                         <span>Operations</span>
                       </NavLink>
-                      <NavLink to="/master-data/work-centers" style={subNavItemStyle}>
+                      <NavLink to="/master-data/work-centers" end style={subNavItemStyle}>
                         <span>Work Centers</span>
                       </NavLink>
-                      <NavLink to="/master-data/line-targets" style={subNavItemStyle}>
+                      <NavLink to="/master-data/line-targets" end style={subNavItemStyle}>
                         <span>Line Targets</span>
                       </NavLink>
-                      <NavLink to="/master-data/changeover-matrix" style={subNavItemStyle}>
+                      <NavLink to="/master-data/changeover-matrix" end style={subNavItemStyle}>
                         <span>Changeover Matrix</span>
                       </NavLink>
-                      <NavLink to="/master-data/sanitation-allergens" style={subNavItemStyle}>
+                      <NavLink to="/master-data/sanitation-allergens" end style={subNavItemStyle}>
                         <span>Sanitation / Allergens</span>
                       </NavLink>
-                      <NavLink to="/master-data/labour-standards" style={subNavItemStyle}>
+                      <NavLink to="/master-data/labour-standards" end style={subNavItemStyle}>
                         <span>Labour Standards</span>
                       </NavLink>
-                      <NavLink to="/master-data/skills" style={subNavItemStyle}>
+                      <NavLink to="/master-data/skills" end style={subNavItemStyle}>
                         <span>Skills / Qualifications</span>
                       </NavLink>
-                      <NavLink to="/master-data/quality-specs" style={subNavItemStyle}>
+                      <NavLink to="/master-data/quality-specs" end style={subNavItemStyle}>
                         <span>Quality Specifications</span>
                       </NavLink>
-                      <NavLink to="/master-data/ccp-limits" style={subNavItemStyle}>
+                      <NavLink to="/master-data/ccp-limits" end style={subNavItemStyle}>
                         <span>CCP Limits</span>
                       </NavLink>
-                      <NavLink to="/master-data/machine-capability" style={subNavItemStyle}>
+                      <NavLink to="/master-data/machine-capability" end style={subNavItemStyle}>
                         <span>Machine Capability</span>
                       </NavLink>
-                      <NavLink to="/master-data/storage-resources" style={subNavItemStyle}>
+                      <NavLink to="/master-data/storage-resources" end style={subNavItemStyle}>
                         <span>Storage Resources</span>
                       </NavLink>
                     </div>
@@ -511,16 +514,16 @@ export function Sidebar() {
 
                   {!sidebarCollapsed && openGroups.integrations && (
                     <div style={{ display: "flex", flexDirection: "column", gap: "2px", marginTop: "2px" }}>
-                      <NavLink to="/integrations/erp" style={subNavItemStyle}>
+                      <NavLink to="/integrations/erp" end style={subNavItemStyle}>
                         <span>ERP</span>
                       </NavLink>
-                      <NavLink to="/integrations/iot" style={subNavItemStyle}>
+                      <NavLink to="/integrations/iot" end style={subNavItemStyle}>
                         <span>IoT / Machines</span>
                       </NavLink>
-                      <NavLink to="/integrations/barcode" style={subNavItemStyle}>
+                      <NavLink to="/integrations/barcode" end style={subNavItemStyle}>
                         <span>Barcode / QR</span>
                       </NavLink>
-                      <NavLink to="/integrations/apis" style={subNavItemStyle}>
+                      <NavLink to="/integrations/apis" end style={subNavItemStyle}>
                         <span>APIs</span>
                       </NavLink>
                     </div>
@@ -545,22 +548,22 @@ export function Sidebar() {
 
                   {!sidebarCollapsed && openGroups.dataHealth && (
                     <div style={{ display: "flex", flexDirection: "column", gap: "2px", marginTop: "2px" }}>
-                      <NavLink to="/data-health/missing-data" style={subNavItemStyle}>
+                      <NavLink to="/data-health/missing-data" end style={subNavItemStyle}>
                         <span>Missing Data</span>
                       </NavLink>
-                      <NavLink to="/data-health/duplicates" style={subNavItemStyle}>
+                      <NavLink to="/data-health/duplicates" end style={subNavItemStyle}>
                         <span>Duplicates</span>
                       </NavLink>
-                      <NavLink to="/data-health/invalid-references" style={subNavItemStyle}>
+                      <NavLink to="/data-health/invalid-references" end style={subNavItemStyle}>
                         <span>Invalid References</span>
                       </NavLink>
-                      <NavLink to="/data-health/broken-relationships" style={subNavItemStyle}>
+                      <NavLink to="/data-health/broken-relationships" end style={subNavItemStyle}>
                         <span>Broken Relationships</span>
                       </NavLink>
-                      <NavLink to="/data-health/stale-records" style={subNavItemStyle}>
+                      <NavLink to="/data-health/stale-records" end style={subNavItemStyle}>
                         <span>Stale Records</span>
                       </NavLink>
-                      <NavLink to="/data-health/remediation" style={subNavItemStyle}>
+                      <NavLink to="/data-health/remediation" end style={subNavItemStyle}>
                         <span>Remediation</span>
                       </NavLink>
                     </div>
@@ -568,31 +571,31 @@ export function Sidebar() {
                 </div>
 
                 {/* 8. Security */}
-                <NavLink to="/security" style={navItemStyle} title="Security">
+                <NavLink to="/security" end style={navItemStyle} title="Security">
                   <Lock size={18} style={{ flexShrink: 0 }} />
                   {!sidebarCollapsed && <span>8. Security</span>}
                 </NavLink>
 
                 {/* 9. Configuration */}
-                <NavLink to="/configuration" style={navItemStyle} title="Configuration">
+                <NavLink to="/configuration" end style={navItemStyle} title="Configuration">
                   <Sliders size={18} style={{ flexShrink: 0 }} />
                   {!sidebarCollapsed && <span>9. Configuration</span>}
                 </NavLink>
 
                 {/* 10. Audit Logs */}
-                <NavLink to="/audit-logs" style={navItemStyle} title="Audit Logs">
+                <NavLink to="/audit-logs" end style={navItemStyle} title="Audit Logs">
                   <FileText size={18} style={{ flexShrink: 0 }} />
                   {!sidebarCollapsed && <span>10. Audit Logs</span>}
                 </NavLink>
 
                 {/* 11. Migration */}
-                <NavLink to="/migration" style={navItemStyle} title="Migration">
+                <NavLink to="/migration" end style={navItemStyle} title="Migration">
                   <UploadCloud size={18} style={{ flexShrink: 0 }} />
                   {!sidebarCollapsed && <span>11. Migration</span>}
                 </NavLink>
 
                 {/* 12. System Reports */}
-                <NavLink to="/system-reports" style={navItemStyle} title="System Reports">
+                <NavLink to="/system-reports" end style={navItemStyle} title="System Reports">
                   <FileSpreadsheet size={18} style={{ flexShrink: 0 }} />
                   {!sidebarCollapsed && <span>12. System Reports</span>}
                 </NavLink>
@@ -614,19 +617,19 @@ export function Sidebar() {
                       >
                         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                           <Layers size={18} color={active ? "#B27E33" : "var(--text-secondary)"} style={{ flexShrink: 0 }} />
-                          {!sidebarCollapsed && <span>{item.group}</span>}
+                          {!isCollapsed && <span>{item.group}</span>}
                         </div>
-                        {!sidebarCollapsed && (
+                        {!isCollapsed && (
                           isGroupOpen ? <ChevronDown size={14} color="var(--text-muted)" /> : <ChevronRight size={14} color="var(--text-muted)" />
                         )}
                       </div>
 
-                      {!sidebarCollapsed && isGroupOpen && (
+                      {!isCollapsed && isGroupOpen && (
                         <div style={{ display: "flex", flexDirection: "column", gap: "2px", marginTop: "2px" }}>
                           {item.items.map((subItem) => {
                             const IconComp = iconMap[subItem.icon] || FileText;
                             return (
-                              <NavLink key={subItem.path} to={subItem.path} style={subNavItemStyle}>
+                              <NavLink key={subItem.path} to={subItem.path} end style={subNavItemStyle}>
                                 <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                                   <IconComp size={14} />
                                   <span>{subItem.label}</span>
@@ -643,10 +646,10 @@ export function Sidebar() {
 
                 const IconComp = iconMap[item.icon] || LayoutDashboard;
                 return (
-                  <NavLink key={item.path} to={item.path} style={navItemStyle} title={item.label}>
+                  <NavLink key={item.path} to={item.path} end style={navItemStyle} title={item.label}>
                     <IconComp size={18} style={{ flexShrink: 0 }} />
-                    {!sidebarCollapsed && <span>{item.label}</span>}
-                    {!sidebarCollapsed && renderBadge(item.label)}
+                    {!isCollapsed && <span>{item.label}</span>}
+                    {!isCollapsed && renderBadge(item.label)}
                   </NavLink>
                 );
               })
@@ -661,11 +664,11 @@ export function Sidebar() {
             borderTop: "1px solid var(--border-subtle)",
             display: "flex",
             alignItems: "center",
-            justifyContent: sidebarCollapsed ? "center" : "space-between",
+            justifyContent: isCollapsed ? "center" : "space-between",
             backgroundColor: "var(--bg-card-subtle)"
           }}
         >
-          {!sidebarCollapsed ? (
+          {!isCollapsed ? (
             <div style={{ display: "flex", alignItems: "center", gap: "10px", overflow: "hidden" }}>
               <div
                 style={{
