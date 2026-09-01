@@ -62,7 +62,7 @@ export function ProductionEntry() {
       </Card>
 
       <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-        <Card style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+        <Card style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "20px" }}>
           {/* Produced Quantity */}
           <div>
             <label style={{ fontSize: "12px", fontWeight: 700, color: "#FFFFFF", display: "block", marginBottom: "6px" }}>
@@ -127,7 +127,7 @@ export function ProductionEntry() {
           </div>
         </Card>
 
-        <Button type="submit" variant="primary" icon={Send}>
+        <Button type="submit" variant="primary" icon={Send} style={{ width: "fit-content", padding: "8px 24px" }}>
           Submit Production Log
         </Button>
       </form>

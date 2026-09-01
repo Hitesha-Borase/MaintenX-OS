@@ -78,60 +78,63 @@ export function DowntimeLoss() {
       )}
 
       <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-        <Card style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-          {/* Select Asset */}
-          <div>
-            <label style={{ fontSize: "12px", fontWeight: 700, color: "#FFFFFF", display: "block", marginBottom: "6px" }}>
-              Select Faulty Asset / Station
-            </label>
-            <select
-              value={assetId}
-              onChange={(e) => setAssetId(e.target.value)}
-              className="input-field"
-              style={{ width: "100%" }}
-            >
-              {assets.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.name} ({a.id}) - Health {a.health}%
-                </option>
-              ))}
-            </select>
-          </div>
+        <Card style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+          {/* Grid for selectors */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "16px" }}>
+            {/* Select Asset */}
+            <div>
+              <label style={{ fontSize: "12px", fontWeight: 700, color: "#FFFFFF", display: "block", marginBottom: "6px" }}>
+                Select Faulty Asset / Station
+              </label>
+              <select
+                value={assetId}
+                onChange={(e) => setAssetId(e.target.value)}
+                className="input-field"
+                style={{ width: "100%" }}
+              >
+                {assets.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.name} ({a.id}) - Health {a.health}%
+                  </option>
+                ))}
+              </select>
+            </div>
 
-          {/* Downtime Category */}
-          <div>
-            <label style={{ fontSize: "12px", fontWeight: 700, color: "#FFFFFF", display: "block", marginBottom: "6px" }}>
-              Failure Category
-            </label>
-            <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              className="input-field"
-              style={{ width: "100%" }}
-            >
-              <option value="Mechanical Failure">Mechanical Failure</option>
-              <option value="Electrical Failure">Electrical Failure</option>
-              <option value="Cleaning/Sanitation">Cleaning / Sanitation</option>
-              <option value="Tool Changeover">Tool Changeover</option>
-              <option value="Raw Material Shortage">Raw Material Shortage</option>
-              <option value="Quality Deviation Hold">Quality Deviation Hold</option>
-              <option value="Micro-Stop / Jam">Micro-Stop / Bottle Jam</option>
-            </select>
-          </div>
+            {/* Downtime Category */}
+            <div>
+              <label style={{ fontSize: "12px", fontWeight: 700, color: "#FFFFFF", display: "block", marginBottom: "6px" }}>
+                Failure Category
+              </label>
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="input-field"
+                style={{ width: "100%" }}
+              >
+                <option value="Mechanical Failure">Mechanical Failure</option>
+                <option value="Electrical Failure">Electrical Failure</option>
+                <option value="Cleaning/Sanitation">Cleaning / Sanitation</option>
+                <option value="Tool Changeover">Tool Changeover</option>
+                <option value="Raw Material Shortage">Raw Material Shortage</option>
+                <option value="Quality Deviation Hold">Quality Deviation Hold</option>
+                <option value="Micro-Stop / Jam">Micro-Stop / Bottle Jam</option>
+              </select>
+            </div>
 
-          {/* Estimated Duration */}
-          <div>
-            <label style={{ fontSize: "12px", fontWeight: 700, color: "#FFFFFF", display: "block", marginBottom: "6px" }}>
-              Estimated Duration (Minutes)
-            </label>
-            <input
-              type="number"
-              value={duration}
-              onChange={(e) => setDuration(Math.max(1, parseInt(e.target.value) || 0))}
-              className="input-field"
-              style={{ width: "100%" }}
-              required
-            />
+            {/* Estimated Duration */}
+            <div>
+              <label style={{ fontSize: "12px", fontWeight: 700, color: "#FFFFFF", display: "block", marginBottom: "6px" }}>
+                Estimated Duration (Minutes)
+              </label>
+              <input
+                type="number"
+                value={duration}
+                onChange={(e) => setDuration(Math.max(1, parseInt(e.target.value) || 0))}
+                className="input-field"
+                style={{ width: "100%" }}
+                required
+              />
+            </div>
           </div>
 
           {/* Symptom / Description */}
@@ -150,7 +153,7 @@ export function DowntimeLoss() {
           </div>
         </Card>
 
-        <Button type="submit" variant="danger" icon={Save}>
+        <Button type="submit" variant="danger" icon={Save} style={{ width: "fit-content", padding: "8px 24px" }}>
           Log Downtime Event
         </Button>
       </form>
