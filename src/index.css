@@ -814,3 +814,36 @@ textarea.input-field {
   min-height: 84px;
   line-height: 1.5;
 }
+
+/* Custom Responsive Styles */
+@media (max-width: 768px) {
+  .app-header { padding: 8px 12px !important; gap: 8px !important; }
+  .app-sidebar { z-index: 50 !important; }
+  .header-left-section { gap: 6px !important; }
+  .mobile-menu-toggle { display: flex !important; width: 32px !important; height: 32px !important; margin-right: 0 !important; border-radius: 8px !important; }
+  .header-brand-logo { width: 32px !important; height: 32px !important; border-radius: 8px !important; }
+  .header-brand-logo svg { width: 18px !important; height: 18px !important; }
+  .header-brand-text span { font-size: 14px !important; }
+  .desktop-sidebar-toggle { display: none !important; }
+  .header-subtitle { display: none !important; }
+  .header-search-container { display: none !important; }
+  .header-right-section { gap: 6px !important; }
+  .mobile-search-trigger { display: flex !important; width: 32px !important; height: 32px !important; border-radius: 8px !important; }
+  .header-notification-btn { width: 32px !important; height: 32px !important; border-radius: 8px !important; }
+  .header-fast-action .btn-text { display: none !important; }
+  .header-fast-action { padding: 0 !important; width: 32px !important; height: 32px !important; display: flex !important; align-items: center !important; justify-content: center !important; border-radius: 8px !important; }
+  .header-profile-btn { padding: 2px !important; border-radius: 50% !important; }
+  .header-profile-btn .profile-chevron { display: none !important; }
+  .header-profile-avatar { width: 28px !important; height: 28px !important; font-size: 11px !important; }
+  .grid-2-responsive { grid-template-columns: repeat(1, minmax(0, 1fr)) !important; }
+  .dashboard-grid-layout { grid-template-columns: 1fr !important; }
+}
+
+.dashboard-grid-layout { display: grid; grid-template-columns: 2fr 1fr; gap: 24px; }
+.grid-2-responsive { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+
+@media (max-width: 480px) {
+  .mobile-flex-col { flex-direction: column !important; align-items: stretch !important; }
+  .mobile-flex-col button, .mobile-flex-col .btn { width: 100% !important; }
+}
+
