@@ -21,7 +21,9 @@ export function Reports() {
   const navigate = useNavigate();
   const { addToast } = useApp();
 
-  const [reports] = useState([
+  const [printingId, setPrintingId] = useState(null);
+
+  const reports = [
     {
       id: "REP-01",
       name: "Weekly OEE Loss Waterfall & Financial Impact Report",
@@ -54,14 +56,18 @@ export function Reports() {
       cadence: "Weekly",
       format: "Telemetry Digest"
     }
-  ]);
+  ];
 
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("ALL");
 
-  const handlePrint = (name) => {
-    addToast(`Preparing "${name}" for print / PDF generation...`, "info");
-    window.print();
+  const handlePrint = (rep) => {
+    addToast(`Preparing "${rep.name}" for print / PDF generation...`, "info");
+    setPrintingId(rep.id);
+    setTimeout(() => {
+      window.print();
+      setPrintingId(null);
+    }, 100);
   };
 
   const handleExportCSV = () => {
@@ -107,7 +113,7 @@ export function Reports() {
           </div>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+        <div className="no-print" style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
           <Button variant="secondary" icon={Download} onClick={handleExportCSV} style={{ fontSize: "12px", padding: "7px 12px" }}>
             Export Register
           </Button>
@@ -122,7 +128,7 @@ export function Reports() {
 
       {/* KPI Tickers - 2x2 on mobile, 4 on desktop */}
       <div
-        className="kpi-grid-responsive grid-4"
+        className="kpi-grid-responsive grid-4 no-print"
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
@@ -168,7 +174,7 @@ export function Reports() {
       {/* Structured Reports Table Card */}
       <Card style={{ padding: "18px", minWidth: 0, width: "100%", boxSizing: "border-box" }}>
         {/* Table Toolbar */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "12px" }}>
+        <div className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "12px" }}>
           <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", flex: 1, minWidth: "240px" }}>
             <div style={{ position: "relative", minWidth: "220px", flex: 1 }}>
               <Search size={15} color="var(--text-muted)" style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)" }} />
@@ -215,7 +221,7 @@ export function Reports() {
                 <th style={{ padding: "12px 14px", textAlign: "left", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Cadence</th>
                 <th style={{ padding: "12px 14px", textAlign: "left", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Format</th>
                 <th style={{ padding: "12px 14px", textAlign: "left", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Generated Date</th>
-                <th style={{ padding: "12px 14px", textAlign: "right", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Action</th>
+                <th className="no-print" style={{ padding: "12px 14px", textAlign: "right", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Action</th>
               </tr>
             </thead>
             <tbody>
@@ -224,6 +230,7 @@ export function Reports() {
                   return (
                     <tr
                       key={rep.id}
+                      className={printingId === rep.id ? "print-only" : ""}
                       style={{
                         borderBottom: "1px solid var(--border-subtle)",
                         transition: "background-color 0.12s ease"
@@ -265,12 +272,12 @@ export function Reports() {
                         </span>
                       </td>
 
-                      <td style={{ padding: "12px 14px", textAlign: "right", whiteSpace: "nowrap" }}>
+                      <td className="no-print" style={{ padding: "12px 14px", textAlign: "right", whiteSpace: "nowrap" }}>
                         <Button
                           variant="secondary"
                           size="sm"
                           icon={Printer}
-                          onClick={() => handlePrint(rep.name)}
+                          onClick={() => handlePrint(rep)}
                           style={{ fontSize: "11px", padding: "4px 10px" }}
                         >
                           Print / Export PDF
