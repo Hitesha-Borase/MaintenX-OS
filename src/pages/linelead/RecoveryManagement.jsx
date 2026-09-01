@@ -33,14 +33,12 @@ export function RecoveryManagement() {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "800px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "100%" }}>
       <div>
         <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
           Schedule Recovery Management
         </h1>
-        <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-          Steer schedule deficit countermeasures and speed-up recovery workflows
-        </p>
+
       </div>
 
       {/* Target Deficit Status */}

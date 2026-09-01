@@ -202,6 +202,9 @@ body {
   font-weight: 700;
   letter-spacing: 0.02em;
   text-transform: uppercase;
+  width: fit-content;
+  max-width: max-content;
+  white-space: nowrap;
 }
 
 .badge-emerald {
@@ -539,4 +542,164 @@ form > button[type="submit"] {
   margin-right: auto !important;
   padding: 8px 24px !important;
   margin-top: 4px;
+}
+
+/* Custom Responsive Styles */
+@media (max-width: 768px) {
+  .app-header {
+    padding: 8px 12px !important;
+    gap: 8px !important;
+  }
+  .app-sidebar {
+    z-index: 50 !important;
+  }
+  .header-left-section {
+    gap: 6px !important;
+  }
+  .mobile-menu-toggle {
+    display: flex !important;
+    width: 32px !important;
+    height: 32px !important;
+    margin-right: 0 !important;
+    border-radius: 8px !important;
+  }
+  .header-brand-logo {
+    width: 32px !important;
+    height: 32px !important;
+    border-radius: 8px !important;
+  }
+  .header-brand-logo svg {
+    width: 18px !important;
+    height: 18px !important;
+  }
+  .header-brand-text span {
+    font-size: 14px !important;
+  }
+  .desktop-sidebar-toggle {
+    display: none !important;
+  }
+  .header-subtitle {
+    display: none !important;
+  }
+  .header-search-container {
+    display: none !important;
+  }
+  .header-right-section {
+    gap: 6px !important;
+  }
+  .mobile-search-trigger {
+    display: flex !important;
+    width: 32px !important;
+    height: 32px !important;
+    border-radius: 8px !important;
+  }
+  .header-notification-btn {
+    width: 32px !important;
+    height: 32px !important;
+    border-radius: 8px !important;
+  }
+  .header-fast-action .btn-text {
+    display: none !important;
+  }
+  .header-fast-action {
+    padding: 0 !important;
+    width: 32px !important;
+    height: 32px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 8px !important;
+  }
+  .header-profile-btn {
+    padding: 2px !important;
+    border-radius: 50% !important;
+  }
+  .header-profile-btn .profile-chevron {
+    display: none !important;
+  }
+  .header-profile-avatar {
+    width: 28px !important;
+    height: 28px !important;
+    font-size: 11px !important;
+  }
+  .grid-2-responsive {
+    grid-template-columns: repeat(1, minmax(0, 1fr)) !important;
+  }
+  .dashboard-grid-layout {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+.dashboard-grid-layout {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 24px;
+}
+
+.grid-2-responsive {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+@media (max-width: 480px) {
+  .mobile-flex-col {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+  .mobile-flex-col button, .mobile-flex-col .btn {
+    width: 100% !important;
+  }
+}
+
+/* Universal Form Input Styling */
+.input-field,
+input[type="text"],
+input[type="number"],
+input[type="email"],
+input[type="password"],
+input[type="date"],
+select.input-field,
+textarea.input-field {
+  width: 100%;
+  padding: 10px 14px;
+  background-color: #FFFFFF;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md, 10px);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  outline: none;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 2px rgba(70, 45, 15, 0.03);
+}
+
+.input-field:focus,
+input[type="text"]:focus,
+input[type="number"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+input[type="date"]:focus,
+select.input-field:focus,
+textarea.input-field:focus {
+  border-color: var(--border-active, #C89547) !important;
+  box-shadow: 0 0 0 3px rgba(200, 149, 71, 0.18) !important;
+}
+
+select.input-field {
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236B5B4E' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 14px;
+  padding-right: 36px;
+}
+
+textarea.input-field {
+  resize: vertical;
+  min-height: 84px;
+  line-height: 1.5;
 }

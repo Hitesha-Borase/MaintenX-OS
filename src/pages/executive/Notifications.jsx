@@ -20,14 +20,12 @@ export function Notifications() {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "800px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%" }}>
       <div>
         <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
           Executive Notifications
         </h1>
-        <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-          SLA warnings, material costing variance excursions, and critical supply chain updates
-        </p>
+
       </div>
 
       {notifications.length === 0 ? (

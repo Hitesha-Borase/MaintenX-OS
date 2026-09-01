@@ -31,7 +31,8 @@ import {
   X,
   LogOut,
   Settings as SettingsIcon,
-  RefreshCw
+  RefreshCw,
+  Menu
 } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { useRole } from "../../context/RoleContext";
@@ -55,6 +56,8 @@ export function Header() {
     setIsQuickActionOpen,
     sidebarCollapsed,
     setSidebarCollapsed,
+    mobileMenuOpen,
+    setMobileMenuOpen,
     addToast
   } = useApp();
 
@@ -215,8 +218,31 @@ export function Header() {
   return (
     <header className="app-header" style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 24px", position: "sticky", top: 0, zIndex: 40, backdropFilter: "blur(14px)", backgroundColor: "var(--bg-header)", borderBottom: "1px solid var(--border-subtle)", gap: "16px" }}>
       {/* Far Left: Branding Logo & Sidebar Collapse Toggle */}
-      <div style={{ display: "flex", alignItems: "center", gap: "10px", flexShrink: 0 }}>
+      <div className="header-left-section" style={{ display: "flex", alignItems: "center", gap: "10px", flexShrink: 0 }}>
+        {/* Mobile Hamburger Menu Toggle */}
+        <button
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          className="mobile-menu-toggle"
+          style={{
+            width: "36px",
+            height: "36px",
+            borderRadius: "10px",
+            backgroundColor: "var(--bg-card-subtle)",
+            border: "1px solid var(--border-subtle)",
+            display: "none",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            color: "var(--text-secondary)",
+            marginRight: "4px"
+          }}
+          title="Toggle Navigation Menu"
+        >
+          <Menu size={18} />
+        </button>
+
         <div
+          className="header-brand-logo"
           style={{
             width: "36px",
             height: "36px",
@@ -232,11 +258,11 @@ export function Header() {
         >
           <Flame size={20} />
         </div>
-        <div style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
+        <div className="header-brand-text" style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
           <span style={{ fontSize: "15px", fontWeight: 900, letterSpacing: "-0.2px", color: "var(--text-primary)", lineHeight: 1, marginBottom: "4px", whiteSpace: "nowrap" }}>
             MaintenX <span style={{ color: "#B27E33" }}>OS</span>
           </span>
-          <span style={{ fontSize: "10px", color: "var(--text-muted)", letterSpacing: "0.08em", textTransform: "uppercase", fontWeight: 700, lineHeight: 1, whiteSpace: "nowrap" }}>
+          <span className="header-subtitle" style={{ fontSize: "10px", color: "var(--text-muted)", letterSpacing: "0.08em", textTransform: "uppercase", fontWeight: 700, lineHeight: 1, whiteSpace: "nowrap" }}>
             Manufacturing Cloud
           </span>
         </div>
@@ -244,6 +270,7 @@ export function Header() {
         {/* Sidebar Collapse Button */}
         <button
           onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+          className="desktop-sidebar-toggle"
           style={{
             width: "32px",
             height: "32px",
@@ -268,6 +295,7 @@ export function Header() {
       {/* Center Space: Live Interactive Global Search Bar */}
       <div
         ref={searchContainerRef}
+        className="header-search-container"
         style={{
           display: "flex",
           alignItems: "center",
@@ -485,10 +513,33 @@ export function Header() {
       </div>
 
       {/* Far Right: Notification & Profile Button */}
-      <div style={{ display: "flex", alignItems: "center", gap: "10px", flexShrink: 0 }}>
+      <div className="header-right-section" style={{ display: "flex", alignItems: "center", gap: "10px", flexShrink: 0 }}>
+        {/* Mobile Search Trigger */}
+        <button
+          onClick={() => setIsSearchOpen(true)}
+          className="mobile-search-trigger"
+          style={{
+            width: "36px",
+            height: "36px",
+            borderRadius: "10px",
+            backgroundColor: "#FFFFFF",
+            border: "1px solid var(--border-subtle)",
+            display: "none",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            color: "#6B5B4E",
+            boxShadow: "0 1px 3px rgba(70, 45, 15, 0.04)"
+          }}
+          title="Search System"
+        >
+          <Search size={16} />
+        </button>
+
         {/* Notification Bell */}
         <button
           onClick={() => addToast("1 New PM Task Alert for Line 1", "info")}
+          className="header-notification-btn"
           style={{
             width: "36px",
             height: "36px",
@@ -533,8 +584,9 @@ export function Header() {
           size="sm"
           icon={Plus}
           onClick={() => setIsQuickActionOpen(true)}
+          className="header-fast-action"
         >
-          Fast Action
+          <span className="btn-text">Fast Action</span>
         </Button>
 
         {/* SLEEK PROFILE AVATAR BUTTON & DROPDOWN */}
@@ -544,6 +596,7 @@ export function Header() {
               setShowProfileMenu(!showProfileMenu);
               setShowRoleSubmenu(false);
             }}
+            className="header-profile-btn"
             style={{
               display: "flex",
               alignItems: "center",
@@ -559,6 +612,7 @@ export function Header() {
             title="User Profile & Settings"
           >
             <div
+              className="header-profile-avatar"
               style={{
                 width: "28px",
                 height: "28px",
@@ -575,7 +629,7 @@ export function Header() {
             >
               {currentRole?.label?.charAt(0) || "U"}
             </div>
-            <ChevronDown size={14} color="#B27E33" style={{ transform: showProfileMenu ? "rotate(180deg)" : "none", transition: "transform 0.15s ease" }} />
+            <ChevronDown className="profile-chevron" size={14} color="#B27E33" style={{ transform: showProfileMenu ? "rotate(180deg)" : "none", transition: "transform 0.15s ease" }} />
           </button>
 
           {/* PROFILE & LOGOUT DROPDOWN MENU */}

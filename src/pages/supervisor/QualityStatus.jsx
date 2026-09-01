@@ -15,9 +15,7 @@ export function QualityStatus() {
         <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
           Departmental QA Status
         </h1>
-        <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-          Operations overview of active line quality control points (CCPs)
-        </p>
+
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>

@@ -12,16 +12,14 @@ export function Reports() {
   ];
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "800px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%" }}>
       <div>
         <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
           Executive Reports Portfolio
         </h1>
-        <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-          Access standard costing variance models, OEE waterlines, and CI savings realizations
-        </p>
+
       </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+      <div className="grid-2">
         {reports.map((rep, idx) => (
           <Card key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>

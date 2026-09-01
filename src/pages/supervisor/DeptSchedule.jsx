@@ -27,9 +27,7 @@ export function DeptSchedule() {
         <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
           Department Run Schedule
         </h1>
-        <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-          Authorize and oversee active shift line schedules across the plant
-        </p>
+
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>

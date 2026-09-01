@@ -18,15 +18,13 @@ export function CustomerDemand() {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "1000px" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%" }}>
+      <div className="mobile-flex-col" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "16px" }}>
         <div>
           <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
             Customer Demand Analytics
           </h1>
-          <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-            Total backlog volume, incoming orders, and production supply alignment
-          </p>
+
         </div>
         <Button variant="secondary" icon={RefreshCw} onClick={handleSyncDemand} style={{ animation: demandSyncing ? "spin 1s linear infinite" : "none" }}>
           Sync Forecast
@@ -47,15 +45,15 @@ export function CustomerDemand() {
             { customer: "Walmart Stores", product: "Apple Juice 500ML", qty: "8,500 Cases", due: "2026-09-06", status: "Staged" },
             { customer: "Target Corp", product: "Apple Juice 1L", qty: "6,200 Cases", due: "2026-09-08", status: "Pending Reserve" }
           ].map((item, idx) => (
-            <div key={idx} style={{ padding: "10px 12px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div key={idx} className="mobile-flex-col" style={{ padding: "10px 12px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)", display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "12px" }}>
               <div>
                 <span style={{ fontSize: "13px", fontWeight: 700, color: "#FFFFFF" }}>{item.customer}</span>
-                <div style={{ display: "flex", gap: "15px", marginTop: "4px", fontSize: "12px", color: "var(--text-secondary)" }}>
+                <div style={{ display: "flex", gap: "15px", marginTop: "4px", fontSize: "12px", color: "var(--text-secondary)", flexWrap: "wrap" }}>
                   <span>Product: {item.product}</span>
                   <span>Due: {item.due}</span>
                 </div>
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
                 <span style={{ fontSize: "13px", fontWeight: 700, color: "#FFFFFF" }}>{item.qty}</span>
                 <span style={{ fontSize: "12px", color: "#38BDF8", fontWeight: 600 }}>{item.status}</span>
               </div>

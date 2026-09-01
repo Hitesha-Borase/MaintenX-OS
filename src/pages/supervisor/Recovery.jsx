@@ -26,9 +26,7 @@ export function Recovery() {
         <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
           Departmental Recovery Steering
         </h1>
-        <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-          Authorize crew reallocation or line speed tunes to offset shift OEE deficits
-        </p>
+
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>

@@ -18,15 +18,13 @@ export function MaterialCost() {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "1000px" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%" }}>
+      <div className="mobile-flex-col" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "16px" }}>
         <div>
           <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
             Material & Packaging Costs
           </h1>
-          <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-            Monitor raw ingredient and packaging standard pricing vs actual procurement pricing
-          </p>
+
         </div>
         <Button variant="secondary" icon={RefreshCw} onClick={handleUpdateContracts}>
           Update Contract Rates

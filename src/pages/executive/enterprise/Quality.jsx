@@ -14,15 +14,13 @@ export function Quality() {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "1000px" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%" }}>
+      <div className="mobile-flex-col" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "16px" }}>
         <div>
           <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
             Enterprise Quality & Compliance
           </h1>
-          <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-            Quality holds, CCP non-conformances, and First-Pass Yield (FPY) across facilities
-          </p>
+
         </div>
         <Button variant="secondary" icon={ShieldCheck} onClick={handleAudit}>
           Trigger QA Audit
@@ -44,9 +42,9 @@ export function Quality() {
             { plant: "Chicago East Plant", fpy: "96.2%", holds: 1, ccpEvents: 0, compliance: "100%" },
             { plant: "Boston Logistics Hub", fpy: "99.1%", holds: 0, ccpEvents: 0, compliance: "100%" }
           ].map((item, idx) => (
-            <div key={idx} style={{ padding: "10px 12px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div key={idx} className="mobile-flex-col" style={{ padding: "10px 12px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px" }}>
               <span style={{ fontSize: "13px", fontWeight: 700, color: "#FFFFFF" }}>{item.plant}</span>
-              <div style={{ display: "flex", gap: "20px", fontSize: "12px", color: "var(--text-secondary)" }}>
+              <div style={{ display: "flex", gap: "20px", fontSize: "12px", color: "var(--text-secondary)", flexWrap: "wrap" }}>
                 <span>FPY: <strong style={{ color: "#10B981" }}>{item.fpy}</strong></span>
                 <span>Holds: <strong style={{ color: item.holds > 0 ? "#EF4444" : "var(--text-secondary)" }}>{item.holds}</strong></span>
                 <span>CCP Excursions: <strong>{item.ccpEvents}</strong></span>

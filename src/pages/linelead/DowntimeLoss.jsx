@@ -38,9 +38,7 @@ export function DowntimeLoss() {
         <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
           Shift Downtime & Loss Logs
         </h1>
-        <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-          Track active line breakdown events and trigger maintenance dispatches
-        </p>
+
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>

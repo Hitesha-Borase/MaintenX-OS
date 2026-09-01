@@ -20,14 +20,12 @@ export function CISavings() {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "1000px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%" }}>
       <div>
         <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
           Continuous Improvement (CI) Savings
         </h1>
-        <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-          Track realized cost savings across certified Kaizen and Six Sigma project actions
-        </p>
+
       </div>
 
       <div className="grid-3">
@@ -40,15 +38,15 @@ export function CISavings() {
         <h3 style={{ fontSize: "14px", fontWeight: 700, color: "#FFFFFF", marginBottom: "16px" }}>CI Savings Portfolio</h3>
         <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
           {savingProjects.map((p, idx) => (
-            <div key={idx} style={{ padding: "12px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div key={idx} className="mobile-flex-col" style={{ padding: "12px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)", display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "12px" }}>
               <div>
                 <span style={{ fontSize: "13px", fontWeight: 700, color: "#FFFFFF" }}>{p.id}: {p.title}</span>
-                <div style={{ display: "flex", gap: "15px", marginTop: "4px", fontSize: "12px", color: "var(--text-secondary)" }}>
+                <div style={{ display: "flex", gap: "15px", marginTop: "4px", fontSize: "12px", color: "var(--text-secondary)", flexWrap: "wrap" }}>
                   <span>Projected: {p.projected}</span>
                   <span>Actual Realized: <strong style={{ color: "#10B981" }}>{p.actual}</strong></span>
                 </div>
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
                 <Badge variant={p.status === "Verified" ? "emerald" : "warning"}>{p.status}</Badge>
                 {p.status === "Pending Verification" && (
                   <Button variant="success" size="xs" icon={Award} onClick={() => handleVerify(p.id)}>
