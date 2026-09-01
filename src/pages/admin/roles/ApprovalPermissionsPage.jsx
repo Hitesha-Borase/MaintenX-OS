@@ -5,11 +5,14 @@ import {
   Lock,
   Edit2,
   FileCheck,
-  AlertTriangle
+  AlertTriangle,
+  Layers,
+  FileSpreadsheet
 } from "lucide-react";
 import { Card } from "../../../components/common/Card";
 import { Badge } from "../../../components/common/Badge";
 import { Button } from "../../../components/common/Button";
+import { StatCard } from "../../../components/common/StatCard";
 import { useApp } from "../../../context/AppContext";
 
 export function ApprovalPermissionsPage() {
@@ -23,26 +26,64 @@ export function ApprovalPermissionsPage() {
   ]);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%", maxWidth: "1200px", margin: "0 auto", minWidth: 0 }}>
       {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
-        <div>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px", width: "100%" }}>
+        <div style={{ minWidth: "240px", flex: 1 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+            <h1 style={{ fontSize: "clamp(18px, 4vw, 24px)", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.3px", lineHeight: 1.2 }}>
               High-Value Electronic Approval Governance
             </h1>
-            <Badge variant="emerald">Dual E-Signature Rules</Badge>
+            <Badge variant="emerald">DUAL E-SIGNATURE RULES</Badge>
           </div>
-          <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>
-            Mandatory dual-authorization policies, regulatory electronic sign-off thresholds, and compliance workflows.
-          </p>
         </div>
       </div>
 
+      {/* KPI Tickers - 2x2 on mobile, 4 on desktop */}
+      <div
+        className="kpi-grid-responsive grid-4"
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+          gap: "12px",
+          width: "100%",
+          minWidth: 0
+        }}
+      >
+        <StatCard
+          title="Approval Gates"
+          value={approvalRules.length.toString()}
+          unit="Active Gates"
+          icon={FileCheck}
+          colorVariant="emerald"
+        />
+        <StatCard
+          title="Regulatory Standard"
+          value="21 CFR Part 11"
+          unit="Compliant"
+          icon={ShieldCheck}
+          colorVariant="cyan"
+        />
+        <StatCard
+          title="Dual Sign-offs"
+          value="3"
+          unit="High-Value Rules"
+          icon={Lock}
+          colorVariant="amber"
+        />
+        <StatCard
+          title="Enforcement Rate"
+          value="100%"
+          unit="Strict"
+          icon={CheckCircle2}
+          colorVariant="emerald"
+        />
+      </div>
+
       {/* Rules Table */}
-      <Card>
-        <div className="data-table-container">
-          <table className="data-table">
+      <Card style={{ padding: "18px", minWidth: 0, width: "100%", boxSizing: "border-box" }}>
+        <div className="data-table-container" style={{ width: "100%", overflowX: "auto", WebkitOverflowScrolling: "touch", display: "block" }}>
+          <table className="data-table" style={{ width: "100%", minWidth: "680px" }}>
             <thead>
               <tr>
                 <th>Rule ID</th>
@@ -56,19 +97,19 @@ export function ApprovalPermissionsPage() {
               {approvalRules.map((a) => (
                 <tr key={a.id}>
                   <td>
-                    <span style={{ fontWeight: 700, color: "#38BDF8", fontFamily: "var(--font-mono)" }}>{a.id}</span>
+                    <span style={{ fontWeight: 800, color: "#8C5B23", fontFamily: "var(--font-mono)" }}>{a.id}</span>
                   </td>
                   <td>
-                    <strong style={{ color: "#FFFFFF" }}>{a.event}</strong>
+                    <strong style={{ color: "var(--text-primary)" }}>{a.event}</strong>
                   </td>
                   <td>
-                    <Badge variant="cyan">{a.tier}</Badge>
+                    <Badge variant="amber">{a.tier}</Badge>
                   </td>
+                  <td style={{ fontSize: "12px", color: "var(--text-secondary)", fontWeight: 600 }}>{a.authorizedRoles}</td>
                   <td>
-                    <span style={{ fontSize: "12px", color: "var(--text-primary)" }}>{a.authorizedRoles}</span>
-                  </td>
-                  <td>
-                    <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>{a.compliance}</span>
+                    <span style={{ fontSize: "11px", backgroundColor: "rgba(5, 150, 105, 0.1)", color: "#059669", padding: "4px 8px", borderRadius: "4px", fontWeight: 700 }}>
+                      {a.compliance}
+                    </span>
                   </td>
                 </tr>
               ))}

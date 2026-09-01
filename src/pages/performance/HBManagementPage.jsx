@@ -1,16 +1,17 @@
 import React, { useState } from "react";
 import {
   Clock,
-  Plus,
   TrendingUp,
   TrendingDown,
+  Gauge,
+  Layers,
+  Plus,
   CheckCircle2,
   AlertTriangle,
   Download,
+  Filter,
   X,
-  Gauge,
-  Layers,
-  Wrench
+  ArrowRight
 } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { Badge } from "../../components/common/Badge";
@@ -22,21 +23,21 @@ export function HBManagementPage() {
   const { addToast } = useApp();
 
   const [hourlyLogs, setHourlyLogs] = useState([
-    { id: 1, hour: "06:00 - 07:00", target: 4000, actual: 4120, delta: 120, cumDelta: 120, reason: "Nominal steady state", action: "None" },
-    { id: 2, hour: "07:00 - 08:00", target: 4000, actual: 3950, delta: -50, cumDelta: 70, reason: "Label reel splice pause", action: "Reel pre-staging verified" },
-    { id: 3, hour: "08:00 - 09:00", target: 4000, actual: 4080, delta: 80, cumDelta: 150, reason: "Speed increased to 102%", action: "Maintain pace" },
-    { id: 4, hour: "09:00 - 10:00", target: 4000, actual: 3400, delta: -600, cumDelta: -450, reason: "Scheduled CIP line flush", action: "CIP completed in 22 mins" },
-    { id: 5, hour: "10:00 - 11:00", target: 4000, actual: 4200, delta: 200, cumDelta: -250, reason: "Recovery run-rate enabled", action: "Catch-up pace maintained" },
-    { id: 6, hour: "11:00 - 12:00", target: 4000, actual: 4150, delta: 150, cumDelta: -100, reason: "Optimal filling performance", action: "On-track" }
+    { id: "HB-01", hour: "06:00 - 07:00", target: 4000, actual: 4050, delta: +50, cumDelta: +50, reason: "Smooth startup", action: "None" },
+    { id: "HB-02", hour: "07:00 - 08:00", target: 4000, actual: 4020, delta: +20, cumDelta: +70, reason: "Optimal pacing", action: "None" },
+    { id: "HB-03", hour: "08:00 - 09:00", target: 4000, actual: 3650, delta: -350, cumDelta: -280, reason: "Starwheel infeed bottle jam", action: "Sensor re-calibrated & speed restored" },
+    { id: "HB-04", hour: "09:00 - 10:00", target: 4000, actual: 4180, delta: +180, cumDelta: -100, reason: "Recovery run rate", action: "Operating at 105% nominal speed" },
+    { id: "HB-05", hour: "10:00 - 11:00", target: 4000, actual: 4100, delta: +100, cumDelta: 0, reason: "Balanced flow", action: "None" },
+    { id: "HB-06", hour: "11:00 - 12:00", target: 4000, actual: 3980, delta: -20, cumDelta: -20, reason: "Operator meal transition", action: "Cross-trained coverage active" }
   ]);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newEntry, setNewEntry] = useState({
     hour: "12:00 - 13:00",
     target: 4000,
-    actual: 4100,
-    reason: "",
-    action: ""
+    actual: 4050,
+    reason: "On target",
+    action: "None"
   });
 
   const totalTarget = hourlyLogs.reduce((sum, h) => sum + h.target, 0);
@@ -45,75 +46,81 @@ export function HBManagementPage() {
 
   const handleAddSubmit = (e) => {
     e.preventDefault();
-    const delta = Number(newEntry.actual) - Number(newEntry.target);
-    const lastCum = hourlyLogs[hourlyLogs.length - 1]?.cumDelta || 0;
+    const delta = newEntry.actual - newEntry.target;
+    const lastCum = hourlyLogs.length > 0 ? hourlyLogs[hourlyLogs.length - 1].cumDelta : 0;
     const cumDelta = lastCum + delta;
 
     const entry = {
-      id: Date.now(),
+      id: `HB-0${hourlyLogs.length + 1}`,
       hour: newEntry.hour,
       target: Number(newEntry.target),
       actual: Number(newEntry.actual),
       delta,
       cumDelta,
-      reason: newEntry.reason || "Normal production",
-      action: newEntry.action || "Standard monitoring"
+      reason: newEntry.reason || "Nominal run",
+      action: newEntry.action || "None"
     };
 
     setHourlyLogs([...hourlyLogs, entry]);
-    addToast(`H/B entry for ${newEntry.hour} logged successfully!`, "success");
+    addToast(`Hourly pitch record logged (${entry.hour})!`, "success");
     setIsModalOpen(false);
   };
 
   const handleExportCSV = () => {
-    const headers = "Time Window,Target (units),Actual (units),Hourly Delta,Cumulative Delta,Root Cause / Reason,Corrective Action\n";
+    const headers = "Pitch ID,Hour Window,Target,Actual,Delta,Cumulative Delta,Reason,Action\n";
     const rows = hourlyLogs
-      .map((h) => `"${h.hour}",${h.target},${h.actual},${h.delta},${h.cumDelta},"${h.reason}","${h.action}"`)
+      .map((h) => `"${h.id}","${h.hour}",${h.target},${h.actual},${h.delta},${h.cumDelta},"${h.reason}","${h.action}"`)
       .join("\n");
     const blob = new Blob([headers + rows], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `Hour_By_Hour_Pacing_${new Date().toISOString().substring(0, 10)}.csv`;
+    a.download = `Hour_By_Hour_Pitch_${new Date().toISOString().substring(0, 10)}.csv`;
     a.click();
-    addToast("Hour-by-Hour report exported to CSV.", "info");
+    addToast("Hour-by-hour tracking exported to CSV.", "info");
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%", maxWidth: "1200px", margin: "0 auto", minWidth: 0 }}>
       {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
-        <div>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px", width: "100%" }}>
+        <div style={{ minWidth: "240px", flex: 1 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+            <h1 style={{ fontSize: "clamp(18px, 4vw, 24px)", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.3px", lineHeight: 1.2 }}>
               Hour-by-Hour (H/B) Pacing Management
             </h1>
-            <Badge variant="cyan">Shift A Active Board</Badge>
+            <Badge variant="cyan">SHIFT A ACTIVE BOARD</Badge>
           </div>
-          <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>
-            Granular hourly pitch monitoring, short-interval control (SIC), pace variances, and shop-floor countermeasures.
-          </p>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-          <Button variant="secondary" icon={Download} onClick={handleExportCSV}>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+          <Button variant="secondary" icon={Download} onClick={handleExportCSV} style={{ fontSize: "12px", padding: "7px 12px" }}>
             Export H/B Board
           </Button>
-          <Button variant="primary" icon={Plus} onClick={() => setIsModalOpen(true)}>
+          <Button variant="primary" icon={Plus} onClick={() => setIsModalOpen(true)} style={{ fontSize: "12px", padding: "7px 12px" }}>
             + Log Hour Pitch
           </Button>
         </div>
       </div>
 
-      {/* KPI Tickers */}
-      <div className="grid-4" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px" }}>
+      {/* KPI Tickers - 2x2 on mobile, 4 on desktop */}
+      <div
+        className="kpi-grid-responsive grid-4"
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+          gap: "12px",
+          width: "100%",
+          minWidth: 0
+        }}
+      >
         <StatCard
           title="Shift Target Output"
           value={totalTarget.toLocaleString()}
           unit="Units"
           trend={{ value: "Planned Shift Run", isPositive: true, text: "" }}
           icon={Clock}
-          colorVariant="blue"
+          colorVariant="cyan"
         />
         <StatCard
           title="Actual Output (YTD)"
@@ -142,20 +149,16 @@ export function HBManagementPage() {
       </div>
 
       {/* Main H/B Table */}
-      <Card>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-          <div>
-            <h3 style={{ fontSize: "15px", fontWeight: 700, color: "var(--text-primary)" }}>
-              Short-Interval Hourly Pitch Log (Line 1 Aseptic)
-            </h3>
-            <p style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-              Hour-by-hour output, delta vs plan, root cause of loss, and shop-floor recovery actions
-            </p>
-          </div>
+      <Card style={{ padding: "18px", minWidth: 0, width: "100%", boxSizing: "border-box" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px", flexWrap: "wrap", gap: "8px" }}>
+          <h3 style={{ fontSize: "15px", fontWeight: 800, color: "var(--text-primary)" }}>
+            Short-Interval Hourly Pitch Log (Line 1 Aseptic)
+          </h3>
+          <Badge variant="emerald">{hourlyLogs.length} RECORDED PITCHES</Badge>
         </div>
 
-        <div className="data-table-container">
-          <table className="data-table">
+        <div className="data-table-container" style={{ width: "100%", overflowX: "auto", WebkitOverflowScrolling: "touch", display: "block" }}>
+          <table className="data-table" style={{ width: "100%", minWidth: "680px" }}>
             <thead>
               <tr>
                 <th>Time Window</th>
@@ -171,23 +174,23 @@ export function HBManagementPage() {
               {hourlyLogs.map((h) => (
                 <tr key={h.id}>
                   <td>
-                    <div style={{ fontWeight: 700, color: "#FFFFFF" }}>{h.hour}</div>
+                    <div style={{ fontWeight: 700, color: "var(--text-primary)" }}>{h.hour}</div>
                   </td>
                   <td style={{ fontFamily: "var(--font-mono)" }}>{h.target.toLocaleString()}</td>
                   <td style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--text-primary)" }}>
                     {h.actual.toLocaleString()}
                   </td>
-                  <td style={{ fontFamily: "var(--font-mono)", fontWeight: 800, color: h.delta >= 0 ? "#10B981" : "#EF4444" }}>
+                  <td style={{ fontFamily: "var(--font-mono)", fontWeight: 800, color: h.delta >= 0 ? "#059669" : "#DC2626" }}>
                     {h.delta >= 0 ? `+${h.delta}` : h.delta}
                   </td>
-                  <td style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: h.cumDelta >= 0 ? "#10B981" : "#F59E0B" }}>
+                  <td style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: h.cumDelta >= 0 ? "#059669" : "#D97706" }}>
                     {h.cumDelta >= 0 ? `+${h.cumDelta}` : h.cumDelta}
                   </td>
                   <td style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
                     {h.reason}
                   </td>
                   <td>
-                    <span style={{ fontSize: "11px", backgroundColor: "var(--bg-surface)", padding: "4px 8px", borderRadius: "4px", color: "#38BDF8", border: "1px solid var(--border-subtle)" }}>
+                    <span style={{ fontSize: "11px", backgroundColor: "var(--bg-card-subtle)", padding: "4px 8px", borderRadius: "4px", color: "#8C5B23", border: "1px solid var(--border-subtle)", fontWeight: 600 }}>
                       {h.action}
                     </span>
                   </td>
@@ -200,10 +203,10 @@ export function HBManagementPage() {
 
       {/* MODAL: ADD HOURLY LOG */}
       {isModalOpen && (
-        <div className="modal-backdrop">
-          <div className="modal-content" style={{ maxWidth: "480px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-              <h2 style={{ fontSize: "18px", fontWeight: 800, color: "var(--text-primary)" }}>
+        <div className="modal-backdrop" onClick={() => setIsModalOpen(false)}>
+          <div className="modal-content" style={{ maxWidth: "480px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+              <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)" }}>
                 Record Hour-by-Hour Pitch
               </h2>
               <button onClick={() => setIsModalOpen(false)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
@@ -211,7 +214,7 @@ export function HBManagementPage() {
               </button>
             </div>
 
-            <form onSubmit={handleAddSubmit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+            <form onSubmit={handleAddSubmit} style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
               <div>
                 <label className="form-label">Time Window *</label>
                 <input
@@ -220,6 +223,7 @@ export function HBManagementPage() {
                   value={newEntry.hour}
                   onChange={(e) => setNewEntry({ ...newEntry, hour: e.target.value })}
                   className="form-input"
+                  style={{ backgroundColor: "#FFFFFF" }}
                 />
               </div>
 
@@ -231,6 +235,7 @@ export function HBManagementPage() {
                     value={newEntry.target}
                     onChange={(e) => setNewEntry({ ...newEntry, target: Number(e.target.value) })}
                     className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
                   />
                 </div>
 
@@ -242,6 +247,7 @@ export function HBManagementPage() {
                     value={newEntry.actual}
                     onChange={(e) => setNewEntry({ ...newEntry, actual: Number(e.target.value) })}
                     className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
                   />
                 </div>
               </div>
@@ -254,6 +260,7 @@ export function HBManagementPage() {
                   value={newEntry.reason}
                   onChange={(e) => setNewEntry({ ...newEntry, reason: e.target.value })}
                   className="form-input"
+                  style={{ backgroundColor: "#FFFFFF" }}
                 />
               </div>
 
@@ -265,10 +272,11 @@ export function HBManagementPage() {
                   value={newEntry.action}
                   onChange={(e) => setNewEntry({ ...newEntry, action: e.target.value })}
                   className="form-input"
+                  style={{ backgroundColor: "#FFFFFF" }}
                 />
               </div>
 
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px" }}>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
                 <Button variant="secondary" onClick={() => setIsModalOpen(false)}>
                   Cancel
                 </Button>

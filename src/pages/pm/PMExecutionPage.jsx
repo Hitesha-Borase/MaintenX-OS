@@ -146,9 +146,6 @@ export function PMExecutionPage() {
             </h1>
             <Badge variant="cyan">Standardized Verification</Badge>
           </div>
-          <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>
-            Perform guided preventive inspections, record numeric sensor limits, and trigger automated corrective work orders.
-          </p>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>

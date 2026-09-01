@@ -263,9 +263,9 @@ export function Sidebar() {
           style={{
             position: "fixed",
             inset: 0,
-            backgroundColor: "rgba(43, 29, 17, 0.4)",
+            backgroundColor: "rgba(43, 29, 17, 0.45)",
             backdropFilter: "blur(4px)",
-            zIndex: 45
+            zIndex: 998
           }}
         />
       )}
@@ -278,7 +278,6 @@ export function Sidebar() {
           display: "flex",
           flexDirection: "column",
           justifyContent: "space-between",
-          zIndex: 50,
           backgroundColor: "var(--bg-sidebar)",
           borderRight: "1px solid var(--border-subtle)"
         }}

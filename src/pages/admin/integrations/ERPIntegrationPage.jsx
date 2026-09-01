@@ -40,9 +40,6 @@ export function ERPIntegrationPage() {
               SAP S/4HANA CONNECTED
             </Badge>
           </div>
-          <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>
-            Bi-directional synchronization of production orders, inventory consumption, purchase requisitions, and finished goods receipts.
-          </p>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
