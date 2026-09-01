@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   FileSpreadsheet,
@@ -19,6 +19,8 @@ import { useApp } from "../../context/AppContext";
 export function Reports() {
   const navigate = useNavigate();
   const { addToast } = useApp();
+
+  const [printingId, setPrintingId] = useState(null);
 
   const reports = [
     {
@@ -47,9 +49,13 @@ export function Reports() {
     }
   ];
 
-  const handlePrint = (name) => {
-    addToast(`Preparing "${name}" for print / PDF generation...`, "info");
-    window.print();
+  const handlePrint = (rep) => {
+    addToast(`Preparing "${rep.name}" for print / PDF generation...`, "info");
+    setPrintingId(rep.id);
+    setTimeout(() => {
+      window.print();
+      setPrintingId(null);
+    }, 100);
   };
 
   const handleExportCSV = () => {
@@ -139,6 +145,7 @@ export function Reports() {
         {reports.map((rep) => (
           <Card
             key={rep.id}
+            className={printingId === rep.id ? "print-only" : ""}
             style={{
               display: "flex",
               justifyContent: "space-between",
@@ -171,9 +178,9 @@ export function Reports() {
               </div>
             </div>
 
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <div className="no-print" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
               <button
-                onClick={() => handlePrint(rep.name)}
+                onClick={() => handlePrint(rep)}
                 style={{
                   padding: "6px 14px",
                   borderRadius: "8px",
