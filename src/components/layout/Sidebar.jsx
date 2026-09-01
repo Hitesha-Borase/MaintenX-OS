@@ -117,6 +117,7 @@ export function Sidebar() {
   const { currentRole, logout, NAVIGATION_CONFIG } = useRole();
   const { sidebarCollapsed, setSidebarCollapsed, mobileMenuOpen, setMobileMenuOpen, addToast } = useApp();
   const location = useLocation();
+  const isCollapsed = sidebarCollapsed && !mobileMenuOpen;
 
   React.useEffect(() => {
     if (mobileMenuOpen) {
@@ -266,6 +267,7 @@ export function Sidebar() {
       {/* Mobile Backdrop */}
       {mobileMenuOpen && (
         <div
+          className="mobile-backdrop-overlay"
           onClick={() => setMobileMenuOpen(false)}
           style={{
             position: "fixed",
@@ -281,9 +283,9 @@ export function Sidebar() {
       )}
 
       <aside
-        className={`app-sidebar ${mobileMenuOpen ? "mobile-open" : ""} ${sidebarCollapsed ? "collapsed" : ""}`}
+        className={`app-sidebar ${mobileMenuOpen ? "mobile-open" : ""} ${isCollapsed ? "collapsed" : ""}`}
         style={{
-          width: sidebarCollapsed ? "68px" : "260px",
+          width: isCollapsed ? "68px" : "260px",
           transition: "width 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
           display: "flex",
           flexDirection: "column",
@@ -615,14 +617,14 @@ export function Sidebar() {
                       >
                         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                           <Layers size={18} color={active ? "#B27E33" : "var(--text-secondary)"} style={{ flexShrink: 0 }} />
-                          {!sidebarCollapsed && <span>{item.group}</span>}
+                          {!isCollapsed && <span>{item.group}</span>}
                         </div>
-                        {!sidebarCollapsed && (
+                        {!isCollapsed && (
                           isGroupOpen ? <ChevronDown size={14} color="var(--text-muted)" /> : <ChevronRight size={14} color="var(--text-muted)" />
                         )}
                       </div>
 
-                      {!sidebarCollapsed && isGroupOpen && (
+                      {!isCollapsed && isGroupOpen && (
                         <div style={{ display: "flex", flexDirection: "column", gap: "2px", marginTop: "2px" }}>
                           {item.items.map((subItem) => {
                             const IconComp = iconMap[subItem.icon] || FileText;
@@ -646,8 +648,8 @@ export function Sidebar() {
                 return (
                   <NavLink key={item.path} to={item.path} end style={navItemStyle} title={item.label}>
                     <IconComp size={18} style={{ flexShrink: 0 }} />
-                    {!sidebarCollapsed && <span>{item.label}</span>}
-                    {!sidebarCollapsed && renderBadge(item.label)}
+                    {!isCollapsed && <span>{item.label}</span>}
+                    {!isCollapsed && renderBadge(item.label)}
                   </NavLink>
                 );
               })
@@ -662,11 +664,11 @@ export function Sidebar() {
             borderTop: "1px solid var(--border-subtle)",
             display: "flex",
             alignItems: "center",
-            justifyContent: sidebarCollapsed ? "center" : "space-between",
+            justifyContent: isCollapsed ? "center" : "space-between",
             backgroundColor: "var(--bg-card-subtle)"
           }}
         >
-          {!sidebarCollapsed ? (
+          {!isCollapsed ? (
             <div style={{ display: "flex", alignItems: "center", gap: "10px", overflow: "hidden" }}>
               <div
                 style={{
