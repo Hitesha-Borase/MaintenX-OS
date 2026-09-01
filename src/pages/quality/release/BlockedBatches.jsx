@@ -1,15 +1,33 @@
-import React from "react";
+import React, { useState } from "react";
 import { Card } from "../../../components/common/Card";
 import { Badge } from "../../../components/common/Badge";
 import { AlertOctagon } from "lucide-react";
+import { useApp } from "../../../context/AppContext";
 
 export function BlockedBatches() {
-  const holds = [
-    { batch: "BAT-2026-0890", reason: "CCP Pasteurizer temp excursion to 82.9°C", blockedBy: "Maria Santos (QA Lead)", date: "2026-08-31" }
-  ];
+  const { addToast } = useApp();
+
+  const [holds, setHolds] = useState([
+    { id: 1, batch: "BAT-2026-0890", reason: "CCP Pasteurizer temp excursion to 82.9°C", blockedBy: "Maria Santos (QA Lead)", date: "2026-08-31", status: "HOLD" }
+  ]);
+
+  const handleToggleStatus = (id, currentStatus) => {
+    setHolds(prev => prev.map(h => {
+      if (h.id === id) {
+        if (currentStatus === "HOLD") {
+          addToast(`Batch ${h.batch} RELEASED.`, "success");
+          return { ...h, status: "RELEASED" };
+        } else {
+          addToast(`Batch ${h.batch} placed on HOLD.`, "warning");
+          return { ...h, status: "HOLD" };
+        }
+      }
+      return h;
+    }));
+  };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "24px", maxWidth: "900px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "24px", maxWidth: "100%" }}>
       <div>
         <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)" }}>
           Blocked / Quality HOLD Batches
@@ -20,9 +38,9 @@ export function BlockedBatches() {
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-        {holds.map((h, idx) => (
+        {holds.map((h) => (
           <Card 
-            key={idx} 
+            key={h.id} 
             style={{ 
               display: "flex", 
               justifyContent: "space-between", 
@@ -38,7 +56,14 @@ export function BlockedBatches() {
                 <span style={{ fontSize: "14px", color: "var(--text-secondary)", fontWeight: 500 }}>
                   Reason: {h.reason} &bull; Blocked by: {h.blockedBy} &bull; {h.date}
                 </span>
-                <Badge variant="slate">HOLD</Badge>
+                <div 
+                  style={{ cursor: "pointer", transition: "opacity 0.2s" }}
+                  onClick={() => handleToggleStatus(h.id, h.status)}
+                  onMouseOver={(e) => e.currentTarget.style.opacity = 0.8}
+                  onMouseOut={(e) => e.currentTarget.style.opacity = 1}
+                >
+                  <Badge variant={h.status === "HOLD" ? "slate" : "emerald"}>{h.status}</Badge>
+                </div>
               </div>
             </div>
           </Card>

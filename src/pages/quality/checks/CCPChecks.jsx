@@ -1,15 +1,33 @@
-import React from "react";
+import React, { useState } from "react";
 import { Card } from "../../../components/common/Card";
 import { Badge } from "../../../components/common/Badge";
 import { ShieldCheck } from "lucide-react";
+import { useApp } from "../../../context/AppContext";
 
 export function CCPChecks() {
-  const ccps = [
-    { name: "Pasteurizer HTST Critical Limit temperature", target: ">83.1°C", actual: "83.5°C", status: "PASS" }
-  ];
+  const { addToast } = useApp();
+
+  const [ccps, setCcps] = useState([
+    { id: 1, name: "Pasteurizer HTST Critical Limit temperature", target: ">83.1°C", actual: "83.5°C", status: "PASS" }
+  ]);
+
+  const handleToggleStatus = (id, currentStatus) => {
+    setCcps(prev => prev.map(c => {
+      if (c.id === id) {
+        if (currentStatus === "PASS") {
+          addToast(`${c.name} marked as FAIL.`, "error");
+          return { ...c, status: "FAIL" };
+        } else {
+          addToast(`${c.name} marked as PASS.`, "success");
+          return { ...c, status: "PASS" };
+        }
+      }
+      return c;
+    }));
+  };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "800px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "100%" }}>
       <div style={{ marginBottom: "8px" }}>
         <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>
           Critical Control Point (CCP) Checks
@@ -20,9 +38,9 @@ export function CCPChecks() {
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-        {ccps.map((c, idx) => (
+        {ccps.map((c) => (
           <Card 
-            key={idx} 
+            key={c.id} 
             style={{ 
               display: "flex", 
               justifyContent: "space-between", 
@@ -43,8 +61,13 @@ export function CCPChecks() {
                 </span>
               </div>
             </div>
-            <div style={{ display: "flex", alignItems: "center" }}>
-              <Badge variant="emerald">{c.status}</Badge>
+            <div 
+              style={{ display: "flex", alignItems: "center", cursor: "pointer", transition: "opacity 0.2s" }}
+              onClick={() => handleToggleStatus(c.id, c.status)}
+              onMouseOver={(e) => e.currentTarget.style.opacity = 0.8}
+              onMouseOut={(e) => e.currentTarget.style.opacity = 1}
+            >
+              <Badge variant={c.status === "PASS" ? "emerald" : "destructive"}>{c.status}</Badge>
             </div>
           </Card>
         ))}

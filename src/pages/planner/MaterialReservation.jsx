@@ -21,7 +21,7 @@ export function MaterialReservation() {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "800px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "100%" }}>
       <div style={{ marginBottom: "8px" }}>
         <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>
           Material Reservations (Staging)
@@ -41,7 +41,7 @@ export function MaterialReservation() {
               <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
                   <h4 style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-primary)" }}>{res.order} ({res.id})</h4>
-                  <Badge variant={res.status === "Staged" ? "emerald" : "slate"}>{res.status}</Badge>
+                  <Badge variant={res.status === "Staged" ? "emerald" : "slate"}>{res.status.toUpperCase()}</Badge>
                 </div>
                 <span style={{ fontSize: "14px", color: "var(--text-secondary)", fontWeight: 500 }}>
                   Part: {res.part} • Staged Target: {res.quantity}
@@ -49,11 +49,16 @@ export function MaterialReservation() {
               </div>
             </div>
 
-            {res.status === "Allocated" && (
-              <Button variant="success" size="sm" icon={Check} onClick={() => handleStage(res.id)}>
-                Confirm Stage
-              </Button>
-            )}
+            <Button 
+              variant={res.status === "Allocated" ? "success" : "outline"} 
+              size="sm" 
+              icon={Check} 
+              onClick={() => handleStage(res.id)}
+              style={{ opacity: res.status === "Allocated" ? 1 : 0.6, cursor: res.status === "Allocated" ? "pointer" : "default" }}
+              disabled={res.status !== "Allocated"}
+            >
+              {res.status === "Allocated" ? "Confirm Stage" : "Staged"}
+            </Button>
           </Card>
         ))}
       </div>

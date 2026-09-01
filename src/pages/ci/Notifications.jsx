@@ -86,6 +86,7 @@ export function Notifications() {
   const getIcon = (type) => {
     if (type === "danger") return AlertTriangle;
     return Bell;
+  };
   const handleMarkAsRead = (id) => {
     setNotifications((prev) =>
       prev.map((n) => (n.id === id ? { ...n, read: true } : n))

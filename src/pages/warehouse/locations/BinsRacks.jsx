@@ -1,14 +1,32 @@
-import React from "react";
+import React, { useState } from "react";
 import { Layers } from "lucide-react";
+import { useApp } from "../../../context/AppContext";
 
 export function BinsRacks() {
-  const bins = [
-    { code: "A-01-B", desc: "Aisle A, Rack 1, Bin B", item: "Organic Orange Caps", status: "Staged" },
-    { code: "B-04-A", desc: "Aisle B, Rack 4, Bin A", item: "Aseptic Glass Bottles", status: "Staged" }
-  ];
+  const { addToast } = useApp();
+
+  const [bins, setBins] = useState([
+    { id: 1, code: "A-01-B", desc: "Aisle A, Rack 1, Bin B", item: "Organic Orange Caps", status: "Staged" },
+    { id: 2, code: "B-04-A", desc: "Aisle B, Rack 4, Bin A", item: "Aseptic Glass Bottles", status: "Staged" }
+  ]);
+
+  const handleToggleStatus = (id, currentStatus) => {
+    setBins(prev => prev.map(b => {
+      if (b.id === id) {
+        if (currentStatus === "Staged") {
+          addToast("Bin cleared.", "info");
+          return { ...b, status: "Empty" };
+        } else {
+          addToast("Bin marked as staged.", "success");
+          return { ...b, status: "Staged" };
+        }
+      }
+      return b;
+    }));
+  };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "24px", maxWidth: "900px", fontFamily: "system-ui, -apple-system, sans-serif" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "24px", maxWidth: "100%", fontFamily: "system-ui, -apple-system, sans-serif" }}>
       <div>
         <h1 style={{ fontSize: "24px", fontWeight: 800, color: "#2d2825", margin: "0 0 8px 0" }}>
           Bins & Storage Racks
@@ -19,9 +37,9 @@ export function BinsRacks() {
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-        {bins.map((b, idx) => (
+        {bins.map((b) => (
           <div 
-            key={idx} 
+            key={b.id} 
             style={{ 
               display: "flex", 
               justifyContent: "space-between", 
@@ -40,19 +58,26 @@ export function BinsRacks() {
               </span>
             </div>
             
-            <span style={{ 
-              padding: "6px 12px", 
-              backgroundColor: "#e8fbf0", 
-              color: "#10b981", 
-              border: "1px solid #a7e6c4",
-              borderRadius: "6px",
-              fontSize: "13px",
-              fontWeight: 700,
-              letterSpacing: "0.5px",
-              textTransform: "uppercase"
-            }}>
-              {b.status.toUpperCase()}
-            </span>
+            <div 
+              onClick={() => handleToggleStatus(b.id, b.status)}
+              style={{ cursor: "pointer", transition: "opacity 0.2s" }}
+              onMouseOver={(e) => e.currentTarget.style.opacity = 0.8}
+              onMouseOut={(e) => e.currentTarget.style.opacity = 1}
+            >
+              <span style={{ 
+                padding: "6px 12px", 
+                backgroundColor: b.status === "Staged" ? "#e8fbf0" : "#f4f4f5", 
+                color: b.status === "Staged" ? "#10b981" : "#52525b", 
+                border: `1px solid ${b.status === "Staged" ? "#a7e6c4" : "#e4e4e7"}`,
+                borderRadius: "6px",
+                fontSize: "13px",
+                fontWeight: 700,
+                letterSpacing: "0.5px",
+                textTransform: "uppercase"
+              }}>
+                {b.status.toUpperCase()}
+              </span>
+            </div>
           </div>
         ))}
       </div>

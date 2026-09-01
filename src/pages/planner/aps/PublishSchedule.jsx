@@ -18,7 +18,7 @@ export function PublishSchedule() {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "800px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "100%" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
         <div>
           <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
@@ -34,7 +34,7 @@ export function PublishSchedule() {
             Publish to HMI
           </Button>
         ) : (
-          <Badge variant="emerald">Schedule Published</Badge>
+          <Badge variant="emerald">SCHEDULE PUBLISHED</Badge>
         )}
       </div>
 
@@ -46,11 +46,11 @@ export function PublishSchedule() {
         <div style={{ display: "flex", flexDirection: "column", gap: "12px", fontSize: "13px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "8px" }}>
             <span style={{ color: "var(--text-primary)", fontWeight: 500 }}>Line 1 Aseptic HMI:</span>
-            <Badge variant={published ? "emerald" : "slate"}>{published ? "Synced" : "Out of Sync"}</Badge>
+            <Badge variant={published ? "emerald" : "slate"}>{published ? "SYNCED" : "OUT OF SYNC"}</Badge>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "8px" }}>
             <span style={{ color: "var(--text-primary)", fontWeight: 500 }}>Line 2 Formulation panel:</span>
-            <Badge variant={published ? "emerald" : "slate"}>{published ? "Synced" : "Out of Sync"}</Badge>
+            <Badge variant={published ? "emerald" : "slate"}>{published ? "SYNCED" : "OUT OF SYNC"}</Badge>
           </div>
         </div>
       </Card>

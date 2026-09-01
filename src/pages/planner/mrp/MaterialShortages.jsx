@@ -20,7 +20,7 @@ export function MaterialShortages() {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "800px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "100%" }}>
       <div style={{ marginBottom: "8px" }}>
         <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>
           Supply Shortages Alert
@@ -40,7 +40,7 @@ export function MaterialShortages() {
               <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
                   <span style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-primary)" }}>{s.part}</span>
-                  <Badge variant={s.status === "Critical" ? "danger" : "cyan"}>{s.status}</Badge>
+                  <Badge variant={s.status === "Critical" ? "danger" : "cyan"}>{s.status.toUpperCase()}</Badge>
                 </div>
                 <div style={{ fontSize: "14px", color: "var(--text-secondary)", marginTop: "2px", fontWeight: 500 }}>
                   Deficit Quantity: <strong style={{ color: "#EF4444" }}>{s.deficit}</strong> | Deficit Period: {s.weekDeficit}
@@ -51,11 +51,16 @@ export function MaterialShortages() {
               </div>
             </div>
 
-            {s.status === "Critical" && (
-              <Button variant="warning" size="sm" icon={Send} onClick={() => handleExpedite(s.id, s.part)}>
-                Expedite Order
-              </Button>
-            )}
+            <Button 
+              variant={s.status === "Critical" ? "warning" : "outline"} 
+              size="sm" 
+              icon={Send} 
+              onClick={() => handleExpedite(s.id, s.part)}
+              style={{ opacity: s.status === "Critical" ? 1 : 0.6, cursor: s.status === "Critical" ? "pointer" : "default" }}
+              disabled={s.status !== "Critical"}
+            >
+              {s.status === "Critical" ? "Expedite Order" : "Expedited"}
+            </Button>
           </Card>
         ))}
       </div>

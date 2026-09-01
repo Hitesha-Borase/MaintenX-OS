@@ -1,15 +1,33 @@
-import React from "react";
+import React, { useState } from "react";
 import { Card } from "../../../components/common/Card";
 import { Badge } from "../../../components/common/Badge";
 import { Activity } from "lucide-react";
+import { useApp } from "../../../context/AppContext";
 
 export function ProcessChecks() {
-  const processes = [
-    { name: "Blending agitator speed (Tank TK-02)", target: "450 RPM", actual: "448 RPM", status: "OK" }
-  ];
+  const { addToast } = useApp();
+
+  const [processes, setProcesses] = useState([
+    { id: 1, name: "Blending agitator speed (Tank TK-02)", target: "450 RPM", actual: "448 RPM", status: "OK" }
+  ]);
+
+  const handleToggleStatus = (id, currentStatus) => {
+    setProcesses(prev => prev.map(p => {
+      if (p.id === id) {
+        if (currentStatus === "OK") {
+          addToast(`${p.name} marked as WARNING.`, "warning");
+          return { ...p, status: "WARNING" };
+        } else {
+          addToast(`${p.name} marked as OK.`, "success");
+          return { ...p, status: "OK" };
+        }
+      }
+      return p;
+    }));
+  };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "800px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "100%" }}>
       <div style={{ marginBottom: "8px" }}>
         <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>
           In-Process Checks
@@ -20,9 +38,9 @@ export function ProcessChecks() {
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-        {processes.map((p, idx) => (
+        {processes.map((p) => (
           <Card 
-            key={idx} 
+            key={p.id} 
             style={{ 
               display: "flex", 
               justifyContent: "space-between", 
@@ -43,8 +61,13 @@ export function ProcessChecks() {
                 </span>
               </div>
             </div>
-            <div style={{ display: "flex", alignItems: "center" }}>
-              <Badge variant="emerald">{p.status}</Badge>
+            <div 
+              style={{ display: "flex", alignItems: "center", cursor: "pointer", transition: "opacity 0.2s" }}
+              onClick={() => handleToggleStatus(p.id, p.status)}
+              onMouseOver={(e) => e.currentTarget.style.opacity = 0.8}
+              onMouseOut={(e) => e.currentTarget.style.opacity = 1}
+            >
+              <Badge variant={p.status === "OK" ? "emerald" : "warning"}>{p.status}</Badge>
             </div>
           </Card>
         ))}

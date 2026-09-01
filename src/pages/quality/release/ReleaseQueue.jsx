@@ -13,7 +13,7 @@ export function ReleaseQueue() {
   const pendingBatches = batches && batches.length > 0 ? batches.filter(b => b.progressPercent >= 100) : [];
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "24px", maxWidth: "900px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "24px", maxWidth: "100%" }}>
       <div>
         <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)" }}>
           QA Human Release Queue

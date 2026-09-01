@@ -2,10 +2,13 @@ import React from "react";
 import { Award } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { Badge } from "../../components/common/Badge";
+import { useApp } from "../../context/AppContext";
 
 export function Profile() {
+  const { addToast } = useApp();
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "24px", maxWidth: "900px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "24px", maxWidth: "100%" }}>
       <div>
         <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)" }}>
           Quality Assurance Lead Profile
@@ -24,8 +27,12 @@ export function Profile() {
             <h3 style={{ fontSize: "18px", fontWeight: 800, color: "var(--text-primary)" }}>Maria Santos</h3>
             <span style={{ fontSize: "14px", color: "var(--text-secondary)", display: "block" }}>Quality Assurance Lead</span>
             <div style={{ display: "flex", gap: "8px", marginTop: "8px" }}>
-              <Badge variant="purple">QA SIGNATORY AUTHORITY</Badge>
-              <Badge variant="cyan">CCP AUDITOR</Badge>
+              <div style={{ cursor: "pointer" }} onClick={() => addToast("QA Signatory Authority valid until Dec 2026", "info")}>
+                <Badge variant="purple">QA SIGNATORY AUTHORITY</Badge>
+              </div>
+              <div style={{ cursor: "pointer" }} onClick={() => addToast("CCP Auditor credentials verified", "success")}>
+                <Badge variant="cyan">CCP AUDITOR</Badge>
+              </div>
             </div>
           </div>
         </Card>
@@ -48,11 +55,27 @@ export function Profile() {
         </h3>
         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
           {[
-            { name: "HACCP Lead Auditor Certification", status: "ACTIVE" },
-            { name: "ISO 22000 Food Safety Management Lead", status: "ACTIVE" },
-            { name: "SQF Practitioner Level 3", status: "ACTIVE" }
-          ].map((cert, idx) => (
-            <div key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 16px", borderRadius: "8px", backgroundColor: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)" }}>
+            { id: 1, name: "HACCP Lead Auditor Certification", status: "ACTIVE" },
+            { id: 2, name: "ISO 22000 Food Safety Management Lead", status: "ACTIVE" },
+            { id: 3, name: "SQF Practitioner Level 3", status: "ACTIVE" }
+          ].map((cert) => (
+            <div 
+              key={cert.id} 
+              style={{ 
+                display: "flex", 
+                justifyContent: "space-between", 
+                alignItems: "center", 
+                padding: "12px 16px", 
+                borderRadius: "8px", 
+                backgroundColor: "var(--bg-card-subtle)", 
+                border: "1px solid var(--border-subtle)",
+                cursor: "pointer",
+                transition: "opacity 0.2s"
+              }}
+              onClick={() => addToast(`Verified: ${cert.name}`, "success")}
+              onMouseOver={(e) => e.currentTarget.style.opacity = 0.8}
+              onMouseOut={(e) => e.currentTarget.style.opacity = 1}
+            >
               <span style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-primary)" }}>{cert.name}</span>
               <Badge variant="emerald">{cert.status}</Badge>
             </div>

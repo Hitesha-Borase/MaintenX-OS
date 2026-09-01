@@ -30,7 +30,7 @@ export function Deviations() {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "24px", maxWidth: "900px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "24px", maxWidth: "100%" }}>
       <div>
         <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)" }}>
           Quality Deviations Console

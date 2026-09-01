@@ -18,7 +18,7 @@ export function Lots() {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "24px", maxWidth: "900px", fontFamily: "system-ui, -apple-system, sans-serif" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "24px", maxWidth: "100%", fontFamily: "system-ui, -apple-system, sans-serif" }}>
       <div>
         <h1 style={{ fontSize: "24px", fontWeight: 800, color: "#2d2825", margin: "0 0 8px 0" }}>
           Inventory Lot Controls
@@ -65,30 +65,29 @@ export function Lots() {
               </div>
             </div>
 
-            {l.status === "Approved" && (
-              <button 
-                onClick={() => handleQuarantine(l.code)}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  padding: "8px 16px",
-                  backgroundColor: "#fee2e2",
-                  color: "#ef4444",
-                  border: "1px solid #fca5a5",
-                  borderRadius: "16px",
-                  fontSize: "14px",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  transition: "background-color 0.2s"
-                }}
-                onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#fecaca'}
-                onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#fee2e2'}
-              >
-                <AlertCircle size={16} strokeWidth={2} />
-                Quarantine
-              </button>
-            )}
+            <button 
+              onClick={() => l.status === "Approved" && handleQuarantine(l.code)}
+              disabled={l.status !== "Approved"}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                padding: "8px 16px",
+                backgroundColor: l.status === "Approved" ? "#fee2e2" : "#f1f5f9",
+                color: l.status === "Approved" ? "#ef4444" : "#94a3b8",
+                border: l.status === "Approved" ? "1px solid #fca5a5" : "1px solid #e2e8f0",
+                borderRadius: "16px",
+                fontSize: "14px",
+                fontWeight: 600,
+                cursor: l.status === "Approved" ? "pointer" : "default",
+                transition: "background-color 0.2s"
+              }}
+              onMouseOver={(e) => { if (l.status === "Approved") e.currentTarget.style.backgroundColor = '#fecaca' }}
+              onMouseOut={(e) => { if (l.status === "Approved") e.currentTarget.style.backgroundColor = '#fee2e2' }}
+            >
+              <AlertCircle size={16} strokeWidth={2} />
+              {l.status === "Approved" ? "Quarantine" : "Quarantined"}
+            </button>
           </div>
         ))}
       </div>

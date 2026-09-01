@@ -20,7 +20,7 @@ export function AllergenChecks() {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "800px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "100%" }}>
       <div style={{ marginBottom: "8px" }}>
         <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>
           Allergen Verification Audits
@@ -60,13 +60,16 @@ export function AllergenChecks() {
                 </div>
               </div>
 
-              {isPending && (
-                <div style={{ display: "flex", alignItems: "center", width: "100%", justifyContent: "flex-end", flex: "1 1 auto" }}>
-                  <Button variant="success" icon={Check} onClick={() => handleAudit(c.id, c.name)}>
-                    Clear Allergen
-                  </Button>
-                </div>
-              )}
+              <div style={{ display: "flex", alignItems: "center", width: "100%", justifyContent: "flex-end", flex: "1 1 auto" }}>
+                <Button 
+                  variant={isPending ? "success" : "secondary"} 
+                  icon={Check} 
+                  onClick={() => isPending && handleAudit(c.id, c.name)}
+                  style={{ opacity: isPending ? 1 : 0.6, cursor: isPending ? "pointer" : "default" }}
+                >
+                  {isPending ? "Clear Allergen" : "Cleared"}
+                </Button>
+              </div>
             </Card>
           );
         })}

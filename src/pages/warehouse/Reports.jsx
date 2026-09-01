@@ -1,14 +1,22 @@
 import React from "react";
 import { FileSpreadsheet, Printer } from "lucide-react";
+import { useApp } from "../../context/AppContext";
 
 export function Reports() {
+  const { addToast } = useApp();
+
   const reports = [
     { name: "Inbound Deliveries Logs", date: "2026-08-31" },
     { name: "Cycle Stock Variance Audit", date: "2026-08-31" }
   ];
 
+  const handlePrint = (name) => {
+    addToast(`Preparing ${name} for printing...`, "info");
+    setTimeout(() => window.print(), 500);
+  };
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "24px", maxWidth: "900px", fontFamily: "system-ui, -apple-system, sans-serif" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "24px", maxWidth: "100%", fontFamily: "system-ui, -apple-system, sans-serif" }}>
       <div>
         <h1 style={{ fontSize: "24px", fontWeight: 800, color: "#2d2825", margin: "0 0 8px 0" }}>
           Warehouse Inventory Reports
@@ -41,7 +49,7 @@ export function Reports() {
             </div>
             
             <button 
-              onClick={() => window.print()}
+              onClick={() => handlePrint(rep.name)}
               style={{
                 display: "flex",
                 alignItems: "center",

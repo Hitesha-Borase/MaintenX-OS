@@ -17,7 +17,7 @@ export function PickingExecution() {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "24px", maxWidth: "900px", fontFamily: "system-ui, -apple-system, sans-serif" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "24px", maxWidth: "100%", fontFamily: "system-ui, -apple-system, sans-serif" }}>
       <div>
         <h1 style={{ fontSize: "24px", fontWeight: 800, color: "#2d2825", margin: "0 0 8px 0" }}>
           Picking Execution Console
@@ -67,30 +67,29 @@ export function PickingExecution() {
                 </div>
               </div>
 
-              {isPending && (
-                <button 
-                  onClick={() => handlePick(item.id, item.name)}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "6px",
-                    padding: "8px 16px",
-                    backgroundColor: "#e8fbf0",
-                    color: "#10b981",
-                    border: "1px solid #a7e6c4",
-                    borderRadius: "16px",
-                    fontSize: "14px",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    transition: "background-color 0.2s"
-                  }}
-                  onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#d1f4e0'}
-                  onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#e8fbf0'}
-                >
-                  <ArrowRight size={16} strokeWidth={2} />
-                  Confirm Pick
-                </button>
-              )}
+              <button 
+                onClick={() => isPending && handlePick(item.id, item.name)}
+                disabled={!isPending}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  padding: "8px 16px",
+                  backgroundColor: isPending ? "#e8fbf0" : "#f1f5f9",
+                  color: isPending ? "#10b981" : "#94a3b8",
+                  border: isPending ? "1px solid #a7e6c4" : "1px solid #e2e8f0",
+                  borderRadius: "16px",
+                  fontSize: "14px",
+                  fontWeight: 600,
+                  cursor: isPending ? "pointer" : "default",
+                  transition: "background-color 0.2s"
+                }}
+                onMouseOver={(e) => { if(isPending) e.currentTarget.style.backgroundColor = '#d1f4e0' }}
+                onMouseOut={(e) => { if(isPending) e.currentTarget.style.backgroundColor = '#e8fbf0' }}
+              >
+                <ArrowRight size={16} strokeWidth={2} />
+                {isPending ? "Confirm Pick" : "Picked"}
+              </button>
             </div>
           );
         })}

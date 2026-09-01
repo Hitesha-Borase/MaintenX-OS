@@ -1,11 +1,35 @@
-import React from "react";
+import React, { useState } from "react";
 import { Award } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { Badge } from "../../components/common/Badge";
+import { useApp } from "../../context/AppContext";
 
 export function Profile() {
+  const { addToast } = useApp();
+
+  const [certs, setCerts] = useState([
+    { id: 1, name: "OSHA Forklift Operations License", status: "ACTIVE", activeVariant: "emerald", inactiveVariant: "warning" },
+    { id: 2, name: "Hazardous lot staging handling", status: "CERTIFIED", activeVariant: "emerald", inactiveVariant: "warning" }
+  ]);
+
+  const handleToggleCert = (id, currentStatus) => {
+    setCerts(prev => prev.map(cert => {
+      if (cert.id === id) {
+        if (currentStatus === "EXPIRED") {
+          const originalStatus = id === 1 ? "ACTIVE" : "CERTIFIED";
+          addToast(`${cert.name} marked as ${originalStatus}.`, "success");
+          return { ...cert, status: originalStatus };
+        } else {
+          addToast(`${cert.name} marked as EXPIRED.`, "warning");
+          return { ...cert, status: "EXPIRED" };
+        }
+      }
+      return cert;
+    }));
+  };
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "800px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "100%" }}>
       <div style={{ marginBottom: "8px" }}>
         <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>
           Warehouse Operator Profile
@@ -68,14 +92,21 @@ export function Profile() {
           <span style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-primary)" }}>Certifications</span>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 16px", borderRadius: "8px", backgroundColor: "var(--bg-card)", border: "1px solid var(--border-subtle)", flexWrap: "wrap", gap: "12px" }}>
-            <span style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-primary)" }}>OSHA Forklift Operations License</span>
-            <Badge variant="emerald">ACTIVE</Badge>
-          </div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 16px", borderRadius: "8px", backgroundColor: "var(--bg-card)", border: "1px solid var(--border-subtle)", flexWrap: "wrap", gap: "12px" }}>
-            <span style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-primary)" }}>Hazardous lot staging handling</span>
-            <Badge variant="emerald">CERTIFIED</Badge>
-          </div>
+          {certs.map(cert => (
+            <div key={cert.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 16px", borderRadius: "8px", backgroundColor: "var(--bg-card)", border: "1px solid var(--border-subtle)", flexWrap: "wrap", gap: "12px" }}>
+              <span style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-primary)" }}>{cert.name}</span>
+              <div 
+                onClick={() => handleToggleCert(cert.id, cert.status)}
+                style={{ cursor: "pointer", transition: "opacity 0.2s" }}
+                onMouseOver={(e) => e.currentTarget.style.opacity = 0.8}
+                onMouseOut={(e) => e.currentTarget.style.opacity = 1}
+              >
+                <Badge variant={cert.status === "EXPIRED" ? cert.inactiveVariant : cert.activeVariant}>
+                  {cert.status}
+                </Badge>
+              </div>
+            </div>
+          ))}
         </div>
       </Card>
     </div>

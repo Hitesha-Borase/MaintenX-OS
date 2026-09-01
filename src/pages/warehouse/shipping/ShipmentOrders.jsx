@@ -1,14 +1,32 @@
-import React from "react";
+import React, { useState } from "react";
 import { FileText } from "lucide-react";
+import { useApp } from "../../../context/AppContext";
 
 export function ShipmentOrders() {
-  const shipments = [
+  const { addToast } = useApp();
+
+  const [shipments, setShipments] = useState([
     { id: "SO-9002", dest: "Target regional Chicago", cargo: "12 Pallets", date: "2026-09-02", status: "Allocated Carrier" },
     { id: "SO-9003", dest: "Kroger regional Dallas", cargo: "24 Pallets", date: "2026-09-04", status: "Pending Freight" }
-  ];
+  ]);
+
+  const handleToggleStatus = (id, currentStatus) => {
+    setShipments(prev => prev.map(s => {
+      if (s.id === id) {
+        if (currentStatus === "Allocated Carrier") {
+          addToast("Shipment marked as Pending Freight.", "warning");
+          return { ...s, status: "Pending Freight" };
+        } else {
+          addToast("Carrier allocated successfully.", "success");
+          return { ...s, status: "Allocated Carrier" };
+        }
+      }
+      return s;
+    }));
+  };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "24px", maxWidth: "900px", fontFamily: "system-ui, -apple-system, sans-serif" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "24px", maxWidth: "100%", fontFamily: "system-ui, -apple-system, sans-serif" }}>
       <div>
         <h1 style={{ fontSize: "24px", fontWeight: 800, color: "#2d2825", margin: "0 0 8px 0" }}>
           Shipment Purchase Orders
@@ -40,19 +58,26 @@ export function ShipmentOrders() {
               </span>
             </div>
             
-            <span style={{ 
-              padding: "6px 12px", 
-              backgroundColor: "#e0f2fe", 
-              color: "#0ea5e9", 
-              border: "1px solid #bae6fd",
-              borderRadius: "6px",
-              fontSize: "13px",
-              fontWeight: 700,
-              letterSpacing: "0.5px",
-              textTransform: "uppercase"
-            }}>
-              {s.status.toUpperCase()}
-            </span>
+            <div 
+              onClick={() => handleToggleStatus(s.id, s.status)}
+              style={{ cursor: "pointer", transition: "opacity 0.2s" }}
+              onMouseOver={(e) => e.currentTarget.style.opacity = 0.8}
+              onMouseOut={(e) => e.currentTarget.style.opacity = 1}
+            >
+              <span style={{ 
+                padding: "6px 12px", 
+                backgroundColor: s.status === "Allocated Carrier" ? "#e0f2fe" : "#fef3c7", 
+                color: s.status === "Allocated Carrier" ? "#0ea5e9" : "#d97706", 
+                border: `1px solid ${s.status === "Allocated Carrier" ? "#bae6fd" : "#fde68a"}`,
+                borderRadius: "6px",
+                fontSize: "13px",
+                fontWeight: 700,
+                letterSpacing: "0.5px",
+                textTransform: "uppercase"
+              }}>
+                {s.status.toUpperCase()}
+              </span>
+            </div>
           </div>
         ))}
       </div>

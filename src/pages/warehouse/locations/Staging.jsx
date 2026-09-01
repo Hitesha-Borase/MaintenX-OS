@@ -17,7 +17,7 @@ export function Staging() {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "24px", maxWidth: "900px", fontFamily: "system-ui, -apple-system, sans-serif" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "24px", maxWidth: "100%", fontFamily: "system-ui, -apple-system, sans-serif" }}>
       <div>
         <h1 style={{ fontSize: "24px", fontWeight: 800, color: "#2d2825", margin: "0 0 8px 0" }}>
           Shop Floor Staging Bays
@@ -67,30 +67,29 @@ export function Staging() {
                 </div>
               </div>
 
-              {isAwaiting && (
-                <button 
-                  onClick={() => handlePullConfirm(s.id)}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "6px",
-                    padding: "8px 16px",
-                    backgroundColor: "#e8fbf0",
-                    color: "#10b981",
-                    border: "1px solid #a7e6c4",
-                    borderRadius: "16px",
-                    fontSize: "14px",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    transition: "background-color 0.2s"
-                  }}
-                  onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#d1f4e0'}
-                  onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#e8fbf0'}
-                >
-                  <Check size={16} strokeWidth={2} />
-                  Confirm Pull
-                </button>
-              )}
+              <button 
+                onClick={() => isAwaiting && handlePullConfirm(s.id)}
+                disabled={!isAwaiting}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  padding: "8px 16px",
+                  backgroundColor: isAwaiting ? "#e8fbf0" : "#f1f5f9",
+                  color: isAwaiting ? "#10b981" : "#94a3b8",
+                  border: isAwaiting ? "1px solid #a7e6c4" : "1px solid #e2e8f0",
+                  borderRadius: "16px",
+                  fontSize: "14px",
+                  fontWeight: 600,
+                  cursor: isAwaiting ? "pointer" : "default",
+                  transition: "background-color 0.2s"
+                }}
+                onMouseOver={(e) => { if (isAwaiting) e.currentTarget.style.backgroundColor = '#d1f4e0' }}
+                onMouseOut={(e) => { if (isAwaiting) e.currentTarget.style.backgroundColor = '#e8fbf0' }}
+              >
+                <Check size={16} strokeWidth={2} />
+                {isAwaiting ? "Confirm Pull" : "Pulled"}
+              </button>
             </div>
           );
         })}

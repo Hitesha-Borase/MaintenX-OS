@@ -2,10 +2,13 @@ import React from "react";
 import { Award } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { Badge } from "../../components/common/Badge";
+import { useApp } from "../../context/AppContext";
 
 export function Profile() {
+  const { addToast } = useApp();
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "800px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "100%" }}>
       <div style={{ marginBottom: "8px" }}>
         <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>
           Supply Planner / Scheduler Profile
@@ -45,8 +48,12 @@ export function Profile() {
             <h2 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>Sarah Miller</h2>
             <span style={{ fontSize: "15px", color: "var(--text-secondary)", fontWeight: 500 }}>Lead Production Scheduler</span>
             <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-              <Badge variant="cyan">APS PLANNER</Badge>
-              <Badge variant="slate">MRP LEAD</Badge>
+              <div style={{ cursor: "pointer" }} onClick={() => addToast("APS Planner credentials verified", "success")}>
+                <Badge variant="cyan">APS PLANNER</Badge>
+              </div>
+              <div style={{ cursor: "pointer" }} onClick={() => addToast("MRP Lead valid until Dec 2026", "info")}>
+                <Badge variant="slate">MRP LEAD</Badge>
+              </div>
             </div>
           </div>
         </Card>
@@ -77,14 +84,33 @@ export function Profile() {
           <Award size={24} color="#C89547" />
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-          <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: "16px", padding: "16px 20px", borderRadius: "12px", backgroundColor: "rgba(200, 149, 71, 0.05)", border: "1px solid rgba(200, 149, 71, 0.2)" }}>
-            <span style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-primary)" }}>APICS CPIM Certification</span>
-            <Badge variant="emerald">CERTIFIED</Badge>
-          </div>
-          <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: "16px", padding: "16px 20px", borderRadius: "12px", backgroundColor: "rgba(200, 149, 71, 0.05)", border: "1px solid rgba(200, 149, 71, 0.2)" }}>
-            <span style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-primary)" }}>Advanced Production Sequencing (APS)</span>
-            <Badge variant="emerald">EXPERT</Badge>
-          </div>
+          {[
+            { id: 1, name: "APICS CPIM Certification", status: "CERTIFIED", variant: "emerald" },
+            { id: 2, name: "Advanced Production Sequencing (APS)", status: "EXPERT", variant: "emerald" }
+          ].map(cert => (
+            <div 
+              key={cert.id} 
+              style={{ 
+                display: "flex", 
+                flexWrap: "wrap", 
+                justifyContent: "space-between", 
+                alignItems: "center", 
+                gap: "16px", 
+                padding: "16px 20px", 
+                borderRadius: "12px", 
+                backgroundColor: "rgba(200, 149, 71, 0.05)", 
+                border: "1px solid rgba(200, 149, 71, 0.2)",
+                cursor: "pointer",
+                transition: "opacity 0.2s"
+              }}
+              onClick={() => addToast(`Verified: ${cert.name}`, "success")}
+              onMouseOver={(e) => e.currentTarget.style.opacity = 0.8}
+              onMouseOut={(e) => e.currentTarget.style.opacity = 1}
+            >
+              <span style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-primary)" }}>{cert.name}</span>
+              <Badge variant={cert.variant}>{cert.status}</Badge>
+            </div>
+          ))}
         </div>
       </Card>
     </div>

@@ -3,9 +3,11 @@ import { Card } from "../../../components/common/Card";
 import { Badge } from "../../../components/common/Badge";
 import { useProduction } from "../../../context/ProductionContext";
 import { FileText } from "lucide-react";
+import { useApp } from "../../../context/AppContext";
 
 export function BatchReview() {
   const { batches } = useProduction();
+  const { addToast } = useApp();
 
   // Handle case where batches are empty to display template like screenshot
   const displayBatches = batches && batches.length > 0 ? batches : [{
@@ -15,8 +17,12 @@ export function BatchReview() {
     progressPercent: 77
   }];
 
+  const handleReview = (id) => {
+    addToast(`Reviewing batch ${id}...`, "info");
+  };
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "24px", maxWidth: "900px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "24px", maxWidth: "100%" }}>
       <div>
         <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)" }}>
           Active Batch Quality Review
@@ -44,7 +50,14 @@ export function BatchReview() {
                 Recipe: {batch.recipeName} | Status: {batch.currentStep}
               </span>
             </div>
-            <Badge variant="cyan">{batch.progressPercent}% COMPLETE</Badge>
+            <div 
+              style={{ cursor: "pointer", transition: "opacity 0.2s" }}
+              onClick={() => handleReview(batch.id)}
+              onMouseOver={(e) => e.currentTarget.style.opacity = 0.8}
+              onMouseOut={(e) => e.currentTarget.style.opacity = 1}
+            >
+              <Badge variant="cyan">{batch.progressPercent}% COMPLETE</Badge>
+            </div>
           </Card>
         ))}
       </div>

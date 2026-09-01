@@ -18,7 +18,7 @@ export function ScheduleValidation() {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "800px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "100%" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
         <div>
           <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
@@ -29,8 +29,8 @@ export function ScheduleValidation() {
           </p>
         </div>
 
-        <Button variant="primary" icon={Play} onClick={handleValidate}>
-          Validate Draft
+        <Button variant="primary" icon={Play} onClick={handleValidate} disabled={validated}>
+          {validated ? "Validated" : "Validate Draft"}
         </Button>
       </div>
 
@@ -42,11 +42,11 @@ export function ScheduleValidation() {
         <div style={{ display: "flex", flexDirection: "column", gap: "12px", fontSize: "13px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "8px" }}>
             <span style={{ color: "var(--text-primary)", fontWeight: 500 }}>Raw Material Feasibility:</span>
-            <Badge variant={validated ? "emerald" : "slate"}>{validated ? "Passed" : "Not Audited"}</Badge>
+            <Badge variant={validated ? "emerald" : "slate"}>{validated ? "PASSED" : "NOT AUDITED"}</Badge>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "8px" }}>
             <span style={{ color: "var(--text-primary)", fontWeight: 500 }}>Labor Headcount Fit:</span>
-            <Badge variant={validated ? "emerald" : "slate"}>{validated ? "Passed" : "Not Audited"}</Badge>
+            <Badge variant={validated ? "emerald" : "slate"}>{validated ? "PASSED" : "NOT AUDITED"}</Badge>
           </div>
         </div>
       </Card>

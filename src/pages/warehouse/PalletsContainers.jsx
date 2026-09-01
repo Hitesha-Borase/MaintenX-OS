@@ -21,7 +21,7 @@ export function PalletsContainers() {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "800px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "100%" }}>
       <div style={{ marginBottom: "8px" }}>
         <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>
           Pallets & Cargo Containers
@@ -32,40 +32,47 @@ export function PalletsContainers() {
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-        {pallets.map((p) => (
-          <Card 
-            key={p.id} 
-            style={{ 
-              display: "flex", 
-              justifyContent: "space-between", 
-              alignItems: "center",
-              flexWrap: "wrap",
-              gap: "16px",
-              padding: "20px"
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: "16px", flex: 1, minWidth: "250px" }}>
-              <div style={{ padding: "10px", backgroundColor: "rgba(200, 149, 71, 0.1)", borderRadius: "10px", flexShrink: 0, height: "fit-content" }}>
-                <Boxes size={24} color="#C89547" />
+        {pallets.map((p) => {
+          const isStaged = p.status === "Staged WH-B";
+          return (
+            <Card 
+              key={p.id} 
+              style={{ 
+                display: "flex", 
+                justifyContent: "space-between", 
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: "16px",
+                padding: "20px"
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "16px", flex: 1, minWidth: "250px" }}>
+                <div style={{ padding: "10px", backgroundColor: "rgba(200, 149, 71, 0.1)", borderRadius: "10px", flexShrink: 0, height: "fit-content" }}>
+                  <Boxes size={24} color="#C89547" />
+                </div>
+                <span style={{ fontSize: "16px", color: "var(--text-primary)", fontWeight: 500, lineHeight: 1.5 }}>
+                  {p.id} <br/>
+                  <span style={{ fontSize: "14px", color: "var(--text-secondary)" }}>SKU: {p.sku} <span style={{ margin: "0 4px" }}>•</span> Contents: {p.description}</span>
+                </span>
               </div>
-              <span style={{ fontSize: "16px", color: "var(--text-primary)", fontWeight: 500, lineHeight: 1.5 }}>
-                {p.id} <br/>
-                <span style={{ fontSize: "14px", color: "var(--text-secondary)" }}>SKU: {p.sku} <span style={{ margin: "0 4px" }}>•</span> Contents: {p.description}</span>
-              </span>
-            </div>
 
-            <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
-              <Badge variant={p.status === "Loaded Carrier" ? "emerald" : "warning"}>
-                {p.status.toUpperCase()}
-              </Badge>
-              {p.status === "Staged WH-B" && (
-                <Button variant="success" size="sm" icon={Check} onClick={() => handleStage(p.id)}>
-                  Load Cargo
+              <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+                <Badge variant={p.status === "Loaded Carrier" ? "emerald" : "warning"}>
+                  {p.status.toUpperCase()}
+                </Badge>
+                <Button 
+                  variant={isStaged ? "success" : "secondary"} 
+                  size="sm" 
+                  icon={Check} 
+                  onClick={() => isStaged && handleStage(p.id)}
+                  style={{ opacity: isStaged ? 1 : 0.6, cursor: isStaged ? "pointer" : "default" }}
+                >
+                  {isStaged ? "Load Cargo" : "Loaded"}
                 </Button>
-              )}
-            </div>
-          </Card>
-        ))}
+              </div>
+            </Card>
+          );
+        })}
       </div>
     </div>
   );

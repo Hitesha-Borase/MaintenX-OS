@@ -1,16 +1,34 @@
-import React from "react";
+import React, { useState } from "react";
 import { FileText } from "lucide-react";
 import { Card } from "../../../components/common/Card";
 import { Badge } from "../../../components/common/Badge";
+import { useApp } from "../../../context/AppContext";
 
 export function PickLists() {
-  const lists = [
+  const { addToast } = useApp();
+
+  const [lists, setLists] = useState([
     { id: "PK-102", order: "ORD-904", itemsCount: "2 Items (Caps, Bottles)", date: "2026-08-31", status: "Active" },
     { id: "PK-103", order: "ORD-905", itemsCount: "1 Item (Concentrate)", date: "2026-08-31", status: "Staged" }
-  ];
+  ]);
+
+  const handleToggleStatus = (id, currentStatus) => {
+    setLists(prev => prev.map(l => {
+      if (l.id === id) {
+        if (currentStatus === "Active") {
+          addToast("Pick list marked as Staged.", "success");
+          return { ...l, status: "Staged" };
+        } else {
+          addToast("Pick list marked as Active.", "info");
+          return { ...l, status: "Active" };
+        }
+      }
+      return l;
+    }));
+  };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "800px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "100%" }}>
       <div style={{ marginBottom: "8px" }}>
         <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>
           Warehouse Pick Lists
@@ -45,9 +63,16 @@ export function PickLists() {
                 </span>
               </div>
               
-              <Badge variant={isActive ? "cyan" : "emerald"}>
-                {l.status.toUpperCase()}
-              </Badge>
+              <div 
+                onClick={() => handleToggleStatus(l.id, l.status)}
+                style={{ cursor: "pointer", transition: "opacity 0.2s" }}
+                onMouseOver={(e) => e.currentTarget.style.opacity = 0.8}
+                onMouseOut={(e) => e.currentTarget.style.opacity = 1}
+              >
+                <Badge variant={isActive ? "cyan" : "emerald"}>
+                  {l.status.toUpperCase()}
+                </Badge>
+              </div>
             </Card>
           );
         })}

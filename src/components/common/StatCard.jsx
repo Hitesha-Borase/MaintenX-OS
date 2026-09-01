@@ -99,7 +99,8 @@ export function StatCard({
             {badge.label}
           </Badge>
         </div>
-      )}
+        )}
+      </div>
     </Card>
   );
 }

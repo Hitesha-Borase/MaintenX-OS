@@ -20,7 +20,7 @@ export function ServiceRisk() {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "800px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "100%" }}>
       <div style={{ marginBottom: "8px" }}>
         <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>
           Fulfillment Service Risks
@@ -40,7 +40,7 @@ export function ServiceRisk() {
               <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
                   <span style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-primary)" }}>{r.id}: {r.title}</span>
-                  <Badge variant={r.status === "Active" ? "danger" : "emerald"}>{r.status}</Badge>
+                  <Badge variant={r.status === "Active" ? "danger" : "emerald"}>{r.status.toUpperCase()}</Badge>
                 </div>
                 <div style={{ fontSize: "14px", color: "var(--text-secondary)", marginTop: "2px", fontWeight: 500 }}>
                   Reason: {r.reason} | Severity: <strong style={{ color: r.status === "Active" ? "#EF4444" : "inherit" }}>{r.severity}</strong>
@@ -48,11 +48,16 @@ export function ServiceRisk() {
               </div>
             </div>
 
-            {r.status === "Active" && (
-              <Button variant="primary" size="sm" icon={Zap} onClick={() => handleMitigate(r.id, r.title)}>
-                Mitigate Risk
-              </Button>
-            )}
+            <Button 
+              variant={r.status === "Active" ? "primary" : "outline"} 
+              size="sm" 
+              icon={Zap} 
+              onClick={() => handleMitigate(r.id, r.title)}
+              style={{ opacity: r.status === "Active" ? 1 : 0.6, cursor: r.status === "Active" ? "pointer" : "default" }}
+              disabled={r.status !== "Active"}
+            >
+              {r.status === "Active" ? "Mitigate Risk" : "Mitigated"}
+            </Button>
           </Card>
         ))}
       </div>
