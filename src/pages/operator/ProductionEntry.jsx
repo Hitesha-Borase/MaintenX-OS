@@ -88,26 +88,24 @@ export function ProductionEntry() {
               </span>
             </div>
 
-            {/* Stepper Input */}
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", backgroundColor: "var(--bg-card-subtle)", padding: "6px 8px", borderRadius: "10px", border: "1px solid #E8DDCF" }}>
+            {/* Sleek Stepper Input */}
+            <div style={{ display: "flex", margin: "0 auto", width: "fit-content", alignItems: "center", gap: "12px", backgroundColor: "var(--bg-card-subtle)", padding: "4px", borderRadius: "32px", border: "1px solid #E8DDCF", boxShadow: "inset 0 1px 3px rgba(0,0,0,0.03)" }}>
               <button
                 type="button"
                 onClick={() => setProducedAdd(p => Math.max(0, p - 100))}
                 style={{
-                  width: "36px",
-                  height: "36px",
-                  borderRadius: "8px",
+                  width: "32px",
+                  height: "32px",
+                  borderRadius: "50%",
                   backgroundColor: "#FFFFFF",
                   border: "1px solid #E2D7C7",
-                  color: "var(--text-primary)",
-                  fontWeight: 800,
-                  fontSize: "14px",
+                  color: "var(--text-secondary)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   cursor: "pointer",
-                  boxShadow: "0 1px 3px rgba(70, 45, 15, 0.05)",
-                  transition: "all 0.15s ease",
+                  boxShadow: "0 2px 4px rgba(70, 45, 15, 0.05)",
+                  transition: "all 0.2s ease",
                   flexShrink: 0
                 }}
                 title="-100"
@@ -120,18 +118,16 @@ export function ProductionEntry() {
                 value={producedAdd}
                 onChange={(e) => setProducedAdd(Math.max(0, parseInt(e.target.value) || 0))}
                 style={{
-                  flex: 1,
                   textAlign: "center",
                   backgroundColor: "transparent",
                   border: "none",
                   color: "#059669",
                   fontFamily: "var(--font-mono)",
-                  fontSize: "22px",
+                  fontSize: "18px",
                   fontWeight: 800,
                   outline: "none",
-                  width: "100%",
-                  minWidth: "60px",
-                  padding: "4px 0"
+                  width: "56px",
+                  padding: "0"
                 }}
                 required
               />
@@ -140,20 +136,18 @@ export function ProductionEntry() {
                 type="button"
                 onClick={() => setProducedAdd(p => p + 100)}
                 style={{
-                  width: "36px",
-                  height: "36px",
-                  borderRadius: "8px",
+                  width: "32px",
+                  height: "32px",
+                  borderRadius: "50%",
                   backgroundColor: "#FFFFFF",
                   border: "1px solid #E2D7C7",
                   color: "var(--text-primary)",
-                  fontWeight: 800,
-                  fontSize: "14px",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   cursor: "pointer",
-                  boxShadow: "0 1px 3px rgba(70, 45, 15, 0.05)",
-                  transition: "all 0.15s ease",
+                  boxShadow: "0 2px 4px rgba(70, 45, 15, 0.05)",
+                  transition: "all 0.2s ease",
                   flexShrink: 0
                 }}
                 title="+100"
@@ -162,31 +156,7 @@ export function ProductionEntry() {
               </button>
             </div>
 
-            {/* Quick Preset Buttons */}
-            <div style={{ display: "flex", gap: "6px" }}>
-              {[50, 100, 250, 500].map((preset) => (
-                <button
-                  key={preset}
-                  type="button"
-                  onClick={() => setProducedAdd(preset)}
-                  style={{
-                    flex: 1,
-                    padding: "5px 0",
-                    fontSize: "11px",
-                    fontWeight: 700,
-                    borderRadius: "6px",
-                    backgroundColor: producedAdd === preset ? "rgba(16, 185, 129, 0.15)" : "#FFFFFF",
-                    border: producedAdd === preset ? "1px solid #10B981" : "1px solid var(--border-subtle)",
-                    color: producedAdd === preset ? "#059669" : "var(--text-secondary)",
-                    cursor: "pointer",
-                    boxShadow: "0 1px 2px rgba(70, 45, 15, 0.03)",
-                    transition: "all 0.15s ease"
-                  }}
-                >
-                  +{preset}
-                </button>
-              ))}
-            </div>
+
           </Card>
 
           {/* Scrap Count Card */}
@@ -217,26 +187,24 @@ export function ProductionEntry() {
               </span>
             </div>
 
-            {/* Stepper Input */}
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", backgroundColor: "var(--bg-card-subtle)", padding: "6px 8px", borderRadius: "10px", border: "1px solid #E8DDCF" }}>
+            {/* Sleek Stepper Input */}
+            <div style={{ display: "flex", margin: "0 auto", width: "fit-content", alignItems: "center", gap: "12px", backgroundColor: "var(--bg-card-subtle)", padding: "4px", borderRadius: "32px", border: "1px solid #E8DDCF", boxShadow: "inset 0 1px 3px rgba(0,0,0,0.03)" }}>
               <button
                 type="button"
                 onClick={() => setScrapAdd(p => Math.max(0, p - 5))}
                 style={{
-                  width: "36px",
-                  height: "36px",
-                  borderRadius: "8px",
+                  width: "32px",
+                  height: "32px",
+                  borderRadius: "50%",
                   backgroundColor: "#FFFFFF",
                   border: "1px solid #E2D7C7",
-                  color: "var(--text-primary)",
-                  fontWeight: 800,
-                  fontSize: "14px",
+                  color: "var(--text-secondary)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   cursor: "pointer",
-                  boxShadow: "0 1px 3px rgba(70, 45, 15, 0.05)",
-                  transition: "all 0.15s ease",
+                  boxShadow: "0 2px 4px rgba(70, 45, 15, 0.05)",
+                  transition: "all 0.2s ease",
                   flexShrink: 0
                 }}
                 title="-5"
@@ -249,18 +217,16 @@ export function ProductionEntry() {
                 value={scrapAdd}
                 onChange={(e) => setScrapAdd(Math.max(0, parseInt(e.target.value) || 0))}
                 style={{
-                  flex: 1,
                   textAlign: "center",
                   backgroundColor: "transparent",
                   border: "none",
                   color: "#DC2626",
                   fontFamily: "var(--font-mono)",
-                  fontSize: "22px",
+                  fontSize: "18px",
                   fontWeight: 800,
                   outline: "none",
-                  width: "100%",
-                  minWidth: "60px",
-                  padding: "4px 0"
+                  width: "56px",
+                  padding: "0"
                 }}
                 required
               />
@@ -269,20 +235,18 @@ export function ProductionEntry() {
                 type="button"
                 onClick={() => setScrapAdd(p => p + 5)}
                 style={{
-                  width: "36px",
-                  height: "36px",
-                  borderRadius: "8px",
+                  width: "32px",
+                  height: "32px",
+                  borderRadius: "50%",
                   backgroundColor: "#FFFFFF",
                   border: "1px solid #E2D7C7",
                   color: "var(--text-primary)",
-                  fontWeight: 800,
-                  fontSize: "14px",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   cursor: "pointer",
-                  boxShadow: "0 1px 3px rgba(70, 45, 15, 0.05)",
-                  transition: "all 0.15s ease",
+                  boxShadow: "0 2px 4px rgba(70, 45, 15, 0.05)",
+                  transition: "all 0.2s ease",
                   flexShrink: 0
                 }}
                 title="+5"
@@ -291,31 +255,7 @@ export function ProductionEntry() {
               </button>
             </div>
 
-            {/* Quick Preset Buttons */}
-            <div style={{ display: "flex", gap: "6px" }}>
-              {[1, 5, 10, 25].map((preset) => (
-                <button
-                  key={preset}
-                  type="button"
-                  onClick={() => setScrapAdd(preset)}
-                  style={{
-                    flex: 1,
-                    padding: "5px 0",
-                    fontSize: "11px",
-                    fontWeight: 700,
-                    borderRadius: "6px",
-                    backgroundColor: scrapAdd === preset ? "rgba(239, 68, 68, 0.15)" : "#FFFFFF",
-                    border: scrapAdd === preset ? "1px solid #EF4444" : "1px solid var(--border-subtle)",
-                    color: scrapAdd === preset ? "#DC2626" : "var(--text-secondary)",
-                    cursor: "pointer",
-                    boxShadow: "0 1px 2px rgba(70, 45, 15, 0.03)",
-                    transition: "all 0.15s ease"
-                  }}
-                >
-                  +{preset}
-                </button>
-              ))}
-            </div>
+
           </Card>
 
           {/* Rework Count Card */}
@@ -346,26 +286,24 @@ export function ProductionEntry() {
               </span>
             </div>
 
-            {/* Stepper Input */}
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", backgroundColor: "var(--bg-card-subtle)", padding: "6px 8px", borderRadius: "10px", border: "1px solid #E8DDCF" }}>
+            {/* Sleek Stepper Input */}
+            <div style={{ display: "flex", margin: "0 auto", width: "fit-content", alignItems: "center", gap: "12px", backgroundColor: "var(--bg-card-subtle)", padding: "4px", borderRadius: "32px", border: "1px solid #E8DDCF", boxShadow: "inset 0 1px 3px rgba(0,0,0,0.03)" }}>
               <button
                 type="button"
                 onClick={() => setReworkAdd(p => Math.max(0, p - 5))}
                 style={{
-                  width: "36px",
-                  height: "36px",
-                  borderRadius: "8px",
+                  width: "32px",
+                  height: "32px",
+                  borderRadius: "50%",
                   backgroundColor: "#FFFFFF",
                   border: "1px solid #E2D7C7",
-                  color: "var(--text-primary)",
-                  fontWeight: 800,
-                  fontSize: "14px",
+                  color: "var(--text-secondary)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   cursor: "pointer",
-                  boxShadow: "0 1px 3px rgba(70, 45, 15, 0.05)",
-                  transition: "all 0.15s ease",
+                  boxShadow: "0 2px 4px rgba(70, 45, 15, 0.05)",
+                  transition: "all 0.2s ease",
                   flexShrink: 0
                 }}
                 title="-5"
@@ -378,18 +316,16 @@ export function ProductionEntry() {
                 value={reworkAdd}
                 onChange={(e) => setReworkAdd(Math.max(0, parseInt(e.target.value) || 0))}
                 style={{
-                  flex: 1,
                   textAlign: "center",
                   backgroundColor: "transparent",
                   border: "none",
                   color: "#B27E33",
                   fontFamily: "var(--font-mono)",
-                  fontSize: "22px",
+                  fontSize: "18px",
                   fontWeight: 800,
                   outline: "none",
-                  width: "100%",
-                  minWidth: "60px",
-                  padding: "4px 0"
+                  width: "56px",
+                  padding: "0"
                 }}
                 required
               />
@@ -398,20 +334,18 @@ export function ProductionEntry() {
                 type="button"
                 onClick={() => setReworkAdd(p => p + 5)}
                 style={{
-                  width: "36px",
-                  height: "36px",
-                  borderRadius: "8px",
+                  width: "32px",
+                  height: "32px",
+                  borderRadius: "50%",
                   backgroundColor: "#FFFFFF",
                   border: "1px solid #E2D7C7",
                   color: "var(--text-primary)",
-                  fontWeight: 800,
-                  fontSize: "14px",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   cursor: "pointer",
-                  boxShadow: "0 1px 3px rgba(70, 45, 15, 0.05)",
-                  transition: "all 0.15s ease",
+                  boxShadow: "0 2px 4px rgba(70, 45, 15, 0.05)",
+                  transition: "all 0.2s ease",
                   flexShrink: 0
                 }}
                 title="+5"
@@ -420,31 +354,7 @@ export function ProductionEntry() {
               </button>
             </div>
 
-            {/* Quick Preset Buttons */}
-            <div style={{ display: "flex", gap: "6px" }}>
-              {[1, 5, 10, 20].map((preset) => (
-                <button
-                  key={preset}
-                  type="button"
-                  onClick={() => setReworkAdd(preset)}
-                  style={{
-                    flex: 1,
-                    padding: "5px 0",
-                    fontSize: "11px",
-                    fontWeight: 700,
-                    borderRadius: "6px",
-                    backgroundColor: reworkAdd === preset ? "rgba(200, 149, 71, 0.2)" : "#FFFFFF",
-                    border: reworkAdd === preset ? "1px solid #C89547" : "1px solid var(--border-subtle)",
-                    color: reworkAdd === preset ? "#8C5B23" : "var(--text-secondary)",
-                    cursor: "pointer",
-                    boxShadow: "0 1px 2px rgba(70, 45, 15, 0.03)",
-                    transition: "all 0.15s ease"
-                  }}
-                >
-                  +{preset}
-                </button>
-              ))}
-            </div>
+
           </Card>
         </div>
 

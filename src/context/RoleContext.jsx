@@ -32,18 +32,12 @@ export const NAVIGATION_CONFIG = {
   line_lead: [
     { label: "Dashboard", path: "/linelead/dashboard", icon: "LayoutDashboard" },
     { label: "H/B Management", path: "/linelead/hb-management", icon: "Clock" },
-    { label: "Production Orders", path: "/linelead/production-orders", icon: "Factory" },
-    { label: "Line Schedule", path: "/linelead/line-schedule", icon: "CalendarRange" },
     { label: "Downtime & Loss", path: "/linelead/downtime-loss", icon: "AlertTriangle" },
     { label: "Changeover", path: "/linelead/changeover", icon: "Layers" },
     { label: "Staffing", path: "/linelead/staffing", icon: "Users" },
     { label: "Production Performance", path: "/linelead/production-performance", icon: "LineChart" },
-    { label: "Quality Events", path: "/linelead/quality-events", icon: "ShieldAlert" },
-    { label: "Material Status", path: "/linelead/material-status", icon: "Package" },
-    { label: "Maintenance Issues", path: "/linelead/maintenance-issues", icon: "Wrench" },
     { label: "Recovery Management", path: "/linelead/recovery-management", icon: "Zap" },
     { label: "Escalations", path: "/linelead/escalations", icon: "AlertOctagon" },
-    { label: "Shift Handoff", path: "/linelead/shift-handoff", icon: "Users" },
     { label: "Notifications", path: "/linelead/notifications", icon: "Bell" },
     { label: "Profile", path: "/linelead/profile", icon: "User" }
   ],
@@ -54,10 +48,7 @@ export const NAVIGATION_CONFIG = {
     {
       group: "Production",
       items: [
-        { label: "Production Orders", path: "/supervisor/production/orders", icon: "Factory" },
-        { label: "Batches", path: "/supervisor/production/batches", icon: "Layers" },
-        { label: "Production Performance", path: "/supervisor/production/performance", icon: "LineChart" },
-        { label: "Downtime & Loss", path: "/supervisor/production/downtime-loss", icon: "AlertTriangle" }
+        { label: "Production Performance", path: "/supervisor/production/performance", icon: "LineChart" }
       ]
     },
     {
@@ -72,15 +63,12 @@ export const NAVIGATION_CONFIG = {
     {
       group: "Quality",
       items: [
-        { label: "Quality Status", path: "/supervisor/quality/status", icon: "ShieldCheck" },
-        { label: "Holds", path: "/supervisor/quality/holds", icon: "ShieldAlert" },
-        { label: "Quality Events", path: "/supervisor/quality/events", icon: "AlertTriangle" }
+        { label: "Holds", path: "/supervisor/quality/holds", icon: "ShieldAlert" }
       ]
     },
     { label: "Recovery", path: "/supervisor/recovery", icon: "Zap" },
     { label: "Shift Handoff", path: "/supervisor/shift-handoff", icon: "Users" },
     { label: "Approvals", path: "/supervisor/approvals", icon: "FileCheck" },
-    { label: "Exceptions", path: "/supervisor/exceptions", icon: "AlertOctagon" },
     { label: "Reports", path: "/supervisor/reports", icon: "FileSpreadsheet" },
     { label: "Notifications", path: "/supervisor/notifications", icon: "Bell" },
     { label: "Profile", path: "/supervisor/profile", icon: "User" }
@@ -341,11 +329,7 @@ export const NAVIGATION_CONFIG = {
     {
       group: "Enterprise Performance",
       items: [
-        { label: "Multi-Plant KPIs", path: "/executive/enterprise/kpis", icon: "Gauge" },
-        { label: "OEE", path: "/executive/enterprise/oee", icon: "Activity" },
-        { label: "Production", path: "/executive/enterprise/production", icon: "Factory" },
-        { label: "Quality", path: "/executive/enterprise/quality", icon: "ShieldCheck" },
-        { label: "Delivery", path: "/executive/enterprise/delivery", icon: "Send" }
+        { label: "Multi-Plant KPIs", path: "/executive/enterprise/kpis", icon: "Gauge" }
       ]
     },
     {
@@ -363,9 +347,6 @@ export const NAVIGATION_CONFIG = {
     {
       group: "Business Performance",
       items: [
-        { label: "Customer Demand", path: "/executive/business/demand", icon: "ShoppingBag" },
-        { label: "Service Level", path: "/executive/business/service-level", icon: "CheckCircle" },
-        { label: "Shipment Performance", path: "/executive/business/shipments", icon: "Truck" },
         { label: "Trends", path: "/executive/business/trends", icon: "TrendingUp" }
       ]
     },
@@ -373,17 +354,13 @@ export const NAVIGATION_CONFIG = {
       group: "Risk & Opportunity",
       items: [
         { label: "Risks", path: "/executive/risk/risks", icon: "AlertTriangle" },
-        { label: "Constraints", path: "/executive/risk/constraints", icon: "AlertOctagon" },
-        { label: "Opportunities", path: "/executive/risk/opportunities", icon: "Zap" },
-        { label: "Recovery", path: "/executive/risk/recovery", icon: "RefreshCw" }
+        { label: "Opportunities", path: "/executive/risk/opportunities", icon: "Zap" }
       ]
     },
     {
       group: "AI",
       items: [
-        { label: "Executive AI Briefing", path: "/executive/ai/briefing", icon: "BrainCircuit" },
-        { label: "AI Recommendations", path: "/executive/ai/recommendations", icon: "Cpu" },
-        { label: "AI Agents", path: "/executive/ai/agents", icon: "Layers" }
+        { label: "Executive AI Briefing", path: "/executive/ai/briefing", icon: "BrainCircuit" }
       ]
     },
     { label: "Reports", path: "/executive/reports", icon: "FileSpreadsheet" },

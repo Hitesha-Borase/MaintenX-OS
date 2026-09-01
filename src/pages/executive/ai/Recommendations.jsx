@@ -30,19 +30,29 @@ export function Recommendations() {
 
       <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
         {recs.map((r, idx) => (
-          <Card key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderLeft: r.status === "Applied" ? "4px solid #10B981" : "4px solid #A855F7" }}>
-            <div>
-              <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                <Cpu size={16} color={r.status === "Applied" ? "#10B981" : "#A855F7"} />
-                <span style={{ fontSize: "13px", fontWeight: 700, color: "#FFFFFF" }}>{r.id}: {r.title}</span>
+          <Card key={idx} style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "14px",
+            padding: "16px 20px",
+            backgroundColor: "#FFFFFF",
+            border: "1px solid var(--border-subtle)",
+            borderLeft: r.status === "Applied" ? "4px solid #059669" : "4px solid #7C3AED"
+          }}>
+            <div style={{ flex: 1, minWidth: "220px" }}>
+              <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
+                <Cpu size={16} color={r.status === "Applied" ? "#059669" : "#7C3AED"} style={{ flexShrink: 0 }} />
+                <span style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)" }}>{r.id}: {r.title}</span>
                 <Badge variant={r.status === "Applied" ? "emerald" : "purple"}>{r.status}</Badge>
               </div>
               <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "4px" }}>
-                Confidence: <strong style={{ color: "#38BDF8" }}>{r.confidence}</strong> | Potential Impact: <strong style={{ color: "#10B981" }}>{r.actionValue}</strong>
+                Confidence: <strong style={{ color: "#0284C7" }}>{r.confidence}</strong> | Potential Impact: <strong style={{ color: "#059669" }}>{r.actionValue}</strong>
               </p>
             </div>
             {r.status === "Proposed" && (
-              <Button variant="success" size="sm" icon={CheckCircle} onClick={() => handleApply(r.id)}>
+              <Button variant="success" size="sm" icon={CheckCircle} onClick={() => handleApply(r.id)} style={{ flexShrink: 0 }}>
                 Apply Action
               </Button>
             )}

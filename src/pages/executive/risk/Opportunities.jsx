@@ -36,19 +36,32 @@ export function Opportunities() {
 
       <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
         {opps.map((o, idx) => (
-          <Card key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderLeft: o.status === "Approved" ? "4px solid #10B981" : "4px solid #38BDF8" }}>
-            <div>
-              <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                <Zap size={16} color={o.status === "Approved" ? "#10B981" : "#38BDF8"} />
-                <span style={{ fontSize: "13px", fontWeight: 700, color: "#FFFFFF" }}>{o.id}: {o.title}</span>
+          <Card
+            key={idx}
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "14px",
+              padding: "16px 20px",
+              backgroundColor: "#FFFFFF",
+              border: "1px solid var(--border-subtle)",
+              borderLeft: o.status === "Approved" ? "4px solid #059669" : "4px solid #0284C7"
+            }}
+          >
+            <div style={{ flex: 1, minWidth: "220px" }}>
+              <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
+                <Zap size={16} color={o.status === "Approved" ? "#059669" : "#0284C7"} style={{ flexShrink: 0 }} />
+                <span style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)" }}>{o.id}: {o.title}</span>
                 <Badge variant={o.status === "Approved" ? "emerald" : "cyan"}>{o.status}</Badge>
               </div>
               <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "4px" }}>
-                Est Savings: <strong style={{ color: "#10B981" }}>{o.estSavings}</strong> | Payback: {o.payback} | Capex Cost: {o.costToImplement}
+                Est Savings: <strong style={{ color: "#059669", fontFamily: "var(--font-mono)" }}>{o.estSavings}</strong> | Payback: <strong>{o.payback}</strong> | Capex Cost: {o.costToImplement}
               </p>
             </div>
             {o.status === "Proposed" && (
-              <Button variant="success" size="sm" icon={DollarSign} onClick={() => handleApprove(o.id)}>
+              <Button variant="success" size="sm" icon={DollarSign} onClick={() => handleApprove(o.id)} style={{ flexShrink: 0 }}>
                 Authorize Opportunity
               </Button>
             )}

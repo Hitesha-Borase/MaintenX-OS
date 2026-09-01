@@ -120,7 +120,7 @@ export function OperatorDashboard() {
               }}
             />
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", fontFamily: "var(--font-mono)", fontWeight: 700, color: "#FFFFFF" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px", fontSize: "12px", fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--text-primary)" }}>
             <span>Actual: {actual.toLocaleString()} / {target.toLocaleString()} {activeOrder.unit}</span>
             <span>Target Remaining: {(target - actual).toLocaleString()} {activeOrder.unit}</span>
           </div>

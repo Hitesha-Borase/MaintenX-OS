@@ -44,13 +44,13 @@ export function Constraints() {
             { location: "Austin Plant — Line 1", constraint: "Pasteurizer thermal cycle speed limitation", impact: "Reduces maximum line output to 14,000/hr", status: "Critical" },
             { location: "Chicago Plant — Blending Room", constraint: "Tank 3 valve maintenance downtime window", impact: "Limits batch volume capacity on Tuesdays", status: "Mitigated" }
           ].map((item, idx) => (
-            <div key={idx} style={{ padding: "12px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div>
-                <span style={{ fontSize: "13px", fontWeight: 700, color: "#FFFFFF" }}>{item.location}</span>
+            <div key={idx} style={{ padding: "14px 16px", borderRadius: "8px", backgroundColor: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)", display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px" }}>
+              <div style={{ flex: 1, minWidth: "180px" }}>
+                <span style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)", display: "block" }}>{item.location}</span>
                 <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "4px" }}>Constraint: {item.constraint}</p>
                 <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>Impact: {item.impact}</span>
               </div>
-              <span style={{ fontSize: "12px", color: item.status === "Critical" ? "#EF4444" : "#10B981", fontWeight: 700 }}>
+              <span style={{ fontSize: "12px", color: item.status === "Critical" ? "#DC2626" : "#059669", fontWeight: 800, flexShrink: 0 }}>
                 {item.status}
               </span>
             </div>
