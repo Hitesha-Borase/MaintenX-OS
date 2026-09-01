@@ -1,36 +1,26 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   Search,
   Plus,
   Bell,
-  Building2,
-  Calendar,
-  Clock,
-  UserCheck,
   ChevronDown,
+  ChevronRight,
   Menu,
-  Sparkles,
   QrCode,
-  Shield,
-  Cpu,
   Flame,
-  User
+  User,
+  Settings,
+  LogOut,
+  RefreshCw
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Breadcrumbs } from "./Breadcrumbs";
 import { useApp } from "../../context/AppContext";
 import { useRole } from "../../context/RoleContext";
 import { Button } from "../common/Button";
-import { Badge } from "../common/Badge";
 
 export function Header() {
   const {
-    selectedPlant,
-    setSelectedPlant,
-    PLANTS,
-    selectedShift,
-    setSelectedShift,
-    SHIFTS,
-    selectedDate,
     setIsSearchOpen,
     setIsQuickActionOpen,
     openQrModal,
@@ -39,12 +29,47 @@ export function Header() {
     addToast
   } = useApp();
 
+  const navigate = useNavigate();
   const { currentRole, setRoleById, ROLES } = useRole();
   const [showRoleDropdown, setShowRoleDropdown] = useState(false);
-  const [showNotifications, setShowNotifications] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [showRoleSubmenu, setShowRoleSubmenu] = useState(false);
+  const profileDropdownRef = useRef(null);
+
+  // Close profile dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (profileDropdownRef.current && !profileDropdownRef.current.contains(e.target)) {
+        setShowProfileMenu(false);
+        setShowRoleSubmenu(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleLogout = () => {
+    setShowProfileMenu(false);
+    addToast("Logged out successfully.", "info");
+    navigate("/login");
+  };
 
   return (
-    <header className="app-header" style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 40, backdropFilter: "blur(14px)", backgroundColor: "var(--bg-header)", borderBottom: "1px solid var(--border-subtle)" }}>
+    <header
+      className="app-header"
+      style={{
+        width: "100%",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        position: "sticky",
+        top: 0,
+        zIndex: 40,
+        backdropFilter: "blur(14px)",
+        backgroundColor: "var(--bg-header)",
+        borderBottom: "1px solid var(--border-subtle)"
+      }}
+    >
       {/* Far Left: Branding Logo */}
       <div style={{ display: "flex", alignItems: "center", gap: "12px", flexShrink: 0 }}>
         <div
@@ -73,9 +98,8 @@ export function Header() {
         </div>
       </div>
 
-      {/* Center Space: intermediate elements distributed evenly */}
+      {/* Center: Nav toggle, Breadcrumbs, Search */}
       <div style={{ display: "flex", alignItems: "center", gap: "16px", flex: 1, justifyContent: "center", minWidth: 0 }}>
-        {/* Navigation / Mobile Toggle & Breadcrumbs */}
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -88,8 +112,6 @@ export function Header() {
             <Breadcrumbs />
           </div>
         </div>
-
-        {/* Facility and Shift removed to save space */}
 
         {/* Search Trigger */}
         <button
@@ -127,9 +149,10 @@ export function Header() {
         </button>
       </div>
 
-      {/* Far Right: Fast Action & Role Switcher */}
+      {/* Far Right: QR, Role Switcher, Bell, Fast Action, Profile */}
       <div style={{ display: "flex", alignItems: "center", gap: "10px", flexShrink: 0 }}>
-        {/* Quick QR Scanner / Label trigger */}
+
+        {/* QR Scanner */}
         <div className="header-qr-btn">
           <Button
             variant="secondary"
@@ -139,23 +162,24 @@ export function Header() {
             title="Scan or View Asset QR Code"
           />
         </div>
-        
-        {/* ROLE SWITCHER DROPDOWN */}
+
+        {/* Role Switcher Dropdown */}
         <div style={{ position: "relative" }}>
           <button
             className="header-role-btn"
             onClick={() => setShowRoleDropdown(!showRoleDropdown)}
             style={{
-              height: "36px",
+              height: "38px",
               fontSize: "12px",
               display: "flex",
               alignItems: "center",
-              height: "38px",
+              gap: "8px",
               backgroundColor: "#FFFFFF",
               border: "1px solid var(--border-subtle)",
               borderRadius: "12px",
-              padding: "0 6px 0 14px",
-              boxShadow: "0 1px 4px rgba(70, 45, 15, 0.04)"
+              padding: "0 12px 0 14px",
+              boxShadow: "0 1px 4px rgba(70, 45, 15, 0.04)",
+              cursor: "pointer"
             }}
           >
             <div
@@ -175,7 +199,9 @@ export function Header() {
             >
               {currentRole?.label?.charAt(0) || "U"}
             </div>
-            <span className="header-role-text" style={{ fontWeight: 700, color: "var(--text-primary)" }}>{currentRole.label} - Alexander V.</span>
+            <span className="header-role-text" style={{ fontWeight: 700, color: "var(--text-primary)" }}>
+              {currentRole.label} - Alexander V.
+            </span>
             <div className="header-role-chevron" style={{ display: "flex" }}>
               <ChevronDown size={14} color="#B27E33" />
             </div>
@@ -283,7 +309,7 @@ export function Header() {
           <span className="btn-text">Fast Action</span>
         </Button>
 
-        {/* SLEEK PROFILE AVATAR BUTTON & DROPDOWN */}
+        {/* Profile Avatar + Dropdown */}
         <div ref={profileDropdownRef} style={{ position: "relative" }}>
           <button
             onClick={() => {
@@ -327,7 +353,7 @@ export function Header() {
             </div>
           </button>
 
-          {/* PROFILE & LOGOUT DROPDOWN MENU */}
+          {/* Profile Dropdown Menu */}
           {showProfileMenu && (
             <div
               style={{
@@ -386,24 +412,10 @@ export function Header() {
                 </div>
               </div>
 
-              {/* Menu Options */}
+              {/* My Profile */}
               <div
-                onClick={() => {
-                  setShowProfileMenu(false);
-                  navigate("/profile");
-                }}
-                style={{
-                  padding: "9px 12px",
-                  borderRadius: "8px",
-                  fontSize: "13px",
-                  fontWeight: 600,
-                  color: "var(--text-primary)",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "10px",
-                  transition: "background-color 0.12s ease"
-                }}
+                onClick={() => { setShowProfileMenu(false); navigate("/profile"); }}
+                style={{ padding: "9px 12px", borderRadius: "8px", fontSize: "13px", fontWeight: 600, color: "var(--text-primary)", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px", transition: "background-color 0.12s ease" }}
                 onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "var(--bg-card-subtle)")}
                 onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
               >
@@ -411,21 +423,10 @@ export function Header() {
                 <span>My Profile</span>
               </div>
 
-              {/* Switch Role Option */}
+              {/* Switch Role */}
               <div
                 onClick={() => setShowRoleSubmenu(!showRoleSubmenu)}
-                style={{
-                  padding: "9px 12px",
-                  borderRadius: "8px",
-                  fontSize: "13px",
-                  fontWeight: 600,
-                  color: "var(--text-primary)",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  transition: "background-color 0.12s ease"
-                }}
+                style={{ padding: "9px 12px", borderRadius: "8px", fontSize: "13px", fontWeight: 600, color: "var(--text-primary)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", transition: "background-color 0.12s ease" }}
                 onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "var(--bg-card-subtle)")}
                 onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
               >
@@ -436,41 +437,14 @@ export function Header() {
                 <ChevronRight size={13} color="var(--text-muted)" style={{ transform: showRoleSubmenu ? "rotate(90deg)" : "none", transition: "transform 0.15s ease" }} />
               </div>
 
-              {/* Nested Role Submenu */}
+              {/* Role Submenu */}
               {showRoleSubmenu && (
-                <div
-                  style={{
-                    maxHeight: "160px",
-                    overflowY: "auto",
-                    backgroundColor: "var(--bg-card-subtle)",
-                    borderRadius: "8px",
-                    padding: "4px",
-                    margin: "2px 0 4px 0",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "2px"
-                  }}
-                >
+                <div style={{ maxHeight: "160px", overflowY: "auto", backgroundColor: "var(--bg-card-subtle)", borderRadius: "8px", padding: "4px", margin: "2px 0 4px 0", display: "flex", flexDirection: "column", gap: "2px" }}>
                   {ROLES.map((r) => (
                     <div
                       key={r.id}
-                      onClick={() => {
-                        setRoleById(r.id);
-                        setShowProfileMenu(false);
-                        setShowRoleSubmenu(false);
-                      }}
-                      style={{
-                        padding: "6px 10px",
-                        borderRadius: "6px",
-                        fontSize: "12px",
-                        fontWeight: currentRole.id === r.id ? 800 : 500,
-                        color: currentRole.id === r.id ? "#261603" : "var(--text-primary)",
-                        background: currentRole.id === r.id ? "linear-gradient(180deg, #E2B670 0%, #C89547 100%)" : "transparent",
-                        cursor: "pointer",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between"
-                      }}
+                      onClick={() => { setRoleById(r.id); setShowProfileMenu(false); setShowRoleSubmenu(false); }}
+                      style={{ padding: "6px 10px", borderRadius: "6px", fontSize: "12px", fontWeight: currentRole.id === r.id ? 800 : 500, color: currentRole.id === r.id ? "#261603" : "var(--text-primary)", background: currentRole.id === r.id ? "linear-gradient(180deg, #E2B670 0%, #C89547 100%)" : "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}
                     >
                       <span>{r.label}</span>
                       {currentRole.id === r.id && <span style={{ fontSize: "9px", color: "#261603", fontWeight: 800 }}>● Active</span>}
@@ -479,53 +453,24 @@ export function Header() {
                 </div>
               )}
 
-              {/* Account / Settings */}
+              {/* Account Settings */}
               <div
-                onClick={() => {
-                  setShowProfileMenu(false);
-                  navigate("/configuration");
-                }}
-                style={{
-                  padding: "9px 12px",
-                  borderRadius: "8px",
-                  fontSize: "13px",
-                  fontWeight: 600,
-                  color: "var(--text-primary)",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "10px",
-                  transition: "background-color 0.12s ease"
-                }}
+                onClick={() => { setShowProfileMenu(false); navigate("/configuration"); }}
+                style={{ padding: "9px 12px", borderRadius: "8px", fontSize: "13px", fontWeight: 600, color: "var(--text-primary)", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px", transition: "background-color 0.12s ease" }}
                 onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "var(--bg-card-subtle)")}
                 onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
               >
-                <SettingsIcon size={15} color="#6B5B4E" />
+                <Settings size={15} color="#6B5B4E" />
                 <span>Account Settings</span>
               </div>
 
               {/* Divider */}
               <div style={{ height: "1px", backgroundColor: "var(--border-subtle)", margin: "4px 0" }} />
 
-              {/* Sign Out / Logout */}
+              {/* Sign Out */}
               <div
-                onClick={() => {
-                  setShowProfileMenu(false);
-                  logout();
-                  addToast("Logged out successfully.", "info");
-                }}
-                style={{
-                  padding: "9px 12px",
-                  borderRadius: "8px",
-                  fontSize: "13px",
-                  fontWeight: 700,
-                  color: "#DC2626",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "10px",
-                  transition: "background-color 0.12s ease"
-                }}
+                onClick={handleLogout}
+                style={{ padding: "9px 12px", borderRadius: "8px", fontSize: "13px", fontWeight: 700, color: "#DC2626", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px", transition: "background-color 0.12s ease" }}
                 onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgba(239, 68, 68, 0.1)")}
                 onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
               >
@@ -538,64 +483,29 @@ export function Header() {
       </div>
 
       <style>{`
-        /* Mobile defaults (up to 767px) */
         @media (max-width: 767px) {
           .header-logo-text { display: none !important; }
           .header-breadcrumbs { display: none !important; }
           .search-text-placeholder { display: none !important; }
-          
-          /* Make search button circular/icon only on mobile */
-          .header-search-btn { 
-            width: 36px !important; 
-            min-width: 36px !important; 
-            padding: 0 !important; 
-            justify-content: center !important; 
-            border: none !important; 
-            background: transparent !important;
-            box-shadow: none !important;
-          }
+          .header-search-btn { width: 36px !important; min-width: 36px !important; padding: 0 !important; justify-content: center !important; border: none !important; background: transparent !important; box-shadow: none !important; }
           .search-icon-wrapper { padding: 8px !important; border-radius: 10px !important; }
-          
           .header-qr-btn { display: none !important; }
           .header-role-text { display: none !important; }
           .header-role-chevron { display: none !important; }
-          
-          /* Avatar circle only on mobile */
-          .header-role-btn { 
-            padding: 0 !important; 
-            width: 36px !important; 
-            justify-content: center !important; 
-            background: transparent !important;
-            border: none !important;
-            box-shadow: none !important;
-          }
-          
+          .header-role-btn { padding: 0 !important; width: 36px !important; justify-content: center !important; background: transparent !important; border: none !important; box-shadow: none !important; }
           .header-fast-action { display: none !important; }
-          
-          /* Tighter header padding for mobile */
           .app-header { padding: 12px 16px !important; gap: 8px !important; }
         }
-
-        /* Tablet/Desktop defaults */
         @media (min-width: 768px) {
           .header-logo-text { display: flex !important; }
           .header-breadcrumbs { display: block !important; }
           .search-text-placeholder { display: inline !important; }
-          
-          .header-search-btn { 
-            min-width: 180px !important; 
-            padding: 0 10px 0 14px !important; 
-            justify-content: space-between !important; 
-          }
-          
+          .header-search-btn { min-width: 180px !important; padding: 0 10px 0 14px !important; justify-content: space-between !important; }
           .header-qr-btn { display: block !important; }
           .header-role-text { display: inline !important; }
           .header-role-chevron { display: block !important; }
-          
           .header-role-btn { padding: 0 12px !important; }
-          
           .header-fast-action { display: block !important; }
-          
           .app-header { padding: 12px 24px !important; gap: 16px !important; }
         }
       `}</style>
