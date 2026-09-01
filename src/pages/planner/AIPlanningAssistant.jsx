@@ -44,9 +44,7 @@ export function AIPlanningAssistant() {
         <h1 style={{ fontSize: "24px", fontWeight: 800, color: "#2d2825", margin: "0 0 8px 0" }}>
           AI Supply Chain Planning Assistant
         </h1>
-        <p style={{ fontSize: "15px", color: "#7a7571", margin: 0 }}>
-          Leverage predictive models to sequence production orders and optimize capacity constraints
-        </p>
+
       </div>
 
       {/* Recommended Action Card */}

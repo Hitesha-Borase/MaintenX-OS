@@ -24,9 +24,7 @@ export function PublishSchedule() {
           <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
             Publish Shift Run Schedule
           </h1>
-          <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-            Dispatch the validated run schedule to active shopfloor operator terminals
-          </p>
+
         </div>
 
         {!published ? (

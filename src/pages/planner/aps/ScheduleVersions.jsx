@@ -26,9 +26,7 @@ export function ScheduleVersions() {
         <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
           Schedule Version History
         </h1>
-        <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-          Revert or compare draft schedule runs from baseline versions
-        </p>
+
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>

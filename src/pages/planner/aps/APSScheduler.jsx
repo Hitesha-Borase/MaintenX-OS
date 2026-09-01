@@ -25,9 +25,7 @@ export function APSScheduler() {
           <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
             APS Optimization Engine
           </h1>
-          <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-            Run advanced algorithms to sequence runs and minimize changeover duration
-          </p>
+
         </div>
 
         <Button variant="primary" icon={running ? Check : Play} onClick={handleOptimize} disabled={running}>

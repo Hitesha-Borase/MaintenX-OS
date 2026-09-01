@@ -25,9 +25,7 @@ export function ForecastRun() {
           <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
             Demand Forecasting Console
           </h1>
-          <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-            Review baseline statistical projections for the upcoming quarters
-          </p>
+
         </div>
 
         <Button variant="primary" icon={running ? Sparkles : LineChart} onClick={handleRunForecast} disabled={running}>

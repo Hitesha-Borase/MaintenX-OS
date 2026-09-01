@@ -14,9 +14,7 @@ export function DemandHistory() {
         <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>
           Historical Sales Demand
         </h1>
-        <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginTop: "4px", fontWeight: 500 }}>
-          Examine past shipping compliance to improve current forecast baseline values
-        </p>
+
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>

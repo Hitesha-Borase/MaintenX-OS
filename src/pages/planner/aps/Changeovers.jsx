@@ -33,9 +33,7 @@ export function Changeovers() {
         <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
           SKU Changeover Matrix
         </h1>
-        <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-          Monitor standard mechanical swap durations for scheduling sequences
-        </p>
+
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>

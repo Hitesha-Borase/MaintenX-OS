@@ -37,9 +37,7 @@ export function PromotionsUplift() {
         <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
           Promotion & Event Demand Uplifts
         </h1>
-        <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-          Incorporate trade promotions or event volume spikes into the scheduling forecast model
-        </p>
+
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "16px" }}>

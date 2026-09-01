@@ -36,9 +36,7 @@ export function WorkCenterCapacity() {
         <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
           Work Center Utilization
         </h1>
-        <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-          Operations overview of active capacity limits and work center status
-        </p>
+
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>

@@ -26,9 +26,7 @@ export function PlanningReports() {
         <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>
           Supply Planning Reports
         </h1>
-        <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginTop: "4px", fontWeight: 500 }}>
-          Access cost-variance reviews, safety stock projections, and MRP validation reports
-        </p>
+
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>

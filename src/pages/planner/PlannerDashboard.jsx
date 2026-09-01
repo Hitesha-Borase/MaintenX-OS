@@ -53,9 +53,7 @@ export function PlannerDashboard() {
           <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)" }}>
             Supply Chain Planning Dashboard
           </h1>
-          <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginTop: "4px" }}>
-            Demand planning, MRP net requirements, scheduling, and capacity constraints
-          </p>
+
         </div>
 
         <div className="planner-header-toggle" style={{ display: "flex", gap: "4px", backgroundColor: "#0F172A", padding: "6px", borderRadius: "10px", border: "1px solid var(--border-subtle)" }}>

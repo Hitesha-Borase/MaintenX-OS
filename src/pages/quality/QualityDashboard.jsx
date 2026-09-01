@@ -31,9 +31,7 @@ export function QualityDashboard() {
         <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
           Quality Assurance Control Center
         </h1>
-        <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-          Monitor pre-op sanitation status, Critical Control Point (CCP) limits, holds, and human release approvals
-        </p>
+
       </div>
 
       {/* KPI Stats */}
