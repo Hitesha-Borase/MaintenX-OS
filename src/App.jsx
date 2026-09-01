@@ -329,6 +329,8 @@ import { TroubleshootingPage } from "./pages/troubleshooting/TroubleshootingPage
 import { ReliabilityPage } from "./pages/reliability/ReliabilityPage";
 import { MachineIoTPage } from "./pages/iot/MachineIoTPage";
 import { MaintenanceLabourPage } from "./pages/labour/MaintenanceLabourPage";
+import { RepeatFailures } from "./pages/maintenance/RepeatFailures";
+import { VerifiedSolutions as MaintenanceVerifiedSolutions } from "./pages/maintenance/VerifiedSolutions";
 import { ReportsPage } from "./pages/reports/ReportsPage";
 import { NotificationsPage } from "./pages/notifications/NotificationsPage";
 import { ProfilePage } from "./pages/profile/ProfilePage";
@@ -533,6 +535,10 @@ export function AppContent() {
           <Route path="/maintenance/reliability" element={<RoleProtectedRoute><ReliabilityPage /></RoleProtectedRoute>} />
           <Route path="/machine-iot" element={<RoleProtectedRoute><MachineIoTPage /></RoleProtectedRoute>} />
           <Route path="/maintenance-labour" element={<RoleProtectedRoute><MaintenanceLabourPage /></RoleProtectedRoute>} />
+          <Route path="/maintenance/repeat-failures" element={<RoleProtectedRoute><RepeatFailures /></RoleProtectedRoute>} />
+          <Route path="/maintenance/verified-solutions" element={<RoleProtectedRoute><MaintenanceVerifiedSolutions /></RoleProtectedRoute>} />
+          <Route path="/repeat-failures" element={<RoleProtectedRoute><RepeatFailures /></RoleProtectedRoute>} />
+          <Route path="/verified-solutions" element={<RoleProtectedRoute><MaintenanceVerifiedSolutions /></RoleProtectedRoute>} />
 
           {/* ========================================================= */}
           {/* 3. PLANT MANAGER & COMMAND CENTER ROUTES                  */}

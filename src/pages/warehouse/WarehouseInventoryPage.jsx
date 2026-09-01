@@ -9,7 +9,9 @@ import {
   CheckCircle2,
   AlertTriangle,
   X,
-  Layers
+  Layers,
+  Building,
+  DollarSign
 } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { Badge } from "../../components/common/Badge";
@@ -19,71 +21,132 @@ import { useInventory } from "../../context/InventoryContext";
 import { useApp } from "../../context/AppContext";
 
 export function WarehouseInventoryPage() {
-  const { lots, zones, addLot } = useInventory();
+  const { lots = [], zones = [], addLot } = useInventory();
   const { addToast } = useApp();
 
   const [searchQuery, setSearchQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("ALL");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [formData, setFormData] = useState({
-    item: "",
+    materialName: "",
+    materialCode: "RM-RAW-01",
     category: "Raw Material",
     quantity: 1000,
     unit: "kg",
-    zone: "Zone A - Raw Ingredients"
+    location: "Cold Storage Zone A - Rack R04-B2",
+    supplier: "Citrus Valley Farms Co.",
+    costPerUnitUSD: 4.50
   });
 
+  const getLotId = (l) => l.lotNumber || l.id || "LOT-REC-001";
+  const getName = (l) => l.materialName || l.item || l.materialCode || "Inventory Item";
+  const getLocation = (l) => l.location || l.zone || "Warehouse Bay";
+  const getStatus = (l) => l.qaStatus || l.status || "Approved / Released";
+
   const filteredLots = (lots || []).filter((l) => {
-    return (
-      l.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      l.item.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      l.zone.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const q = searchQuery.toLowerCase();
+    const id = getLotId(l).toLowerCase();
+    const name = getName(l).toLowerCase();
+    const loc = getLocation(l).toLowerCase();
+    const cat = (l.category || "").toLowerCase();
+
+    const matchesSearch = id.includes(q) || name.includes(q) || loc.includes(q);
+    const matchesCat = categoryFilter === "ALL" || (l.category || "") === categoryFilter;
+
+    return matchesSearch && matchesCat;
   });
 
   const handleAddSubmit = (e) => {
     e.preventDefault();
-    if (!formData.item) {
+    if (!formData.materialName.trim()) {
       addToast("Please provide item name", "warning");
       return;
     }
+
+    const lotNumber = `LOT-REC-${Math.floor(1000 + Math.random() * 9000)}`;
+    const newLot = {
+      lotNumber,
+      materialCode: formData.materialCode,
+      materialName: formData.materialName,
+      category: formData.category,
+      quantity: Number(formData.quantity) || 1000,
+      unit: formData.unit,
+      location: formData.location,
+      supplier: formData.supplier,
+      supplierLot: `SUP-${lotNumber}`,
+      receivedDate: new Date().toISOString().substring(0, 10),
+      expiryDate: "2027-12-31",
+      qaStatus: "Approved / Released",
+      costPerUnitUSD: Number(formData.costPerUnitUSD) || 1.0
+    };
+
     if (addLot) {
-      addLot({
-        ...formData,
-        quantity: Number(formData.quantity),
-        status: "In Stock"
-      });
+      addLot(newLot);
     }
-    addToast(`Material Lot added to Warehouse Inventory!`, "success");
+    addToast(`Material Lot ${lotNumber} added to Warehouse Inventory!`, "success");
     setIsAddModalOpen(false);
+    setFormData({
+      materialName: "",
+      materialCode: "RM-RAW-01",
+      category: "Raw Material",
+      quantity: 1000,
+      unit: "kg",
+      location: "Cold Storage Zone A - Rack R04-B2",
+      supplier: "Citrus Valley Farms Co.",
+      costPerUnitUSD: 4.50
+    });
+  };
+
+  const handleExportCSV = () => {
+    const headers = "Lot Number,Material Name,Category,Quantity,Unit,Location,QA Status,Cost / Unit\n";
+    const rows = filteredLots
+      .map((l) => `"${getLotId(l)}","${getName(l)}","${l.category || ''}",${l.quantity || 0},"${l.unit || 'kg'}","${getLocation(l)}","${getStatus(l)}",${l.costPerUnitUSD || 0}`)
+      .join("\n");
+    const blob = new Blob([headers + rows], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `Warehouse_Inventory_${new Date().toISOString().substring(0, 10)}.csv`;
+    a.click();
+    addToast("Warehouse inventory exported to CSV.", "info");
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%", maxWidth: "1200px", margin: "0 auto", minWidth: 0 }}>
       {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
-        <div>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px", width: "100%" }}>
+        <div style={{ minWidth: "240px", flex: 1 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+            <h1 style={{ fontSize: "clamp(18px, 4vw, 24px)", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.3px", lineHeight: 1.2 }}>
               Warehouse & Raw Materials Inventory
             </h1>
-            <Badge variant="cyan">{lots?.length || 0} Tracked Material Lots</Badge>
+            <Badge variant="cyan">{lots.length} TRACKED MATERIAL LOTS</Badge>
           </div>
-          <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>
-            MRO store, bulk ingredient holding tanks, packaging materials stock, and warehouse bin locations.
-          </p>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-          <Button variant="primary" icon={Plus} onClick={() => setIsAddModalOpen(true)}>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+          <Button variant="secondary" icon={Download} onClick={handleExportCSV} style={{ fontSize: "12px", padding: "7px 12px" }}>
+            Export CSV
+          </Button>
+          <Button variant="primary" icon={Plus} onClick={() => setIsAddModalOpen(true)} style={{ fontSize: "12px", padding: "7px 12px" }}>
             + Receive Material Lot
           </Button>
         </div>
       </div>
 
-      {/* KPI Tickers */}
-      <div className="grid-3" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "16px" }}>
+      {/* KPI Tickers - 2x2 on mobile, 4 on desktop */}
+      <div
+        className="kpi-grid-responsive grid-4"
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+          gap: "12px",
+          width: "100%",
+          minWidth: 0
+        }}
+      >
         <StatCard
-          title="Stock Availability Health"
+          title="Stock Availability"
           value="98.1%"
           unit="In Stock"
           trend={{ value: "All high-runner SKUs covered", isPositive: true, text: "" }}
@@ -92,77 +155,116 @@ export function WarehouseInventoryPage() {
         />
         <StatCard
           title="Active Storage Zones"
-          value="4 Zones"
+          value={`${zones.length || 4} Zones`}
           unit="A, B, C, D"
-          trend={{ value: "Cleanroom & ambient storage", isPositive: true, text: "" }}
+          trend={{ value: "Cold & ambient storage", isPositive: true, text: "" }}
           icon={Layers}
           colorVariant="cyan"
         />
         <StatCard
-          title="Inventory Turnover"
-          value="18.2 Days"
-          unit="DOH"
-          trend={{ value: "Lean stock buffer", isPositive: true, text: "" }}
+          title="Total Inventory Value"
+          value="$124,500"
+          unit="Valuation"
+          trend={{ value: "Real-time FIFO pricing", isPositive: true, text: "" }}
+          icon={DollarSign}
+          colorVariant="emerald"
+        />
+        <StatCard
+          title="Critical Shortages"
+          value="0 Items"
+          unit="Clear"
+          trend={{ value: "Safety stock maintained", isPositive: true, text: "" }}
           icon={CheckCircle2}
           colorVariant="emerald"
         />
       </div>
 
-      {/* Inventory Table */}
-      <Card>
+      {/* Inventory Table Card */}
+      <Card style={{ padding: "18px", minWidth: 0, width: "100%", boxSizing: "border-box" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "12px" }}>
-          <div style={{ position: "relative", minWidth: "260px", flex: 1 }}>
+          <div style={{ position: "relative", minWidth: "220px", flex: 1 }}>
             <Search size={15} color="var(--text-muted)" style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)" }} />
             <input
               type="text"
-              placeholder="Search lot number, material item, zone..."
+              placeholder="Search lot #, material name, bin location..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="form-input"
-              style={{ paddingLeft: "32px", height: "36px", fontSize: "12px" }}
+              style={{ paddingLeft: "32px", height: "36px", fontSize: "12px", backgroundColor: "#FFFFFF" }}
             />
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <span style={{ fontSize: "12px", color: "var(--text-muted)", fontWeight: 700 }}>Category:</span>
+            <select
+              className="form-select"
+              style={{ height: "36px", minWidth: "130px", fontSize: "12px", backgroundColor: "#FFFFFF" }}
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+            >
+              <option value="ALL">All Categories</option>
+              <option value="Raw Material">Raw Material</option>
+              <option value="Packaging">Packaging</option>
+              <option value="Finished Goods">Finished Goods</option>
+            </select>
           </div>
         </div>
 
-        <div className="data-table-container">
-          <table className="data-table">
+        <div className="data-table-container" style={{ width: "100%", overflowX: "auto", WebkitOverflowScrolling: "touch", display: "block" }}>
+          <table className="data-table" style={{ width: "100%", minWidth: "680px" }}>
             <thead>
               <tr>
-                <th>Lot ID</th>
-                <th>Material Description</th>
+                <th>Lot Number</th>
+                <th>Material Name</th>
                 <th>Category</th>
-                <th>Stock Quantity</th>
-                <th>Warehouse Zone</th>
-                <th>Status</th>
+                <th>On-Hand Qty</th>
+                <th>Storage Bin / Location</th>
+                <th>QA Status</th>
               </tr>
             </thead>
             <tbody>
-              {filteredLots.map((l) => (
-                <tr key={l.id}>
-                  <td>
-                    <span style={{ fontWeight: 700, color: "#38BDF8", fontFamily: "var(--font-mono)" }}>{l.id}</span>
-                  </td>
-                  <td>
-                    <div style={{ fontWeight: 600, color: "var(--text-primary)" }}>{l.item}</div>
-                  </td>
-                  <td>
-                    <Badge variant="cyan">{l.category}</Badge>
-                  </td>
-                  <td>
-                    <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700 }}>
-                      {l.quantity.toLocaleString()} {l.unit}
-                    </span>
-                  </td>
-                  <td style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-                    {l.zone}
-                  </td>
-                  <td>
-                    <Badge variant={l.status === "In Stock" ? "emerald" : "amber"}>
-                      {l.status}
-                    </Badge>
+              {filteredLots.length === 0 ? (
+                <tr>
+                  <td colSpan={6} style={{ textAlign: "center", padding: "24px", color: "var(--text-secondary)" }}>
+                    No material lots match your search query.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                filteredLots.map((l, idx) => {
+                  const status = getStatus(l);
+                  const isApproved = status.toLowerCase().includes("app") || status.toLowerCase().includes("rel");
+
+                  return (
+                    <tr key={idx}>
+                      <td>
+                        <span style={{ fontWeight: 800, color: "#8C5B23", fontFamily: "var(--font-mono)" }}>{getLotId(l)}</span>
+                      </td>
+                      <td>
+                        <div style={{ fontWeight: 700, color: "var(--text-primary)" }}>{getName(l)}</div>
+                        <span style={{ fontSize: "11px", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>
+                          {l.materialCode || "RM-STD"}
+                        </span>
+                      </td>
+                      <td>
+                        <Badge variant="cyan">{l.category || "Raw Material"}</Badge>
+                      </td>
+                      <td>
+                        <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--text-primary)" }}>
+                          {Number(l.quantity || 0).toLocaleString()} {l.unit || "units"}
+                        </span>
+                      </td>
+                      <td>
+                        <span style={{ fontSize: "12px", color: "var(--text-secondary)", fontWeight: 600 }}>{getLocation(l)}</span>
+                      </td>
+                      <td>
+                        <Badge variant={isApproved ? "emerald" : "amber"}>
+                          {status}
+                        </Badge>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
@@ -170,75 +272,93 @@ export function WarehouseInventoryPage() {
 
       {/* RECEIVE LOT MODAL */}
       {isAddModalOpen && (
-        <div className="modal-backdrop">
-          <div className="modal-content" style={{ maxWidth: "520px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-              <h2 style={{ fontSize: "18px", fontWeight: 800, color: "var(--text-primary)" }}>
-                Receive Material Inbound
+        <div className="modal-backdrop" onClick={() => setIsAddModalOpen(false)}>
+          <div className="modal-content" style={{ maxWidth: "520px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+              <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)" }}>
+                Receive Material Inbound Lot
               </h2>
               <button onClick={() => setIsAddModalOpen(false)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
                 <X size={18} />
               </button>
             </div>
 
-            <form onSubmit={handleAddSubmit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+            <form onSubmit={handleAddSubmit} style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px", maxHeight: "80vh", overflowY: "auto" }}>
               <div>
-                <label className="form-label">Material Name *</label>
+                <label className="form-label">Material Name / Description *</label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Liquid Cane Sugar 67° Bx Syrup"
-                  value={formData.item}
-                  onChange={(e) => setFormData({ ...formData, item: e.target.value })}
+                  placeholder="e.g. Valencia Organic Orange Juice Concentrate"
+                  value={formData.materialName}
+                  onChange={(e) => setFormData({ ...formData, materialName: e.target.value })}
                   className="form-input"
+                  style={{ backgroundColor: "#FFFFFF" }}
                 />
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
                 <div>
-                  <label className="form-label">Category</label>
+                  <label className="form-label">Material Category *</label>
                   <select
                     className="form-select"
                     value={formData.category}
                     onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                    style={{ backgroundColor: "#FFFFFF" }}
                   >
-                    <option value="Raw Material">Raw Material Ingredient</option>
-                    <option value="Packaging">Packaging (Bottles/Caps)</option>
-                    <option value="Chemicals">Sanitation Chemicals</option>
+                    <option value="Raw Material">Raw Material</option>
+                    <option value="Packaging">Packaging</option>
+                    <option value="Finished Goods">Finished Goods</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="form-label">Quantity *</label>
+                  <label className="form-label">Received Quantity *</label>
                   <input
                     type="number"
                     required
                     value={formData.quantity}
-                    onChange={(e) => setFormData({ ...formData, quantity: Number(e.target.value) })}
+                    onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
                     className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
                   />
                 </div>
               </div>
 
-              <div>
-                <label className="form-label">Destination Warehouse Zone</label>
-                <select
-                  className="form-select"
-                  value={formData.zone}
-                  onChange={(e) => setFormData({ ...formData, zone: e.target.value })}
-                >
-                  <option value="Zone A - Raw Ingredients">Zone A - Raw Ingredients</option>
-                  <option value="Zone B - Packaging & Corrugated">Zone B - Packaging</option>
-                  <option value="Zone C - Bulk Tank Silos">Zone C - Bulk Tank Silos</option>
-                </select>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
+                <div>
+                  <label className="form-label">Storage Bin / Location *</label>
+                  <select
+                    className="form-select"
+                    value={formData.location}
+                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  >
+                    <option value="Cold Storage Zone A - Rack R04-B2">Cold Storage Zone A - Rack R04-B2</option>
+                    <option value="Ambient Storage Bay 2 - Bin G-12">Ambient Storage Bay 2 - Bin G-12</option>
+                    <option value="Warehouse Bay 3 - Racks P01-P06">Warehouse Bay 3 - Racks P01-P06</option>
+                    <option value="Finished Goods High-Bay - Bin FG-44">Finished Goods High-Bay - Bin FG-44</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="form-label">Unit of Measure</label>
+                  <input
+                    type="text"
+                    value={formData.unit}
+                    onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
               </div>
 
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px" }}>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
                 <Button variant="secondary" onClick={() => setIsAddModalOpen(false)}>
                   Cancel
                 </Button>
                 <Button variant="primary" type="submit">
-                  Receive & Save
+                  Receive & Register Lot
                 </Button>
               </div>
             </form>

@@ -20,7 +20,7 @@ import { useCMMS } from "../../context/CMMSContext";
 import { useApp } from "../../context/AppContext";
 
 export function PartsInventoryPage() {
-  const { spareParts, addSparePart, issueSparePart, restockSparePart, workOrders } = useCMMS();
+  const { spareParts = [], addSparePart, issueSparePart, restockSparePart, workOrders = [] } = useCMMS();
   const { addToast } = useApp();
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -52,12 +52,12 @@ export function PartsInventoryPage() {
   const [restockQty, setRestockQty] = useState(5);
 
   const lowStockList = spareParts.filter((p) => p.stock <= p.minStock);
-  const totalValuation = spareParts.reduce((sum, p) => sum + p.stock * p.unitCost, 0);
+  const totalValuation = spareParts.reduce((sum, p) => sum + (p.stock || 0) * (p.unitCost || 0), 0);
 
   const filteredParts = spareParts.filter((p) => {
     const matchesSearch =
-      p.partNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.partNo?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       p.supplier?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       p.location?.toLowerCase().includes(searchQuery.toLowerCase());
 
@@ -84,8 +84,18 @@ export function PartsInventoryPage() {
       unitCost: Number(addFormData.unitCost)
     });
 
-    addToast(`Spare part ${created.partNo} added to catalog!`, "success");
+    addToast(`Spare part ${created?.partNo || addFormData.partNo} added to catalog!`, "success");
     setIsAddModalOpen(false);
+    setAddFormData({
+      partNo: "",
+      name: "",
+      category: "Bearings & Power Transmission",
+      stock: 10,
+      minStock: 4,
+      unitCost: 50.0,
+      location: "Aisle 1 - Shelf A1",
+      supplier: "SKF Direct"
+    });
   };
 
   const handleIssueSubmit = (e) => {
@@ -114,7 +124,7 @@ export function PartsInventoryPage() {
   };
 
   const handleExportCSV = () => {
-    const headers = "Part No,Description,Category,On-Hand Stock,Min Stock,Unit Cost ($),Location,Supplier,Status\n";
+    const headers = "Part No,Description,Category,On-Hand Stock,Min Level,Unit Cost ($),Location,Supplier,Status\n";
     const rows = filteredParts
       .map(
         (p) =>
@@ -131,33 +141,39 @@ export function PartsInventoryPage() {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%", maxWidth: "1600px", margin: "0 auto", minWidth: 0 }}>
       {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
-        <div>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px", width: "100%" }}>
+        <div style={{ minWidth: "240px", flex: 1 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+            <h1 style={{ fontSize: "clamp(18px, 4vw, 24px)", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.3px", lineHeight: 1.2 }}>
               Spare Parts Inventory
             </h1>
-            <Badge variant="cyan">{spareParts.length} SKUs in Stock</Badge>
+            <Badge variant="cyan">{spareParts.length} SKUS IN STOCK</Badge>
           </div>
-          <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>
-            MRO store inventory levels, min-max reorder alerts, bin locations, and stock issue/receipt workflows.
-          </p>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-          <Button variant="secondary" icon={Download} onClick={handleExportCSV}>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+          <Button variant="secondary" icon={Download} onClick={handleExportCSV} style={{ fontSize: "12px", padding: "7px 12px" }}>
             Export Inventory
           </Button>
-          <Button variant="primary" icon={Plus} onClick={() => setIsAddModalOpen(true)}>
+          <Button variant="primary" icon={Plus} onClick={() => setIsAddModalOpen(true)} style={{ fontSize: "12px", padding: "7px 12px" }}>
             + Add Spare Part SKU
           </Button>
         </div>
       </div>
 
-      {/* KPI Tickers */}
-      <div className="grid-4" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px" }}>
+      {/* KPI Tickers - 2x2 on mobile, 4 on desktop */}
+      <div
+        className="kpi-grid-responsive grid-4"
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+          gap: "12px",
+          width: "100%",
+          minWidth: 0
+        }}
+      >
         <StatCard
           title="Total SKUs Managed"
           value={spareParts.length.toString()}
@@ -165,6 +181,7 @@ export function PartsInventoryPage() {
           trend={{ value: "100% catalogued", isPositive: true, text: "" }}
           icon={Package}
           colorVariant="cyan"
+          onClick={() => setStockFilter("ALL")}
         />
         <StatCard
           title="Critical Low Stock"
@@ -193,146 +210,199 @@ export function PartsInventoryPage() {
         />
       </div>
 
-      {/* Filter and Inventory Table */}
-      <Card>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", alignItems: "center", marginBottom: "16px", justifyContent: "space-between" }}>
-          <div style={{ position: "relative", minWidth: "260px", flex: 1 }}>
-            <Search size={15} color="var(--text-muted)" style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)" }} />
+      {/* Filter and Inventory Table Card */}
+      <Card style={{ padding: "16px", minWidth: 0, width: "100%", boxSizing: "border-box" }}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", alignItems: "center", marginBottom: "16px", justifyContent: "space-between", width: "100%" }}>
+          <div style={{ position: "relative", minWidth: "220px", flex: 1 }}>
+            <Search size={15} color="var(--text-muted)" style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)" }} />
             <input
               type="text"
               placeholder="Search part number, description, bin location, supplier..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="form-input"
-              style={{ paddingLeft: "32px", height: "36px", fontSize: "12px" }}
+              style={{ paddingLeft: "36px", height: "36px", fontSize: "12px", backgroundColor: "#FFFFFF", borderRadius: "10px" }}
             />
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>Category:</span>
-            <select
-              className="form-select"
-              style={{ height: "36px", minWidth: "150px", fontSize: "12px" }}
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-            >
-              <option value="ALL">All Categories</option>
-              <option value="Bearings & Power Transmission">Bearings & Drives</option>
-              <option value="Seals & Gaskets">Seals & Gaskets</option>
-              <option value="Pneumatics">Pneumatics</option>
-              <option value="Instrumentation & Sensors">Sensors & Instruments</option>
-              <option value="Lubricants & Chemicals">Lubricants</option>
-            </select>
-          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+              <span style={{ fontSize: "11px", color: "var(--text-muted)", fontWeight: 700, textTransform: "uppercase" }}>Category:</span>
+              <select
+                className="form-select"
+                style={{ height: "36px", minWidth: "140px", fontSize: "12px", backgroundColor: "#FFFFFF", borderRadius: "8px" }}
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+              >
+                <option value="ALL">All Categories</option>
+                <option value="Bearings & Power Transmission">Bearings & Drives</option>
+                <option value="Seals & Gaskets">Seals & Gaskets</option>
+                <option value="Pneumatics">Pneumatics</option>
+                <option value="Instrumentation & Sensors">Sensors & Instruments</option>
+                <option value="Lubricants & Chemicals">Lubricants</option>
+              </select>
+            </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>Stock Status:</span>
-            <select
-              className="form-select"
-              style={{ height: "36px", minWidth: "130px", fontSize: "12px" }}
-              value={stockFilter}
-              onChange={(e) => setStockFilter(e.target.value)}
-            >
-              <option value="ALL">All Stock</option>
-              <option value="LOW">Low Stock Alert</option>
-              <option value="IN_STOCK">In Stock (Healthy)</option>
-            </select>
-          </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+              <span style={{ fontSize: "11px", color: "var(--text-muted)", fontWeight: 700, textTransform: "uppercase" }}>Stock:</span>
+              <select
+                className="form-select"
+                style={{ height: "36px", minWidth: "125px", fontSize: "12px", backgroundColor: "#FFFFFF", borderRadius: "8px" }}
+                value={stockFilter}
+                onChange={(e) => setStockFilter(e.target.value)}
+              >
+                <option value="ALL">All Stock</option>
+                <option value="LOW">Low Stock Alert</option>
+                <option value="IN_STOCK">In Stock (Healthy)</option>
+              </select>
+            </div>
 
-          {(searchQuery || categoryFilter !== "ALL" || stockFilter !== "ALL") && (
-            <Button
-              variant="ghost"
-              size="sm"
-              icon={X}
-              onClick={() => {
-                setSearchQuery("");
-                setCategoryFilter("ALL");
-                setStockFilter("ALL");
-              }}
-            >
-              Reset
-            </Button>
-          )}
+            {(searchQuery || categoryFilter !== "ALL" || stockFilter !== "ALL") && (
+              <button
+                onClick={() => {
+                  setSearchQuery("");
+                  setCategoryFilter("ALL");
+                  setStockFilter("ALL");
+                }}
+                style={{
+                  height: "36px",
+                  padding: "0 10px",
+                  borderRadius: "8px",
+                  border: "1px solid var(--border-subtle)",
+                  backgroundColor: "var(--bg-card-subtle)",
+                  color: "var(--text-secondary)",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "4px"
+                }}
+              >
+                <X size={13} /> Reset
+              </button>
+            )}
+          </div>
         </div>
 
-        <div className="data-table-container">
-          <table className="data-table">
+        {/* Scrollable Data Table Container with Horizontal Slide */}
+        <div
+          className="data-table-container"
+          style={{
+            overflowX: "auto",
+            WebkitOverflowScrolling: "touch",
+            width: "100%",
+            maxWidth: "100%",
+            display: "block",
+            boxSizing: "border-box"
+          }}
+        >
+          <table className="data-table" style={{ width: "100%", minWidth: "700px", borderCollapse: "collapse" }}>
             <thead>
               <tr>
-                <th>Part No</th>
-                <th>Part Name & Category</th>
-                <th>On-Hand Stock</th>
-                <th>Min Level</th>
-                <th>Unit Cost</th>
-                <th>Bin Location</th>
-                <th>Status</th>
-                <th>Actions</th>
+                <th style={{ minWidth: "110px" }}>Part No</th>
+                <th style={{ minWidth: "160px" }}>Part Name & Category</th>
+                <th style={{ minWidth: "100px" }}>On-Hand Stock</th>
+                <th style={{ minWidth: "80px" }}>Min Level</th>
+                <th style={{ minWidth: "90px" }}>Unit Cost</th>
+                <th style={{ minWidth: "110px" }}>Bin Location</th>
+                <th style={{ minWidth: "90px" }}>Status</th>
+                <th style={{ minWidth: "120px", textAlign: "right" }}>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {filteredParts.map((p) => {
-                const isLow = p.stock <= p.minStock;
+              {filteredParts.length === 0 ? (
+                <tr>
+                  <td colSpan={8} style={{ textAlign: "center", padding: "30px", color: "var(--text-muted)" }}>
+                    No spare parts matching the filter.
+                  </td>
+                </tr>
+              ) : (
+                filteredParts.map((p) => {
+                  const isLow = p.stock <= p.minStock;
 
-                return (
-                  <tr key={p.partNo}>
-                    <td style={{ fontWeight: 700, color: "#FFFFFF", fontFamily: "var(--font-mono)" }}>
-                      {p.partNo}
-                    </td>
-                    <td>
-                      <div style={{ fontWeight: 600, color: "var(--text-primary)" }}>{p.name}</div>
-                      <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>{p.category}</div>
-                    </td>
-                    <td>
-                      <span style={{ fontFamily: "var(--font-mono)", fontWeight: 800, fontSize: "14px", color: isLow ? "#EF4444" : "#10B981" }}>
-                        {p.stock} units
-                      </span>
-                    </td>
-                    <td style={{ fontFamily: "var(--font-mono)", fontSize: "12px", color: "var(--text-muted)" }}>
-                      {p.minStock}
-                    </td>
-                    <td style={{ fontFamily: "var(--font-mono)", fontSize: "12px", color: "#FFFFFF" }}>
-                      ${p.unitCost?.toFixed(2)}
-                    </td>
-                    <td style={{ fontSize: "12px", color: "#38BDF8" }}>
-                      {p.location}
-                    </td>
-                    <td>
-                      <Badge variant={isLow ? "rose" : "emerald"} dot={isLow}>
-                        {isLow ? "Low Stock" : "In Stock"}
-                      </Badge>
-                    </td>
-                    <td>
-                      <div style={{ display: "flex", gap: "6px" }}>
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          icon={ArrowDownRight}
-                          onClick={() => {
-                            setSelectedPartForIssue(p);
-                            setIsIssueModalOpen(true);
-                          }}
-                          title="Issue to Work Order"
-                        >
-                          Issue
-                        </Button>
+                  return (
+                    <tr key={p.partNo}>
+                      <td style={{ fontWeight: 800, color: "var(--text-primary)", fontFamily: "var(--font-mono)", fontSize: "12px" }}>
+                        {p.partNo}
+                      </td>
+                      <td>
+                        <div style={{ fontWeight: 700, color: "var(--text-primary)", fontSize: "12px" }}>{p.name}</div>
+                        <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>{p.category}</div>
+                      </td>
+                      <td>
+                        <span style={{ fontFamily: "var(--font-mono)", fontWeight: 800, fontSize: "13px", color: isLow ? "#DC2626" : "#059669" }}>
+                          {p.stock} units
+                        </span>
+                      </td>
+                      <td style={{ fontFamily: "var(--font-mono)", fontSize: "12px", color: "var(--text-muted)" }}>
+                        {p.minStock}
+                      </td>
+                      <td style={{ fontFamily: "var(--font-mono)", fontSize: "12px", color: "var(--text-primary)", fontWeight: 600 }}>
+                        ${p.unitCost?.toFixed(2)}
+                      </td>
+                      <td style={{ fontSize: "12px", color: "#0284C7", fontWeight: 600 }}>
+                        {p.location}
+                      </td>
+                      <td>
+                        <Badge variant={isLow ? "rose" : "emerald"} dot={isLow}>
+                          {isLow ? "Low Stock" : "In Stock"}
+                        </Badge>
+                      </td>
+                      <td style={{ textAlign: "right" }}>
+                        <div style={{ display: "inline-flex", gap: "6px" }}>
+                          <button
+                            onClick={() => {
+                              setSelectedPartForIssue(p);
+                              setIsIssueModalOpen(true);
+                            }}
+                            title="Issue to Work Order"
+                            style={{
+                              padding: "4px 8px",
+                              borderRadius: "6px",
+                              fontSize: "11px",
+                              fontWeight: 700,
+                              background: "linear-gradient(180deg, #E2B670 0%, #C89547 100%)",
+                              color: "#261603",
+                              border: "1px solid #E8C182",
+                              boxShadow: "0 2px 6px rgba(178, 126, 51, 0.25)",
+                              cursor: "pointer",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "4px"
+                            }}
+                          >
+                            <ArrowDownRight size={12} /> Issue
+                          </button>
 
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          icon={ArrowUpRight}
-                          onClick={() => {
-                            setSelectedPartForRestock(p);
-                            setIsRestockModalOpen(true);
-                          }}
-                          title="Restock Stock"
-                        >
-                          Receive
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
+                          <button
+                            onClick={() => {
+                              setSelectedPartForRestock(p);
+                              setIsRestockModalOpen(true);
+                            }}
+                            title="Restock Inbound"
+                            style={{
+                              padding: "4px 8px",
+                              borderRadius: "6px",
+                              fontSize: "11px",
+                              fontWeight: 700,
+                              background: "var(--bg-card-subtle)",
+                              border: "1px solid var(--border-subtle)",
+                              color: "var(--text-secondary)",
+                              cursor: "pointer",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "4px"
+                            }}
+                          >
+                            <ArrowUpRight size={12} /> Receive
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
@@ -340,10 +410,10 @@ export function PartsInventoryPage() {
 
       {/* ISSUE PART MODAL */}
       {isIssueModalOpen && selectedPartForIssue && (
-        <div className="modal-backdrop">
-          <div className="modal-content" style={{ maxWidth: "480px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-              <h2 style={{ fontSize: "18px", fontWeight: 800, color: "var(--text-primary)" }}>
+        <div className="modal-backdrop" onClick={() => setIsIssueModalOpen(false)}>
+          <div className="modal-content" style={{ maxWidth: "480px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+              <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)" }}>
                 Issue Spare Part from Warehouse
               </h2>
               <button onClick={() => setIsIssueModalOpen(false)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
@@ -351,15 +421,15 @@ export function PartsInventoryPage() {
               </button>
             </div>
 
-            <form onSubmit={handleIssueSubmit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-              <div style={{ padding: "12px", backgroundColor: "var(--bg-card-subtle)", borderRadius: "6px" }}>
+            <form onSubmit={handleIssueSubmit} style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px", maxHeight: "80vh", overflowY: "auto" }}>
+              <div style={{ padding: "12px", backgroundColor: "var(--bg-card-subtle)", borderRadius: "8px", border: "1px solid var(--border-subtle)" }}>
                 <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>Selected Part:</div>
-                <div style={{ fontWeight: 700, color: "#FFFFFF" }}>{selectedPartForIssue.partNo} — {selectedPartForIssue.name}</div>
-                <div style={{ fontSize: "12px", color: "#10B981", marginTop: "4px" }}>Available On-Hand: {selectedPartForIssue.stock} units</div>
+                <div style={{ fontWeight: 800, color: "var(--text-primary)", fontSize: "13px" }}>{selectedPartForIssue.partNo} — {selectedPartForIssue.name}</div>
+                <div style={{ fontSize: "12px", color: "#059669", fontWeight: 700, marginTop: "4px" }}>Available On-Hand: {selectedPartForIssue.stock} units</div>
               </div>
 
               <div>
-                <label className="form-label">Quantity to Issue</label>
+                <label className="form-label">Quantity to Issue *</label>
                 <input
                   type="number"
                   min="1"
@@ -367,6 +437,7 @@ export function PartsInventoryPage() {
                   value={issueQty}
                   onChange={(e) => setIssueQty(Number(e.target.value))}
                   className="form-input"
+                  style={{ backgroundColor: "#FFFFFF" }}
                   required
                 />
               </div>
@@ -377,6 +448,7 @@ export function PartsInventoryPage() {
                   className="form-select"
                   value={issueWO}
                   onChange={(e) => setIssueWO(e.target.value)}
+                  style={{ backgroundColor: "#FFFFFF" }}
                 >
                   {workOrders.map((w) => (
                     <option key={w.id} value={w.id}>
@@ -386,7 +458,7 @@ export function PartsInventoryPage() {
                 </select>
               </div>
 
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px" }}>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
                 <Button variant="secondary" onClick={() => setIsIssueModalOpen(false)}>
                   Cancel
                 </Button>
@@ -401,10 +473,10 @@ export function PartsInventoryPage() {
 
       {/* RESTOCK PART MODAL */}
       {isRestockModalOpen && selectedPartForRestock && (
-        <div className="modal-backdrop">
-          <div className="modal-content" style={{ maxWidth: "480px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-              <h2 style={{ fontSize: "18px", fontWeight: 800, color: "var(--text-primary)" }}>
+        <div className="modal-backdrop" onClick={() => setIsRestockModalOpen(false)}>
+          <div className="modal-content" style={{ maxWidth: "480px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+              <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)" }}>
                 Receive Stock Inbound
               </h2>
               <button onClick={() => setIsRestockModalOpen(false)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
@@ -412,25 +484,26 @@ export function PartsInventoryPage() {
               </button>
             </div>
 
-            <form onSubmit={handleRestockSubmit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-              <div style={{ padding: "12px", backgroundColor: "var(--bg-card-subtle)", borderRadius: "6px" }}>
+            <form onSubmit={handleRestockSubmit} style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px", maxHeight: "80vh", overflowY: "auto" }}>
+              <div style={{ padding: "12px", backgroundColor: "var(--bg-card-subtle)", borderRadius: "8px", border: "1px solid var(--border-subtle)" }}>
                 <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>Restocking SKU:</div>
-                <div style={{ fontWeight: 700, color: "#FFFFFF" }}>{selectedPartForRestock.partNo} — {selectedPartForRestock.name}</div>
+                <div style={{ fontWeight: 800, color: "var(--text-primary)", fontSize: "13px" }}>{selectedPartForRestock.partNo} — {selectedPartForRestock.name}</div>
               </div>
 
               <div>
-                <label className="form-label">Quantity Received</label>
+                <label className="form-label">Quantity Received *</label>
                 <input
                   type="number"
                   min="1"
                   value={restockQty}
                   onChange={(e) => setRestockQty(Number(e.target.value))}
                   className="form-input"
+                  style={{ backgroundColor: "#FFFFFF" }}
                   required
                 />
               </div>
 
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px" }}>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
                 <Button variant="secondary" onClick={() => setIsRestockModalOpen(false)}>
                   Cancel
                 </Button>
@@ -445,19 +518,22 @@ export function PartsInventoryPage() {
 
       {/* ADD NEW PART SKU MODAL */}
       {isAddModalOpen && (
-        <div className="modal-backdrop">
-          <div className="modal-content" style={{ maxWidth: "540px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-              <h2 style={{ fontSize: "18px", fontWeight: 800, color: "var(--text-primary)" }}>
-                Add New Spare Part SKU
-              </h2>
+        <div className="modal-backdrop" onClick={() => setIsAddModalOpen(false)}>
+          <div className="modal-content" style={{ maxWidth: "560px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Package size={18} color="#B27E33" />
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)" }}>
+                  Add New Spare Part SKU
+                </h2>
+              </div>
               <button onClick={() => setIsAddModalOpen(false)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
                 <X size={18} />
               </button>
             </div>
 
-            <form onSubmit={handleAddSubmit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+            <form onSubmit={handleAddSubmit} style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px", maxHeight: "80vh", overflowY: "auto" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "12px" }}>
                 <div>
                   <label className="form-label">Part Number / SKU *</label>
                   <input
@@ -467,6 +543,7 @@ export function PartsInventoryPage() {
                     value={addFormData.partNo}
                     onChange={(e) => setAddFormData({ ...addFormData, partNo: e.target.value })}
                     className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
                   />
                 </div>
 
@@ -476,6 +553,7 @@ export function PartsInventoryPage() {
                     className="form-select"
                     value={addFormData.category}
                     onChange={(e) => setAddFormData({ ...addFormData, category: e.target.value })}
+                    style={{ backgroundColor: "#FFFFFF" }}
                   >
                     <option value="Bearings & Power Transmission">Bearings & Power Transmission</option>
                     <option value="Seals & Gaskets">Seals & Gaskets</option>
@@ -496,10 +574,11 @@ export function PartsInventoryPage() {
                   value={addFormData.name}
                   onChange={(e) => setAddFormData({ ...addFormData, name: e.target.value })}
                   className="form-input"
+                  style={{ backgroundColor: "#FFFFFF" }}
                 />
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "10px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: "10px" }}>
                 <div>
                   <label className="form-label">Initial Stock</label>
                   <input
@@ -507,6 +586,7 @@ export function PartsInventoryPage() {
                     value={addFormData.stock}
                     onChange={(e) => setAddFormData({ ...addFormData, stock: e.target.value })}
                     className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
                   />
                 </div>
 
@@ -517,6 +597,7 @@ export function PartsInventoryPage() {
                     value={addFormData.minStock}
                     onChange={(e) => setAddFormData({ ...addFormData, minStock: e.target.value })}
                     className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
                   />
                 </div>
 
@@ -528,11 +609,12 @@ export function PartsInventoryPage() {
                     value={addFormData.unitCost}
                     onChange={(e) => setAddFormData({ ...addFormData, unitCost: e.target.value })}
                     className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
                   />
                 </div>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "12px" }}>
                 <div>
                   <label className="form-label">Warehouse Bin Location</label>
                   <input
@@ -541,6 +623,7 @@ export function PartsInventoryPage() {
                     value={addFormData.location}
                     onChange={(e) => setAddFormData({ ...addFormData, location: e.target.value })}
                     className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
                   />
                 </div>
 
@@ -552,11 +635,12 @@ export function PartsInventoryPage() {
                     value={addFormData.supplier}
                     onChange={(e) => setAddFormData({ ...addFormData, supplier: e.target.value })}
                     className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
                   />
                 </div>
               </div>
 
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px" }}>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
                 <Button variant="secondary" onClick={() => setIsAddModalOpen(false)}>
                   Cancel
                 </Button>
