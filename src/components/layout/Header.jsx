@@ -158,16 +158,7 @@ export function Header() {
               boxShadow: "0 1px 4px rgba(70, 45, 15, 0.04)"
             }}
           >
-            <input
-              type="text"
-              placeholder=""
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setIsSearchFocused(true);
-              }}
-              onFocus={() => setIsSearchFocused(true)}
-              onKeyDown={handleKeyDown}
+            <div
               style={{
                 width: "22px",
                 height: "22px",
