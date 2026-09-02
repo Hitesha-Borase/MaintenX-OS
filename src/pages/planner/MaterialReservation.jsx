@@ -26,9 +26,7 @@ export function MaterialReservation() {
         <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>
           Material Reservations (Staging)
         </h1>
-        <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginTop: "4px", fontWeight: 500 }}>
-          Reserve raw feedstocks and instruct warehouse staging teams
-        </p>
+
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>

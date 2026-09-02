@@ -24,9 +24,7 @@ export function ScheduleValidation() {
           <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
             Schedule Feasibility Validation
           </h1>
-          <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-            Validate scheduling drafts against crew roster lists and machine capacity limits
-          </p>
+
         </div>
 
         <Button variant="primary" icon={Play} onClick={handleValidate} disabled={validated}>

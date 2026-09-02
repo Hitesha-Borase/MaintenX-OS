@@ -33,9 +33,7 @@ export function CapacityPlanning() {
         <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
           APS Capacity Planning
         </h1>
-        <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-          Monitor work center load ratios and scheduled capacity constraints
-        </p>
+
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
