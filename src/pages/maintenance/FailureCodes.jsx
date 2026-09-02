@@ -115,9 +115,6 @@ export function FailureCodes() {
             </h1>
             <Badge variant="cyan">ISO 14224 Taxonomy</Badge>
           </div>
-          <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>
-            Standard failure modes across Mechanical, Electrical, Hydraulic, Pneumatic, and Instrumentation disciplines.
-          </p>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
@@ -208,3 +205,4 @@ export function FailureCodes() {
     </div>
   );
 }
+

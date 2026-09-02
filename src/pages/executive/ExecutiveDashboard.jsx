@@ -1,29 +1,165 @@
-import React, { useState } from "react";
-import { Building, DollarSign, AlertTriangle, Zap, TrendingUp, BrainCircuit, RefreshCw } from "lucide-react";
+import React, { useState, useMemo } from "react";
+import { Building, DollarSign, AlertTriangle, Zap, TrendingUp, BrainCircuit, RefreshCw, BarChart2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Card } from "../../components/common/Card";
 import { StatCard } from "../../components/common/StatCard";
 import { Button } from "../../components/common/Button";
 import { Badge } from "../../components/common/Badge";
 import { useApp } from "../../context/AppContext";
 
+// Contexts for Enterprise Data Integration
+import { useMasterData } from "../../context/MasterDataContext";
+import { useProduction } from "../../context/ProductionContext";
+import { useCMMS } from "../../context/CMMSContext";
+import { useCI } from "../../context/CIContext";
+import { useQuality } from "../../context/QualityContext";
+import { useInventory } from "../../context/InventoryContext";
+
 export function ExecutiveDashboard() {
   const { addToast } = useApp();
-  const [selectedPlant, setSelectedPlant] = useState("All");
+  const navigate = useNavigate();
+
+  // Connect Contexts
+  const { plants } = useMasterData();
+  const { productionOrders } = useProduction();
+  const { workOrders, assets } = useCMMS();
+  const { 
+    fleetMTBF, 
+    fleetMTTR, 
+    realizedSavingsTotal, 
+    projectedSavingsTotal,
+    ciProjects,
+    lossRecords
+  } = useCI();
+  const { qualityChecks, holds } = useQuality();
+  const { inventory } = useInventory();
+
+  // Local State
+  const [selectedPlantId, setSelectedPlantId] = useState("ALL");
   const [refreshing, setRefreshing] = useState(false);
 
   const handleRefresh = () => {
     setRefreshing(true);
     setTimeout(() => {
       setRefreshing(false);
-      addToast("Executive portfolio data updated.", "success");
+      addToast("Executive portfolio data synced with operational modules.", "success");
     }, 800);
   };
 
-  const plants = [
-    { name: "Austin Main Plant", oee: "84.2%", cost: "$142.5K", status: "Optimal" },
-    { name: "Chicago East Plant", oee: "78.9%", cost: "$198.2K", status: "Warning" },
-    { name: "Boston Logistics Hub", oee: "89.5%", cost: "$92.1K", status: "Optimal" }
-  ];
+  // --- Dynamic Enterprise Calculations ---
+  
+  // 1. Filtered active plants
+  const activePlants = useMemo(() => {
+    if (selectedPlantId === "ALL") return plants;
+    return plants.filter(p => p.id === selectedPlantId);
+  }, [plants, selectedPlantId]);
+
+  // 2. Production Performance (Achievement %)
+  const productionStats = useMemo(() => {
+    let totalTarget = 0;
+    let totalActual = 0;
+    
+    productionOrders.forEach(order => {
+      // Apply plant filter if necessary
+      if (selectedPlantId !== "ALL" && order.plantId !== selectedPlantId) return;
+      
+      totalTarget += (Number(order.targetQuantity) || 0);
+      totalActual += (Number(order.actualQuantity) || 0);
+    });
+
+    const achievement = totalTarget > 0 ? ((totalActual / totalTarget) * 100).toFixed(1) : "0.0";
+    return { achievement, totalTarget, totalActual };
+  }, [productionOrders, selectedPlantId]);
+
+  // 3. Plant Performance Portfolio (Comparison Table)
+  const plantPerformance = useMemo(() => {
+    return activePlants.map(plant => {
+      // Plant-specific Production
+      const pOrders = productionOrders.filter(o => o.plantId === plant.id);
+      const pTarget = pOrders.reduce((sum, o) => sum + (Number(o.targetQuantity) || 0), 0);
+      const pActual = pOrders.reduce((sum, o) => sum + (Number(o.actualQuantity) || 0), 0);
+      const pAch = pTarget > 0 ? ((pActual / pTarget) * 100).toFixed(1) : "0.0";
+
+      // Plant-specific CI Projects
+      const activeCI = ciProjects.filter(p => p.plantId === plant.id && p.status === "Active").length;
+
+      // Determine Status (Simplified Mock Logic for demo purposes)
+      let status = "Optimal";
+      if (Number(pAch) < 85) status = "Warning";
+      if (Number(pAch) < 70) status = "Critical";
+
+      return {
+        ...plant,
+        achievement: pAch + "%",
+        activeCI,
+        status
+      };
+    });
+  }, [activePlants, productionOrders, ciProjects]);
+
+  // 4. Executive Alerts Engine
+  const executiveAlerts = useMemo(() => {
+    const alerts = [];
+    
+    // Check Production Risk
+    if (Number(productionStats.achievement) < 80 && productionStats.totalTarget > 0) {
+      alerts.push({
+        type: "Critical",
+        title: "Production Volume Risk",
+        desc: `Enterprise production achievement is critically low at ${productionStats.achievement}%.`,
+        icon: AlertTriangle,
+        color: "#DC2626",
+        bg: "rgba(239, 68, 68, 0.06)",
+        border: "rgba(239, 68, 68, 0.15)",
+        link: "/production"
+      });
+    }
+
+    // Check Quality Holds
+    const activeHolds = holds ? holds.filter(h => h.status === "Open" || h.status === "Active") : [];
+    if (activeHolds.length > 0) {
+      alerts.push({
+        type: "Warning",
+        title: "Active Quality Holds",
+        desc: `There are ${activeHolds.length} open quality holds requiring review.`,
+        icon: AlertTriangle,
+        color: "#D97706",
+        bg: "rgba(217, 119, 6, 0.06)",
+        border: "rgba(217, 119, 6, 0.15)",
+        link: "/quality"
+      });
+    }
+
+    // Default Opportunity (if no critical alerts)
+    if (alerts.length === 0) {
+      alerts.push({
+        type: "Opportunity",
+        title: "OEE Optimization Opportunity",
+        desc: "Implement PM on critical assets to gain projected 1.8% OEE lift.",
+        icon: Zap,
+        color: "#059669",
+        bg: "rgba(16, 185, 129, 0.06)",
+        border: "rgba(16, 185, 129, 0.15)",
+        link: "/ci/reliability"
+      });
+    }
+
+    return alerts;
+  }, [productionStats, holds]);
+
+  // 5. Top Loss Analysis (Aggregated from CIContext)
+  const topLosses = useMemo(() => {
+    let filteredLosses = lossRecords;
+    if (selectedPlantId !== "ALL") {
+      // Assuming lossRecords have a plantId or we map them. 
+      // For this mockup, if plantId doesn't exist on lossRecord, we just take top 3 globally.
+      filteredLosses = lossRecords.filter(l => !l.plantId || l.plantId === selectedPlantId);
+    }
+    
+    // Sort by financial impact descending
+    const sorted = [...filteredLosses].sort((a, b) => (b.financialImpactUSD || 0) - (a.financialImpactUSD || 0));
+    return sorted.slice(0, 3); // Top 3
+  }, [lossRecords, selectedPlantId]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "24px", width: "100%" }}>
@@ -37,8 +173,8 @@ export function ExecutiveDashboard() {
 
         <div className="mobile-flex-col" style={{ display: "flex", gap: "12px", alignItems: "center", width: "fit-content" }}>
           <select
-            value={selectedPlant}
-            onChange={(e) => setSelectedPlant(e.target.value)}
+            value={selectedPlantId}
+            onChange={(e) => setSelectedPlantId(e.target.value)}
             className="input-field"
             style={{
               padding: "8px 12px",
@@ -49,13 +185,13 @@ export function ExecutiveDashboard() {
               outline: "none",
               fontSize: "13px",
               cursor: "pointer",
-              minWidth: "130px"
+              minWidth: "150px"
             }}
           >
-            <option value="All">All Plants</option>
-            <option value="Austin">Austin Plant</option>
-            <option value="Chicago">Chicago Plant</option>
-            <option value="Boston">Boston Plant</option>
+            <option value="ALL">Enterprise (All Plants)</option>
+            {plants.map(p => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
           </select>
 
           <Button
@@ -64,47 +200,58 @@ export function ExecutiveDashboard() {
             onClick={handleRefresh}
             style={{ animation: refreshing ? "spin 1s linear infinite" : "none" }}
           >
-            Sync Portfolio
+            Sync Data
           </Button>
         </div>
       </div>
 
-      {/* Stats Grid */}
+      {/* Stats Grid - Enterprise KPI Summary */}
       <div className="grid-4">
-        <StatCard
-          title="Multi-Plant Avg OEE"
-          value="84.2%"
-          description="Enterprise average"
-          icon={Building}
-          color="#0284C7"
-        />
-        <StatCard
-          title="Manufacturing Cost (MTD)"
-          value="$432,800"
-          description="Standard: $420,000"
-          icon={DollarSign}
-          color="#DC2626"
-        />
-        <StatCard
-          title="CI Savings Realized"
-          value="$64,200"
-          description="Target: $50,000"
-          icon={TrendingUp}
-          color="#059669"
-        />
-        <StatCard
-          title="Active Opportunities"
-          value="5 Strategic"
-          description="OEE optimization"
-          icon={Zap}
-          color="#7C3AED"
-        />
+        <div onClick={() => navigate("/production")} style={{ cursor: "pointer", transition: "transform 0.2s" }} onMouseEnter={(e) => e.currentTarget.style.transform = "translateY(-2px)"} onMouseLeave={(e) => e.currentTarget.style.transform = "none"}>
+          <StatCard
+            title="Production Achievement"
+            value={`${productionStats.achievement}%`}
+            description="Actual vs Target"
+            icon={Building}
+            color="#0284C7"
+          />
+        </div>
+        
+        <div onClick={() => navigate("/ci/reliability")} style={{ cursor: "pointer", transition: "transform 0.2s" }} onMouseEnter={(e) => e.currentTarget.style.transform = "translateY(-2px)"} onMouseLeave={(e) => e.currentTarget.style.transform = "none"}>
+          <StatCard
+            title="Enterprise Reliability"
+            value={`${fleetMTBF} hrs`}
+            description={`MTTR: ${fleetMTTR} mins`}
+            icon={Zap}
+            color="#D97706"
+          />
+        </div>
+        
+        <div onClick={() => navigate("/ci/projects/savings")} style={{ cursor: "pointer", transition: "transform 0.2s" }} onMouseEnter={(e) => e.currentTarget.style.transform = "translateY(-2px)"} onMouseLeave={(e) => e.currentTarget.style.transform = "none"}>
+          <StatCard
+            title="CI Savings Realized"
+            value={`$${(realizedSavingsTotal / 1000).toFixed(1)}K`}
+            description={`Projected: $${(projectedSavingsTotal / 1000).toFixed(1)}K`}
+            icon={TrendingUp}
+            color="#059669"
+          />
+        </div>
+        
+        <div onClick={() => navigate("/costing")} style={{ cursor: "pointer", transition: "transform 0.2s" }} onMouseEnter={(e) => e.currentTarget.style.transform = "translateY(-2px)"} onMouseLeave={(e) => e.currentTarget.style.transform = "none"}>
+          <StatCard
+            title="Manufacturing Cost (MTD)"
+            value="[PENDING]"
+            description="Awaiting ERP Backend"
+            icon={DollarSign}
+            color="#DC2626"
+          />
+        </div>
       </div>
 
       {/* Main Content Layout */}
       <div className="dashboard-grid-layout">
         
-        {/* Left Side: Plant Performance & Financial Impact */}
+        {/* Left Side: Plant Performance & Loss Analysis */}
         <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
           
           {/* Plant Performance Table */}
@@ -113,13 +260,14 @@ export function ExecutiveDashboard() {
               <h3 style={{ fontSize: "15px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
                 Plant Performance Portfolio
               </h3>
-              <Badge variant="cyan">3 Facilities Active</Badge>
+              <Badge variant="cyan">{activePlants.length} Facilities Active</Badge>
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-              {plants.map((plant, idx) => (
+              {plantPerformance.map((plant, idx) => (
                 <div
                   key={idx}
+                  onClick={() => setSelectedPlantId(plant.id)}
                   style={{
                     display: "flex",
                     justifyContent: "space-between",
@@ -148,36 +296,35 @@ export function ExecutiveDashboard() {
                     </div>
                     <div>
                       <span style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)", display: "block" }}>{plant.name}</span>
-                      <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>Manufacturing Cost MTD: {plant.cost}</span>
+                      <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>{plant.region}</span>
                     </div>
                   </div>
 
                   <div style={{ display: "flex", alignItems: "center", gap: "16px", marginLeft: "auto" }}>
-                    <div>
-                      <span style={{ fontSize: "11px", color: "var(--text-muted)", display: "block", textAlign: "right" }}>OEE</span>
-                      <span style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)", fontFamily: "var(--font-mono)" }}>{plant.oee}</span>
+                    <div style={{ textAlign: "right" }}>
+                      <span style={{ fontSize: "11px", color: "var(--text-muted)", display: "block" }}>Achievement</span>
+                      <span style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)", fontFamily: "var(--font-mono)" }}>{plant.achievement}</span>
                     </div>
-                    <Badge variant={plant.status === "Optimal" ? "emerald" : "warning"}>{plant.status}</Badge>
+                    <Badge variant={plant.status === "Optimal" ? "emerald" : (plant.status === "Warning" ? "warning" : "destructive")}>
+                      {plant.status}
+                    </Badge>
                   </div>
                 </div>
               ))}
             </div>
           </Card>
 
-          {/* Cost Variance / Standards Breakdown */}
+          {/* Top Loss Analysis */}
           <Card style={{ backgroundColor: "#FFFFFF", border: "1px solid var(--border-subtle)", padding: "20px" }}>
-            <h3 style={{ fontSize: "15px", fontWeight: 800, color: "var(--text-primary)", marginBottom: "16px", margin: "0 0 16px 0" }}>
-              Standard vs. Actual Manufacturing Cost
-            </h3>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+              <h3 style={{ fontSize: "15px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                Top Major Losses (YTD)
+              </h3>
+              <Button variant="secondary" size="sm" onClick={() => navigate("/ci/reports")}>View All</Button>
+            </div>
             
             <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-              {[
-                { category: "Raw Materials", std: "$180,000", act: "$185,200", var: "+$5,200", status: "Over" },
-                { category: "Packaging Materials", std: "$45,000", act: "$44,100", var: "-$900", status: "Under" },
-                { category: "Direct Labour", std: "$110,000", act: "$118,500", var: "+$8,500", status: "Over" },
-                { category: "Machine Time / Utilities", std: "$50,000", act: "$52,300", var: "+$2,300", status: "Over" },
-                { category: "Overhead", std: "$35,000", act: "$32,700", var: "-$2,300", status: "Under" }
-              ].map((item, idx) => (
+              {topLosses.length > 0 ? topLosses.map((loss, idx) => (
                 <div
                   key={idx}
                   style={{
@@ -193,30 +340,71 @@ export function ExecutiveDashboard() {
                     gap: "8px"
                   }}
                 >
-                  <span style={{ color: "var(--text-primary)", fontWeight: 700, minWidth: "140px" }}>
-                    {item.category}
-                  </span>
+                  <div>
+                    <span style={{ color: "var(--text-primary)", fontWeight: 700, display: "block" }}>
+                      {loss.category}
+                    </span>
+                    <span style={{ color: "var(--text-secondary)", fontSize: "11px" }}>
+                      {loss.eventName} — Line: {loss.lineId}
+                    </span>
+                  </div>
 
-                  <div style={{ display: "flex", gap: "14px", alignItems: "center", flexWrap: "wrap", marginLeft: "auto" }}>
-                    <span style={{ color: "var(--text-secondary)", fontSize: "12px" }}>
-                      Std: <strong style={{ fontFamily: "var(--font-mono)", color: "var(--text-primary)" }}>{item.std}</strong>
+                  <div style={{ display: "flex", gap: "14px", alignItems: "center", marginLeft: "auto" }}>
+                    <span style={{ color: "var(--text-secondary)", fontSize: "12px", textAlign: "right" }}>
+                      Hours Lost: <strong style={{ fontFamily: "var(--font-mono)", color: "var(--text-primary)" }}>{loss.hoursLost}h</strong>
                     </span>
-                    <span style={{ color: "var(--text-secondary)", fontSize: "12px" }}>
-                      Act: <strong style={{ fontFamily: "var(--font-mono)", color: "var(--text-primary)" }}>{item.act}</strong>
-                    </span>
-                    <span style={{ color: item.status === "Over" ? "#DC2626" : "#059669", fontWeight: 800, fontFamily: "var(--font-mono)", fontSize: "13px" }}>
-                      {item.var}
+                    <span style={{ color: "#DC2626", fontWeight: 800, fontFamily: "var(--font-mono)", fontSize: "13px" }}>
+                      -${(loss.financialImpactUSD / 1000).toFixed(1)}K
                     </span>
                   </div>
                 </div>
-              ))}
+              )) : (
+                <div style={{ padding: "20px", textAlign: "center", color: "var(--text-muted)", fontSize: "13px" }}>
+                  No significant losses recorded for this period/plant.
+                </div>
+              )}
             </div>
           </Card>
         </div>
 
-        {/* Right Side: AI Briefing & Risks/Opportunities */}
+        {/* Right Side: AI Briefing, Risks & Standard vs Actual (Pending) */}
         <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
           
+          {/* Executive Alerts Engine */}
+          <Card style={{ backgroundColor: "#FFFFFF", border: "1px solid var(--border-subtle)", padding: "20px" }}>
+            <h3 style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)", marginBottom: "12px", margin: "0 0 12px 0" }}>Strategic Risks & Opportunities</h3>
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+              {executiveAlerts.map((alert, idx) => {
+                const Icon = alert.icon;
+                return (
+                  <div 
+                    key={idx} 
+                    onClick={() => navigate(alert.link)}
+                    style={{ 
+                      display: "flex", 
+                      gap: "10px", 
+                      alignItems: "flex-start", 
+                      padding: "10px", 
+                      borderRadius: "8px", 
+                      backgroundColor: alert.bg, 
+                      border: `1px solid ${alert.border}`,
+                      cursor: "pointer",
+                      transition: "opacity 0.2s"
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.opacity = 0.8}
+                    onMouseLeave={(e) => e.currentTarget.style.opacity = 1}
+                  >
+                    <Icon size={16} color={alert.color} style={{ flexShrink: 0, marginTop: "2px" }} />
+                    <div>
+                      <span style={{ fontSize: "12px", fontWeight: 800, color: "var(--text-primary)" }}>{alert.title}</span>
+                      <p style={{ fontSize: "11px", color: "var(--text-secondary)", marginTop: "2px" }}>{alert.desc}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
+
           {/* AI Briefing Card */}
           <Card style={{ backgroundColor: "#FFFFFF", border: "1px solid rgba(124, 58, 237, 0.3)", background: "linear-gradient(135deg, rgba(124, 58, 237, 0.04) 0%, #FFFFFF 100%)", padding: "20px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
@@ -224,7 +412,8 @@ export function ExecutiveDashboard() {
               <h3 style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>Executive AI Briefing</h3>
             </div>
             <p style={{ fontSize: "12px", color: "var(--text-secondary)", lineHeight: "1.6" }}>
-              Enterprise OEE holds steady at <strong style={{ color: "#0284C7" }}>84.2%</strong>. Materials variance is up <strong style={{ color: "#DC2626" }}>2.9%</strong> due to raw milk pricing fluctuations. Suggest routing additional raw inventory to Austin Skid 2 to capitalize on high reliability MTBF capacity.
+              Enterprise production achievement is <strong style={{ color: "#0284C7" }}>{productionStats.achievement}%</strong>. 
+              {Number(productionStats.achievement) < 90 ? " Focus on resolving top downtime events to meet monthly volume targets." : " Output is tracking well against targets."}
             </p>
             <div style={{ marginTop: "16px" }}>
               <Button variant="primary" size="sm" style={{ width: "100%" }} onClick={() => addToast("Detailed Briefing Generated in AI Hub.", "info")}>
@@ -233,44 +422,19 @@ export function ExecutiveDashboard() {
             </div>
           </Card>
 
-          {/* Risks & Opportunities Widget */}
-          <Card style={{ backgroundColor: "#FFFFFF", border: "1px solid var(--border-subtle)", padding: "20px" }}>
-            <h3 style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)", marginBottom: "12px", margin: "0 0 12px 0" }}>Strategic Risks & Opportunities</h3>
-            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-              <div style={{ display: "flex", gap: "10px", alignItems: "flex-start", padding: "10px", borderRadius: "8px", backgroundColor: "rgba(239, 68, 68, 0.06)", border: "1px solid rgba(239, 68, 68, 0.15)" }}>
-                <AlertTriangle size={16} color="#DC2626" style={{ flexShrink: 0, marginTop: "2px" }} />
-                <div>
-                  <span style={{ fontSize: "12px", fontWeight: 800, color: "var(--text-primary)" }}>Supply Chain Delay Risk</span>
-                  <p style={{ fontSize: "11px", color: "var(--text-secondary)", marginTop: "2px" }}>Chicago raw materials shipment delay could affect Line 2 output.</p>
-                </div>
-              </div>
-
-              <div style={{ display: "flex", gap: "10px", alignItems: "flex-start", padding: "10px", borderRadius: "8px", backgroundColor: "rgba(16, 185, 129, 0.06)", border: "1px solid rgba(16, 185, 129, 0.15)" }}>
-                <Zap size={16} color="#059669" style={{ flexShrink: 0, marginTop: "2px" }} />
-                <div>
-                  <span style={{ fontSize: "12px", fontWeight: 800, color: "var(--text-primary)" }}>OEE Optimization Opportunity</span>
-                  <p style={{ fontSize: "11px", color: "var(--text-secondary)", marginTop: "2px" }}>Implement PM on Austin Filler to gain 1.8% OEE lift.</p>
-                </div>
-              </div>
+          {/* Cost Variance (Pending Backend) */}
+          <Card style={{ backgroundColor: "#FFFFFF", border: "1px dashed var(--border-subtle)", padding: "20px", opacity: 0.7 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+              <h3 style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-muted)", margin: 0 }}>
+                Standard vs. Actual Cost
+              </h3>
+              <Badge variant="neutral">BACKEND PENDING</Badge>
             </div>
-          </Card>
-
-          {/* Trends Summary */}
-          <Card style={{ backgroundColor: "#FFFFFF", border: "1px solid var(--border-subtle)", padding: "20px" }}>
-            <h3 style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)", marginBottom: "12px", margin: "0 0 12px 0" }}>Enterprise Trends</h3>
+            
             <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-              {[
-                { metric: "Service Level", value: "98.2%", trend: "+0.4%", status: "up" },
-                { metric: "Yield Variance", value: "-0.8%", trend: "-0.2%", status: "down" },
-                { metric: "Machine Scrap", value: "$4,200", trend: "-12.5%", status: "down" }
-              ].map((t, idx) => (
-                <div key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "12px", paddingBottom: "6px", borderBottom: idx < 2 ? "1px solid var(--border-subtle)" : "none" }}>
-                  <span style={{ color: "var(--text-secondary)", fontWeight: 600 }}>{t.metric}</span>
-                  <span style={{ color: "var(--text-primary)", fontWeight: 800, fontFamily: "var(--font-mono)" }}>
-                    {t.value} (<strong style={{ color: t.status === "down" ? "#059669" : "#DC2626" }}>{t.trend}</strong>)
-                  </span>
-                </div>
-              ))}
+              <p style={{ fontSize: "12px", color: "var(--text-muted)", fontStyle: "italic", textAlign: "center", padding: "20px 0" }}>
+                Waiting for ERP Finance API integration to populate real-time MTD variance data.
+              </p>
             </div>
           </Card>
         </div>

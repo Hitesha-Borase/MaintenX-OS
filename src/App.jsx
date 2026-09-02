@@ -311,25 +311,22 @@ import { Profile as ExecProfile } from "./pages/executive/Profile";
 // MAINTENANCE / CMMS PAGES
 // ==========================================
 import { MaintenanceDashboard } from "./pages/dashboards/MaintenanceDashboard";
-import { AssetRegister } from "./pages/assets/AssetRegister";
-import { AssetHierarchy } from "./pages/assets/AssetHierarchy";
-import { Asset360Page } from "./pages/assets/Asset360Page";
-import { WorkOrdersPage } from "./pages/workorders/WorkOrdersPage";
-import { BreakdownLog } from "./pages/breakdowns/BreakdownLog";
-import { BreakdownAnalysis } from "./pages/breakdowns/BreakdownAnalysis";
-import { DowntimeImpact } from "./pages/breakdowns/DowntimeImpact";
-import { PMPlans } from "./pages/pm/PMPlans";
-import { PMSchedulePage } from "./pages/pm/PMSchedulePage";
-import { PMExecutionPage } from "./pages/pm/PMExecutionPage";
-import { PartsInventoryPage } from "./pages/spareparts/PartsInventoryPage";
+import { AssetList } from "./pages/maintenance/AssetList";
+import { Asset360 } from "./pages/maintenance/Asset360";
+import { WorkOrderList } from "./pages/maintenance/WorkOrderList";
+import { WorkOrderDetail } from "./pages/maintenance/WorkOrderDetail";
+import { BreakdownList } from "./pages/maintenance/BreakdownList";
+import { BreakdownDetail } from "./pages/maintenance/BreakdownDetail";
+import { PMChecklistList } from "./pages/maintenance/PMChecklistList";
+import { PMScheduleList } from "./pages/maintenance/PMScheduleList";
+import { PMChecklistExecute } from "./pages/maintenance/PMChecklistExecute";
+import { SparePartsInventory } from "./pages/maintenance/SparePartsInventory";
 import { SparePartsBOMPage } from "./pages/spareparts/SparePartsBOMPage";
 import { PartsRequestsPage } from "./pages/spareparts/PartsRequestsPage";
-import { CalibrationSchedulePage } from "./pages/calibration/CalibrationSchedulePage";
-import { CalibrationRecordsPage } from "./pages/calibration/CalibrationRecordsPage";
-import { CalibrationHistoryPage } from "./pages/calibration/CalibrationHistoryPage";
-import { FailureCodesPage } from "./pages/failurecodes/FailureCodesPage";
-import { TroubleshootingPage } from "./pages/troubleshooting/TroubleshootingPage";
-import { ReliabilityPage } from "./pages/reliability/ReliabilityPage";
+import { CalibrationCenter } from "./pages/maintenance/CalibrationCenter";
+import { FailureCodes } from "./pages/maintenance/FailureCodes";
+import { TroubleshootingWizard } from "./pages/maintenance/TroubleshootingWizard";
+import { ReliabilityAnalytics } from "./pages/maintenance/ReliabilityAnalytics";
 import { MachineIoTPage } from "./pages/iot/MachineIoTPage";
 import { MaintenanceLabourPage } from "./pages/labour/MaintenanceLabourPage";
 import { RepeatFailures } from "./pages/maintenance/RepeatFailures";
@@ -497,46 +494,26 @@ export function AppContent() {
           {/* 2. MAINTENANCE / CMMS ROUTES                              */}
           {/* ========================================================= */}
           <Route path="/maintenance" element={<RoleProtectedRoute><MaintenanceDashboard /></RoleProtectedRoute>} />
-          <Route path="/assets/register" element={<RoleProtectedRoute><AssetRegister /></RoleProtectedRoute>} />
-          <Route path="/assets/hierarchy" element={<RoleProtectedRoute><AssetHierarchy /></RoleProtectedRoute>} />
-          <Route path="/assets/360" element={<RoleProtectedRoute><Asset360Page /></RoleProtectedRoute>} />
-          <Route path="/maintenance/assets" element={<RoleProtectedRoute><AssetRegister /></RoleProtectedRoute>} />
-          <Route path="/maintenance/assets/:id" element={<RoleProtectedRoute><Asset360Page /></RoleProtectedRoute>} />
+          <Route path="/maintenance/assets" element={<RoleProtectedRoute><AssetList /></RoleProtectedRoute>} />
+          <Route path="/maintenance/assets/:id" element={<RoleProtectedRoute><Asset360 /></RoleProtectedRoute>} />
 
-          <Route path="/work-orders" element={<RoleProtectedRoute><WorkOrdersPage /></RoleProtectedRoute>} />
-          <Route path="/work-orders/open" element={<RoleProtectedRoute><WorkOrdersPage /></RoleProtectedRoute>} />
-          <Route path="/work-orders/corrective" element={<RoleProtectedRoute><WorkOrdersPage /></RoleProtectedRoute>} />
-          <Route path="/work-orders/preventive" element={<RoleProtectedRoute><WorkOrdersPage /></RoleProtectedRoute>} />
-          <Route path="/work-orders/completed" element={<RoleProtectedRoute><WorkOrdersPage /></RoleProtectedRoute>} />
-          <Route path="/maintenance/work-orders" element={<RoleProtectedRoute><WorkOrdersPage /></RoleProtectedRoute>} />
+          <Route path="/maintenance/work-orders" element={<RoleProtectedRoute><WorkOrderList /></RoleProtectedRoute>} />
+          <Route path="/maintenance/work-orders/:id" element={<RoleProtectedRoute><WorkOrderDetail /></RoleProtectedRoute>} />
 
-          <Route path="/breakdowns/log" element={<RoleProtectedRoute><BreakdownLog /></RoleProtectedRoute>} />
-          <Route path="/breakdowns/analysis" element={<RoleProtectedRoute><BreakdownAnalysis /></RoleProtectedRoute>} />
-          <Route path="/breakdowns/downtime-impact" element={<RoleProtectedRoute><DowntimeImpact /></RoleProtectedRoute>} />
-          <Route path="/maintenance/breakdowns" element={<RoleProtectedRoute><BreakdownLog /></RoleProtectedRoute>} />
+          <Route path="/maintenance/breakdowns" element={<RoleProtectedRoute><BreakdownList /></RoleProtectedRoute>} />
+          <Route path="/maintenance/breakdowns/:id" element={<RoleProtectedRoute><BreakdownDetail /></RoleProtectedRoute>} />
 
-          <Route path="/pm/plans" element={<RoleProtectedRoute><PMPlans /></RoleProtectedRoute>} />
-          <Route path="/pm/schedule" element={<RoleProtectedRoute><PMSchedulePage /></RoleProtectedRoute>} />
-          <Route path="/pm/execution" element={<RoleProtectedRoute><PMExecutionPage /></RoleProtectedRoute>} />
-          <Route path="/maintenance/pm-schedules" element={<RoleProtectedRoute><PMSchedulePage /></RoleProtectedRoute>} />
-          <Route path="/maintenance/pm-checklists" element={<RoleProtectedRoute><PMPlans /></RoleProtectedRoute>} />
+          <Route path="/maintenance/pm-schedules" element={<RoleProtectedRoute><PMScheduleList /></RoleProtectedRoute>} />
+          <Route path="/maintenance/pm-checklists" element={<RoleProtectedRoute><PMChecklistList /></RoleProtectedRoute>} />
+          <Route path="/maintenance/pm-execute" element={<RoleProtectedRoute><PMChecklistExecute /></RoleProtectedRoute>} />
 
-          <Route path="/spare-parts/inventory" element={<RoleProtectedRoute><PartsInventoryPage /></RoleProtectedRoute>} />
-          <Route path="/spare-parts/bom" element={<RoleProtectedRoute><SparePartsBOMPage /></RoleProtectedRoute>} />
-          <Route path="/spare-parts/requests" element={<RoleProtectedRoute><PartsRequestsPage /></RoleProtectedRoute>} />
-          <Route path="/maintenance/spare-parts" element={<RoleProtectedRoute><PartsInventoryPage /></RoleProtectedRoute>} />
+          <Route path="/maintenance/spare-parts" element={<RoleProtectedRoute><SparePartsInventory /></RoleProtectedRoute>} />
 
-          <Route path="/calibration/schedule" element={<RoleProtectedRoute><CalibrationSchedulePage /></RoleProtectedRoute>} />
-          <Route path="/calibration/records" element={<RoleProtectedRoute><CalibrationRecordsPage /></RoleProtectedRoute>} />
-          <Route path="/calibration/history" element={<RoleProtectedRoute><CalibrationHistoryPage /></RoleProtectedRoute>} />
-          <Route path="/maintenance/calibration" element={<RoleProtectedRoute><CalibrationSchedulePage /></RoleProtectedRoute>} />
+          <Route path="/maintenance/calibration" element={<RoleProtectedRoute><CalibrationCenter /></RoleProtectedRoute>} />
 
-          <Route path="/failure-codes" element={<RoleProtectedRoute><FailureCodesPage /></RoleProtectedRoute>} />
-          <Route path="/maintenance/failure-codes" element={<RoleProtectedRoute><FailureCodesPage /></RoleProtectedRoute>} />
-          <Route path="/troubleshooting" element={<RoleProtectedRoute><TroubleshootingPage /></RoleProtectedRoute>} />
-          <Route path="/maintenance/troubleshooting" element={<RoleProtectedRoute><TroubleshootingPage /></RoleProtectedRoute>} />
-          <Route path="/reliability" element={<RoleProtectedRoute><ReliabilityPage /></RoleProtectedRoute>} />
-          <Route path="/maintenance/reliability" element={<RoleProtectedRoute><ReliabilityPage /></RoleProtectedRoute>} />
+          <Route path="/maintenance/failure-codes" element={<RoleProtectedRoute><FailureCodes /></RoleProtectedRoute>} />
+          <Route path="/maintenance/troubleshooting" element={<RoleProtectedRoute><TroubleshootingWizard /></RoleProtectedRoute>} />
+          <Route path="/maintenance/reliability" element={<RoleProtectedRoute><ReliabilityAnalytics /></RoleProtectedRoute>} />
           <Route path="/machine-iot" element={<RoleProtectedRoute><MachineIoTPage /></RoleProtectedRoute>} />
           <Route path="/maintenance-labour" element={<RoleProtectedRoute><MaintenanceLabourPage /></RoleProtectedRoute>} />
           <Route path="/maintenance/repeat-failures" element={<RoleProtectedRoute><RepeatFailures /></RoleProtectedRoute>} />

@@ -82,6 +82,11 @@ export function MaintenanceDashboard() {
 
   const lowStockParts = spareParts.filter((p) => p.stock <= p.minStock);
 
+  // Dynamic calculations for PM Compliance
+  const totalPms = pmSchedules.length;
+  const compliantPms = pmSchedules.filter((p) => p.status !== "Overdue" && p.status !== "Failed").length;
+  const dynamicPmCompliance = totalPms > 0 ? ((compliantPms / totalPms) * 100).toFixed(1) : "100.0";
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%", maxWidth: "1600px", margin: "0 auto", minWidth: 0 }}>
       {/* Page Title & Quick Actions */}
@@ -110,7 +115,7 @@ export function MaintenanceDashboard() {
           <Button
             variant="secondary"
             icon={Clock}
-            onClick={() => navigate("/pm/execution")}
+            onClick={() => navigate("/maintenance/pm-execute")}
             style={{ fontSize: "12px", padding: "7px 12px" }}
           >
             Execute PM Checklist
@@ -145,7 +150,7 @@ export function MaintenanceDashboard() {
           trend={{ value: `${offlineCount} Offline, ${degradedCount} Degraded`, isPositive: offlineCount === 0, text: "" }}
           icon={Layers}
           colorVariant={offlineCount > 0 ? "rose" : "emerald"}
-          onClick={() => navigate("/assets/register")}
+          onClick={() => navigate("/maintenance/assets")}
         />
 
         {/* Work Orders */}
@@ -156,7 +161,7 @@ export function MaintenanceDashboard() {
           trend={{ value: `${criticalWOs.length} Critical (P1)`, isPositive: criticalWOs.length === 0, text: "" }}
           icon={Wrench}
           colorVariant="amber"
-          onClick={() => navigate("/work-orders/open")}
+          onClick={() => navigate("/maintenance/work-orders")}
         />
 
         {/* Preventive Maintenance */}
@@ -167,7 +172,7 @@ export function MaintenanceDashboard() {
           trend={{ value: `${pmOverdueCount} Overdue, ${pmDueCount} Upcoming`, isPositive: pmOverdueCount === 0, text: "" }}
           icon={CheckCircle2}
           colorVariant={pmOverdueCount > 0 ? "amber" : "emerald"}
-          onClick={() => navigate("/pm/schedule")}
+          onClick={() => navigate("/maintenance/pm-schedules")}
         />
 
         {/* Downtime Impact */}
@@ -178,7 +183,7 @@ export function MaintenanceDashboard() {
           trend={{ value: activeBDs.length > 0 ? `${activeBDs.length} Breakdown Active` : "Zero active breakdown", isPositive: activeBDs.length === 0, text: "" }}
           icon={DollarSign}
           colorVariant="rose"
-          onClick={() => navigate("/breakdowns/downtime-impact")}
+          onClick={() => navigate("/maintenance/breakdowns")}
         />
       </div>
 

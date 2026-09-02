@@ -98,10 +98,6 @@ export function Asset360() {
                 </span>
               </div>
 
-              <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>
-                {asset.plant} • {asset.department} • {asset.line} • Location: <strong style={{ color: "var(--text-primary)" }}>{asset.location}</strong>
-              </p>
-
               <div style={{ display: "flex", gap: "16px", marginTop: "10px", fontSize: "12px", color: "var(--text-muted)", flexWrap: "wrap" }}>
                 <span>OEM: <strong>{asset.manufacturer}</strong></span>
                 <span>Serial: <strong style={{ fontFamily: "var(--font-mono)" }}>{asset.serialNumber}</strong></span>
@@ -253,9 +249,6 @@ export function Asset360() {
                 <h3 style={{ fontSize: "15px", fontWeight: 700, color: "var(--text-primary)" }}>
                   24-Hour Continuous Vibration Spectral Trend
                 </h3>
-                <p style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-                  Peak FFT accelerometer stream recording velocity RMS
-                </p>
               </div>
               <Badge variant="rose">Anomaly Alert Triggered at 08:15</Badge>
             </div>
@@ -287,9 +280,6 @@ export function Asset360() {
               <h3 style={{ fontSize: "15px", fontWeight: 700, color: "var(--text-primary)" }}>
                 Work Orders Linked to {asset.id}
               </h3>
-              <p style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-                Corrective, preventive, and emergency work history
-              </p>
             </div>
             <Button variant="primary" size="sm" icon={Plus} onClick={() => setIsQuickActionOpen(true)}>
               New Work Order
@@ -345,9 +335,6 @@ export function Asset360() {
               <h3 style={{ fontSize: "15px", fontWeight: 700, color: "var(--text-primary)" }}>
                 Preventive Maintenance Schedules for {asset.id}
               </h3>
-              <p style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-                Daily, weekly, monthly, and runtime-triggered checklists
-              </p>
             </div>
           </div>
 
@@ -402,9 +389,6 @@ export function Asset360() {
               <h3 style={{ fontSize: "15px", fontWeight: 700, color: "var(--text-primary)" }}>
                 Spare Parts Bill of Materials (BOM)
               </h3>
-              <p style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-                Consumables, bearings, seals, and replacement assemblies linked to {asset.id}
-              </p>
             </div>
             <Button variant="secondary" size="sm" onClick={() => navigate("/maintenance/spare-parts")}>
               Spare Parts Inventory
@@ -450,9 +434,6 @@ export function Asset360() {
               <h3 style={{ fontSize: "15px", fontWeight: 700, color: "var(--text-primary)" }}>
                 Verified Solutions Library for {asset.name}
               </h3>
-              <p style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-                Proven engineering diagnostic and repair procedures
-              </p>
             </div>
             <Button variant="secondary" size="sm" onClick={() => navigate("/maintenance/verified-solutions")}>
               View All Solutions
@@ -484,10 +465,6 @@ export function Asset360() {
                   {sol.problemSymptom}
                 </h4>
 
-                <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "4px" }}>
-                  <strong>Root Cause:</strong> {sol.rootCause}
-                </p>
-
                 <div style={{ marginTop: "10px", paddingTop: "10px", borderTop: "1px solid var(--border-subtle)", fontSize: "11px", color: "var(--text-muted)", display: "flex", justifyContent: "space-between" }}>
                   <span>Verified by: <strong style={{ color: "var(--text-primary)" }}>{sol.verifiedBy}</strong></span>
                   <span>Date: {sol.verificationDate}</span>
@@ -506,9 +483,6 @@ export function Asset360() {
               <h3 style={{ fontSize: "15px", fontWeight: 700, color: "var(--text-primary)" }}>
                 OEM Manuals, Schematics & SOPs
               </h3>
-              <p style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-                Official manufacturer documentation and electrical drawings
-              </p>
             </div>
             <Button variant="secondary" size="sm" onClick={() => navigate("/documents")}>
               Document Center
@@ -538,3 +512,4 @@ export function Asset360() {
     </div>
   );
 }
+
