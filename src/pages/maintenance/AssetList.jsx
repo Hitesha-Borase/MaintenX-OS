@@ -156,9 +156,6 @@ export function AssetList() {
             </h1>
             <Badge variant="cyan">{assets.length} Registered Machines</Badge>
           </div>
-          <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>
-            Comprehensive machinery directory, condition monitoring telemetry, QR tagging, and MTBF tracking.
-          </p>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
@@ -263,3 +260,4 @@ export function AssetList() {
     </div>
   );
 }
+

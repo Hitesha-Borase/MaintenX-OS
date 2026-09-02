@@ -45,9 +45,6 @@ export function BreakdownsOverviewPage() {
             </h1>
             <Badge variant="rose">{activeBDs.length} Active Stoppages</Badge>
           </div>
-          <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>
-            Real-time tracking of machine outages, emergency repair technician dispatches, and downtime duration timers.
-          </p>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
@@ -161,3 +158,4 @@ export function BreakdownsOverviewPage() {
     </div>
   );
 }
+

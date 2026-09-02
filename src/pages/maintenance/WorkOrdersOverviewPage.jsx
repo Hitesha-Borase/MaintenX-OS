@@ -46,9 +46,6 @@ export function WorkOrdersOverviewPage() {
             </h1>
             <Badge variant="cyan">{workOrders.length} Total Orders</Badge>
           </div>
-          <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>
-            Executive visibility into corrective, preventive, and emergency work order execution across all lines.
-          </p>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
@@ -180,3 +177,4 @@ export function WorkOrdersOverviewPage() {
     </div>
   );
 }
+

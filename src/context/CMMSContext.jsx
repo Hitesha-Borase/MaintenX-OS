@@ -137,6 +137,43 @@ export function CMMSProvider({ children }) {
     return saved ? JSON.parse(saved) : DEFAULT_USER_PROFILE;
   });
 
+  // Dynamic MTTR / MTBF recalculation based on actual Breakdowns
+  useEffect(() => {
+    const resolvedBDs = breakdowns.filter(b => b.status === "Resolved" || b.status === "Closed");
+    
+    let totalDowntimeMin = 0;
+    const assetFailureCounts = {};
+    
+    resolvedBDs.forEach(bd => {
+       totalDowntimeMin += bd.durationMinutes || 0;
+       assetFailureCounts[bd.assetId] = (assetFailureCounts[bd.assetId] || 0) + 1;
+    });
+
+    const breakdownCount = resolvedBDs.length;
+    const mttrHrs = breakdownCount > 0 ? (totalDowntimeMin / 60) / breakdownCount : 0;
+    
+    // Very simple MTBF mock calculation: Total assumed operating hours (e.g. 720 for a month) / breakdownCount
+    const mtbfHrs = breakdownCount > 0 ? 720 / breakdownCount : 720;
+    
+    setReliabilityMetrics(prev => ({
+      ...prev,
+      plantOverall: {
+        ...prev.plantOverall,
+        mttrHours: mttrHrs.toFixed(1),
+        mtbfHours: mtbfHrs.toFixed(1),
+        downtimeHours: (totalDowntimeMin / 60).toFixed(1)
+      }
+    }));
+    
+    // Also update asset 'recentFailuresCount'
+    setAssets((prevAssets) => 
+      prevAssets.map(a => ({
+        ...a,
+        recentFailuresCount: assetFailureCounts[a.id] || a.recentFailuresCount || 0
+      }))
+    );
+  }, [breakdowns]);
+
   // Sync to local storage
   useEffect(() => {
     localStorage.setItem("flowstate_assets", JSON.stringify(assets));
@@ -257,12 +294,22 @@ export function CMMSProvider({ children }) {
     return assetWithMeta;
   };
 
-  const updateAssetStatus = (assetId, newStatus, healthOffset = 0) => {
+  const updateAssetStatus = (assetId, newStatus, healthChange = 0) => {
     setAssets((prev) =>
       prev.map((asset) => {
         if (asset.id === assetId) {
-          const updatedHealth = Math.min(100, Math.max(10, asset.health + healthOffset));
-          return { ...asset, status: newStatus, health: updatedHealth };
+          const updated = {
+            ...asset,
+            status: newStatus,
+            health: Math.max(0, Math.min(100, asset.health + healthChange))
+          };
+          // Dispatch custom event for cross-context synchronization (e.g. MasterDataContext line status)
+          window.dispatchEvent(
+            new CustomEvent("AssetStatusChanged", {
+              detail: { assetId, status: newStatus, lineId: asset.lineId }
+            })
+          );
+          return updated;
         }
         return asset;
       })
@@ -316,6 +363,45 @@ export function CMMSProvider({ children }) {
     );
   };
 
+  const startWorkOrder = (woId) => {
+    setWorkOrders((prev) =>
+      prev.map((wo) => {
+        if (wo.id === woId) {
+          return {
+            ...wo,
+            status: "In Progress",
+            actualStartTime: new Date().toISOString().replace("T", " ").substring(0, 16),
+          };
+        }
+        return wo;
+      })
+    );
+  };
+
+  const completeWorkOrder = (woId, closureDetails = {}) => {
+    setWorkOrders((prev) =>
+      prev.map((wo) => {
+        if (wo.id === woId) {
+          const endTime = new Date().toISOString().replace("T", " ").substring(0, 16);
+          let durationMinutes = 0;
+          if (wo.actualStartTime) {
+             const start = new Date(wo.actualStartTime);
+             const end = new Date(endTime);
+             durationMinutes = Math.max(0, Math.floor((end - start) / 60000));
+          }
+          return {
+            ...wo,
+            ...closureDetails,
+            status: closureDetails.status || "Completed",
+            actualEndTime: endTime,
+            durationMinutes: closureDetails.durationMinutes || durationMinutes,
+          };
+        }
+        return wo;
+      })
+    );
+  };
+
   const addWorkOrderComment = (woId, text) => {
     setWorkOrders((prev) =>
       prev.map((wo) => {
@@ -362,10 +448,34 @@ export function CMMSProvider({ children }) {
     return schedWithMeta;
   };
 
-  const updatePMScheduleStatus = (schedId, newStatus) => {
+  const updatePMScheduleStatus = (schedId, newStatus, activeWoId = null) => {
     setPmSchedules((prev) =>
-      prev.map((s) => (s.id === schedId ? { ...s, status: newStatus } : s))
+      prev.map((s) => {
+        if (s.id === schedId) {
+          const updated = { ...s, status: newStatus };
+          if (activeWoId) updated.activeWoId = activeWoId;
+          return updated;
+        }
+        return s;
+      })
     );
+  };
+
+  const addCalibrationRecord = (recordData) => {
+    const id = `CAL-${Math.floor(1000 + Math.random() * 9000)}`;
+    const newRecord = {
+      id,
+      assetId: recordData.assetId,
+      name: recordData.name || assets.find(a => a.id === recordData.assetId)?.name || "Instrument",
+      lastCalibration: recordData.lastCalibration || new Date().toISOString().substring(0, 10),
+      nextDueDate: recordData.nextDueDate,
+      status: "Valid",
+      certificate: `CERT-${Math.floor(10000 + Math.random() * 90000)}`,
+      technician: recordData.technician || userProfile?.name || "Metrology Tech",
+      result: recordData.result || "PASS - Within Tolerance"
+    };
+    setCalibrations((prev) => [newRecord, ...prev]);
+    return newRecord;
   };
 
   const completeChecklistExecution = (executionResult) => {
@@ -400,19 +510,22 @@ export function CMMSProvider({ children }) {
     return newRecord;
   };
 
-  const handleFailedPMCheck = ({ assetId, checklistName, checkItemLabel, actualValue, limitText, severity = "Critical" }) => {
+  const handleFailedPMCheck = ({ assetId, checklistName, checkItemLabel, actualValue, limitText, severity = "Critical", originalWoId }) => {
+    let desc = `Immediate inspection and corrective action required following failed PM verification check.`;
+    if (originalWoId) desc += `\nOriginating Work Order: ${originalWoId}`;
+
     const correctiveWO = addWorkOrder({
       title: `Corrective: PM Check Failed - ${checkItemLabel}`,
       assetId,
       assetName: assets.find((a) => a.id === assetId)?.name || assetId,
       type: "Corrective",
       priority: severity === "Critical" ? "P1 - Critical" : "P2 - High",
-      status: "In Progress",
-      department: "Packaging",
+      status: "Open",
+      department: "Maintenance",
       assignedTechnician: userProfile?.name || "Marcus Vance (Senior Tech)",
       failureCode: "MEC-004",
       symptom: `Failed PM Check during '${checklistName}': ${checkItemLabel}. Actual: ${actualValue}, Limit: ${limitText}.`,
-      description: `Immediate inspection and corrective action required following failed PM verification check.`
+      description: desc
     });
 
     updateAssetStatus(assetId, severity === "Critical" ? "Out of Service" : "Degraded", -20);
@@ -431,7 +544,19 @@ export function CMMSProvider({ children }) {
     };
     setBreakdowns((prev) => [newBD, ...prev]);
     if (breakdownData.assetId) {
-      updateAssetStatus(breakdownData.assetId, "Breakdown", -35);
+      updateAssetStatus(breakdownData.assetId, "DOWN", -35);
+      
+      // Auto-create Emergency Work Order
+      if (breakdownData.priority === "P1" || breakdownData.priority === "Critical" || !breakdownData.priority) {
+          addWorkOrder({
+              title: `Emergency Repair: ${breakdownData.symptom || 'Breakdown'}`,
+              assetId: breakdownData.assetId,
+              type: "Emergency",
+              priority: "P1 - Critical",
+              status: "Open",
+              description: `Auto-generated from breakdown report ${id}.`
+          });
+      }
     }
     return newBD;
   };
@@ -443,10 +568,15 @@ export function CMMSProvider({ children }) {
           if (bd.assetId) {
             updateAssetStatus(bd.assetId, "Operational", +30);
           }
+          const endTimeStr = new Date().toISOString().replace("T", " ").substring(0, 16);
+          const start = new Date(bd.startTime);
+          const end = new Date(endTimeStr);
+          const durationMinutes = Math.max(0, Math.floor((end - start) / 60000));
           return {
             ...bd,
             status: "Resolved",
-            endTime: new Date().toISOString().replace("T", " ").substring(0, 16),
+            endTime: endTimeStr,
+            durationMinutes,
             ...repairDetails
           };
         }
@@ -466,9 +596,11 @@ export function CMMSProvider({ children }) {
   };
 
   const issueSparePart = (partNo, qty = 1, workOrderId = "") => {
+    let partName = partNo;
     setSpareParts((prev) =>
       prev.map((part) => {
         if (part.partNo === partNo) {
+          partName = part.name;
           const updatedStock = Math.max(0, part.stock - qty);
           const status = updatedStock <= part.minStock ? "Low Stock" : "In Stock";
           return { ...part, stock: updatedStock, status };
@@ -476,6 +608,21 @@ export function CMMSProvider({ children }) {
         return part;
       })
     );
+    
+    if (workOrderId) {
+      setWorkOrders((prev) => 
+        prev.map((wo) => {
+          if (wo.id === workOrderId) {
+            const newPart = { partNo, name: partName, qty, status: "Issued" };
+            return {
+              ...wo,
+              partsRequired: [...(wo.partsRequired || []), newPart]
+            };
+          }
+          return wo;
+        })
+      );
+    }
   };
 
   const returnSparePart = (partNo, qty = 1) => {
@@ -668,6 +815,8 @@ export function CMMSProvider({ children }) {
         setWorkOrders,
         addWorkOrder,
         updateWorkOrderStatus,
+        startWorkOrder,
+        completeWorkOrder,
         addWorkOrderComment,
 
         // PM
@@ -705,6 +854,7 @@ export function CMMSProvider({ children }) {
         calibrationHistory,
         addCalibrationSchedule,
         recordCalibrationResult,
+        addCalibrationRecord,
 
         // Failure Codes
         failureCodes,

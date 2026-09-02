@@ -20,10 +20,20 @@ import { useCMMS } from "../../context/CMMSContext";
 import { useApp } from "../../context/AppContext";
 
 export function CalibrationCenter() {
-  const { calibrations } = useCMMS();
+  const { calibrations, addCalibrationRecord } = useCMMS();
   const { addToast } = useApp();
 
   const [selectedCert, setSelectedCert] = useState(null);
+  const [isLogModalOpen, setIsLogModalOpen] = useState(false);
+  const [calData, setCalData] = useState({ assetId: "", nextDueDate: "", result: "PASS - Within Tolerance" });
+
+  const handleLogCalibration = (e) => {
+    e.preventDefault();
+    addCalibrationRecord(calData);
+    addToast("Calibration record successfully logged.");
+    setIsLogModalOpen(false);
+    setCalData({ assetId: "", nextDueDate: "", result: "PASS - Within Tolerance" });
+  };
 
   const validCount = calibrations.filter((c) => c.status === "Valid").length;
   const dueSoonCount = calibrations.filter((c) => c.status === "Due Soon").length;
@@ -112,13 +122,10 @@ export function CalibrationCenter() {
             </h1>
             <Badge variant="emerald">ISO 17025 Compliant</Badge>
           </div>
-          <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>
-            Calibration certificate records, metrological drift tracking, and recalibration intervals for critical process transmitters.
-          </p>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <Button variant="primary" icon={Plus} onClick={() => addToast("Log Calibration Record modal opened.")}>
+          <Button variant="primary" icon={Plus} onClick={() => setIsLogModalOpen(true)}>
             + Log Calibration
           </Button>
         </div>
@@ -216,6 +223,54 @@ export function CalibrationCenter() {
           </div>
         )}
       </Modal>
+
+      {/* Log Calibration Modal */}
+      <Modal
+        isOpen={isLogModalOpen}
+        onClose={() => setIsLogModalOpen(false)}
+        title="Log Calibration Record"
+        subtitle="Enter new calibration test results"
+      >
+        <form onSubmit={handleLogCalibration} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+          <div className="form-group">
+            <label className="form-label">Asset / Instrument ID</label>
+            <input
+              type="text"
+              className="form-input"
+              value={calData.assetId}
+              onChange={(e) => setCalData({ ...calData, assetId: e.target.value })}
+              required
+            />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Next Due Date</label>
+            <input
+              type="date"
+              className="form-input"
+              value={calData.nextDueDate}
+              onChange={(e) => setCalData({ ...calData, nextDueDate: e.target.value })}
+              required
+            />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Result</label>
+            <select
+              className="form-input"
+              value={calData.result}
+              onChange={(e) => setCalData({ ...calData, result: e.target.value })}
+            >
+              <option value="PASS - Within Tolerance">PASS - Within Tolerance</option>
+              <option value="FAIL - Out of Tolerance">FAIL - Out of Tolerance</option>
+              <option value="ADJUSTED - Back to Spec">ADJUSTED - Back to Spec</option>
+            </select>
+          </div>
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px" }}>
+            <Button variant="secondary" onClick={() => setIsLogModalOpen(false)}>Cancel</Button>
+            <Button variant="primary" type="submit" icon={CheckCircle2}>Log Record</Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }
+

@@ -89,9 +89,6 @@ export function BreakdownDetail() {
               </Badge>
               <Badge variant="rose">{bd.failureCode}</Badge>
             </div>
-            <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>
-              Started: {bd.startTime} • Plant: {bd.plant} • Line: {bd.line} • Lead Tech: <strong style={{ color: "#38BDF8" }}>{bd.technician}</strong>
-            </p>
           </div>
 
           <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
@@ -262,3 +259,4 @@ export function BreakdownDetail() {
     </div>
   );
 }
+

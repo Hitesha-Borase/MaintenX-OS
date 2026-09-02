@@ -97,9 +97,6 @@ export function TroubleshootingWizard() {
           </h1>
           <Badge variant="cyan">Standardized 7-Step Method</Badge>
         </div>
-        <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>
-          Step-by-step diagnostic tree leading from symptom through diagnostic checks, root cause isolation, repair, and verified solution conversion.
-        </p>
       </div>
 
       {/* Stepper Header */}
@@ -114,9 +111,6 @@ export function TroubleshootingWizard() {
             <h3 style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-primary)" }}>
               Step 1: Machine Issue & Observed Symptom
             </h3>
-            <p style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-              Select the affected production equipment and describe the physical symptom or alarm trigger.
-            </p>
 
             <div className="form-group">
               <label className="form-label">Affected Machine / Asset *</label>
@@ -147,9 +141,6 @@ export function TroubleshootingWizard() {
             <h3 style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-primary)" }}>
               Step 2: Diagnostic Checks & Measurement Protocol
             </h3>
-            <p style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-              Define the physical tests, sensor checks, and instrument verifications required to diagnose the problem.
-            </p>
 
             <div className="form-group">
               <label className="form-label">Diagnostic Steps & Tool Requirements</label>
@@ -168,9 +159,6 @@ export function TroubleshootingWizard() {
             <h3 style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-primary)" }}>
               Step 3: Actual Diagnostic Results & Evidence
             </h3>
-            <p style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-              Record empirical measurement values, sensor readings, and observational evidence.
-            </p>
 
             <div className="form-group">
               <label className="form-label">Empirical Measurements & Observations *</label>
@@ -189,9 +177,6 @@ export function TroubleshootingWizard() {
             <h3 style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-primary)" }}>
               Step 4: Root Cause Isolation
             </h3>
-            <p style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-              Identify the exact causal mechanism based on diagnostic findings and evidence.
-            </p>
 
             <div className="form-group">
               <label className="form-label">Root Cause Determination *</label>
@@ -210,9 +195,6 @@ export function TroubleshootingWizard() {
             <h3 style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-primary)" }}>
               Step 5: Corrective Repair Procedure
             </h3>
-            <p style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-              Document the step-by-step mechanical/electrical repair procedure, parts replaced, and alignment tolerances.
-            </p>
 
             <div className="form-group">
               <label className="form-label">Repair Execution Steps *</label>
@@ -231,9 +213,6 @@ export function TroubleshootingWizard() {
             <h3 style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-primary)" }}>
               Step 6: Post-Repair Operational Test & Trial Run
             </h3>
-            <p style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-              Record verification trial parameters, vibration velocity drops, temperature stability, and line speed.
-            </p>
 
             <div className="form-group">
               <label className="form-label">Trial Run Test Results *</label>
@@ -252,9 +231,6 @@ export function TroubleshootingWizard() {
             <h3 style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-primary)" }}>
               Step 7: Verification & Verified Solution Conversion
             </h3>
-            <p style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-              Sign off on verification and permanently store this solution in the Verified Solutions Library for future repeat failure prevention.
-            </p>
 
             <div className="form-group">
               <label className="form-label">Verifying Engineer / Specialist</label>
@@ -308,3 +284,4 @@ export function TroubleshootingWizard() {
     </div>
   );
 }
+
