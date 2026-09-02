@@ -271,13 +271,13 @@ export function Sidebar() {
           onClick={() => setMobileMenuOpen(false)}
           style={{
             position: "fixed",
-            top: "61px",
+            top: "52px",
             left: 0,
             right: 0,
             bottom: 0,
             backgroundColor: "rgba(43, 29, 17, 0.45)",
             backdropFilter: "blur(4px)",
-            zIndex: 998
+            zIndex: 990
           }}
         />
       )}

@@ -5,6 +5,7 @@ import {
   Bell,
   ChevronLeft,
   ChevronRight,
+  Menu,
   Flame,
   User,
   Settings,
@@ -126,7 +127,7 @@ export function Header() {
           </span>
         </div>
 
-        {/* Sidebar Toggle Button (< / > Icon in rounded pill) */}
+        {/* Sidebar Toggle Button (3 Lines Menu Icon) */}
         <button
           onClick={() => {
             if (window.innerWidth <= 768) {
@@ -151,9 +152,9 @@ export function Header() {
             flexShrink: 0,
             transition: "all 0.15s ease"
           }}
-          title={sidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+          title="Toggle Sidebar Menu"
         >
-          {sidebarCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+          <Menu size={18} />
         </button>
       </div>
 
