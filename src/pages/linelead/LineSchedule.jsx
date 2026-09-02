@@ -44,9 +44,6 @@ export function LineSchedule() {
           <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
             Line Run Schedule & Pre-Op Gate
           </h1>
-          <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-            View planned jobs, log pre-run line readiness, and report setup delays
-          </p>
         </div>
 
         <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>

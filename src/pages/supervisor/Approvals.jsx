@@ -68,9 +68,6 @@ export function Approvals() {
           <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
             Pending Shift Approvals
           </h1>
-          <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-            Authorize quality releases, sanitation checklists, PM audits, and line speedup proposals
-          </p>
         </div>
 
         <Button variant="success" icon={CheckSquare} onClick={handleBulkApprove}>

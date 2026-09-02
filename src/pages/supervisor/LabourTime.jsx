@@ -37,9 +37,6 @@ export function LabourTime() {
           <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
             Crew Hours & Clock In logs
           </h1>
-          <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-            Verify operator clock ins, authorize shift timecards, and approve overtime labor premiums
-          </p>
         </div>
 
         <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>

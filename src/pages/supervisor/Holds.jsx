@@ -61,9 +61,6 @@ export function Holds() {
         <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
           Active Quality Quarantine Holds
         </h1>
-        <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-          Review CCP deviations, authorize batch releases, route to rework, or approve scrap
-        </p>
       </div>
 
       {holds.length === 0 ? (

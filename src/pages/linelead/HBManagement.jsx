@@ -99,9 +99,6 @@ export function HBManagement() {
           <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
             Hour-by-Hour (H/B) Management
           </h1>
-          <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-            Log hourly production actuals, categorize loss drivers, and submit shift reconciliation
-          </p>
         </div>
 
         <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>

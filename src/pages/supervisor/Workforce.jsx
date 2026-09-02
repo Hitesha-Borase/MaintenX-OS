@@ -48,9 +48,6 @@ export function Workforce() {
           <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
             Departmental Workforce
           </h1>
-          <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-            Manage active shift workers, track attendance, and roster allocations
-          </p>
         </div>
 
         <Button variant="primary" icon={UserPlus} onClick={() => setIsAddModalOpen(true)}>

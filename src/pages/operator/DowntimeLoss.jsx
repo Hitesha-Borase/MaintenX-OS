@@ -71,9 +71,6 @@ export function DowntimeLoss() {
           <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
             Downtime & Loss Logger
           </h1>
-          <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-            Record unscheduled machine breakdowns, micro-stop jams, and dispatch corrective maintenance
-          </p>
         </div>
 
         <Button variant="warning" icon={Plus} onClick={() => setIsMicroModalOpen(true)}>

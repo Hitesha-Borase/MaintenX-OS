@@ -48,11 +48,13 @@ export function Staffing() {
 
   const handleAutoFill = () => {
     setCrew([
-      { id: 1, name: "Elena Rostova", station: "Line 1 Filler HMI", status: "Allocated (Aseptic Cert)" },
-      { id: 2, name: "Carlos Mendez", station: "Line 1 Case Packer", status: "Allocated (Packaging Cert)" },
-      { id: 3, name: "Sarah Jenkins", station: "Line 1 CIP Station", status: "Allocated (Sanitation Cert)" }
+      { id: 1, name: "Elena Rostova", station: "Line 1 Filler HMI", status: "Allocated", skillMatch: "100% Fit — Aseptic Cert" },
+      { id: 2, name: "Carlos Mendez", station: "Line 1 Case Packer", status: "Allocated", skillMatch: "96% Fit — Packaging Cert" },
+      { id: 3, name: "Sarah Jenkins", station: "Line 1 CIP Station", status: "Allocated", skillMatch: "98% Fit — CIP Sanitation" },
+      { id: 4, name: "David Kim", station: "Line 2 Blender Panel", status: "Allocated", skillMatch: "94% Fit — Blending Cert" },
+      { id: 5, name: "Amara Okafor", station: "Line 3 Palletizer Conveyor", status: "Allocated", skillMatch: "99% Fit — Automation" }
     ]);
-    addToast("Auto-filled station roster by matching certified operator skills.", "success");
+    addToast("Auto-filled station roster by matching certified operator skills across all 5 lines.", "success");
   };
 
   return (
@@ -62,9 +64,6 @@ export function Staffing() {
           <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
             Shift Staffing Allocations & Reallocations
           </h1>
-          <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-            Assign certified operators to machine stations and swap rosters during bottlenecks
-          </p>
         </div>
 
         <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
@@ -88,8 +87,11 @@ export function Staffing() {
             <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
               <Users size={20} color="#A855F7" />
               <div>
-                <h4 style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>{member.name}</h4>
-                <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <h4 style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>{member.name}</h4>
+                  {member.skillMatch && <Badge variant="emerald">{member.skillMatch}</Badge>}
+                </div>
+                <span style={{ fontSize: "12px", color: "var(--text-secondary)", display: "block", marginTop: "2px" }}>
                   Current Station: <strong style={{ color: "#0284C7" }}>{member.station}</strong>
                 </span>
               </div>
@@ -97,15 +99,16 @@ export function Staffing() {
 
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
               <select
+                value={member.station}
                 onChange={(e) => handleReassign(member.id, e.target.value)}
                 className="input-field"
-                style={{ fontSize: "12px", padding: "4px 8px", height: "34px", width: "170px" }}
-                defaultValue={member.station}
+                style={{ fontSize: "12px", padding: "4px 8px", height: "34px", width: "190px" }}
               >
                 <option value="Line 1 Filler HMI">Line 1 Filler HMI</option>
                 <option value="Line 1 Case Packer">Line 1 Case Packer</option>
                 <option value="Line 1 CIP Station">Line 1 CIP Station</option>
                 <option value="Line 2 Blender Panel">Line 2 Blender Panel</option>
+                <option value="Line 3 Palletizer Conveyor">Line 3 Palletizer Conveyor</option>
               </select>
 
               <Button variant="warning" size="sm" icon={RefreshCw} onClick={() => handleOpenReallocateModal(member)}>

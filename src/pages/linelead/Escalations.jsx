@@ -56,9 +56,6 @@ export function Escalations() {
         <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
           Line Lead Escalation Console (P1 Control Tower)
         </h1>
-        <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-          Dispatch critical operational escalations and attach RCA 2.0 evidence for rapid resolution
-        </p>
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>

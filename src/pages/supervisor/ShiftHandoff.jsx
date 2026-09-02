@@ -50,9 +50,6 @@ export function ShiftHandoff() {
         <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
           Supervisor Shift Handoff
         </h1>
-        <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-          Hand over department execution, sign off shift log, and transfer open operational tasks
-        </p>
       </div>
 
       <form onSubmit={handleOpenSignModal} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>

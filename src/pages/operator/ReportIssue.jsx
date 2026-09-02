@@ -54,9 +54,6 @@ export function ReportIssue() {
           <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
             Report Operational Issue & Safety Exception
           </h1>
-          <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-            Log safety hazards, machine defects, and trigger immediate maintenance dispatch
-          </p>
         </div>
 
         <Button variant="danger" icon={PhoneCall} onClick={() => setIsEmergencyModalOpen(true)}>

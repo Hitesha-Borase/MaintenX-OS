@@ -55,9 +55,6 @@ export function MaterialRequest() {
           <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
             Material Requisition & Line Feedstock
           </h1>
-          <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-            Queue raw ingredient & packaging deliveries from WMS staging to Line 1
-          </p>
         </div>
 
         <Button variant="warning" icon={PhoneCall} onClick={handleCallWarehouseRunner}>

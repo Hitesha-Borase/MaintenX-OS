@@ -43,9 +43,6 @@ export function MyJobs() {
         <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
           My Assigned Jobs & Production Queue
         </h1>
-        <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-          View scheduled work orders, initiate machine production runs, and monitor batch progress
-        </p>
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>

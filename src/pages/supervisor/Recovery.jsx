@@ -33,9 +33,6 @@ export function Recovery() {
           <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
             Departmental Recovery Steering
           </h1>
-          <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-            Authorize Line Lead recovery actions, overtime extensions, and speed tunes to eliminate shift deficit
-          </p>
         </div>
 
         <Button variant="primary" icon={Zap} onClick={handleApproveAll}>

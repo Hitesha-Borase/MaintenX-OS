@@ -43,9 +43,6 @@ export function RecoveryManagement() {
           <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
             Schedule Recovery Management
           </h1>
-          <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-            Formulate yield recovery actions and submit pace proposals for Supervisor authorization
-          </p>
         </div>
 
         <Button variant="primary" icon={Send} onClick={handleSubmitProposal}>

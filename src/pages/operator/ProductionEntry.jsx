@@ -59,9 +59,6 @@ export function ProductionEntry() {
           <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
             Production HMI Entry & Scrap Logging
           </h1>
-          <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-            Record good output quantities, categorize scrap rejects, and log rework units
-          </p>
         </div>
 
         <Button variant="danger" icon={AlertTriangle} onClick={() => setIsScrapModalOpen(true)}>

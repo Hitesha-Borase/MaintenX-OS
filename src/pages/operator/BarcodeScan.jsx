@@ -77,9 +77,6 @@ export function BarcodeScan() {
           <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
             Barcode & QR Code Scanner (GS1-128 / Traceability)
           </h1>
-          <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-            Scan raw material lot tags, finished pallets, and bind QR codes to active production batches
-          </p>
         </div>
 
         {scanResult && scanResult.type.includes("Lot") && (

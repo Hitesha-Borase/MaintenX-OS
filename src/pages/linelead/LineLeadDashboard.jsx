@@ -87,9 +87,6 @@ export function LineLeadDashboard() {
           <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
             Line Lead Control Console
           </h1>
-          <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-            Real-time pace tracking, micro-stop resolution, staffing, and supervisor escalation control
-          </p>
         </div>
 
         <Button variant="warning" icon={Zap} onClick={() => setIsSpeedModalOpen(true)}>

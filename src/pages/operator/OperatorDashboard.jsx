@@ -69,9 +69,6 @@ export function OperatorDashboard() {
               HMI Console & Shop-Floor HMI
             </h1>
           </div>
-          <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-            Real-time machine control, target attainment, and shop-floor data logging
-          </p>
         </div>
 
         <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>

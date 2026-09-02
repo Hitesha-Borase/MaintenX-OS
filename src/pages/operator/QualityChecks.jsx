@@ -63,9 +63,6 @@ export function QualityChecks() {
           <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
             Hourly Operator Quality & CCP Checks
           </h1>
-          <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-            Log Brix, pH, and torque values audited against critical quality limits
-          </p>
         </div>
 
         <Button variant="danger" icon={AlertOctagon} onClick={() => setIsHoldModalOpen(true)}>
