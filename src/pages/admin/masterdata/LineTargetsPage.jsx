@@ -1,71 +1,117 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   Gauge,
   Plus,
-  CheckCircle2,
   Search,
   X,
   Edit2,
+  Trash2,
   Activity,
   Percent,
   TrendingUp,
-  ShieldCheck
+  ShieldCheck,
+  Building2,
+  CheckCircle2
 } from "lucide-react";
 import { Card } from "../../../components/common/Card";
 import { Badge } from "../../../components/common/Badge";
 import { Button } from "../../../components/common/Button";
 import { StatCard } from "../../../components/common/StatCard";
+import { useMasterData } from "../../../context/MasterDataContext";
 import { useApp } from "../../../context/AppContext";
 
 export function LineTargetsPage() {
+  const { lineTargets = [], addLineTarget, updateLineTarget, deleteLineTarget, lines = [], skus = [], plants = [], activePlantId } = useMasterData();
   const { addToast } = useApp();
 
-  const [targets, setTargets] = useState([
-    { id: "TGT-01", line: "Line 1 — Aseptic Bottling", targetOEE: "85.0%", targetAvailability: "92.0%", targetPerformance: "95.0%", targetQuality: "98.5%", shiftTargetUnits: "24,000 btl", status: "Active" },
-    { id: "TGT-02", line: "Line 2 — Formulation & Pasteurizer", targetOEE: "82.0%", targetAvailability: "90.0%", targetPerformance: "94.0%", targetQuality: "98.0%", shiftTargetUnits: "32,000 L", status: "Active" },
-    { id: "TGT-03", line: "Line 3 — Canning Line", targetOEE: "88.0%", targetAvailability: "94.0%", targetPerformance: "96.0%", targetQuality: "98.5%", shiftTargetUnits: "36,000 can", status: "Active" }
-  ]);
-
   const [searchQuery, setSearchQuery] = useState("");
+  const [plantFilter, setPlantFilter] = useState("ALL");
+  const [lineFilter, setLineFilter] = useState("ALL");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTarget, setEditingTarget] = useState(null);
+
+  const finishedSkus = useMemo(() => skus.filter((s) => s.category === "Finished Goods"), [skus]);
+
   const [newTarget, setNewTarget] = useState({
-    line: "Line 1 — Aseptic Bottling",
-    targetOEE: "85.0%",
-    targetAvailability: "92.0%",
-    targetPerformance: "95.0%",
-    targetQuality: "98.5%",
-    shiftTargetUnits: "25,000 btl"
+    plantId: activePlantId || "PLT-01",
+    lineId: lines[0]?.lineId || "LIN-01",
+    skuId: finishedSkus[0]?.skuId || "SKU-001",
+    shift: "Morning Shift (06:00 - 14:00)",
+    targetQuantity: 300000,
+    targetHB: "37,500 Bottles/Hour",
+    stdRunRate: 42000,
+    oeeTargetPct: 88.5
   });
 
-  const filteredTargets = targets.filter((t) => {
-    if (!searchQuery.trim()) return true;
-    return t.line.toLowerCase().includes(searchQuery.toLowerCase());
-  });
+  const filteredTargets = useMemo(() => {
+    return lineTargets.filter((t) => {
+      const matchesPlant = plantFilter === "ALL" || t.plantId === plantFilter;
+      const matchesLine = lineFilter === "ALL" || t.lineId === lineFilter;
+      const q = searchQuery.toLowerCase().trim();
+      const matchesSearch =
+        !q ||
+        (t.lineName || "").toLowerCase().includes(q) ||
+        (t.skuName || "").toLowerCase().includes(q) ||
+        (t.skuCode || "").toLowerCase().includes(q) ||
+        (t.shift || "").toLowerCase().includes(q);
+
+      return matchesPlant && matchesLine && matchesSearch;
+    });
+  }, [lineTargets, plantFilter, lineFilter, searchQuery]);
 
   const handleAddSubmit = (e) => {
     e.preventDefault();
-    const created = {
-      id: `TGT-0${targets.length + 1}`,
-      line: newTarget.line,
-      targetOEE: newTarget.targetOEE || "85.0%",
-      targetAvailability: newTarget.targetAvailability || "90.0%",
-      targetPerformance: newTarget.targetPerformance || "95.0%",
-      targetQuality: newTarget.targetQuality || "98.0%",
-      shiftTargetUnits: newTarget.shiftTargetUnits || "20,000 units",
-      status: "Active"
-    };
+    const selLine = lines.find((l) => l.lineId === newTarget.lineId);
+    const selSku = skus.find((s) => s.skuId === newTarget.skuId);
 
-    setTargets([...targets, created]);
-    addToast(`Target standard updated for ${created.line}!`, "success");
+    const created = addLineTarget({
+      ...newTarget,
+      lineName: selLine ? selLine.name : "Line 1",
+      skuCode: selSku ? selSku.skuCode : "SKU-5001",
+      skuName: selSku ? selSku.name : "Beverage",
+      targetQuantity: Number(newTarget.targetQuantity) || 250000,
+      stdRunRate: Number(newTarget.stdRunRate) || 40000,
+      oeeTargetPct: Number(newTarget.oeeTargetPct) || 88.0
+    });
+
+    addToast(`Target standard registered for ${created.lineName}!`, "success");
     setIsModalOpen(false);
+    setNewTarget({
+      plantId: activePlantId || "PLT-01",
+      lineId: lines[0]?.lineId || "LIN-01",
+      skuId: finishedSkus[0]?.skuId || "SKU-001",
+      shift: "Morning Shift (06:00 - 14:00)",
+      targetQuantity: 300000,
+      targetHB: "37,500 Bottles/Hour",
+      stdRunRate: 42000,
+      oeeTargetPct: 88.5
+    });
   };
 
   const handleEditSubmit = (e) => {
     e.preventDefault();
-    setTargets(targets.map((t) => (t.id === editingTarget.id ? editingTarget : t)));
-    addToast(`Line target for ${editingTarget.line} updated!`, "success");
+    const selLine = lines.find((l) => l.lineId === editingTarget.lineId);
+    const selSku = skus.find((s) => s.skuId === editingTarget.skuId);
+
+    updateLineTarget(editingTarget.targetId, {
+      ...editingTarget,
+      lineName: selLine ? selLine.name : editingTarget.lineName,
+      skuCode: selSku ? selSku.skuCode : editingTarget.skuCode,
+      skuName: selSku ? selSku.name : editingTarget.skuName,
+      targetQuantity: Number(editingTarget.targetQuantity) || 250000,
+      stdRunRate: Number(editingTarget.stdRunRate) || 40000,
+      oeeTargetPct: Number(editingTarget.oeeTargetPct) || 88.0
+    });
+
+    addToast(`Line target for ${editingTarget.lineName} updated!`, "success");
     setEditingTarget(null);
+  };
+
+  const handleDelete = (targetId, lineName) => {
+    if (window.confirm(`Are you sure you want to delete target standard for "${lineName}"?`)) {
+      deleteLineTarget(targetId);
+      addToast(`Target standard deleted.`, "info");
+    }
   };
 
   return (
@@ -77,7 +123,7 @@ export function LineTargetsPage() {
             <h1 style={{ fontSize: "clamp(18px, 4vw, 24px)", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.3px", lineHeight: 1.2 }}>
               Line Targets & Operational Standards
             </h1>
-            <Badge variant="cyan">{targets.length} BASELINES ACTIVE</Badge>
+            <Badge variant="cyan">{lineTargets.length} BASELINES ACTIVE</Badge>
           </div>
         </div>
 
@@ -88,7 +134,7 @@ export function LineTargetsPage() {
         </div>
       </div>
 
-      {/* KPI Tickers - 2x2 on mobile, 4 on desktop */}
+      {/* KPI Tickers */}
       <div
         className="kpi-grid-responsive grid-4"
         style={{
@@ -100,101 +146,201 @@ export function LineTargetsPage() {
         }}
       >
         <StatCard
-          title="Enterprise Target OEE"
-          value="85.0%"
-          unit="Weighted"
-          trend={{ value: "World class benchmark", isPositive: true, text: "" }}
+          title="Target Baselines"
+          value={lineTargets.length.toString()}
+          unit="Line Shifts"
           icon={Gauge}
           colorVariant="emerald"
         />
         <StatCard
-          title="Target Availability"
-          value="92.0%"
-          unit="Uptime"
-          trend={{ value: "< 8% allowable downtime", isPositive: true, text: "" }}
-          icon={Activity}
+          title="Average OEE Benchmark"
+          value="88.2%"
+          unit="Target"
+          icon={Percent}
           colorVariant="cyan"
         />
         <StatCard
-          title="Target Quality"
-          value="98.3%"
-          unit="First-Pass"
-          trend={{ value: "< 1.7% scrap / defect rate", isPositive: true, text: "" }}
-          icon={CheckCircle2}
+          title="Total Shift Volume"
+          value="790k"
+          unit="Units/Day"
+          icon={TrendingUp}
           colorVariant="amber"
         />
         <StatCard
-          title="Nominal Shift Output"
-          value="92,000"
-          unit="Units/Shift"
-          trend={{ value: "Combined all 3 lines", isPositive: true, text: "" }}
-          icon={TrendingUp}
+          title="Governance Compliance"
+          value="100%"
+          unit="Locked"
+          icon={ShieldCheck}
           colorVariant="emerald"
         />
       </div>
 
-      {/* Table */}
-      <Card style={{ padding: "18px", minWidth: 0, width: "100%", boxSizing: "border-box" }}>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", alignItems: "center", marginBottom: "14px", justifyContent: "space-between" }}>
-          <div style={{ position: "relative", minWidth: "220px", flex: 1 }}>
-            <Search size={15} color="var(--text-muted)" style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)" }} />
+      {/* Main Table Card */}
+      <Card
+        style={{
+          backgroundColor: "#FFFFFF",
+          border: "1px solid var(--border-subtle)",
+          borderRadius: "14px",
+          overflow: "hidden"
+        }}
+      >
+        {/* Controls Bar */}
+        <div
+          style={{
+            padding: "16px 20px",
+            borderBottom: "1px solid var(--border-subtle)",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "12px",
+            backgroundColor: "var(--bg-card-subtle)"
+          }}
+        >
+          <div style={{ position: "relative", minWidth: "240px", flex: 1 }}>
+            <Search
+              size={15}
+              style={{
+                position: "absolute",
+                left: "12px",
+                top: "50%",
+                transform: "translateY(-50%)",
+                color: "var(--text-muted)"
+              }}
+            />
             <input
               type="text"
-              placeholder="Search production line..."
+              placeholder="Search target by line, SKU or shift..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="form-input"
-              style={{ paddingLeft: "32px", height: "36px", fontSize: "12px", backgroundColor: "#FFFFFF" }}
+              style={{
+                paddingLeft: "36px",
+                backgroundColor: "#FFFFFF",
+                fontSize: "12px",
+                width: "100%"
+              }}
             />
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+            <select
+              value={plantFilter}
+              onChange={(e) => setPlantFilter(e.target.value)}
+              className="form-input"
+              style={{ fontSize: "12px", padding: "6px 10px", width: "auto", backgroundColor: "#FFFFFF" }}
+            >
+              <option value="ALL">All Plants</option>
+              {plants.map((p) => (
+                <option key={p.id} value={p.id}>{p.name.split(" - ")[0]}</option>
+              ))}
+            </select>
+
+            <select
+              value={lineFilter}
+              onChange={(e) => setLineFilter(e.target.value)}
+              className="form-input"
+              style={{ fontSize: "12px", padding: "6px 10px", width: "auto", backgroundColor: "#FFFFFF" }}
+            >
+              <option value="ALL">All Lines</option>
+              {lines.map((l) => (
+                <option key={l.lineId} value={l.lineId}>{l.lineCode} — {l.name}</option>
+              ))}
+            </select>
           </div>
         </div>
 
-        <div className="data-table-container" style={{ width: "100%", overflowX: "auto", WebkitOverflowScrolling: "touch", display: "block" }}>
-          <table className="data-table" style={{ width: "100%", minWidth: "680px" }}>
+        {/* Table View */}
+        <div style={{ overflowX: "auto", width: "100%" }}>
+          <table className="data-table" style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
             <thead>
-              <tr>
-                <th>Production Line</th>
-                <th>Target OEE</th>
-                <th>Target Avail</th>
-                <th>Target Perf</th>
-                <th>Target Quality</th>
-                <th>Standard Shift Target</th>
-                <th>Action</th>
+              <tr style={{ borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Work Center / Line</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Master SKU</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Operating Shift</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Target Volume</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>H/B Run Rate</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>OEE Target</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Status</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", textAlign: "right" }}>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {filteredTargets.map((t) => (
-                <tr key={t.id}>
-                  <td>
-                    <strong style={{ color: "var(--text-primary)" }}>{t.line}</strong>
-                  </td>
-                  <td style={{ fontFamily: "var(--font-mono)", fontWeight: 800, color: "#059669" }}>{t.targetOEE}</td>
-                  <td style={{ fontFamily: "var(--font-mono)", fontSize: "12px" }}>{t.targetAvailability}</td>
-                  <td style={{ fontFamily: "var(--font-mono)", fontSize: "12px" }}>{t.targetPerformance}</td>
-                  <td style={{ fontFamily: "var(--font-mono)", fontSize: "12px" }}>{t.targetQuality}</td>
-                  <td style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "#8C5B23" }}>{t.shiftTargetUnits}</td>
-                  <td>
-                    <button
-                      onClick={() => setEditingTarget({ ...t })}
-                      title="Edit Target"
-                      style={{
-                        width: "30px",
-                        height: "30px",
-                        borderRadius: "6px",
-                        backgroundColor: "var(--bg-card-subtle)",
-                        color: "var(--text-primary)",
-                        border: "1px solid var(--border-subtle)",
-                        cursor: "pointer",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        justifyContent: "center"
-                      }}
-                    >
-                      <Edit2 size={13} />
-                    </button>
+              {filteredTargets.length === 0 ? (
+                <tr>
+                  <td colSpan={8} style={{ textAlign: "center", padding: "32px", color: "var(--text-muted)", fontSize: "13px" }}>
+                    No line targets found matching filters.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                filteredTargets.map((t) => (
+                  <tr key={t.targetId} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+                    <td style={{ padding: "12px 16px" }}>
+                      <div style={{ fontWeight: 800, color: "var(--text-primary)", fontSize: "13px" }}>{t.lineName}</div>
+                      <div style={{ fontSize: "11px", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>{t.lineId}</div>
+                    </td>
+                    <td style={{ padding: "12px 16px" }}>
+                      <div style={{ fontWeight: 700, color: "var(--text-primary)", fontSize: "12px" }}>{t.skuName}</div>
+                      <div style={{ fontSize: "11px", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>{t.skuCode}</div>
+                    </td>
+                    <td style={{ padding: "12px 16px", fontSize: "12px", color: "var(--text-secondary)" }}>
+                      {t.shift}
+                    </td>
+                    <td style={{ padding: "12px 16px", fontFamily: "var(--font-mono)", fontWeight: 800, color: "#8C5B23" }}>
+                      {(Number(t.targetQuantity) || 0).toLocaleString()} Units
+                    </td>
+                    <td style={{ padding: "12px 16px", fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--text-primary)" }}>
+                      {t.targetHB}
+                    </td>
+                    <td style={{ padding: "12px 16px", fontFamily: "var(--font-mono)", fontWeight: 800, color: "#059669" }}>
+                      {t.oeeTargetPct || 88.5}%
+                    </td>
+                    <td style={{ padding: "12px 16px" }}>
+                      <Badge variant="emerald">{t.status || "Active"}</Badge>
+                    </td>
+                    <td style={{ padding: "12px 16px", textAlign: "right" }}>
+                      <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                        <button
+                          onClick={() => setEditingTarget({ ...t })}
+                          title="Edit Target"
+                          style={{
+                            width: "30px",
+                            height: "30px",
+                            borderRadius: "6px",
+                            backgroundColor: "var(--bg-card-subtle)",
+                            color: "var(--text-primary)",
+                            border: "1px solid var(--border-subtle)",
+                            cursor: "pointer",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center"
+                          }}
+                        >
+                          <Edit2 size={13} />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(t.targetId, t.lineName)}
+                          title="Delete Target"
+                          style={{
+                            width: "30px",
+                            height: "30px",
+                            borderRadius: "6px",
+                            backgroundColor: "var(--bg-card-subtle)",
+                            color: "#EF4444",
+                            border: "1px solid var(--border-subtle)",
+                            cursor: "pointer",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center"
+                          }}
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -203,101 +349,121 @@ export function LineTargetsPage() {
       {/* ADD TARGET MODAL */}
       {isModalOpen && (
         <div className="modal-backdrop" onClick={() => setIsModalOpen(false)}>
-          <div className="modal-content" style={{ maxWidth: "480px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+          <div className="modal-content" style={{ maxWidth: "520px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
-              <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)" }}>
-                Set Line Target Standards
-              </h2>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Gauge size={18} color="#C89547" />
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                  Set Line Target Benchmark
+                </h2>
+              </div>
               <button onClick={() => setIsModalOpen(false)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
                 <X size={18} />
               </button>
             </div>
 
             <form onSubmit={handleAddSubmit} style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
-              <div>
-                <label className="form-label">Production Line *</label>
-                <select
-                  className="form-select"
-                  value={newTarget.line}
-                  onChange={(e) => setNewTarget({ ...newTarget, line: e.target.value })}
-                  style={{ backgroundColor: "#FFFFFF" }}
-                >
-                  <option value="Line 1 — Aseptic Bottling">Line 1 — Aseptic Bottling</option>
-                  <option value="Line 2 — Formulation & Pasteurizer">Line 2 — Formulation & Pasteurizer</option>
-                  <option value="Line 3 — Canning Line">Line 3 — Canning Line</option>
-                </select>
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                 <div>
-                  <label className="form-label">Target OEE</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. 85.0%"
-                    value={newTarget.targetOEE}
-                    onChange={(e) => setNewTarget({ ...newTarget, targetOEE: e.target.value })}
+                  <label className="form-label">Work Center / Line *</label>
+                  <select
+                    value={newTarget.lineId}
+                    onChange={(e) => setNewTarget({ ...newTarget, lineId: e.target.value })}
                     className="form-input"
                     style={{ backgroundColor: "#FFFFFF" }}
-                  />
+                  >
+                    {lines.map((l) => (
+                      <option key={l.lineId} value={l.lineId}>{l.lineCode} — {l.name}</option>
+                    ))}
+                  </select>
                 </div>
-
                 <div>
-                  <label className="form-label">Target Availability</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. 92.0%"
-                    value={newTarget.targetAvailability}
-                    onChange={(e) => setNewTarget({ ...newTarget, targetAvailability: e.target.value })}
+                  <label className="form-label">Master SKU *</label>
+                  <select
+                    value={newTarget.skuId}
+                    onChange={(e) => setNewTarget({ ...newTarget, skuId: e.target.value })}
                     className="form-input"
                     style={{ backgroundColor: "#FFFFFF" }}
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
-                <div>
-                  <label className="form-label">Target Performance</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. 95.0%"
-                    value={newTarget.targetPerformance}
-                    onChange={(e) => setNewTarget({ ...newTarget, targetPerformance: e.target.value })}
-                    className="form-input"
-                    style={{ backgroundColor: "#FFFFFF" }}
-                  />
-                </div>
-
-                <div>
-                  <label className="form-label">Target Quality</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. 98.5%"
-                    value={newTarget.targetQuality}
-                    onChange={(e) => setNewTarget({ ...newTarget, targetQuality: e.target.value })}
-                    className="form-input"
-                    style={{ backgroundColor: "#FFFFFF" }}
-                  />
+                  >
+                    {finishedSkus.map((s) => (
+                      <option key={s.skuId} value={s.skuId}>{s.skuCode} — {s.name}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
               <div>
-                <label className="form-label">Standard Shift Target Output</label>
+                <label className="form-label">Shift Description *</label>
                 <input
                   type="text"
-                  placeholder="e.g. 24,000 btl"
-                  value={newTarget.shiftTargetUnits}
-                  onChange={(e) => setNewTarget({ ...newTarget, shiftTargetUnits: e.target.value })}
+                  required
+                  placeholder="e.g. Morning Shift (06:00 - 14:00)"
+                  value={newTarget.shift}
+                  onChange={(e) => setNewTarget({ ...newTarget, shift: e.target.value })}
                   className="form-input"
                   style={{ backgroundColor: "#FFFFFF" }}
                 />
               </div>
 
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div>
+                  <label className="form-label">Target Shift Quantity *</label>
+                  <input
+                    type="number"
+                    min="1"
+                    required
+                    value={newTarget.targetQuantity}
+                    onChange={(e) => setNewTarget({ ...newTarget, targetQuantity: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+                <div>
+                  <label className="form-label">Target H/B Rate</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 37,500 Bottles/Hour"
+                    value={newTarget.targetHB}
+                    onChange={(e) => setNewTarget({ ...newTarget, targetHB: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div>
+                  <label className="form-label">Std Speed (BPH)</label>
+                  <input
+                    type="number"
+                    min="1000"
+                    value={newTarget.stdRunRate}
+                    onChange={(e) => setNewTarget({ ...newTarget, stdRunRate: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+                <div>
+                  <label className="form-label">OEE Target %</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="50"
+                    max="100"
+                    value={newTarget.oeeTargetPct}
+                    onChange={(e) => setNewTarget({ ...newTarget, oeeTargetPct: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "8px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
                 <Button variant="secondary" onClick={() => setIsModalOpen(false)}>
                   Cancel
                 </Button>
                 <Button variant="primary" type="submit">
-                  Save Line Target
+                  Save Target Baseline
                 </Button>
               </div>
             </form>
@@ -308,12 +474,12 @@ export function LineTargetsPage() {
       {/* EDIT TARGET MODAL */}
       {editingTarget && (
         <div className="modal-backdrop" onClick={() => setEditingTarget(null)}>
-          <div className="modal-content" style={{ maxWidth: "480px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+          <div className="modal-content" style={{ maxWidth: "520px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <Edit2 size={16} color="#B27E33" />
+                <Edit2 size={16} color="#C89547" />
                 <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
-                  Edit Target — {editingTarget.line}
+                  Edit Target — {editingTarget.lineName}
                 </h2>
               </div>
               <button onClick={() => setEditingTarget(null)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
@@ -322,71 +488,73 @@ export function LineTargetsPage() {
             </div>
 
             <form onSubmit={handleEditSubmit} style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
-                <div>
-                  <label className="form-label">Target OEE</label>
-                  <input
-                    type="text"
-                    value={editingTarget.targetOEE}
-                    onChange={(e) => setEditingTarget({ ...editingTarget, targetOEE: e.target.value })}
-                    className="form-input"
-                    style={{ backgroundColor: "#FFFFFF" }}
-                  />
-                </div>
-
-                <div>
-                  <label className="form-label">Target Availability</label>
-                  <input
-                    type="text"
-                    value={editingTarget.targetAvailability}
-                    onChange={(e) => setEditingTarget({ ...editingTarget, targetAvailability: e.target.value })}
-                    className="form-input"
-                    style={{ backgroundColor: "#FFFFFF" }}
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
-                <div>
-                  <label className="form-label">Target Performance</label>
-                  <input
-                    type="text"
-                    value={editingTarget.targetPerformance}
-                    onChange={(e) => setEditingTarget({ ...editingTarget, targetPerformance: e.target.value })}
-                    className="form-input"
-                    style={{ backgroundColor: "#FFFFFF" }}
-                  />
-                </div>
-
-                <div>
-                  <label className="form-label">Target Quality</label>
-                  <input
-                    type="text"
-                    value={editingTarget.targetQuality}
-                    onChange={(e) => setEditingTarget({ ...editingTarget, targetQuality: e.target.value })}
-                    className="form-input"
-                    style={{ backgroundColor: "#FFFFFF" }}
-                  />
-                </div>
-              </div>
-
               <div>
-                <label className="form-label">Standard Shift Target Output</label>
+                <label className="form-label">Shift Description *</label>
                 <input
                   type="text"
-                  value={editingTarget.shiftTargetUnits}
-                  onChange={(e) => setEditingTarget({ ...editingTarget, shiftTargetUnits: e.target.value })}
+                  required
+                  value={editingTarget.shift}
+                  onChange={(e) => setEditingTarget({ ...editingTarget, shift: e.target.value })}
                   className="form-input"
                   style={{ backgroundColor: "#FFFFFF" }}
                 />
               </div>
 
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
-                <Button variant="secondary" type="button" onClick={() => setEditingTarget(null)}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div>
+                  <label className="form-label">Target Quantity *</label>
+                  <input
+                    type="number"
+                    min="1"
+                    required
+                    value={editingTarget.targetQuantity}
+                    onChange={(e) => setEditingTarget({ ...editingTarget, targetQuantity: Number(e.target.value) })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+                <div>
+                  <label className="form-label">Target H/B Rate</label>
+                  <input
+                    type="text"
+                    value={editingTarget.targetHB}
+                    onChange={(e) => setEditingTarget({ ...editingTarget, targetHB: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div>
+                  <label className="form-label">Std Speed (BPH)</label>
+                  <input
+                    type="number"
+                    value={editingTarget.stdRunRate || 40000}
+                    onChange={(e) => setEditingTarget({ ...editingTarget, stdRunRate: Number(e.target.value) })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+                <div>
+                  <label className="form-label">OEE Target %</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={editingTarget.oeeTargetPct || 88.5}
+                    onChange={(e) => setEditingTarget({ ...editingTarget, oeeTargetPct: Number(e.target.value) })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "8px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
+                <Button variant="secondary" onClick={() => setEditingTarget(null)}>
                   Cancel
                 </Button>
                 <Button variant="primary" type="submit">
-                  Save Changes
+                  Update Target
                 </Button>
               </div>
             </form>

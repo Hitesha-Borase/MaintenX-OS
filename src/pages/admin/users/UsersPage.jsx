@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   Users,
   UserPlus,
@@ -14,17 +14,19 @@ import {
   Lock,
   Unlock,
   AlertTriangle,
-  Layers
+  Layers,
+  Edit2,
+  Trash2
 } from "lucide-react";
 import { Card } from "../../../components/common/Card";
 import { Badge } from "../../../components/common/Badge";
 import { Button } from "../../../components/common/Button";
 import { StatCard } from "../../../components/common/StatCard";
-import { useAdmin } from "../../../context/AdminContext";
+import { useMasterData } from "../../../context/MasterDataContext";
 import { useApp } from "../../../context/AppContext";
 
 export function UsersPage() {
-  const { users = [], addUser, updateUserStatus } = useAdmin();
+  const { users = [], addUser, updateUserStatus, plants = [], departments = [] } = useMasterData();
   const { addToast } = useApp();
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -34,21 +36,25 @@ export function UsersPage() {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
-    role: "Maintenance Lead",
-    department: "Maintenance",
-    plant: "Plant 1 (Austin)",
+    role: "Plant Manager",
+    department: "Operations / Production",
+    plantId: "PLT-01",
     status: "Active"
   });
 
-  const filteredUsers = users.filter((u) => {
-    const matchesSearch =
-      (u.name && u.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (u.email && u.email.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (u.department && u.department.toLowerCase().includes(searchQuery.toLowerCase()));
+  const filteredUsers = useMemo(() => {
+    return users.filter((u) => {
+      const q = searchQuery.toLowerCase().trim();
+      const matchesSearch =
+        !q ||
+        (u.name && u.name.toLowerCase().includes(q)) ||
+        (u.email && u.email.toLowerCase().includes(q)) ||
+        (u.department && u.department.toLowerCase().includes(q));
 
-    const matchesRole = roleFilter === "ALL" || u.role === roleFilter;
-    return matchesSearch && matchesRole;
-  });
+      const matchesRole = roleFilter === "ALL" || u.role === roleFilter;
+      return matchesSearch && matchesRole;
+    });
+  }, [users, roleFilter, searchQuery]);
 
   const handleToggleStatus = (userId, currentStatus) => {
     const newStatus = currentStatus === "Active" ? "Suspended" : "Active";
@@ -71,19 +77,19 @@ export function UsersPage() {
         email: formData.email,
         role: formData.role,
         department: formData.department,
-        plant: formData.plant,
+        plantId: formData.plantId,
         status: "Active"
       });
     }
 
-    addToast(`User ${formData.name} successfully created!`, "success");
+    addToast(`User ${formData.name} successfully provisioned!`, "success");
     setIsAddModalOpen(false);
     setFormData({
       name: "",
       email: "",
-      role: "Maintenance Lead",
-      department: "Maintenance",
-      plant: "Plant 1 (Austin)",
+      role: "Plant Manager",
+      department: "Operations / Production",
+      plantId: "PLT-01",
       status: "Active"
     });
   };
@@ -103,12 +109,12 @@ export function UsersPage() {
 
         <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
           <Button variant="primary" icon={Plus} onClick={() => setIsAddModalOpen(true)} style={{ fontSize: "12px", padding: "7px 12px" }}>
-            + Provision New User
+            + Provision User
           </Button>
         </div>
       </div>
 
-      {/* KPI Tickers - 2x2 on mobile, 4 on desktop */}
+      {/* KPI Tickers */}
       <div
         className="kpi-grid-responsive grid-4"
         style={{
@@ -120,125 +126,157 @@ export function UsersPage() {
         }}
       >
         <StatCard
-          title="Active User Accounts"
+          title="Active Accounts"
           value={users.filter((u) => u.status === "Active").length.toString()}
-          unit="Enabled"
-          trend={{ value: "All credentials verified", isPositive: true, text: "" }}
-          icon={CheckCircle2}
+          unit="Users"
+          icon={Users}
           colorVariant="emerald"
         />
         <StatCard
-          title="Suspended Accounts"
-          value={users.filter((u) => u.status === "Suspended").length.toString()}
-          unit="Locked"
-          trend={{ value: "Access revoked", isPositive: false, text: "" }}
-          icon={XCircle}
-          colorVariant="rose"
-        />
-        <StatCard
-          title="Administrative Users"
-          value={users.filter((u) => u.role?.includes("Admin") || u.role?.includes("Manager")).length.toString()}
-          unit="Privileged"
-          trend={{ value: "MFA Enforced", isPositive: true, text: "" }}
+          title="System Administrators"
+          value={users.filter((u) => u.role?.includes("Admin")).length.toString()}
+          unit="Superusers"
           icon={ShieldCheck}
           colorVariant="cyan"
         />
         <StatCard
-          title="RBAC Compliance"
+          title="Pending SSO Invites"
+          value="0"
+          unit="Cleared"
+          icon={Clock}
+          colorVariant="amber"
+        />
+        <StatCard
+          title="MFA Enforced"
           value="100%"
-          unit="Audited"
-          trend={{ value: "Least privilege enforced", isPositive: true, text: "" }}
-          icon={Lock}
+          unit="Compliant"
+          icon={CheckCircle2}
           colorVariant="emerald"
         />
       </div>
 
-      {/* Users Table */}
-      <Card style={{ padding: "18px", minWidth: 0, width: "100%", boxSizing: "border-box" }}>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", alignItems: "center", marginBottom: "14px", justifyContent: "space-between" }}>
-          <div style={{ position: "relative", minWidth: "220px", flex: 1 }}>
-            <Search size={15} color="var(--text-muted)" style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)" }} />
+      {/* Main Table Card */}
+      <Card
+        style={{
+          backgroundColor: "#FFFFFF",
+          border: "1px solid var(--border-subtle)",
+          borderRadius: "14px",
+          overflow: "hidden"
+        }}
+      >
+        {/* Controls Bar */}
+        <div
+          style={{
+            padding: "16px 20px",
+            borderBottom: "1px solid var(--border-subtle)",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "12px",
+            backgroundColor: "var(--bg-card-subtle)"
+          }}
+        >
+          <div style={{ position: "relative", minWidth: "240px", flex: 1 }}>
+            <Search
+              size={15}
+              style={{
+                position: "absolute",
+                left: "12px",
+                top: "50%",
+                transform: "translateY(-50%)",
+                color: "var(--text-muted)"
+              }}
+            />
             <input
               type="text"
-              placeholder="Search user name, email, department..."
+              placeholder="Search users by name, email or department..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="form-input"
-              style={{ paddingLeft: "32px", height: "36px", fontSize: "12px", backgroundColor: "#FFFFFF" }}
+              style={{
+                paddingLeft: "36px",
+                backgroundColor: "#FFFFFF",
+                fontSize: "12px",
+                width: "100%"
+              }}
             />
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>Role:</span>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
             <select
-              className="form-select"
-              style={{ height: "36px", minWidth: "140px", fontSize: "12px", backgroundColor: "#FFFFFF" }}
               value={roleFilter}
               onChange={(e) => setRoleFilter(e.target.value)}
+              className="form-input"
+              style={{ fontSize: "12px", padding: "6px 10px", width: "auto", backgroundColor: "#FFFFFF" }}
             >
               <option value="ALL">All Roles</option>
               <option value="System Administrator">System Administrator</option>
               <option value="Plant Manager">Plant Manager</option>
-              <option value="QA Manager">QA Manager</option>
+              <option value="Quality Manager">Quality Manager</option>
               <option value="Maintenance Lead">Maintenance Lead</option>
-              <option value="Operator / Line Tech">Operator / Line Tech</option>
+              <option value="Line Operator">Line Operator</option>
             </select>
           </div>
         </div>
 
-        <div className="data-table-container" style={{ width: "100%", overflowX: "auto", WebkitOverflowScrolling: "touch", display: "block" }}>
-          <table className="data-table" style={{ width: "100%", minWidth: "680px" }}>
+        {/* Table View */}
+        <div style={{ overflowX: "auto", width: "100%" }}>
+          <table className="data-table" style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
             <thead>
-              <tr>
-                <th>User</th>
-                <th>Assigned Role</th>
-                <th>Department</th>
-                <th>Plant Scope</th>
-                <th>Last Active</th>
-                <th>Status</th>
-                <th>Action</th>
+              <tr style={{ borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>User Profile</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Assigned Role</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Department</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Plant Facility</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Status</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", textAlign: "right" }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {filteredUsers.map((u) => {
-                const isActive = u.status === "Active";
-
+                const plantName = plants.find((p) => p.id === u.plantId)?.name?.split(" - ")[0] || "Indore Plant 1";
                 return (
-                  <tr key={u.id}>
-                    <td>
-                      <div style={{ fontWeight: 700, color: "var(--text-primary)" }}>{u.name}</div>
-                      <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>{u.email}</div>
+                  <tr key={u.id} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+                    <td style={{ padding: "12px 16px" }}>
+                      <div style={{ fontWeight: 800, color: "var(--text-primary)", fontSize: "13px" }}>{u.name}</div>
+                      <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>{u.email}</div>
                     </td>
-                    <td>
+                    <td style={{ padding: "12px 16px" }}>
                       <Badge variant="cyan">{u.role}</Badge>
                     </td>
-                    <td>
-                      <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>{u.department}</span>
+                    <td style={{ padding: "12px 16px", fontSize: "12px", color: "var(--text-secondary)" }}>
+                      {u.department}
                     </td>
-                    <td>
-                      <span style={{ fontSize: "12px", color: "var(--text-primary)", fontWeight: 600 }}>{u.plant}</span>
+                    <td style={{ padding: "12px 16px", fontSize: "12px", color: "var(--text-secondary)" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                        <Building2 size={12} color="#C89547" />
+                        <span>{plantName}</span>
+                      </div>
                     </td>
-                    <td style={{ fontSize: "11px", color: "var(--text-muted)" }}>{u.lastLogin || "Today"}</td>
-                    <td>
-                      <Badge variant={isActive ? "emerald" : "rose"}>
+                    <td style={{ padding: "12px 16px" }}>
+                      <Badge variant={u.status === "Active" ? "emerald" : "rose"}>
                         {u.status}
                       </Badge>
                     </td>
-                    <td>
+                    <td style={{ padding: "12px 16px", textAlign: "right" }}>
                       <button
                         onClick={() => handleToggleStatus(u.id, u.status)}
+                        title={u.status === "Active" ? "Suspend Account" : "Activate Account"}
                         style={{
-                          padding: "4px 10px",
+                          width: "30px",
+                          height: "30px",
                           borderRadius: "6px",
-                          fontSize: "11px",
-                          fontWeight: 700,
-                          backgroundColor: isActive ? "var(--bg-card-subtle)" : "rgba(16, 185, 129, 0.1)",
-                          color: isActive ? "#DC2626" : "#059669",
+                          backgroundColor: "var(--bg-card-subtle)",
+                          color: u.status === "Active" ? "#EF4444" : "#059669",
                           border: "1px solid var(--border-subtle)",
-                          cursor: "pointer"
+                          cursor: "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center"
                         }}
                       >
-                        {isActive ? "Suspend" : "Activate"}
+                        {u.status === "Active" ? <Lock size={13} /> : <Unlock size={13} />}
                       </button>
                     </td>
                   </tr>
@@ -249,21 +287,24 @@ export function UsersPage() {
         </div>
       </Card>
 
-      {/* PROVISION USER MODAL */}
+      {/* ADD USER MODAL */}
       {isAddModalOpen && (
         <div className="modal-backdrop" onClick={() => setIsAddModalOpen(false)}>
           <div className="modal-content" style={{ maxWidth: "520px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
-              <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)" }}>
-                Provision New User Account
-              </h2>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <UserPlus size={18} color="#C89547" />
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                  Provision Enterprise User
+                </h2>
+              </div>
               <button onClick={() => setIsAddModalOpen(false)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
                 <X size={18} />
               </button>
             </div>
 
             <form onSubmit={handleAddSubmit} style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                 <div>
                   <label className="form-label">Full Name *</label>
                   <input
@@ -276,13 +317,12 @@ export function UsersPage() {
                     style={{ backgroundColor: "#FFFFFF" }}
                   />
                 </div>
-
                 <div>
-                  <label className="form-label">Corporate Email *</label>
+                  <label className="form-label">Email Address *</label>
                   <input
                     type="email"
                     required
-                    placeholder="john.doe@flowstate.io"
+                    placeholder="e.g. jdoe@maintenx.com"
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     className="form-input"
@@ -291,55 +331,53 @@ export function UsersPage() {
                 </div>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                 <div>
-                  <label className="form-label">System Role</label>
+                  <label className="form-label">Role Assignment *</label>
                   <select
-                    className="form-select"
                     value={formData.role}
                     onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                    className="form-input"
                     style={{ backgroundColor: "#FFFFFF" }}
                   >
                     <option value="System Administrator">System Administrator</option>
                     <option value="Plant Manager">Plant Manager</option>
-                    <option value="QA Manager">QA Manager</option>
+                    <option value="Quality Manager">Quality Manager</option>
                     <option value="Maintenance Lead">Maintenance Lead</option>
-                    <option value="Operator / Line Tech">Operator / Line Tech</option>
+                    <option value="Line Operator">Line Operator</option>
                   </select>
                 </div>
-
                 <div>
-                  <label className="form-label">Department</label>
+                  <label className="form-label">Plant Assignment *</label>
                   <select
-                    className="form-select"
-                    value={formData.department}
-                    onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                    value={formData.plantId}
+                    onChange={(e) => setFormData({ ...formData, plantId: e.target.value })}
+                    className="form-input"
                     style={{ backgroundColor: "#FFFFFF" }}
                   >
-                    <option value="Operations">Operations</option>
-                    <option value="Maintenance">Maintenance</option>
-                    <option value="Quality Assurance">Quality Assurance</option>
-                    <option value="Warehouse / Logistics">Warehouse</option>
-                    <option value="IT & Digital Ops">IT & Digital Ops</option>
+                    {plants.map((p) => (
+                      <option key={p.id} value={p.id}>{p.name.split(" - ")[0]}</option>
+                    ))}
                   </select>
                 </div>
               </div>
 
               <div>
-                <label className="form-label">Plant Assignment Scope</label>
+                <label className="form-label">Department</label>
                 <select
-                  className="form-select"
-                  value={formData.plant}
-                  onChange={(e) => setFormData({ ...formData, plant: e.target.value })}
+                  value={formData.department}
+                  onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                  className="form-input"
                   style={{ backgroundColor: "#FFFFFF" }}
                 >
-                  <option value="Plant 1 (Austin)">Plant 1 (Austin)</option>
-                  <option value="Plant 2 (Dallas)">Plant 2 (Dallas)</option>
-                  <option value="All Plants">All Plants (Enterprise Global)</option>
+                  <option value="Operations / Production">Operations / Production</option>
+                  <option value="Maintenance & Reliability">Maintenance & Reliability</option>
+                  <option value="Quality Assurance & Lab">Quality Assurance & Lab</option>
+                  <option value="Warehouse & Logistics">Warehouse & Logistics</option>
                 </select>
               </div>
 
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "8px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
                 <Button variant="secondary" onClick={() => setIsAddModalOpen(false)}>
                   Cancel
                 </Button>

@@ -1,23 +1,26 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   ShieldAlert,
   Plus,
-  CheckCircle2,
   Search,
   X,
   Edit2,
+  Trash2,
   AlertTriangle,
   Flame,
   ShieldCheck,
-  Zap
+  Zap,
+  CheckCircle2
 } from "lucide-react";
 import { Card } from "../../../components/common/Card";
 import { Badge } from "../../../components/common/Badge";
 import { Button } from "../../../components/common/Button";
 import { StatCard } from "../../../components/common/StatCard";
+import { useMasterData } from "../../../context/MasterDataContext";
 import { useApp } from "../../../context/AppContext";
 
 export function CCPLimitsPage() {
+  const { qualitySpecs = [], operations = [], plants = [], activePlantId } = useMasterData();
   const { addToast } = useApp();
 
   const [ccps, setCcps] = useState([
@@ -30,22 +33,25 @@ export function CCPLimitsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCCP, setEditingCCP] = useState(null);
   const [newCCP, setNewCCP] = useState({
-    processStep: "",
-    hazard: "",
-    criticalLimit: "",
-    autoDivertAction: "Line Immediate Stop & Lockout"
+    processStep: "Thermal Pasteurization Hold",
+    hazard: "Pathogen Survival (Microbial)",
+    criticalLimit: "≥ 72.0°C for ≥ 15.0 seconds",
+    autoDivertAction: "Automatic Flow Divert Valve to Balance Tank"
   });
 
-  const filteredCCPs = ccps.filter((c) => {
-    if (!searchQuery.trim()) return true;
-    const q = searchQuery.toLowerCase();
-    return (
-      c.processStep.toLowerCase().includes(q) ||
-      c.ccpNumber.toLowerCase().includes(q) ||
-      c.hazard.toLowerCase().includes(q) ||
-      c.criticalLimit.toLowerCase().includes(q)
-    );
-  });
+  const filteredCCPs = useMemo(() => {
+    return ccps.filter((c) => {
+      const q = searchQuery.toLowerCase().trim();
+      return (
+        !q ||
+        c.processStep.toLowerCase().includes(q) ||
+        c.ccpNumber.toLowerCase().includes(q) ||
+        c.hazard.toLowerCase().includes(q) ||
+        c.criticalLimit.toLowerCase().includes(q) ||
+        c.autoDivertAction.toLowerCase().includes(q)
+      );
+    });
+  }, [ccps, searchQuery]);
 
   const handleAddSubmit = (e) => {
     e.preventDefault();
@@ -66,7 +72,12 @@ export function CCPLimitsPage() {
     setCcps([...ccps, created]);
     addToast(`Critical Control Point "${created.ccpNumber}" registered!`, "success");
     setIsModalOpen(false);
-    setNewCCP({ processStep: "", hazard: "", criticalLimit: "", autoDivertAction: "Line Immediate Stop & Lockout" });
+    setNewCCP({
+      processStep: "Thermal Pasteurization Hold",
+      hazard: "Pathogen Survival (Microbial)",
+      criticalLimit: "≥ 72.0°C for ≥ 15.0 seconds",
+      autoDivertAction: "Automatic Flow Divert Valve to Balance Tank"
+    });
   };
 
   const handleEditSubmit = (e) => {
@@ -79,6 +90,13 @@ export function CCPLimitsPage() {
     setCcps(ccps.map((c) => (c.ccpNumber === editingCCP.ccpNumber ? editingCCP : c)));
     addToast(`Critical Control Point ${editingCCP.ccpNumber} updated successfully!`, "success");
     setEditingCCP(null);
+  };
+
+  const handleDelete = (ccpNumber) => {
+    if (window.confirm(`Are you sure you want to delete ${ccpNumber}?`)) {
+      setCcps(ccps.filter((c) => c.ccpNumber !== ccpNumber));
+      addToast(`${ccpNumber} removed.`, "info");
+    }
   };
 
   return (
@@ -101,7 +119,7 @@ export function CCPLimitsPage() {
         </div>
       </div>
 
-      {/* KPI Tickers - 2x2 on mobile, 4 on desktop */}
+      {/* KPI Tickers */}
       <div
         className="kpi-grid-responsive grid-4"
         style={{
@@ -113,104 +131,136 @@ export function CCPLimitsPage() {
         }}
       >
         <StatCard
-          title="Mandatory CCPs"
+          title="Mandatory CCP Limits"
           value={ccps.length.toString()}
-          unit="Active Gates"
-          trend={{ value: "Pasteurizer, Cleanroom & X-Ray", isPositive: true, text: "" }}
-          icon={ShieldAlert}
-          colorVariant="amber"
+          unit="Hard Interlocks"
+          icon={Flame}
+          colorVariant="rose"
         />
         <StatCard
-          title="Pasteurizer Hold"
-          value="≥ 72.0°C"
-          unit="15s Minimum"
-          trend={{ value: "Zero thermal breach", isPositive: true, text: "" }}
-          icon={Flame}
+          title="Automated Diverts"
+          value="100%"
+          unit="PLC Interlocked"
+          icon={Zap}
           colorVariant="emerald"
         />
         <StatCard
-          title="Auto-Divert Valves"
-          value="100%"
-          unit="Hardware Interlock"
-          trend={{ value: "Sub-second PLC reaction", isPositive: true, text: "" }}
-          icon={Zap}
+          title="Active Quality Specs"
+          value={qualitySpecs.length.toString()}
+          unit="Parameters"
+          icon={ShieldCheck}
           colorVariant="cyan"
         />
         <StatCard
-          title="FDA 21 CFR Part 117"
+          title="Audit Compliance"
           value="100%"
-          unit="Validated"
-          trend={{ value: "Full tamper-evident audit log", isPositive: true, text: "" }}
-          icon={ShieldCheck}
+          unit="FSMA / GFSI"
+          icon={CheckCircle2}
           colorVariant="emerald"
         />
       </div>
 
-      {/* Table */}
-      <Card style={{ padding: "18px", minWidth: 0, width: "100%", boxSizing: "border-box" }}>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", alignItems: "center", marginBottom: "14px", justifyContent: "space-between" }}>
-          <div style={{ position: "relative", minWidth: "220px", flex: 1 }}>
-            <Search size={15} color="var(--text-muted)" style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)" }} />
+      {/* Main Table Card */}
+      <Card
+        style={{
+          backgroundColor: "#FFFFFF",
+          border: "1px solid var(--border-subtle)",
+          borderRadius: "14px",
+          overflow: "hidden"
+        }}
+      >
+        {/* Controls Bar */}
+        <div
+          style={{
+            padding: "16px 20px",
+            borderBottom: "1px solid var(--border-subtle)",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "12px",
+            backgroundColor: "var(--bg-card-subtle)"
+          }}
+        >
+          <div style={{ position: "relative", minWidth: "280px", flex: 1 }}>
+            <Search
+              size={15}
+              style={{
+                position: "absolute",
+                left: "12px",
+                top: "50%",
+                transform: "translateY(-50%)",
+                color: "var(--text-muted)"
+              }}
+            />
             <input
               type="text"
-              placeholder="Search process step, hazard, limit..."
+              placeholder="Search critical control point, hazard or action..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="form-input"
-              style={{ paddingLeft: "32px", height: "36px", fontSize: "12px", backgroundColor: "#FFFFFF" }}
+              style={{
+                paddingLeft: "36px",
+                backgroundColor: "#FFFFFF",
+                fontSize: "12px",
+                width: "100%"
+              }}
             />
           </div>
         </div>
 
-        <div className="data-table-container" style={{ width: "100%", overflowX: "auto", WebkitOverflowScrolling: "touch", display: "block" }}>
-          <table className="data-table" style={{ width: "100%", minWidth: "720px" }}>
+        {/* Table View */}
+        <div style={{ overflowX: "auto", width: "100%" }}>
+          <table className="data-table" style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
             <thead>
-              <tr>
-                <th>CCP Tag</th>
-                <th>Process Step</th>
-                <th>Addressed Hazard</th>
-                <th>Critical Limit Specification</th>
-                <th>Automated Divert Action</th>
-                <th>Status</th>
-                <th>Action</th>
+              <tr style={{ borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>CCP Number</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Process Step</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Target Hazard</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Critical Limit Specification</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Automated PLC Divert Action</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Status</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", textAlign: "right" }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {filteredCCPs.map((c) => (
-                <tr key={c.ccpNumber}>
-                  <td>
-                    <Badge variant="rose">{c.ccpNumber}</Badge>
+                <tr key={c.ccpNumber} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+                  <td style={{ padding: "12px 16px", fontFamily: "var(--font-mono)", fontWeight: 800, color: "#EF4444" }}>
+                    {c.ccpNumber}
                   </td>
-                  <td>
-                    <strong style={{ color: "var(--text-primary)" }}>{c.processStep}</strong>
+                  <td style={{ padding: "12px 16px", fontWeight: 700, color: "var(--text-primary)", fontSize: "13px" }}>
+                    {c.processStep}
                   </td>
-                  <td>
-                    <span style={{ fontSize: "12px", color: "#D97706", fontWeight: 600 }}>{c.hazard}</span>
+                  <td style={{ padding: "12px 16px", fontSize: "12px", color: "var(--text-secondary)" }}>
+                    {c.hazard}
                   </td>
-                  <td style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "#059669" }}>{c.criticalLimit}</td>
-                  <td style={{ fontSize: "12px", color: "var(--text-primary)" }}>{c.autoDivertAction}</td>
-                  <td>
-                    <Badge variant="emerald">{c.status}</Badge>
+                  <td style={{ padding: "12px 16px", fontFamily: "var(--font-mono)", fontWeight: 800, color: "#8C5B23", fontSize: "12px" }}>
+                    {c.criticalLimit}
                   </td>
-                  <td>
-                    <button
-                      onClick={() => setEditingCCP({ ...c })}
-                      title="Edit CCP"
-                      style={{
-                        width: "30px",
-                        height: "30px",
-                        borderRadius: "6px",
-                        backgroundColor: "var(--bg-card-subtle)",
-                        color: "var(--text-primary)",
-                        border: "1px solid var(--border-subtle)",
-                        cursor: "pointer",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        justifyContent: "center"
-                      }}
-                    >
-                      <Edit2 size={13} />
-                    </button>
+                  <td style={{ padding: "12px 16px", fontSize: "12px", color: "#1E293B", fontWeight: 600 }}>
+                    {c.autoDivertAction}
+                  </td>
+                  <td style={{ padding: "12px 16px" }}>
+                    <Badge variant="rose">{c.status}</Badge>
+                  </td>
+                  <td style={{ padding: "12px 16px", textAlign: "right" }}>
+                    <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                      <button
+                        onClick={() => setEditingCCP({ ...c })}
+                        title="Edit CCP"
+                        style={{ width: "30px", height: "30px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", color: "var(--text-primary)", border: "1px solid var(--border-subtle)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+                      >
+                        <Edit2 size={13} />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(c.ccpNumber)}
+                        title="Delete CCP"
+                        style={{ width: "30px", height: "30px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", color: "#EF4444", border: "1px solid var(--border-subtle)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -222,11 +272,14 @@ export function CCPLimitsPage() {
       {/* ADD CCP MODAL */}
       {isModalOpen && (
         <div className="modal-backdrop" onClick={() => setIsModalOpen(false)}>
-          <div className="modal-content" style={{ maxWidth: "480px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+          <div className="modal-content" style={{ maxWidth: "520px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
-              <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)" }}>
-                Add Critical Control Point (CCP)
-              </h2>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <ShieldAlert size={18} color="#EF4444" />
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                  Register Critical Control Point (CCP)
+                </h2>
+              </div>
               <button onClick={() => setIsModalOpen(false)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
                 <X size={18} />
               </button>
@@ -234,11 +287,11 @@ export function CCPLimitsPage() {
 
             <form onSubmit={handleAddSubmit} style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
               <div>
-                <label className="form-label">Process Step Location *</label>
+                <label className="form-label">Process Step *</label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. UV Sterilization Water Line"
+                  placeholder="e.g. Flash Pasteurization Hold Loop"
                   value={newCCP.processStep}
                   onChange={(e) => setNewCCP({ ...newCCP, processStep: e.target.value })}
                   className="form-input"
@@ -247,11 +300,10 @@ export function CCPLimitsPage() {
               </div>
 
               <div>
-                <label className="form-label">Addressed Hazard *</label>
+                <label className="form-label">Target Biological / Physical Hazard</label>
                 <input
                   type="text"
-                  required
-                  placeholder="e.g. Microbiological Contamination"
+                  placeholder="e.g. Pathogen Survival (Microbial)"
                   value={newCCP.hazard}
                   onChange={(e) => setNewCCP({ ...newCCP, hazard: e.target.value })}
                   className="form-input"
@@ -264,7 +316,7 @@ export function CCPLimitsPage() {
                 <input
                   type="text"
                   required
-                  placeholder="e.g. ≥ 40 mJ/cm² UV dosage"
+                  placeholder="e.g. ≥ 72.0°C for ≥ 15.0 seconds"
                   value={newCCP.criticalLimit}
                   onChange={(e) => setNewCCP({ ...newCCP, criticalLimit: e.target.value })}
                   className="form-input"
@@ -273,10 +325,10 @@ export function CCPLimitsPage() {
               </div>
 
               <div>
-                <label className="form-label">Automated Divert / Failsafe Action</label>
+                <label className="form-label">Automated PLC Divert / Fail-safe Action</label>
                 <input
                   type="text"
-                  placeholder="e.g. Automatic Valve Close & Audible Alarm"
+                  placeholder="e.g. Automatic Flow Divert Valve to Balance Tank"
                   value={newCCP.autoDivertAction}
                   onChange={(e) => setNewCCP({ ...newCCP, autoDivertAction: e.target.value })}
                   className="form-input"
@@ -284,7 +336,7 @@ export function CCPLimitsPage() {
                 />
               </div>
 
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "8px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
                 <Button variant="secondary" onClick={() => setIsModalOpen(false)}>
                   Cancel
                 </Button>
@@ -300,12 +352,12 @@ export function CCPLimitsPage() {
       {/* EDIT CCP MODAL */}
       {editingCCP && (
         <div className="modal-backdrop" onClick={() => setEditingCCP(null)}>
-          <div className="modal-content" style={{ maxWidth: "480px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+          <div className="modal-content" style={{ maxWidth: "520px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <Edit2 size={16} color="#B27E33" />
+                <Edit2 size={16} color="#EF4444" />
                 <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
-                  Edit Critical Control Point — {editingCCP.ccpNumber}
+                  Edit {editingCCP.ccpNumber}
                 </h2>
               </div>
               <button onClick={() => setEditingCCP(null)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
@@ -315,7 +367,7 @@ export function CCPLimitsPage() {
 
             <form onSubmit={handleEditSubmit} style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
               <div>
-                <label className="form-label">Process Step Location *</label>
+                <label className="form-label">Process Step *</label>
                 <input
                   type="text"
                   required
@@ -327,10 +379,9 @@ export function CCPLimitsPage() {
               </div>
 
               <div>
-                <label className="form-label">Addressed Hazard *</label>
+                <label className="form-label">Target Hazard</label>
                 <input
                   type="text"
-                  required
                   value={editingCCP.hazard}
                   onChange={(e) => setEditingCCP({ ...editingCCP, hazard: e.target.value })}
                   className="form-input"
@@ -351,7 +402,7 @@ export function CCPLimitsPage() {
               </div>
 
               <div>
-                <label className="form-label">Automated Divert / Failsafe Action</label>
+                <label className="form-label">Automated PLC Divert Action</label>
                 <input
                   type="text"
                   value={editingCCP.autoDivertAction}
@@ -361,12 +412,12 @@ export function CCPLimitsPage() {
                 />
               </div>
 
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
-                <Button variant="secondary" type="button" onClick={() => setEditingCCP(null)}>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "8px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
+                <Button variant="secondary" onClick={() => setEditingCCP(null)}>
                   Cancel
                 </Button>
                 <Button variant="primary" type="submit">
-                  Save Changes
+                  Update CCP
                 </Button>
               </div>
             </form>

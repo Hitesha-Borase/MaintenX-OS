@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   Clock,
   Archive,
@@ -15,9 +15,11 @@ import { Card } from "../../../components/common/Card";
 import { Badge } from "../../../components/common/Badge";
 import { Button } from "../../../components/common/Button";
 import { StatCard } from "../../../components/common/StatCard";
+import { useMasterData } from "../../../context/MasterDataContext";
 import { useApp } from "../../../context/AppContext";
 
 export function StaleRecordsPage() {
+  const { dataHealthStats = {} } = useMasterData();
   const { addToast } = useApp();
 
   const [staleRecords, setStaleRecords] = useState([
@@ -42,15 +44,17 @@ export function StaleRecordsPage() {
     addToast("All stale & obsolete records archived to cold storage!", "success");
   };
 
-  const filteredRecords = staleRecords.filter((s) => {
-    if (!searchQuery.trim()) return true;
-    const q = searchQuery.toLowerCase();
-    return (
-      s.name.toLowerCase().includes(q) ||
-      s.table.toLowerCase().includes(q) ||
-      s.id.toLowerCase().includes(q)
-    );
-  });
+  const filteredRecords = useMemo(() => {
+    return staleRecords.filter((s) => {
+      if (!searchQuery.trim()) return true;
+      const q = searchQuery.toLowerCase();
+      return (
+        s.name.toLowerCase().includes(q) ||
+        s.table.toLowerCase().includes(q) ||
+        s.id.toLowerCase().includes(q)
+      );
+    });
+  }, [staleRecords, searchQuery]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%", maxWidth: "1200px", margin: "0 auto", minWidth: 0 }}>
@@ -89,7 +93,7 @@ export function StaleRecordsPage() {
         </div>
       </div>
 
-      {/* KPI Tickers - 2x2 on mobile, 4 on desktop */}
+      {/* KPI Tickers */}
       <div
         className="kpi-grid-responsive grid-4"
         style={{
@@ -101,117 +105,144 @@ export function StaleRecordsPage() {
         }}
       >
         <StatCard
-          title="Stale Candidates"
-          value={staleCount.toString()}
-          unit="Records"
-          trend={{ value: "Inactive > 180 days", isPositive: staleCount === 0, text: "" }}
+          title="Active Master Freshness"
+          value="98.5%"
+          unit="Active In 90d"
           icon={Clock}
-          colorVariant={staleCount > 0 ? "amber" : "emerald"}
-        />
-        <StatCard
-          title="Zero On-Hand Stock"
-          value="100%"
-          unit="Safe to Purge"
-          trend={{ value: "No active lot inventory", isPositive: true, text: "" }}
-          icon={Package}
-          colorVariant="cyan"
-        />
-        <StatCard
-          title="Cold Storage Volume"
-          value="1,420"
-          unit="Archived"
-          trend={{ value: "Historical query searchable", isPositive: true, text: "" }}
-          icon={Archive}
           colorVariant="emerald"
         />
         <StatCard
-          title="Database Optimization"
-          value="+14%"
-          unit="Index Gain"
-          trend={{ value: "Purging stale hot keys", isPositive: true, text: "" }}
+          title="Stale Candidates"
+          value={staleCount.toString()}
+          unit="Records"
+          icon={AlertTriangle}
+          colorVariant={staleCount > 0 ? "amber" : "emerald"}
+        />
+        <StatCard
+          title="Cold Storage Node"
+          value="Online"
+          unit="Archived S3"
+          icon={Archive}
+          colorVariant="cyan"
+        />
+        <StatCard
+          title="Active Planning Filter"
+          value="Protected"
+          unit="Zero Bloat"
           icon={ShieldCheck}
           colorVariant="emerald"
         />
       </div>
 
-      {/* Table */}
-      <Card style={{ padding: "18px", minWidth: 0, width: "100%", boxSizing: "border-box" }}>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", alignItems: "center", marginBottom: "14px", justifyContent: "space-between" }}>
-          <div style={{ position: "relative", minWidth: "220px", flex: 1 }}>
-            <Search size={15} color="var(--text-muted)" style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)" }} />
+      {/* Main Table Card */}
+      <Card
+        style={{
+          backgroundColor: "#FFFFFF",
+          border: "1px solid var(--border-subtle)",
+          borderRadius: "14px",
+          overflow: "hidden"
+        }}
+      >
+        {/* Controls Bar */}
+        <div
+          style={{
+            padding: "16px 20px",
+            borderBottom: "1px solid var(--border-subtle)",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "12px",
+            backgroundColor: "var(--bg-card-subtle)"
+          }}
+        >
+          <div style={{ position: "relative", minWidth: "240px", flex: 1 }}>
+            <Search
+              size={15}
+              style={{
+                position: "absolute",
+                left: "12px",
+                top: "50%",
+                transform: "translateY(-50%)",
+                color: "var(--text-muted)"
+              }}
+            />
             <input
               type="text"
-              placeholder="Search obsolete record, table..."
+              placeholder="Search by stale record name, table or inactivity duration..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="form-input"
-              style={{ paddingLeft: "32px", height: "36px", fontSize: "12px", backgroundColor: "#FFFFFF" }}
+              style={{
+                paddingLeft: "36px",
+                backgroundColor: "#FFFFFF",
+                fontSize: "12px",
+                width: "100%"
+              }}
             />
           </div>
         </div>
 
-        <div className="data-table-container" style={{ width: "100%", overflowX: "auto", WebkitOverflowScrolling: "touch", display: "block" }}>
-          <table className="data-table" style={{ width: "100%", minWidth: "700px" }}>
+        {/* Table View */}
+        <div style={{ overflowX: "auto", width: "100%" }}>
+          <table className="data-table" style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
             <thead>
-              <tr>
-                <th>Item Ref</th>
-                <th>Master Table</th>
-                <th>Record Description</th>
-                <th>Last Active Time</th>
-                <th>On-Hand Stock</th>
-                <th>Status</th>
-                <th>Action</th>
+              <tr style={{ borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Stale Record Identifier</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Target Master Domain</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Inactivity Duration</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Current Inventory Stock</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Status</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", textAlign: "right" }}>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {filteredRecords.map((s) => {
-                const isStale = !s.status.includes("Archived");
-
-                return (
-                  <tr key={s.id}>
-                    <td>
-                      <span style={{ fontWeight: 800, color: "#8C5B23", fontFamily: "var(--font-mono)" }}>{s.id}</span>
-                    </td>
-                    <td>
-                      <Badge variant="cyan">{s.table}</Badge>
-                    </td>
-                    <td>
-                      <strong style={{ color: "var(--text-primary)" }}>{s.name}</strong>
-                    </td>
-                    <td style={{ fontSize: "12px", color: "#D97706", fontWeight: 600 }}>{s.lastProduced}</td>
-                    <td style={{ fontFamily: "var(--font-mono)", fontSize: "12px" }}>{s.inventoryOnHand} units</td>
-                    <td>
-                      <Badge variant={isStale ? "amber" : "emerald"}>{s.status}</Badge>
-                    </td>
-                    <td>
-                      {isStale ? (
-                        <button
-                          onClick={() => handleArchive(s.id)}
-                          title="Archive Record"
-                          style={{
-                            width: "30px",
-                            height: "30px",
-                            borderRadius: "6px",
-                            backgroundColor: "var(--bg-card-subtle)",
-                            color: "var(--text-primary)",
-                            border: "1px solid var(--border-subtle)",
-                            cursor: "pointer",
-                            display: "inline-flex",
-                            alignItems: "center",
-                            justifyContent: "center"
-                          }}
-                        >
-                          <Archive size={13} />
-                        </button>
-                      ) : (
-                        <span style={{ fontSize: "11px", color: "#059669", fontWeight: 800, display: "inline-flex", alignItems: "center", gap: "4px" }}>
-                          <CheckCircle2 size={13} /> Archived
-                        </span>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
+              {filteredRecords.map((s) => (
+                <tr key={s.id} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+                  <td style={{ padding: "12px 16px" }}>
+                    <div style={{ fontWeight: 800, color: "var(--text-primary)", fontSize: "13px" }}>{s.name}</div>
+                    <div style={{ fontSize: "11px", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>{s.id}</div>
+                  </td>
+                  <td style={{ padding: "12px 16px" }}>
+                    <Badge variant="cyan">{s.table}</Badge>
+                  </td>
+                  <td style={{ padding: "12px 16px", fontFamily: "var(--font-mono)", fontWeight: 700, color: "#D97706" }}>
+                    {s.lastProduced}
+                  </td>
+                  <td style={{ padding: "12px 16px", fontFamily: "var(--font-mono)", fontSize: "12px", color: "var(--text-secondary)" }}>
+                    {s.inventoryOnHand} units
+                  </td>
+                  <td style={{ padding: "12px 16px" }}>
+                    <Badge variant={s.status.includes("Archived") ? "emerald" : "amber"}>
+                      {s.status}
+                    </Badge>
+                  </td>
+                  <td style={{ padding: "12px 16px", textAlign: "right" }}>
+                    {!s.status.includes("Archived") ? (
+                      <button
+                        onClick={() => handleArchive(s.id)}
+                        title="Archive to Cold Storage"
+                        style={{
+                          width: "30px",
+                          height: "30px",
+                          borderRadius: "6px",
+                          backgroundColor: "var(--bg-card-subtle)",
+                          color: "#059669",
+                          border: "1px solid var(--border-subtle)",
+                          cursor: "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center"
+                        }}
+                      >
+                        <Archive size={13} />
+                      </button>
+                    ) : (
+                      <span style={{ fontSize: "12px", color: "#059669", fontWeight: 700 }}>Archived</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>

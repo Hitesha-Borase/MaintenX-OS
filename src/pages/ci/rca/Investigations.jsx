@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   SearchCode,
@@ -11,43 +11,40 @@ import {
   ExternalLink,
   Layers,
   ArrowRight,
-  Sparkles
+  Sparkles,
+  Search,
+  Filter,
+  Eye,
+  FileText,
+  X,
+  Wrench
 } from "lucide-react";
 import { Card } from "../../../components/common/Card";
 import { Button } from "../../../components/common/Button";
 import { Badge } from "../../../components/common/Badge";
 import { StatCard } from "../../../components/common/StatCard";
+import { useCI } from "../../../context/CIContext";
 import { useApp } from "../../../context/AppContext";
 
 export function Investigations() {
   const navigate = useNavigate();
   const { addToast } = useApp();
+  const {
+    investigations = [],
+    openRcaCount,
+    advanceRcaPhase,
+    initiateRCA
+  } = useCI();
 
-  const [investigations, setInvestigations] = useState([
-    {
-      id: "INV-802",
-      title: "HTST Pasteurizer CCP Temp Excursion",
-      batch: "BAT-2026-0890",
-      phase: "Hypothesis & Tests",
-      lead: "David Kim",
-      daysActive: 3,
-      criticality: "Critical"
-    },
-    {
-      id: "INV-803",
-      title: "Orange Cap Thread Dimension Out-of-Spec",
-      batch: "NCR-402",
-      phase: "Evidence",
-      lead: "Elena Rostova",
-      daysActive: 1,
-      criticality: "High"
-    }
-  ]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [severityFilter, setSeverityFilter] = useState("ALL");
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [selectedRcaDetail, setSelectedRcaDetail] = useState(null);
 
   const [newTitle, setNewTitle] = useState("");
-  const [selectedBatch, setSelectedBatch] = useState("BAT-2026-0892");
+  const [newAssetId, setNewAssetId] = useState("AST-002");
 
-  const phases = ["Event", "Evidence", "Hypothesis & Tests", "Occurrence Cause", "Escape Cause", "CAPA"];
+  const phases = ["Event", "Evidence", "Hypothesis & Tests", "Occurrence Cause", "Escape Cause", "CAPA", "Verification"];
 
   const handleCreate = (e) => {
     e.preventDefault();
@@ -56,42 +53,15 @@ export function Investigations() {
       return;
     }
 
-    const id = `INV-${Math.floor(800 + Math.random() * 100)}`;
-    setInvestigations((prev) => [
-      ...prev,
-      {
-        id,
-        title: newTitle,
-        batch: selectedBatch,
-        phase: "Event",
-        lead: "Alexander Vance",
-        daysActive: 0,
-        criticality: "High"
-      }
-    ]);
-    addToast(`RCA Investigation ${id} created. Workflow started at Event phase.`, "success");
+    initiateRCA(newAssetId, null, newTitle.trim());
     setNewTitle("");
-  };
-
-  const handleAdvance = (id) => {
-    setInvestigations((prev) =>
-      prev.map((inv) => {
-        if (inv.id === id) {
-          const currentIdx = phases.indexOf(inv.phase);
-          const nextIdx = Math.min(currentIdx + 1, phases.length - 1);
-          const nextPhase = phases[nextIdx];
-          addToast(`Investigation ${id} advanced to "${nextPhase}".`, "success");
-          return { ...inv, phase: nextPhase };
-        }
-        return inv;
-      })
-    );
+    setIsCreateModalOpen(false);
   };
 
   const handleExportCSV = () => {
-    const headers = "Investigation ID,Title,Source Batch,Current Phase,Lead Investigator,Days Active\n";
-    const rows = investigations
-      .map((inv) => `"${inv.id}","${inv.title}","${inv.batch}","${inv.phase}","${inv.lead}",${inv.daysActive}`)
+    const headers = "Investigation ID,Title,Asset ID,Asset Name,Line,Plant,Phase,Status,Severity,Lead Investigator,Days Active\n";
+    const rows = filteredInvestigations
+      .map((inv) => `"${inv.id}","${inv.title}","${inv.assetId}","${inv.assetName}","${inv.lineName}","${inv.plantId}","${inv.currentPhase}","${inv.status}","${inv.severity}","${inv.leadInvestigator}",${inv.daysActive}`)
       .join("\n");
     const blob = new Blob([headers + rows], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
@@ -119,14 +89,29 @@ export function Investigations() {
     }
   };
 
+  const filteredInvestigations = useMemo(() => {
+    return investigations.filter((inv) => {
+      const matchesSeverity = severityFilter === "ALL" || inv.severity === severityFilter;
+      const q = searchQuery.toLowerCase().trim();
+      const matchesSearch =
+        !q ||
+        inv.title?.toLowerCase().includes(q) ||
+        inv.id?.toLowerCase().includes(q) ||
+        inv.assetName?.toLowerCase().includes(q) ||
+        inv.leadInvestigator?.toLowerCase().includes(q);
+
+      return matchesSeverity && matchesSearch;
+    });
+  }, [investigations, searchQuery, severityFilter]);
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%", maxWidth: "1200px", margin: "0 auto", minWidth: 0 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%", maxWidth: "1600px", margin: "0 auto", minWidth: 0 }}>
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px", width: "100%" }}>
         <div style={{ minWidth: "240px", flex: 1 }}>
           <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
             <h1 style={{ fontSize: "clamp(18px, 4vw, 24px)", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.3px", lineHeight: 1.2 }}>
-              RCA 2.0 — Investigations
+              RCA 2.0 — Investigations Hub
             </h1>
             <Badge variant="cyan">{investigations.length} ACTIVE INVESTIGATIONS</Badge>
           </div>
@@ -139,10 +124,13 @@ export function Investigations() {
           <Button variant="secondary" onClick={() => navigate("/ci/rca/evidence")} style={{ fontSize: "12px", padding: "7px 12px" }}>
             Evidence Locker
           </Button>
+          <Button variant="primary" icon={Plus} onClick={() => setIsCreateModalOpen(true)} style={{ fontSize: "12px", padding: "7px 12px" }}>
+            Create Investigation
+          </Button>
         </div>
       </div>
 
-      {/* KPI Tickers - 2x2 on mobile, 4 on desktop */}
+      {/* KPI Tickers */}
       <div
         className="kpi-grid-responsive grid-4"
         style={{
@@ -155,216 +143,333 @@ export function Investigations() {
       >
         <StatCard
           title="Active Investigations"
-          value={investigations.length.toString()}
-          unit="In-Flight"
-          trend={{ value: "Root Cause 8D Workflow", isPositive: true, text: "" }}
+          value={openRcaCount.toString()}
+          unit="In Flight"
           icon={SearchCode}
           colorVariant="rose"
         />
         <StatCard
-          title="Critical Incidents"
-          value={investigations.filter((i) => i.criticality === "Critical").length.toString()}
-          unit="P1 Risk"
-          trend={{ value: "CCP Excursion priority", isPositive: false, text: "" }}
-          icon={AlertOctagon}
-          colorVariant="amber"
+          title="Root Causes Validated"
+          value={investigations.filter((i) => i.status.includes("Validated")).length.toString()}
+          unit="Confirmed"
+          icon={CheckCircle2}
+          colorVariant="emerald"
         />
         <StatCard
-          title="Avg Phase Velocity"
-          value="2.1 Days"
-          unit="/ Phase"
-          trend={{ value: "Standard SLA: 3 Days", isPositive: true, text: "" }}
-          icon={Clock}
+          title="Methodology"
+          value="5-Why + 8D"
+          unit="Framework"
+          icon={Layers}
           colorVariant="cyan"
         />
         <StatCard
-          title="CAPA Resolution Rate"
-          value="100%"
-          unit="Verified"
-          trend={{ value: "Zero recurrence in 90d", isPositive: true, text: "" }}
-          icon={CheckCircle2}
+          title="Mean Time To Contain"
+          value="3.2 hrs"
+          unit="D3 Speed"
+          icon={Clock}
           colorVariant="emerald"
         />
       </div>
 
-      {/* Horizontal Scrollable Pipeline Phase Stepper */}
-      <Card style={{ padding: "14px", minWidth: 0, width: "100%", boxSizing: "border-box" }}>
-        <div style={{ fontSize: "11px", fontWeight: 800, color: "var(--text-muted)", textTransform: "uppercase", marginBottom: "8px", letterSpacing: "0.5px" }}>
-          Structured 8D Root Cause Workflow Stages
-        </div>
+      {/* Main Table Card */}
+      <Card
+        style={{
+          backgroundColor: "#FFFFFF",
+          border: "1px solid var(--border-subtle)",
+          borderRadius: "14px",
+          overflow: "hidden"
+        }}
+      >
+        {/* Controls Bar */}
         <div
           style={{
+            padding: "16px 20px",
+            borderBottom: "1px solid var(--border-subtle)",
             display: "flex",
-            gap: "8px",
+            justifyContent: "space-between",
             alignItems: "center",
-            overflowX: "auto",
-            WebkitOverflowScrolling: "touch",
-            paddingBottom: "4px"
+            flexWrap: "wrap",
+            gap: "12px",
+            backgroundColor: "var(--bg-card-subtle)"
           }}
         >
-          {phases.map((phase, idx, arr) => (
-            <React.Fragment key={phase}>
-              <div
-                style={{
-                  fontSize: "11px",
-                  fontWeight: 700,
-                  padding: "6px 12px",
-                  borderRadius: "8px",
-                  backgroundColor: "var(--bg-card-subtle)",
-                  color: "var(--text-primary)",
-                  border: "1px solid var(--border-subtle)",
-                  whiteSpace: "nowrap",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px"
-                }}
-              >
-                <span style={{ color: "#C89547", fontWeight: 800 }}>D{idx + 1}</span>
-                <span>{phase}</span>
-              </div>
-              {idx < arr.length - 1 && <ChevronRight size={14} color="var(--text-muted)" style={{ flexShrink: 0 }} />}
-            </React.Fragment>
-          ))}
-        </div>
-      </Card>
-
-      {/* Investigation List */}
-      <div style={{ display: "flex", flexDirection: "column", gap: "12px", width: "100%" }}>
-        {investigations.map((inv) => {
-          const isCritical = inv.criticality === "Critical";
-
-          return (
-            <Card
-              key={inv.id}
+          <div style={{ position: "relative", minWidth: "240px", flex: 1 }}>
+            <Search
+              size={15}
               style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                flexWrap: "wrap",
-                gap: "14px",
-                padding: "16px",
-                borderLeft: `4px solid ${isCritical ? "#DC2626" : "#D97706"}`,
-                boxSizing: "border-box",
-                minWidth: 0,
+                position: "absolute",
+                left: "12px",
+                top: "50%",
+                transform: "translateY(-50%)",
+                color: "var(--text-muted)"
+              }}
+            />
+            <input
+              type="text"
+              placeholder="Search RCA title, ID, asset or investigator..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="form-input"
+              style={{
+                paddingLeft: "36px",
+                backgroundColor: "#FFFFFF",
+                fontSize: "12px",
                 width: "100%"
               }}
+            />
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+            <select
+              value={severityFilter}
+              onChange={(e) => setSeverityFilter(e.target.value)}
+              className="form-input"
+              style={{ fontSize: "12px", padding: "6px 10px", width: "auto", backgroundColor: "#FFFFFF" }}
             >
-              <div style={{ minWidth: "220px", flex: 1 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                  <SearchCode size={16} color={isCritical ? "#DC2626" : "#D97706"} />
-                  <span style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)" }}>
-                    {inv.id}: {inv.title}
-                  </span>
-                  <Badge variant={inv.phase === "CAPA" ? "emerald" : inv.phase === "Evidence" ? "amber" : "cyan"}>
-                    {inv.phase}
-                  </Badge>
-                </div>
-
-                <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "6px", display: "flex", gap: "12px", flexWrap: "wrap" }}>
-                  <span>Source: <strong style={{ color: "var(--text-primary)" }}>{inv.batch}</strong></span>
-                  <span>Lead: <strong style={{ color: "var(--text-primary)" }}>{inv.lead}</strong></span>
-                  <span>Active: <strong style={{ color: "#C89547" }}>{inv.daysActive}d</strong></span>
-                </div>
-              </div>
-
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                <button
-                  onClick={() => navigate(getPhaseRoute(inv.phase))}
-                  style={{
-                    padding: "6px 12px",
-                    borderRadius: "8px",
-                    fontSize: "11px",
-                    fontWeight: 700,
-                    backgroundColor: "var(--bg-card-subtle)",
-                    color: "var(--text-primary)",
-                    border: "1px solid var(--border-subtle)",
-                    cursor: "pointer",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "4px",
-                    whiteSpace: "nowrap"
-                  }}
-                >
-                  <span>Open Phase Hub</span>
-                  <ExternalLink size={12} />
-                </button>
-
-                <button
-                  onClick={() => handleAdvance(inv.id)}
-                  style={{
-                    padding: "6px 12px",
-                    borderRadius: "8px",
-                    fontSize: "11px",
-                    fontWeight: 700,
-                    background: "linear-gradient(180deg, #E2B670 0%, #C89547 100%)",
-                    color: "#261603",
-                    border: "1px solid #E8C182",
-                    boxShadow: "0 2px 6px rgba(178, 126, 51, 0.25)",
-                    cursor: "pointer",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "4px",
-                    whiteSpace: "nowrap"
-                  }}
-                >
-                  <span>Advance Phase</span>
-                  <ChevronRight size={14} />
-                </button>
-              </div>
-            </Card>
-          );
-        })}
-      </div>
-
-      {/* Create New Investigation Form Card */}
-      <Card style={{ padding: "16px", minWidth: 0, width: "100%", boxSizing: "border-box" }}>
-        <div style={{ fontSize: "13px", fontWeight: 800, color: "var(--text-primary)", marginBottom: "10px" }}>
-          Initiate New RCA 2.0 Investigation
+              <option value="ALL">All Severities</option>
+              <option value="Critical">Critical</option>
+              <option value="High">High</option>
+              <option value="Medium">Medium</option>
+            </select>
+          </div>
         </div>
-        <form onSubmit={handleCreate} style={{ display: "flex", gap: "10px", flexWrap: "wrap", width: "100%" }}>
-          <input
-            type="text"
-            placeholder="Enter incident non-conformance or defect title (e.g. Micro-Leak in Heat Exchanger)..."
-            value={newTitle}
-            onChange={(e) => setNewTitle(e.target.value)}
-            className="form-input"
-            style={{ flex: 1, minWidth: "220px", height: "38px", backgroundColor: "#FFFFFF", fontSize: "12px", borderRadius: "8px" }}
-            required
-          />
-          <select
-            value={selectedBatch}
-            onChange={(e) => setSelectedBatch(e.target.value)}
-            className="form-select"
-            style={{ minWidth: "140px", height: "38px", backgroundColor: "#FFFFFF", fontSize: "12px", borderRadius: "8px" }}
-          >
-            <option value="BAT-2026-0892">BAT-2026-0892</option>
-            <option value="BAT-2026-0893">BAT-2026-0893</option>
-            <option value="NCR-403">NCR-403</option>
-            <option value="AUDIT-2026">AUDIT-2026</option>
-          </select>
-          <button
-            type="submit"
-            style={{
-              padding: "0 16px",
-              height: "38px",
-              borderRadius: "8px",
-              fontSize: "12px",
-              fontWeight: 700,
-              background: "linear-gradient(180deg, #E2B670 0%, #C89547 100%)",
-              color: "#261603",
-              border: "1px solid #E8C182",
-              boxShadow: "0 2px 6px rgba(178, 126, 51, 0.25)",
-              cursor: "pointer",
-              whiteSpace: "nowrap",
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "6px"
-            }}
-          >
-            <Plus size={14} /> Start Investigation
-          </button>
-        </form>
+
+        {/* Table View */}
+        <div style={{ overflowX: "auto", width: "100%" }}>
+          <table className="data-table" style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
+            <thead>
+              <tr style={{ borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>RCA Details</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Linked Asset & Line</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Source Breakdown</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Current 8D Phase</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Investigation Status</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", textAlign: "right" }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredInvestigations.map((inv) => (
+                <tr key={inv.id} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+                  <td style={{ padding: "12px 16px" }}>
+                    <div style={{ fontWeight: 800, color: "var(--text-primary)", fontSize: "13px" }}>{inv.title}</div>
+                    <div style={{ fontSize: "11px", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>
+                      {inv.id} • Lead: {inv.leadInvestigator}
+                    </div>
+                  </td>
+                  <td style={{ padding: "12px 16px", fontSize: "12px", color: "var(--text-secondary)" }}>
+                    <div style={{ fontWeight: 700, color: "var(--text-primary)" }}>{inv.assetName}</div>
+                    <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>{inv.lineName}</div>
+                  </td>
+                  <td style={{ padding: "12px 16px", fontFamily: "var(--font-mono)", fontSize: "12px", color: "#8C5B23", fontWeight: 700 }}>
+                    {inv.sourceBreakdownId || "Direct Trigger"}
+                  </td>
+                  <td style={{ padding: "12px 16px" }}>
+                    <div
+                      onClick={() => navigate(getPhaseRoute(inv.currentPhase))}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        cursor: "pointer",
+                        padding: "4px 8px",
+                        borderRadius: "6px",
+                        backgroundColor: "var(--bg-card-subtle)",
+                        border: "1px solid var(--border-subtle)",
+                        fontSize: "12px",
+                        fontWeight: 700,
+                        color: "#8C5B23"
+                      }}
+                    >
+                      <span>{inv.currentPhase}</span>
+                      <ExternalLink size={11} />
+                    </div>
+                  </td>
+                  <td style={{ padding: "12px 16px" }}>
+                    <Badge variant={inv.status.includes("Validated") ? "emerald" : inv.severity === "Critical" ? "rose" : "amber"}>
+                      {inv.status}
+                    </Badge>
+                  </td>
+                  <td style={{ padding: "12px 16px", textAlign: "right" }}>
+                    <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                      <button
+                        onClick={() => setSelectedRcaDetail(inv)}
+                        title="View 5-Why & 8D Dossier"
+                        style={{
+                          width: "30px",
+                          height: "30px",
+                          borderRadius: "6px",
+                          backgroundColor: "var(--bg-card-subtle)",
+                          color: "var(--text-primary)",
+                          border: "1px solid var(--border-subtle)",
+                          cursor: "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center"
+                        }}
+                      >
+                        <Eye size={13} />
+                      </button>
+                      <button
+                        onClick={() => {
+                          const currIdx = phases.indexOf(inv.currentPhase);
+                          const nextPhase = phases[Math.min(currIdx + 1, phases.length - 1)];
+                          advanceRcaPhase(inv.id, nextPhase);
+                        }}
+                        title="Advance Investigation Phase"
+                        style={{
+                          width: "30px",
+                          height: "30px",
+                          borderRadius: "6px",
+                          backgroundColor: "var(--bg-card-subtle)",
+                          color: "#059669",
+                          border: "1px solid var(--border-subtle)",
+                          cursor: "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center"
+                        }}
+                      >
+                        <ChevronRight size={14} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </Card>
+
+      {/* CREATE RCA MODAL */}
+      {isCreateModalOpen && (
+        <div className="modal-backdrop" onClick={() => setIsCreateModalOpen(false)}>
+          <div className="modal-content" style={{ maxWidth: "500px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <SearchCode size={18} color="#C89547" />
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                  Initiate RCA 2.0 Investigation
+                </h2>
+              </div>
+              <button onClick={() => setIsCreateModalOpen(false)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreate} style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div>
+                <label className="form-label">Problem Statement / Failure Title *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Flash Pasteurizer Divert Valve Seal Failure"
+                  value={newTitle}
+                  onChange={(e) => setNewTitle(e.target.value)}
+                  className="form-input"
+                  style={{ backgroundColor: "#FFFFFF" }}
+                />
+              </div>
+
+              <div>
+                <label className="form-label">Source Asset</label>
+                <select
+                  value={newAssetId}
+                  onChange={(e) => setNewAssetId(e.target.value)}
+                  className="form-input"
+                  style={{ backgroundColor: "#FFFFFF" }}
+                >
+                  <option value="AST-002">AST-002 — HTST Flash Pasteurizer (Line 2)</option>
+                  <option value="AST-001">AST-001 — Rotary Isobaric Bottle Filler (Line 1)</option>
+                  <option value="AST-004">AST-004 — Sleeve Rotary Labeler (Line 1)</option>
+                  <option value="AST-005">AST-005 — Automated Case Packer (Line 1)</option>
+                </select>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "8px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
+                <Button variant="secondary" onClick={() => setIsCreateModalOpen(false)}>
+                  Cancel
+                </Button>
+                <Button variant="primary" type="submit">
+                  Launch Investigation
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 5-WHY & 8D DETAIL MODAL */}
+      {selectedRcaDetail && (
+        <div className="modal-backdrop" onClick={() => setSelectedRcaDetail(null)}>
+          <div className="modal-content" style={{ maxWidth: "700px", margin: "16px", maxHeight: "85vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <FileText size={18} color="#C89547" />
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                  {selectedRcaDetail.id} — 5-Why & 8D Dossier
+                </h2>
+              </div>
+              <button onClick={() => setSelectedRcaDetail(null)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
+              <div style={{ backgroundColor: "var(--bg-card-subtle)", padding: "12px", borderRadius: "8px", border: "1px solid var(--border-subtle)" }}>
+                <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Problem Definition</div>
+                <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)", marginTop: "4px" }}>{selectedRcaDetail.problemStatement}</div>
+              </div>
+
+              {/* 5-Why Tree */}
+              <div>
+                <h3 style={{ fontSize: "13px", fontWeight: 800, color: "var(--text-primary)", marginBottom: "8px" }}>
+                  5-Why Causal Tree
+                </h3>
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  {selectedRcaDetail.whyTree?.map((w, idx) => (
+                    <div key={w.id} style={{ padding: "8px 12px", borderRadius: "6px", backgroundColor: idx === 4 ? "rgba(5, 150, 105, 0.08)" : "var(--bg-card-subtle)", border: idx === 4 ? "1px solid rgba(5, 150, 105, 0.3)" : "1px solid var(--border-subtle)" }}>
+                      <div style={{ fontSize: "11px", fontWeight: 800, color: idx === 4 ? "#059669" : "#8C5B23" }}>
+                        Why #{idx + 1}: {w.question}
+                      </div>
+                      <div style={{ fontSize: "12px", color: "var(--text-primary)", marginTop: "2px" }}>
+                        <strong>Answer:</strong> {w.answer || "Investigation in progress"}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* 8D Summary */}
+              {selectedRcaDetail.eightD && (
+                <div>
+                  <h3 style={{ fontSize: "13px", fontWeight: 800, color: "var(--text-primary)", marginBottom: "8px" }}>
+                    8D Containment & Permanent Action Summary
+                  </h3>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", fontSize: "12px" }}>
+                    <div style={{ padding: "8px", backgroundColor: "var(--bg-card-subtle)", borderRadius: "6px" }}>
+                      <strong style={{ color: "#8C5B23" }}>D3 Containment:</strong>
+                      <div style={{ color: "var(--text-secondary)", marginTop: "2px" }}>{selectedRcaDetail.eightD.d3Containment}</div>
+                    </div>
+                    <div style={{ padding: "8px", backgroundColor: "var(--bg-card-subtle)", borderRadius: "6px" }}>
+                      <strong style={{ color: "#059669" }}>D5 Corrective Action:</strong>
+                      <div style={{ color: "var(--text-secondary)", marginTop: "2px" }}>{selectedRcaDetail.eightD.d5CorrectiveAction}</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "8px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
+                <Button variant="secondary" onClick={() => setSelectedRcaDetail(null)}>
+                  Close Dossier
+                </Button>
+                <Button variant="primary" onClick={() => { setSelectedRcaDetail(null); navigate("/ci/capa/corrective"); }}>
+                  View CAPA Actions
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -9,96 +9,151 @@ import {
   CheckCircle2,
   ArrowRight,
   Search,
-  Filter
+  Filter,
+  FileText,
+  DollarSign,
+  Activity,
+  Layers,
+  Zap,
+  Gauge
 } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { Button } from "../../components/common/Button";
 import { Badge } from "../../components/common/Badge";
 import { StatCard } from "../../components/common/StatCard";
+import { useCI } from "../../context/CIContext";
 import { useApp } from "../../context/AppContext";
 
 export function Reports() {
   const navigate = useNavigate();
   const { addToast } = useApp();
+  const {
+    reliabilityRecords = [],
+    investigations = [],
+    capaActions = [],
+    ciProjects = [],
+    lossRecords = [],
+    capexProjects = [],
+    fleetMTBF,
+    fleetMTTR,
+    realizedSavingsTotal,
+    projectedSavingsTotal
+  } = useCI();
 
-  const [printingId, setPrintingId] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedReportCategory, setSelectedReportCategory] = useState("ALL");
 
   const reports = [
     {
       id: "REP-01",
-      name: "Weekly OEE Loss Waterfall & Financial Impact Report",
+      name: "Weekly Operational Loss Waterfall & Financial Impact Digest",
       category: "Loss Analytics",
-      date: "2026-08-31",
-      cadence: "Weekly (Every Monday)",
-      format: "PDF / CSV"
+      description: "Downtime, Speed, Quality, Scrap, and Yield loss distribution with dollar impacts.",
+      dataExporter: () => {
+        const headers = "Loss ID,Category,Line,Asset ID,Event Name,Hours Lost,Units Lost,Financial Impact USD,Date\n";
+        const rows = lossRecords
+          .map((l) => `"${l.id}","${l.category}","${l.lineId}","${l.assetId}","${l.eventName}",${l.hoursLost},${l.unitsLost},${l.financialImpactUSD},"${l.date}"`)
+          .join("\n");
+        return headers + rows;
+      }
     },
     {
       id: "REP-02",
-      name: "RCA 8D / CAPA Effectiveness Monthly Audit Summary",
+      name: "RCA 2.0 & 8D Investigation Root Cause Audit Dossier",
       category: "Quality Compliance",
-      date: "2026-08-31",
-      cadence: "Monthly",
-      format: "PDF / Audit Dossier"
+      description: "Complete 5-Why trees, validated root causes, containment, and investigation stages.",
+      dataExporter: () => {
+        const headers = "Investigation ID,Title,Asset ID,Asset Name,Line,Plant,Phase,Status,Severity,Lead Investigator\n";
+        const rows = investigations
+          .map((i) => `"${i.id}","${i.title}","${i.assetId}","${i.assetName}","${i.lineName}","${i.plantId}","${i.currentPhase}","${i.status}","${i.severity}","${i.leadInvestigator}"`)
+          .join("\n");
+        return headers + rows;
+      }
     },
     {
       id: "REP-03",
-      name: "CI Kaizen Project Realized Savings & ROI Ledger",
-      category: "Continuous Improvement",
-      date: "2026-08-31",
-      cadence: "Quarterly",
-      format: "Executive Ledger"
+      name: "CAPA Execution & Effectiveness Verification Ledger",
+      category: "Quality Compliance",
+      description: "Corrective and preventive actions lifecycle, due dates, overdue statuses, and verifications.",
+      dataExporter: () => {
+        const headers = "CAPA ID,RCA ID,Project ID,Description,Type,Owner,Due Date,Priority,Status,Completion Date,Verified By\n";
+        const rows = capaActions
+          .map((c) => `"${c.id}","${c.rcaId || "-"}","${c.projectId || "-"}","${c.description}","${c.actionType}","${c.owner}","${c.dueDate}","${c.priority}","${c.status}","${c.completionDate || "-"}","${c.verifiedBy || "-"}"`)
+          .join("\n");
+        return headers + rows;
+      }
     },
     {
       id: "REP-04",
-      name: "Plant Reliability — MTBF / MTTR & Chronic Failure Analysis",
+      name: "CI Kaizen Projects Realized vs Projected Savings Report",
+      category: "Continuous Improvement",
+      description: "Separation of projected annual targets vs realized YTD financial savings with GM lock audit.",
+      dataExporter: () => {
+        const headers = "Project ID,Project Name,Type,Owner,Projected Savings,Realized Savings,Benefit Status,Locked By,Locked At\n";
+        const rows = ciProjects
+          .map((p) => `"${p.id}","${p.name}","${p.type}","${p.owner}",${p.projectedSavingsAnnual},${p.realizedSavingsYTD},"${p.benefitStatus}","${p.lockedBy || "-"}","${p.lockedAt || "-"}"`)
+          .join("\n");
+        return headers + rows;
+      }
+    },
+    {
+      id: "REP-05",
+      name: "Fleet Reliability MTBF / MTTR & Bad Actor Analysis",
       category: "Asset Health",
-      date: "2026-08-31",
-      cadence: "Weekly",
-      format: "Telemetry Digest"
+      description: "Asset-level MTBF, MTTR, repeat failure count threshold (>= 2) bad actors, and downtime.",
+      dataExporter: () => {
+        const headers = "Asset ID,Asset Name,Line,Failures (30d),MTBF (hrs),MTTR (min),Downtime (min),Is Bad Actor,Reason\n";
+        const rows = reliabilityRecords
+          .map((r) => `"${r.assetId}","${r.assetName}","${r.lineName}",${r.failuresCount},${r.mtbfHrs},${r.mttrMin},${r.totalDowntimeMin},${r.isBadActor ? "YES" : "NO"},"${r.badActorReason}"`)
+          .join("\n");
+        return headers + rows;
+      }
+    },
+    {
+      id: "REP-06",
+      name: "Engineering Capex & Permanent Machine Redesign Ledger",
+      category: "Engineering",
+      description: "Approved capital projects, engineering justifications, P&ID dossiers, and budget utilization.",
+      dataExporter: () => {
+        const headers = "Capex ID,Project Name,Budget,Actual Spent,Owner,Status,Dossier Ref\n";
+        const rows = capexProjects
+          .map((c) => `"${c.id}","${c.name}",${c.budget},${c.actualCost},"${c.owner}","${c.status}","${c.dossierRef}"`)
+          .join("\n");
+        return headers + rows;
+      }
     }
   ];
 
-  const [searchQuery, setSearchQuery] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("ALL");
-
-  const handlePrint = (rep) => {
-    addToast(`Preparing "${rep.name}" for print / PDF generation...`, "info");
-    setPrintingId(rep.id);
-    setTimeout(() => {
-      window.print();
-      setPrintingId(null);
-    }, 100);
-  };
-
-  const handleExportCSV = () => {
-    const headers = "Report ID,Report Title,Category,Last Generated,Cadence,Format\n";
-    const rows = reports
-      .map((r) => `"${r.id}","${r.name}","${r.category}","${r.date}","${r.cadence}","${r.format}"`)
-      .join("\n");
-    const blob = new Blob([headers + rows], { type: "text/csv" });
+  const handleDownloadReport = (rep) => {
+    const csvContent = rep.dataExporter();
+    const blob = new Blob([csvContent], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `CI_Engineering_Reports_Index_${new Date().toISOString().substring(0, 10)}.csv`;
+    a.download = `${rep.id}_${rep.name.replace(/\s+/g, "_")}_${new Date().toISOString().substring(0, 10)}.csv`;
     a.click();
-    addToast("Reports register exported to CSV.", "info");
+    addToast(`Report "${rep.name}" downloaded as CSV!`, "success");
+  };
+
+  const handlePrint = (rep) => {
+    addToast(`Preparing "${rep.name}" for print / PDF generation...`, "info");
+    window.print();
   };
 
   const filteredReports = useMemo(() => {
     return reports.filter((r) => {
-      const matchesCategory = categoryFilter === "ALL" || r.category === categoryFilter;
+      const matchesCategory = selectedReportCategory === "ALL" || r.category === selectedReportCategory;
       const q = searchQuery.toLowerCase().trim();
       const matchesSearch =
         !q ||
-        r.id?.toLowerCase().includes(q) ||
-        r.name?.toLowerCase().includes(q) ||
-        r.category?.toLowerCase().includes(q) ||
-        r.cadence?.toLowerCase().includes(q) ||
-        r.format?.toLowerCase().includes(q);
+        r.id.toLowerCase().includes(q) ||
+        r.name.toLowerCase().includes(q) ||
+        r.description.toLowerCase().includes(q) ||
+        r.category.toLowerCase().includes(q);
 
       return matchesCategory && matchesSearch;
     });
-  }, [reports, searchQuery, categoryFilter]);
+  }, [reports, selectedReportCategory, searchQuery]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%", maxWidth: "1600px", margin: "0 auto", minWidth: 0 }}>
@@ -107,28 +162,25 @@ export function Reports() {
         <div style={{ minWidth: "240px", flex: 1 }}>
           <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
             <h1 style={{ fontSize: "clamp(18px, 4vw, 24px)", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.3px", lineHeight: 1.2 }}>
-              CI / Engineering Reports
+              CI / Engineering Reports Hub
             </h1>
-            <Badge variant="cyan">{reports.length} EXECUTIVE DIGESTS</Badge>
+            <Badge variant="cyan">{reports.length} DYNAMIC AUDIT REPORTS</Badge>
           </div>
         </div>
 
         <div className="no-print" style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-          <Button variant="secondary" icon={Download} onClick={handleExportCSV} style={{ fontSize: "12px", padding: "7px 12px" }}>
-            Export Register
-          </Button>
           <Button variant="secondary" onClick={() => navigate("/ci/reliability")} style={{ fontSize: "12px", padding: "7px 12px" }}>
-            Reliability
+            Reliability Hub
           </Button>
-          <Button variant="primary" icon={ArrowRight} onClick={() => navigate("/ci/notifications")} style={{ fontSize: "12px", padding: "7px 12px" }}>
-            Notifications
+          <Button variant="primary" onClick={() => navigate("/ci/projects/savings")} style={{ fontSize: "12px", padding: "7px 12px" }}>
+            Savings Tracker
           </Button>
         </div>
       </div>
 
-      {/* KPI Tickers - 2x2 on mobile, 4 on desktop */}
+      {/* KPI Tickers */}
       <div
-        className="kpi-grid-responsive grid-4 no-print"
+        className="kpi-grid-responsive grid-4"
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
@@ -138,161 +190,172 @@ export function Reports() {
         }}
       >
         <StatCard
-          title="Executive Reports"
-          value={reports.length.toString()}
-          unit="Active"
-          trend={{ value: "Automated report pipelines", isPositive: true, text: "" }}
-          icon={FileSpreadsheet}
+          title="Fleet MTBF / MTTR"
+          value={`${fleetMTBF}h / ${fleetMTTR}m`}
+          unit="Current Performance"
+          icon={Gauge}
+          colorVariant="emerald"
+        />
+        <StatCard
+          title="Realized YTD Savings"
+          value={`$${realizedSavingsTotal.toLocaleString()}`}
+          unit="Audited Financial Benefit"
+          icon={DollarSign}
+          colorVariant="emerald"
+        />
+        <StatCard
+          title="Active RCAs & CAPA"
+          value={`${investigations.length} RCA / ${capaActions.length} CAPA`}
+          unit="In Flight"
+          icon={CheckCircle2}
           colorVariant="cyan"
         />
         <StatCard
-          title="Data Freshness"
-          value="Real-Time"
-          unit="Live"
-          trend={{ value: "Connected to plant telemetry", isPositive: true, text: "" }}
-          icon={Sparkles}
+          title="Data Export Engines"
+          value="Live CSV & PDF"
+          unit="Real-time"
+          icon={FileSpreadsheet}
           colorVariant="emerald"
-        />
-        <StatCard
-          title="Audit Compliance"
-          value="100%"
-          unit="Certified"
-          trend={{ value: "ISO 22000 & 50001 compliant", isPositive: true, text: "" }}
-          icon={CheckCircle2}
-          colorVariant="emerald"
-        />
-        <StatCard
-          title="Scheduled Delivery"
-          value="Weekly"
-          unit="Mondays"
-          trend={{ value: "Automatic email & print digest", isPositive: true, text: "" }}
-          icon={Calendar}
-          colorVariant="amber"
         />
       </div>
 
-      {/* Structured Reports Table Card */}
-      <Card style={{ padding: "18px", minWidth: 0, width: "100%", boxSizing: "border-box" }}>
-        {/* Table Toolbar */}
-        <div className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "12px" }}>
-          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", flex: 1, minWidth: "240px" }}>
-            <div style={{ position: "relative", minWidth: "220px", flex: 1 }}>
-              <Search size={15} color="var(--text-muted)" style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)" }} />
-              <input
-                type="text"
-                placeholder=""
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="form-input"
-                style={{ paddingLeft: "32px", height: "36px", fontSize: "12px", backgroundColor: "#FFFFFF" }}
-              />
-            </div>
-
-            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-              <Filter size={14} color="var(--text-muted)" />
-              <select
-                value={categoryFilter}
-                onChange={(e) => setCategoryFilter(e.target.value)}
-                className="form-input"
-                style={{ height: "36px", fontSize: "12px", width: "190px", backgroundColor: "#FFFFFF" }}
-              >
-                <option value="ALL">All Categories</option>
-                <option value="Loss Analytics">Loss Analytics</option>
-                <option value="Quality Compliance">Quality Compliance</option>
-                <option value="Continuous Improvement">Continuous Improvement</option>
-                <option value="Asset Health">Asset Health</option>
-              </select>
-            </div>
+      {/* Main Table Card */}
+      <Card
+        style={{
+          backgroundColor: "#FFFFFF",
+          border: "1px solid var(--border-subtle)",
+          borderRadius: "14px",
+          overflow: "hidden"
+        }}
+      >
+        {/* Controls Bar */}
+        <div
+          style={{
+            padding: "16px 20px",
+            borderBottom: "1px solid var(--border-subtle)",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "12px",
+            backgroundColor: "var(--bg-card-subtle)"
+          }}
+        >
+          <div style={{ position: "relative", minWidth: "240px", flex: 1 }}>
+            <Search
+              size={15}
+              style={{
+                position: "absolute",
+                left: "12px",
+                top: "50%",
+                transform: "translateY(-50%)",
+                color: "var(--text-muted)"
+              }}
+            />
+            <input
+              type="text"
+              placeholder="Search report title, ID or domain..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="form-input"
+              style={{
+                paddingLeft: "36px",
+                backgroundColor: "#FFFFFF",
+                fontSize: "12px",
+                width: "100%"
+              }}
+            />
           </div>
 
-          <div style={{ fontSize: "12px", color: "var(--text-muted)", fontWeight: 600 }}>
-            Showing <strong>{filteredReports.length}</strong> of {reports.length} Executive Digests
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+            <select
+              value={selectedReportCategory}
+              onChange={(e) => setSelectedReportCategory(e.target.value)}
+              className="form-input"
+              style={{ fontSize: "12px", padding: "6px 10px", width: "auto", backgroundColor: "#FFFFFF" }}
+            >
+              <option value="ALL">All Report Categories</option>
+              <option value="Loss Analytics">Loss Analytics</option>
+              <option value="Quality Compliance">Quality & CAPA Compliance</option>
+              <option value="Continuous Improvement">Continuous Improvement</option>
+              <option value="Asset Health">Asset Health & Reliability</option>
+              <option value="Engineering">Engineering Capex</option>
+            </select>
           </div>
         </div>
 
-        {/* Structured Data Table */}
-        <div className="data-table-container" style={{ overflowX: "auto", border: "1px solid var(--border-subtle)", borderRadius: "10px" }}>
-          <table className="data-table" style={{ width: "100%", borderCollapse: "collapse", minWidth: "850px" }}>
+        {/* Table View */}
+        <div style={{ overflowX: "auto", width: "100%" }}>
+          <table className="data-table" style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
             <thead>
-              <tr style={{ backgroundColor: "var(--bg-card-subtle)", borderBottom: "1.5px solid var(--border-subtle)" }}>
-                <th style={{ padding: "12px 14px", textAlign: "left", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Report ID</th>
-                <th style={{ padding: "12px 14px", textAlign: "left", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Report Title & Scope</th>
-                <th style={{ padding: "12px 14px", textAlign: "left", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Category</th>
-                <th style={{ padding: "12px 14px", textAlign: "left", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Cadence</th>
-                <th style={{ padding: "12px 14px", textAlign: "left", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Format</th>
-                <th style={{ padding: "12px 14px", textAlign: "left", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Generated Date</th>
-                <th className="no-print" style={{ padding: "12px 14px", textAlign: "right", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Action</th>
+              <tr style={{ borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Report Digest Title</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Domain</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Scope & Description</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Format</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", textAlign: "right" }}>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {filteredReports.length > 0 ? (
-                filteredReports.map((rep) => {
-                  return (
-                    <tr
-                      key={rep.id}
-                      className={printingId === rep.id ? "print-only" : ""}
-                      style={{
-                        borderBottom: "1px solid var(--border-subtle)",
-                        transition: "background-color 0.12s ease"
-                      }}
-                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgba(200, 149, 71, 0.04)")}
-                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
-                    >
-                      <td style={{ padding: "12px 14px", whiteSpace: "nowrap" }}>
-                        <span style={{ fontSize: "12px", fontFamily: "var(--font-mono)", fontWeight: 800, color: "#0284C7" }}>
-                          {rep.id}
-                        </span>
-                      </td>
-
-                      <td style={{ padding: "12px 14px" }}>
-                        <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)" }}>
-                          {rep.name}
-                        </div>
-                      </td>
-
-                      <td style={{ padding: "12px 14px", whiteSpace: "nowrap" }}>
-                        <Badge variant="cyan">{rep.category}</Badge>
-                      </td>
-
-                      <td style={{ padding: "12px 14px", whiteSpace: "nowrap" }}>
-                        <span style={{ fontSize: "12px", color: "var(--text-primary)", fontWeight: 600 }}>
-                          {rep.cadence}
-                        </span>
-                      </td>
-
-                      <td style={{ padding: "12px 14px", whiteSpace: "nowrap" }}>
-                        <span style={{ fontSize: "12px", color: "#8C5B23", fontWeight: 700 }}>
-                          {rep.format}
-                        </span>
-                      </td>
-
-                      <td style={{ padding: "12px 14px", whiteSpace: "nowrap" }}>
-                        <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-                          {rep.date}
-                        </span>
-                      </td>
-
-                      <td className="no-print" style={{ padding: "12px 14px", textAlign: "right", whiteSpace: "nowrap" }}>
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          icon={Printer}
-                          onClick={() => handlePrint(rep)}
-                          style={{ fontSize: "11px", padding: "4px 10px" }}
-                        >
-                          Print / Export PDF
-                        </Button>
-                      </td>
-                    </tr>
-                  );
-                })
-              ) : (
-                <tr>
-                  <td colSpan={7} style={{ padding: "32px", textAlign: "center", color: "var(--text-muted)", fontSize: "13px" }}>
-                    No executive reports match the selected category or search filter.
+              {filteredReports.map((r) => (
+                <tr key={r.id} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+                  <td style={{ padding: "12px 16px" }}>
+                    <div style={{ fontWeight: 800, color: "var(--text-primary)", fontSize: "13px" }}>{r.name}</div>
+                    <div style={{ fontSize: "11px", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>{r.id}</div>
+                  </td>
+                  <td style={{ padding: "12px 16px" }}>
+                    <Badge variant={r.category.includes("Loss") ? "amber" : r.category.includes("Quality") ? "cyan" : "emerald"}>
+                      {r.category}
+                    </Badge>
+                  </td>
+                  <td style={{ padding: "12px 16px", fontSize: "12px", color: "var(--text-secondary)" }}>
+                    {r.description}
+                  </td>
+                  <td style={{ padding: "12px 16px", fontFamily: "var(--font-mono)", fontSize: "12px", color: "#8C5B23", fontWeight: 700 }}>
+                    Live CSV / PDF
+                  </td>
+                  <td style={{ padding: "12px 16px", textAlign: "right" }}>
+                    <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                      <button
+                        onClick={() => handleDownloadReport(r)}
+                        title="Download CSV Dataset"
+                        style={{
+                          width: "30px",
+                          height: "30px",
+                          borderRadius: "6px",
+                          backgroundColor: "var(--bg-card-subtle)",
+                          color: "#059669",
+                          border: "1px solid var(--border-subtle)",
+                          cursor: "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center"
+                        }}
+                      >
+                        <Download size={13} />
+                      </button>
+                      <button
+                        onClick={() => handlePrint(r)}
+                        title="Print / Generate PDF"
+                        style={{
+                          width: "30px",
+                          height: "30px",
+                          borderRadius: "6px",
+                          backgroundColor: "var(--bg-card-subtle)",
+                          color: "#8C5B23",
+                          border: "1px solid var(--border-subtle)",
+                          cursor: "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center"
+                        }}
+                      >
+                        <Printer size={13} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
-              )}
+              ))}
             </tbody>
           </table>
         </div>

@@ -1,76 +1,97 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   Boxes,
   Plus,
-  CheckCircle2,
   Search,
   Filter,
   Layers,
   Edit2,
+  Trash2,
   X,
   ShieldCheck,
   Percent,
-  Tag
+  Tag,
+  Building2,
+  CheckCircle2
 } from "lucide-react";
 import { Card } from "../../../components/common/Card";
 import { Badge } from "../../../components/common/Badge";
 import { Button } from "../../../components/common/Button";
 import { StatCard } from "../../../components/common/StatCard";
+import { useMasterData } from "../../../context/MasterDataContext";
 import { useApp } from "../../../context/AppContext";
 
 export function ProductFamiliesPage() {
+  const { productFamilies = [], addProductFamily, updateProductFamily, deleteProductFamily, toggleProductFamilyStatus, skus = [], plants = [], activePlantId } = useMasterData();
   const { addToast } = useApp();
 
-  const [families, setFamilies] = useState([
-    { id: "FAM-01", name: "Sparkling Flavored Beverages", skusCount: 12, allergenRisk: "None", standardMargin: "58.4%", status: "Active" },
-    { id: "FAM-02", name: "Tonics & Mixers Premium", skusCount: 8, allergenRisk: "None", standardMargin: "62.1%", status: "Active" },
-    { id: "FAM-03", name: "Organic Ginger Brews", skusCount: 6, allergenRisk: "Ginger Extract", standardMargin: "54.0%", status: "Active" },
-    { id: "FAM-04", name: "Functional Energy Formulations", skusCount: 4, allergenRisk: "None", standardMargin: "66.5%", status: "Active" }
-  ]);
-
   const [searchQuery, setSearchQuery] = useState("");
+  const [plantFilter, setPlantFilter] = useState("ALL");
+  const [statusFilter, setStatusFilter] = useState("ALL");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingFamily, setEditingFamily] = useState(null);
 
   const [newFamily, setNewFamily] = useState({
+    code: "",
     name: "",
-    skusCount: 4,
+    category: "Finished Goods",
+    description: "",
+    plantId: activePlantId || "PLT-01",
     allergenRisk: "None",
-    standardMargin: "50%"
+    standardMargin: "55.0%",
+    effectiveFrom: new Date().toISOString().substring(0, 10),
+    effectiveTo: "2030-12-31"
   });
 
-  const totalSKUs = families.reduce((sum, f) => sum + (f.skusCount || 0), 0);
+  const totalSKUs = useMemo(() => {
+    return productFamilies.reduce((sum, f) => {
+      const linked = skus.filter((s) => s.familyId === f.familyId || s.family === f.name).length;
+      return sum + linked;
+    }, 0);
+  }, [productFamilies, skus]);
 
-  const filteredFamilies = families.filter((f) => {
-    if (!searchQuery.trim()) return true;
-    const q = searchQuery.toLowerCase();
-    return (
-      f.name.toLowerCase().includes(q) ||
-      f.id.toLowerCase().includes(q) ||
-      f.allergenRisk.toLowerCase().includes(q)
-    );
-  });
+  const filteredFamilies = useMemo(() => {
+    return productFamilies.filter((f) => {
+      const matchesPlant = plantFilter === "ALL" || f.plantId === plantFilter;
+      const matchesStatus = statusFilter === "ALL" || f.status === statusFilter;
+      const q = searchQuery.toLowerCase().trim();
+      const matchesSearch =
+        !q ||
+        f.name.toLowerCase().includes(q) ||
+        f.code.toLowerCase().includes(q) ||
+        (f.allergenRisk || "").toLowerCase().includes(q) ||
+        (f.description || "").toLowerCase().includes(q);
+
+      return matchesPlant && matchesStatus && matchesSearch;
+    });
+  }, [productFamilies, plantFilter, statusFilter, searchQuery]);
 
   const handleAddSubmit = (e) => {
     e.preventDefault();
     if (!newFamily.name.trim()) {
-      addToast("Please provide family description.", "warning");
+      addToast("Please provide product family name.", "warning");
       return;
     }
 
-    const created = {
-      id: `FAM-0${families.length + 1}`,
-      name: newFamily.name,
-      skusCount: Number(newFamily.skusCount) || 1,
-      allergenRisk: newFamily.allergenRisk || "None",
-      standardMargin: newFamily.standardMargin || "50%",
-      status: "Active"
-    };
+    if (newFamily.code && productFamilies.some((f) => f.code.toLowerCase() === newFamily.code.trim().toLowerCase())) {
+      addToast(`Family Code "${newFamily.code}" already exists.`, "warning");
+      return;
+    }
 
-    setFamilies([...families, created]);
-    addToast(`Product family "${created.name}" registered!`, "success");
+    const created = addProductFamily(newFamily);
+    addToast(`Product family "${created.name}" registered in Master Data!`, "success");
     setIsModalOpen(false);
-    setNewFamily({ name: "", skusCount: 4, allergenRisk: "None", standardMargin: "50%" });
+    setNewFamily({
+      code: "",
+      name: "",
+      category: "Finished Goods",
+      description: "",
+      plantId: activePlantId || "PLT-01",
+      allergenRisk: "None",
+      standardMargin: "55.0%",
+      effectiveFrom: new Date().toISOString().substring(0, 10),
+      effectiveTo: "2030-12-31"
+    });
   };
 
   const handleEditSubmit = (e) => {
@@ -80,11 +101,16 @@ export function ProductFamiliesPage() {
       return;
     }
 
-    setFamilies((prev) =>
-      prev.map((f) => (f.id === editingFamily.id ? editingFamily : f))
-    );
+    updateProductFamily(editingFamily.familyId, editingFamily);
     addToast(`Product family "${editingFamily.name}" updated successfully!`, "success");
     setEditingFamily(null);
+  };
+
+  const handleDelete = (familyId, name) => {
+    if (window.confirm(`Are you sure you want to delete Product Family "${name}"?`)) {
+      deleteProductFamily(familyId);
+      addToast(`Product family "${name}" deleted.`, "info");
+    }
   };
 
   return (
@@ -96,7 +122,7 @@ export function ProductFamiliesPage() {
             <h1 style={{ fontSize: "clamp(18px, 4vw, 24px)", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.3px", lineHeight: 1.2 }}>
               Product Families Master
             </h1>
-            <Badge variant="cyan">{families.length} FAMILIES CONFIGURED</Badge>
+            <Badge variant="cyan">{productFamilies.length} FAMILIES CONFIGURED</Badge>
           </div>
         </div>
 
@@ -107,7 +133,7 @@ export function ProductFamiliesPage() {
         </div>
       </div>
 
-      {/* KPI Tickers - 2x2 on mobile, 4 on desktop */}
+      {/* KPI Tickers */}
       <div
         className="kpi-grid-responsive grid-4"
         style={{
@@ -120,7 +146,7 @@ export function ProductFamiliesPage() {
       >
         <StatCard
           title="Active Families"
-          value={families.length.toString()}
+          value={productFamilies.filter((f) => f.status === "Active").length.toString()}
           unit="Categories"
           icon={Boxes}
           colorVariant="emerald"
@@ -148,84 +174,187 @@ export function ProductFamiliesPage() {
         />
       </div>
 
-      {/* Table Section */}
-      <Card style={{ padding: "18px", minWidth: 0, width: "100%", boxSizing: "border-box" }}>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", alignItems: "center", marginBottom: "14px", justifyContent: "space-between" }}>
-          <div style={{ position: "relative", minWidth: "220px", flex: 1 }}>
-            <Search size={15} color="var(--text-muted)" style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)" }} />
+      {/* Main Table Card */}
+      <Card
+        style={{
+          backgroundColor: "#FFFFFF",
+          border: "1px solid var(--border-subtle)",
+          borderRadius: "14px",
+          overflow: "hidden"
+        }}
+      >
+        {/* Controls Bar */}
+        <div
+          style={{
+            padding: "16px 20px",
+            borderBottom: "1px solid var(--border-subtle)",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "12px",
+            backgroundColor: "var(--bg-card-subtle)"
+          }}
+        >
+          <div style={{ position: "relative", minWidth: "240px", flex: 1 }}>
+            <Search
+              size={15}
+              style={{
+                position: "absolute",
+                left: "12px",
+                top: "50%",
+                transform: "translateY(-50%)",
+                color: "var(--text-muted)"
+              }}
+            />
             <input
               type="text"
-              placeholder="Search family name, code, allergens..."
+              placeholder="Search product family by name, code or allergen..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="form-input"
-              style={{ paddingLeft: "32px", height: "36px", fontSize: "12px", backgroundColor: "#FFFFFF" }}
+              style={{
+                paddingLeft: "36px",
+                backgroundColor: "#FFFFFF",
+                fontSize: "12px",
+                width: "100%"
+              }}
             />
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+            <select
+              value={plantFilter}
+              onChange={(e) => setPlantFilter(e.target.value)}
+              className="form-input"
+              style={{ fontSize: "12px", padding: "6px 10px", width: "auto", backgroundColor: "#FFFFFF" }}
+            >
+              <option value="ALL">All Plants</option>
+              {plants.map((p) => (
+                <option key={p.id} value={p.id}>{p.name.split(" - ")[0]}</option>
+              ))}
+            </select>
+
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="form-input"
+              style={{ fontSize: "12px", padding: "6px 10px", width: "auto", backgroundColor: "#FFFFFF" }}
+            >
+              <option value="ALL">All Status</option>
+              <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
+            </select>
           </div>
         </div>
 
-        <div className="data-table-container" style={{ width: "100%", overflowX: "auto", WebkitOverflowScrolling: "touch", display: "block" }}>
-          <table className="data-table" style={{ width: "100%", minWidth: "680px" }}>
+        {/* Table View */}
+        <div style={{ overflowX: "auto", width: "100%" }}>
+          <table className="data-table" style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
             <thead>
-              <tr>
-                <th>Family Code</th>
-                <th>Family Description</th>
-                <th>SKU Count</th>
-                <th>Allergen Profile</th>
-                <th>Target Margin</th>
-                <th>Status</th>
-                <th>Actions</th>
+              <tr style={{ borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Family Code</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Family Name & Description</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Plant Facility</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Linked SKUs</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Allergen Risk</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Target Margin</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Status</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", textAlign: "right" }}>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {filteredFamilies.map((f) => (
-                <tr key={f.id}>
-                  <td>
-                    <span style={{ fontWeight: 800, color: "#8C5B23", fontFamily: "var(--font-mono)" }}>
-                      {f.id}
-                    </span>
-                  </td>
-                  <td>
-                    <strong style={{ color: "var(--text-primary)" }}>{f.name}</strong>
-                  </td>
-                  <td>
-                    <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "#059669" }}>
-                      {f.skusCount} SKUs
-                    </span>
-                  </td>
-                  <td>
-                    <Badge variant={f.allergenRisk === "None" ? "emerald" : "amber"}>
-                      {f.allergenRisk}
-                    </Badge>
-                  </td>
-                  <td style={{ fontFamily: "var(--font-mono)", fontSize: "12px", fontWeight: 700, color: "#D97706" }}>
-                    {f.standardMargin}
-                  </td>
-                  <td>
-                    <Badge variant="emerald">{f.status}</Badge>
-                  </td>
-                  <td>
-                    <button
-                      onClick={() => setEditingFamily({ ...f })}
-                      title="Edit Product Family"
-                      style={{
-                        width: "30px",
-                        height: "30px",
-                        borderRadius: "6px",
-                        backgroundColor: "var(--bg-card-subtle)",
-                        color: "var(--text-primary)",
-                        border: "1px solid var(--border-subtle)",
-                        cursor: "pointer",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        justifyContent: "center"
-                      }}
-                    >
-                      <Edit2 size={13} />
-                    </button>
+              {filteredFamilies.length === 0 ? (
+                <tr>
+                  <td colSpan={8} style={{ textAlign: "center", padding: "32px", color: "var(--text-muted)", fontSize: "13px" }}>
+                    No product families found matching filters.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                filteredFamilies.map((f) => {
+                  const linkedCount = skus.filter((s) => s.familyId === f.familyId || s.family === f.name).length;
+                  const plantName = plants.find((p) => p.id === f.plantId)?.name?.split(" - ")[0] || "Global / Enterprise";
+                  return (
+                    <tr key={f.familyId} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+                      <td style={{ padding: "12px 16px", fontFamily: "var(--font-mono)", fontWeight: 800, color: "#8C5B23" }}>
+                        {f.code}
+                      </td>
+                      <td style={{ padding: "12px 16px" }}>
+                        <div style={{ fontWeight: 800, color: "var(--text-primary)", fontSize: "13px" }}>{f.name}</div>
+                        {f.description && <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>{f.description}</div>}
+                      </td>
+                      <td style={{ padding: "12px 16px", fontSize: "12px", color: "var(--text-secondary)" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                          <Building2 size={12} color="#C89547" />
+                          <span>{plantName}</span>
+                        </div>
+                      </td>
+                      <td style={{ padding: "12px 16px" }}>
+                        <Badge variant="cyan">{linkedCount} Master SKUs</Badge>
+                      </td>
+                      <td style={{ padding: "12px 16px" }}>
+                        {f.allergenRisk && f.allergenRisk !== "None" ? (
+                          <Badge variant="amber">{f.allergenRisk}</Badge>
+                        ) : (
+                          <Badge variant="emerald">None (Safe)</Badge>
+                        )}
+                      </td>
+                      <td style={{ padding: "12px 16px", fontFamily: "var(--font-mono)", fontWeight: 700, color: "#D97706" }}>
+                        {f.standardMargin || "55%"}
+                      </td>
+                      <td style={{ padding: "12px 16px" }}>
+                        <button
+                          onClick={() => toggleProductFamilyStatus(f.familyId)}
+                          style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}
+                          title="Click to toggle status"
+                        >
+                          <Badge variant={f.status === "Active" ? "emerald" : "gray"}>{f.status}</Badge>
+                        </button>
+                      </td>
+                      <td style={{ padding: "12px 16px", textAlign: "right" }}>
+                        <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                          <button
+                            onClick={() => setEditingFamily({ ...f })}
+                            title="Edit Product Family"
+                            style={{
+                              width: "30px",
+                              height: "30px",
+                              borderRadius: "6px",
+                              backgroundColor: "var(--bg-card-subtle)",
+                              color: "var(--text-primary)",
+                              border: "1px solid var(--border-subtle)",
+                              cursor: "pointer",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center"
+                            }}
+                          >
+                            <Edit2 size={13} />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(f.familyId, f.name)}
+                            title="Delete Product Family"
+                            style={{
+                              width: "30px",
+                              height: "30px",
+                              borderRadius: "6px",
+                              backgroundColor: "var(--bg-card-subtle)",
+                              color: "#EF4444",
+                              border: "1px solid var(--border-subtle)",
+                              cursor: "pointer",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center"
+                            }}
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
@@ -234,48 +363,66 @@ export function ProductFamiliesPage() {
       {/* ADD FAMILY MODAL */}
       {isModalOpen && (
         <div className="modal-backdrop" onClick={() => setIsModalOpen(false)}>
-          <div className="modal-content" style={{ maxWidth: "480px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+          <div className="modal-content" style={{ maxWidth: "520px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
-              <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)" }}>
-                Add New Product Family
-              </h2>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Boxes size={18} color="#C89547" />
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                  Add New Product Family
+                </h2>
+              </div>
               <button onClick={() => setIsModalOpen(false)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
                 <X size={18} />
               </button>
             </div>
 
             <form onSubmit={handleAddSubmit} style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
-              <div>
-                <label className="form-label">Family Name / Description *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Cold-Pressed Premium Juices"
-                  value={newFamily.name}
-                  onChange={(e) => setNewFamily({ ...newFamily, name: e.target.value })}
-                  className="form-input"
-                  style={{ backgroundColor: "#FFFFFF" }}
-                />
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "12px" }}>
                 <div>
-                  <label className="form-label">Estimated SKU Count</label>
+                  <label className="form-label">Family Code *</label>
                   <input
-                    type="number"
-                    min="1"
-                    value={newFamily.skusCount}
-                    onChange={(e) => setNewFamily({ ...newFamily, skusCount: e.target.value })}
+                    type="text"
+                    required
+                    placeholder="e.g. FAM-05"
+                    value={newFamily.code}
+                    onChange={(e) => setNewFamily({ ...newFamily, code: e.target.value.toUpperCase() })}
                     className="form-input"
                     style={{ backgroundColor: "#FFFFFF" }}
                   />
                 </div>
+                <div>
+                  <label className="form-label">Family Name *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Cold-Pressed Premium Juices"
+                    value={newFamily.name}
+                    onChange={(e) => setNewFamily({ ...newFamily, name: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+              </div>
 
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div>
+                  <label className="form-label">Plant Facility *</label>
+                  <select
+                    value={newFamily.plantId}
+                    onChange={(e) => setNewFamily({ ...newFamily, plantId: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  >
+                    {plants.map((p) => (
+                      <option key={p.id} value={p.id}>{p.name.split(" - ")[0]}</option>
+                    ))}
+                  </select>
+                </div>
                 <div>
                   <label className="form-label">Target Gross Margin</label>
                   <input
                     type="text"
-                    placeholder="e.g. 55%"
+                    placeholder="e.g. 58.0%"
                     value={newFamily.standardMargin}
                     onChange={(e) => setNewFamily({ ...newFamily, standardMargin: e.target.value })}
                     className="form-input"
@@ -288,7 +435,7 @@ export function ProductFamiliesPage() {
                 <label className="form-label">Allergen Risk Profile</label>
                 <input
                   type="text"
-                  placeholder="e.g. None or Soy / Dairy"
+                  placeholder="e.g. None or Ginger Extract / Citrus Terpenes"
                   value={newFamily.allergenRisk}
                   onChange={(e) => setNewFamily({ ...newFamily, allergenRisk: e.target.value })}
                   className="form-input"
@@ -296,12 +443,47 @@ export function ProductFamiliesPage() {
                 />
               </div>
 
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
+              <div>
+                <label className="form-label">Description / Scope</label>
+                <textarea
+                  rows={2}
+                  placeholder="Technical description of this product line..."
+                  value={newFamily.description}
+                  onChange={(e) => setNewFamily({ ...newFamily, description: e.target.value })}
+                  className="form-input"
+                  style={{ backgroundColor: "#FFFFFF" }}
+                />
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div>
+                  <label className="form-label">Effective From</label>
+                  <input
+                    type="date"
+                    value={newFamily.effectiveFrom}
+                    onChange={(e) => setNewFamily({ ...newFamily, effectiveFrom: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+                <div>
+                  <label className="form-label">Effective To</label>
+                  <input
+                    type="date"
+                    value={newFamily.effectiveTo}
+                    onChange={(e) => setNewFamily({ ...newFamily, effectiveTo: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "8px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
                 <Button variant="secondary" onClick={() => setIsModalOpen(false)}>
                   Cancel
                 </Button>
                 <Button variant="primary" type="submit">
-                  Create Family
+                  Save Product Family
                 </Button>
               </div>
             </form>
@@ -312,42 +494,59 @@ export function ProductFamiliesPage() {
       {/* EDIT FAMILY MODAL */}
       {editingFamily && (
         <div className="modal-backdrop" onClick={() => setEditingFamily(null)}>
-          <div className="modal-content" style={{ maxWidth: "480px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+          <div className="modal-content" style={{ maxWidth: "520px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
-              <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)" }}>
-                Edit Family — {editingFamily.id}
-              </h2>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Edit2 size={16} color="#C89547" />
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                  Edit Product Family — {editingFamily.code}
+                </h2>
+              </div>
               <button onClick={() => setEditingFamily(null)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
                 <X size={18} />
               </button>
             </div>
 
             <form onSubmit={handleEditSubmit} style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
-              <div>
-                <label className="form-label">Family Name / Description *</label>
-                <input
-                  type="text"
-                  required
-                  value={editingFamily.name}
-                  onChange={(e) => setEditingFamily({ ...editingFamily, name: e.target.value })}
-                  className="form-input"
-                  style={{ backgroundColor: "#FFFFFF" }}
-                />
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "12px" }}>
                 <div>
-                  <label className="form-label">SKU Count</label>
+                  <label className="form-label">Family Code *</label>
                   <input
-                    type="number"
-                    min="1"
-                    value={editingFamily.skusCount}
-                    onChange={(e) => setEditingFamily({ ...editingFamily, skusCount: Number(e.target.value) })}
+                    type="text"
+                    required
+                    value={editingFamily.code}
+                    onChange={(e) => setEditingFamily({ ...editingFamily, code: e.target.value })}
                     className="form-input"
                     style={{ backgroundColor: "#FFFFFF" }}
                   />
                 </div>
+                <div>
+                  <label className="form-label">Family Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingFamily.name}
+                    onChange={(e) => setEditingFamily({ ...editingFamily, name: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+              </div>
 
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div>
+                  <label className="form-label">Plant Facility</label>
+                  <select
+                    value={editingFamily.plantId}
+                    onChange={(e) => setEditingFamily({ ...editingFamily, plantId: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  >
+                    {plants.map((p) => (
+                      <option key={p.id} value={p.id}>{p.name.split(" - ")[0]}</option>
+                    ))}
+                  </select>
+                </div>
                 <div>
                   <label className="form-label">Target Gross Margin</label>
                   <input
@@ -360,38 +559,34 @@ export function ProductFamiliesPage() {
                 </div>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
-                <div>
-                  <label className="form-label">Allergen Risk Profile</label>
-                  <input
-                    type="text"
-                    value={editingFamily.allergenRisk}
-                    onChange={(e) => setEditingFamily({ ...editingFamily, allergenRisk: e.target.value })}
-                    className="form-input"
-                    style={{ backgroundColor: "#FFFFFF" }}
-                  />
-                </div>
-
-                <div>
-                  <label className="form-label">Status</label>
-                  <select
-                    className="form-select"
-                    value={editingFamily.status}
-                    onChange={(e) => setEditingFamily({ ...editingFamily, status: e.target.value })}
-                    style={{ backgroundColor: "#FFFFFF" }}
-                  >
-                    <option value="Active">Active</option>
-                    <option value="Inactive">Inactive</option>
-                  </select>
-                </div>
+              <div>
+                <label className="form-label">Allergen Risk Profile</label>
+                <input
+                  type="text"
+                  value={editingFamily.allergenRisk}
+                  onChange={(e) => setEditingFamily({ ...editingFamily, allergenRisk: e.target.value })}
+                  className="form-input"
+                  style={{ backgroundColor: "#FFFFFF" }}
+                />
               </div>
 
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
+              <div>
+                <label className="form-label">Description / Scope</label>
+                <textarea
+                  rows={2}
+                  value={editingFamily.description || ""}
+                  onChange={(e) => setEditingFamily({ ...editingFamily, description: e.target.value })}
+                  className="form-input"
+                  style={{ backgroundColor: "#FFFFFF" }}
+                />
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "8px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
                 <Button variant="secondary" onClick={() => setEditingFamily(null)}>
                   Cancel
                 </Button>
                 <Button variant="primary" type="submit">
-                  Save Changes
+                  Update Product Family
                 </Button>
               </div>
             </form>

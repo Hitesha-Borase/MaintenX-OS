@@ -25,23 +25,15 @@ import { Card } from "../../../components/common/Card";
 import { Badge } from "../../../components/common/Badge";
 import { Button } from "../../../components/common/Button";
 import { StatCard } from "../../../components/common/StatCard";
+import { useMasterData } from "../../../context/MasterDataContext";
 import { useApp } from "../../../context/AppContext";
 
 export function MigrationPage() {
+  const { migrationStats = {}, executeMigration, auditLogs = [], skus = [] } = useMasterData();
   const { addToast } = useApp();
 
   // Wizard active state: 0 = Dashboard, 1 = Source, 2 = Mapping, 3 = Validation, 4 = Duplicate Review, 5 = Summary
   const [wizardStep, setWizardStep] = useState(0);
-
-  // Migration Stats
-  const [stats, setStats] = useState({
-    totalRecords: 2450,
-    validRecords: 2380,
-    importedRecords: 2340,
-    duplicatesCount: 45,
-    errorsCount: 25,
-    pendingReviewCount: 40
-  });
 
   // Step 1: Selected Source
   const [selectedSource, setSelectedSource] = useState("FlowState ERP - Legacy Production & SKU Store");
@@ -94,13 +86,38 @@ export function MigrationPage() {
   };
 
   const handleFinishMigration = () => {
+    // Sample mock payload to inject live migrated SKUs into MasterDataContext
+    const mockIngestedRecords = [
+      {
+        skuCode: "SKU-8001",
+        name: "Legacy Cold Brew Coffee Concentrate",
+        category: "Finished Goods",
+        family: "Functional Formulations",
+        uom: "Bottles",
+        plantId: "PLT-01",
+        status: "Active",
+        stdCost: "$0.68",
+        description: "Migrated from FlowState Legacy ERP Batch 2026-08"
+      },
+      {
+        skuCode: "SKU-8002",
+        name: "Legacy Organic Hibiscus Tea Blend",
+        category: "Finished Goods",
+        family: "Organic Ginger Brews",
+        uom: "Bottles",
+        plantId: "PLT-01",
+        status: "Active",
+        stdCost: "$0.55",
+        description: "Migrated from FlowState Legacy ERP Batch 2026-08"
+      }
+    ];
+
+    if (executeMigration) {
+      executeMigration("SKU Master", mockIngestedRecords);
+    }
+
     setWizardStep(0);
-    setStats((prev) => ({
-      ...prev,
-      importedRecords: prev.importedRecords + 110,
-      pendingReviewCount: 0
-    }));
-    addToast("FlowState legacy records successfully migrated & verified into MaintenX OS!", "success");
+    addToast("FlowState legacy records successfully migrated & verified into MaintenX OS Master Tables!", "success");
   };
 
   return (
@@ -155,7 +172,7 @@ export function MigrationPage() {
           >
             <StatCard
               title="Total Source Records"
-              value={stats.totalRecords.toLocaleString()}
+              value={(migrationStats.totalRecords || 2450).toLocaleString()}
               unit="Rows"
               trend={{ value: "FlowState legacy extraction", isPositive: true, text: "" }}
               icon={FileSpreadsheet}
@@ -163,7 +180,7 @@ export function MigrationPage() {
             />
             <StatCard
               title="Valid Clean Records"
-              value={stats.validRecords.toLocaleString()}
+              value={(migrationStats.validRecords || 2380).toLocaleString()}
               unit="Validated"
               trend={{ value: "97.1% Schema conformity", isPositive: true, text: "" }}
               icon={CheckCircle2}
@@ -171,7 +188,7 @@ export function MigrationPage() {
             />
             <StatCard
               title="Successfully Imported"
-              value={stats.importedRecords.toLocaleString()}
+              value={(migrationStats.importedRecords || 2340).toLocaleString()}
               unit="Active in OS"
               trend={{ value: "Live across master tables", isPositive: true, text: "" }}
               icon={ShieldCheck}
@@ -179,7 +196,7 @@ export function MigrationPage() {
             />
             <StatCard
               title="Duplicate Records"
-              value={stats.duplicatesCount.toString()}
+              value={(migrationStats.duplicatesCount || 45).toString()}
               unit="Identified"
               trend={{ value: "Auto-matched for review", isPositive: false, text: "" }}
               icon={Copy}
@@ -187,7 +204,7 @@ export function MigrationPage() {
             />
             <StatCard
               title="Schema Errors"
-              value={stats.errorsCount.toString()}
+              value={(migrationStats.errorsCount || 25).toString()}
               unit="Flagged"
               trend={{ value: "Missing plant or UOM keys", isPositive: false, text: "" }}
               icon={AlertOctagon}
@@ -195,56 +212,106 @@ export function MigrationPage() {
             />
             <StatCard
               title="Pending Dual Review"
-              value={stats.pendingReviewCount.toString()}
+              value={(migrationStats.pendingReviewCount || 40).toString()}
               unit="Awaiting Action"
               trend={{ value: "Ready in duplicate resolver", isPositive: true, text: "" }}
-              icon={RotateCcw}
-              colorVariant="cyan"
+              icon={Zap}
+              colorVariant="amber"
             />
           </div>
 
-          {/* Migration Batches History Card */}
-          <Card style={{ padding: "18px", width: "100%", boxSizing: "border-box" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
-              <div style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)" }}>
-                Executed Migration Pipeline Batches
+          {/* Migration Audit Trail & History */}
+          <Card
+            style={{
+              backgroundColor: "#FFFFFF",
+              border: "1px solid var(--border-subtle)",
+              borderRadius: "14px",
+              padding: "20px"
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "10px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Layers size={18} color="#C89547" />
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                  Recent Ingestion Batches & Execution Log
+                </h2>
               </div>
-              <Button variant="secondary" size="sm" onClick={() => setWizardStep(1)} style={{ fontSize: "11px" }}>
-                Start New Batch
-              </Button>
+              <Badge variant="cyan">{auditLogs.filter((l) => l.action?.includes("MIGRATION") || l.entity === "Migration").length || 3} COMPLETED RUNS</Badge>
             </div>
 
-            <div className="data-table-container" style={{ overflowX: "auto", border: "1px solid var(--border-subtle)", borderRadius: "10px" }}>
-              <table className="data-table" style={{ width: "100%", borderCollapse: "collapse", minWidth: "850px" }}>
+            <div style={{ overflowX: "auto", width: "100%" }}>
+              <table className="data-table" style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
                 <thead>
-                  <tr style={{ backgroundColor: "var(--bg-card-subtle)", borderBottom: "1.5px solid var(--border-subtle)" }}>
-                    <th style={{ padding: "12px 14px", textAlign: "left", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Batch ID</th>
-                    <th style={{ padding: "12px 14px", textAlign: "left", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Target Master Table</th>
-                    <th style={{ padding: "12px 14px", textAlign: "left", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Source System</th>
-                    <th style={{ padding: "12px 14px", textAlign: "left", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Records Processed</th>
-                    <th style={{ padding: "12px 14px", textAlign: "left", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Pass Rate</th>
-                    <th style={{ padding: "12px 14px", textAlign: "left", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Date</th>
-                    <th style={{ padding: "12px 14px", textAlign: "right", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Status</th>
+                  <tr style={{ borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+                    <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Batch Run ID</th>
+                    <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Dataset Target</th>
+                    <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Source Connector</th>
+                    <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Records Transferred</th>
+                    <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Conformity</th>
+                    <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Status</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {[
-                    { id: "MIG-01", target: "Item & SKU Master", source: "FlowState CSV Export", count: 1420, rate: "100%", date: "2026-08-28", status: "Completed" },
-                    { id: "MIG-02", target: "BOM & Recipe Formulas", source: "Legacy Excel (.xlsx)", count: 48, rate: "98.5%", date: "2026-08-29", status: "Completed" },
-                    { id: "MIG-03", target: "Physical Machine Assets", source: "Plant SCADA Export", count: 870, rate: "99.1%", date: "2026-08-30", status: "Completed" }
-                  ].map((batch) => (
-                    <tr key={batch.id} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
-                      <td style={{ padding: "12px 14px", fontFamily: "var(--font-mono)", fontWeight: 800, color: "#0284C7" }}>{batch.id}</td>
-                      <td style={{ padding: "12px 14px", fontWeight: 700 }}>{batch.target}</td>
-                      <td style={{ padding: "12px 14px", color: "var(--text-secondary)" }}>{batch.source}</td>
-                      <td style={{ padding: "12px 14px", fontWeight: 600 }}>{batch.count.toLocaleString()} rows</td>
-                      <td style={{ padding: "12px 14px", color: "#059669", fontWeight: 700 }}>{batch.rate}</td>
-                      <td style={{ padding: "12px 14px", color: "var(--text-muted)" }}>{batch.date}</td>
-                      <td style={{ padding: "12px 14px", textAlign: "right" }}>
-                        <Badge variant="emerald">{batch.status}</Badge>
-                      </td>
-                    </tr>
-                  ))}
+                  <tr style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+                    <td style={{ padding: "12px 16px", fontFamily: "var(--font-mono)", fontWeight: 800, color: "#8C5B23" }}>
+                      RUN-2026-0819-01
+                    </td>
+                    <td style={{ padding: "12px 16px", fontWeight: 700, color: "var(--text-primary)" }}>
+                      Item & SKU Master Tables
+                    </td>
+                    <td style={{ padding: "12px 16px", fontSize: "12px", color: "var(--text-secondary)" }}>
+                      FlowState ERP SQL Connector
+                    </td>
+                    <td style={{ padding: "12px 16px", fontFamily: "var(--font-mono)", fontWeight: 700 }}>
+                      1,420 / 1,420 rows
+                    </td>
+                    <td style={{ padding: "12px 16px", color: "#059669", fontWeight: 700 }}>
+                      98.6%
+                    </td>
+                    <td style={{ padding: "12px 16px" }}>
+                      <Badge variant="emerald">Committed & Verified</Badge>
+                    </td>
+                  </tr>
+                  <tr style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+                    <td style={{ padding: "12px 16px", fontFamily: "var(--font-mono)", fontWeight: 800, color: "#8C5B23" }}>
+                      RUN-2026-0818-04
+                    </td>
+                    <td style={{ padding: "12px 16px", fontWeight: 700, color: "var(--text-primary)" }}>
+                      Bill of Materials (BOM) Multi-Level
+                    </td>
+                    <td style={{ padding: "12px 16px", fontSize: "12px", color: "var(--text-secondary)" }}>
+                      CSV Bulk File Staging
+                    </td>
+                    <td style={{ padding: "12px 16px", fontFamily: "var(--font-mono)", fontWeight: 700 }}>
+                      640 / 650 rows
+                    </td>
+                    <td style={{ padding: "12px 16px", color: "#059669", fontWeight: 700 }}>
+                      98.4%
+                    </td>
+                    <td style={{ padding: "12px 16px" }}>
+                      <Badge variant="emerald">Committed & Verified</Badge>
+                    </td>
+                  </tr>
+                  <tr style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+                    <td style={{ padding: "12px 16px", fontFamily: "var(--font-mono)", fontWeight: 800, color: "#8C5B23" }}>
+                      RUN-2026-0817-02
+                    </td>
+                    <td style={{ padding: "12px 16px", fontWeight: 700, color: "var(--text-primary)" }}>
+                      Machine Asset Register & Line Mappings
+                    </td>
+                    <td style={{ padding: "12px 16px", fontSize: "12px", color: "var(--text-secondary)" }}>
+                      SAP Plant Maintenance Export
+                    </td>
+                    <td style={{ padding: "12px 16px", fontFamily: "var(--font-mono)", fontWeight: 700 }}>
+                      390 / 390 rows
+                    </td>
+                    <td style={{ padding: "12px 16px", color: "#059669", fontWeight: 700 }}>
+                      100.0%
+                    </td>
+                    <td style={{ padding: "12px 16px" }}>
+                      <Badge variant="emerald">Committed & Verified</Badge>
+                    </td>
+                  </tr>
                 </tbody>
               </table>
             </div>
@@ -252,91 +319,110 @@ export function MigrationPage() {
         </>
       )}
 
-      {/* 5-STEP MIGRATION WIZARD VIEW */}
+      {/* STEP-BY-STEP MIGRATION WIZARD (When wizard is active) */}
       {wizardStep > 0 && (
-        <Card style={{ padding: "24px", width: "100%", boxSizing: "border-box" }}>
-          {/* Stepper Header Tracker */}
-          <div style={{ marginBottom: "28px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", position: "relative" }}>
-              {/* Line */}
-              <div style={{ position: "absolute", top: "16px", left: "20px", right: "20px", height: "3px", backgroundColor: "var(--border-subtle)", zIndex: 1 }} />
-              <div style={{ position: "absolute", top: "16px", left: "20px", width: `${((wizardStep - 1) / 4) * 90}%`, height: "3px", backgroundColor: "#C89547", zIndex: 2, transition: "width 0.3s ease" }} />
-
-              {[
-                { step: 1, label: "1. Source" },
-                { step: 2, label: "2. Field Mapping" },
-                { step: 3, label: "3. Validation" },
-                { step: 4, label: "4. Duplicate Review" },
-                { step: 5, label: "5. Summary" }
-              ].map((s) => {
-                const isPassed = s.step <= wizardStep;
-                const isCurrent = s.step === wizardStep;
-                return (
-                  <div key={s.step} style={{ display: "flex", flexDirection: "column", alignItems: "center", zIndex: 3, gap: "6px" }}>
-                    <div
-                      style={{
-                        width: "32px",
-                        height: "32px",
-                        borderRadius: "50%",
-                        backgroundColor: isPassed ? "#C89547" : "#FFFFFF",
-                        border: isCurrent ? "3px solid #8C5B23" : "2px solid var(--border-subtle)",
-                        color: isPassed ? "#FFFFFF" : "var(--text-muted)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontWeight: 800,
-                        fontSize: "12px",
-                        boxShadow: isCurrent ? "0 0 0 4px rgba(200, 149, 71, 0.25)" : "none"
-                      }}
-                    >
-                      {isPassed ? <CheckCircle2 size={16} /> : s.step}
-                    </div>
-                    <span style={{ fontSize: "11px", fontWeight: isCurrent ? 800 : 600, color: isCurrent ? "#8C5B23" : isPassed ? "var(--text-primary)" : "var(--text-muted)" }}>
-                      {s.label}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
+        <Card
+          style={{
+            backgroundColor: "#FFFFFF",
+            border: "1px solid var(--border-subtle)",
+            borderRadius: "14px",
+            padding: "24px"
+          }}
+        >
+          {/* Stepper Progress Indicator */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "28px", flexWrap: "wrap", gap: "10px", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "16px" }}>
+            {[
+              { num: 1, label: "Select Source & Dataset" },
+              { num: 2, label: "Field Mapping" },
+              { num: 3, label: "Schema Validation" },
+              { num: 4, label: "Duplicate Resolver" },
+              { num: 5, label: "Final Ingestion Commit" }
+            ].map((st) => (
+              <div
+                key={st.num}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  color: wizardStep === st.num ? "#8C5B23" : wizardStep > st.num ? "#059669" : "var(--text-muted)",
+                  fontWeight: wizardStep === st.num ? 800 : 600,
+                  fontSize: "12px"
+                }}
+              >
+                <div
+                  style={{
+                    width: "24px",
+                    height: "24px",
+                    borderRadius: "50%",
+                    backgroundColor: wizardStep === st.num ? "rgba(200, 149, 71, 0.2)" : wizardStep > st.num ? "rgba(5, 150, 105, 0.15)" : "var(--bg-card-subtle)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    border: wizardStep === st.num ? "2px solid #C89547" : "1px solid var(--border-subtle)",
+                    fontSize: "11px"
+                  }}
+                >
+                  {wizardStep > st.num ? <Check size={12} /> : st.num}
+                </div>
+                <span>{st.label}</span>
+              </div>
+            ))}
           </div>
 
-          {/* STEP 1: SOURCE SELECTION */}
+          {/* STEP 1: SELECT SOURCE */}
           {wizardStep === 1 && (
             <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
               <div style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)" }}>
-                Step 1: Select Migration Source & Dataset
+                Step 1: Select Legacy Data Source & Extract File
               </div>
-              <p style={{ fontSize: "13px", color: "var(--text-secondary)", margin: 0 }}>
-                Select legacy FlowState database or file package to ingest into the MaintenX OS master schema.
-              </p>
-
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "14px", marginTop: "10px" }}>
-                {[
-                  { title: "FlowState ERP Legacy Export", desc: "Production Orders, Item Master, UOMs, and BOM Recipes.", count: "1,420 Items" },
-                  { title: "CMMS Asset History Package", desc: "Machine Serial Numbers, Line assignments, and PM intervals.", count: "870 Assets" },
-                  { title: "Quality Specs & CCP Library", desc: "HACCP parameters, Brix tolerances, and lab calibration logs.", count: "250 Specs" }
-                ].map((src, idx) => (
-                  <div
-                    key={idx}
-                    onClick={() => setSelectedSource(src.title)}
-                    style={{
-                      border: "2px solid",
-                      borderColor: selectedSource === src.title ? "#C89547" : "var(--border-subtle)",
-                      backgroundColor: selectedSource === src.title ? "rgba(200, 149, 71, 0.05)" : "#FFFFFF",
-                      borderRadius: "10px",
-                      padding: "16px",
-                      cursor: "pointer"
-                    }}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+                <div>
+                  <label className="form-label">Source System Connector</label>
+                  <select
+                    value={selectedSource}
+                    onChange={(e) => setSelectedSource(e.target.value)}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
                   >
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <div style={{ fontSize: "13px", fontWeight: 800, color: "var(--text-primary)" }}>{src.title}</div>
-                      <Badge variant="cyan">{src.count}</Badge>
-                    </div>
-                    <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "6px", lineHeight: 1.4 }}>
-                      {src.desc}
-                    </div>
-                  </div>
-                ))}
+                    <option value="FlowState ERP - Legacy Production & SKU Store">FlowState ERP - Legacy Production & SKU Store</option>
+                    <option value="SAP S/4HANA Plant Maintenance Export">SAP S/4HANA Plant Maintenance Export</option>
+                    <option value="Microsoft Dynamics AX Item Master">Microsoft Dynamics AX Item Master</option>
+                    <option value="Direct CSV / Excel Bulk Spreadsheet">Direct CSV / Excel Bulk Spreadsheet</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="form-label">Target Dataset Table</label>
+                  <select
+                    value={selectedDataset}
+                    onChange={(e) => setSelectedDataset(e.target.value)}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  >
+                    <option value="Item & SKU Master Records (1,420 rows)">Item & SKU Master Records (1,420 rows)</option>
+                    <option value="Bill of Materials & Recipes (650 rows)">Bill of Materials & Recipes (650 rows)</option>
+                    <option value="Quality Specifications & CCP Limits (480 rows)">Quality Specifications & CCP Limits (480 rows)</option>
+                    <option value="Machine Asset Registry (390 rows)">Machine Asset Registry (390 rows)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div
+                style={{
+                  border: "2px dashed var(--border-subtle)",
+                  borderRadius: "12px",
+                  padding: "36px",
+                  textAlign: "center",
+                  backgroundColor: "var(--bg-card-subtle)",
+                  marginTop: "8px"
+                }}
+              >
+                <UploadCloud size={36} color="#C89547" style={{ margin: "0 auto 12px auto", display: "block" }} />
+                <div style={{ fontWeight: 800, color: "var(--text-primary)", fontSize: "14px" }}>
+                  Drag & Drop CSV / XLSX Data Extract or Select Connected Table
+                </div>
+                <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "4px" }}>
+                  Selected: flowstate_export_skus_master_2026.csv (1,420 rows, 480 KB)
+                </div>
               </div>
             </div>
           )}
@@ -344,62 +430,44 @@ export function MigrationPage() {
           {/* STEP 2: FIELD MAPPING */}
           {wizardStep === 2 && (
             <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
-                <div>
-                  <div style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)" }}>
-                    Step 2: Schema Field Mapping & Translation
-                  </div>
-                  <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-                    Source: <strong>{selectedSource}</strong> $\rightarrow$ Target: <strong>MaintenX SKU & Master Schema</strong>
-                  </div>
-                </div>
-                <Badge variant="emerald">6 of 7 Fields Auto-Matched</Badge>
+              <div style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)" }}>
+                Step 2: Map Legacy Columns to MaintenX OS Schema
               </div>
 
-              <div style={{ overflowX: "auto", border: "1px solid var(--border-subtle)", borderRadius: "8px" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "12px" }}>
+              <div style={{ overflowX: "auto", width: "100%" }}>
+                <table className="data-table" style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
                   <thead>
-                    <tr style={{ backgroundColor: "var(--bg-card-subtle)", borderBottom: "1px solid var(--border-subtle)" }}>
-                      <th style={{ padding: "10px 14px", textAlign: "left", color: "var(--text-secondary)" }}>FlowState Legacy Field</th>
-                      <th style={{ padding: "10px 14px", textAlign: "left", color: "var(--text-secondary)" }}>Sample Extraction Value</th>
-                      <th style={{ padding: "10px 14px", textAlign: "left", color: "var(--text-secondary)" }}>MaintenX OS Target Field</th>
-                      <th style={{ padding: "10px 14px", textAlign: "right", color: "var(--text-secondary)" }}>Mapping Status</th>
+                    <tr style={{ borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+                      <th style={{ padding: "10px 14px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Source Field (FlowState)</th>
+                      <th style={{ padding: "10px 14px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Sample Legacy Value</th>
+                      <th style={{ padding: "10px 14px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Target MaintenX OS Field</th>
+                      <th style={{ padding: "10px 14px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Mapping Status</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {fieldMappings.map((fm, idx) => (
+                    {fieldMappings.map((m, idx) => (
                       <tr key={idx} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
-                        <td style={{ padding: "10px 14px", fontWeight: 700, color: "var(--text-primary)" }}>
-                          {fm.sourceField}
+                        <td style={{ padding: "10px 14px", fontWeight: 700, color: "var(--text-primary)", fontSize: "12px" }}>
+                          {m.sourceField}
                         </td>
-                        <td style={{ padding: "10px 14px", fontFamily: "var(--font-mono)", color: "var(--text-secondary)" }}>
-                          {fm.sampleValue}
+                        <td style={{ padding: "10px 14px", fontFamily: "var(--font-mono)", fontSize: "12px", color: "var(--text-secondary)" }}>
+                          {m.sampleValue}
                         </td>
                         <td style={{ padding: "10px 14px" }}>
-                          <select
-                            value={fm.maintenxField}
+                          <input
+                            type="text"
+                            value={m.maintenxField}
                             onChange={(e) => {
                               const updated = [...fieldMappings];
                               updated[idx].maintenxField = e.target.value;
-                              updated[idx].status = e.target.value.includes("Ignore") ? "Ignored" : "Matched";
                               setFieldMappings(updated);
                             }}
                             className="form-input"
-                            style={{ height: "30px", fontSize: "12px", width: "220px" }}
-                          >
-                            <option value="SKU Code">SKU Code</option>
-                            <option value="SKU Name">SKU Name</option>
-                            <option value="Plant Location">Plant Location</option>
-                            <option value="UOM">UOM</option>
-                            <option value="Standard Cost">Standard Cost</option>
-                            <option value="Description">Description</option>
-                            <option value="-- Ignore / Unmapped --">-- Ignore / Unmapped --</option>
-                          </select>
+                            style={{ fontSize: "12px", padding: "4px 8px", backgroundColor: "#FFFFFF" }}
+                          />
                         </td>
-                        <td style={{ padding: "10px 14px", textAlign: "right" }}>
-                          <Badge variant={fm.status === "Matched" ? "emerald" : "amber"}>
-                            {fm.status}
-                          </Badge>
+                        <td style={{ padding: "10px 14px" }}>
+                          <Badge variant={m.status === "Matched" ? "emerald" : "gray"}>{m.status}</Badge>
                         </td>
                       </tr>
                     ))}
@@ -409,95 +477,76 @@ export function MigrationPage() {
             </div>
           )}
 
-          {/* STEP 3: VALIDATION */}
+          {/* STEP 3: SCHEMA VALIDATION */}
           {wizardStep === 3 && (
             <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
               <div style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)" }}>
-                Step 3: Schema Validation & Integrity Checks
+                Step 3: Schema Validation & Anomaly Diagnostics
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "12px" }}>
-                <div style={{ backgroundColor: "rgba(5, 150, 105, 0.08)", border: "1px solid rgba(5, 150, 105, 0.3)", borderRadius: "8px", padding: "14px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#059669", fontWeight: 800 }}>
-                    <CheckCircle2 size={16} /> Required Fields Check
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+                <div style={{ border: "1px solid rgba(5, 150, 105, 0.3)", borderRadius: "10px", padding: "16px", backgroundColor: "rgba(5, 150, 105, 0.04)" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#059669", fontWeight: 800, fontSize: "13px" }}>
+                    <CheckCircle2 size={16} />
+                    <span>Conformant Clean Records (1,390 Rows)</span>
                   </div>
-                  <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "6px" }}>
-                    100% SKU codes and item names present.
-                  </div>
+                  <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "8px", lineHeight: 1.4 }}>
+                    Mandatory keys (SKU Code, UOM, Plant, Category) matched 100% with no missing foreign keys.
+                  </p>
                 </div>
 
-                <div style={{ backgroundColor: "rgba(5, 150, 105, 0.08)", border: "1px solid rgba(5, 150, 105, 0.3)", borderRadius: "8px", padding: "14px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#059669", fontWeight: 800 }}>
-                    <CheckCircle2 size={16} /> Foreign Key Integrity
+                <div style={{ border: "1px solid rgba(245, 158, 11, 0.3)", borderRadius: "10px", padding: "16px", backgroundColor: "rgba(245, 158, 11, 0.04)" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#D97706", fontWeight: 800, fontSize: "13px" }}>
+                    <AlertTriangle size={16} />
+                    <span>Flagged for Review (30 Rows)</span>
                   </div>
-                  <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "6px" }}>
-                    All Plant IDs map to active facilities (PLT-01, PLT-02).
-                  </div>
+                  <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "8px", lineHeight: 1.4 }}>
+                    3 duplicate code matches detected. 27 records formatted with whitespace padding auto-sanitized.
+                  </p>
                 </div>
-
-                <div style={{ backgroundColor: "rgba(200, 149, 71, 0.08)", border: "1px solid rgba(200, 149, 71, 0.3)", borderRadius: "8px", padding: "14px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#8C5B23", fontWeight: 800 }}>
-                    <AlertTriangle size={16} /> Duplicate Detection
-                  </div>
-                  <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "6px" }}>
-                    3 potential duplicate SKU records require review in Step 4.
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ fontSize: "13px", color: "#059669", fontWeight: 700, marginTop: "8px" }}>
-                ✓ Pre-flight validation passed with 97.8% confidence score. Ready to proceed to duplicate triage.
               </div>
             </div>
           )}
 
-          {/* STEP 4: DUPLICATE REVIEW */}
+          {/* STEP 4: DUPLICATE RESOLVER */}
           {wizardStep === 4 && (
             <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
-                <div>
-                  <div style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)" }}>
-                    Step 4: Duplicate Record Triage & Reconciliation
-                  </div>
-                  <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-                    Select resolution strategy for overlapping legacy and existing Master records.
-                  </div>
-                </div>
-                <Badge variant="amber">3 Overlaps Detected</Badge>
+              <div style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)" }}>
+                Step 4: Duplicate Record Decision Matrix
               </div>
 
-              <div style={{ overflowX: "auto", border: "1px solid var(--border-subtle)", borderRadius: "8px" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "12px" }}>
+              <div style={{ overflowX: "auto", width: "100%" }}>
+                <table className="data-table" style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
                   <thead>
-                    <tr style={{ backgroundColor: "var(--bg-card-subtle)", borderBottom: "1px solid var(--border-subtle)" }}>
-                      <th style={{ padding: "10px 14px", textAlign: "left", color: "var(--text-secondary)" }}>Source Incoming Record</th>
-                      <th style={{ padding: "10px 14px", textAlign: "left", color: "var(--text-secondary)" }}>Existing MaintenX Record</th>
-                      <th style={{ padding: "10px 14px", textAlign: "left", color: "var(--text-secondary)" }}>Match Criteria</th>
-                      <th style={{ padding: "10px 14px", textAlign: "right", color: "var(--text-secondary)" }}>Resolution Action</th>
+                    <tr style={{ borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+                      <th style={{ padding: "10px 14px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Incoming Source Record</th>
+                      <th style={{ padding: "10px 14px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Existing MaintenX Record</th>
+                      <th style={{ padding: "10px 14px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Match Rule</th>
+                      <th style={{ padding: "10px 14px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Action Required</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {duplicates.map((dup) => (
-                      <tr key={dup.id} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
-                        <td style={{ padding: "10px 14px", fontWeight: 700, color: "var(--text-primary)" }}>
-                          {dup.sourceRecord}
+                    {duplicates.map((d) => (
+                      <tr key={d.id} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+                        <td style={{ padding: "10px 14px", fontWeight: 700, color: "var(--text-primary)", fontSize: "12px" }}>
+                          {d.sourceRecord}
                         </td>
-                        <td style={{ padding: "10px 14px", color: "var(--text-secondary)" }}>
-                          {dup.existingRecord}
+                        <td style={{ padding: "10px 14px", fontSize: "12px", color: "var(--text-secondary)" }}>
+                          {d.existingRecord}
                         </td>
                         <td style={{ padding: "10px 14px" }}>
-                          <Badge variant="cyan">{dup.matchType}</Badge>
+                          <Badge variant="amber">{d.matchType}</Badge>
                         </td>
-                        <td style={{ padding: "10px 14px", textAlign: "right" }}>
+                        <td style={{ padding: "10px 14px" }}>
                           <select
-                            value={dup.actionTaken}
-                            onChange={(e) => handleDuplicateActionChange(dup.id, e.target.value)}
+                            value={d.actionTaken}
+                            onChange={(e) => handleDuplicateActionChange(d.id, e.target.value)}
                             className="form-input"
-                            style={{ height: "30px", fontSize: "12px", width: "150px" }}
+                            style={{ fontSize: "12px", padding: "4px 8px", width: "auto", backgroundColor: "#FFFFFF" }}
                           >
-                            <option value="Keep Existing">Keep Existing</option>
-                            <option value="Merge">Merge</option>
-                            <option value="Create New">Create New</option>
+                            <option value="Merge">Merge (Overwrite Values)</option>
+                            <option value="Keep Existing">Keep Existing (Discard Incoming)</option>
+                            <option value="Create New">Create New (Append _MIG)</option>
                             <option value="Skip">Skip</option>
                           </select>
                         </td>

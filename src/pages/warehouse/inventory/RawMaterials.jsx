@@ -3,13 +3,18 @@ import { Package } from "lucide-react";
 import { Card } from "../../../components/common/Card";
 import { Badge } from "../../../components/common/Badge";
 import { useApp } from "../../../context/AppContext";
+import { useInventory } from "../../../context/InventoryContext";
 import { useMasterData } from "../../../context/MasterDataContext";
 
 export function RawMaterials() {
   const { addToast } = useApp();
+  const { lots } = useInventory();
   const { skus = [] } = useMasterData();
 
-  // Seed inventory from MasterDataContext non-finished goods SKUs
+  // Filter lots that are Raw Materials from InventoryContext (live data)
+  const rmLots = lots.filter(lot => lot.category === "Raw Material");
+
+  // Seed inventory from MasterDataContext non-finished goods SKUs (pulled changes)
   const rawMasterSkus = skus.filter((s) => s.category !== "Finished Goods");
 
   const [materials, setMaterials] = useState(() => {
@@ -28,25 +33,9 @@ export function RawMaterials() {
     ];
   });
 
-  const handleToggleStatus = (id, currentStatus) => {
-    setMaterials(prev => prev.map(m => {
-      if (m.id === id) {
-        if (currentStatus === "Allocated") {
-          addToast("Material released to General Inventory.", "info");
-          return { ...m, status: "Available" };
-        } else if (currentStatus === "Available") {
-          addToast("Material successfully allocated to Production.", "success");
-          return { ...m, status: "Allocated" };
-        } else if (currentStatus === "Secure Stock") {
-          addToast("Stock marked for manual review.", "warning");
-          return { ...m, status: "Review" };
-        } else {
-          addToast("Stock secured.", "success");
-          return { ...m, status: "Secure Stock" };
-        }
-      }
-      return m;
-    }));
+  const handleToggleStatus = (lotNumber, currentStatus) => {
+    // Basic mock toggle for demonstration on the UI
+    addToast(`Status toggle for ${lotNumber} not fully implemented in mock.`, "info");
   };
 
   return (
@@ -61,7 +50,50 @@ export function RawMaterials() {
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-        {materials.map((m) => (
+        {/* Live lots from InventoryContext (Receiving flow) */}
+        {rmLots.map((m) => (
+          <Card 
+            key={m.lotNumber} 
+            style={{ 
+              display: "flex", 
+              justifyContent: "space-between", 
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "16px",
+              padding: "20px"
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "16px", flex: 1, minWidth: "250px" }}>
+              <div style={{ padding: "10px", backgroundColor: "rgba(200, 149, 71, 0.1)", borderRadius: "10px", flexShrink: 0, height: "fit-content" }}>
+                <Package size={24} color="#C89547" />
+              </div>
+              <span style={{ fontSize: "16px", color: "var(--text-primary)", fontWeight: 500, lineHeight: 1.5 }}>
+                {m.materialName} <br/>
+                <span style={{ fontSize: "14px", color: "var(--text-secondary)" }}>
+                  Lot: {m.lotNumber} <span style={{ margin: "0 4px" }}>•</span> On-Hand: {m.quantity} {m.unit}
+                </span>
+                <br/>
+                <span style={{ fontSize: "13px", color: "#C89547" }}>
+                  Location: {m.location}
+                </span>
+              </span>
+            </div>
+            
+            <div 
+              onClick={() => handleToggleStatus(m.lotNumber, m.status)}
+              style={{ cursor: "pointer", transition: "opacity 0.2s" }}
+              onMouseOver={(e) => e.currentTarget.style.opacity = 0.8}
+              onMouseOut={(e) => e.currentTarget.style.opacity = 1}
+            >
+              <Badge variant={m.status === "PUT-AWAY" ? "emerald" : m.status === "STAGED" ? "warning" : "slate"}>
+                {(m.status || m.qaStatus || "AVAILABLE").toUpperCase()}
+              </Badge>
+            </div>
+          </Card>
+        ))}
+
+        {/* Master Data SKUs (pulled changes) */}
+        {rmLots.length === 0 && materials.map((m) => (
           <Card 
             key={m.id} 
             style={{ 
@@ -79,22 +111,22 @@ export function RawMaterials() {
               </div>
               <span style={{ fontSize: "16px", color: "var(--text-primary)", fontWeight: 500, lineHeight: 1.5 }}>
                 {m.name} <br/>
-                <span style={{ fontSize: "14px", color: "var(--text-secondary)" }}>SKU: {m.sku} <span style={{ margin: "0 4px" }}>•</span> On-Hand: {m.qty}</span>
+                <span style={{ fontSize: "14px", color: "var(--text-secondary)" }}>
+                  SKU: {m.sku} <span style={{ margin: "0 4px" }}>•</span> On-Hand: {m.qty}
+                </span>
               </span>
             </div>
-            
-            <div 
-              onClick={() => handleToggleStatus(m.id, m.status)}
-              style={{ cursor: "pointer", transition: "opacity 0.2s" }}
-              onMouseOver={(e) => e.currentTarget.style.opacity = 0.8}
-              onMouseOut={(e) => e.currentTarget.style.opacity = 1}
-            >
-              <Badge variant={m.status === "Allocated" || m.status === "Secure Stock" ? "emerald" : m.status === "Review" ? "danger" : "slate"}>
-                {m.status.toUpperCase()}
-              </Badge>
-            </div>
+            <Badge variant={m.status === "Allocated" ? "emerald" : m.status === "Secure Stock" ? "warning" : "slate"}>
+              {m.status.toUpperCase()}
+            </Badge>
           </Card>
         ))}
+
+        {rmLots.length === 0 && materials.length === 0 && (
+          <div style={{ padding: "40px", textAlign: "center" }}>
+            <p style={{ color: "var(--text-secondary)" }}>No raw materials in inventory.</p>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   FileCheck,
@@ -11,156 +11,119 @@ import {
   Clock,
   Plus,
   X,
-  Filter
+  Filter,
+  Wrench,
+  Layers,
+  Sparkles,
+  BookOpen
 } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { Button } from "../../components/common/Button";
 import { Badge } from "../../components/common/Badge";
 import { StatCard } from "../../components/common/StatCard";
+import { useCI } from "../../context/CIContext";
 import { useApp } from "../../context/AppContext";
 
 export function VerifiedSolutions() {
   const navigate = useNavigate();
   const { addToast } = useApp();
-
-  const [solutions, setSolutions] = useState([
-    {
-      id: "VS-21",
-      failure: "HTST Temperature Sensor Drift during 98°C Steam Sanitization",
-      fix: "Replace OEM sensor with dual PT100 RTD Class A probe in sanitary thermowell and codify 3-point pre-shift calibration cross-check against dry-well block calibrator.",
-      effectiveness: "100%",
-      date: "2026-07-14",
-      author: "Pedro Alves (Maintenance Lead)",
-      votes: 14,
-      category: "Thermal Loop"
-    },
-    {
-      id: "VS-19",
-      failure: "Filler Nozzle Volumetric Over-Fill Liquid Giveaway (+2.4g/bottle)",
-      fix: "Recalibrate servo dosing stroke profile to ±0.2g using dynamic Mettler Toledo high-speed checkweigher telemetry feedback loop.",
-      effectiveness: "100%",
-      date: "2026-06-20",
-      author: "Ahmed Hassan (CI Lead)",
-      votes: 19,
-      category: "Liquid Dosing"
-    },
-    {
-      id: "VS-18",
-      failure: "Capping Head Spindle Torque Slip under 600 BPM Rotation",
-      fix: "Upgrade to magnetic hysteresis clutches with quarterly spring deflection audits and wireless telemetry torque caps.",
-      effectiveness: "100%",
-      date: "2026-05-10",
-      author: "Elena Rostova (Tooling Tech)",
-      votes: 11,
-      category: "Rotary Mechanical"
-    }
-  ]);
+  const {
+    verifiedSolutions = [],
+    createVerifiedSolution,
+    investigations = []
+  } = useCI();
 
   const [searchTerm, setSearchTerm] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("ALL");
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const [newSolution, setNewSolution] = useState({
-    failure: "",
-    fix: "",
-    category: "Thermal Loop",
-    author: "Alexander Vance (Admin)"
+    assetId: "AST-002",
+    assetName: "HTST Flash Pasteurizer",
+    failureMode: "",
+    symptom: "",
+    rootCause: "",
+    solutionSteps: "",
+    partsUsed: "",
+    sourceRcaId: investigations[0]?.id || ""
   });
-
-  const handleVote = (id) => {
-    setSolutions((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, votes: s.votes + 1 } : s))
-    );
-    addToast("Upvoted verified solution! Knowledge base score updated.", "success");
-  };
 
   const handleAddSubmit = (e) => {
     e.preventDefault();
-    if (!newSolution.failure.trim() || !newSolution.fix.trim()) {
-      addToast("Please provide failure symptom and standardized fix.", "warning");
+    if (!newSolution.failureMode.trim() || !newSolution.solutionSteps.trim()) {
+      addToast("Please provide failure mode and solution steps.", "warning");
       return;
     }
 
-    const created = {
-      id: `VS-${Math.floor(22 + Math.random() * 50)}`,
-      failure: newSolution.failure,
-      fix: newSolution.fix,
-      category: newSolution.category,
-      effectiveness: "100%",
-      date: new Date().toISOString().substring(0, 10),
-      author: newSolution.author,
-      votes: 1
-    };
-
-    setSolutions([created, ...solutions]);
-    addToast(`Solution ${created.id} codified and added to library!`, "success");
-    setIsModalOpen(false);
+    createVerifiedSolution(newSolution);
     setNewSolution({
-      failure: "",
-      fix: "",
-      category: "Thermal Loop",
-      author: "Alexander Vance (Admin)"
+      assetId: "AST-002",
+      assetName: "HTST Flash Pasteurizer",
+      failureMode: "",
+      symptom: "",
+      rootCause: "",
+      solutionSteps: "",
+      partsUsed: "",
+      sourceRcaId: investigations[0]?.id || ""
     });
+    setIsModalOpen(false);
   };
 
   const handleExportCSV = () => {
-    const headers = "Solution ID,Failure Mode,Validated Countermeasure,Category,Effectiveness,Verified Date,Author,Votes\n";
+    const headers = "Solution ID,Asset Name,Failure Mode,Symptom,Root Cause,Solution Steps,Parts Used,Source RCA,Verified By,Date,Status\n";
     const rows = filteredSolutions
-      .map((s) => `"${s.id}","${s.failure}","${s.fix}","${s.category}","${s.effectiveness}","${s.date}","${s.author}",${s.votes}`)
+      .map((s) => `"${s.id}","${s.assetName}","${s.failureMode}","${s.symptom}","${s.rootCause}","${s.solutionSteps}","${s.partsUsed || "-"}","${s.sourceRcaId || "-"}","${s.verifiedBy}","${s.verifiedDate}","${s.status}"`)
       .join("\n");
     const blob = new Blob([headers + rows], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `Verified_Solutions_Knowledge_Base_${new Date().toISOString().substring(0, 10)}.csv`;
+    a.download = `Verified_Troubleshooting_Solutions_${new Date().toISOString().substring(0, 10)}.csv`;
     a.click();
-    addToast("Verified solutions knowledge base exported to CSV.", "info");
+    addToast("Verified solutions library exported to CSV.", "info");
   };
 
-  const totalVotes = solutions.reduce((sum, s) => sum + s.votes, 0);
-
-  const filteredSolutions = solutions.filter((s) => {
-    const term = searchTerm.toLowerCase();
-    const matchesSearch =
-      !searchTerm.trim() ||
-      s.failure.toLowerCase().includes(term) ||
-      s.fix.toLowerCase().includes(term) ||
-      s.category.toLowerCase().includes(term) ||
-      s.author.toLowerCase().includes(term);
-    const matchesCategory = categoryFilter === "ALL" || s.category === categoryFilter;
-    return matchesSearch && matchesCategory;
-  });
+  const filteredSolutions = useMemo(() => {
+    return verifiedSolutions.filter((s) => {
+      const q = searchTerm.toLowerCase().trim();
+      return (
+        !q ||
+        s.id.toLowerCase().includes(q) ||
+        s.assetName?.toLowerCase().includes(q) ||
+        s.failureMode.toLowerCase().includes(q) ||
+        s.symptom.toLowerCase().includes(q) ||
+        s.rootCause.toLowerCase().includes(q) ||
+        s.solutionSteps.toLowerCase().includes(q)
+      );
+    });
+  }, [verifiedSolutions, searchTerm]);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%", maxWidth: "1200px", margin: "0 auto", minWidth: 0 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%", maxWidth: "1600px", margin: "0 auto", minWidth: 0 }}>
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px", width: "100%" }}>
         <div style={{ minWidth: "240px", flex: 1 }}>
           <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
             <h1 style={{ fontSize: "clamp(18px, 4vw, 24px)", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.3px", lineHeight: 1.2 }}>
-              Verified Solutions Library
+              Verified Troubleshooting Solutions
             </h1>
-            <Badge variant="emerald">100% SUSTAINED EFFICACY</Badge>
+            <Badge variant="cyan">{verifiedSolutions.length} STANDARDIZED REMEDIES</Badge>
           </div>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-          <Button variant="primary" icon={Plus} onClick={() => setIsModalOpen(true)} style={{ fontSize: "12px", padding: "7px 12px" }}>
-            + Submit Solution
-          </Button>
           <Button variant="secondary" icon={Download} onClick={handleExportCSV} style={{ fontSize: "12px", padding: "7px 12px" }}>
-            Export CSV
+            Export Library CSV
           </Button>
           <Button variant="secondary" onClick={() => navigate("/ci/standards")} style={{ fontSize: "12px", padding: "7px 12px" }}>
-            Standards Library
+            Controlled Standards
           </Button>
-          <Button variant="secondary" icon={ArrowRight} onClick={() => navigate("/ci/engineering")} style={{ fontSize: "12px", padding: "7px 12px" }}>
-            Engineering Hub
+          <Button variant="primary" icon={Plus} onClick={() => setIsModalOpen(true)} style={{ fontSize: "12px", padding: "7px 12px" }}>
+            Publish Verified Solution
           </Button>
         </div>
       </div>
 
-      {/* KPI Tickers - 2x2 on mobile, 4 on desktop */}
+      {/* KPI Tickers */}
       <div
         className="kpi-grid-responsive grid-4"
         style={{
@@ -172,129 +135,122 @@ export function VerifiedSolutions() {
         }}
       >
         <StatCard
-          title="Verified Solutions"
-          value={solutions.length.toString()}
+          title="Published Solutions"
+          value={verifiedSolutions.length.toString()}
           unit="Proven Fixes"
+          icon={FileCheck}
+          colorVariant="emerald"
+        />
+        <StatCard
+          title="First-Time-Fix Rate"
+          value="98.2%"
+          unit="Remediation Quality"
           icon={CheckCircle2}
           colorVariant="emerald"
         />
         <StatCard
-          title="Recurrence Defense"
-          value="100%"
-          unit="Sustained"
-          icon={ShieldCheck}
-          colorVariant="emerald"
-        />
-        <StatCard
-          title="Avg Resolution Time"
-          value="2.4 Days"
-          unit="MTTR Gain"
+          title="Mean Time To Diagnose"
+          value="8 min"
+          unit="Standardized Flow"
           icon={Clock}
           colorVariant="cyan"
         />
         <StatCard
-          title="Technician Upvotes"
-          value={`${totalVotes} Votes`}
-          unit="Endorsed"
-          icon={ThumbsUp}
-          colorVariant="amber"
+          title="Knowledge Sharing"
+          value="Active"
+          unit="Fleet Synchronized"
+          icon={BookOpen}
+          colorVariant="emerald"
         />
       </div>
 
-      {/* Structured Clean Data Table Card */}
-      <Card style={{ padding: "18px", minWidth: 0, width: "100%", boxSizing: "border-box" }}>
-        {/* Table Controls Toolbar */}
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", alignItems: "center", marginBottom: "14px", justifyContent: "space-between" }}>
-          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", flex: 1, minWidth: "220px" }}>
-            <div style={{ position: "relative", minWidth: "200px", flex: 1 }}>
-              <Search size={15} color="var(--text-muted)" style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)" }} />
-              <input
-                type="text"
-                placeholder=""
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="form-input"
-                style={{ paddingLeft: "32px", height: "36px", fontSize: "12px", backgroundColor: "#FFFFFF" }}
-              />
-            </div>
-
-            <select
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-              className="form-select"
-              style={{ width: "auto", minWidth: "150px", height: "36px", fontSize: "12px", backgroundColor: "#FFFFFF" }}
-            >
-              <option value="ALL">All Categories</option>
-              <option value="Thermal Loop">Thermal Loop</option>
-              <option value="Liquid Dosing">Liquid Dosing</option>
-              <option value="Rotary Mechanical">Rotary Mechanical</option>
-            </select>
+      {/* Main Table Card */}
+      <Card
+        style={{
+          backgroundColor: "#FFFFFF",
+          border: "1px solid var(--border-subtle)",
+          borderRadius: "14px",
+          overflow: "hidden"
+        }}
+      >
+        {/* Controls Bar */}
+        <div
+          style={{
+            padding: "16px 20px",
+            borderBottom: "1px solid var(--border-subtle)",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "12px",
+            backgroundColor: "var(--bg-card-subtle)"
+          }}
+        >
+          <div style={{ position: "relative", minWidth: "280px", flex: 1 }}>
+            <Search
+              size={15}
+              style={{
+                position: "absolute",
+                left: "12px",
+                top: "50%",
+                transform: "translateY(-50%)",
+                color: "var(--text-muted)"
+              }}
+            />
+            <input
+              type="text"
+              placeholder="Search by equipment, symptom, root cause or failure mode..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="form-input"
+              style={{
+                paddingLeft: "36px",
+                backgroundColor: "#FFFFFF",
+                fontSize: "12px",
+                width: "100%"
+              }}
+            />
           </div>
         </div>
 
-        {/* Structured Clean Table */}
-        <div className="data-table-container" style={{ width: "100%", overflowX: "auto", WebkitOverflowScrolling: "touch", display: "block" }}>
-          <table className="data-table" style={{ width: "100%", minWidth: "780px" }}>
+        {/* Table View */}
+        <div style={{ overflowX: "auto", width: "100%" }}>
+          <table className="data-table" style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
             <thead>
-              <tr>
-                <th>Code</th>
-                <th>Failure Mode / Problem Symptom</th>
-                <th>Standardized Kaizen Countermeasure</th>
-                <th>Domain</th>
-                <th>Author & Date</th>
-                <th>Efficacy</th>
-                <th>Endorsements</th>
+              <tr style={{ borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Equipment & Failure Mode</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Symptom & Root Cause</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Standardized Fix Steps</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Spare Parts Required</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Verified By</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Status</th>
               </tr>
             </thead>
             <tbody>
               {filteredSolutions.map((s) => (
-                <tr key={s.id}>
-                  <td>
-                    <span style={{ fontWeight: 800, color: "#8C5B23", fontFamily: "var(--font-mono)" }}>
-                      {s.id}
-                    </span>
-                  </td>
-                  <td style={{ maxWidth: "260px" }}>
-                    <strong style={{ color: "var(--text-primary)", fontSize: "13px", lineHeight: 1.3, display: "block" }}>
-                      {s.failure}
-                    </strong>
-                  </td>
-                  <td style={{ maxWidth: "340px" }}>
-                    <div style={{ fontSize: "12px", color: "var(--text-secondary)", lineHeight: 1.4 }}>
-                      {s.fix}
+                <tr key={s.id} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+                  <td style={{ padding: "12px 16px" }}>
+                    <div style={{ fontWeight: 800, color: "var(--text-primary)", fontSize: "13px" }}>{s.failureMode}</div>
+                    <div style={{ fontSize: "11px", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>
+                      {s.id} • {s.assetName}
                     </div>
                   </td>
-                  <td>
-                    <Badge variant="cyan">{s.category}</Badge>
+                  <td style={{ padding: "12px 16px", fontSize: "12px", color: "var(--text-secondary)" }}>
+                    <div><strong>Symptom:</strong> {s.symptom}</div>
+                    <div style={{ color: "#D97706", marginTop: "2px" }}><strong>Cause:</strong> {s.rootCause}</div>
                   </td>
-                  <td>
-                    <div style={{ fontSize: "12px", color: "var(--text-primary)", fontWeight: 600 }}>{s.author}</div>
-                    <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>{s.date}</div>
+                  <td style={{ padding: "12px 16px", fontSize: "12px", color: "var(--text-primary)", fontWeight: 600 }}>
+                    {s.solutionSteps}
                   </td>
-                  <td>
-                    <Badge variant="emerald">100% Proven</Badge>
+                  <td style={{ padding: "12px 16px", fontSize: "12px", color: "var(--text-secondary)", fontFamily: "var(--font-mono)" }}>
+                    {s.partsUsed || "Standard tooling"}
                   </td>
-                  <td>
-                    <button
-                      onClick={() => handleVote(s.id)}
-                      title="Vote this solution as helpful"
-                      style={{
-                        padding: "5px 10px",
-                        borderRadius: "6px",
-                        fontSize: "11px",
-                        fontWeight: 700,
-                        backgroundColor: "rgba(5, 150, 105, 0.1)",
-                        color: "#059669",
-                        border: "1px solid rgba(5, 150, 105, 0.3)",
-                        cursor: "pointer",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "4px",
-                        whiteSpace: "nowrap"
-                      }}
-                    >
-                      <ThumbsUp size={12} /> {s.votes} Votes
-                    </button>
+                  <td style={{ padding: "12px 16px", fontSize: "12px", color: "var(--text-secondary)" }}>
+                    <div>{s.verifiedBy}</div>
+                    <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>{s.verifiedDate}</div>
+                  </td>
+                  <td style={{ padding: "12px 16px" }}>
+                    <Badge variant="emerald">PUBLISHED</Badge>
                   </td>
                 </tr>
               ))}
@@ -303,55 +259,92 @@ export function VerifiedSolutions() {
         </div>
       </Card>
 
-      {/* SUBMIT SOLUTION MODAL */}
+      {/* PUBLISH SOLUTION MODAL */}
       {isModalOpen && (
         <div className="modal-backdrop" onClick={() => setIsModalOpen(false)}>
-          <div className="modal-content" style={{ maxWidth: "520px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+          <div className="modal-content" style={{ maxWidth: "560px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
-              <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)" }}>
-                Submit Verified Kaizen Solution
-              </h2>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <FileCheck size={18} color="#C89547" />
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                  Publish Verified Solution
+                </h2>
+              </div>
               <button onClick={() => setIsModalOpen(false)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
                 <X size={18} />
               </button>
             </div>
 
             <form onSubmit={handleAddSubmit} style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div>
+                  <label className="form-label">Target Asset</label>
+                  <select
+                    value={newSolution.assetId}
+                    onChange={(e) => {
+                      const name = e.target.value === "AST-002" ? "HTST Flash Pasteurizer" : "Rotary Isobaric Bottle Filler";
+                      setNewSolution({ ...newSolution, assetId: e.target.value, assetName: name });
+                    }}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  >
+                    <option value="AST-002">AST-002 — HTST Flash Pasteurizer</option>
+                    <option value="AST-001">AST-001 — Rotary Isobaric Bottle Filler</option>
+                    <option value="AST-004">AST-004 — Sleeve Rotary Labeler</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="form-label">Source RCA Investigation</label>
+                  <select
+                    value={newSolution.sourceRcaId}
+                    onChange={(e) => setNewSolution({ ...newSolution, sourceRcaId: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  >
+                    <option value="">Direct Verification</option>
+                    {investigations.map((inv) => (
+                      <option key={inv.id} value={inv.id}>{inv.id} — {inv.title.substring(0, 20)}...</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
               <div>
-                <label className="form-label">Failure Mode / Symptom Description *</label>
+                <label className="form-label">Failure Mode *</label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Induction Sealer Heat Inconsistency on 38mm Neck"
-                  value={newSolution.failure}
-                  onChange={(e) => setNewSolution({ ...newSolution, failure: e.target.value })}
+                  placeholder="e.g. Pneumatic Actuator Slow Divert on Temperature Plunge"
+                  value={newSolution.failureMode}
+                  onChange={(e) => setNewSolution({ ...newSolution, failureMode: e.target.value })}
                   className="form-input"
                   style={{ backgroundColor: "#FFFFFF" }}
                 />
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                 <div>
-                  <label className="form-label">Domain / System</label>
-                  <select
-                    className="form-select"
-                    value={newSolution.category}
-                    onChange={(e) => setNewSolution({ ...newSolution, category: e.target.value })}
+                  <label className="form-label">Observed Symptom</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Divert valve chatter, CCP warning"
+                    value={newSolution.symptom}
+                    onChange={(e) => setNewSolution({ ...newSolution, symptom: e.target.value })}
+                    className="form-input"
                     style={{ backgroundColor: "#FFFFFF" }}
-                  >
-                    <option value="Thermal Loop">Thermal Loop</option>
-                    <option value="Liquid Dosing">Liquid Dosing</option>
-                    <option value="Rotary Mechanical">Rotary Mechanical</option>
-                    <option value="Electrical & Sensors">Electrical & Sensors</option>
-                  </select>
+                  />
                 </div>
 
                 <div>
-                  <label className="form-label">Author / Lead Tech</label>
+                  <label className="form-label">Validated Root Cause</label>
                   <input
                     type="text"
-                    value={newSolution.author}
-                    onChange={(e) => setNewSolution({ ...newSolution, author: e.target.value })}
+                    required
+                    placeholder="e.g. Particulate fouling in pilot regulator"
+                    value={newSolution.rootCause}
+                    onChange={(e) => setNewSolution({ ...newSolution, rootCause: e.target.value })}
                     className="form-input"
                     style={{ backgroundColor: "#FFFFFF" }}
                   />
@@ -359,24 +352,36 @@ export function VerifiedSolutions() {
               </div>
 
               <div>
-                <label className="form-label">Standardized Kaizen Fix / Procedure *</label>
+                <label className="form-label">Standardized Solution Steps *</label>
                 <textarea
                   rows={3}
                   required
-                  placeholder="Describe step-by-step resolution, torque specs, replacement part #, or parameter changes..."
-                  value={newSolution.fix}
-                  onChange={(e) => setNewSolution({ ...newSolution, fix: e.target.value })}
+                  placeholder="1. Isolate air line. 2. Clean regulator screen in ultrasonic bath. 3. Replace pilot seal ring..."
+                  value={newSolution.solutionSteps}
+                  onChange={(e) => setNewSolution({ ...newSolution, solutionSteps: e.target.value })}
                   className="form-textarea"
                   style={{ backgroundColor: "#FFFFFF" }}
                 />
               </div>
 
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
+              <div>
+                <label className="form-label">Parts / Consumables Used</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Pneumatic Seal Kit SKU-SP-4402, Loctite 243"
+                  value={newSolution.partsUsed}
+                  onChange={(e) => setNewSolution({ ...newSolution, partsUsed: e.target.value })}
+                  className="form-input"
+                  style={{ backgroundColor: "#FFFFFF" }}
+                />
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "8px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
                 <Button variant="secondary" onClick={() => setIsModalOpen(false)}>
                   Cancel
                 </Button>
                 <Button variant="primary" type="submit">
-                  Save Solution
+                  Publish to Knowledge Base
                 </Button>
               </div>
             </form>

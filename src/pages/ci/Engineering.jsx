@@ -13,50 +13,51 @@ import {
   Search,
   Filter,
   User,
-  X
+  X,
+  Zap,
+  Layers,
+  FileCheck,
+  ShieldCheck
 } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { StatCard } from "../../components/common/StatCard";
 import { Badge } from "../../components/common/Badge";
 import { Button } from "../../components/common/Button";
+import { useCI } from "../../context/CIContext";
 import { useApp } from "../../context/AppContext";
 
 export function Engineering() {
   const navigate = useNavigate();
   const { addToast } = useApp();
-
-  const [projects, setProjects] = useState([
-    {
-      id: "ENG-2026-01",
-      name: "Filler Line 1 — Volumetric Servo Dosing & Fill Volume Upgrade",
-      status: "In Progress",
-      budget: "$38,000",
-      spent: "$26,400",
-      lead: "Ahmed Hassan",
-      phase: "Installation & FAT"
-    },
-    {
-      id: "ENG-2026-02",
-      name: "CIP Skid Automation & Burst Wash Retrofit",
-      status: "Design Phase",
-      budget: "$44,400",
-      spent: "$12,000",
-      lead: "David Kim",
-      phase: "P&ID Review"
-    }
-  ]);
+  const {
+    capexProjects = [],
+    createCapexProject,
+    investigations = [],
+    ciProjects = [],
+    openCapexCount
+  } = useCI();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Modal Form State
   const [newProject, setNewProject] = useState({
     name: "",
-    budget: "$25,000",
-    lead: "Ahmed Hassan",
-    phase: "Concept & Spec"
+    budget: "50000",
+    estimatedCost: "45000",
+    owner: "David Kim (Lead CI)",
+    linkedRcaId: investigations[0]?.id || "",
+    linkedProjectId: ciProjects[0]?.id || "",
+    engineeringJustification: ""
   });
+
+  const totalBudget = useMemo(() => {
+    return capexProjects.reduce((acc, c) => acc + (Number(c.budget) || 0), 0);
+  }, [capexProjects]);
+
+  const totalActual = useMemo(() => {
+    return capexProjects.reduce((acc, c) => acc + (Number(c.actualCost) || 0), 0);
+  }, [capexProjects]);
 
   const handleAdd = (e) => {
     e.preventDefault();
@@ -65,60 +66,47 @@ export function Engineering() {
       return;
     }
 
-    const nextNum = projects.length + 1;
-    const id = `ENG-2026-0${nextNum}`;
-    setProjects((prev) => [
-      {
-        id,
-        name: newProject.name.trim(),
-        status: "Design Phase",
-        budget: newProject.budget.startsWith("$") ? newProject.budget : `$${newProject.budget}`,
-        spent: "$0",
-        lead: newProject.lead.trim(),
-        phase: newProject.phase
-      },
-      ...prev
-    ]);
-    addToast(`Engineering Capex Project ${id} registered successfully!`, "success");
+    createCapexProject(newProject);
     setNewProject({
       name: "",
-      budget: "$25,000",
-      lead: "Ahmed Hassan",
-      phase: "Concept & Spec"
+      budget: "50000",
+      estimatedCost: "45000",
+      owner: "David Kim (Lead CI)",
+      linkedRcaId: investigations[0]?.id || "",
+      linkedProjectId: ciProjects[0]?.id || "",
+      engineeringJustification: ""
     });
     setIsModalOpen(false);
   };
 
   const handleExportCSV = () => {
-    const headers = "Project ID,Project Name,Status,Budget,Spent,Lead,Phase\n";
-    const rows = projects
-      .map((p) => `"${p.id}","${p.name}","${p.status}","${p.budget}","${p.spent}","${p.lead}","${p.phase}"`)
+    const headers = "Capex ID,Project Name,Asset ID,Linked RCA,Linked CI Project,Budget,Actual Spent,Status,Owner,Target Date,Approval Status\n";
+    const rows = filteredProjects
+      .map((p) => `"${p.id}","${p.name}","${p.assetId}","${p.linkedRcaId || "-"}","${p.linkedProjectId || "-"}","${p.budget}","${p.actualCost}","${p.status}","${p.owner}","${p.targetCommissionDate}","${p.approvalStatus}"`)
       .join("\n");
     const blob = new Blob([headers + rows], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `Engineering_Projects_Capex_${new Date().toISOString().substring(0, 10)}.csv`;
+    a.download = `Engineering_Capex_Register_${new Date().toISOString().substring(0, 10)}.csv`;
     a.click();
-    addToast("Engineering capex register exported to CSV.", "info");
+    addToast("Engineering Capex register exported to CSV.", "info");
   };
 
   const filteredProjects = useMemo(() => {
-    return projects.filter((p) => {
+    return capexProjects.filter((p) => {
       const matchesStatus = statusFilter === "ALL" || p.status === statusFilter;
       const q = searchQuery.toLowerCase().trim();
       const matchesSearch =
         !q ||
-        p.id?.toLowerCase().includes(q) ||
-        p.name?.toLowerCase().includes(q) ||
-        p.lead?.toLowerCase().includes(q) ||
-        p.budget?.toLowerCase().includes(q) ||
-        p.spent?.toLowerCase().includes(q) ||
-        p.phase?.toLowerCase().includes(q);
+        p.id.toLowerCase().includes(q) ||
+        p.name.toLowerCase().includes(q) ||
+        p.owner.toLowerCase().includes(q) ||
+        p.dossierRef?.toLowerCase().includes(q);
 
       return matchesStatus && matchesSearch;
     });
-  }, [projects, searchQuery, statusFilter]);
+  }, [capexProjects, statusFilter, searchQuery]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%", maxWidth: "1600px", margin: "0 auto", minWidth: 0 }}>
@@ -127,29 +115,26 @@ export function Engineering() {
         <div style={{ minWidth: "240px", flex: 1 }}>
           <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
             <h1 style={{ fontSize: "clamp(18px, 4vw, 24px)", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.3px", lineHeight: 1.2 }}>
-              Engineering Dashboard & Capex
+              Engineering Capex & Permanent Redesign
             </h1>
-            <Badge variant="cyan">{projects.length} CAPEX PROJECTS</Badge>
+            <Badge variant="cyan">{capexProjects.length} CAPITAL INITIATIVES</Badge>
           </div>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-          <Button variant="primary" icon={Plus} onClick={() => setIsModalOpen(true)} style={{ fontSize: "12px", padding: "7px 14px" }}>
-            + Log Capex Project
-          </Button>
           <Button variant="secondary" icon={Download} onClick={handleExportCSV} style={{ fontSize: "12px", padding: "7px 12px" }}>
             Export Capex CSV
           </Button>
-          <Button variant="secondary" onClick={() => navigate("/ci/standards")} style={{ fontSize: "12px", padding: "7px 12px" }}>
-            Standards
+          <Button variant="secondary" onClick={() => navigate("/ci/projects/list")} style={{ fontSize: "12px", padding: "7px 12px" }}>
+            Kaizen Projects
           </Button>
-          <Button variant="secondary" icon={ArrowRight} onClick={() => navigate("/ci/reliability")} style={{ fontSize: "12px", padding: "7px 12px" }}>
-            Reliability Insights
+          <Button variant="primary" icon={Plus} onClick={() => setIsModalOpen(true)} style={{ fontSize: "12px", padding: "7px 12px" }}>
+            Create Capex Project
           </Button>
         </div>
       </div>
 
-      {/* KPI Tickers - 2x2 on mobile, 4 on desktop */}
+      {/* KPI Tickers */}
       <div
         className="kpi-grid-responsive grid-4"
         style={{
@@ -161,298 +146,256 @@ export function Engineering() {
         }}
       >
         <StatCard
-          title="Open Capex Projects"
-          value={projects.length.toString()}
-          unit="Active"
-          trend={{ value: "Facility upgrades in progress", isPositive: true, text: "" }}
-          icon={Settings}
-          colorVariant="cyan"
-        />
-        <StatCard
-          title="Change Requests"
-          value="3 Pending"
-          unit="Review"
-          trend={{ value: "Awaiting engineering sign-off", isPositive: false, text: "" }}
-          icon={AlertTriangle}
-          colorVariant="amber"
-        />
-        <StatCard
-          title="CAPEX Spend YTD"
-          value="$82,400"
-          unit="Spent"
-          trend={{ value: "vs. $110,000 annual budget", isPositive: true, text: "" }}
+          title="Total Capex Budget"
+          value={`$${totalBudget.toLocaleString()}`}
+          unit="Approved Allocation"
           icon={DollarSign}
           colorVariant="emerald"
         />
         <StatCard
-          title="Budget Variance"
-          value="-4.2%"
-          unit="Under Budget"
-          trend={{ value: "Favorable capex control", isPositive: true, text: "" }}
-          icon={CheckCircle2}
+          title="Committed / Spent"
+          value={`$${totalActual.toLocaleString()}`}
+          unit="Actual Incurred"
+          icon={TrendingUp}
+          colorVariant="cyan"
+        />
+        <StatCard
+          title="Active Redesigns"
+          value={openCapexCount.toString()}
+          unit="In Engineering Review"
+          icon={Zap}
+          colorVariant="amber"
+        />
+        <StatCard
+          title="P&ID Dossiers"
+          value="100%"
+          unit="Engineering Approved"
+          icon={ShieldCheck}
           colorVariant="emerald"
         />
       </div>
 
-      {/* Structured Projects Table Card */}
-      <Card style={{ padding: "18px", minWidth: 0, width: "100%", boxSizing: "border-box" }}>
-        {/* Table Toolbar */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "12px" }}>
-          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", flex: 1, minWidth: "240px" }}>
-            <div style={{ position: "relative", minWidth: "220px", flex: 1 }}>
-              <Search size={15} color="var(--text-muted)" style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)" }} />
-              <input
-                type="text"
-                placeholder=""
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="form-input"
-                style={{ paddingLeft: "32px", height: "36px", fontSize: "12px", backgroundColor: "#FFFFFF" }}
-              />
-            </div>
-
-            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-              <Filter size={14} color="var(--text-muted)" />
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="form-input"
-                style={{ height: "36px", fontSize: "12px", width: "150px", backgroundColor: "#FFFFFF" }}
-              >
-                <option value="ALL">All Statuses</option>
-                <option value="In Progress">In Progress</option>
-                <option value="Design Phase">Design Phase</option>
-                <option value="Completed">Completed</option>
-              </select>
-            </div>
+      {/* Main Table Card */}
+      <Card
+        style={{
+          backgroundColor: "#FFFFFF",
+          border: "1px solid var(--border-subtle)",
+          borderRadius: "14px",
+          overflow: "hidden"
+        }}
+      >
+        {/* Controls Bar */}
+        <div
+          style={{
+            padding: "16px 20px",
+            borderBottom: "1px solid var(--border-subtle)",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "12px",
+            backgroundColor: "var(--bg-card-subtle)"
+          }}
+        >
+          <div style={{ position: "relative", minWidth: "240px", flex: 1 }}>
+            <Search
+              size={15}
+              style={{
+                position: "absolute",
+                left: "12px",
+                top: "50%",
+                transform: "translateY(-50%)",
+                color: "var(--text-muted)"
+              }}
+            />
+            <input
+              type="text"
+              placeholder="Search Capex project name, ID, owner or dossier..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="form-input"
+              style={{
+                paddingLeft: "36px",
+                backgroundColor: "#FFFFFF",
+                fontSize: "12px",
+                width: "100%"
+              }}
+            />
           </div>
 
-          <div style={{ fontSize: "12px", color: "var(--text-muted)", fontWeight: 600 }}>
-            Showing <strong>{filteredProjects.length}</strong> of {projects.length} Capex Projects
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="form-input"
+              style={{ fontSize: "12px", padding: "6px 10px", width: "auto", backgroundColor: "#FFFFFF" }}
+            >
+              <option value="ALL">All Capex Statuses</option>
+              <option value="Budget Approved">Budget Approved</option>
+              <option value="Under Engineering Review">Under Engineering Review</option>
+              <option value="Execution">Execution</option>
+            </select>
           </div>
         </div>
 
-        {/* Structured Data Table */}
-        <div className="data-table-container" style={{ overflowX: "auto", border: "1px solid var(--border-subtle)", borderRadius: "10px" }}>
-          <table className="data-table" style={{ width: "100%", borderCollapse: "collapse", minWidth: "850px" }}>
+        {/* Table View */}
+        <div style={{ overflowX: "auto", width: "100%" }}>
+          <table className="data-table" style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
             <thead>
-              <tr style={{ backgroundColor: "var(--bg-card-subtle)", borderBottom: "1.5px solid var(--border-subtle)" }}>
-                <th style={{ padding: "12px 14px", textAlign: "left", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Project ID</th>
-                <th style={{ padding: "12px 14px", textAlign: "left", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Project Scope & Target</th>
-                <th style={{ padding: "12px 14px", textAlign: "left", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Lead Engineer</th>
-                <th style={{ padding: "12px 14px", textAlign: "right", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Capex Budget</th>
-                <th style={{ padding: "12px 14px", textAlign: "right", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Spent to Date</th>
-                <th style={{ padding: "12px 14px", textAlign: "left", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Phase</th>
-                <th style={{ padding: "12px 14px", textAlign: "center", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Status</th>
-                <th style={{ padding: "12px 14px", textAlign: "right", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Action</th>
+              <tr style={{ borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Capex Initiative</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Origins (RCA / Kaizen)</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Budget / Actual</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Engineering Lead</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Dossier Ref</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Status</th>
               </tr>
             </thead>
             <tbody>
-              {filteredProjects.length > 0 ? (
-                filteredProjects.map((proj) => {
-                  return (
-                    <tr
-                      key={proj.id}
-                      style={{
-                        borderBottom: "1px solid var(--border-subtle)",
-                        transition: "background-color 0.12s ease"
-                      }}
-                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgba(200, 149, 71, 0.04)")}
-                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
-                    >
-                      <td style={{ padding: "12px 14px", whiteSpace: "nowrap" }}>
-                        <span style={{ fontSize: "12px", fontFamily: "var(--font-mono)", fontWeight: 800, color: "#0284C7" }}>
-                          {proj.id}
-                        </span>
-                      </td>
-
-                      <td style={{ padding: "12px 14px" }}>
-                        <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)" }}>
-                          {proj.name}
-                        </div>
-                      </td>
-
-                      <td style={{ padding: "12px 14px", whiteSpace: "nowrap" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", color: "var(--text-primary)", fontWeight: 600 }}>
-                          <User size={13} color="var(--text-muted)" />
-                          <span>{proj.lead}</span>
-                        </div>
-                      </td>
-
-                      <td style={{ padding: "12px 14px", textAlign: "right", whiteSpace: "nowrap" }}>
-                        <span style={{ fontSize: "13px", fontWeight: 700, color: "#8C5B23" }}>
-                          {proj.budget}
-                        </span>
-                      </td>
-
-                      <td style={{ padding: "12px 14px", textAlign: "right", whiteSpace: "nowrap" }}>
-                        <span style={{ fontSize: "13px", fontWeight: 700, color: "#059669" }}>
-                          {proj.spent}
-                        </span>
-                      </td>
-
-                      <td style={{ padding: "12px 14px", whiteSpace: "nowrap" }}>
-                        <span style={{ fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)" }}>
-                          {proj.phase}
-                        </span>
-                      </td>
-
-                      <td style={{ padding: "12px 14px", textAlign: "center", whiteSpace: "nowrap" }}>
-                        <Badge variant={proj.status === "In Progress" ? "cyan" : "amber"}>{proj.status}</Badge>
-                      </td>
-
-                      <td style={{ padding: "12px 14px", textAlign: "right", whiteSpace: "nowrap" }}>
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          icon={ArrowRight}
-                          onClick={() => addToast(`Opening engineering dossier for ${proj.id}...`, "info")}
-                          style={{ fontSize: "11px", padding: "4px 10px" }}
-                        >
-                          Spec Dossier
-                        </Button>
-                      </td>
-                    </tr>
-                  );
-                })
-              ) : (
-                <tr>
-                  <td colSpan={8} style={{ padding: "32px", textAlign: "center", color: "var(--text-muted)", fontSize: "13px" }}>
-                    No engineering capex projects match the search or filter criteria.
+              {filteredProjects.map((p) => (
+                <tr key={p.id} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+                  <td style={{ padding: "12px 16px" }}>
+                    <div style={{ fontWeight: 800, color: "var(--text-primary)", fontSize: "13px" }}>{p.name}</div>
+                    <div style={{ fontSize: "11px", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>
+                      {p.id} • Target: {p.targetCommissionDate}
+                    </div>
+                  </td>
+                  <td style={{ padding: "12px 16px", fontSize: "12px", fontFamily: "var(--font-mono)", color: "#8C5B23" }}>
+                    <div>RCA: {p.linkedRcaId || "Direct Initiative"}</div>
+                    <div style={{ color: "var(--text-muted)" }}>Project: {p.linkedProjectId || "Standalone"}</div>
+                  </td>
+                  <td style={{ padding: "12px 16px" }}>
+                    <div style={{ fontFamily: "var(--font-mono)", fontWeight: 800, color: "var(--text-primary)", fontSize: "13px" }}>
+                      Budget: ${p.budget?.toLocaleString()}
+                    </div>
+                    <div style={{ fontSize: "11px", color: "#059669", fontFamily: "var(--font-mono)" }}>
+                      Spent: ${p.actualCost?.toLocaleString()}
+                    </div>
+                  </td>
+                  <td style={{ padding: "12px 16px", fontSize: "12px", color: "var(--text-secondary)" }}>
+                    {p.owner}
+                  </td>
+                  <td style={{ padding: "12px 16px", fontFamily: "var(--font-mono)", fontSize: "12px", color: "#0284C7", fontWeight: 700 }}>
+                    {p.dossierRef}
+                  </td>
+                  <td style={{ padding: "12px 16px" }}>
+                    <Badge variant={p.status === "Budget Approved" ? "emerald" : "amber"}>
+                      {p.status}
+                    </Badge>
                   </td>
                 </tr>
-              )}
+              ))}
             </tbody>
           </table>
         </div>
       </Card>
 
-      {/* POPUP MODAL: REGISTER CAPEX PROJECT */}
+      {/* MODAL */}
       {isModalOpen && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: "rgba(26, 15, 2, 0.45)",
-            backdropFilter: "blur(4px)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 1000,
-            padding: "16px"
-          }}
-          onClick={() => setIsModalOpen(false)}
-        >
-          <div
-            style={{
-              backgroundColor: "#FFFFFF",
-              borderRadius: "16px",
-              width: "100%",
-              maxWidth: "520px",
-              boxShadow: "0 20px 40px rgba(0,0,0,0.18)",
-              border: "1px solid var(--border-subtle)",
-              overflow: "hidden"
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Modal Header */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "18px 22px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: "linear-gradient(135deg, #E2B670 0%, #C89547 100%)", display: "flex", alignItems: "center", justifyContent: "center", color: "#261603" }}>
-                  <Settings size={16} />
-                </div>
-                <div>
-                  <h3 style={{ fontSize: "15px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
-                    Log Capital Engineering Project
-                  </h3>
-                  <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>
-                    Register a new Capex project or machine upgrade
-                  </span>
-                </div>
+        <div className="modal-backdrop" onClick={() => setIsModalOpen(false)}>
+          <div className="modal-content" style={{ maxWidth: "540px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Zap size={18} color="#C89547" />
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                  Initiate Engineering Capex Project
+                </h2>
               </div>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer", padding: "4px" }}
-              >
+              <button onClick={() => setIsModalOpen(false)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
                 <X size={18} />
               </button>
             </div>
 
-            {/* Modal Form */}
-            <form onSubmit={handleAdd} style={{ padding: "20px 22px", display: "flex", flexDirection: "column", gap: "16px" }}>
+            <form onSubmit={handleAdd} style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
               <div>
-                <label className="form-label" style={{ fontSize: "12px", fontWeight: 700, marginBottom: "6px", display: "block" }}>
-                  Project Scope & Machine Target *
-                </label>
+                <label className="form-label">Capex Redesign Title *</label>
                 <input
                   type="text"
-                  placeholder="e.g. Pasteurizer Holding Tube Insulation & Thermal Jacket Retrofit"
+                  required
+                  placeholder="e.g. Automated Tri-Clamp Steam Modulating Valve Redesign"
                   value={newProject.name}
                   onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
                   className="form-input"
-                  style={{ width: "100%", height: "38px", fontSize: "13px" }}
-                  required
-                  autoFocus
+                  style={{ backgroundColor: "#FFFFFF" }}
                 />
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                 <div>
-                  <label className="form-label" style={{ fontSize: "12px", fontWeight: 700, marginBottom: "6px", display: "block" }}>
-                    Lead Project Engineer *
-                  </label>
-                  <input
-                    type="text"
-                    value={newProject.lead}
-                    onChange={(e) => setNewProject({ ...newProject, lead: e.target.value })}
+                  <label className="form-label">Linked RCA Investigation</label>
+                  <select
+                    value={newProject.linkedRcaId}
+                    onChange={(e) => setNewProject({ ...newProject, linkedRcaId: e.target.value })}
                     className="form-input"
-                    style={{ width: "100%", height: "38px", fontSize: "13px" }}
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  >
+                    <option value="">Direct Engineering Initiative</option>
+                    {investigations.map((inv) => (
+                      <option key={inv.id} value={inv.id}>{inv.id} — {inv.title.substring(0, 20)}...</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="form-label">Linked CI Project</label>
+                  <select
+                    value={newProject.linkedProjectId}
+                    onChange={(e) => setNewProject({ ...newProject, linkedProjectId: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  >
+                    <option value="">Standalone Capex</option>
+                    {ciProjects.map((p) => (
+                      <option key={p.id} value={p.id}>{p.id} — {p.name.substring(0, 20)}...</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div>
+                  <label className="form-label">Approved Capex Budget ($)</label>
+                  <input
+                    type="number"
                     required
+                    value={newProject.budget}
+                    onChange={(e) => setNewProject({ ...newProject, budget: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
                   />
                 </div>
 
                 <div>
-                  <label className="form-label" style={{ fontSize: "12px", fontWeight: 700, marginBottom: "6px", display: "block" }}>
-                    Capex Budget ($) *
-                  </label>
+                  <label className="form-label">Engineering Lead</label>
                   <input
                     type="text"
-                    value={newProject.budget}
-                    onChange={(e) => setNewProject({ ...newProject, budget: e.target.value })}
-                    className="form-input"
-                    style={{ width: "100%", height: "38px", fontSize: "13px" }}
                     required
+                    value={newProject.owner}
+                    onChange={(e) => setNewProject({ ...newProject, owner: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
                   />
                 </div>
               </div>
 
               <div>
-                <label className="form-label" style={{ fontSize: "12px", fontWeight: 700, marginBottom: "6px", display: "block" }}>
-                  Initial Project Phase *
-                </label>
-                <select
-                  value={newProject.phase}
-                  onChange={(e) => setNewProject({ ...newProject, phase: e.target.value })}
-                  className="form-input"
-                  style={{ width: "100%", height: "38px", fontSize: "13px" }}
-                >
-                  <option value="Concept & Spec">Concept & Spec</option>
-                  <option value="P&ID Review">P&ID Review</option>
-                  <option value="Installation & FAT">Installation & FAT</option>
-                  <option value="Commissioning">Commissioning</option>
-                </select>
+                <label className="form-label">Engineering Justification & P&ID Scope</label>
+                <textarea
+                  rows={3}
+                  placeholder="Describe the permanent equipment modification to eliminate failure modes..."
+                  value={newProject.engineeringJustification}
+                  onChange={(e) => setNewProject({ ...newProject, engineeringJustification: e.target.value })}
+                  className="form-textarea"
+                  style={{ backgroundColor: "#FFFFFF" }}
+                />
               </div>
 
-              {/* Modal Footer */}
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px", paddingTop: "14px", borderTop: "1px solid var(--border-subtle)" }}>
-                <Button variant="secondary" type="button" onClick={() => setIsModalOpen(false)}>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "8px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
+                <Button variant="secondary" onClick={() => setIsModalOpen(false)}>
                   Cancel
                 </Button>
-                <Button variant="primary" type="submit" icon={Plus}>
-                  Register Project
+                <Button variant="primary" type="submit">
+                  Submit for GM Approval
                 </Button>
               </div>
             </form>
