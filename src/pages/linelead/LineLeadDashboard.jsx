@@ -129,7 +129,7 @@ export function LineLeadDashboard() {
       {/* Grid containing critical alerts and statuses */}
       <div className="grid-3">
         {/* Staffing & Work Status */}
-        <Card style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+        <Card style={{ display: "flex", flexDirection: "column", gap: "12px", minWidth: 0, boxSizing: "border-box" }}>
           <h3 style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
             Staffing Status
           </h3>
@@ -146,7 +146,7 @@ export function LineLeadDashboard() {
         </Card>
 
         {/* Changeover Status */}
-        <Card style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+        <Card style={{ display: "flex", flexDirection: "column", gap: "12px", minWidth: 0, boxSizing: "border-box" }}>
           <h3 style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
             Next Changeover
           </h3>
@@ -163,7 +163,7 @@ export function LineLeadDashboard() {
         </Card>
 
         {/* Downtime Alert */}
-        <Card style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+        <Card style={{ display: "flex", flexDirection: "column", gap: "12px", minWidth: 0, boxSizing: "border-box" }}>
           <h3 style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
             Downtime Logged
           </h3>
@@ -174,11 +174,11 @@ export function LineLeadDashboard() {
               <span style={{ fontSize: "11px", color: "#EF4444", display: "block" }}>Micro-stops active</span>
             </div>
           </div>
-          <div style={{ display: "flex", gap: "6px", marginTop: "auto" }}>
+          <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "8px", marginTop: "auto" }}>
             <Button size="xs" variant="warning" onClick={() => addToast("Micro-stop jam acknowledged & logged in Downtime Ledger.", "info")}>
               Acknowledge Micro-Stop
             </Button>
-            <button onClick={() => navigate("/linelead/downtime-loss")} className="btn btn-ghost" style={{ fontSize: "12px", padding: "4px 0" }}>
+            <button onClick={() => navigate("/linelead/downtime-loss")} className="btn btn-ghost" style={{ fontSize: "12px", padding: "4px 8px" }}>
               Analyze Losses <ChevronRight size={14} />
             </button>
           </div>
@@ -188,7 +188,7 @@ export function LineLeadDashboard() {
       {/* Material, Quality, Maintenance Issue Status */}
       <div className="grid-3">
         {/* Material Shortage Card & Button */}
-        <Card style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+        <Card style={{ display: "flex", flexDirection: "column", gap: "10px", minWidth: 0, boxSizing: "border-box" }}>
           <h3 style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "6px" }}>
             <Package size={15} color="#38BDF8" /> Material Stock Alert
           </h3>
@@ -202,7 +202,7 @@ export function LineLeadDashboard() {
         </Card>
 
         {/* Quality Hold Card & Button */}
-        <Card style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+        <Card style={{ display: "flex", flexDirection: "column", gap: "10px", minWidth: 0, boxSizing: "border-box" }}>
           <h3 style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "6px" }}>
             <ShieldAlert size={15} color="#10B981" /> Quality Holds
           </h3>
@@ -216,7 +216,7 @@ export function LineLeadDashboard() {
         </Card>
 
         {/* Maintenance Issue Card & Button */}
-        <Card style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+        <Card style={{ display: "flex", flexDirection: "column", gap: "10px", minWidth: 0, boxSizing: "border-box" }}>
           <h3 style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "6px" }}>
             <Wrench size={15} color="#EF4444" /> Maintenance Issues
           </h3>
