@@ -1,22 +1,18 @@
-import React, { useState } from "react";
-import { Truck } from "lucide-react";
+import React from "react";
+import { Truck, ArrowRight } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useApp } from "../../../context/AppContext";
+import { useInventory } from "../../../context/InventoryContext";
 
 export function IncomingDeliveries() {
   const { addToast } = useApp();
+  const navigate = useNavigate();
+  const { shipments, receiveShipment } = useInventory();
   
-  const [deliveries, setDeliveries] = useState([
-    { id: "DEL-8802", vendor: "Amcor Packaging Solutions", item: "Glass Bottles 1L", qty: "20,000 Pcs", status: "Transit" },
-    { id: "DEL-8803", vendor: "ADM Sweetener Lots", item: "Liquid Cane Sugar Sugar 500L", qty: "2 Drums", status: "Arrived" }
-  ]);
-
   const handleToggleStatus = (id, currentStatus) => {
-    if (currentStatus === "Transit") {
-      setDeliveries(prev => prev.map(d => d.id === id ? { ...d, status: "Arrived" } : d));
+    if (currentStatus === "TRANSIT") {
+      receiveShipment(id);
       addToast("Shipment marked as Arrived at dock.", "success");
-    } else {
-      setDeliveries(prev => prev.map(d => d.id === id ? { ...d, status: "Transit" } : d));
-      addToast("Shipment reverted to In-Transit.", "info");
     }
   };
 
@@ -32,7 +28,7 @@ export function IncomingDeliveries() {
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-        {deliveries.map((d) => (
+        {shipments.map((d) => (
           <div 
             key={d.id} 
             style={{ 
@@ -46,47 +42,65 @@ export function IncomingDeliveries() {
               boxShadow: "0 2px 8px rgba(0,0,0,0.02)"
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-              <Truck size={24} color="#38BDF8" strokeWidth={2} />
-              <span style={{ fontSize: "15px", color: "#71717a" }}>
-                Item: {d.item} <span style={{ margin: "0 4px" }}>•</span> Volume: {d.qty}
+            <div style={{ display: "flex", flex: 1, flexDirection: "column", gap: "8px" }}>
+               <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+                <Truck size={24} color="#38BDF8" strokeWidth={2} />
+                <span style={{ fontSize: "16px", fontWeight: 700, color: "#2B1D11" }}>
+                  {d.supplier}
+                </span>
+              </div>
+              <span style={{ fontSize: "15px", color: "#71717a", marginLeft: "40px" }}>
+                Item: {d.item} <span style={{ margin: "0 4px" }}>•</span> Volume: {d.volume}
               </span>
             </div>
             
-            <div 
-              onClick={() => handleToggleStatus(d.id, d.status)}
-              style={{ cursor: "pointer", transition: "opacity 0.2s" }}
-              onMouseOver={(e) => e.currentTarget.style.opacity = 0.8}
-              onMouseOut={(e) => e.currentTarget.style.opacity = 1}
-            >
-              {d.status === "Transit" ? (
-                <span style={{ 
-                  padding: "6px 12px", 
-                  backgroundColor: "#f4f4f5", 
-                  color: "#52525b", 
-                  border: "1px solid #e4e4e7",
-                  borderRadius: "6px",
-                  fontSize: "13px",
-                  fontWeight: 700,
-                  letterSpacing: "0.5px",
-                  textTransform: "uppercase"
-                }}>
-                  TRANSIT
-                </span>
-              ) : (
-                <span style={{ 
-                  padding: "6px 12px", 
-                  backgroundColor: "#e8fbf0", 
-                  color: "#10b981", 
-                  border: "1px solid #a7e6c4",
-                  borderRadius: "6px",
-                  fontSize: "13px",
-                  fontWeight: 700,
-                  letterSpacing: "0.5px",
-                  textTransform: "uppercase"
-                }}>
-                  ARRIVED
-                </span>
+            <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+              <div 
+                onClick={() => handleToggleStatus(d.id, d.status)}
+                style={{ cursor: d.status === "TRANSIT" ? "pointer" : "default", transition: "opacity 0.2s" }}
+              >
+                {d.status === "TRANSIT" ? (
+                  <span style={{ 
+                    padding: "6px 12px", 
+                    backgroundColor: "#f4f4f5", 
+                    color: "#52525b", 
+                    border: "1px solid #e4e4e7",
+                    borderRadius: "6px",
+                    fontSize: "13px",
+                    fontWeight: 700,
+                    letterSpacing: "0.5px",
+                    textTransform: "uppercase"
+                  }}>
+                    TRANSIT
+                  </span>
+                ) : (
+                  <span style={{ 
+                    padding: "6px 12px", 
+                    backgroundColor: "#e8fbf0", 
+                    color: "#10b981", 
+                    border: "1px solid #a7e6c4",
+                    borderRadius: "6px",
+                    fontSize: "13px",
+                    fontWeight: 700,
+                    letterSpacing: "0.5px",
+                    textTransform: "uppercase"
+                  }}>
+                    ARRIVED
+                  </span>
+                )}
+              </div>
+              
+              {d.status === "ARRIVED" && (
+                <button
+                   onClick={() => navigate("/warehouse/receiving/receive")}
+                   style={{
+                     display: "flex", alignItems: "center", gap: "6px",
+                     padding: "8px 16px", backgroundColor: "#C89547", color: "#1A0F02",
+                     border: "none", borderRadius: "8px", fontWeight: 700, cursor: "pointer", fontSize: "14px"
+                   }}
+                >
+                  Receive Material <ArrowRight size={16} />
+                </button>
               )}
             </div>
           </div>

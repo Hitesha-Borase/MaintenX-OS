@@ -1,85 +1,136 @@
 import React, { useState } from "react";
-import { Layers } from "lucide-react";
+import { Layers, ArrowRight } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useApp } from "../../../context/AppContext";
+import { useInventory } from "../../../context/InventoryContext";
 
 export function BinsRacks() {
   const { addToast } = useApp();
+  const navigate = useNavigate();
+  const { lots, transferLotLocation } = useInventory();
 
-  const [bins, setBins] = useState([
-    { id: 1, code: "A-01-B", desc: "Aisle A, Rack 1, Bin B", item: "Organic Orange Caps", status: "Staged" },
-    { id: 2, code: "B-04-A", desc: "Aisle B, Rack 4, Bin A", item: "Aseptic Glass Bottles", status: "Staged" }
-  ]);
+  // Show lots that are staged and need put-away
+  const stagedLots = lots.filter(lot => lot.status === "STAGED");
+  
+  // Available bins mock
+  const [selectedBins, setSelectedBins] = useState({});
 
-  const handleToggleStatus = (id, currentStatus) => {
-    setBins(prev => prev.map(b => {
-      if (b.id === id) {
-        if (currentStatus === "Staged") {
-          addToast("Bin cleared.", "info");
-          return { ...b, status: "Empty" };
-        } else {
-          addToast("Bin marked as staged.", "success");
-          return { ...b, status: "Staged" };
-        }
-      }
-      return b;
-    }));
+  const handleSelectBin = (lotNum, bin) => {
+    setSelectedBins(prev => ({ ...prev, [lotNum]: bin }));
+  };
+
+  const handlePutAway = (lotNum) => {
+    const bin = selectedBins[lotNum];
+    if (!bin) {
+      addToast("Please select a destination bin.", "error");
+      return;
+    }
+    
+    transferLotLocation(lotNum, bin);
+    addToast(`Lot ${lotNum} stored in ${bin}.`, "success");
+    
+    setTimeout(() => {
+      navigate("/warehouse/inventory/raw");
+    }, 1000);
   };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "24px", maxWidth: "100%", fontFamily: "system-ui, -apple-system, sans-serif" }}>
       <div>
         <h1 style={{ fontSize: "24px", fontWeight: 800, color: "#2d2825", margin: "0 0 8px 0" }}>
-          Bins & Storage Racks
+          Bins & Storage Racks Put-Away
         </h1>
         <p style={{ fontSize: "15px", color: "#7a7571", margin: 0 }}>
-          Monitor storage slots allocation status
+          Allocate storage slots and confirm put-away for staged items
         </p>
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-        {bins.map((b) => (
-          <div 
-            key={b.id} 
-            style={{ 
-              display: "flex", 
-              justifyContent: "space-between", 
-              alignItems: "center",
-              backgroundColor: "#ffffff",
-              padding: "24px",
-              borderRadius: "16px",
-              border: "1px solid #e8e6e1",
-              boxShadow: "0 2px 8px rgba(0,0,0,0.02)"
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-              <Layers size={24} color="#a855f7" strokeWidth={2} />
-              <span style={{ fontSize: "15px", color: "#71717a" }}>
-                {b.desc} <span style={{ margin: "0 4px" }}>•</span> Contains: {b.item}
-              </span>
-            </div>
-            
-            <div 
-              onClick={() => handleToggleStatus(b.id, b.status)}
-              style={{ cursor: "pointer", transition: "opacity 0.2s" }}
-              onMouseOver={(e) => e.currentTarget.style.opacity = 0.8}
-              onMouseOut={(e) => e.currentTarget.style.opacity = 1}
-            >
-              <span style={{ 
-                padding: "6px 12px", 
-                backgroundColor: b.status === "Staged" ? "#e8fbf0" : "#f4f4f5", 
-                color: b.status === "Staged" ? "#10b981" : "#52525b", 
-                border: `1px solid ${b.status === "Staged" ? "#a7e6c4" : "#e4e4e7"}`,
-                borderRadius: "6px",
-                fontSize: "13px",
-                fontWeight: 700,
-                letterSpacing: "0.5px",
-                textTransform: "uppercase"
-              }}>
-                {b.status.toUpperCase()}
-              </span>
-            </div>
+        {stagedLots.length === 0 ? (
+          <div style={{ padding: "40px", textAlign: "center", backgroundColor: "#fff", borderRadius: "16px", border: "1px dashed #ccc" }}>
+            <p style={{ color: "#71717a" }}>No items pending put-away.</p>
           </div>
-        ))}
+        ) : (
+          stagedLots.map((s) => (
+            <div 
+              key={s.lotNumber} 
+              style={{ 
+                display: "flex", 
+                justifyContent: "space-between", 
+                alignItems: "center",
+                backgroundColor: "#ffffff",
+                padding: "24px",
+                borderRadius: "16px",
+                border: "1px solid #e8e6e1",
+                borderLeft: "4px solid #C89547",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.02)"
+              }}
+            >
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "24px" }}>
+                  <Layers size={24} color="#C89547" strokeWidth={2} />
+                  <span style={{ 
+                    padding: "6px 12px", 
+                    backgroundColor: "rgba(200, 149, 71, 0.12)", 
+                    color: "#8B6914", 
+                    border: "1px solid rgba(200, 149, 71, 0.3)",
+                    borderRadius: "6px",
+                    fontSize: "13px",
+                    fontWeight: 700,
+                    letterSpacing: "0.5px",
+                    textTransform: "uppercase"
+                  }}>
+                    PENDING PUT-AWAY
+                  </span>
+                </div>
+                <div style={{ fontSize: "15px", color: "#71717a", marginTop: "4px", marginLeft: "48px" }}>
+                  <strong style={{ color: "#2B1D11" }}>{s.materialName}</strong> <br/>
+                  Lot: {s.lotNumber} <span style={{ margin: "0 4px" }}>•</span> Qty: {s.quantity} {s.unit}
+                </div>
+              </div>
+
+              <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+                <select 
+                  style={{
+                    padding: "10px",
+                    borderRadius: "8px",
+                    border: "1px solid #e8e6e1",
+                    backgroundColor: "#f9f9f9",
+                    fontSize: "14px",
+                    outline: "none"
+                  }}
+                  value={selectedBins[s.lotNumber] || ""}
+                  onChange={(e) => handleSelectBin(s.lotNumber, e.target.value)}
+                >
+                  <option value="" disabled>Select Target Bin...</option>
+                  <option value="Aisle A, Rack 1, Bin B">Aisle A, Rack 1, Bin B</option>
+                  <option value="Aisle B, Rack 4, Bin A">Aisle B, Rack 4, Bin A</option>
+                  <option value="Cold Storage Zone A - Rack R04-B2">Cold Storage Zone A - Rack R04-B2</option>
+                </select>
+                
+                <button 
+                  onClick={() => handlePutAway(s.lotNumber)}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    padding: "10px 16px",
+                    backgroundColor: "#C89547",
+                    color: "#1A0F02",
+                    border: "none",
+                    borderRadius: "8px",
+                    fontSize: "14px",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    transition: "background-color 0.2s"
+                  }}
+                >
+                  Store <ArrowRight size={16} />
+                </button>
+              </div>
+            </div>
+          ))
+        )}
       </div>
     </div>
   );
