@@ -1,8 +1,9 @@
 import React, { useState } from "react";
-import { AlertOctagon, Send, ShieldAlert, Users } from "lucide-react";
+import { AlertOctagon, Send, ShieldAlert, Users, Paperclip, Camera, Image } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { Button } from "../../components/common/Button";
 import { Badge } from "../../components/common/Badge";
+import { Modal } from "../../components/common/Modal";
 import { useExceptions } from "../../context/ExceptionContext";
 import { useApp } from "../../context/AppContext";
 
@@ -15,6 +16,10 @@ export function Escalations() {
   const [targetRole, setTargetRole] = useState("Plant Manager");
   const [subject, setSubject] = useState("");
   const [details, setDetails] = useState("");
+
+  const [isEvidenceModalOpen, setIsEvidenceModalOpen] = useState(false);
+  const [evidenceNote, setEvidenceNote] = useState("Photo attachment: Photo_Nozzle_Leak_1420.jpg");
+  const [activeEsc, setActiveEsc] = useState(null);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -34,19 +39,32 @@ export function Escalations() {
     setDetails("");
   };
 
+  const handleOpenEvidence = (ex) => {
+    setActiveEsc(ex);
+    setIsEvidenceModalOpen(true);
+  };
+
+  const handleSaveEvidence = (e) => {
+    e.preventDefault();
+    addToast(`RCA 2.0 Evidence file attached to Escalation #${activeEsc?.id}.`, "success");
+    setIsEvidenceModalOpen(false);
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "100%" }}>
       <div>
         <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
-          Line Lead Escalation Console
+          Line Lead Escalation Console (P1 Control Tower)
         </h1>
-
+        <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
+          Dispatch critical operational escalations and attach RCA 2.0 evidence for rapid resolution
+        </p>
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
         {/* Active Escalations */}
-        <Card style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-          <h3 style={{ fontSize: "14px", fontWeight: 700, color: "#FFFFFF" }}>
+        <Card style={{ display: "flex", flexDirection: "column", gap: "12px", backgroundColor: "#FFFFFF", border: "1px solid var(--border-subtle)", padding: "20px" }}>
+          <h3 style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)" }}>
             Active Escalation Records
           </h3>
 
@@ -55,8 +73,8 @@ export function Escalations() {
               <div
                 key={ex.id}
                 style={{
-                  padding: "10px 12px",
-                  borderRadius: "6px",
+                  padding: "12px 14px",
+                  borderRadius: "8px",
                   backgroundColor: "var(--bg-card-subtle)",
                   border: "1px solid var(--border-subtle)",
                   fontSize: "12px",
@@ -66,12 +84,17 @@ export function Escalations() {
                 }}
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontWeight: 700, color: "#FFFFFF" }}>{ex.id}</span>
-                  <Badge variant="danger">{ex.severity}</Badge>
+                  <span style={{ fontWeight: 700, color: "var(--text-primary)" }}>{ex.id}</span>
+                  <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                    <Badge variant="danger">{ex.severity}</Badge>
+                    <Button variant="secondary" size="xs" icon={Paperclip} onClick={() => handleOpenEvidence(ex)}>
+                      Attach Evidence
+                    </Button>
+                  </div>
                 </div>
-                <div style={{ fontWeight: 600, color: "#F87171" }}>{ex.title}</div>
+                <div style={{ fontWeight: 700, color: "#EF4444" }}>{ex.title}</div>
                 <div style={{ color: "var(--text-secondary)" }}>Escalated To: {ex.owner}</div>
-                <div style={{ fontStyle: "italic", color: "var(--text-muted)", marginTop: "4px" }}>"{ex.details || ex.impactDescription}"</div>
+                <div style={{ fontStyle: "italic", color: "var(--text-secondary)", marginTop: "4px" }}>"{ex.details || ex.impactDescription}"</div>
               </div>
             ))}
           </div>
@@ -79,14 +102,14 @@ export function Escalations() {
 
         {/* New Escalation Form */}
         <form onSubmit={handleSubmit}>
-          <Card style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-            <h3 style={{ fontSize: "14px", fontWeight: 700, color: "#FFFFFF" }}>
-              Dispatch Escalation
+          <Card style={{ display: "flex", flexDirection: "column", gap: "16px", backgroundColor: "#FFFFFF", border: "1px solid var(--border-subtle)", padding: "20px" }}>
+            <h3 style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)" }}>
+              Dispatch New Escalation
             </h3>
 
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "16px", alignItems: "flex-end" }}>
               <div>
-                <label style={{ fontSize: "11px", color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
+                <label style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-primary)", display: "block", marginBottom: "4px" }}>
                   Escalate Target Role
                 </label>
                 <select
@@ -103,7 +126,7 @@ export function Escalations() {
               </div>
 
               <div>
-                <label style={{ fontSize: "11px", color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
+                <label style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-primary)", display: "block", marginBottom: "4px" }}>
                   Escalation Subject
                 </label>
                 <input
@@ -118,7 +141,7 @@ export function Escalations() {
               </div>
 
               <div>
-                <label style={{ fontSize: "11px", color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
+                <label style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-primary)", display: "block", marginBottom: "4px" }}>
                   Details & Justification
                 </label>
                 <textarea
@@ -140,6 +163,44 @@ export function Escalations() {
           </Card>
         </form>
       </div>
+
+      {/* Attach RCA 2.0 Evidence Modal */}
+      <Modal
+        isOpen={isEvidenceModalOpen}
+        onClose={() => setIsEvidenceModalOpen(false)}
+        title="Attach RCA 2.0 Breakdown Evidence / Photo"
+        subtitle={`Escalation ID: ${activeEsc?.id}`}
+        maxWidth="480px"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setIsEvidenceModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="primary" icon={Send} onClick={handleSaveEvidence}>
+              Upload & Attach Evidence
+            </Button>
+          </>
+        }
+      >
+        <form onSubmit={handleSaveEvidence} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+          <div>
+            <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-primary)", display: "block", marginBottom: "6px" }}>
+              Evidence File Attachment / Photo URL
+            </label>
+            <input
+              type="text"
+              value={evidenceNote}
+              onChange={(e) => setEvidenceNote(e.target.value)}
+              className="input-field"
+              required
+            />
+          </div>
+
+          <div style={{ padding: "10px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", fontSize: "12px", color: "var(--text-secondary)" }}>
+            Attaching failure photos or sensor telemetry logs provides immediate evidence for Maintenance Techs and RCA 2.0 root-cause investigations.
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

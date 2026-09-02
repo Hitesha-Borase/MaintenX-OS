@@ -94,10 +94,36 @@ export function HBManagement() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "100%" }}>
-      <div>
-        <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
-          Hour-by-Hour (H/B) Management
-        </h1>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
+        <div>
+          <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
+            Hour-by-Hour (H/B) Management
+          </h1>
+          <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
+            Log hourly production actuals, categorize loss drivers, and submit shift reconciliation
+          </p>
+        </div>
+
+        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+          <Button
+            variant="warning"
+            icon={RefreshCw}
+            onClick={() => {
+              setTarget(3150);
+              addToast("Catch-up schedule calculated: Target re-baselined to 3,150 bottles/hr.", "info");
+            }}
+          >
+            Recalculate Catch-Up
+          </Button>
+
+          <Button
+            variant="success"
+            icon={Send}
+            onClick={() => addToast("All shift H/B hour records reconciled and submitted to Supervisor queue.", "success")}
+          >
+            Bulk Reconcile Shift Hours
+          </Button>
+        </div>
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
