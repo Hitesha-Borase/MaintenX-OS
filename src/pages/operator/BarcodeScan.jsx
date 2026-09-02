@@ -1,8 +1,9 @@
 import React, { useState } from "react";
-import { QrCode, Camera, ShieldCheck, AlertCircle, Scan, Sparkles, Keyboard, CheckCircle2 } from "lucide-react";
+import { QrCode, Camera, ShieldCheck, AlertCircle, Scan, Sparkles, Keyboard, CheckCircle2, Link, Send } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { Button } from "../../components/common/Button";
 import { Badge } from "../../components/common/Badge";
+import { Modal } from "../../components/common/Modal";
 import { useApp } from "../../context/AppContext";
 
 export function BarcodeScan() {
@@ -10,6 +11,9 @@ export function BarcodeScan() {
   const [manualCode, setManualCode] = useState("");
   const [scanResult, setScanResult] = useState(null);
   const [scanning, setScanning] = useState(false);
+
+  const [isAttachModalOpen, setIsAttachModalOpen] = useState(false);
+  const [activeBatchId, setActiveBatchId] = useState("BAT-2026-904 (Juice Run A)");
 
   const simulateScan = (code, type) => {
     setScanning(true);
@@ -59,13 +63,27 @@ export function BarcodeScan() {
     setManualCode("");
   };
 
+  const handleAttachLotSubmit = (e) => {
+    e.preventDefault();
+    addToast(`Lot Tag ${scanResult?.id} verified and attached to Active Batch ${activeBatchId}. Traceability record updated (PDF Section 8 Batch 360°).`, "success");
+    setIsAttachModalOpen(false);
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%" }}>
       {/* Header */}
-      <div>
-        <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
-          Barcode & QR Code Scanner
-        </h1>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
+        <div>
+          <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
+            Barcode & QR Code Scanner (GS1-128 / Traceability)
+          </h1>
+        </div>
+
+        {scanResult && scanResult.type.includes("Lot") && (
+          <Button variant="success" icon={Link} onClick={() => setIsAttachModalOpen(true)}>
+            Verify Lot & Attach to Batch
+          </Button>
+        )}
       </div>
 
       {/* 1. Scanner Viewfinder Card (Full Width) */}
@@ -203,9 +221,17 @@ export function BarcodeScan() {
       {/* 4. Scan Results Card */}
       {scanResult && (
         <Card style={{ borderLeft: "4px solid #10B981", backgroundColor: "#FFFFFF", border: "1px solid var(--border-subtle)", boxShadow: "0 2px 8px rgba(16, 185, 129, 0.08)", padding: "20px" }}>
-          <h3 style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)", marginBottom: "14px", display: "flex", alignItems: "center", gap: "6px" }}>
-            <ShieldCheck size={18} color="#059669" /> Parser Decoded Information
-          </h3>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px", marginBottom: "14px" }}>
+            <h3 style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)", margin: 0, display: "flex", alignItems: "center", gap: "6px" }}>
+              <ShieldCheck size={18} color="#059669" /> Parser Decoded Information
+            </h3>
+
+            {scanResult.type.includes("Lot") && (
+              <Button variant="success" size="sm" icon={Link} onClick={() => setIsAttachModalOpen(true)}>
+                Verify & Attach to Batch
+              </Button>
+            )}
+          </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: "10px", fontSize: "13px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "6px" }}>
@@ -241,6 +267,45 @@ export function BarcodeScan() {
           </div>
         </Card>
       )}
+
+      {/* Verify Lot Tag & Attach to Active Batch Modal */}
+      <Modal
+        isOpen={isAttachModalOpen}
+        onClose={() => setIsAttachModalOpen(false)}
+        title="Verify & Attach Lot Tag to Active Batch"
+        subtitle={`Scanned Lot ID: ${scanResult?.id}`}
+        maxWidth="480px"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setIsAttachModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="success" icon={Send} onClick={handleAttachLotSubmit}>
+              Confirm Lot Tag Binding
+            </Button>
+          </>
+        }
+      >
+        <form onSubmit={handleAttachLotSubmit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+          <div>
+            <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-primary)", display: "block", marginBottom: "6px" }}>
+              Active Target Production Batch
+            </label>
+            <select
+              value={activeBatchId}
+              onChange={(e) => setActiveBatchId(e.target.value)}
+              className="input-field"
+            >
+              <option value="BAT-2026-904 (Juice Run A)">BAT-2026-904 (Juice Run A - Line 1)</option>
+              <option value="BAT-2026-905 (Juice Run B)">BAT-2026-905 (Juice Run B - Line 1)</option>
+            </select>
+          </div>
+
+          <div style={{ padding: "10px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", fontSize: "12px", color: "var(--text-secondary)" }}>
+            Attaching lot <strong>{scanResult?.id}</strong> binds supplier raw material lots to the active batch for forward & backward 360° traceability audits (PDF Page 3 Section 8).
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

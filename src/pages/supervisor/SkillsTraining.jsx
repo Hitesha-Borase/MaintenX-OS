@@ -60,9 +60,6 @@ export function SkillsTraining() {
           <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
             Departmental Qualifications & Skills
           </h1>
-          <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-            Track employee machinery credentials, HACCP food-safety training, and renewal schedules
-          </p>
         </div>
 
         <Button variant="primary" icon={Plus} onClick={() => setIsScheduleModalOpen(true)}>

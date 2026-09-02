@@ -173,9 +173,6 @@ export function PMChecklistList() {
             <h3 style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)" }}>
               Recent Checklist Execution History & Sign-Offs
             </h3>
-            <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-              Historical audit log of technician completed PM inspections
-            </p>
           </div>
           <Badge variant="emerald">100% Signed Off</Badge>
         </div>
@@ -193,7 +190,9 @@ export function PMChecklistList() {
               </tr>
             </thead>
             <tbody>
-              {checklistHistory.map((hist) => (
+              {checklistHistory.map((hist) => {
+                const template = templates.find(t => t.id === hist.checklistTemplateId);
+                return (
                 <tr key={hist.id}>
                   <td>
                     <span style={{ fontWeight: 800, color: "#8C5B23", fontFamily: "var(--font-mono)" }}>
@@ -201,26 +200,26 @@ export function PMChecklistList() {
                     </span>
                   </td>
                   <td>
-                    <strong style={{ color: "var(--text-primary)" }}>{hist.templateName}</strong>
+                    <strong style={{ color: "var(--text-primary)" }}>{template ? template.name : hist.checklistTemplateId}</strong>
                   </td>
                   <td>
                     <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>{hist.assetName}</span>
                   </td>
                   <td style={{ fontFamily: "var(--font-mono)", fontSize: "12px", color: "var(--text-muted)" }}>
-                    {hist.executionDate}
+                    {hist.executedDate}
                   </td>
                   <td>
                     <span style={{ fontSize: "12px", color: "var(--text-primary)", fontWeight: 600 }}>
-                      {hist.technician}
+                      {hist.executedBy}
                     </span>
                   </td>
                   <td>
-                    <Badge variant={hist.status.includes("Pass") ? "emerald" : "amber"}>
-                      {hist.status}
+                    <Badge variant={hist.overallStatus && hist.overallStatus.includes("PASS") ? "emerald" : "amber"}>
+                      {hist.overallStatus}
                     </Badge>
                   </td>
                 </tr>
-              ))}
+              )})}
             </tbody>
           </table>
         </div>
@@ -311,3 +310,4 @@ export function PMChecklistList() {
     </div>
   );
 }
+

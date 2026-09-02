@@ -1,90 +1,113 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   Scale,
   Plus,
-  CheckCircle2,
   Search,
   Filter,
   Layers,
   Edit2,
+  Trash2,
   X,
   ShieldCheck,
   Percent,
-  Cpu
+  Cpu,
+  CheckCircle2
 } from "lucide-react";
 import { Card } from "../../../components/common/Card";
 import { Badge } from "../../../components/common/Badge";
 import { Button } from "../../../components/common/Button";
 import { StatCard } from "../../../components/common/StatCard";
+import { useMasterData } from "../../../context/MasterDataContext";
 import { useApp } from "../../../context/AppContext";
 
 export function UOMPage() {
+  const { uoms = [], addUOM, updateUOM, toggleUOMStatus, deleteUOM } = useMasterData();
   const { addToast } = useApp();
 
-  const [uoms, setUoms] = useState([
-    { id: "UOM-01", code: "CASE-24", name: "Case of 24 Units", baseUnit: "EA", factor: 24.0, type: "Packaging" },
-    { id: "UOM-02", code: "CASE-12", name: "Case of 12 Units", baseUnit: "EA", factor: 12.0, type: "Packaging" },
-    { id: "UOM-03", code: "PALLET-60", name: "Standard 48x40 Wood Pallet", baseUnit: "CASE-24", factor: 60.0, type: "Warehouse Logistics" },
-    { id: "UOM-04", code: "LITER", name: "Metric Volume (1,000 ml)", baseUnit: "ML", factor: 1000.0, type: "Liquid Measure" },
-    { id: "UOM-05", code: "KG", name: "Kilogram (1,000 g)", baseUnit: "G", factor: 1000.0, type: "Mass Measure" }
-  ]);
-
   const [searchQuery, setSearchQuery] = useState("");
+  const [typeFilter, setTypeFilter] = useState("ALL");
+  const [statusFilter, setStatusFilter] = useState("ALL");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUOM, setEditingUOM] = useState(null);
 
   const [newUOM, setNewUOM] = useState({
-    code: "",
+    uomCode: "",
     name: "",
-    baseUnit: "EA",
-    factor: 12.0,
-    type: "Packaging"
+    baseUom: "UNITS",
+    conversionFactor: 1.0,
+    type: "Packaging",
+    effectiveFrom: new Date().toISOString().substring(0, 10),
+    effectiveTo: "2030-12-31"
   });
 
-  const filteredUOMs = uoms.filter((u) => {
-    if (!searchQuery.trim()) return true;
-    const q = searchQuery.toLowerCase();
-    return (
-      u.name.toLowerCase().includes(q) ||
-      u.code.toLowerCase().includes(q) ||
-      u.type.toLowerCase().includes(q)
-    );
-  });
+  const filteredUOMs = useMemo(() => {
+    return uoms.filter((u) => {
+      const matchesType = typeFilter === "ALL" || u.type === typeFilter;
+      const matchesStatus = statusFilter === "ALL" || u.status === statusFilter;
+      const q = searchQuery.toLowerCase().trim();
+      const matchesSearch =
+        !q ||
+        (u.name || "").toLowerCase().includes(q) ||
+        (u.uomCode || u.code || "").toLowerCase().includes(q) ||
+        (u.type || "").toLowerCase().includes(q) ||
+        (u.baseUom || "").toLowerCase().includes(q);
+
+      return matchesType && matchesStatus && matchesSearch;
+    });
+  }, [uoms, typeFilter, statusFilter, searchQuery]);
 
   const handleAddSubmit = (e) => {
     e.preventDefault();
-    if (!newUOM.code.trim() || !newUOM.name.trim()) {
+    const codeVal = (newUOM.uomCode || "").trim().toUpperCase();
+    if (!codeVal || !newUOM.name.trim()) {
       addToast("Please provide UOM code and description.", "warning");
       return;
     }
 
-    const created = {
-      id: `UOM-0${uoms.length + 1}`,
-      code: newUOM.code.toUpperCase(),
-      name: newUOM.name,
-      baseUnit: newUOM.baseUnit,
-      factor: Number(newUOM.factor) || 1.0,
-      type: newUOM.type
-    };
+    if (uoms.some((u) => (u.uomCode || u.code || "").toUpperCase() === codeVal)) {
+      addToast(`UOM Code "${codeVal}" already exists in Master Data!`, "warning");
+      return;
+    }
 
-    setUoms([...uoms, created]);
-    addToast(`UOM "${created.code}" registered successfully!`, "success");
+    const created = addUOM({
+      ...newUOM,
+      uomCode: codeVal,
+      conversionFactor: Number(newUOM.conversionFactor) || 1.0
+    });
+    addToast(`UOM "${created.uomCode}" registered in Master Data!`, "success");
     setIsModalOpen(false);
-    setNewUOM({ code: "", name: "", baseUnit: "EA", factor: 12.0, type: "Packaging" });
+    setNewUOM({
+      uomCode: "",
+      name: "",
+      baseUom: "UNITS",
+      conversionFactor: 1.0,
+      type: "Packaging",
+      effectiveFrom: new Date().toISOString().substring(0, 10),
+      effectiveTo: "2030-12-31"
+    });
   };
 
   const handleEditSubmit = (e) => {
     e.preventDefault();
-    if (!editingUOM.code.trim() || !editingUOM.name.trim()) {
-      addToast("Please provide UOM code and description.", "warning");
+    if (!editingUOM.name.trim()) {
+      addToast("Please provide description.", "warning");
       return;
     }
 
-    setUoms((prev) =>
-      prev.map((u) => (u.id === editingUOM.id ? editingUOM : u))
-    );
-    addToast(`UOM "${editingUOM.code}" updated successfully!`, "success");
+    updateUOM(editingUOM.uomId, {
+      ...editingUOM,
+      uomCode: (editingUOM.uomCode || editingUOM.code || "").toUpperCase(),
+      conversionFactor: Number(editingUOM.conversionFactor || editingUOM.factor) || 1.0
+    });
+    addToast(`UOM "${editingUOM.uomCode || editingUOM.code}" updated successfully!`, "success");
     setEditingUOM(null);
+  };
+
+  const handleDelete = (uomId, code) => {
+    if (window.confirm(`Are you sure you want to delete UOM "${code}"?`)) {
+      deleteUOM(uomId);
+      addToast(`UOM "${code}" deleted.`, "info");
+    }
   };
 
   return (
@@ -107,7 +130,7 @@ export function UOMPage() {
         </div>
       </div>
 
-      {/* KPI Tickers - 2x2 on mobile, 4 on desktop */}
+      {/* KPI Tickers */}
       <div
         className="kpi-grid-responsive grid-4"
         style={{
@@ -120,102 +143,205 @@ export function UOMPage() {
       >
         <StatCard
           title="Active UOMs"
-          value={uoms.length.toString()}
-          unit="Conversion Factors"
+          value={uoms.filter((u) => u.status === "Active").length.toString()}
+          unit="Standard Units"
           icon={Scale}
           colorVariant="emerald"
         />
         <StatCard
-          title="Standard Pallet"
-          value="60 Cases"
-          unit="48x40 GMA"
+          title="Packaging Types"
+          value={uoms.filter((u) => u.type === "Packaging").length.toString()}
+          unit="Multipliers"
           icon={Layers}
           colorVariant="cyan"
         />
         <StatCard
-          title="Precision Factor"
-          value="100%"
-          unit="Deterministic"
-          icon={Percent}
+          title="Volume & Mass"
+          value={uoms.filter((u) => u.type?.includes("Measure")).length.toString()}
+          unit="Metric Base"
+          icon={Cpu}
           colorVariant="amber"
         />
         <StatCard
-          title="ERP Sync State"
-          value="Live"
-          unit="Auto-Mapped"
+          title="Conversion Integrity"
+          value="100%"
+          unit="Audited"
           icon={ShieldCheck}
           colorVariant="emerald"
         />
       </div>
 
-      {/* Table Section */}
-      <Card style={{ padding: "18px", minWidth: 0, width: "100%", boxSizing: "border-box" }}>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", alignItems: "center", marginBottom: "14px", justifyContent: "space-between" }}>
-          <div style={{ position: "relative", minWidth: "220px", flex: 1 }}>
-            <Search size={15} color="var(--text-muted)" style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)" }} />
+      {/* Main Table Card */}
+      <Card
+        style={{
+          backgroundColor: "#FFFFFF",
+          border: "1px solid var(--border-subtle)",
+          borderRadius: "14px",
+          overflow: "hidden"
+        }}
+      >
+        {/* Controls Bar */}
+        <div
+          style={{
+            padding: "16px 20px",
+            borderBottom: "1px solid var(--border-subtle)",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "12px",
+            backgroundColor: "var(--bg-card-subtle)"
+          }}
+        >
+          <div style={{ position: "relative", minWidth: "240px", flex: 1 }}>
+            <Search
+              size={15}
+              style={{
+                position: "absolute",
+                left: "12px",
+                top: "50%",
+                transform: "translateY(-50%)",
+                color: "var(--text-muted)"
+              }}
+            />
             <input
               type="text"
-              placeholder="Search UOM code, name, type..."
+              placeholder="Search UOM code, conversion multiplier or type..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="form-input"
-              style={{ paddingLeft: "32px", height: "36px", fontSize: "12px", backgroundColor: "#FFFFFF" }}
+              style={{
+                paddingLeft: "36px",
+                backgroundColor: "#FFFFFF",
+                fontSize: "12px",
+                width: "100%"
+              }}
             />
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+            <select
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value)}
+              className="form-input"
+              style={{ fontSize: "12px", padding: "6px 10px", width: "auto", backgroundColor: "#FFFFFF" }}
+            >
+              <option value="ALL">All Categories</option>
+              <option value="Packaging">Packaging</option>
+              <option value="Discrete Unit">Discrete Unit</option>
+              <option value="Liquid Measure">Liquid Measure</option>
+              <option value="Mass Measure">Mass Measure</option>
+              <option value="Logistics">Logistics</option>
+            </select>
+
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="form-input"
+              style={{ fontSize: "12px", padding: "6px 10px", width: "auto", backgroundColor: "#FFFFFF" }}
+            >
+              <option value="ALL">All Status</option>
+              <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
+            </select>
           </div>
         </div>
 
-        <div className="data-table-container" style={{ width: "100%", overflowX: "auto", WebkitOverflowScrolling: "touch", display: "block" }}>
-          <table className="data-table" style={{ width: "100%", minWidth: "680px" }}>
+        {/* Table View */}
+        <div style={{ overflowX: "auto", width: "100%" }}>
+          <table className="data-table" style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
             <thead>
-              <tr>
-                <th>UOM Code</th>
-                <th>Unit Description</th>
-                <th>Category</th>
-                <th>Base Reference</th>
-                <th>Multiplier Ratio</th>
-                <th>Actions</th>
+              <tr style={{ borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>UOM Code</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>UOM Description</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Classification</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Base Unit Reference</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Multiplier Factor</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Status</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", textAlign: "right" }}>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {filteredUOMs.map((u) => (
-                <tr key={u.id}>
-                  <td>
-                    <span style={{ fontWeight: 800, color: "#8C5B23", fontFamily: "var(--font-mono)" }}>
-                      {u.code}
-                    </span>
-                  </td>
-                  <td>
-                    <strong style={{ color: "var(--text-primary)" }}>{u.name}</strong>
-                  </td>
-                  <td>
-                    <Badge variant="cyan">{u.type}</Badge>
-                  </td>
-                  <td style={{ fontFamily: "var(--font-mono)", fontSize: "12px", color: "var(--text-secondary)", fontWeight: 600 }}>{u.baseUnit}</td>
-                  <td style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "#059669" }}>
-                    1 {u.code} = {u.factor} {u.baseUnit}
-                  </td>
-                  <td>
-                    <button
-                      onClick={() => setEditingUOM({ ...u })}
-                      title="Edit UOM"
-                      style={{
-                        width: "30px",
-                        height: "30px",
-                        borderRadius: "6px",
-                        backgroundColor: "var(--bg-card-subtle)",
-                        color: "var(--text-primary)",
-                        border: "1px solid var(--border-subtle)",
-                        cursor: "pointer",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        justifyContent: "center"
-                      }}
-                    >
-                      <Edit2 size={13} />
-                    </button>
+              {filteredUOMs.length === 0 ? (
+                <tr>
+                  <td colSpan={7} style={{ textAlign: "center", padding: "32px", color: "var(--text-muted)", fontSize: "13px" }}>
+                    No UOM records found matching filters.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                filteredUOMs.map((u) => {
+                  const uomCode = u.uomCode || u.code;
+                  const factor = u.conversionFactor || u.factor || 1.0;
+                  return (
+                    <tr key={u.uomId || u.id} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+                      <td style={{ padding: "12px 16px", fontFamily: "var(--font-mono)", fontWeight: 800, color: "#8C5B23" }}>
+                        {uomCode}
+                      </td>
+                      <td style={{ padding: "12px 16px", fontWeight: 700, color: "var(--text-primary)", fontSize: "13px" }}>
+                        {u.name}
+                      </td>
+                      <td style={{ padding: "12px 16px" }}>
+                        <Badge variant="cyan">{u.type}</Badge>
+                      </td>
+                      <td style={{ padding: "12px 16px", fontFamily: "var(--font-mono)", fontSize: "12px", color: "var(--text-secondary)" }}>
+                        1 {uomCode} = {factor} {u.baseUom || u.baseUnit || "Units"}
+                      </td>
+                      <td style={{ padding: "12px 16px", fontFamily: "var(--font-mono)", fontWeight: 800, color: "#D97706" }}>
+                        × {factor.toFixed(1)}
+                      </td>
+                      <td style={{ padding: "12px 16px" }}>
+                        <button
+                          onClick={() => toggleUOMStatus(u.uomId || u.id)}
+                          style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}
+                          title="Toggle Status"
+                        >
+                          <Badge variant={u.status === "Active" ? "emerald" : "gray"}>{u.status || "Active"}</Badge>
+                        </button>
+                      </td>
+                      <td style={{ padding: "12px 16px", textAlign: "right" }}>
+                        <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                          <button
+                            onClick={() => setEditingUOM({ ...u })}
+                            title="Edit UOM"
+                            style={{
+                              width: "30px",
+                              height: "30px",
+                              borderRadius: "6px",
+                              backgroundColor: "var(--bg-card-subtle)",
+                              color: "var(--text-primary)",
+                              border: "1px solid var(--border-subtle)",
+                              cursor: "pointer",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center"
+                            }}
+                          >
+                            <Edit2 size={13} />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(u.uomId || u.id, uomCode)}
+                            title="Delete UOM"
+                            style={{
+                              width: "30px",
+                              height: "30px",
+                              borderRadius: "6px",
+                              backgroundColor: "var(--bg-card-subtle)",
+                              color: "#EF4444",
+                              border: "1px solid var(--border-subtle)",
+                              cursor: "pointer",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center"
+                            }}
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
@@ -226,51 +352,54 @@ export function UOMPage() {
         <div className="modal-backdrop" onClick={() => setIsModalOpen(false)}>
           <div className="modal-content" style={{ maxWidth: "480px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
-              <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)" }}>
-                Add UOM Conversion Factor
-              </h2>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Scale size={18} color="#C89547" />
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                  Add UOM & Conversion Factor
+                </h2>
+              </div>
               <button onClick={() => setIsModalOpen(false)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
                 <X size={18} />
               </button>
             </div>
 
             <form onSubmit={handleAddSubmit} style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                 <div>
                   <label className="form-label">UOM Code *</label>
                   <input
                     type="text"
                     required
-                    placeholder="e.g. TRAY-6"
-                    value={newUOM.code}
-                    onChange={(e) => setNewUOM({ ...newUOM, code: e.target.value })}
+                    placeholder="e.g. CASE-24"
+                    value={newUOM.uomCode}
+                    onChange={(e) => setNewUOM({ ...newUOM, uomCode: e.target.value.toUpperCase() })}
                     className="form-input"
                     style={{ backgroundColor: "#FFFFFF" }}
                   />
                 </div>
-
                 <div>
-                  <label className="form-label">Category</label>
+                  <label className="form-label">UOM Category</label>
                   <select
-                    className="form-select"
                     value={newUOM.type}
                     onChange={(e) => setNewUOM({ ...newUOM, type: e.target.value })}
+                    className="form-input"
                     style={{ backgroundColor: "#FFFFFF" }}
                   >
                     <option value="Packaging">Packaging</option>
-                    <option value="Warehouse Logistics">Warehouse Logistics</option>
+                    <option value="Discrete Unit">Discrete Unit</option>
                     <option value="Liquid Measure">Liquid Measure</option>
                     <option value="Mass Measure">Mass Measure</option>
+                    <option value="Logistics">Logistics</option>
                   </select>
                 </div>
               </div>
 
               <div>
-                <label className="form-label">Unit Description *</label>
+                <label className="form-label">UOM Description / Label *</label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Multipack Tray of 6 Cans"
+                  placeholder="e.g. Case of 24 Cans / Bottles"
                   value={newUOM.name}
                   onChange={(e) => setNewUOM({ ...newUOM, name: e.target.value })}
                   className="form-input"
@@ -278,39 +407,40 @@ export function UOMPage() {
                 />
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                 <div>
-                  <label className="form-label">Base Reference Unit</label>
+                  <label className="form-label">Base Unit Reference</label>
                   <input
                     type="text"
-                    placeholder="e.g. EA or CAN"
-                    value={newUOM.baseUnit}
-                    onChange={(e) => setNewUOM({ ...newUOM, baseUnit: e.target.value })}
+                    required
+                    placeholder="e.g. UNITS or ML"
+                    value={newUOM.baseUom}
+                    onChange={(e) => setNewUOM({ ...newUOM, baseUom: e.target.value.toUpperCase() })}
                     className="form-input"
                     style={{ backgroundColor: "#FFFFFF" }}
                   />
                 </div>
-
                 <div>
-                  <label className="form-label">Multiplier Factor Ratio</label>
+                  <label className="form-label">Conversion Multiplier *</label>
                   <input
                     type="number"
-                    step="0.01"
-                    min="0.01"
-                    value={newUOM.factor}
-                    onChange={(e) => setNewUOM({ ...newUOM, factor: e.target.value })}
+                    step="any"
+                    min="0.0001"
+                    required
+                    value={newUOM.conversionFactor}
+                    onChange={(e) => setNewUOM({ ...newUOM, conversionFactor: e.target.value })}
                     className="form-input"
                     style={{ backgroundColor: "#FFFFFF" }}
                   />
                 </div>
               </div>
 
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "8px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
                 <Button variant="secondary" onClick={() => setIsModalOpen(false)}>
                   Cancel
                 </Button>
                 <Button variant="primary" type="submit">
-                  Save UOM
+                  Save UOM Factor
                 </Button>
               </div>
             </form>
@@ -323,46 +453,49 @@ export function UOMPage() {
         <div className="modal-backdrop" onClick={() => setEditingUOM(null)}>
           <div className="modal-content" style={{ maxWidth: "480px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
-              <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)" }}>
-                Edit UOM — {editingUOM.code}
-              </h2>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Edit2 size={16} color="#C89547" />
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                  Edit UOM — {editingUOM.uomCode || editingUOM.code}
+                </h2>
+              </div>
               <button onClick={() => setEditingUOM(null)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
                 <X size={18} />
               </button>
             </div>
 
             <form onSubmit={handleEditSubmit} style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                 <div>
                   <label className="form-label">UOM Code *</label>
                   <input
                     type="text"
                     required
-                    value={editingUOM.code}
-                    onChange={(e) => setEditingUOM({ ...editingUOM, code: e.target.value })}
+                    value={editingUOM.uomCode || editingUOM.code}
+                    onChange={(e) => setEditingUOM({ ...editingUOM, uomCode: e.target.value.toUpperCase() })}
                     className="form-input"
                     style={{ backgroundColor: "#FFFFFF" }}
                   />
                 </div>
-
                 <div>
-                  <label className="form-label">Category</label>
+                  <label className="form-label">UOM Category</label>
                   <select
-                    className="form-select"
                     value={editingUOM.type}
                     onChange={(e) => setEditingUOM({ ...editingUOM, type: e.target.value })}
+                    className="form-input"
                     style={{ backgroundColor: "#FFFFFF" }}
                   >
                     <option value="Packaging">Packaging</option>
-                    <option value="Warehouse Logistics">Warehouse Logistics</option>
+                    <option value="Discrete Unit">Discrete Unit</option>
                     <option value="Liquid Measure">Liquid Measure</option>
                     <option value="Mass Measure">Mass Measure</option>
+                    <option value="Logistics">Logistics</option>
                   </select>
                 </div>
               </div>
 
               <div>
-                <label className="form-label">Unit Description *</label>
+                <label className="form-label">UOM Description *</label>
                 <input
                   type="text"
                   required
@@ -373,38 +506,37 @@ export function UOMPage() {
                 />
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                 <div>
-                  <label className="form-label">Base Reference Unit</label>
+                  <label className="form-label">Base Unit Reference</label>
                   <input
                     type="text"
-                    value={editingUOM.baseUnit}
-                    onChange={(e) => setEditingUOM({ ...editingUOM, baseUnit: e.target.value })}
+                    value={editingUOM.baseUom || editingUOM.baseUnit || "UNITS"}
+                    onChange={(e) => setEditingUOM({ ...editingUOM, baseUom: e.target.value.toUpperCase() })}
                     className="form-input"
                     style={{ backgroundColor: "#FFFFFF" }}
                   />
                 </div>
-
                 <div>
-                  <label className="form-label">Multiplier Factor Ratio</label>
+                  <label className="form-label">Conversion Multiplier *</label>
                   <input
                     type="number"
-                    step="0.01"
-                    min="0.01"
-                    value={editingUOM.factor}
-                    onChange={(e) => setEditingUOM({ ...editingUOM, factor: Number(e.target.value) })}
+                    step="any"
+                    required
+                    value={editingUOM.conversionFactor || editingUOM.factor || 1.0}
+                    onChange={(e) => setEditingUOM({ ...editingUOM, conversionFactor: e.target.value })}
                     className="form-input"
                     style={{ backgroundColor: "#FFFFFF" }}
                   />
                 </div>
               </div>
 
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "8px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
                 <Button variant="secondary" onClick={() => setEditingUOM(null)}>
                   Cancel
                 </Button>
                 <Button variant="primary" type="submit">
-                  Save Changes
+                  Update UOM Factor
                 </Button>
               </div>
             </form>

@@ -75,9 +75,6 @@ export function CreateWorkOrder() {
         <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)" }}>
           Create Maintenance Work Order
         </h1>
-        <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>
-          Dispatch maintenance work orders with parts reservation, safety LOTO requirements, and technician assignment.
-        </p>
       </div>
 
       <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
@@ -218,3 +215,4 @@ export function CreateWorkOrder() {
     </div>
   );
 }
+

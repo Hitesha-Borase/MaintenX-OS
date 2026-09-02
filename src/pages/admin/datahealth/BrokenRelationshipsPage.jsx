@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   HeartPulse,
   CheckCircle2,
@@ -9,15 +9,18 @@ import {
   Zap,
   ShieldCheck,
   Workflow,
-  Layers
+  Layers,
+  Link
 } from "lucide-react";
 import { Card } from "../../../components/common/Card";
 import { Badge } from "../../../components/common/Badge";
 import { Button } from "../../../components/common/Button";
 import { StatCard } from "../../../components/common/StatCard";
+import { useMasterData } from "../../../context/MasterDataContext";
 import { useApp } from "../../../context/AppContext";
 
 export function BrokenRelationshipsPage() {
+  const { dataHealthStats = {} } = useMasterData();
   const { addToast } = useApp();
 
   const [brokenRels, setBrokenRels] = useState([
@@ -41,16 +44,18 @@ export function BrokenRelationshipsPage() {
     addToast("All unlinked entity relationships connected!", "success");
   };
 
-  const filteredRels = brokenRels.filter((b) => {
-    if (!searchQuery.trim()) return true;
-    const q = searchQuery.toLowerCase();
-    return (
-      b.fromEntity.toLowerCase().includes(q) ||
-      b.toEntity.toLowerCase().includes(q) ||
-      b.issue.toLowerCase().includes(q) ||
-      b.id.toLowerCase().includes(q)
-    );
-  });
+  const filteredRels = useMemo(() => {
+    return brokenRels.filter((b) => {
+      if (!searchQuery.trim()) return true;
+      const q = searchQuery.toLowerCase();
+      return (
+        b.fromEntity.toLowerCase().includes(q) ||
+        b.toEntity.toLowerCase().includes(q) ||
+        b.issue.toLowerCase().includes(q) ||
+        b.id.toLowerCase().includes(q)
+      );
+    });
+  }, [brokenRels, searchQuery]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%", maxWidth: "1200px", margin: "0 auto", minWidth: 0 }}>
@@ -74,7 +79,7 @@ export function BrokenRelationshipsPage() {
             onClick={() => addToast("Re-crawled entity dependency graph: 0 new broken edges.", "info")}
             style={{ fontSize: "12px", padding: "7px 12px" }}
           >
-            Audit Dependency Graph
+            Audit Graph
           </Button>
           {unlinkedCount > 0 && (
             <Button
@@ -89,7 +94,7 @@ export function BrokenRelationshipsPage() {
         </div>
       </div>
 
-      {/* KPI Tickers - 2x2 on mobile, 4 on desktop */}
+      {/* KPI Tickers */}
       <div
         className="kpi-grid-responsive grid-4"
         style={{
@@ -101,120 +106,144 @@ export function BrokenRelationshipsPage() {
         }}
       >
         <StatCard
-          title="Unlinked Edges"
+          title="Relational Health"
+          value="99.2%"
+          unit="Dependency Graph"
+          icon={Workflow}
+          colorVariant="emerald"
+        />
+        <StatCard
+          title="Broken Graph Edges"
           value={unlinkedCount.toString()}
-          unit="Anomalies"
-          trend={{ value: "Cross-table linkage gaps", isPositive: unlinkedCount === 0, text: "" }}
+          unit="Unlinked"
           icon={AlertTriangle}
           colorVariant={unlinkedCount > 0 ? "amber" : "emerald"}
         />
         <StatCard
-          title="Graph Connectivity"
-          value="99.4%"
-          unit="Topology"
-          trend={{ value: "+0.8% node connectivity", isPositive: true, text: "" }}
-          icon={Workflow}
+          title="BOM Integrity"
+          value="100%"
+          unit="Multi-Level"
+          icon={Layers}
           colorVariant="cyan"
         />
         <StatCard
-          title="Monitored Entities"
-          value="18 Types"
-          unit="Active Models"
-          trend={{ value: "Lines, WorkCenters, Routing, BOM", isPositive: true, text: "" }}
-          icon={Layers}
-          colorVariant="emerald"
-        />
-        <StatCard
-          title="Deterministic Link"
-          value="100%"
-          unit="Automated"
-          trend={{ value: "Zero manual SQL required", isPositive: true, text: "" }}
+          title="Graph Verification"
+          value="Passed"
+          unit="Zero Loops"
           icon={ShieldCheck}
           colorVariant="emerald"
         />
       </div>
 
-      {/* Table */}
-      <Card style={{ padding: "18px", minWidth: 0, width: "100%", boxSizing: "border-box" }}>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", alignItems: "center", marginBottom: "14px", justifyContent: "space-between" }}>
-          <div style={{ position: "relative", minWidth: "220px", flex: 1 }}>
-            <Search size={15} color="var(--text-muted)" style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)" }} />
+      {/* Main Table Card */}
+      <Card
+        style={{
+          backgroundColor: "#FFFFFF",
+          border: "1px solid var(--border-subtle)",
+          borderRadius: "14px",
+          overflow: "hidden"
+        }}
+      >
+        {/* Controls Bar */}
+        <div
+          style={{
+            padding: "16px 20px",
+            borderBottom: "1px solid var(--border-subtle)",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "12px",
+            backgroundColor: "var(--bg-card-subtle)"
+          }}
+        >
+          <div style={{ position: "relative", minWidth: "240px", flex: 1 }}>
+            <Search
+              size={15}
+              style={{
+                position: "absolute",
+                left: "12px",
+                top: "50%",
+                transform: "translateY(-50%)",
+                color: "var(--text-muted)"
+              }}
+            />
             <input
               type="text"
-              placeholder="Search source entity, target entity, issue..."
+              placeholder="Search by source entity, target entity or relationship issue..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="form-input"
-              style={{ paddingLeft: "32px", height: "36px", fontSize: "12px", backgroundColor: "#FFFFFF" }}
+              style={{
+                paddingLeft: "36px",
+                backgroundColor: "#FFFFFF",
+                fontSize: "12px",
+                width: "100%"
+              }}
             />
           </div>
         </div>
 
-        <div className="data-table-container" style={{ width: "100%", overflowX: "auto", WebkitOverflowScrolling: "touch", display: "block" }}>
-          <table className="data-table" style={{ width: "100%", minWidth: "700px" }}>
+        {/* Table View */}
+        <div style={{ overflowX: "auto", width: "100%" }}>
+          <table className="data-table" style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
             <thead>
-              <tr>
-                <th>Link ID</th>
-                <th>Source Entity</th>
-                <th>Target Entity</th>
-                <th>Relationship Context</th>
-                <th>Structural Anomaly</th>
-                <th>Status</th>
-                <th>Action</th>
+              <tr style={{ borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Source Master Entity</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Target Master Entity</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Relationship Scope</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Detected Gap</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Status</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", textAlign: "right" }}>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {filteredRels.map((b) => {
-                const isUnlinked = b.status === "Unlinked";
-
-                return (
-                  <tr key={b.id}>
-                    <td>
-                      <span style={{ fontWeight: 800, color: "#8C5B23", fontFamily: "var(--font-mono)" }}>{b.id}</span>
-                    </td>
-                    <td>
-                      <strong style={{ color: "var(--text-primary)" }}>{b.fromEntity}</strong>
-                    </td>
-                    <td>
-                      <span style={{ fontWeight: 700, color: "#8C5B23" }}>{b.toEntity}</span>
-                    </td>
-                    <td>
-                      <span style={{ fontSize: "12px", color: "var(--text-secondary)", fontWeight: 600 }}>{b.relationship}</span>
-                    </td>
-                    <td style={{ fontSize: "12px", color: "#D97706", fontWeight: 600 }}>{b.issue}</td>
-                    <td>
-                      <Badge variant={isUnlinked ? "amber" : "emerald"}>{b.status}</Badge>
-                    </td>
-                    <td>
-                      {isUnlinked ? (
-                        <button
-                          onClick={() => handleFix(b.id)}
-                          title="Auto-Link Relationship"
-                          style={{
-                            width: "30px",
-                            height: "30px",
-                            borderRadius: "6px",
-                            backgroundColor: "var(--color-primary)",
-                            color: "#FFFFFF",
-                            border: "none",
-                            cursor: "pointer",
-                            display: "inline-flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            boxShadow: "0 2px 4px rgba(140, 91, 35, 0.2)"
-                          }}
-                        >
-                          <Wrench size={13} />
-                        </button>
-                      ) : (
-                        <span style={{ fontSize: "11px", color: "#059669", fontWeight: 800, display: "inline-flex", alignItems: "center", gap: "4px" }}>
-                          <CheckCircle2 size={13} /> Connected
-                        </span>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
+              {filteredRels.map((b) => (
+                <tr key={b.id} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+                  <td style={{ padding: "12px 16px" }}>
+                    <div style={{ fontWeight: 800, color: "var(--text-primary)", fontSize: "13px" }}>{b.fromEntity}</div>
+                    <div style={{ fontSize: "11px", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>{b.id}</div>
+                  </td>
+                  <td style={{ padding: "12px 16px", fontWeight: 700, color: "#8C5B23", fontSize: "13px" }}>
+                    {b.toEntity}
+                  </td>
+                  <td style={{ padding: "12px 16px" }}>
+                    <Badge variant="cyan">{b.relationship}</Badge>
+                  </td>
+                  <td style={{ padding: "12px 16px", fontSize: "12px", color: "#D97706", fontWeight: 600 }}>
+                    {b.issue}
+                  </td>
+                  <td style={{ padding: "12px 16px" }}>
+                    <Badge variant={b.status === "Unlinked" ? "amber" : "emerald"}>
+                      {b.status}
+                    </Badge>
+                  </td>
+                  <td style={{ padding: "12px 16px", textAlign: "right" }}>
+                    {b.status === "Unlinked" ? (
+                      <button
+                        onClick={() => handleFix(b.id)}
+                        title="Auto-Connect Graph Edge"
+                        style={{
+                          width: "30px",
+                          height: "30px",
+                          borderRadius: "6px",
+                          backgroundColor: "var(--bg-card-subtle)",
+                          color: "#059669",
+                          border: "1px solid var(--border-subtle)",
+                          cursor: "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center"
+                        }}
+                      >
+                        <Wrench size={13} />
+                      </button>
+                    ) : (
+                      <span style={{ fontSize: "12px", color: "#059669", fontWeight: 700 }}>Connected</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>

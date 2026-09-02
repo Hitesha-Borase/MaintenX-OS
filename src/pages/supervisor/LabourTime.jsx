@@ -37,14 +37,17 @@ export function LabourTime() {
           <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
             Crew Hours & Clock In logs
           </h1>
-          <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-            Verify operator clock ins, authorize shift timecards, and approve overtime labor premiums
-          </p>
         </div>
 
-        <Button variant="success" icon={ShieldCheck} onClick={handleVerifyAll}>
-          Verify & Lock Timecards
-        </Button>
+        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+          <Button variant="warning" icon={DollarSign} onClick={() => addToast("Shift Overtime Hours (+2.0 hrs) authorized for all 3 operators.", "success")}>
+            Authorize Shift Overtime Hours
+          </Button>
+
+          <Button variant="success" icon={ShieldCheck} onClick={handleVerifyAll}>
+            Verify & Lock Timecards
+          </Button>
+        </div>
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>

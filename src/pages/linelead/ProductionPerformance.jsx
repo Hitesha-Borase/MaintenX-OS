@@ -69,12 +69,22 @@ export function ProductionPerformance() {
     addToast("Target override reset to standard master schedule target.", "info");
   };
 
+  const [isSimModalOpen, setIsSimModalOpen] = useState(false);
+  const [simHours, setSimHours] = useState(3.5);
+  const simReqBPM = Math.round(remaining / (simHours * 60)) || 0;
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "100%" }}>
-      <div>
-        <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
-          Production Performance & Pace Analytics
-        </h1>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
+        <div>
+          <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
+            Production Performance & Pace Analytics
+          </h1>
+        </div>
+
+        <Button variant="primary" icon={Gauge} onClick={() => setIsSimModalOpen(true)}>
+          Simulate Recovery Speed
+        </Button>
       </div>
 
       {/* Active Override Status Banner */}
@@ -276,6 +286,52 @@ export function ProductionPerformance() {
             </select>
           </div>
         </form>
+      </Modal>
+
+      {/* Recovery Speed Simulator Modal */}
+      <Modal
+        isOpen={isSimModalOpen}
+        onClose={() => setIsSimModalOpen(false)}
+        title="Recovery Speed Pace Simulator"
+        subtitle="Simulate Required Line BPM Speed for Remaining Shift Time"
+        maxWidth="480px"
+        footer={
+          <Button variant="secondary" onClick={() => setIsSimModalOpen(false)}>
+            Close Simulator
+          </Button>
+        }
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+          <div>
+            <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-primary)", display: "block", marginBottom: "6px" }}>
+              Remaining Shift Hours Available
+            </label>
+            <input
+              type="number"
+              step="0.5"
+              value={simHours}
+              onChange={(e) => setSimHours(Number(e.target.value))}
+              className="input-field"
+              min={0.5}
+              max={12}
+            />
+          </div>
+
+          <div style={{ padding: "14px", borderRadius: "8px", backgroundColor: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)", display: "flex", flexDirection: "column", gap: "8px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px" }}>
+              <span style={{ color: "var(--text-secondary)" }}>Remaining Target Qty:</span>
+              <strong style={{ color: "var(--text-primary)" }}>{remaining.toLocaleString()} Bottles</strong>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px" }}>
+              <span style={{ color: "var(--text-secondary)" }}>Simulated Hours:</span>
+              <strong style={{ color: "var(--text-primary)" }}>{simHours} hrs ({simHours * 60} mins)</strong>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "14px", borderTop: "1px solid var(--border-subtle)", paddingTop: "8px" }}>
+              <span style={{ fontWeight: 700, color: "var(--text-primary)" }}>Required Speed:</span>
+              <strong style={{ color: "#0284C7", fontSize: "16px" }}>{simReqBPM} BPM</strong>
+            </div>
+          </div>
+        </div>
       </Modal>
     </div>
   );

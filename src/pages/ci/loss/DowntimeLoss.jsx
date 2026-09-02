@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Clock,
@@ -8,58 +8,66 @@ import {
   TrendingDown,
   Activity,
   Plus,
-  SearchCode
+  SearchCode,
+  DollarSign,
+  Layers,
+  Search,
+  Filter
 } from "lucide-react";
 import { Card } from "../../../components/common/Card";
 import { StatCard } from "../../../components/common/StatCard";
 import { Badge } from "../../../components/common/Badge";
 import { Button } from "../../../components/common/Button";
+import { useCI } from "../../../context/CIContext";
 import { useApp } from "../../../context/AppContext";
 
 export function DowntimeLoss() {
   const navigate = useNavigate();
   const { addToast } = useApp();
+  const { lossRecords = [], initiateRCA } = useCI();
 
-  const [events, setEvents] = useState([
-    {
-      event: "Filler nozzle seal rupture & CIP loop pressure drop — Line 1",
-      duration: "45 min",
-      category: "Unplanned",
-      cost: "$4,500",
-      rootCauseRef: "INV-802"
-    },
-    {
-      event: "Scheduled Size Changeover: SKU-AJ-500ML → SKU-AJ-1L PET",
-      duration: "32 min",
-      category: "Planned",
-      cost: "$2,200",
-      rootCauseRef: "SOP-CHG-102"
-    },
-    {
-      event: "Capper infeed starwheel jam and micro-stoppage — Bay 2",
-      duration: "22 min",
-      category: "Unplanned",
-      cost: "$1,800",
-      rootCauseRef: "INV-803"
-    }
-  ]);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const downtimeLosses = useMemo(() => {
+    return lossRecords.filter((l) => l.category.toLowerCase().includes("downtime") || l.hoursLost > 0);
+  }, [lossRecords]);
+
+  const totalDowntimeHours = useMemo(() => {
+    return downtimeLosses.reduce((acc, l) => acc + (Number(l.hoursLost) || 0), 0);
+  }, [downtimeLosses]);
+
+  const totalFinancialLoss = useMemo(() => {
+    return downtimeLosses.reduce((acc, l) => acc + (Number(l.financialImpactUSD) || 0), 0);
+  }, [downtimeLosses]);
 
   const handleExportCSV = () => {
-    const headers = "Downtime Event,Duration,Category,Financial Loss,Reference ID\n";
-    const rows = events
-      .map((e) => `"${e.event}","${e.duration}","${e.category}","${e.cost}","${e.rootCauseRef}"`)
+    const headers = "Loss ID,Event Name,Line ID,Asset ID,Hours Lost,Units Lost,Financial Impact USD,Linked RCA,Linked Project,Date\n";
+    const rows = filteredLosses
+      .map((l) => `"${l.id}","${l.eventName}","${l.lineId}","${l.assetId}",${l.hoursLost},${l.unitsLost},${l.financialImpactUSD},"${l.linkedRcaId || "-"}","${l.linkedProjectId || "-"}","${l.date}"`)
       .join("\n");
     const blob = new Blob([headers + rows], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `Downtime_Loss_Events_${new Date().toISOString().substring(0, 10)}.csv`;
+    a.download = `Downtime_Loss_Ledger_${new Date().toISOString().substring(0, 10)}.csv`;
     a.click();
-    addToast("Downtime events log exported to CSV.", "info");
+    addToast("Downtime loss events exported to CSV.", "info");
   };
 
+  const filteredLosses = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim();
+    return downtimeLosses.filter((l) => {
+      return (
+        !q ||
+        l.eventName?.toLowerCase().includes(q) ||
+        l.id?.toLowerCase().includes(q) ||
+        l.assetId?.toLowerCase().includes(q)
+      );
+    });
+  }, [downtimeLosses, searchQuery]);
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%", maxWidth: "1200px", margin: "0 auto", minWidth: 0 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%", maxWidth: "1600px", margin: "0 auto", minWidth: 0 }}>
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px", width: "100%" }}>
         <div style={{ minWidth: "240px", flex: 1 }}>
@@ -73,18 +81,18 @@ export function DowntimeLoss() {
 
         <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
           <Button variant="secondary" icon={Download} onClick={handleExportCSV} style={{ fontSize: "12px", padding: "7px 12px" }}>
-            Export CSV
+            Export Loss CSV
           </Button>
           <Button variant="secondary" onClick={() => navigate("/ci/rca/investigations")} style={{ fontSize: "12px", padding: "7px 12px" }}>
             RCA Investigations
           </Button>
-          <Button variant="primary" icon={ArrowRight} onClick={() => navigate("/ci/loss/quality")} style={{ fontSize: "12px", padding: "7px 12px" }}>
+          <Button variant="primary" onClick={() => navigate("/ci/loss/quality")} style={{ fontSize: "12px", padding: "7px 12px" }}>
             Quality Loss Hub
           </Button>
         </div>
       </div>
 
-      {/* KPI Tickers - 2x2 on mobile, 4 on desktop */}
+      {/* KPI Tickers */}
       <div
         className="kpi-grid-responsive grid-4"
         style={{
@@ -96,111 +104,156 @@ export function DowntimeLoss() {
         }}
       >
         <StatCard
-          title="Planned Downtime"
-          value="112 min"
-          unit="Changeovers"
-          trend={{ value: "CIP and size format conversions", isPositive: true, text: "" }}
+          title="Total Downtime"
+          value={`${totalDowntimeHours.toFixed(1)} hrs`}
+          unit="Aggregate Outage"
+          trend={{ value: "Across fleet", isPositive: false, text: "" }}
           icon={Clock}
           colorVariant="cyan"
         />
         <StatCard
-          title="Unplanned Outages"
-          value="67 min"
-          unit="Breakdowns"
-          trend={{ value: "Emergency stops & triage", isPositive: false, text: "" }}
-          icon={AlertOctagon}
+          title="Financial Loss"
+          value={`$${totalFinancialLoss.toLocaleString()}`}
+          unit="Direct Downtime Cost"
+          trend={{ value: "Production stoppage impact", isPositive: false, text: "" }}
+          icon={DollarSign}
           colorVariant="rose"
         />
         <StatCard
           title="OEE Availability"
           value="93.8%"
           unit="Target: 95%"
-          trend={{ value: "-1.2% vs world-class standard", isPositive: false, text: "" }}
+          trend={{ value: "-1.2% gap vs benchmark", isPositive: false, text: "" }}
           icon={Activity}
           colorVariant="amber"
         />
         <StatCard
-          title="Downtime Cost"
-          value="$8,500"
-          unit="Direct Loss"
-          trend={{ value: "Unscheduled maintenance impact", isPositive: false, text: "" }}
-          icon={TrendingDown}
-          colorVariant="rose"
+          title="Active Investigations"
+          value={downtimeLosses.filter((l) => l.linkedRcaId).length.toString()}
+          unit="Under RCA 2.0"
+          trend={{ value: "Root cause linked", isPositive: true, text: "" }}
+          icon={SearchCode}
+          colorVariant="emerald"
         />
       </div>
 
-      {/* Downtime Events Card */}
-      <Card style={{ padding: "18px", minWidth: 0, width: "100%", boxSizing: "border-box" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px", flexWrap: "wrap", gap: "8px" }}>
-          <h3 style={{ fontSize: "15px", fontWeight: 800, color: "var(--text-primary)" }}>
-            Top Line Downtime Outage Events
-          </h3>
-          <Badge variant="cyan">{events.length} LOGGED EVENTS</Badge>
+      {/* Main Table Card */}
+      <Card
+        style={{
+          backgroundColor: "#FFFFFF",
+          border: "1px solid var(--border-subtle)",
+          borderRadius: "14px",
+          overflow: "hidden"
+        }}
+      >
+        {/* Controls Bar */}
+        <div
+          style={{
+            padding: "16px 20px",
+            borderBottom: "1px solid var(--border-subtle)",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "12px",
+            backgroundColor: "var(--bg-card-subtle)"
+          }}
+        >
+          <div style={{ position: "relative", minWidth: "240px", flex: 1 }}>
+            <Search
+              size={15}
+              style={{
+                position: "absolute",
+                left: "12px",
+                top: "50%",
+                transform: "translateY(-50%)",
+                color: "var(--text-muted)"
+              }}
+            />
+            <input
+              type="text"
+              placeholder="Search downtime event, asset or ID..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="form-input"
+              style={{
+                paddingLeft: "36px",
+                backgroundColor: "#FFFFFF",
+                fontSize: "12px",
+                width: "100%"
+              }}
+            />
+          </div>
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-          {events.map((ev, idx) => {
-            const isUnplanned = ev.category === "Unplanned";
-
-            return (
-              <div
-                key={idx}
-                style={{
-                  padding: "12px 14px",
-                  borderRadius: "10px",
-                  backgroundColor: "var(--bg-card-subtle)",
-                  border: isUnplanned ? "1px solid rgba(220, 38, 38, 0.3)" : "1px solid var(--border-subtle)",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  flexWrap: "wrap",
-                  gap: "10px"
-                }}
-              >
-                <div style={{ minWidth: "220px", flex: 1 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                    <span style={{ fontSize: "13px", fontWeight: 800, color: "var(--text-primary)" }}>
-                      {ev.event}
-                    </span>
-                    <Badge variant={isUnplanned ? "rose" : "cyan"}>{ev.category}</Badge>
-                  </div>
-                  <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "4px", display: "flex", gap: "12px", flexWrap: "wrap" }}>
-                    <span>Financial Loss: <strong style={{ color: "#DC2626" }}>{ev.cost}</strong></span>
-                    <span>Ref: <strong style={{ color: "var(--text-primary)", fontFamily: "var(--font-mono)" }}>{ev.rootCauseRef}</strong></span>
-                  </div>
-                </div>
-
-                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                  <span style={{ fontSize: "14px", fontWeight: 800, color: isUnplanned ? "#DC2626" : "#0284C7", fontFamily: "var(--font-mono)" }}>
-                    {ev.duration}
-                  </span>
-
-                  {isUnplanned && (
+        {/* Table View */}
+        <div style={{ overflowX: "auto", width: "100%" }}>
+          <table className="data-table" style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
+            <thead>
+              <tr style={{ borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Downtime Event</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Asset / Line</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Hours Lost</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Units Lost</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Financial Loss</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Linked RCA</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", textAlign: "right" }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredLosses.map((l) => (
+                <tr key={l.id} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+                  <td style={{ padding: "12px 16px" }}>
+                    <div style={{ fontWeight: 800, color: "var(--text-primary)", fontSize: "13px" }}>{l.eventName}</div>
+                    <div style={{ fontSize: "11px", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>{l.id} • {l.date}</div>
+                  </td>
+                  <td style={{ padding: "12px 16px", fontSize: "12px", color: "var(--text-secondary)" }}>
+                    <div style={{ fontWeight: 700, color: "var(--text-primary)" }}>{l.assetId}</div>
+                    <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>{l.lineId}</div>
+                  </td>
+                  <td style={{ padding: "12px 16px", fontFamily: "var(--font-mono)", fontWeight: 700, color: "#DC2626", fontSize: "13px" }}>
+                    {l.hoursLost} hrs
+                  </td>
+                  <td style={{ padding: "12px 16px", fontFamily: "var(--font-mono)", fontSize: "12px", color: "var(--text-secondary)" }}>
+                    {l.unitsLost?.toLocaleString()} units
+                  </td>
+                  <td style={{ padding: "12px 16px", fontFamily: "var(--font-mono)", fontWeight: 800, color: "#DC2626", fontSize: "13px" }}>
+                    ${l.financialImpactUSD?.toLocaleString()}
+                  </td>
+                  <td style={{ padding: "12px 16px", fontFamily: "var(--font-mono)", fontSize: "12px", color: "#8C5B23", fontWeight: 700 }}>
+                    {l.linkedRcaId || "Pending Trigger"}
+                  </td>
+                  <td style={{ padding: "12px 16px", textAlign: "right" }}>
                     <button
-                      onClick={() => navigate("/ci/rca/investigations")}
+                      onClick={() => {
+                        if (l.linkedRcaId) {
+                          navigate("/ci/rca/investigations");
+                        } else {
+                          initiateRCA(l.assetId, null, `Investigation — ${l.eventName}`);
+                          navigate("/ci/rca/investigations");
+                        }
+                      }}
+                      title="Investigate Root Cause"
                       style={{
-                        padding: "5px 10px",
+                        width: "30px",
+                        height: "30px",
                         borderRadius: "6px",
-                        fontSize: "11px",
-                        fontWeight: 700,
-                        background: "linear-gradient(180deg, #E2B670 0%, #C89547 100%)",
-                        color: "#261603",
-                        border: "1px solid #E8C182",
-                        boxShadow: "0 2px 6px rgba(178, 126, 51, 0.25)",
+                        backgroundColor: "var(--bg-card-subtle)",
+                        color: "#C89547",
+                        border: "1px solid var(--border-subtle)",
                         cursor: "pointer",
                         display: "inline-flex",
                         alignItems: "center",
-                        gap: "4px"
+                        justifyContent: "center"
                       }}
                     >
-                      <SearchCode size={12} />
-                      <span>Investigate</span>
+                      <SearchCode size={13} />
                     </button>
-                  )}
-                </div>
-              </div>
-            );
-          })}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </Card>
     </div>

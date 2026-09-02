@@ -62,9 +62,6 @@ export function HBManagement() {
           <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
             Departmental H/B Reconciliations
           </h1>
-          <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-            Reconcile hourly variance, sign off downtime drivers, and audit shift performance
-          </p>
         </div>
 
         <Button variant="secondary" icon={FileSpreadsheet} onClick={handleExportLog}>

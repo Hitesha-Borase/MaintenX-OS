@@ -121,9 +121,6 @@ export function ReliabilityAnalytics() {
             </h1>
             <Badge variant="cyan">Weibull Distribution</Badge>
           </div>
-          <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>
-            Mean Time Between Failures, Mean Time To Repair, asset criticality ranking, and maintenance cost growth.
-          </p>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
@@ -177,9 +174,6 @@ export function ReliabilityAnalytics() {
               <h3 style={{ fontSize: "15px", fontWeight: 700, color: "var(--text-primary)" }}>
                 Monthly MTBF Growth Trend (6-Months)
               </h3>
-              <p style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-                Continuous reliability trend progression across all production bays
-              </p>
             </div>
             <Badge variant="emerald">+24.2% Growth</Badge>
           </div>
@@ -198,9 +192,6 @@ export function ReliabilityAnalytics() {
               <h3 style={{ fontSize: "15px", fontWeight: 700, color: "var(--text-primary)" }}>
                 Monthly Maintenance Spend ($ USD)
               </h3>
-              <p style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-                Parts consumption, external services, and overtime repair cost
-              </p>
             </div>
             <Badge variant="cyan">Budget Control</Badge>
           </div>
@@ -229,3 +220,4 @@ export function ReliabilityAnalytics() {
     </div>
   );
 }
+

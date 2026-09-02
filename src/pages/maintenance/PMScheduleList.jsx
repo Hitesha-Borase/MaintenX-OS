@@ -22,7 +22,7 @@ import { useApp } from "../../context/AppContext";
 
 export function PMScheduleList() {
   const navigate = useNavigate();
-  const { pmSchedules, addPMSchedule } = useCMMS();
+  const { pmSchedules, addPMSchedule, addWorkOrder, updatePMScheduleStatus } = useCMMS();
   const { addToast } = useApp();
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -134,17 +134,53 @@ export function PMScheduleList() {
       accessor: "actions",
       sortable: false,
       render: (_, row) => (
-        <Button
-          variant="primary"
-          size="sm"
-          icon={Play}
-          onClick={(e) => {
-            e.stopPropagation();
-            navigate(`/maintenance/pm-checklists/execute/${row.templateId || "CHK-001"}?asset=${row.assetId}`);
-          }}
-        >
-          Start PM
-        </Button>
+        <div style={{ display: "flex", gap: "8px" }}>
+          {row.status.includes("Due") || row.status.includes("Overdue") ? (
+            <Button
+              variant="secondary"
+              size="sm"
+              icon={Plus}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (addWorkOrder) {
+                  const newWo = addWorkOrder({
+                    title: `Preventive Maintenance: ${row.title}`,
+                    assetId: row.assetId,
+                    assetName: row.assetName,
+                    type: "Preventive",
+                    priority: "P3 - Medium",
+                    status: "Open",
+                    department: "Maintenance",
+                    assignedTechnician: row.assignedTo || "Marcus Vance",
+                    description: `Auto-generated PM Work Order for Schedule ${row.id}. Please execute checklist ${row.templateId}.`,
+                  });
+                  addToast(`PM Work Order ${newWo.id} Generated!`);
+                  if (updatePMScheduleStatus) {
+                     updatePMScheduleStatus(row.id, "WO Generated", newWo.id);
+                  }
+                }
+              }}
+            >
+              Generate WO
+            </Button>
+          ) : (
+            <Button
+              variant="primary"
+              size="sm"
+              icon={Play}
+              onClick={(e) => {
+                e.stopPropagation();
+                let url = `/maintenance/pm-checklists/execute/${row.templateId || "CHK-001"}?asset=${row.assetId}`;
+                if (row.activeWoId) {
+                  url += `&woId=${row.activeWoId}`;
+                }
+                navigate(url);
+              }}
+            >
+              Start PM
+            </Button>
+          )}
+        </div>
       )
     }
   ];

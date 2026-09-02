@@ -26,7 +26,7 @@ import { useApp } from "../../context/AppContext";
 export function WorkOrderDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { workOrders, updateWorkOrderStatus, addVerifiedSolution, issueSparePart } = useCMMS();
+  const { workOrders, updateWorkOrderStatus, startWorkOrder, completeWorkOrder, addVerifiedSolution, issueSparePart, spareParts } = useCMMS();
   const { addToast } = useApp();
 
   const wo = workOrders.find((w) => w.id === id) || workOrders[0];
@@ -36,6 +36,9 @@ export function WorkOrderDetail() {
   const [testResultText, setTestResultText] = useState(wo.testResult || "");
   const [isSignOffModalOpen, setIsSignOffModalOpen] = useState(false);
   const [supervisorName, setSupervisorName] = useState("Thomas Sterling (Plant Operations)");
+  const [isIssuePartModalOpen, setIsIssuePartModalOpen] = useState(false);
+  const [selectedPartNo, setSelectedPartNo] = useState("");
+  const [issueQty, setIssueQty] = useState(1);
 
   const statuses = [
     "Draft",
@@ -49,8 +52,16 @@ export function WorkOrderDetail() {
   ];
 
   const handleStatusTransition = (newStatus) => {
-    updateWorkOrderStatus(wo.id, newStatus, `Transitioned to ${newStatus}`);
-    addToast(`Work Order ${wo.id} updated to ${newStatus}`);
+    if (newStatus === "In Progress") {
+        startWorkOrder(wo.id);
+        addToast(`Work Order ${wo.id} started. Timer active.`);
+    } else if (newStatus === "Completed") {
+        completeWorkOrder(wo.id, { repairAction: repairActionText, testResult: testResultText });
+        addToast(`Work Order ${wo.id} marked as completed. Duration calculated.`);
+    } else {
+        updateWorkOrderStatus(wo.id, newStatus, `Transitioned to ${newStatus}`);
+        addToast(`Work Order ${wo.id} updated to ${newStatus}`);
+    }
   };
 
   const handleAddComment = (e) => {
@@ -65,11 +76,25 @@ export function WorkOrderDetail() {
     addToast("Repair actions and verification test results saved!");
   };
 
+  const [actualHoursLog, setActualHoursLog] = useState(wo.actualHours || "");
+
   const handleSupervisorSignOff = (e) => {
     e.preventDefault();
-    updateWorkOrderStatus(wo.id, "Verified", `Supervisor sign-off completed by ${supervisorName}`);
+    updateWorkOrderStatus(wo.id, "Verified", `Supervisor sign-off completed by ${supervisorName}. Labour: ${actualHoursLog} hrs.`);
+    // Since updateWorkOrderStatus just updates status/comments, we will call completeWorkOrder if we want to save actualHours directly, but let's just pass it in the details
+    completeWorkOrder(wo.id, { actualHours: parseFloat(actualHoursLog) });
     setIsSignOffModalOpen(false);
     addToast(`Work order ${wo.id} verified and signed off!`);
+  };
+
+  const handleIssuePart = (e) => {
+    e.preventDefault();
+    if (!selectedPartNo) return;
+    issueSparePart(selectedPartNo, parseInt(issueQty), wo.id);
+    addToast(`Issued ${issueQty} unit(s) of ${selectedPartNo} to Work Order ${wo.id}.`);
+    setIsIssuePartModalOpen(false);
+    setSelectedPartNo("");
+    setIssueQty(1);
   };
 
   const handleConvertToSolution = () => {
@@ -110,9 +135,6 @@ export function WorkOrderDetail() {
             <Badge variant={wo.priority.includes("P1") ? "rose" : "amber"}>{wo.priority}</Badge>
             <Badge variant="cyan">{wo.type}</Badge>
           </div>
-          <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>
-            Target Asset: <strong style={{ color: "#38BDF8" }}>{wo.assetId} - {wo.assetName}</strong> • Department: {wo.department} • Due: {wo.dueDate}
-          </p>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
@@ -215,10 +237,15 @@ export function WorkOrderDetail() {
           {/* Parts & Tools Required */}
           <Card>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
-              <h3 style={{ fontSize: "15px", fontWeight: 700, color: "var(--text-primary)" }}>
-                Parts & Tools Consumed
-              </h3>
-              <Badge variant="cyan">{wo.partsRequired?.length || 0} Parts</Badge>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <h3 style={{ fontSize: "15px", fontWeight: 700, color: "var(--text-primary)" }}>
+                  Parts & Tools Consumed
+                </h3>
+                <Badge variant="cyan">{wo.partsRequired?.length || 0} Parts</Badge>
+              </div>
+              <Button variant="secondary" size="sm" icon={Plus} onClick={() => setIsIssuePartModalOpen(true)}>
+                Issue Part
+              </Button>
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
@@ -364,6 +391,24 @@ export function WorkOrderDetail() {
             />
           </div>
 
+          <div className="form-group">
+            <label className="form-label">Actual Labour Hours</label>
+            <input
+              type="number"
+              step="0.1"
+              min="0"
+              className="form-input"
+              value={wo.actualHours || ""}
+              onChange={(e) => {
+                // Update local WO state via completeWorkOrder or context update if we had a setWo function.
+                // Since this is a simple gap closure, we will pass it during handleSupervisorSignOff.
+                setActualHoursLog(e.target.value);
+              }}
+              placeholder="e.g. 2.5"
+              required
+            />
+          </div>
+
           <div style={{ padding: "12px", borderRadius: "8px", backgroundColor: "rgba(16, 185, 129, 0.1)", border: "1px solid rgba(16, 185, 129, 0.3)", fontSize: "12px", color: "#34D399" }}>
             By signing off, you verify that machine safety guards are remounted, LOTO is cleared, and test cycles are within operational tolerance limits.
           </div>
@@ -378,6 +423,55 @@ export function WorkOrderDetail() {
           </div>
         </form>
       </Modal>
+
+      {/* Issue Part Modal */}
+      <Modal
+        isOpen={isIssuePartModalOpen}
+        onClose={() => setIsIssuePartModalOpen(false)}
+        title="Issue Spare Part"
+        subtitle={`Deduct part from inventory and link to Work Order ${wo.id}`}
+      >
+        <form onSubmit={handleIssuePart} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+          <div className="form-group">
+            <label className="form-label">Select Spare Part</label>
+            <select
+              className="form-input"
+              value={selectedPartNo}
+              onChange={(e) => setSelectedPartNo(e.target.value)}
+              required
+            >
+              <option value="">-- Select Part in Stock --</option>
+              {spareParts.filter(p => p.stock > 0).map(p => (
+                <option key={p.partNo} value={p.partNo}>
+                  {p.partNo} - {p.name} ({p.stock} in stock)
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Quantity</label>
+            <input
+              type="number"
+              className="form-input"
+              min="1"
+              value={issueQty}
+              onChange={(e) => setIssueQty(e.target.value)}
+              required
+            />
+          </div>
+
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px" }}>
+            <Button variant="secondary" onClick={() => setIsIssuePartModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="primary" type="submit" icon={Package}>
+              Confirm Issue
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }
+

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { TrendingUp, CheckCircle, Zap, Clock } from "lucide-react";
+import { TrendingUp, CheckCircle, Zap, Clock, Send } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { Button } from "../../components/common/Button";
 import { Badge } from "../../components/common/Badge";
@@ -32,28 +32,37 @@ export function RecoveryManagement() {
     addToast(`Recovery countermeasure activated: ${name}`, "success");
   };
 
+  const handleSubmitProposal = () => {
+    addToast("Recovery plan package submitted to Supervisor's /supervisor/recovery approval queue.", "success");
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "100%" }}>
-      <div>
-        <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
-          Schedule Recovery Management
-        </h1>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
+        <div>
+          <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
+            Schedule Recovery Management
+          </h1>
+        </div>
 
+        <Button variant="primary" icon={Send} onClick={handleSubmitProposal}>
+          Submit Proposal to Supervisor
+        </Button>
       </div>
 
       {/* Target Deficit Status */}
-      <Card style={{ borderLeft: "4px solid #EF4444", backgroundColor: "rgba(239, 68, 68, 0.05)" }}>
-        <h3 style={{ fontSize: "14px", fontWeight: 700, color: "#F87171", display: "flex", alignItems: "center", gap: "6px" }}>
+      <Card style={{ borderLeft: "4px solid #EF4444", backgroundColor: "#FFFFFF", border: "1px solid var(--border-subtle)" }}>
+        <h3 style={{ fontSize: "14px", fontWeight: 700, color: "#EF4444", display: "flex", alignItems: "center", gap: "6px" }}>
           <TrendingUp size={16} /> Pace Shortage Warning
         </h3>
         <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "6px" }}>
-          Line 1 is currently projected to miss the shift target by <strong style={{ color: "#FFFFFF" }}>1,800 Bottles</strong> due to the plate heat exchanger breakdown downtime earlier.
+          Line 1 is currently projected to miss the shift target by <strong style={{ color: "var(--text-primary)" }}>1,800 Bottles</strong> due to the plate heat exchanger breakdown downtime earlier.
         </p>
       </Card>
 
       {/* Countermeasures Options */}
-      <Card>
-        <h3 style={{ fontSize: "14px", fontWeight: 700, color: "#FFFFFF", marginBottom: "12px" }}>
+      <Card style={{ backgroundColor: "#FFFFFF", border: "1px solid var(--border-subtle)" }}>
+        <h3 style={{ fontSize: "14px", fontWeight: 700, color: "var(--text-primary)", marginBottom: "12px" }}>
           Available Recovery Countermeasures
         </h3>
 
@@ -65,6 +74,8 @@ export function RecoveryManagement() {
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
+                flexWrap: "wrap",
+                gap: "12px",
                 padding: "12px",
                 borderRadius: "6px",
                 backgroundColor: "var(--bg-card-subtle)",
@@ -72,9 +83,9 @@ export function RecoveryManagement() {
               }}
             >
               <div>
-                <span style={{ fontSize: "13px", fontWeight: 600, color: "#FFFFFF" }}>{c.name}</span>
-                <span style={{ fontSize: "11px", color: "var(--text-muted)", display: "block", marginTop: "2px" }}>
-                  Type: {c.type} • Expected Yield Recovery: <strong style={{ color: "#10B981" }}>{c.expectedRecovery}</strong>
+                <span style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)" }}>{c.name}</span>
+                <span style={{ fontSize: "11px", color: "var(--text-secondary)", display: "block", marginTop: "2px" }}>
+                  Type: {c.type} • Expected Yield Recovery: <strong style={{ color: "#059669" }}>{c.expectedRecovery}</strong>
                 </span>
               </div>
 
@@ -91,8 +102,8 @@ export function RecoveryManagement() {
       </Card>
 
       {/* Countermeasure Logs */}
-      <Card>
-        <h3 style={{ fontSize: "14px", fontWeight: 700, color: "#FFFFFF", marginBottom: "12px" }}>
+      <Card style={{ backgroundColor: "#FFFFFF", border: "1px solid var(--border-subtle)" }}>
+        <h3 style={{ fontSize: "14px", fontWeight: 700, color: "var(--text-primary)", marginBottom: "12px" }}>
           Countermeasure Execution Logs
         </h3>
         <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
@@ -110,7 +121,7 @@ export function RecoveryManagement() {
               }}
             >
               <span style={{ color: "var(--text-muted)" }}>{log.time}</span>
-              <span style={{ fontWeight: 600, color: "#FFFFFF" }}>{log.countermeasure}</span>
+              <span style={{ fontWeight: 600, color: "var(--text-primary)" }}>{log.countermeasure}</span>
               <Badge variant="emerald">{log.status}</Badge>
             </div>
           ))}

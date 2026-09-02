@@ -14,7 +14,9 @@ import {
   AlertTriangle,
   CheckCircle2,
   RefreshCw,
-  Plus
+  Plus,
+  Zap,
+  Send
 } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { StatCard } from "../../components/common/StatCard";
@@ -37,6 +39,8 @@ export function LineLeadDashboard() {
   const [isMaterialModalOpen, setIsMaterialModalOpen] = useState(false);
   const [isQualityModalOpen, setIsQualityModalOpen] = useState(false);
   const [isWOModalOpen, setIsWOModalOpen] = useState(false);
+  const [isSpeedModalOpen, setIsSpeedModalOpen] = useState(false);
+  const [proposedBPM, setProposedBPM] = useState(620);
 
   const [requestingStock, setRequestingStock] = useState(false);
   const [loggingQA, setLoggingQA] = useState(false);
@@ -78,10 +82,16 @@ export function LineLeadDashboard() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
       {/* Header */}
-      <div>
-        <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
-          Line Lead Control Console
-        </h1>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
+        <div>
+          <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
+            Line Lead Control Console
+          </h1>
+        </div>
+
+        <Button variant="warning" icon={Zap} onClick={() => setIsSpeedModalOpen(true)}>
+          Propose Line Speed-Up
+        </Button>
       </div>
 
       {/* KPI Ticker Grid */}
@@ -164,9 +174,14 @@ export function LineLeadDashboard() {
               <span style={{ fontSize: "11px", color: "#EF4444", display: "block" }}>Micro-stops active</span>
             </div>
           </div>
-          <button onClick={() => navigate("/linelead/downtime-loss")} className="btn btn-ghost" style={{ fontSize: "12px", justifyContent: "flex-start", padding: "4px 0", marginTop: "auto" }}>
-            Analyze Losses <ChevronRight size={14} />
-          </button>
+          <div style={{ display: "flex", gap: "6px", marginTop: "auto" }}>
+            <Button size="xs" variant="warning" onClick={() => addToast("Micro-stop jam acknowledged & logged in Downtime Ledger.", "info")}>
+              Acknowledge Micro-Stop
+            </Button>
+            <button onClick={() => navigate("/linelead/downtime-loss")} className="btn btn-ghost" style={{ fontSize: "12px", padding: "4px 0" }}>
+              Analyze Losses <ChevronRight size={14} />
+            </button>
+          </div>
         </Card>
       </div>
 
@@ -347,6 +362,59 @@ export function LineLeadDashboard() {
             ))}
           </div>
         </div>
+      </Modal>
+
+      {/* 4. Propose Line Speed-Up Modal */}
+      <Modal
+        isOpen={isSpeedModalOpen}
+        onClose={() => setIsSpeedModalOpen(false)}
+        title="Propose Line Speed Increase"
+        subtitle="Submit Recovery Speed Tuning Proposal to Operations Supervisor"
+        maxWidth="480px"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setIsSpeedModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="warning"
+              icon={Send}
+              onClick={() => {
+                addToast(`Proposed speed increase to ${proposedBPM} BPM submitted to Supervisor for authorization.`, "success");
+                setIsSpeedModalOpen(false);
+              }}
+            >
+              Submit Proposal
+            </Button>
+          </>
+        }
+      >
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            addToast(`Proposed speed increase to ${proposedBPM} BPM submitted to Supervisor for authorization.`, "success");
+            setIsSpeedModalOpen(false);
+          }}
+          style={{ display: "flex", flexDirection: "column", gap: "14px" }}
+        >
+          <div>
+            <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-primary)", display: "block", marginBottom: "6px" }}>
+              Proposed Line Speed (BPM)
+            </label>
+            <input
+              type="number"
+              value={proposedBPM}
+              onChange={(e) => setProposedBPM(e.target.value)}
+              className="input-field"
+              min={500}
+              max={650}
+              required
+            />
+          </div>
+          <div style={{ fontSize: "12px", color: "var(--text-secondary)", padding: "10px", backgroundColor: "var(--bg-card-subtle)", borderRadius: "6px" }}>
+            Increasing speed to {proposedBPM} BPM will recover approximately +2,100 bottles over the next 3.5 hours to compensate for morning downtime.
+          </div>
+        </form>
       </Modal>
     </div>
   );

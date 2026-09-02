@@ -45,9 +45,6 @@ export function AssetHealthPage() {
             </h1>
             <Badge variant="cyan">{assets.length} Tracked Machines</Badge>
           </div>
-          <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>
-            Fleet-wide condition monitoring health index, sensor telemetry status, and mechanical health scoring.
-          </p>
         </div>
       </div>
 
@@ -162,3 +159,4 @@ export function AssetHealthPage() {
     </div>
   );
 }
+

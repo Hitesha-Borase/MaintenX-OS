@@ -137,9 +137,6 @@ export function WorkOrderList() {
             </h1>
             <Badge variant="cyan">{workOrders.length} Total Orders</Badge>
           </div>
-          <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>
-            Corrective, preventive, emergency breakdowns, and calibration work orders with complete lifecycle status tracking.
-          </p>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
@@ -199,3 +196,4 @@ export function WorkOrderList() {
     </div>
   );
 }
+

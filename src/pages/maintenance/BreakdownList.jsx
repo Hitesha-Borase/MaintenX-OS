@@ -149,9 +149,6 @@ export function BreakdownList() {
             </h1>
             <Badge variant="rose">{activeCount} Active Outages</Badge>
           </div>
-          <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>
-            Emergency incident response, downtime root cause logging, and technician dispatch tracking.
-          </p>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
@@ -263,3 +260,4 @@ export function BreakdownList() {
     </div>
   );
 }
+

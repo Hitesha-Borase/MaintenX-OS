@@ -1,7 +1,8 @@
 import React, { useState } from "react";
-import { AlertOctagon, Send, FileWarning, ShieldAlert, AlertTriangle } from "lucide-react";
+import { AlertOctagon, Send, FileWarning, ShieldAlert, AlertTriangle, PhoneCall } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { Button } from "../../components/common/Button";
+import { Modal } from "../../components/common/Modal";
 import { useExceptions } from "../../context/ExceptionContext";
 import { useCMMS } from "../../context/CMMSContext";
 import { useApp } from "../../context/AppContext";
@@ -16,13 +17,16 @@ export function ReportIssue() {
   const [severity, setSeverity] = useState("P1");
   const [description, setDescription] = useState("");
 
+  const [isEmergencyModalOpen, setIsEmergencyModalOpen] = useState(false);
+  const [hazardType, setHazardType] = useState("Major Pneumatic Leak / High Pressure Hazard");
+
   const handleSubmit = (e) => {
     e.preventDefault();
 
     const selectedAsset = assets.find((a) => a.id === assetId) || assets[0];
 
     const newException = {
-      severity, // P1, P2, P3, P4
+      severity,
       category: issueType === "Mechanical breakdown" ? "Downtime" : "Quality Hold",
       title: `${issueType}: ${selectedAsset.name}`,
       location: `${selectedAsset.line || "Line 1"} - ${selectedAsset.department || "Bottling"}`,
@@ -37,12 +41,24 @@ export function ReportIssue() {
     setDescription("");
   };
 
+  const handleTriggerEmergencyCall = (e) => {
+    e.preventDefault();
+    addToast(`EMERGENCY ALERT: Pager broadcast dispatched to Maintenance Tech Lead & Safety Officer for "${hazardType}".`, "danger");
+    setIsEmergencyModalOpen(false);
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%" }}>
-      <div>
-        <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
-          Report Operational Issue
-        </h1>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
+        <div>
+          <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
+            Report Operational Issue & Safety Exception
+          </h1>
+        </div>
+
+        <Button variant="danger" icon={PhoneCall} onClick={() => setIsEmergencyModalOpen(true)}>
+          Trigger Emergency Maintenance Call
+        </Button>
       </div>
 
       <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
@@ -137,6 +153,47 @@ export function ReportIssue() {
           Log Issue Ticket
         </Button>
       </form>
+
+      {/* Emergency Maintenance Call Modal */}
+      <Modal
+        isOpen={isEmergencyModalOpen}
+        onClose={() => setIsEmergencyModalOpen(false)}
+        title="Emergency Maintenance & Safety Alert Broadcast"
+        subtitle="Broadcast Priority P1 Alarm to On-Duty Maintenance Team"
+        maxWidth="480px"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setIsEmergencyModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="danger" icon={PhoneCall} onClick={handleTriggerEmergencyCall}>
+              Dispatch Immediate Broadcast
+            </Button>
+          </>
+        }
+      >
+        <form onSubmit={handleTriggerEmergencyCall} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+          <div>
+            <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-primary)", display: "block", marginBottom: "6px" }}>
+              Emergency Hazard Category
+            </label>
+            <select
+              value={hazardType}
+              onChange={(e) => setHazardType(e.target.value)}
+              className="input-field"
+            >
+              <option value="Major Pneumatic Leak / High Pressure Hazard">Major Pneumatic Leak / High Pressure Hazard</option>
+              <option value="Electrical Short / Smoke Anomaly">Electrical Short / Smoke Anomaly</option>
+              <option value="Structural Guard Slip / Interlock Failure">Structural Guard Slip / Interlock Failure</option>
+              <option value="Chemical / CIP Spray Leak Emergency">Chemical / CIP Spray Leak Emergency</option>
+            </select>
+          </div>
+
+          <div style={{ padding: "10px", borderRadius: "6px", backgroundColor: "#FFF5F5", border: "1px solid #FED7D7", fontSize: "12px", color: "#C53030" }}>
+            Triggering an emergency call immediately alerts On-Call Maintenance Engineers and logs a P1 Critical Incident ticket.
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

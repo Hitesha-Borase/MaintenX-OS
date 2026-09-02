@@ -1,8 +1,9 @@
 import React, { useState } from "react";
-import { AlertTriangle, Clock, Wrench, FileText, Send, AlertOctagon } from "lucide-react";
+import { AlertTriangle, Clock, Wrench, FileText, Send, AlertOctagon, Plus } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { Button } from "../../components/common/Button";
 import { Badge } from "../../components/common/Badge";
+import { Modal } from "../../components/common/Modal";
 import { useCMMS } from "../../context/CMMSContext";
 import { useApp } from "../../context/AppContext";
 
@@ -14,6 +15,10 @@ export function DowntimeLoss() {
   const [duration, setDuration] = useState(30);
   const [category, setCategory] = useState("Mechanical Failure");
   const [symptom, setSymptom] = useState("");
+
+  const [isMicroModalOpen, setIsMicroModalOpen] = useState(false);
+  const [microMins, setMicroMins] = useState(2);
+  const [microReason, setMicroReason] = useState("Bottle Conveyor Jam at Star-Wheel");
 
   const activeBreakdowns = breakdowns.filter((b) => !b.endTime);
 
@@ -41,12 +46,10 @@ export function DowntimeLoss() {
       }
     };
 
-    // Update global context breakdowns
     if (setBreakdowns) {
       setBreakdowns((prev) => [newBD, ...(prev || [])]);
     }
 
-    // Update asset status to Out of Service
     if (updateAssetStatus) {
       updateAssetStatus(assetId, "Out of Service", -10);
     }
@@ -55,12 +58,24 @@ export function DowntimeLoss() {
     setSymptom("");
   };
 
+  const handleMicroStopSubmit = (e) => {
+    e.preventDefault();
+    addToast(`Micro-stop (${microMins} mins) logged: "${microReason}". Added to shift loss logs.`, "warning");
+    setIsMicroModalOpen(false);
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%" }}>
-      <div>
-        <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
-          Downtime & Loss Logger
-        </h1>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
+        <div>
+          <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
+            Downtime & Loss Logger
+          </h1>
+        </div>
+
+        <Button variant="warning" icon={Plus} onClick={() => setIsMicroModalOpen(true)}>
+          Log Micro-Stop (&lt;5 Min)
+        </Button>
       </div>
 
       {/* Active Downtime Alarms Banner */}
@@ -225,6 +240,59 @@ export function DowntimeLoss() {
           Log Downtime Event
         </Button>
       </form>
+
+      {/* Log Micro-Stop Modal */}
+      <Modal
+        isOpen={isMicroModalOpen}
+        onClose={() => setIsMicroModalOpen(false)}
+        title="Log Micro-Stop Reason (< 5 Min)"
+        subtitle="Quick Entry for Minor Jams & Bottle Stoppages"
+        maxWidth="480px"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setIsMicroModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="warning" icon={Send} onClick={handleMicroStopSubmit}>
+              Save Micro-Stop Log
+            </Button>
+          </>
+        }
+      >
+        <form onSubmit={handleMicroStopSubmit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+          <div>
+            <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-primary)", display: "block", marginBottom: "6px" }}>
+              Stoppage Duration (Minutes)
+            </label>
+            <input
+              type="number"
+              value={microMins}
+              onChange={(e) => setMicroMins(Number(e.target.value))}
+              className="input-field"
+              min={1}
+              max={5}
+              required
+            />
+          </div>
+
+          <div>
+            <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-primary)", display: "block", marginBottom: "6px" }}>
+              Micro-Stop Reason Code
+            </label>
+            <select
+              value={microReason}
+              onChange={(e) => setMicroReason(e.target.value)}
+              className="input-field"
+            >
+              <option value="Bottle Conveyor Jam at Star-Wheel">Bottle Conveyor Jam at Star-Wheel</option>
+              <option value="Filler Nozzle Drip Sensor Fault">Filler Nozzle Drip Sensor Fault</option>
+              <option value="Cap Feeder Bowl Jam">Cap Feeder Bowl Jam</option>
+              <option value="Label Web Splicing Adjustment">Label Web Splicing Adjustment</option>
+              <option value="Case Packer Infeed Hesitation">Case Packer Infeed Hesitation</option>
+            </select>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

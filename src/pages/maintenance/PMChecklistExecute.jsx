@@ -26,7 +26,7 @@ import { useApp } from "../../context/AppContext";
 export function PMChecklistExecute() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { checklistTemplates, handleFailedPMCheck, assets, updateAssetStatus } = useCMMS();
+  const { checklistTemplates, handleFailedPMCheck, assets, updateAssetStatus, completeChecklistExecution, completeWorkOrder } = useCMMS();
   const { addToast } = useApp();
 
   const template = checklistTemplates.find((t) => t.id === id) || checklistTemplates[0];
@@ -105,7 +105,13 @@ export function PMChecklistExecute() {
   // Failed check action: Auto-create corrective work order
   const handleCreateCorrectiveWO = () => {
     if (!failedCheckModalData) return;
-    const wo = handleFailedPMCheck(failedCheckModalData);
+    const searchParams = new URLSearchParams(window.location.search);
+    const activeWoId = searchParams.get("woId");
+    
+    const wo = handleFailedPMCheck({
+      ...failedCheckModalData,
+      originalWoId: activeWoId
+    });
     addToast(`Corrective Work Order ${wo.id} auto-created with priority P1!`);
     setFailedCheckModalData(null);
     navigate(`/maintenance/work-orders/${wo.id}`);
@@ -125,6 +131,25 @@ export function PMChecklistExecute() {
 
   const handleSubmitChecklist = () => {
     const hasFailures = sections.some((s) => s.items.some((i) => i.status === "FAIL"));
+    
+    // Save execution record
+    completeChecklistExecution({
+      templateId: template.id,
+      templateName: template.name,
+      assetId: template.assetId,
+      assetName: template.assetName,
+      technician: supervisorName,
+      status: hasFailures ? "Failed" : "Passed"
+    });
+
+    const searchParams = new URLSearchParams(window.location.search);
+    const activeWoId = searchParams.get("woId");
+    
+    if (activeWoId) {
+       // Close the work order with standard completion
+       completeWorkOrder(activeWoId, { completionNotes: "PM Checklist Executed successfully." });
+    }
+
     if (hasFailures) {
       addToast("PM Checklist submitted with Non-Conformances. Corrective Work Orders generated.", "warning");
     } else {
@@ -154,9 +179,6 @@ export function PMChecklistExecute() {
               <Badge variant="cyan">{template.version}</Badge>
               <Badge variant="emerald">{template.frequency}</Badge>
             </div>
-            <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>
-              Target Asset: <strong style={{ color: "#38BDF8" }}>{template.assetId} - {template.assetName}</strong> • Est. Duration: {template.estimatedMinutes} mins
-            </p>
           </div>
 
           <div style={{ display: "flex", gap: "10px" }}>
@@ -209,9 +231,6 @@ export function PMChecklistExecute() {
                           {item.required && <Badge variant="rose">Required</Badge>}
                           {item.limitText && <Badge variant="slate">{item.limitText}</Badge>}
                         </div>
-                        <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "4px", lineHeight: 1.5 }}>
-                          {item.instruction}
-                        </p>
                       </div>
 
                       {/* PASS / FAIL / N/A Button Group */}
@@ -396,10 +415,6 @@ export function PMChecklistExecute() {
               </div>
             </div>
 
-            <p style={{ fontSize: "12px", color: "var(--text-secondary)", lineHeight: 1.5 }}>
-              A critical PM parameter has failed specification. Select an immediate corrective action to dispatch maintenance technicians or isolate the machinery:
-            </p>
-
             <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
               <Button
                 variant="primary"
@@ -445,3 +460,4 @@ export function PMChecklistExecute() {
     </div>
   );
 }
+
