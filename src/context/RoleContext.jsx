@@ -1,17 +1,17 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 
 export const ROLES = [
-  { id: "operator", label: "Line Operator", icon: "Activity", defaultRoute: "/operator/dashboard" },
-  { id: "line_lead", label: "Line Lead", icon: "Briefcase", defaultRoute: "/linelead/dashboard" },
-  { id: "supervisor", label: "Operations Supervisor", icon: "Users", defaultRoute: "/supervisor/dashboard" },
-  { id: "planner", label: "Planner / Scheduler", icon: "CalendarRange", defaultRoute: "/planner/dashboard" },
-  { id: "warehouse", label: "Warehouse / Receiver", icon: "Package", defaultRoute: "/warehouse/dashboard" },
-  { id: "quality", label: "Quality / QA", icon: "ShieldCheck", defaultRoute: "/quality/dashboard" },
-  { id: "maintenance", label: "Maintenance", icon: "Wrench", defaultRoute: "/maintenance" },
-  { id: "ci_engineer", label: "CI / Engineering", icon: "Settings", defaultRoute: "/ci/dashboard" },
-  { id: "plant_manager", label: "Plant Manager", icon: "Building2", defaultRoute: "/command-center" },
-  { id: "executive", label: "Executive", icon: "Briefcase", defaultRoute: "/executive/dashboard" },
-  { id: "admin", label: "System Administrator", icon: "ShieldAlert", defaultRoute: "/admin/console" }
+  { id: "admin", label: "System Administrator", icon: "ShieldAlert", defaultRoute: "/admin/console", step: "1. Setup" },
+  { id: "planner", label: "Planner / Scheduler", icon: "CalendarRange", defaultRoute: "/planner/dashboard", step: "2. Plan" },
+  { id: "warehouse", label: "Warehouse / Receiver", icon: "Package", defaultRoute: "/warehouse/dashboard", step: "3. Materials" },
+  { id: "maintenance", label: "Maintenance", icon: "Wrench", defaultRoute: "/maintenance", step: "4. Machines" },
+  { id: "supervisor", label: "Operations Supervisor", icon: "Users", defaultRoute: "/supervisor/dashboard", step: "5. Shift" },
+  { id: "line_lead", label: "Line Lead", icon: "Briefcase", defaultRoute: "/linelead/dashboard", step: "6. Line" },
+  { id: "operator", label: "Line Operator", icon: "Activity", defaultRoute: "/operator/dashboard", step: "7. Production" },
+  { id: "quality", label: "Quality / QA", icon: "ShieldCheck", defaultRoute: "/quality/dashboard", step: "8. Quality" },
+  { id: "ci_engineer", label: "CI / Engineering", icon: "Settings", defaultRoute: "/ci/dashboard", step: "9. Kaizen" },
+  { id: "plant_manager", label: "Plant Manager", icon: "Building2", defaultRoute: "/command-center", step: "10. Plant" },
+  { id: "executive", label: "Executive", icon: "Briefcase", defaultRoute: "/executive/dashboard", step: "11. Enterprise" }
 ];
 
 export const NAVIGATION_CONFIG = {

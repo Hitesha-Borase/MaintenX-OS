@@ -403,13 +403,19 @@ export function Login() {
               </div>
             </div>
 
-            {/* Interactive Grid: 3x3 layout for simulated perspectives */}
+            {/* Interactive Grid: Sequential End-to-End Lifecycle Flow */}
             <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label" style={{ fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: "10px", display: "block" }}>
-                Select Dashboard Perspective
-              </label>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+                <label className="form-label" style={{ fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase", margin: 0, display: "block" }}>
+                  Select Dashboard Perspective
+                </label>
+                <span style={{ fontSize: "10px", fontWeight: 700, color: "#8C5B23", backgroundColor: "rgba(200, 149, 71, 0.12)", padding: "2px 8px", borderRadius: "10px" }}>
+                  Data Flow: Step 1 ➔ Step 11
+                </span>
+              </div>
+
               <div className="login-roles-grid">
-                {ROLES.map((role) => {
+                {ROLES.map((role, idx) => {
                   const IconComponent = iconMap[role.icon] || ShieldCheck;
                   const isSelected = selectedRole === role.id;
                   const isHovered = hoveredRole === role.id;
@@ -421,7 +427,7 @@ export function Login() {
                       onMouseEnter={() => setHoveredRole(role.id)}
                       onMouseLeave={() => setHoveredRole(null)}
                       style={{
-                        padding: "12px 10px",
+                        padding: "10px 8px",
                         borderRadius: "12px",
                         backgroundColor: isSelected 
                           ? "rgba(200, 149, 71, 0.15)" 
@@ -440,16 +446,29 @@ export function Login() {
                         display: "flex",
                         flexDirection: "column",
                         alignItems: "center",
-                        gap: "6px",
+                        gap: "5px",
                         textAlign: "center",
                         transition: "all 0.18s ease",
                         position: "relative"
                       }}
                     >
+                      {/* Step Indicator Pill */}
+                      <span
+                        style={{
+                          fontSize: "9px",
+                          fontWeight: 800,
+                          color: isSelected ? "#8C5B23" : "var(--text-muted)",
+                          letterSpacing: "0.03em",
+                          textTransform: "uppercase"
+                        }}
+                      >
+                        {role.step || `Step ${idx + 1}`}
+                      </span>
+
                       <div
                         style={{
-                          width: "30px",
-                          height: "30px",
+                          width: "28px",
+                          height: "28px",
                           borderRadius: "50%",
                           background: isSelected 
                             ? "linear-gradient(135deg, #E2B670 0%, #C89547 100%)" 
@@ -461,14 +480,14 @@ export function Login() {
                           boxShadow: isSelected ? "0 2px 6px rgba(178, 126, 51, 0.25)" : "none"
                         }}
                       >
-                        <IconComponent size={14} />
+                        <IconComponent size={13} />
                       </div>
-                      <span style={{ fontSize: "11px", fontWeight: isSelected ? 800 : 600, color: isSelected ? "#2B1D11" : "var(--text-secondary)" }}>
+                      <span style={{ fontSize: "11px", fontWeight: isSelected ? 800 : 600, color: isSelected ? "#2B1D11" : "var(--text-secondary)", lineHeight: 1.15 }}>
                         {role.label}
                       </span>
                       {isSelected && (
-                        <div style={{ position: "absolute", top: "6px", right: "6px", color: "#B27E33" }}>
-                          <CheckCircle2 size={13} />
+                        <div style={{ position: "absolute", top: "5px", right: "5px", color: "#B27E33" }}>
+                          <CheckCircle2 size={12} />
                         </div>
                       )}
                     </div>
