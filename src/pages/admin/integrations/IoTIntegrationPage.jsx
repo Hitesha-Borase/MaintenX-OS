@@ -31,6 +31,7 @@ export function IoTIntegrationPage() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingBroker, setEditingBroker] = useState(null);
   const [newBroker, setNewBroker] = useState({
     name: "",
     protocol: "OPC-UA (TCP:4840)",
@@ -70,6 +71,18 @@ export function IoTIntegrationPage() {
     addToast(`IoT Gateway "${created.id}" connected!`, "success");
     setIsModalOpen(false);
     setNewBroker({ name: "", protocol: "OPC-UA (TCP:4840)", connectedNodes: 50, telemetryRate: "50 Hz" });
+  };
+
+  const handleEditSubmit = (e) => {
+    e.preventDefault();
+    if (!editingBroker.name.trim()) {
+      addToast("Please provide gateway server description.", "warning");
+      return;
+    }
+
+    setBrokers(brokers.map((b) => (b.id === editingBroker.id ? { ...editingBroker, connectedNodes: Number(editingBroker.connectedNodes) || 10 } : b)));
+    addToast(`IoT Gateway ${editingBroker.id} updated successfully!`, "success");
+    setEditingBroker(null);
   };
 
   return (
@@ -202,7 +215,7 @@ export function IoTIntegrationPage() {
                   </td>
                   <td>
                     <button
-                      onClick={() => addToast(`Opened telemetry diagnostics for ${b.id}`, "info")}
+                      onClick={() => setEditingBroker({ ...b })}
                       title="Edit Gateway"
                       style={{
                         width: "30px",
@@ -301,6 +314,88 @@ export function IoTIntegrationPage() {
                 </Button>
                 <Button variant="primary" type="submit">
                   Connect Gateway
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT GATEWAY MODAL */}
+      {editingBroker && (
+        <div className="modal-backdrop" onClick={() => setEditingBroker(null)}>
+          <div className="modal-content" style={{ maxWidth: "480px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Edit2 size={16} color="#B27E33" />
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                  Edit IoT Gateway — {editingBroker.id}
+                </h2>
+              </div>
+              <button onClick={() => setEditingBroker(null)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditSubmit} style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div>
+                <label className="form-label">Server Description *</label>
+                <input
+                  type="text"
+                  required
+                  value={editingBroker.name}
+                  onChange={(e) => setEditingBroker({ ...editingBroker, name: e.target.value })}
+                  className="form-input"
+                  style={{ backgroundColor: "#FFFFFF" }}
+                />
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
+                <div>
+                  <label className="form-label">Protocol & Port</label>
+                  <select
+                    className="form-select"
+                    value={editingBroker.protocol}
+                    onChange={(e) => setEditingBroker({ ...editingBroker, protocol: e.target.value })}
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  >
+                    <option value="OPC-UA (TCP:4840)">OPC-UA (TCP:4840)</option>
+                    <option value="MQTT (TLS:8883)">MQTT (TLS:8883)</option>
+                    <option value="Modbus TCP (Port 502)">Modbus TCP (Port 502)</option>
+                    <option value="EtherNet/IP (TCP:44818)">EtherNet/IP (TCP:44818)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="form-label">Active Nodes / PLC Tags</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={editingBroker.connectedNodes}
+                    onChange={(e) => setEditingBroker({ ...editingBroker, connectedNodes: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="form-label">Sampling Pitch Frequency</label>
+                <input
+                  type="text"
+                  value={editingBroker.telemetryRate}
+                  onChange={(e) => setEditingBroker({ ...editingBroker, telemetryRate: e.target.value })}
+                  className="form-input"
+                  style={{ backgroundColor: "#FFFFFF" }}
+                />
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
+                <Button variant="secondary" type="button" onClick={() => setEditingBroker(null)}>
+                  Cancel
+                </Button>
+                <Button variant="primary" type="submit">
+                  Save Changes
                 </Button>
               </div>
             </form>

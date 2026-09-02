@@ -29,6 +29,7 @@ export function RoutingsPage() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingRouting, setEditingRouting] = useState(null);
   const [newRouting, setNewRouting] = useState({
     name: "",
     line: "Line 1 (Aseptic)",
@@ -67,6 +68,18 @@ export function RoutingsPage() {
     addToast(`Routing sequence "${created.id}" created!`, "success");
     setIsModalOpen(false);
     setNewRouting({ name: "", line: "Line 1 (Aseptic)", sequence: "Mixing -> Filling -> Capping -> Packing", stepsCount: 4 });
+  };
+
+  const handleEditSubmit = (e) => {
+    e.preventDefault();
+    if (!editingRouting.name.trim()) {
+      addToast("Please provide routing sequence description.", "warning");
+      return;
+    }
+
+    setRoutings(routings.map((r) => (r.id === editingRouting.id ? { ...editingRouting, stepsCount: Number(editingRouting.stepsCount) || 4 } : r)));
+    addToast(`Routing sequence ${editingRouting.id} updated!`, "success");
+    setEditingRouting(null);
   };
 
   return (
@@ -182,7 +195,7 @@ export function RoutingsPage() {
                   </td>
                   <td>
                     <button
-                      onClick={() => addToast(`Opened sequence graph for ${r.id}`, "info")}
+                      onClick={() => setEditingRouting({ ...r })}
                       title="Edit Routing"
                       style={{
                         width: "30px",
@@ -280,6 +293,87 @@ export function RoutingsPage() {
                 </Button>
                 <Button variant="primary" type="submit">
                   Save Routing
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT ROUTING MODAL */}
+      {editingRouting && (
+        <div className="modal-backdrop" onClick={() => setEditingRouting(null)}>
+          <div className="modal-content" style={{ maxWidth: "500px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Edit2 size={16} color="#B27E33" />
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                  Edit Routing Sequence — {editingRouting.id}
+                </h2>
+              </div>
+              <button onClick={() => setEditingRouting(null)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditSubmit} style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div>
+                <label className="form-label">Routing Description *</label>
+                <input
+                  type="text"
+                  required
+                  value={editingRouting.name}
+                  onChange={(e) => setEditingRouting({ ...editingRouting, name: e.target.value })}
+                  className="form-input"
+                  style={{ backgroundColor: "#FFFFFF" }}
+                />
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
+                <div>
+                  <label className="form-label">Primary Line Facility</label>
+                  <select
+                    className="form-select"
+                    value={editingRouting.line}
+                    onChange={(e) => setEditingRouting({ ...editingRouting, line: e.target.value })}
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  >
+                    <option value="Line 1 (Aseptic)">Line 1 (Aseptic)</option>
+                    <option value="Line 2 (Formulation)">Line 2 (Formulation)</option>
+                    <option value="Line 3 (Canning)">Line 3 (Canning)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="form-label">Number of Sequential Steps</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={editingRouting.stepsCount}
+                    onChange={(e) => setEditingRouting({ ...editingRouting, stepsCount: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="form-label">Process Flow Sequence</label>
+                <textarea
+                  rows={2}
+                  value={editingRouting.sequence}
+                  onChange={(e) => setEditingRouting({ ...editingRouting, sequence: e.target.value })}
+                  className="form-textarea"
+                  style={{ backgroundColor: "#FFFFFF" }}
+                />
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
+                <Button variant="secondary" type="button" onClick={() => setEditingRouting(null)}>
+                  Cancel
+                </Button>
+                <Button variant="primary" type="submit">
+                  Save Changes
                 </Button>
               </div>
             </form>

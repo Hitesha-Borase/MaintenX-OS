@@ -4,17 +4,21 @@ import { Card } from "../../components/common/Card";
 import { Button } from "../../components/common/Button";
 import { Badge } from "../../components/common/Badge";
 import { useApp } from "../../context/AppContext";
+import { useMasterData } from "../../context/MasterDataContext";
 
 export function MaterialRequest() {
   const { addToast } = useApp();
+  const { skus = [] } = useMasterData();
 
-  const [sku, setSku] = useState("SKU-AJ-500ML-ORG");
+  const defaultMaterial = skus.find((s) => s.category !== "Finished Goods") || skus[0] || { skuCode: "ING-1001", name: "Liquid Cane Sugar 67°Bx" };
+
+  const [sku, setSku] = useState(defaultMaterial.skuCode || "ING-1001");
   const [qty, setQty] = useState(5000);
   const [priority, setPriority] = useState("Standard");
 
   const [requests, setRequests] = useState([
-    { id: "REQ-402", sku: "SKU-AJ-500ML-ORG", qty: 10000, priority: "Standard", status: "Delivered", time: "10:30" },
-    { id: "REQ-403", sku: "SKU-CAP-ORG-01", qty: 15000, priority: "Urgent", status: "In Transit", time: "12:15" }
+    { id: "REQ-402", sku: "ING-1001 (Liquid Cane Sugar 67°Bx)", qty: 8500, priority: "Standard", status: "Delivered", time: "10:30" },
+    { id: "REQ-403", sku: "PKG-2001 (28mm Tamper-Evident Closures)", qty: 15000, priority: "Urgent", status: "In Transit", time: "12:15" }
   ]);
 
   const handleSubmit = (e) => {
@@ -75,10 +79,18 @@ export function MaterialRequest() {
                 onChange={(e) => setSku(e.target.value)}
                 className="input-field"
               >
-                <option value="SKU-AJ-500ML-ORG">Aseptic Bottles 500ml (SKU-AJ-500ML-ORG)</option>
-                <option value="SKU-CAP-ORG-01">High-Speed Aseptic Orange Caps (SKU-CAP-ORG-01)</option>
-                <option value="SKU-BOX-L1-A">Cardboard Packing Boxes (SKU-BOX-L1-A)</option>
-                <option value="SKU-NITRO-VALVE">Nitrogen Gas Seal Flush Valve (SKU-NITRO-VALVE)</option>
+                {skus.length > 0 ? (
+                  skus.map((s) => (
+                    <option key={s.skuId} value={`${s.skuCode} (${s.name})`}>
+                      {s.skuCode} — {s.name} ({s.category})
+                    </option>
+                  ))
+                ) : (
+                  <>
+                    <option value="ING-1001 (Liquid Cane Sugar)">ING-1001 — Liquid Cane Sugar</option>
+                    <option value="PKG-2001 (28mm Closures)">PKG-2001 — 28mm Tamper-Evident Closures</option>
+                  </>
+                )}
               </select>
             </div>
 

@@ -25,6 +25,7 @@ export function PlantsPage() {
   ]);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingPlant, setEditingPlant] = useState(null);
   const [newPlant, setNewPlant] = useState({
     name: "",
     code: "",
@@ -56,6 +57,18 @@ export function PlantsPage() {
     addToast(`Plant "${created.name}" registered successfully!`, "success");
     setIsModalOpen(false);
     setNewPlant({ name: "", code: "", location: "", lines: 2, capacity: "120,000 btl/day" });
+  };
+
+  const handleEditSubmit = (e) => {
+    e.preventDefault();
+    if (!editingPlant.name.trim() || !editingPlant.code.trim()) {
+      addToast("Please provide plant name and code.", "warning");
+      return;
+    }
+
+    setPlants(plants.map((p) => (p.id === editingPlant.id ? { ...editingPlant, lines: Number(editingPlant.lines) || 1 } : p)));
+    addToast(`Plant "${editingPlant.name}" updated successfully!`, "success");
+    setEditingPlant(null);
   };
 
   return (
@@ -148,7 +161,7 @@ export function PlantsPage() {
 
             <div style={{ borderTop: "1px solid var(--border-subtle)", paddingTop: "10px", display: "flex", justifyContent: "flex-end" }}>
               <button
-                onClick={() => addToast(`Config verified for ${p.name}`, "info")}
+                onClick={() => setEditingPlant({ ...p })}
                 style={{
                   padding: "5px 12px",
                   borderRadius: "6px",
@@ -257,6 +270,98 @@ export function PlantsPage() {
                 </Button>
                 <Button variant="primary" type="submit">
                   Provision Plant
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT PLANT MODAL */}
+      {editingPlant && (
+        <div className="modal-backdrop" onClick={() => setEditingPlant(null)}>
+          <div className="modal-content" style={{ maxWidth: "480px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Edit2 size={16} color="#B27E33" />
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                  Edit Plant Site — {editingPlant.code}
+                </h2>
+              </div>
+              <button onClick={() => setEditingPlant(null)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditSubmit} style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
+                <div>
+                  <label className="form-label">Plant Facility Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingPlant.name}
+                    onChange={(e) => setEditingPlant({ ...editingPlant, name: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+
+                <div>
+                  <label className="form-label">Plant Code *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingPlant.code}
+                    onChange={(e) => setEditingPlant({ ...editingPlant, code: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="form-label">Geographic Location</label>
+                <input
+                  type="text"
+                  value={editingPlant.location}
+                  onChange={(e) => setEditingPlant({ ...editingPlant, location: e.target.value })}
+                  className="form-input"
+                  style={{ backgroundColor: "#FFFFFF" }}
+                />
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
+                <div>
+                  <label className="form-label">Number of Lines</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={editingPlant.lines}
+                    onChange={(e) => setEditingPlant({ ...editingPlant, lines: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+
+                <div>
+                  <label className="form-label">Rated Daily Capacity</label>
+                  <input
+                    type="text"
+                    value={editingPlant.capacity}
+                    onChange={(e) => setEditingPlant({ ...editingPlant, capacity: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
+                <Button variant="secondary" type="button" onClick={() => setEditingPlant(null)}>
+                  Cancel
+                </Button>
+                <Button variant="primary" type="submit">
+                  Save Changes
                 </Button>
               </div>
             </form>

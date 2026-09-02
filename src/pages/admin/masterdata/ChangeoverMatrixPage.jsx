@@ -28,6 +28,7 @@ export function ChangeoverMatrixPage() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingRule, setEditingRule] = useState(null);
   const [newRule, setNewRule] = useState({
     fromSKU: "",
     toSKU: "",
@@ -68,6 +69,18 @@ export function ChangeoverMatrixPage() {
     addToast(`Changeover rule added (${created.fromSKU} -> ${created.toSKU})!`, "success");
     setIsModalOpen(false);
     setNewRule({ fromSKU: "", toSKU: "", line: "Line 1 (Aseptic)", targetSMEDMins: 20, cleanType: "Flavor Flush & Cleanout" });
+  };
+
+  const handleEditSubmit = (e) => {
+    e.preventDefault();
+    if (!editingRule.fromSKU.trim() || !editingRule.toSKU.trim()) {
+      addToast("Please provide source and target SKUs.", "warning");
+      return;
+    }
+
+    setMatrix(matrix.map((m) => (m.id === editingRule.id ? { ...editingRule, targetSMEDMins: Number(editingRule.targetSMEDMins) || 20 } : m)));
+    addToast(`Changeover rule ${editingRule.id} updated successfully!`, "success");
+    setEditingRule(null);
   };
 
   return (
@@ -185,7 +198,7 @@ export function ChangeoverMatrixPage() {
                   </td>
                   <td>
                     <button
-                      onClick={() => addToast(`Opened changeover SOP for ${m.fromSKU} -> ${m.toSKU}`, "info")}
+                      onClick={() => setEditingRule({ ...m })}
                       title="Edit Matrix Rule"
                       style={{
                         width: "30px",
@@ -298,6 +311,101 @@ export function ChangeoverMatrixPage() {
                 </Button>
                 <Button variant="primary" type="submit">
                   Save Rule
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT CHANGEOVER RULE MODAL */}
+      {editingRule && (
+        <div className="modal-backdrop" onClick={() => setEditingRule(null)}>
+          <div className="modal-content" style={{ maxWidth: "480px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Edit2 size={16} color="#B27E33" />
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                  Edit Transition Rule — {editingRule.id}
+                </h2>
+              </div>
+              <button onClick={() => setEditingRule(null)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditSubmit} style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
+                <div>
+                  <label className="form-label">Origin SKU (From) *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingRule.fromSKU}
+                    onChange={(e) => setEditingRule({ ...editingRule, fromSKU: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+
+                <div>
+                  <label className="form-label">Target SKU (To) *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingRule.toSKU}
+                    onChange={(e) => setEditingRule({ ...editingRule, toSKU: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
+                <div>
+                  <label className="form-label">Production Line</label>
+                  <select
+                    className="form-select"
+                    value={editingRule.line}
+                    onChange={(e) => setEditingRule({ ...editingRule, line: e.target.value })}
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  >
+                    <option value="Line 1 (Aseptic)">Line 1 (Aseptic)</option>
+                    <option value="Line 2 (Formulation)">Line 2 (Formulation)</option>
+                    <option value="Line 3 (Canning)">Line 3 (Canning)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="form-label">SMED Target (Mins)</label>
+                  <input
+                    type="number"
+                    min="5"
+                    value={editingRule.targetSMEDMins}
+                    onChange={(e) => setEditingRule({ ...editingRule, targetSMEDMins: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="form-label">Cleanout Protocol</label>
+                <input
+                  type="text"
+                  value={editingRule.cleanType}
+                  onChange={(e) => setEditingRule({ ...editingRule, cleanType: e.target.value })}
+                  className="form-input"
+                  style={{ backgroundColor: "#FFFFFF" }}
+                />
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
+                <Button variant="secondary" type="button" onClick={() => setEditingRule(null)}>
+                  Cancel
+                </Button>
+                <Button variant="primary" type="submit">
+                  Save Changes
                 </Button>
               </div>
             </form>

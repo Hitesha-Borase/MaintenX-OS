@@ -28,6 +28,7 @@ export function LineTargetsPage() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingTarget, setEditingTarget] = useState(null);
   const [newTarget, setNewTarget] = useState({
     line: "Line 1 — Aseptic Bottling",
     targetOEE: "85.0%",
@@ -58,6 +59,13 @@ export function LineTargetsPage() {
     setTargets([...targets, created]);
     addToast(`Target standard updated for ${created.line}!`, "success");
     setIsModalOpen(false);
+  };
+
+  const handleEditSubmit = (e) => {
+    e.preventDefault();
+    setTargets(targets.map((t) => (t.id === editingTarget.id ? editingTarget : t)));
+    addToast(`Line target for ${editingTarget.line} updated!`, "success");
+    setEditingTarget(null);
   };
 
   return (
@@ -167,7 +175,7 @@ export function LineTargetsPage() {
                   <td style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "#8C5B23" }}>{t.shiftTargetUnits}</td>
                   <td>
                     <button
-                      onClick={() => addToast(`Opened target calibration for ${t.line}`, "info")}
+                      onClick={() => setEditingTarget({ ...t })}
                       title="Edit Target"
                       style={{
                         width: "30px",
@@ -290,6 +298,95 @@ export function LineTargetsPage() {
                 </Button>
                 <Button variant="primary" type="submit">
                   Save Line Target
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT TARGET MODAL */}
+      {editingTarget && (
+        <div className="modal-backdrop" onClick={() => setEditingTarget(null)}>
+          <div className="modal-content" style={{ maxWidth: "480px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Edit2 size={16} color="#B27E33" />
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                  Edit Target — {editingTarget.line}
+                </h2>
+              </div>
+              <button onClick={() => setEditingTarget(null)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditSubmit} style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
+                <div>
+                  <label className="form-label">Target OEE</label>
+                  <input
+                    type="text"
+                    value={editingTarget.targetOEE}
+                    onChange={(e) => setEditingTarget({ ...editingTarget, targetOEE: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+
+                <div>
+                  <label className="form-label">Target Availability</label>
+                  <input
+                    type="text"
+                    value={editingTarget.targetAvailability}
+                    onChange={(e) => setEditingTarget({ ...editingTarget, targetAvailability: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
+                <div>
+                  <label className="form-label">Target Performance</label>
+                  <input
+                    type="text"
+                    value={editingTarget.targetPerformance}
+                    onChange={(e) => setEditingTarget({ ...editingTarget, targetPerformance: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+
+                <div>
+                  <label className="form-label">Target Quality</label>
+                  <input
+                    type="text"
+                    value={editingTarget.targetQuality}
+                    onChange={(e) => setEditingTarget({ ...editingTarget, targetQuality: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="form-label">Standard Shift Target Output</label>
+                <input
+                  type="text"
+                  value={editingTarget.shiftTargetUnits}
+                  onChange={(e) => setEditingTarget({ ...editingTarget, shiftTargetUnits: e.target.value })}
+                  className="form-input"
+                  style={{ backgroundColor: "#FFFFFF" }}
+                />
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
+                <Button variant="secondary" type="button" onClick={() => setEditingTarget(null)}>
+                  Cancel
+                </Button>
+                <Button variant="primary" type="submit">
+                  Save Changes
                 </Button>
               </div>
             </form>

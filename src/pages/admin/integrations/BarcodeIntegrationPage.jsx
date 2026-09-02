@@ -29,6 +29,7 @@ export function BarcodeIntegrationPage() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingFormat, setEditingFormat] = useState(null);
   const [newFormat, setNewFormat] = useState({
     standard: "",
     useCase: "",
@@ -65,6 +66,18 @@ export function BarcodeIntegrationPage() {
     addToast(`Symbology "${created.id}" configured successfully!`, "success");
     setIsModalOpen(false);
     setNewFormat({ standard: "", useCase: "", aiAppPrefix: "GS1 AI Format" });
+  };
+
+  const handleEditSubmit = (e) => {
+    e.preventDefault();
+    if (!editingFormat.standard.trim() || !editingFormat.useCase.trim()) {
+      addToast("Please provide symbology standard and application use case.", "warning");
+      return;
+    }
+
+    setFormats(formats.map((f) => (f.id === editingFormat.id ? editingFormat : f)));
+    addToast(`Symbology ${editingFormat.id} updated successfully!`, "success");
+    setEditingFormat(null);
   };
 
   return (
@@ -178,7 +191,7 @@ export function BarcodeIntegrationPage() {
                   </td>
                   <td>
                     <button
-                      onClick={() => addToast(`Opened encoder setup for ${f.id}`, "info")}
+                      onClick={() => setEditingFormat({ ...f })}
                       title="Edit Symbology"
                       style={{
                         width: "30px",
@@ -261,6 +274,71 @@ export function BarcodeIntegrationPage() {
                 </Button>
                 <Button variant="primary" type="submit">
                   Save Symbology
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT FORMAT MODAL */}
+      {editingFormat && (
+        <div className="modal-backdrop" onClick={() => setEditingFormat(null)}>
+          <div className="modal-content" style={{ maxWidth: "480px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Edit2 size={16} color="#B27E33" />
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                  Edit Symbology Rule — {editingFormat.id}
+                </h2>
+              </div>
+              <button onClick={() => setEditingFormat(null)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditSubmit} style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div>
+                <label className="form-label">Standard Symbology Format *</label>
+                <input
+                  type="text"
+                  required
+                  value={editingFormat.standard}
+                  onChange={(e) => setEditingFormat({ ...editingFormat, standard: e.target.value })}
+                  className="form-input"
+                  style={{ backgroundColor: "#FFFFFF" }}
+                />
+              </div>
+
+              <div>
+                <label className="form-label">Application Use Case *</label>
+                <input
+                  type="text"
+                  required
+                  value={editingFormat.useCase}
+                  onChange={(e) => setEditingFormat({ ...editingFormat, useCase: e.target.value })}
+                  className="form-input"
+                  style={{ backgroundColor: "#FFFFFF" }}
+                />
+              </div>
+
+              <div>
+                <label className="form-label">Data Encoding Structure / AI Prefix</label>
+                <input
+                  type="text"
+                  value={editingFormat.aiAppPrefix}
+                  onChange={(e) => setEditingFormat({ ...editingFormat, aiAppPrefix: e.target.value })}
+                  className="form-input"
+                  style={{ backgroundColor: "#FFFFFF" }}
+                />
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
+                <Button variant="secondary" type="button" onClick={() => setEditingFormat(null)}>
+                  Cancel
+                </Button>
+                <Button variant="primary" type="submit">
+                  Save Changes
                 </Button>
               </div>
             </form>

@@ -20,24 +20,29 @@ import { Badge } from "../../components/common/Badge";
 import { Button } from "../../components/common/Button";
 import { StatCard } from "../../components/common/StatCard";
 import { useProduction } from "../../context/ProductionContext";
+import { useMasterData } from "../../context/MasterDataContext";
 import { useApp } from "../../context/AppContext";
 
 export function ProductionOrdersPage() {
   const { productionOrders = [], updateOrderStatus, setProductionOrders } = useProduction();
+  const { skus = [], lines = [] } = useMasterData();
   const { addToast } = useApp();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
 
   // Create Order Modal
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const defaultSku = skus.find((s) => s.category === "Finished Goods") || skus[0] || { skuCode: "SKU-5001", name: "500ml Sparkling Citrus Soda", uom: "Bottles" };
+  const defaultLine = lines[0] || { name: "Line 1 (Aseptic Bottling)" };
+
   const [formData, setFormData] = useState({
-    productName: "",
-    productCode: "SKU-PROD-500ML",
-    line: "Line 1 (Aseptic Bottling)",
-    plant: "Plant 1 - North Facility",
+    skuId: defaultSku.skuId || "SKU-001",
+    productName: defaultSku.name,
+    productCode: defaultSku.skuCode,
+    line: defaultLine.name,
+    plant: "Indore Plant - North Facility",
     targetQuantity: 25000,
-    unit: "Bottles",
+    unit: defaultSku.uom || "Bottles",
     activeShift: "Shift A (06:00 - 14:30)"
   });
 
@@ -366,16 +371,36 @@ export function ProductionOrdersPage() {
 
             <form onSubmit={handleAddSubmit} style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px", maxHeight: "80vh", overflowY: "auto" }}>
               <div>
-                <label className="form-label">Product Name / SKU Description *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Organic Cold-Pressed Orange Juice 500ml"
-                  value={formData.productName}
-                  onChange={(e) => setFormData({ ...formData, productName: e.target.value })}
-                  className="form-input"
+                <label className="form-label">Select Master SKU *</label>
+                <select
+                  className="form-select"
+                  value={formData.skuId}
+                  onChange={(e) => {
+                    const picked = skus.find((s) => s.skuId === e.target.value);
+                    if (picked) {
+                      setFormData({
+                        ...formData,
+                        skuId: picked.skuId,
+                        productCode: picked.skuCode,
+                        productName: picked.name,
+                        unit: picked.uom || "Bottles"
+                      });
+                    }
+                  }}
                   style={{ backgroundColor: "#FFFFFF" }}
-                />
+                >
+                  {skus.filter((s) => s.category === "Finished Goods").length > 0
+                    ? skus.filter((s) => s.category === "Finished Goods").map((s) => (
+                        <option key={s.skuId} value={s.skuId}>
+                          {s.skuCode} — {s.name} ({s.uom})
+                        </option>
+                      ))
+                    : skus.map((s) => (
+                        <option key={s.skuId} value={s.skuId}>
+                          {s.skuCode} — {s.name}
+                        </option>
+                      ))}
+                </select>
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
@@ -387,9 +412,19 @@ export function ProductionOrdersPage() {
                     onChange={(e) => setFormData({ ...formData, line: e.target.value })}
                     style={{ backgroundColor: "#FFFFFF" }}
                   >
-                    <option value="Line 1 (Aseptic Bottling)">Line 1 (Aseptic Bottling)</option>
-                    <option value="Line 2 (Formulation & Blending)">Line 2 (Formulation)</option>
-                    <option value="Line 3 (Canning Line)">Line 3 (Canning Line)</option>
+                    {lines.length > 0 ? (
+                      lines.map((l) => (
+                        <option key={l.lineId} value={l.name}>
+                          {l.lineCode} — {l.name}
+                        </option>
+                      ))
+                    ) : (
+                      <>
+                        <option value="Line 1 (Aseptic Bottling)">Line 1 (Aseptic Bottling)</option>
+                        <option value="Line 2 (Formulation & Blending)">Line 2 (Formulation)</option>
+                        <option value="Line 3 (Canning Line)">Line 3 (Canning Line)</option>
+                      </>
+                    )}
                   </select>
                 </div>
 

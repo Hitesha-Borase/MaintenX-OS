@@ -3,14 +3,30 @@ import { Boxes } from "lucide-react";
 import { Card } from "../../../components/common/Card";
 import { Badge } from "../../../components/common/Badge";
 import { useApp } from "../../../context/AppContext";
+import { useMasterData } from "../../../context/MasterDataContext";
 
 export function FinishedGoods() {
   const { addToast } = useApp();
+  const { skus = [] } = useMasterData();
 
-  const [goods, setGoods] = useState([
-    { id: 1, name: "Organic Orange Juice 1L", sku: "SKU-AJ-1L-ORG", qty: "32 Pallets (32,000 Bottles)", status: "Ready to Ship" },
-    { id: 2, name: "Organic Orange Juice 500ml", sku: "SKU-AJ-500ML-ORG", qty: "14 Pallets (28,000 Bottles)", status: "Staged" }
-  ]);
+  // Seed finished goods from MasterDataContext Finished Goods SKUs
+  const finishedMasterSkus = skus.filter((s) => s.category === "Finished Goods");
+
+  const [goods, setGoods] = useState(() => {
+    if (finishedMasterSkus.length > 0) {
+      return finishedMasterSkus.map((s, idx) => ({
+        id: s.skuId || `FG-${idx + 1}`,
+        name: s.name,
+        sku: s.skuCode,
+        qty: idx === 0 ? "32 Pallets (32,000 Bottles)" : "14 Pallets (28,000 Cans)",
+        status: idx === 0 ? "Ready to Ship" : "Staged"
+      }));
+    }
+    return [
+      { id: "SKU-001", name: "500ml Sparkling Citrus Soda", sku: "SKU-5001", qty: "32 Pallets (32,000 Bottles)", status: "Ready to Ship" },
+      { id: "SKU-002", name: "330ml Tonic Water", sku: "SKU-5002", qty: "14 Pallets (28,000 Cans)", status: "Staged" }
+    ];
+  });
 
   const handleToggleStatus = (id, currentStatus) => {
     setGoods(prev => prev.map(g => {

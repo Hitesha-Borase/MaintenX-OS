@@ -53,13 +53,15 @@ import {
   RefreshCw,
   X,
   Truck,
-  LogOut
+  LogOut,
+  FlaskConical
 } from "lucide-react";
 import { useRole } from "../../context/RoleContext";
 import { useApp } from "../../context/AppContext";
 import { useCMMS } from "../../context/CMMSContext";
 import { useExceptions } from "../../context/ExceptionContext";
 import { useAdmin } from "../../context/AdminContext";
+import { useMasterData } from "../../context/MasterDataContext";
 
 const iconMap = {
   LayoutDashboard,
@@ -110,7 +112,8 @@ const iconMap = {
   KeyRound,
   UserCheck,
   Server,
-  Activity
+  Activity,
+  FlaskConical
 };
 
 export function Sidebar() {
@@ -128,6 +131,9 @@ export function Sidebar() {
   const cmmsContext = useCMMS ? useCMMS() : { workOrders: [], assets: [] };
   const { workOrders = [], assets = [] } = cmmsContext || {};
 
+  const masterDataContext = useMasterData ? useMasterData() : {};
+  const { skus = [], boms = [], lines = [], assets: masterAssets = [], employees = [], qualitySpecs = [] } = masterDataContext || {};
+
   const exceptionContext = useExceptions ? useExceptions() : { exceptions: [] };
   const { exceptions = [] } = exceptionContext || {};
 
@@ -142,7 +148,8 @@ export function Sidebar() {
     users: true,
     roles: true,
     org: true,
-    masterData: false,
+    masterData: true,
+    "Master Data": true,
     integrations: true,
     dataHealth: true,
     Production: true,
@@ -259,6 +266,48 @@ export function Sidebar() {
         </span>
       );
     }
+    if (label.includes("SKU")) {
+      return (
+        <span style={{ fontSize: "10px", backgroundColor: "rgba(2, 132, 199, 0.12)", color: "#0284C7", padding: "1px 6px", borderRadius: "10px", fontWeight: 700 }}>
+          {skus.length || 6}
+        </span>
+      );
+    }
+    if (label.includes("BOM")) {
+      return (
+        <span style={{ fontSize: "10px", backgroundColor: "rgba(5, 150, 105, 0.12)", color: "#059669", padding: "1px 6px", borderRadius: "10px", fontWeight: 700 }}>
+          {boms.length || 3}
+        </span>
+      );
+    }
+    if (label.includes("Line")) {
+      return (
+        <span style={{ fontSize: "10px", backgroundColor: "rgba(139, 92, 246, 0.12)", color: "#8B5CF6", padding: "1px 6px", borderRadius: "10px", fontWeight: 700 }}>
+          {lines.length || 3}
+        </span>
+      );
+    }
+    if (label.includes("Asset")) {
+      return (
+        <span style={{ fontSize: "10px", backgroundColor: "rgba(220, 38, 38, 0.12)", color: "#DC2626", padding: "1px 6px", borderRadius: "10px", fontWeight: 700 }}>
+          {masterAssets.length || 6}
+        </span>
+      );
+    }
+    if (label.includes("Staff") || label.includes("Skill")) {
+      return (
+        <span style={{ fontSize: "10px", backgroundColor: "rgba(200, 149, 71, 0.15)", color: "#8C5B23", padding: "1px 6px", borderRadius: "10px", fontWeight: 700 }}>
+          {employees.length || 5}
+        </span>
+      );
+    }
+    if (label.includes("QA Spec") || label.includes("Quality Spec")) {
+      return (
+        <span style={{ fontSize: "10px", backgroundColor: "rgba(5, 150, 105, 0.12)", color: "#059669", padding: "1px 6px", borderRadius: "10px", fontWeight: 700 }}>
+          {qualitySpecs.length || 4}
+        </span>
+      );
+    }
     return null;
   };
 
@@ -271,13 +320,13 @@ export function Sidebar() {
           onClick={() => setMobileMenuOpen(false)}
           style={{
             position: "fixed",
-            top: "61px",
+            top: "52px",
             left: 0,
             right: 0,
             bottom: 0,
             backgroundColor: "rgba(43, 29, 17, 0.45)",
             backdropFilter: "blur(4px)",
-            zIndex: 998
+            zIndex: 990
           }}
         />
       )}
