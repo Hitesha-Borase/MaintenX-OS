@@ -99,9 +99,7 @@ export function Notifications() {
               </span>
             )}
           </div>
-          <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginTop: "4px", fontWeight: 500 }}>
-            Active stock safety buffer notifications and schedule draft alerts
-          </p>
+
         </div>
         <div style={{ display: "flex", gap: "12px" }}>
           <Button variant="outline" size="sm" icon={CheckCircle2} onClick={handleMarkAllRead}>

@@ -29,6 +29,7 @@ export function StorageResourcesPage() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingRes, setEditingRes] = useState(null);
   const [newRes, setNewRes] = useState({
     name: "",
     type: "Selective Pallet Rack",
@@ -59,16 +60,28 @@ export function StorageResourcesPage() {
       id: `STR-0${resources.length + 1}`,
       name: newRes.name,
       type: newRes.type,
-      capacity: newRes.capacity || "100 Positions",
+      capacity: newRes.capacity || "300 Pallets",
       tempControl: newRes.tempControl || "Ambient",
-      zone: newRes.zone,
+      zone: newRes.zone || "Zone B",
       status: "Active"
     };
 
     setResources([...resources, created]);
-    addToast(`Storage location "${created.id}" provisioned!`, "success");
+    addToast(`Storage Resource "${created.id}" registered!`, "success");
     setIsModalOpen(false);
     setNewRes({ name: "", type: "Selective Pallet Rack", capacity: "300 Pallets", tempControl: "Ambient", zone: "Zone B - Finished Goods" });
+  };
+
+  const handleEditSubmit = (e) => {
+    e.preventDefault();
+    if (!editingRes.name.trim()) {
+      addToast("Please provide storage resource name.", "warning");
+      return;
+    }
+
+    setResources(resources.map((r) => (r.id === editingRes.id ? editingRes : r)));
+    addToast(`Storage Resource ${editingRes.id} updated successfully!`, "success");
+    setEditingRes(null);
   };
 
   return (
@@ -186,7 +199,7 @@ export function StorageResourcesPage() {
                   </td>
                   <td>
                     <button
-                      onClick={() => addToast(`Opened storage allocation for ${r.name}`, "info")}
+                      onClick={() => setEditingRes({ ...r })}
                       title="Edit Location"
                       style={{
                         width: "30px",
@@ -299,6 +312,100 @@ export function StorageResourcesPage() {
                 </Button>
                 <Button variant="primary" type="submit">
                   Save Location
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT STORAGE MODAL */}
+      {editingRes && (
+        <div className="modal-backdrop" onClick={() => setEditingRes(null)}>
+          <div className="modal-content" style={{ maxWidth: "480px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Edit2 size={16} color="#B27E33" />
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                  Edit Storage Resource — {editingRes.id}
+                </h2>
+              </div>
+              <button onClick={() => setEditingRes(null)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditSubmit} style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div>
+                <label className="form-label">Storage Resource Name *</label>
+                <input
+                  type="text"
+                  required
+                  value={editingRes.name}
+                  onChange={(e) => setEditingRes({ ...editingRes, name: e.target.value })}
+                  className="form-input"
+                  style={{ backgroundColor: "#FFFFFF" }}
+                />
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
+                <div>
+                  <label className="form-label">Resource Type</label>
+                  <select
+                    className="form-select"
+                    value={editingRes.type}
+                    onChange={(e) => setEditingRes({ ...editingRes, type: e.target.value })}
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  >
+                    <option value="Jacketed Silo">Jacketed Silo</option>
+                    <option value="Selective Pallet Rack">Selective Pallet Rack</option>
+                    <option value="Refrigerated Dock">Refrigerated Dock</option>
+                    <option value="Chemical Storage Vault">Chemical Storage Vault</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="form-label">Capacity Specification</label>
+                  <input
+                    type="text"
+                    value={editingRes.capacity}
+                    onChange={(e) => setEditingRes({ ...editingRes, capacity: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
+                <div>
+                  <label className="form-label">Thermal Envelope</label>
+                  <input
+                    type="text"
+                    value={editingRes.tempControl}
+                    onChange={(e) => setEditingRes({ ...editingRes, tempControl: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+
+                <div>
+                  <label className="form-label">Warehouse Zone</label>
+                  <input
+                    type="text"
+                    value={editingRes.zone}
+                    onChange={(e) => setEditingRes({ ...editingRes, zone: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
+                <Button variant="secondary" type="button" onClick={() => setEditingRes(null)}>
+                  Cancel
+                </Button>
+                <Button variant="primary" type="submit">
+                  Save Changes
                 </Button>
               </div>
             </form>

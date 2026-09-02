@@ -67,9 +67,6 @@ export function DowntimeImpact() {
             </h1>
             <Badge variant="rose">Cost of Unreliability</Badge>
           </div>
-          <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>
-            Financial quantification of lost capacity, scrapped product batches, line-stoppage hourly rates, and ROI modeling.
-          </p>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>

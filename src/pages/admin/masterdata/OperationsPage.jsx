@@ -30,6 +30,7 @@ export function OperationsPage() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingOp, setEditingOp] = useState(null);
   const [newOp, setNewOp] = useState({
     code: "",
     name: "",
@@ -69,6 +70,18 @@ export function OperationsPage() {
     addToast(`Operation "${created.code}" registered successfully!`, "success");
     setIsModalOpen(false);
     setNewOp({ code: "", name: "", stdTimeMins: 30, workCenter: "Filler Monoblock", type: "Continuous Machine" });
+  };
+
+  const handleEditSubmit = (e) => {
+    e.preventDefault();
+    if (!editingOp.code.trim() || !editingOp.name.trim()) {
+      addToast("Please provide operation code and name.", "warning");
+      return;
+    }
+
+    setOperations(operations.map((o) => (o.code === editingOp.code ? { ...editingOp, stdTimeMins: Number(editingOp.stdTimeMins) || 30 } : o)));
+    addToast(`Operation ${editingOp.code} updated successfully!`, "success");
+    setEditingOp(null);
   };
 
   return (
@@ -182,7 +195,7 @@ export function OperationsPage() {
                   </td>
                   <td>
                     <button
-                      onClick={() => addToast(`Opened standard procedure for ${o.code}`, "info")}
+                      onClick={() => setEditingOp({ ...o })}
                       title="Edit Operation"
                       style={{
                         width: "30px",
@@ -296,6 +309,102 @@ export function OperationsPage() {
                 </Button>
                 <Button variant="primary" type="submit">
                   Save Operation
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT OPERATION MODAL */}
+      {editingOp && (
+        <div className="modal-backdrop" onClick={() => setEditingOp(null)}>
+          <div className="modal-content" style={{ maxWidth: "480px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Edit2 size={16} color="#B27E33" />
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                  Edit Operation — {editingOp.code}
+                </h2>
+              </div>
+              <button onClick={() => setEditingOp(null)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditSubmit} style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
+                <div>
+                  <label className="form-label">Operation Code *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingOp.code}
+                    onChange={(e) => setEditingOp({ ...editingOp, code: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+
+                <div>
+                  <label className="form-label">Std Duration (Mins)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={editingOp.stdTimeMins}
+                    onChange={(e) => setEditingOp({ ...editingOp, stdTimeMins: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="form-label">Operation Name *</label>
+                <input
+                  type="text"
+                  required
+                  value={editingOp.name}
+                  onChange={(e) => setEditingOp({ ...editingOp, name: e.target.value })}
+                  className="form-input"
+                  style={{ backgroundColor: "#FFFFFF" }}
+                />
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
+                <div>
+                  <label className="form-label">Work Center</label>
+                  <input
+                    type="text"
+                    value={editingOp.workCenter}
+                    onChange={(e) => setEditingOp({ ...editingOp, workCenter: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+
+                <div>
+                  <label className="form-label">Execution Mode</label>
+                  <select
+                    className="form-select"
+                    value={editingOp.type}
+                    onChange={(e) => setEditingOp({ ...editingOp, type: e.target.value })}
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  >
+                    <option value="Continuous Machine">Continuous Machine</option>
+                    <option value="Continuous Flow">Continuous Flow</option>
+                    <option value="Manual/Semi-auto">Manual/Semi-auto</option>
+                    <option value="Robotic Automated">Robotic Automated</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
+                <Button variant="secondary" type="button" onClick={() => setEditingOp(null)}>
+                  Cancel
+                </Button>
+                <Button variant="primary" type="submit">
+                  Save Changes
                 </Button>
               </div>
             </form>

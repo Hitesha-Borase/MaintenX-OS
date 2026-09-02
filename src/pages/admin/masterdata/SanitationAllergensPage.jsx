@@ -28,6 +28,7 @@ export function SanitationAllergensPage() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingCIP, setEditingCIP] = useState(null);
   const [newCIP, setNewCIP] = useState({
     name: "",
     durationMins: 30,
@@ -68,6 +69,18 @@ export function SanitationAllergensPage() {
     addToast(`Sanitation protocol "${created.id}" registered!`, "success");
     setIsModalOpen(false);
     setNewCIP({ name: "", durationMins: 30, chemical: "Peracetic Acid 0.2%", tempSpec: "Ambient", allergenCleared: "Organic Residue" });
+  };
+
+  const handleEditSubmit = (e) => {
+    e.preventDefault();
+    if (!editingCIP.name.trim()) {
+      addToast("Please provide sanitation protocol name.", "warning");
+      return;
+    }
+
+    setProtocols(protocols.map((p) => (p.id === editingCIP.id ? { ...editingCIP, durationMins: Number(editingCIP.durationMins) || 30 } : p)));
+    addToast(`Protocol ${editingCIP.id} updated successfully!`, "success");
+    setEditingCIP(null);
   };
 
   return (
@@ -183,7 +196,7 @@ export function SanitationAllergensPage() {
                   </td>
                   <td>
                     <button
-                      onClick={() => addToast(`Opened CIP recipe validation for ${p.id}`, "info")}
+                      onClick={() => setEditingCIP({ ...p })}
                       title="Edit Protocol"
                       style={{
                         width: "30px",
@@ -293,6 +306,97 @@ export function SanitationAllergensPage() {
                 </Button>
                 <Button variant="primary" type="submit">
                   Save Protocol
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT PROTOCOL MODAL */}
+      {editingCIP && (
+        <div className="modal-backdrop" onClick={() => setEditingCIP(null)}>
+          <div className="modal-content" style={{ maxWidth: "480px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Edit2 size={16} color="#B27E33" />
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                  Edit Sanitation Protocol — {editingCIP.id}
+                </h2>
+              </div>
+              <button onClick={() => setEditingCIP(null)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditSubmit} style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div>
+                <label className="form-label">Sanitation Method *</label>
+                <input
+                  type="text"
+                  required
+                  value={editingCIP.name}
+                  onChange={(e) => setEditingCIP({ ...editingCIP, name: e.target.value })}
+                  className="form-input"
+                  style={{ backgroundColor: "#FFFFFF" }}
+                />
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
+                <div>
+                  <label className="form-label">Chemical Agent & Concentration</label>
+                  <input
+                    type="text"
+                    value={editingCIP.chemical}
+                    onChange={(e) => setEditingCIP({ ...editingCIP, chemical: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+
+                <div>
+                  <label className="form-label">Wash Duration (Mins)</label>
+                  <input
+                    type="number"
+                    min="5"
+                    value={editingCIP.durationMins}
+                    onChange={(e) => setEditingCIP({ ...editingCIP, durationMins: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
+                <div>
+                  <label className="form-label">Temperature Target</label>
+                  <input
+                    type="text"
+                    value={editingCIP.tempSpec}
+                    onChange={(e) => setEditingCIP({ ...editingCIP, tempSpec: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+
+                <div>
+                  <label className="form-label">Allergen Clearance Scope</label>
+                  <input
+                    type="text"
+                    value={editingCIP.allergenCleared}
+                    onChange={(e) => setEditingCIP({ ...editingCIP, allergenCleared: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
+                <Button variant="secondary" type="button" onClick={() => setEditingCIP(null)}>
+                  Cancel
+                </Button>
+                <Button variant="primary" type="submit">
+                  Save Changes
                 </Button>
               </div>
             </form>

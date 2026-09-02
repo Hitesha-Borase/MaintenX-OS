@@ -29,6 +29,7 @@ export function PackagingMasterPage() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingPkg, setEditingPkg] = useState(null);
   const [newPkg, setNewPkg] = useState({
     name: "",
     spec: "",
@@ -67,6 +68,18 @@ export function PackagingMasterPage() {
     addToast(`Packaging spec "${created.name}" created!`, "success");
     setIsModalOpen(false);
     setNewPkg({ name: "", spec: "", supplier: "", cost: "$0.050" });
+  };
+
+  const handleEditSubmit = (e) => {
+    e.preventDefault();
+    if (!editingPkg.name.trim()) {
+      addToast("Please provide packaging item name.", "warning");
+      return;
+    }
+
+    setPackagingTypes(packagingTypes.map((p) => (p.id === editingPkg.id ? editingPkg : p)));
+    addToast(`Packaging spec ${editingPkg.id} updated successfully!`, "success");
+    setEditingPkg(null);
   };
 
   return (
@@ -184,7 +197,7 @@ export function PackagingMasterPage() {
                   </td>
                   <td>
                     <button
-                      onClick={() => addToast(`Opened spec details for ${p.id}`, "info")}
+                      onClick={() => setEditingPkg({ ...p })}
                       title="Edit Specification"
                       style={{
                         width: "30px",
@@ -280,6 +293,83 @@ export function PackagingMasterPage() {
                 </Button>
                 <Button variant="primary" type="submit">
                   Save Specification
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT PACKAGING MODAL */}
+      {editingPkg && (
+        <div className="modal-backdrop" onClick={() => setEditingPkg(null)}>
+          <div className="modal-content" style={{ maxWidth: "480px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Edit2 size={16} color="#B27E33" />
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                  Edit Packaging Spec — {editingPkg.id}
+                </h2>
+              </div>
+              <button onClick={() => setEditingPkg(null)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditSubmit} style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div>
+                <label className="form-label">Packaging Description *</label>
+                <input
+                  type="text"
+                  required
+                  value={editingPkg.name}
+                  onChange={(e) => setEditingPkg({ ...editingPkg, name: e.target.value })}
+                  className="form-input"
+                  style={{ backgroundColor: "#FFFFFF" }}
+                />
+              </div>
+
+              <div>
+                <label className="form-label">Technical Specification</label>
+                <input
+                  type="text"
+                  value={editingPkg.spec}
+                  onChange={(e) => setEditingPkg({ ...editingPkg, spec: e.target.value })}
+                  className="form-input"
+                  style={{ backgroundColor: "#FFFFFF" }}
+                />
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
+                <div>
+                  <label className="form-label">Primary Supplier</label>
+                  <input
+                    type="text"
+                    value={editingPkg.supplier}
+                    onChange={(e) => setEditingPkg({ ...editingPkg, supplier: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+
+                <div>
+                  <label className="form-label">Standard Unit Cost</label>
+                  <input
+                    type="text"
+                    value={editingPkg.cost}
+                    onChange={(e) => setEditingPkg({ ...editingPkg, cost: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
+                <Button variant="secondary" type="button" onClick={() => setEditingPkg(null)}>
+                  Cancel
+                </Button>
+                <Button variant="primary" type="submit">
+                  Save Changes
                 </Button>
               </div>
             </form>

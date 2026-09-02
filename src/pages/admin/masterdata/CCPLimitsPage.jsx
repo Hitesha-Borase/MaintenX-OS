@@ -28,6 +28,7 @@ export function CCPLimitsPage() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingCCP, setEditingCCP] = useState(null);
   const [newCCP, setNewCCP] = useState({
     processStep: "",
     hazard: "",
@@ -66,6 +67,18 @@ export function CCPLimitsPage() {
     addToast(`Critical Control Point "${created.ccpNumber}" registered!`, "success");
     setIsModalOpen(false);
     setNewCCP({ processStep: "", hazard: "", criticalLimit: "", autoDivertAction: "Line Immediate Stop & Lockout" });
+  };
+
+  const handleEditSubmit = (e) => {
+    e.preventDefault();
+    if (!editingCCP.processStep.trim() || !editingCCP.criticalLimit.trim()) {
+      addToast("Please provide process step and critical limit specification.", "warning");
+      return;
+    }
+
+    setCcps(ccps.map((c) => (c.ccpNumber === editingCCP.ccpNumber ? editingCCP : c)));
+    addToast(`Critical Control Point ${editingCCP.ccpNumber} updated successfully!`, "success");
+    setEditingCCP(null);
   };
 
   return (
@@ -181,7 +194,7 @@ export function CCPLimitsPage() {
                   </td>
                   <td>
                     <button
-                      onClick={() => addToast(`Opened CCP limit thresholds for ${c.ccpNumber}`, "info")}
+                      onClick={() => setEditingCCP({ ...c })}
                       title="Edit CCP"
                       style={{
                         width: "30px",
@@ -277,6 +290,83 @@ export function CCPLimitsPage() {
                 </Button>
                 <Button variant="primary" type="submit">
                   Save CCP
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT CCP MODAL */}
+      {editingCCP && (
+        <div className="modal-backdrop" onClick={() => setEditingCCP(null)}>
+          <div className="modal-content" style={{ maxWidth: "480px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Edit2 size={16} color="#B27E33" />
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                  Edit Critical Control Point — {editingCCP.ccpNumber}
+                </h2>
+              </div>
+              <button onClick={() => setEditingCCP(null)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditSubmit} style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div>
+                <label className="form-label">Process Step Location *</label>
+                <input
+                  type="text"
+                  required
+                  value={editingCCP.processStep}
+                  onChange={(e) => setEditingCCP({ ...editingCCP, processStep: e.target.value })}
+                  className="form-input"
+                  style={{ backgroundColor: "#FFFFFF" }}
+                />
+              </div>
+
+              <div>
+                <label className="form-label">Addressed Hazard *</label>
+                <input
+                  type="text"
+                  required
+                  value={editingCCP.hazard}
+                  onChange={(e) => setEditingCCP({ ...editingCCP, hazard: e.target.value })}
+                  className="form-input"
+                  style={{ backgroundColor: "#FFFFFF" }}
+                />
+              </div>
+
+              <div>
+                <label className="form-label">Critical Limit Specification *</label>
+                <input
+                  type="text"
+                  required
+                  value={editingCCP.criticalLimit}
+                  onChange={(e) => setEditingCCP({ ...editingCCP, criticalLimit: e.target.value })}
+                  className="form-input"
+                  style={{ backgroundColor: "#FFFFFF" }}
+                />
+              </div>
+
+              <div>
+                <label className="form-label">Automated Divert / Failsafe Action</label>
+                <input
+                  type="text"
+                  value={editingCCP.autoDivertAction}
+                  onChange={(e) => setEditingCCP({ ...editingCCP, autoDivertAction: e.target.value })}
+                  className="form-input"
+                  style={{ backgroundColor: "#FFFFFF" }}
+                />
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
+                <Button variant="secondary" type="button" onClick={() => setEditingCCP(null)}>
+                  Cancel
+                </Button>
+                <Button variant="primary" type="submit">
+                  Save Changes
                 </Button>
               </div>
             </form>

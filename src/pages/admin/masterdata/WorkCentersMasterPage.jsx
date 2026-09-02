@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   Layers,
   Plus,
@@ -6,90 +6,120 @@ import {
   Search,
   X,
   Edit2,
-  DollarSign,
-  Gauge,
+  Building2,
   Cpu,
-  ShieldCheck
+  ShieldCheck,
+  Eye,
+  Power,
+  Wrench,
+  Users
 } from "lucide-react";
 import { Card } from "../../../components/common/Card";
 import { Badge } from "../../../components/common/Badge";
 import { Button } from "../../../components/common/Button";
 import { StatCard } from "../../../components/common/StatCard";
+import { useMasterData } from "../../../context/MasterDataContext";
 import { useApp } from "../../../context/AppContext";
 
 export function WorkCentersMasterPage() {
+  const { lines = [], addLine, updateLine, assignAssetToLine, toggleLineStatus, assets = [], plants = [], employees = [] } = useMasterData();
   const { addToast } = useApp();
 
-  const [workCenters, setWorkCenters] = useState([
-    { id: "WC-01", name: "Filling & Capping Monoblock", line: "Line 1 (Aseptic)", costPerHour: "$120.00/hr", maxCapacity: "4,250 BPH", status: "Active" },
-    { id: "WC-02", name: "Rotary Labeling Station", line: "Line 1 (Aseptic)", costPerHour: "$85.00/hr", maxCapacity: "4,500 BPH", status: "Active" },
-    { id: "WC-03", name: "Thermal Pasteurization Skid", line: "Line 2 (Formulation)", costPerHour: "$160.00/hr", maxCapacity: "5,000 LPH", status: "Active" },
-    { id: "WC-04", name: "Can Seamer Station", line: "Line 3 (Canning)", costPerHour: "$140.00/hr", maxCapacity: "6,000 CPH", status: "Active" }
-  ]);
-
   const [searchQuery, setSearchQuery] = useState("");
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [newWC, setNewWC] = useState({
-    id: "",
+  const [plantFilter, setPlantFilter] = useState("ALL");
+  const [statusFilter, setStatusFilter] = useState("ALL");
+
+  // Modals
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editingLine, setEditingLine] = useState(null);
+  const [viewingLine, setViewingLine] = useState(null);
+  const [assignMachineLine, setAssignMachineLine] = useState(null);
+  const [selectedAssetToAssign, setSelectedAssetToAssign] = useState("");
+
+  const [newLine, setNewLine] = useState({
+    lineCode: "",
     name: "",
-    line: "Line 1 (Aseptic)",
-    costPerHour: "$110.00/hr",
-    maxCapacity: "4,000 BPH"
+    plantId: "PLT-01",
+    capacity: "40,000 BPH",
+    supervisorId: "EMP-005",
+    assignedAssetIds: []
   });
 
-  const filteredWCs = workCenters.filter((w) => {
-    if (!searchQuery.trim()) return true;
-    const q = searchQuery.toLowerCase();
-    return (
-      w.name.toLowerCase().includes(q) ||
-      w.id.toLowerCase().includes(q) ||
-      w.line.toLowerCase().includes(q)
-    );
-  });
+  const filteredLines = useMemo(() => {
+    return lines.filter((l) => {
+      const matchesPlant = plantFilter === "ALL" || l.plantId === plantFilter;
+      const matchesStatus = statusFilter === "ALL" || l.status === statusFilter;
+      const q = searchQuery.toLowerCase().trim();
+      const matchesSearch =
+        !q ||
+        l.name?.toLowerCase().includes(q) ||
+        l.lineCode?.toLowerCase().includes(q) ||
+        l.supervisorName?.toLowerCase().includes(q);
+
+      return matchesPlant && matchesStatus && matchesSearch;
+    });
+  }, [lines, plantFilter, statusFilter, searchQuery]);
 
   const handleAddSubmit = (e) => {
     e.preventDefault();
-    if (!newWC.id.trim() || !newWC.name.trim()) {
-      addToast("Please provide work center code and description.", "warning");
+    if (!newLine.name.trim()) {
+      addToast("Please provide Line / Work Center name.", "warning");
       return;
     }
+    const created = addLine(newLine);
+    addToast(`Line ${created.lineCode} (${created.name}) created successfully!`, "success");
+    setIsAddModalOpen(false);
+    setNewLine({
+      lineCode: "",
+      name: "",
+      plantId: "PLT-01",
+      capacity: "40,000 BPH",
+      supervisorId: "EMP-005",
+      assignedAssetIds: []
+    });
+  };
 
-    const created = {
-      id: newWC.id.toUpperCase(),
-      name: newWC.name,
-      line: newWC.line,
-      costPerHour: newWC.costPerHour || "$100.00/hr",
-      maxCapacity: newWC.maxCapacity || "4,000 BPH",
-      status: "Active"
-    };
+  const handleEditSubmit = (e) => {
+    e.preventDefault();
+    if (!editingLine.name.trim()) return;
+    updateLine(editingLine.lineId, editingLine);
+    addToast(`Line ${editingLine.lineCode} updated!`, "success");
+    setEditingLine(null);
+  };
 
-    setWorkCenters([...workCenters, created]);
-    addToast(`Master Work Center "${created.id}" created!`, "success");
-    setIsModalOpen(false);
-    setNewWC({ id: "", name: "", line: "Line 1 (Aseptic)", costPerHour: "$110.00/hr", maxCapacity: "4,000 BPH" });
+  const handleAssignMachine = (e) => {
+    e.preventDefault();
+    if (!selectedAssetToAssign) {
+      addToast("Please select a machine asset to assign.", "warning");
+      return;
+    }
+    assignAssetToLine(assignMachineLine.lineId, selectedAssetToAssign);
+    addToast(`Asset assigned to Line ${assignMachineLine.lineCode}!`, "success");
+    setAssignMachineLine(null);
+    setSelectedAssetToAssign("");
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%", maxWidth: "1200px", margin: "0 auto", minWidth: 0 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%", maxWidth: "1600px", margin: "0 auto", minWidth: 0 }}>
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px", width: "100%" }}>
         <div style={{ minWidth: "240px", flex: 1 }}>
           <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
             <h1 style={{ fontSize: "clamp(18px, 4vw, 24px)", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.3px", lineHeight: 1.2 }}>
-              Work Centers Master Registry
+              Line & Work Centre Management
             </h1>
-            <Badge variant="cyan">{workCenters.length} MASTER WORK CENTERS</Badge>
+            <Badge variant="cyan">{lines.length} ACTIVE LINES</Badge>
           </div>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-          <Button variant="primary" icon={Plus} onClick={() => setIsModalOpen(true)} style={{ fontSize: "12px", padding: "7px 12px" }}>
-            + Add Work Center
+          <Button variant="primary" icon={Plus} onClick={() => setIsAddModalOpen(true)} style={{ fontSize: "12px", padding: "7px 12px" }}>
+            + Create Work Centre Line
           </Button>
         </div>
       </div>
 
-      {/* KPI Tickers - 2x2 on mobile, 4 on desktop */}
+      {/* KPI Tickers - 4 Responsive Cards */}
       <div
         className="kpi-grid-responsive grid-4"
         style={{
@@ -101,200 +131,616 @@ export function WorkCentersMasterPage() {
         }}
       >
         <StatCard
-          title="Master Centers"
-          value={workCenters.length.toString()}
-          unit="Active Cells"
-          trend={{ value: "Core machinery stations", isPositive: true, text: "" }}
-          icon={Cpu}
+          title="Active Production Lines"
+          value={lines.filter((l) => l.status === "Active").length.toString()}
+          unit="Running"
+          trend={{ value: "Operational bottling & canning", isPositive: true, text: "" }}
+          icon={Layers}
           colorVariant="emerald"
         />
         <StatCard
-          title="Avg Hourly Rate"
-          value="$126/hr"
-          unit="Absorption"
-          trend={{ value: "Direct standard cost", isPositive: true, text: "" }}
-          icon={DollarSign}
+          title="Total Assigned Machines"
+          value={assets.length.toString()}
+          unit="Equipments"
+          trend={{ value: "Allocated across lines", isPositive: true, text: "" }}
+          icon={Cpu}
           colorVariant="cyan"
         />
         <StatCard
-          title="Peak Rated Speed"
-          value="6,000"
-          unit="CPH"
-          trend={{ value: "Can Seamer Station", isPositive: true, text: "" }}
-          icon={Gauge}
-          colorVariant="amber"
+          title="Overall Line Rated OEE"
+          value="87.9%"
+          unit="Target"
+          trend={{ value: "Availability & speed standard", isPositive: true, text: "" }}
+          icon={CheckCircle2}
+          colorVariant="emerald"
         />
         <StatCard
-          title="SAP GL Mapping"
-          value="100%"
-          unit="Audited"
-          trend={{ value: "Cost centers synced", isPositive: true, text: "" }}
-          icon={ShieldCheck}
-          colorVariant="emerald"
+          title="Shift Supervisors"
+          value={employees.filter((e) => e.role?.includes("Supervisor") || e.role?.includes("Lead")).length.toString()}
+          unit="Qualified"
+          trend={{ value: "Full shift staffing", isPositive: true, text: "" }}
+          icon={Users}
+          colorVariant="amber"
         />
       </div>
 
-      {/* Table */}
-      <Card style={{ padding: "18px", minWidth: 0, width: "100%", boxSizing: "border-box" }}>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", alignItems: "center", marginBottom: "14px", justifyContent: "space-between" }}>
-          <div style={{ position: "relative", minWidth: "220px", flex: 1 }}>
-            <Search size={15} color="var(--text-muted)" style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)" }} />
-            <input
-              type="text"
-              placeholder="Search work center, code, line..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+      {/* Main Table Card */}
+      <Card style={{ padding: "18px", width: "100%", boxSizing: "border-box", minWidth: 0 }}>
+        {/* Table Toolbar */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "12px" }}>
+          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", flex: 1, minWidth: "240px" }}>
+            <div style={{ position: "relative", minWidth: "220px", flex: 1 }}>
+              <Search size={15} color="var(--text-muted)" style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)" }} />
+              <input
+                type="text"
+                placeholder=""
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="form-input"
+                style={{ paddingLeft: "32px", height: "36px", fontSize: "12px", backgroundColor: "#FFFFFF" }}
+              />
+            </div>
+
+            <select
+              value={plantFilter}
+              onChange={(e) => setPlantFilter(e.target.value)}
               className="form-input"
-              style={{ paddingLeft: "32px", height: "36px", fontSize: "12px", backgroundColor: "#FFFFFF" }}
-            />
+              style={{ height: "36px", fontSize: "12px", width: "160px", backgroundColor: "#FFFFFF" }}
+            >
+              <option value="ALL">All Plants</option>
+              {plants.map((p) => (
+                <option key={p.id} value={p.id}>{p.name.split(" - ")[0]}</option>
+              ))}
+            </select>
+
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="form-input"
+              style={{ height: "36px", fontSize: "12px", width: "130px", backgroundColor: "#FFFFFF" }}
+            >
+              <option value="ALL">All Status</option>
+              <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
+            </select>
+          </div>
+
+          <div style={{ fontSize: "12px", color: "var(--text-muted)", fontWeight: 600 }}>
+            Showing <strong>{filteredLines.length}</strong> of {lines.length} Lines
           </div>
         </div>
 
-        <div className="data-table-container" style={{ width: "100%", overflowX: "auto", WebkitOverflowScrolling: "touch", display: "block" }}>
-          <table className="data-table" style={{ width: "100%", minWidth: "680px" }}>
+        {/* Structured Data Table */}
+        <div className="data-table-container" style={{ overflowX: "auto", border: "1px solid var(--border-subtle)", borderRadius: "10px" }}>
+          <table className="data-table" style={{ width: "100%", borderCollapse: "collapse", minWidth: "960px" }}>
             <thead>
-              <tr>
-                <th>WC Code</th>
-                <th>Work Center Description</th>
-                <th>Line Attachment</th>
-                <th>Standard Absorption Rate</th>
-                <th>Max Rated Throughput</th>
-                <th>Status</th>
-                <th>Action</th>
+              <tr style={{ backgroundColor: "var(--bg-card-subtle)", borderBottom: "1.5px solid var(--border-subtle)" }}>
+                <th style={{ padding: "12px 14px", textAlign: "left", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Line Code</th>
+                <th style={{ padding: "12px 14px", textAlign: "left", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Line / Work Centre Name</th>
+                <th style={{ padding: "12px 14px", textAlign: "left", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Plant Location</th>
+                <th style={{ padding: "12px 14px", textAlign: "left", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Rated Capacity</th>
+                <th style={{ padding: "12px 14px", textAlign: "left", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Supervisor</th>
+                <th style={{ padding: "12px 14px", textAlign: "left", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Assigned Machines</th>
+                <th style={{ padding: "12px 14px", textAlign: "left", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Status</th>
+                <th style={{ padding: "12px 14px", textAlign: "right", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {filteredWCs.map((w) => (
-                <tr key={w.id}>
-                  <td>
-                    <span style={{ fontWeight: 800, color: "#8C5B23", fontFamily: "var(--font-mono)" }}>{w.id}</span>
-                  </td>
-                  <td>
-                    <strong style={{ color: "var(--text-primary)" }}>{w.name}</strong>
-                  </td>
-                  <td>
-                    <span style={{ fontSize: "12px", color: "var(--text-secondary)", fontWeight: 600 }}>{w.line}</span>
-                  </td>
-                  <td style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "#059669" }}>{w.costPerHour}</td>
-                  <td style={{ fontFamily: "var(--font-mono)", fontSize: "12px" }}>{w.maxCapacity}</td>
-                  <td>
-                    <Badge variant="emerald">{w.status}</Badge>
-                  </td>
-                  <td>
-                    <button
-                      onClick={() => addToast(`Opened work center costing for ${w.id}`, "info")}
-                      title="Edit Work Center"
+              {filteredLines.length > 0 ? (
+                filteredLines.map((line) => {
+                  const lineAssets = assets.filter((a) => a.lineId === line.lineId || line.assignedAssetIds?.includes(a.assetId));
+                  return (
+                    <tr
+                      key={line.lineId}
                       style={{
-                        width: "30px",
-                        height: "30px",
-                        borderRadius: "6px",
-                        backgroundColor: "var(--bg-card-subtle)",
-                        color: "var(--text-primary)",
-                        border: "1px solid var(--border-subtle)",
-                        cursor: "pointer",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        justifyContent: "center"
+                        borderBottom: "1px solid var(--border-subtle)",
+                        transition: "background-color 0.12s ease"
                       }}
+                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgba(200, 149, 71, 0.04)")}
+                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
                     >
-                      <Edit2 size={13} />
-                    </button>
+                      <td style={{ padding: "12px 14px", whiteSpace: "nowrap" }}>
+                        <span style={{ fontSize: "12px", fontFamily: "var(--font-mono)", fontWeight: 800, color: "#0284C7" }}>
+                          {line.lineCode}
+                        </span>
+                      </td>
+
+                      <td style={{ padding: "12px 14px" }}>
+                        <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)" }}>
+                          {line.name}
+                        </div>
+                      </td>
+
+                      <td style={{ padding: "12px 14px", whiteSpace: "nowrap" }}>
+                        <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
+                          {line.plantName || "Indore Plant"}
+                        </span>
+                      </td>
+
+                      <td style={{ padding: "12px 14px", whiteSpace: "nowrap" }}>
+                        <span style={{ fontSize: "12px", fontWeight: 700, color: "#8C5B23" }}>
+                          {line.capacity}
+                        </span>
+                      </td>
+
+                      <td style={{ padding: "12px 14px", whiteSpace: "nowrap" }}>
+                        <span style={{ fontSize: "12px", color: "var(--text-primary)", fontWeight: 600 }}>
+                          {line.supervisorName || "David Kim"}
+                        </span>
+                      </td>
+
+                      <td style={{ padding: "12px 14px", whiteSpace: "nowrap" }}>
+                        <Badge variant="cyan">{lineAssets.length} Machines</Badge>
+                      </td>
+
+                      <td style={{ padding: "12px 14px", whiteSpace: "nowrap" }}>
+                        <Badge variant={line.status === "Active" ? "emerald" : "rose"}>
+                          {line.status}
+                        </Badge>
+                      </td>
+
+                      <td style={{ padding: "12px 14px", textAlign: "right", whiteSpace: "nowrap" }}>
+                        <div style={{ display: "flex", justifyContent: "flex-end", gap: "6px" }}>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            icon={Eye}
+                            onClick={() => setViewingLine(line)}
+                            style={{ padding: "6px 8px" }}
+                            title="View Line Details"
+                          />
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            icon={Wrench}
+                            onClick={() => {
+                              setAssignMachineLine(line);
+                              setSelectedAssetToAssign("");
+                            }}
+                            style={{ padding: "6px 8px" }}
+                            title="Assign Machines to Line"
+                          />
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            icon={Edit2}
+                            onClick={() => setEditingLine(line)}
+                            style={{ padding: "6px 8px" }}
+                            title="Edit Line"
+                          />
+                          <button
+                            onClick={() => {
+                              toggleLineStatus(line.lineId);
+                              addToast(`Line ${line.lineCode} status toggled!`, "info");
+                            }}
+                            style={{
+                              padding: "6px 8px",
+                              borderRadius: "6px",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              border: "1px solid var(--border-subtle)",
+                              backgroundColor: line.status === "Active" ? "rgba(220, 38, 38, 0.08)" : "rgba(5, 150, 105, 0.08)",
+                              color: line.status === "Active" ? "#DC2626" : "#059669",
+                              cursor: "pointer"
+                            }}
+                            title={line.status === "Active" ? "Deactivate Line" : "Activate Line"}
+                          >
+                            <Power size={14} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan={8} style={{ padding: "32px", textAlign: "center", color: "var(--text-muted)", fontSize: "13px" }}>
+                    No line or work center records match the filter.
                   </td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
         </div>
       </Card>
 
-      {/* ADD WORK CENTER MODAL */}
-      {isModalOpen && (
-        <div className="modal-backdrop" onClick={() => setIsModalOpen(false)}>
-          <div className="modal-content" style={{ maxWidth: "480px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
-              <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)" }}>
-                Add Master Work Center
-              </h2>
-              <button onClick={() => setIsModalOpen(false)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+      {/* CREATE NEW LINE MODAL */}
+      {isAddModalOpen && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(38, 22, 3, 0.55)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+            padding: "16px"
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: "#FFFFFF",
+              borderRadius: "14px",
+              width: "100%",
+              maxWidth: "560px",
+              boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
+              border: "1px solid var(--border-subtle)",
+              overflow: "hidden"
+            }}
+          >
+            <div style={{ padding: "18px 22px", borderBottom: "1px solid var(--border-subtle)", display: "flex", justifyContent: "space-between", alignItems: "center", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Layers size={18} color="#B27E33" />
+                <h3 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                  Create Work Centre / Production Line
+                </h3>
+              </div>
+              <button onClick={() => setIsAddModalOpen(false)} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-muted)" }}>
                 <X size={18} />
               </button>
             </div>
 
-            <form onSubmit={handleAddSubmit} style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
+            <form onSubmit={handleAddSubmit} style={{ padding: "22px", display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "12px" }}>
                 <div>
-                  <label className="form-label">WC Code *</label>
+                  <label style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase" }}>Line Code</label>
+                  <input
+                    type="text"
+                    placeholder="LINE-4"
+                    value={newLine.lineCode}
+                    onChange={(e) => setNewLine({ ...newLine, lineCode: e.target.value })}
+                    className="form-input"
+                    style={{ height: "36px", fontSize: "12px", marginTop: "4px" }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase" }}>Line Name *</label>
                   <input
                     type="text"
                     required
-                    placeholder="e.g. WC-05"
-                    value={newWC.id}
-                    onChange={(e) => setNewWC({ ...newWC, id: e.target.value })}
+                    placeholder="e.g. Aseptic Cartoning Line 4"
+                    value={newLine.name}
+                    onChange={(e) => setNewLine({ ...newLine, name: e.target.value })}
                     className="form-input"
-                    style={{ backgroundColor: "#FFFFFF" }}
+                    style={{ height: "36px", fontSize: "12px", marginTop: "4px" }}
                   />
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div>
+                  <label style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase" }}>Plant Location</label>
+                  <select
+                    value={newLine.plantId}
+                    onChange={(e) => setNewLine({ ...newLine, plantId: e.target.value })}
+                    className="form-input"
+                    style={{ height: "36px", fontSize: "12px", marginTop: "4px" }}
+                  >
+                    {plants.map((p) => (
+                      <option key={p.id} value={p.id}>{p.name.split(" - ")[0]}</option>
+                    ))}
+                  </select>
                 </div>
 
                 <div>
-                  <label className="form-label">Line Attachment</label>
-                  <select
-                    className="form-select"
-                    value={newWC.line}
-                    onChange={(e) => setNewWC({ ...newWC, line: e.target.value })}
-                    style={{ backgroundColor: "#FFFFFF" }}
-                  >
-                    <option value="Line 1 (Aseptic)">Line 1 (Aseptic)</option>
-                    <option value="Line 2 (Formulation)">Line 2 (Formulation)</option>
-                    <option value="Line 3 (Canning)">Line 3 (Canning)</option>
-                  </select>
+                  <label style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase" }}>Capacity</label>
+                  <input
+                    type="text"
+                    placeholder="35,000 Units/Hr"
+                    value={newLine.capacity}
+                    onChange={(e) => setNewLine({ ...newLine, capacity: e.target.value })}
+                    className="form-input"
+                    style={{ height: "36px", fontSize: "12px", marginTop: "4px" }}
+                  />
                 </div>
               </div>
 
               <div>
-                <label className="form-label">Work Center Description *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Depalletizer & Infeed Rinsing"
-                  value={newWC.name}
-                  onChange={(e) => setNewWC({ ...newWC, name: e.target.value })}
+                <label style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase" }}>Assigned Shift Supervisor</label>
+                <select
+                  value={newLine.supervisorId}
+                  onChange={(e) => {
+                    const sup = employees.find((emp) => emp.employeeId === e.target.value);
+                    setNewLine({ ...newLine, supervisorId: e.target.value, supervisorName: sup?.name });
+                  }}
                   className="form-input"
-                  style={{ backgroundColor: "#FFFFFF" }}
-                />
+                  style={{ height: "36px", fontSize: "12px", marginTop: "4px" }}
+                >
+                  {employees.map((emp) => (
+                    <option key={emp.employeeId} value={emp.employeeId}>{emp.name} ({emp.role})</option>
+                  ))}
+                </select>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
-                <div>
-                  <label className="form-label">Absorption Rate</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. $95.00/hr"
-                    value={newWC.costPerHour}
-                    onChange={(e) => setNewWC({ ...newWC, costPerHour: e.target.value })}
-                    className="form-input"
-                    style={{ backgroundColor: "#FFFFFF" }}
-                  />
-                </div>
-
-                <div>
-                  <label className="form-label">Max Rated Throughput</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. 4,500 BPH"
-                    value={newWC.maxCapacity}
-                    onChange={(e) => setNewWC({ ...newWC, maxCapacity: e.target.value })}
-                    className="form-input"
-                    style={{ backgroundColor: "#FFFFFF" }}
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
-                <Button variant="secondary" onClick={() => setIsModalOpen(false)}>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "12px" }}>
+                <Button variant="secondary" type="button" onClick={() => setIsAddModalOpen(false)} style={{ fontSize: "12px" }}>
                   Cancel
                 </Button>
-                <Button variant="primary" type="submit">
-                  Save Work Center
+                <Button variant="primary" type="submit" style={{ fontSize: "12px" }}>
+                  Create Line
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ASSIGN MACHINE MODAL */}
+      {assignMachineLine && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(38, 22, 3, 0.55)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+            padding: "16px"
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: "#FFFFFF",
+              borderRadius: "14px",
+              width: "100%",
+              maxWidth: "520px",
+              boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
+              border: "1px solid var(--border-subtle)",
+              overflow: "hidden"
+            }}
+          >
+            <div style={{ padding: "18px 22px", borderBottom: "1px solid var(--border-subtle)", display: "flex", justifyContent: "space-between", alignItems: "center", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Cpu size={18} color="#0284C7" />
+                <h3 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                  Assign Machine to {assignMachineLine.name}
+                </h3>
+              </div>
+              <button onClick={() => setAssignMachineLine(null)} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-muted)" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleAssignMachine} style={{ padding: "22px", display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div>
+                <label style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase" }}>Select Machine Asset from Catalog</label>
+                <select
+                  required
+                  value={selectedAssetToAssign}
+                  onChange={(e) => setSelectedAssetToAssign(e.target.value)}
+                  className="form-input"
+                  style={{ height: "38px", fontSize: "12px", marginTop: "4px" }}
+                >
+                  <option value="">-- Choose Machine Asset --</option>
+                  {assets.map((a) => (
+                    <option key={a.assetId} value={a.assetId}>{a.assetId} — {a.name} ({a.type})</option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={{ fontSize: "12px", color: "var(--text-muted)", lineHeight: 1.5 }}>
+                Assigning this machine will dynamically connect maintenance history, downtime logs, and live OEE telemetry directly to {assignMachineLine.name}.
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "12px" }}>
+                <Button variant="secondary" type="button" onClick={() => setAssignMachineLine(null)} style={{ fontSize: "12px" }}>
+                  Cancel
+                </Button>
+                <Button variant="primary" type="submit" style={{ fontSize: "12px" }}>
+                  Confirm Assignment
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* VIEW LINE DETAILS MODAL */}
+      {viewingLine && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(38, 22, 3, 0.55)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+            padding: "16px"
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: "#FFFFFF",
+              borderRadius: "14px",
+              width: "100%",
+              maxWidth: "680px",
+              maxHeight: "90vh",
+              display: "flex",
+              flexDirection: "column",
+              boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
+              border: "1px solid var(--border-subtle)",
+              overflow: "hidden"
+            }}
+          >
+            <div style={{ padding: "18px 22px", borderBottom: "1px solid var(--border-subtle)", display: "flex", justifyContent: "space-between", alignItems: "center", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <Layers size={20} color="#B27E33" />
+                <div>
+                  <h3 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                    {viewingLine.name} ({viewingLine.lineCode})
+                  </h3>
+                  <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>
+                    Plant: {viewingLine.plantName || "Indore Plant"} • Capacity: {viewingLine.capacity}
+                  </div>
+                </div>
+              </div>
+              <button onClick={() => setViewingLine(null)} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-muted)" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ padding: "22px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "16px" }}>
+              <div style={{ fontSize: "13px", fontWeight: 800, color: "var(--text-primary)" }}>
+                Assigned Machines & Components ({assets.filter((a) => a.lineId === viewingLine.lineId || viewingLine.assignedAssetIds?.includes(a.assetId)).length})
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                {assets.filter((a) => a.lineId === viewingLine.lineId || viewingLine.assignedAssetIds?.includes(a.assetId)).map((a) => (
+                  <div key={a.assetId} style={{ border: "1px solid var(--border-subtle)", borderRadius: "8px", padding: "12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div>
+                      <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)" }}>{a.name}</div>
+                      <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>ID: {a.assetId} • Type: {a.type} • Status: {a.status}</div>
+                    </div>
+                    <Badge variant="emerald">{a.criticality}</Badge>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ padding: "14px 22px", borderTop: "1px solid var(--border-subtle)", display: "flex", justifyContent: "flex-end", backgroundColor: "var(--bg-card-subtle)" }}>
+              <Button variant="secondary" onClick={() => setViewingLine(null)} style={{ fontSize: "12px" }}>
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT LINE MODAL */}
+      {editingLine && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(38, 22, 3, 0.55)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+            padding: "16px"
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: "#FFFFFF",
+              borderRadius: "14px",
+              width: "100%",
+              maxWidth: "560px",
+              boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
+              border: "1px solid var(--border-subtle)",
+              overflow: "hidden"
+            }}
+          >
+            <div style={{ padding: "18px 22px", borderBottom: "1px solid var(--border-subtle)", display: "flex", justifyContent: "space-between", alignItems: "center", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Edit2 size={18} color="#B27E33" />
+                <h3 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                  Edit Work Centre — {editingLine.lineCode}
+                </h3>
+              </div>
+              <button onClick={() => setEditingLine(null)} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-muted)" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditSubmit} style={{ padding: "22px", display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "12px" }}>
+                <div>
+                  <label style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase" }}>Line Code</label>
+                  <input
+                    type="text"
+                    disabled
+                    value={editingLine.lineCode}
+                    className="form-input"
+                    style={{ height: "36px", fontSize: "12px", marginTop: "4px", backgroundColor: "var(--bg-card-subtle)", cursor: "not-allowed" }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase" }}>Line Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingLine.name}
+                    onChange={(e) => setEditingLine({ ...editingLine, name: e.target.value })}
+                    className="form-input"
+                    style={{ height: "36px", fontSize: "12px", marginTop: "4px" }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div>
+                  <label style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase" }}>Plant Location</label>
+                  <select
+                    value={editingLine.plantId}
+                    onChange={(e) => {
+                      const p = plants.find((plt) => plt.id === e.target.value);
+                      setEditingLine({ ...editingLine, plantId: e.target.value, plantName: p?.name.split(" - ")[0] });
+                    }}
+                    className="form-input"
+                    style={{ height: "36px", fontSize: "12px", marginTop: "4px" }}
+                  >
+                    {plants.map((p) => (
+                      <option key={p.id} value={p.id}>{p.name.split(" - ")[0]}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase" }}>Capacity</label>
+                  <input
+                    type="text"
+                    value={editingLine.capacity}
+                    onChange={(e) => setEditingLine({ ...editingLine, capacity: e.target.value })}
+                    className="form-input"
+                    style={{ height: "36px", fontSize: "12px", marginTop: "4px" }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase" }}>Assigned Shift Supervisor</label>
+                <select
+                  value={editingLine.supervisorId}
+                  onChange={(e) => {
+                    const sup = employees.find((emp) => emp.employeeId === e.target.value);
+                    setEditingLine({ ...editingLine, supervisorId: e.target.value, supervisorName: sup?.name });
+                  }}
+                  className="form-input"
+                  style={{ height: "36px", fontSize: "12px", marginTop: "4px" }}
+                >
+                  {employees.map((emp) => (
+                    <option key={emp.employeeId} value={emp.employeeId}>{emp.name} ({emp.role})</option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "12px" }}>
+                <Button variant="secondary" type="button" onClick={() => setEditingLine(null)} style={{ fontSize: "12px" }}>
+                  Cancel
+                </Button>
+                <Button variant="primary" type="submit" style={{ fontSize: "12px" }}>
+                  Save Changes
                 </Button>
               </div>
             </form>

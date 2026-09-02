@@ -13,9 +13,7 @@ export function Profile() {
         <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>
           Supply Planner / Scheduler Profile
         </h1>
-        <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginTop: "4px", fontWeight: 500 }}>
-          Verify credentials and trade qualifications
-        </p>
+
       </div>
 
       <div style={{ display: "flex", flexWrap: "wrap", gap: "20px" }}>

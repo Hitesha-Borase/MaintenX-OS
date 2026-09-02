@@ -3,14 +3,30 @@ import { Package } from "lucide-react";
 import { Card } from "../../../components/common/Card";
 import { Badge } from "../../../components/common/Badge";
 import { useApp } from "../../../context/AppContext";
+import { useMasterData } from "../../../context/MasterDataContext";
 
 export function RawMaterials() {
   const { addToast } = useApp();
+  const { skus = [] } = useMasterData();
 
-  const [materials, setMaterials] = useState([
-    { id: 1, name: "Organic Orange Concentrate 1000L", sku: "SKU-BLK-SYRUP-1000L", qty: "4 Drums", status: "Allocated" },
-    { id: 2, name: "Purified Water Feedstock", sku: "SKU-WATER-01", qty: "Unlimited Feed", status: "Secure Stock" }
-  ]);
+  // Seed inventory from MasterDataContext non-finished goods SKUs
+  const rawMasterSkus = skus.filter((s) => s.category !== "Finished Goods");
+
+  const [materials, setMaterials] = useState(() => {
+    if (rawMasterSkus.length > 0) {
+      return rawMasterSkus.map((s, idx) => ({
+        id: s.skuId || `RM-${idx + 1}`,
+        name: s.name,
+        sku: s.skuCode,
+        qty: idx === 0 ? "8,500 Liters (4 Bulk Tanks)" : idx === 1 ? "1,200 Kg (48 Bags)" : "42,000 Units (Staged)",
+        status: idx === 0 ? "Allocated" : idx === 1 ? "Secure Stock" : "Available"
+      }));
+    }
+    return [
+      { id: "SKU-101", name: "Liquid Cane Sugar 67°Bx", sku: "ING-1001", qty: "8,500 Liters", status: "Allocated" },
+      { id: "SKU-102", name: "Citric Acid Anhydrous USP", sku: "ING-1002", qty: "1,200 Kg", status: "Secure Stock" }
+    ];
+  });
 
   const handleToggleStatus = (id, currentStatus) => {
     setMaterials(prev => prev.map(m => {
