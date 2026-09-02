@@ -286,11 +286,9 @@ export function WorkCentersMasterPage() {
                             size="sm"
                             icon={Eye}
                             onClick={() => setViewingLine(line)}
-                            style={{ fontSize: "11px", padding: "4px 8px" }}
+                            style={{ padding: "6px 8px" }}
                             title="View Line Details"
-                          >
-                            View
-                          </Button>
+                          />
                           <Button
                             variant="secondary"
                             size="sm"
@@ -299,31 +297,28 @@ export function WorkCentersMasterPage() {
                               setAssignMachineLine(line);
                               setSelectedAssetToAssign("");
                             }}
-                            style={{ fontSize: "11px", padding: "4px 8px" }}
+                            style={{ padding: "6px 8px" }}
                             title="Assign Machines to Line"
-                          >
-                            Assign
-                          </Button>
+                          />
                           <Button
                             variant="secondary"
                             size="sm"
                             icon={Edit2}
                             onClick={() => setEditingLine(line)}
-                            style={{ fontSize: "11px", padding: "4px 8px" }}
+                            style={{ padding: "6px 8px" }}
                             title="Edit Line"
-                          >
-                            Edit
-                          </Button>
+                          />
                           <button
                             onClick={() => {
                               toggleLineStatus(line.lineId);
                               addToast(`Line ${line.lineCode} status toggled!`, "info");
                             }}
                             style={{
-                              padding: "4px 8px",
+                              padding: "6px 8px",
                               borderRadius: "6px",
-                              fontSize: "11px",
-                              fontWeight: 700,
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
                               border: "1px solid var(--border-subtle)",
                               backgroundColor: line.status === "Active" ? "rgba(220, 38, 38, 0.08)" : "rgba(5, 150, 105, 0.08)",
                               color: line.status === "Active" ? "#DC2626" : "#059669",
@@ -331,7 +326,7 @@ export function WorkCentersMasterPage() {
                             }}
                             title={line.status === "Active" ? "Deactivate Line" : "Activate Line"}
                           >
-                            <Power size={12} />
+                            <Power size={14} />
                           </button>
                         </div>
                       </td>

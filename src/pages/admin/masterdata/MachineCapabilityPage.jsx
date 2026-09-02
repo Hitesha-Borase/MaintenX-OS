@@ -285,31 +285,28 @@ export function MachineCapabilityPage() {
                               setViewingAsset(asset);
                               setActiveDetailTab("info");
                             }}
-                            style={{ fontSize: "11px", padding: "4px 8px" }}
+                            style={{ padding: "6px 8px" }}
                             title="View Asset 360 & History Tabs"
-                          >
-                            Details
-                          </Button>
+                          />
                           <Button
                             variant="secondary"
                             size="sm"
                             icon={Edit2}
                             onClick={() => setEditingAsset(asset)}
-                            style={{ fontSize: "11px", padding: "4px 8px" }}
+                            style={{ padding: "6px 8px" }}
                             title="Edit Asset"
-                          >
-                            Edit
-                          </Button>
+                          />
                           <button
                             onClick={() => {
                               toggleAssetStatus(asset.assetId);
                               addToast(`Asset ${asset.assetId} status toggled!`, "info");
                             }}
                             style={{
-                              padding: "4px 8px",
+                              padding: "6px 8px",
                               borderRadius: "6px",
-                              fontSize: "11px",
-                              fontWeight: 700,
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
                               border: "1px solid var(--border-subtle)",
                               backgroundColor: asset.status === "Operational" ? "rgba(220, 38, 38, 0.08)" : "rgba(5, 150, 105, 0.08)",
                               color: asset.status === "Operational" ? "#DC2626" : "#059669",
@@ -317,7 +314,7 @@ export function MachineCapabilityPage() {
                             }}
                             title="Toggle Maintenance Status"
                           >
-                            <Power size={12} />
+                            <Power size={14} />
                           </button>
                         </div>
                       </td>

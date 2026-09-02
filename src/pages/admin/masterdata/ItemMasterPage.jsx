@@ -329,31 +329,28 @@ export function ItemMasterPage() {
                             size="sm"
                             icon={Eye}
                             onClick={() => setViewingSku(sku)}
-                            style={{ fontSize: "11px", padding: "4px 8px" }}
+                            style={{ padding: "6px 8px" }}
                             title="View SKU Details"
-                          >
-                            View
-                          </Button>
+                          />
                           <Button
                             variant="secondary"
                             size="sm"
                             icon={Edit2}
                             onClick={() => setEditingSku(sku)}
-                            style={{ fontSize: "11px", padding: "4px 8px" }}
+                            style={{ padding: "6px 8px" }}
                             title="Edit SKU"
-                          >
-                            Edit
-                          </Button>
+                          />
                           <button
                             onClick={() => {
                               toggleSKUStatus(sku.skuId);
                               addToast(`SKU ${sku.skuCode} status toggled!`, "info");
                             }}
                             style={{
-                              padding: "4px 8px",
+                              padding: "6px 8px",
                               borderRadius: "6px",
-                              fontSize: "11px",
-                              fontWeight: 700,
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
                               border: "1px solid var(--border-subtle)",
                               backgroundColor: sku.status === "Active" ? "rgba(220, 38, 38, 0.08)" : "rgba(5, 150, 105, 0.08)",
                               color: sku.status === "Active" ? "#DC2626" : "#059669",
@@ -361,7 +358,7 @@ export function ItemMasterPage() {
                             }}
                             title={sku.status === "Active" ? "Deactivate SKU" : "Activate SKU"}
                           >
-                            <Power size={12} />
+                            <Power size={14} />
                           </button>
                         </div>
                       </td>

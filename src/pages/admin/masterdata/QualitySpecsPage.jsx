@@ -318,21 +318,17 @@ export function QualitySpecsPage() {
                             size="sm"
                             icon={History}
                             onClick={() => setRevisionModalSpec(spec)}
-                            style={{ fontSize: "11px", padding: "4px 8px" }}
+                            style={{ padding: "6px 8px" }}
                             title="View Revisions & Tolerances"
-                          >
-                            Revisions
-                          </Button>
+                          />
                           <Button
                             variant="secondary"
                             size="sm"
                             icon={Edit2}
                             onClick={() => setEditingSpec(spec)}
-                            style={{ fontSize: "11px", padding: "4px 8px" }}
+                            style={{ padding: "6px 8px" }}
                             title="Edit Specification"
-                          >
-                            Edit
-                          </Button>
+                          />
                         </div>
                       </td>
                     </tr>

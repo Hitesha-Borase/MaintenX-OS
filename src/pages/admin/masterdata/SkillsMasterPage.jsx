@@ -298,21 +298,17 @@ export function SkillsMasterPage() {
                             size="sm"
                             icon={Eye}
                             onClick={() => setViewingEmp(emp)}
-                            style={{ fontSize: "11px", padding: "4px 8px" }}
+                            style={{ padding: "6px 8px" }}
                             title="View Skill Matrix & Certifications"
-                          >
-                            Details
-                          </Button>
+                          />
                           <Button
                             variant="secondary"
                             size="sm"
                             icon={Edit2}
                             onClick={() => setEditingEmp(emp)}
-                            style={{ fontSize: "11px", padding: "4px 8px" }}
+                            style={{ padding: "6px 8px" }}
                             title="Edit Employee Qualifications"
-                          >
-                            Edit
-                          </Button>
+                          />
                         </div>
                       </td>
                     </tr>

@@ -317,21 +317,17 @@ export function BOMRecipesPage() {
                             size="sm"
                             icon={History}
                             onClick={() => setRevisionModalBOM(bom)}
-                            style={{ fontSize: "11px", padding: "4px 8px" }}
+                            style={{ padding: "6px 8px" }}
                             title="View Revision History & Diff"
-                          >
-                            Revisions
-                          </Button>
+                          />
                           <Button
                             variant="secondary"
                             size="sm"
                             icon={FileCheck}
                             onClick={() => setApprovalModalBOM(bom)}
-                            style={{ fontSize: "11px", padding: "4px 8px" }}
+                            style={{ padding: "6px 8px" }}
                             title="Approval Workflow"
-                          >
-                            Workflow
-                          </Button>
+                          />
                         </div>
                       </td>
                     </tr>
