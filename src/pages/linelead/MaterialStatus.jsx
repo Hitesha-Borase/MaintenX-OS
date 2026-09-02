@@ -4,16 +4,30 @@ import { Card } from "../../components/common/Card";
 import { Button } from "../../components/common/Button";
 import { Badge } from "../../components/common/Badge";
 import { useApp } from "../../context/AppContext";
+import { useMasterData } from "../../context/MasterDataContext";
 
 export function MaterialStatus() {
   const { addToast } = useApp();
+  const { skus = [] } = useMasterData();
 
-  const [materials, setMaterials] = useState([
-    { id: 1, name: "Aseptic Bottles 500ml", sku: "SKU-AJ-500ML-ORG", level: 12000, safetyMin: 5000, status: "OK" },
-    { id: 2, name: "Aseptic Orange Caps", sku: "SKU-CAP-ORG-01", level: 2500, safetyMin: 4000, status: "LOW STOCK" },
-    { id: 3, name: "Organic Orange Concentrate 1000L", sku: "SKU-BLK-SYRUP-1000L", level: 850, safetyMin: 500, status: "OK" },
-    { id: 4, name: "Cardboard Packing Boxes", sku: "SKU-BOX-L1-A", level: 1200, safetyMin: 800, status: "OK" }
-  ]);
+  const rawMasterSkus = skus.filter((s) => s.category !== "Finished Goods");
+
+  const [materials, setMaterials] = useState(() => {
+    if (rawMasterSkus.length > 0) {
+      return rawMasterSkus.map((s, idx) => ({
+        id: s.skuId || `MAT-${idx + 1}`,
+        name: s.name,
+        sku: s.skuCode,
+        level: idx === 0 ? 12000 : idx === 1 ? 2500 : 850,
+        safetyMin: idx === 0 ? 5000 : idx === 1 ? 4000 : 500,
+        status: idx === 1 ? "LOW STOCK" : "OK"
+      }));
+    }
+    return [
+      { id: "SKU-101", name: "Liquid Cane Sugar 67°Bx", sku: "ING-1001", level: 12000, safetyMin: 5000, status: "OK" },
+      { id: "SKU-201", name: "28mm Tamper-Evident Closures", sku: "PKG-2001", level: 2500, safetyMin: 4000, status: "LOW STOCK" }
+    ];
+  });
 
   const handleRequestReplenish = (name, sku) => {
     addToast(`Urgent inventory pull requested for ${name} (${sku}). WMS notified.`, "warning");
@@ -26,7 +40,7 @@ export function MaterialStatus() {
     setMaterials(prev =>
       prev.map(m => {
         if (m.sku === sku) {
-          const replenishmentQty = m.sku === "SKU-CAP-ORG-01" ? 15000 : 5000;
+          const replenishmentQty = 10000;
           return { ...m, level: m.level + replenishmentQty, status: "OK" };
         }
         return m;

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useProduction } from "../../context/ProductionContext";
+import { useMasterData } from "../../context/MasterDataContext";
 import { useApp } from "../../context/AppContext";
 import { Card } from "../../components/common/Card";
 import { Button } from "../../components/common/Button";
@@ -8,23 +9,28 @@ import { Factory, Plus, Save } from "lucide-react";
 
 export function ProductionOrders() {
   const { productionOrders, setProductionOrders } = useProduction();
+  const { skus = [] } = useMasterData();
   const { addToast } = useApp();
 
+  const defaultSku = skus.find((s) => s.category === "Finished Goods") || skus[0] || { skuCode: "SKU-5001", name: "500ml Sparkling Citrus Soda", uom: "Bottles" };
+
   const [orderNum, setOrderNum] = useState("");
-  const [product, setProduct] = useState("SKU-AJ-1L-ORG");
+  const [product, setProduct] = useState(defaultSku.skuCode || "SKU-5001");
   const [targetQty, setTargetQty] = useState(25000);
 
   const handleCreateOrder = (e) => {
     e.preventDefault();
 
+    const selectedSkuObj = skus.find((s) => s.skuCode === product || s.skuId === product) || defaultSku;
+
     const newPO = {
       id: Date.now(),
       orderNumber: orderNum,
-      productCode: product,
-      productName: product === "SKU-AJ-1L-ORG" ? "Organic Orange Juice 1L" : "Organic Orange Juice 500ml",
+      productCode: selectedSkuObj.skuCode,
+      productName: selectedSkuObj.name,
       producedQuantity: 0,
       targetQuantity: Number(targetQty),
-      unit: "Bottles",
+      unit: selectedSkuObj.uom || "Bottles",
       status: "Scheduled",
       line: "Line 1 (Aseptic Bottling)",
       leadOperator: "Elena Rostova",
@@ -34,7 +40,7 @@ export function ProductionOrders() {
     };
 
     setProductionOrders((prev) => [newPO, ...prev]);
-    addToast(`Production Order ${orderNum} created successfully.`, "success");
+    addToast(`Production Order ${orderNum} created successfully for ${selectedSkuObj.name}.`, "success");
     setOrderNum("");
   };
 
@@ -103,7 +109,7 @@ export function ProductionOrders() {
 
             <div>
               <label style={{ fontSize: "11px", color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
-                SKU Selection
+                SKU Selection (Master Catalog)
               </label>
               <select
                 value={product}
@@ -111,8 +117,17 @@ export function ProductionOrders() {
                 className="input-field"
                 style={{ width: "100%" }}
               >
-                <option value="SKU-AJ-1L-ORG">Organic Orange Juice 1L</option>
-                <option value="SKU-AJ-500ML-ORG">Organic Orange Juice 500ml</option>
+                {skus.filter((s) => s.category === "Finished Goods").length > 0
+                  ? skus.filter((s) => s.category === "Finished Goods").map((s) => (
+                      <option key={s.skuId} value={s.skuCode}>
+                        {s.skuCode} — {s.name} ({s.uom})
+                      </option>
+                    ))
+                  : skus.map((s) => (
+                      <option key={s.skuId} value={s.skuCode}>
+                        {s.skuCode} — {s.name}
+                      </option>
+                    ))}
               </select>
             </div>
 
