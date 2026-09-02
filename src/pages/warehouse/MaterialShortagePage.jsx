@@ -44,9 +44,6 @@ export function MaterialShortagePage() {
             </h1>
             <Badge variant="rose">{shortages.length} Items under Threshold</Badge>
           </div>
-          <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>
-            Real-time bill of materials explosion vs scheduled runs, stockout time-to-zero countdowns, and expedited PO actions.
-          </p>
         </div>
       </div>
 
@@ -157,3 +154,4 @@ export function MaterialShortagePage() {
     </div>
   );
 }
+

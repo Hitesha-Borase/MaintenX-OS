@@ -32,9 +32,6 @@ export function NonConformance() {
         <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)" }}>
           Non-Conformance Reports (NCR)
         </h1>
-        <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginTop: "4px" }}>
-          Track raw component quality defects and supplier claims
-        </p>
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
@@ -72,3 +69,4 @@ export function NonConformance() {
     </div>
   );
 }
+

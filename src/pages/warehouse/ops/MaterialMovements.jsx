@@ -14,9 +14,6 @@ export function MaterialMovements() {
         <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>
           Material Movements Logs
         </h1>
-        <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginTop: "4px", fontWeight: 500 }}>
-          Reconcile warehouse lot displacements and active material movements
-        </p>
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
@@ -50,3 +47,4 @@ export function MaterialMovements() {
     </div>
   );
 }
+

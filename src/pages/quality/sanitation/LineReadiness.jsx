@@ -32,9 +32,6 @@ export function LineReadiness() {
         <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)" }}>
           Production Line Readiness
         </h1>
-        <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginTop: "4px" }}>
-          Operations overview of plant safety and sanitation clearances
-        </p>
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
@@ -69,3 +66,4 @@ export function LineReadiness() {
     </div>
   );
 }
+

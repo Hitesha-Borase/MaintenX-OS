@@ -28,9 +28,6 @@ export function LocationTransfers() {
         <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
           Storage Location Transfers
         </h1>
-        <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-          Transfer stage lots between warehouse racks or staging areas
-        </p>
       </div>
 
       <form onSubmit={handleTransfer}>
@@ -91,3 +88,4 @@ export function LocationTransfers() {
     </div>
   );
 }
+

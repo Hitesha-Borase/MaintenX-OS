@@ -33,9 +33,6 @@ export function PackagingMaterials() {
         <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>
           Packaging Inventory
         </h1>
-        <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginTop: "4px", fontWeight: 500 }}>
-          Monitor glass bottles, caps, labels, and cardboard box stocks
-        </p>
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
@@ -80,3 +77,4 @@ export function PackagingMaterials() {
     </div>
   );
 }
+

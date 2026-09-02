@@ -23,9 +23,6 @@ export function Adjustments() {
         <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
           Direct Inventory Adjustments
         </h1>
-        <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-          Reconcile physical stock damages or losses with direct adjustments
-        </p>
       </div>
 
       <form onSubmit={handleAdjust}>
@@ -86,3 +83,4 @@ export function Adjustments() {
     </div>
   );
 }
+

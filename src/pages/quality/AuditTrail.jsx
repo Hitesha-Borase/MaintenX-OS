@@ -18,9 +18,6 @@ export function AuditTrail() {
         <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)" }}>
           QA Audit Trail
         </h1>
-        <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginTop: "4px" }}>
-          Immutable log of all QA authorizations, holds, and release decisions
-        </p>
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
@@ -53,3 +50,4 @@ export function AuditTrail() {
     </div>
   );
 }
+

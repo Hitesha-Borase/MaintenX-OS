@@ -1,100 +1,129 @@
 import React, { useState } from "react";
-import { CheckCircle2, Save } from "lucide-react";
+import { CheckCircle2, Save, XCircle, Play, CheckSquare } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
+import { Button } from "../../../components/common/Button";
+import { useNavigate } from "react-router-dom";
 
 export function PreOpChecklist() {
   const { addToast } = useApp();
+  const navigate = useNavigate();
 
+  const [hasStarted, setHasStarted] = useState(false);
   const [items, setItems] = useState([
-    { id: 1, name: "Physical inspection of filler nozzle seals", passed: true },
-    { id: 2, name: "Pasteurizer pipeline pressure calibration", passed: true },
-    { id: 3, name: "Line 1 clean of raw debris and tools", passed: false }
+    { id: 1, name: "Physical inspection of filler nozzle seals", passed: null },
+    { id: 2, name: "Pasteurizer pipeline pressure calibration", passed: null },
+    { id: 3, name: "Line 1 clean of raw debris and tools", passed: null }
   ]);
 
-  const handleToggle = (id) => {
+  const handleStart = () => {
+    setHasStarted(true);
+    addToast("Pre-Op Checklist started.", "info");
+  };
+
+  const handleToggle = (id, result) => {
+    if (!hasStarted) return;
     setItems(prev =>
-      prev.map(item => item.id === id ? { ...item, passed: !item.passed } : item)
+      prev.map(item => item.id === id ? { ...item, passed: result } : item)
     );
   };
 
-  const handleSave = (e) => {
-    e.preventDefault();
-    addToast("Line 1 Pre-Op checklist verified and saved.", "success");
+  const handleSaveProgress = () => {
+    addToast("Progress saved.", "success");
+  };
+
+  const handleComplete = () => {
+    const hasNull = items.some(i => i.passed === null);
+    if (hasNull) {
+      addToast("Please complete all checklist items before submitting.", "warning");
+      return;
+    }
+
+    const hasFailed = items.some(i => i.passed === false);
+    if (hasFailed) {
+      addToast("Pre-Op failed! Redirecting to report a deviation.", "error");
+      setTimeout(() => navigate("/quality/events/deviations"), 2000);
+    } else {
+      addToast("Pre-Op Checklist verified. Line is Ready for Production.", "success");
+      setHasStarted(false);
+    }
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "24px", maxWidth: "100%", fontFamily: "system-ui, -apple-system, sans-serif" }}>
-      <div>
-        <h1 style={{ fontSize: "24px", fontWeight: 800, color: "#2d2825", margin: "0 0 8px 0" }}>
-          Pre-Op Startup Checklist
-        </h1>
-        <p style={{ fontSize: "15px", color: "#7a7571", margin: 0 }}>
-          Confirm startup criteria verification checks before releasing the line to operator HMI
-        </p>
+    <div style={{ display: "flex", flexDirection: "column", gap: "24px", maxWidth: "100%" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: "16px" }}>
+        <div>
+          <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)", margin: "0 0 8px 0" }}>
+            Pre-Op Startup Checklist
+          </h1>
+        </div>
+        {!hasStarted ? (
+          <Button variant="primary" icon={Play} onClick={handleStart}>
+            Start Check
+          </Button>
+        ) : (
+          <div style={{ display: "flex", gap: "12px" }}>
+            <Button variant="outline" icon={Save} onClick={handleSaveProgress}>
+              Save Progress
+            </Button>
+            <Button variant="primary" icon={CheckSquare} onClick={handleComplete}>
+              Complete Check
+            </Button>
+          </div>
+        )}
       </div>
 
-      <form onSubmit={handleSave}>
-        <div style={{ 
-          display: "flex", 
-          flexDirection: "column", 
-          gap: "16px",
-          backgroundColor: "#ffffff",
-          padding: "24px",
-          borderRadius: "16px",
-          border: "1px solid #e8e6e1",
-          boxShadow: "0 2px 8px rgba(0,0,0,0.02)"
-        }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-            {items.map((item) => (
-              <div
-                key={item.id}
-                onClick={() => handleToggle(item.id)}
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  padding: "16px",
-                  borderRadius: "8px",
-                  backgroundColor: item.passed ? "#f6fbf8" : "#f5f1ea",
-                  border: item.passed ? "1px solid #10b981" : "1px solid #e8e3dc",
-                  cursor: "pointer",
-                  transition: "all 0.2s"
-                }}
-              >
-                <span style={{ fontSize: "15px", color: "#2d2825", fontWeight: 500 }}>{item.name}</span>
-                <CheckCircle2 size={20} color={item.passed ? "#10b981" : "#a1a1aa"} />
+      <div style={{ 
+        display: "flex", 
+        flexDirection: "column", 
+        gap: "16px",
+        backgroundColor: "var(--card-bg)",
+        padding: "24px",
+        borderRadius: "16px",
+        border: "1px solid var(--border-color)",
+        opacity: hasStarted ? 1 : 0.6,
+        pointerEvents: hasStarted ? "auto" : "none"
+      }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+          {items.map((item) => (
+            <div
+              key={item.id}
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                padding: "16px",
+                borderRadius: "8px",
+                backgroundColor: item.passed === true ? "rgba(16, 185, 129, 0.1)" : item.passed === false ? "rgba(239, 68, 68, 0.1)" : "var(--bg-secondary)",
+                border: item.passed === true ? "1px solid #10b981" : item.passed === false ? "1px solid #ef4444" : "1px solid var(--border-color)",
+                transition: "all 0.2s"
+              }}
+            >
+              <span style={{ fontSize: "15px", color: "var(--text-primary)", fontWeight: 500 }}>{item.name}</span>
+              <div style={{ display: "flex", gap: "12px" }}>
+                <button 
+                  onClick={() => handleToggle(item.id, true)}
+                  style={{
+                    background: "none", border: "none", cursor: "pointer", 
+                    opacity: item.passed === true ? 1 : 0.3
+                  }}
+                >
+                  <CheckCircle2 size={24} color="#10b981" />
+                </button>
+                <button 
+                  onClick={() => handleToggle(item.id, false)}
+                  style={{
+                    background: "none", border: "none", cursor: "pointer",
+                    opacity: item.passed === false ? 1 : 0.3
+                  }}
+                >
+                  <XCircle size={24} color="#ef4444" />
+                </button>
               </div>
-            ))}
-          </div>
-
-          <button 
-            type="submit" 
-            style={{ 
-              marginTop: "8px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "8px",
-              padding: "14px 24px",
-              background: "linear-gradient(to right, #cd9738, #deae53, #cd9738)",
-              backgroundSize: "200% auto",
-              color: "#18181b",
-              border: "none",
-              borderRadius: "12px",
-              fontSize: "15px",
-              fontWeight: 700,
-              cursor: "pointer",
-              boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
-              transition: "background-position 0.3s"
-            }}
-            onMouseOver={(e) => e.currentTarget.style.backgroundPosition = 'right center'}
-            onMouseOut={(e) => e.currentTarget.style.backgroundPosition = 'left center'}
-          >
-            <Save size={18} strokeWidth={2.5} />
-            Save Pre-Op Checklist
-          </button>
+            </div>
+          ))}
         </div>
-      </form>
+      </div>
     </div>
   );
 }
+

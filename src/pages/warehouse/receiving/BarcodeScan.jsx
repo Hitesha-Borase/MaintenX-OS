@@ -30,9 +30,6 @@ export function BarcodeScan() {
         <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
           Inbound Barcode / QR Scan
         </h1>
-        <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-          Scan lot tracking tags to verify warehouse staging levels
-        </p>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "16px" }}>
@@ -63,3 +60,4 @@ export function BarcodeScan() {
     </div>
   );
 }
+

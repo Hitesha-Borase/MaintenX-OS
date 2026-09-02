@@ -4,13 +4,13 @@ import { Card } from "../../../components/common/Card";
 import { Button } from "../../../components/common/Button";
 import { Badge } from "../../../components/common/Badge";
 import { Clock, FileCheck } from "lucide-react";
-import { useProduction } from "../../../context/ProductionContext";
+import { useQualityStore } from "../utils/useQualityStore";
 
 export function ReleaseQueue() {
   const navigate = useNavigate();
-  const { batches } = useProduction();
+  const qualityState = useQualityStore();
 
-  const pendingBatches = batches && batches.length > 0 ? batches.filter(b => b.progressPercent >= 100) : [];
+  const pendingBatches = qualityState.releases.filter(r => r.status === "Pending Review");
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "24px", maxWidth: "100%" }}>
@@ -18,12 +18,6 @@ export function ReleaseQueue() {
         <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)" }}>
           QA Human Release Queue
         </h1>
-        <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginTop: "4px" }}>
-          Batches awaiting manual QA sign-off before finished goods are available for shipping.
-          <strong style={{ color: "#EF4444", display: "block", marginTop: "4px" }}>
-            ⚠ AI cannot auto-release batches. All releases require human QA approval.
-          </strong>
-        </p>
       </div>
 
       {pendingBatches.length === 0 ? (
@@ -41,23 +35,31 @@ export function ReleaseQueue() {
                 justifyContent: "space-between", 
                 alignItems: "center",
                 padding: "20px 24px",
-                borderRadius: "16px"
+                borderRadius: "16px",
+                flexWrap: "wrap",
+                gap: "16px",
+                borderLeft: "4px solid #F59E0B"
               }}
             >
-              <div style={{ display: "flex", alignItems: "center", gap: "12px", width: "100%" }}>
-                <Clock size={22} color="#F59E0B" strokeWidth={2} style={{ flexShrink: 0 }} />
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                    <Badge variant="warning" style={{ alignSelf: "flex-start", marginBottom: "4px" }}>AWAITING QA SIGN-OFF</Badge>
-                    <span style={{ fontSize: "14px", color: "var(--text-secondary)", fontWeight: 500 }}>
-                      Recipe: {b.recipeName}
-                    </span>
-                  </div>
-                  
-                  <Button variant="primary" size="md" icon={FileCheck} onClick={() => navigate("/quality/release/review")}>
-                    Review & Sign-Off
-                  </Button>
+              <div style={{ display: "flex", alignItems: "center", gap: "16px", width: "100%", flex: 1, minWidth: "250px" }}>
+                <div style={{ padding: "10px", backgroundColor: "rgba(245, 158, 11, 0.1)", borderRadius: "10px", flexShrink: 0 }}>
+                  <Clock size={24} color="#F59E0B" strokeWidth={2} />
                 </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px", flex: 1 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                    <span style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-primary)" }}>{b.batch}</span>
+                    <Badge variant="warning">AWAITING QA SIGN-OFF</Badge>
+                  </div>
+                  <span style={{ fontSize: "14px", color: "var(--text-secondary)", fontWeight: 500 }}>
+                    Release Request ID: {b.id}
+                  </span>
+                </div>
+              </div>
+              
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <Button variant="primary" size="md" icon={FileCheck} onClick={() => navigate("/quality/release/review", { state: { releaseId: b.id, batch: b.batch } })}>
+                  Review & Sign-Off
+                </Button>
               </div>
             </Card>
           ))}
@@ -66,3 +68,4 @@ export function ReleaseQueue() {
     </div>
   );
 }
+

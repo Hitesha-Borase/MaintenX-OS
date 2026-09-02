@@ -569,8 +569,18 @@ export function AppContent() {
           <Route path="/production/shift-performance" element={<RoleProtectedRoute><ShiftPerformancePage /></RoleProtectedRoute>} />
 
           <Route path="/quality" element={<RoleProtectedRoute><QualityDashboard /></RoleProtectedRoute>} />
+          <Route path="/quality/dashboard" element={<RoleProtectedRoute><QualityDashboard /></RoleProtectedRoute>} />
+          <Route path="/quality/checks/product" element={<RoleProtectedRoute><QualityProductChecks /></RoleProtectedRoute>} />
+          <Route path="/quality/checks/ccp" element={<RoleProtectedRoute><QualityCCPChecks /></RoleProtectedRoute>} />
+          <Route path="/quality/sanitation/preop" element={<RoleProtectedRoute><QualityPreOpChecklist /></RoleProtectedRoute>} />
+          <Route path="/quality/events/holds" element={<RoleProtectedRoute><QualityHolds /></RoleProtectedRoute>} />
+          <Route path="/quality/events/deviations" element={<RoleProtectedRoute><QualityDeviations /></RoleProtectedRoute>} />
+          <Route path="/quality/events/investigations" element={<RoleProtectedRoute><QualityInvestigations /></RoleProtectedRoute>} />
+          <Route path="/quality/release/queue" element={<RoleProtectedRoute><QualityReleaseQueue /></RoleProtectedRoute>} />
+          <Route path="/quality/release/review" element={<RoleProtectedRoute><QualityReleaseReview /></RoleProtectedRoute>} />
+          <Route path="/quality/disposition/release" element={<RoleProtectedRoute><QualityDispositionRelease /></RoleProtectedRoute>} />
+          <Route path="/quality/batch/records" element={<RoleProtectedRoute><QualityQualityRecords /></RoleProtectedRoute>} />
           <Route path="/quality/status" element={<RoleProtectedRoute><QualityStatusPage /></RoleProtectedRoute>} />
-          <Route path="/quality/holds" element={<RoleProtectedRoute><HoldsPage /></RoleProtectedRoute>} />
           <Route path="/quality/qa-release" element={<RoleProtectedRoute><QAReleasePage /></RoleProtectedRoute>} />
           <Route path="/quality/trends" element={<RoleProtectedRoute><QualityTrendsPage /></RoleProtectedRoute>} />
 

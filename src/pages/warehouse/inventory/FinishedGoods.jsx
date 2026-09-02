@@ -52,9 +52,6 @@ export function FinishedGoods() {
         <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>
           Finished Goods Pallets
         </h1>
-        <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginTop: "4px", fontWeight: 500 }}>
-          Monitor produced goods staged in warehouses ready for customer dispatch
-        </p>
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
@@ -96,3 +93,4 @@ export function FinishedGoods() {
     </div>
   );
 }
+

@@ -23,9 +23,6 @@ export function CycleCounts() {
         <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
           Inventory Cycle Counting
         </h1>
-        <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-          Perform weekly stock audit checks to reconcile system records
-        </p>
       </div>
 
       <form onSubmit={handleCycleCount}>
@@ -86,3 +83,4 @@ export function CycleCounts() {
     </div>
   );
 }
+
