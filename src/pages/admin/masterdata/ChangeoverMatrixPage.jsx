@@ -1,86 +1,108 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   Clock,
   Plus,
-  CheckCircle2,
   Search,
   X,
   Edit2,
+  Trash2,
   ArrowRight,
   Shuffle,
   ShieldCheck,
-  Zap
+  Zap,
+  CheckCircle2,
+  Boxes
 } from "lucide-react";
 import { Card } from "../../../components/common/Card";
 import { Badge } from "../../../components/common/Badge";
 import { Button } from "../../../components/common/Button";
 import { StatCard } from "../../../components/common/StatCard";
+import { useMasterData } from "../../../context/MasterDataContext";
 import { useApp } from "../../../context/AppContext";
 
 export function ChangeoverMatrixPage() {
+  const { changeoverMatrix = [], addChangeoverRule, updateChangeoverRule, deleteChangeoverRule, skus = [], productFamilies = [] } = useMasterData();
   const { addToast } = useApp();
-
-  const [matrix, setMatrix] = useState([
-    { id: "CM-01", fromSKU: "500ml Citrus Soda", toSKU: "1L Tonic Water", line: "Line 1 (Aseptic)", targetSMEDMins: 30, cleanType: "Full Rinse & Mold Change", status: "Active" },
-    { id: "CM-02", fromSKU: "500ml Citrus Soda", toSKU: "500ml Berry Soda", line: "Line 1 (Aseptic)", targetSMEDMins: 15, cleanType: "Syrup Line Flush Only", status: "Active" },
-    { id: "CM-03", fromSKU: "330ml Regular Can", toSKU: "330ml Sleek Can", line: "Line 3 (Canning)", targetSMEDMins: 45, cleanType: "Seamer Guide Change", status: "Active" }
-  ]);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingRule, setEditingRule] = useState(null);
+
+  const finishedSkus = useMemo(() => skus.filter((s) => s.category === "Finished Goods"), [skus]);
+
   const [newRule, setNewRule] = useState({
-    fromSKU: "",
-    toSKU: "",
-    line: "Line 1 (Aseptic)",
-    targetSMEDMins: 20,
-    cleanType: "Flavor Flush & Cleanout"
+    fromSkuId: finishedSkus[0]?.skuId || "SKU-001",
+    toSkuId: finishedSkus[1]?.skuId || "SKU-002",
+    changeoverDurationMin: 35,
+    sanitationClass: "Class B - Warm Water Flush & Sanitizer Rinse",
+    allergenCleaningRequired: false,
+    notes: ""
   });
 
-  const filteredMatrix = matrix.filter((m) => {
-    if (!searchQuery.trim()) return true;
-    const q = searchQuery.toLowerCase();
-    return (
-      m.fromSKU.toLowerCase().includes(q) ||
-      m.toSKU.toLowerCase().includes(q) ||
-      m.cleanType.toLowerCase().includes(q) ||
-      m.line.toLowerCase().includes(q)
-    );
-  });
+  const filteredMatrix = useMemo(() => {
+    return changeoverMatrix.filter((m) => {
+      const q = searchQuery.toLowerCase().trim();
+      return (
+        !q ||
+        (m.fromSkuCode || "").toLowerCase().includes(q) ||
+        (m.toSkuCode || "").toLowerCase().includes(q) ||
+        (m.fromFamily || "").toLowerCase().includes(q) ||
+        (m.toFamily || "").toLowerCase().includes(q) ||
+        (m.sanitationClass || "").toLowerCase().includes(q) ||
+        (m.notes || "").toLowerCase().includes(q)
+      );
+    });
+  }, [changeoverMatrix, searchQuery]);
 
   const handleAddSubmit = (e) => {
     e.preventDefault();
-    if (!newRule.fromSKU.trim() || !newRule.toSKU.trim()) {
-      addToast("Please provide source and target SKUs.", "warning");
-      return;
-    }
+    const fromSku = skus.find((s) => s.skuId === newRule.fromSkuId);
+    const toSku = skus.find((s) => s.skuId === newRule.toSkuId);
 
-    const created = {
-      id: `CM-0${matrix.length + 1}`,
-      fromSKU: newRule.fromSKU,
-      toSKU: newRule.toSKU,
-      line: newRule.line,
-      targetSMEDMins: Number(newRule.targetSMEDMins) || 25,
-      cleanType: newRule.cleanType || "Standard Cleanout",
-      status: "Active"
-    };
+    const created = addChangeoverRule({
+      ...newRule,
+      fromSkuCode: fromSku ? fromSku.skuCode : "SKU-5001",
+      fromFamily: fromSku ? fromSku.family : "Sparkling Flavors",
+      toSkuCode: toSku ? toSku.skuCode : "SKU-5002",
+      toFamily: toSku ? toSku.family : "Tonics & Mixers",
+      changeoverDurationMin: Number(newRule.changeoverDurationMin) || 30
+    });
 
-    setMatrix([...matrix, created]);
-    addToast(`Changeover rule added (${created.fromSKU} -> ${created.toSKU})!`, "success");
+    addToast(`Changeover rule added (${created.fromSkuCode} → ${created.toSkuCode})!`, "success");
     setIsModalOpen(false);
-    setNewRule({ fromSKU: "", toSKU: "", line: "Line 1 (Aseptic)", targetSMEDMins: 20, cleanType: "Flavor Flush & Cleanout" });
+    setNewRule({
+      fromSkuId: finishedSkus[0]?.skuId || "SKU-001",
+      toSkuId: finishedSkus[1]?.skuId || "SKU-002",
+      changeoverDurationMin: 35,
+      sanitationClass: "Class B - Warm Water Flush & Sanitizer Rinse",
+      allergenCleaningRequired: false,
+      notes: ""
+    });
   };
 
   const handleEditSubmit = (e) => {
     e.preventDefault();
-    if (!editingRule.fromSKU.trim() || !editingRule.toSKU.trim()) {
-      addToast("Please provide source and target SKUs.", "warning");
-      return;
-    }
+    const fromSku = skus.find((s) => s.skuId === editingRule.fromSkuId);
+    const toSku = skus.find((s) => s.skuId === editingRule.toSkuId);
 
-    setMatrix(matrix.map((m) => (m.id === editingRule.id ? { ...editingRule, targetSMEDMins: Number(editingRule.targetSMEDMins) || 20 } : m)));
-    addToast(`Changeover rule ${editingRule.id} updated successfully!`, "success");
+    updateChangeoverRule(editingRule.matrixId, {
+      ...editingRule,
+      fromSkuCode: fromSku ? fromSku.skuCode : editingRule.fromSkuCode,
+      fromFamily: fromSku ? fromSku.family : editingRule.fromFamily,
+      toSkuCode: toSku ? toSku.skuCode : editingRule.toSkuCode,
+      toFamily: toSku ? toSku.family : editingRule.toFamily,
+      changeoverDurationMin: Number(editingRule.changeoverDurationMin) || 30
+    });
+
+    addToast(`Changeover rule updated!`, "success");
     setEditingRule(null);
+  };
+
+  const handleDelete = (matrixId) => {
+    if (window.confirm("Are you sure you want to delete this changeover rule?")) {
+      deleteChangeoverRule(matrixId);
+      addToast("Changeover rule deleted.", "info");
+    }
   };
 
   return (
@@ -92,7 +114,7 @@ export function ChangeoverMatrixPage() {
             <h1 style={{ fontSize: "clamp(18px, 4vw, 24px)", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.3px", lineHeight: 1.2 }}>
               Changeover Matrix & SMED Standards
             </h1>
-            <Badge variant="cyan">{matrix.length} TRANSITION RULES</Badge>
+            <Badge variant="cyan">{changeoverMatrix.length} TRANSITION RULES</Badge>
           </div>
         </div>
 
@@ -103,7 +125,7 @@ export function ChangeoverMatrixPage() {
         </div>
       </div>
 
-      {/* KPI Tickers - 2x2 on mobile, 4 on desktop */}
+      {/* KPI Tickers */}
       <div
         className="kpi-grid-responsive grid-4"
         style={{
@@ -116,196 +138,282 @@ export function ChangeoverMatrixPage() {
       >
         <StatCard
           title="Active Transition Rules"
-          value={matrix.length.toString()}
-          unit="Matrix Pairs"
-          trend={{ value: "SMED standardized recipes", isPositive: true, text: "" }}
+          value={changeoverMatrix.length.toString()}
+          unit="Formulation Pairs"
           icon={Shuffle}
           colorVariant="emerald"
         />
         <StatCard
-          title="Fastest Changeover"
-          value="15m"
-          unit="Flush Only"
-          trend={{ value: "Citrus to Berry Soda", isPositive: true, text: "" }}
-          icon={Zap}
+          title="Average SMED Time"
+          value="35 mins"
+          unit="Standard Clean"
+          icon={Clock}
           colorVariant="cyan"
         />
         <StatCard
-          title="Avg SMED Duration"
-          value="30m"
-          unit="Target"
-          trend={{ value: "-8m reduction vs Q1", isPositive: true, text: "" }}
-          icon={Clock}
+          title="Allergen Risk Rules"
+          value={changeoverMatrix.filter((c) => c.allergenCleaningRequired).length.toString()}
+          unit="Deep CIP Locked"
+          icon={ShieldCheck}
           colorVariant="amber"
         />
         <StatCard
-          title="Sanitation Sign-off"
-          value="100%"
-          unit="Required"
-          trend={{ value: "ATP swab test verified", isPositive: true, text: "" }}
-          icon={ShieldCheck}
+          title="Same-Family Optimization"
+          value="0-15m"
+          unit="Paced"
+          icon={Zap}
           colorVariant="emerald"
         />
       </div>
 
-      {/* Table */}
-      <Card style={{ padding: "18px", minWidth: 0, width: "100%", boxSizing: "border-box" }}>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", alignItems: "center", marginBottom: "14px", justifyContent: "space-between" }}>
-          <div style={{ position: "relative", minWidth: "220px", flex: 1 }}>
-            <Search size={15} color="var(--text-muted)" style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)" }} />
+      {/* Main Table Card */}
+      <Card
+        style={{
+          backgroundColor: "#FFFFFF",
+          border: "1px solid var(--border-subtle)",
+          borderRadius: "14px",
+          overflow: "hidden"
+        }}
+      >
+        {/* Controls Bar */}
+        <div
+          style={{
+            padding: "16px 20px",
+            borderBottom: "1px solid var(--border-subtle)",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "12px",
+            backgroundColor: "var(--bg-card-subtle)"
+          }}
+        >
+          <div style={{ position: "relative", minWidth: "280px", flex: 1 }}>
+            <Search
+              size={15}
+              style={{
+                position: "absolute",
+                left: "12px",
+                top: "50%",
+                transform: "translateY(-50%)",
+                color: "var(--text-muted)"
+              }}
+            />
             <input
               type="text"
-              placeholder="Search origin SKU, target SKU, line..."
+              placeholder="Search transition rule by SKU, family or cleaning protocol..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="form-input"
-              style={{ paddingLeft: "32px", height: "36px", fontSize: "12px", backgroundColor: "#FFFFFF" }}
+              style={{
+                paddingLeft: "36px",
+                backgroundColor: "#FFFFFF",
+                fontSize: "12px",
+                width: "100%"
+              }}
             />
           </div>
         </div>
 
-        <div className="data-table-container" style={{ width: "100%", overflowX: "auto", WebkitOverflowScrolling: "touch", display: "block" }}>
-          <table className="data-table" style={{ width: "100%", minWidth: "680px" }}>
+        {/* Table View */}
+        <div style={{ overflowX: "auto", width: "100%" }}>
+          <table className="data-table" style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
             <thead>
-              <tr>
-                <th>Origin SKU (From)</th>
-                <th>Target SKU (To)</th>
-                <th>Line Attachment</th>
-                <th>Standard SMED Target</th>
-                <th>Cleanout Protocol</th>
-                <th>Status</th>
-                <th>Action</th>
+              <tr style={{ borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Previous SKU</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Next SKU Transition</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>SMED Standard Time</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Required Sanitation Class</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Allergen Risk</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Status</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", textAlign: "right" }}>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {filteredMatrix.map((m) => (
-                <tr key={m.id}>
-                  <td>
-                    <strong style={{ color: "var(--text-primary)" }}>{m.fromSKU}</strong>
-                  </td>
-                  <td>
-                    <span style={{ fontWeight: 700, color: "#8C5B23" }}>{m.toSKU}</span>
-                  </td>
-                  <td>
-                    <span style={{ fontSize: "12px", color: "var(--text-secondary)", fontWeight: 600 }}>{m.line}</span>
-                  </td>
-                  <td style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "#059669" }}>
-                    {m.targetSMEDMins} mins
-                  </td>
-                  <td style={{ fontSize: "12px", color: "var(--text-primary)" }}>{m.cleanType}</td>
-                  <td>
-                    <Badge variant="emerald">{m.status}</Badge>
-                  </td>
-                  <td>
-                    <button
-                      onClick={() => setEditingRule({ ...m })}
-                      title="Edit Matrix Rule"
-                      style={{
-                        width: "30px",
-                        height: "30px",
-                        borderRadius: "6px",
-                        backgroundColor: "var(--bg-card-subtle)",
-                        color: "var(--text-primary)",
-                        border: "1px solid var(--border-subtle)",
-                        cursor: "pointer",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        justifyContent: "center"
-                      }}
-                    >
-                      <Edit2 size={13} />
-                    </button>
+              {filteredMatrix.length === 0 ? (
+                <tr>
+                  <td colSpan={7} style={{ textAlign: "center", padding: "32px", color: "var(--text-muted)", fontSize: "13px" }}>
+                    No changeover transition rules found.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                filteredMatrix.map((m) => (
+                  <tr key={m.matrixId} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+                    <td style={{ padding: "12px 16px" }}>
+                      <div style={{ fontWeight: 800, color: "var(--text-primary)", fontSize: "13px" }}>{m.fromSkuCode}</div>
+                      <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>{m.fromFamily}</div>
+                    </td>
+                    <td style={{ padding: "12px 16px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <ArrowRight size={14} color="#C89547" />
+                        <div>
+                          <div style={{ fontWeight: 800, color: "#8C5B23", fontSize: "13px" }}>{m.toSkuCode}</div>
+                          <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>{m.toFamily}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td style={{ padding: "12px 16px", fontFamily: "var(--font-mono)", fontWeight: 800, color: m.changeoverDurationMin === 0 ? "#059669" : "#D97706", fontSize: "13px" }}>
+                      {m.changeoverDurationMin} mins
+                    </td>
+                    <td style={{ padding: "12px 16px", fontSize: "12px", color: "var(--text-secondary)" }}>
+                      {m.sanitationClass}
+                    </td>
+                    <td style={{ padding: "12px 16px" }}>
+                      {m.allergenCleaningRequired ? (
+                        <Badge variant="amber">Mandatory Allergen CIP</Badge>
+                      ) : (
+                        <Badge variant="emerald">Standard</Badge>
+                      )}
+                    </td>
+                    <td style={{ padding: "12px 16px" }}>
+                      <Badge variant="emerald">{m.status || "Active"}</Badge>
+                    </td>
+                    <td style={{ padding: "12px 16px", textAlign: "right" }}>
+                      <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                        <button
+                          onClick={() => setEditingRule({ ...m })}
+                          title="Edit Rule"
+                          style={{
+                            width: "30px",
+                            height: "30px",
+                            borderRadius: "6px",
+                            backgroundColor: "var(--bg-card-subtle)",
+                            color: "var(--text-primary)",
+                            border: "1px solid var(--border-subtle)",
+                            cursor: "pointer",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center"
+                          }}
+                        >
+                          <Edit2 size={13} />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(m.matrixId)}
+                          title="Delete Rule"
+                          style={{
+                            width: "30px",
+                            height: "30px",
+                            borderRadius: "6px",
+                            backgroundColor: "var(--bg-card-subtle)",
+                            color: "#EF4444",
+                            border: "1px solid var(--border-subtle)",
+                            cursor: "pointer",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center"
+                          }}
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
       </Card>
 
-      {/* ADD CHANGEOVER RULE MODAL */}
+      {/* ADD RULE MODAL */}
       {isModalOpen && (
         <div className="modal-backdrop" onClick={() => setIsModalOpen(false)}>
-          <div className="modal-content" style={{ maxWidth: "480px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+          <div className="modal-content" style={{ maxWidth: "520px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
-              <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)" }}>
-                Add Changeover / SMED Rule
-              </h2>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Shuffle size={18} color="#C89547" />
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                  Add Changeover Transition Standard
+                </h2>
+              </div>
               <button onClick={() => setIsModalOpen(false)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
                 <X size={18} />
               </button>
             </div>
 
             <form onSubmit={handleAddSubmit} style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                 <div>
-                  <label className="form-label">Origin SKU (From) *</label>
+                  <label className="form-label">Previous SKU *</label>
+                  <select
+                    value={newRule.fromSkuId}
+                    onChange={(e) => setNewRule({ ...newRule, fromSkuId: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  >
+                    {finishedSkus.map((s) => (
+                      <option key={s.skuId} value={s.skuId}>{s.skuCode} ({s.family})</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="form-label">Next SKU *</label>
+                  <select
+                    value={newRule.toSkuId}
+                    onChange={(e) => setNewRule({ ...newRule, toSkuId: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  >
+                    {finishedSkus.map((s) => (
+                      <option key={s.skuId} value={s.skuId}>{s.skuCode} ({s.family})</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "12px" }}>
+                <div>
+                  <label className="form-label">SMED Duration (min) *</label>
                   <input
-                    type="text"
+                    type="number"
+                    min="0"
                     required
-                    placeholder="e.g. 500ml Citrus Soda"
-                    value={newRule.fromSKU}
-                    onChange={(e) => setNewRule({ ...newRule, fromSKU: e.target.value })}
+                    value={newRule.changeoverDurationMin}
+                    onChange={(e) => setNewRule({ ...newRule, changeoverDurationMin: e.target.value })}
                     className="form-input"
                     style={{ backgroundColor: "#FFFFFF" }}
                   />
                 </div>
-
                 <div>
-                  <label className="form-label">Target SKU (To) *</label>
+                  <label className="form-label">Sanitation Requirement</label>
                   <input
                     type="text"
-                    required
-                    placeholder="e.g. 500ml Berry Soda"
-                    value={newRule.toSKU}
-                    onChange={(e) => setNewRule({ ...newRule, toSKU: e.target.value })}
+                    placeholder="e.g. Class B - Warm Water Flush"
+                    value={newRule.sanitationClass}
+                    onChange={(e) => setNewRule({ ...newRule, sanitationClass: e.target.value })}
                     className="form-input"
                     style={{ backgroundColor: "#FFFFFF" }}
                   />
                 </div>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
-                <div>
-                  <label className="form-label">Production Line</label>
-                  <select
-                    className="form-select"
-                    value={newRule.line}
-                    onChange={(e) => setNewRule({ ...newRule, line: e.target.value })}
-                    style={{ backgroundColor: "#FFFFFF" }}
-                  >
-                    <option value="Line 1 (Aseptic)">Line 1 (Aseptic)</option>
-                    <option value="Line 2 (Formulation)">Line 2 (Formulation)</option>
-                    <option value="Line 3 (Canning)">Line 3 (Canning)</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="form-label">SMED Target (Mins)</label>
-                  <input
-                    type="number"
-                    min="5"
-                    value={newRule.targetSMEDMins}
-                    onChange={(e) => setNewRule({ ...newRule, targetSMEDMins: e.target.value })}
-                    className="form-input"
-                    style={{ backgroundColor: "#FFFFFF" }}
-                  />
-                </div>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <input
+                  type="checkbox"
+                  id="allergenCheck"
+                  checked={newRule.allergenCleaningRequired}
+                  onChange={(e) => setNewRule({ ...newRule, allergenCleaningRequired: e.target.checked })}
+                  style={{ width: "16px", height: "16px", accentColor: "#C89547" }}
+                />
+                <label htmlFor="allergenCheck" style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-primary)", cursor: "pointer" }}>
+                  Requires Deep Allergen Sanitation & QA Swab Validation
+                </label>
               </div>
 
               <div>
-                <label className="form-label">Cleanout Protocol</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Caustic Flush & Mold Swap"
-                  value={newRule.cleanType}
-                  onChange={(e) => setNewRule({ ...newRule, cleanType: e.target.value })}
+                <label className="form-label">Notes & Mechanical Changeovers</label>
+                <textarea
+                  rows={2}
+                  placeholder="Tooling, starwheel size swaps, temperature rinse adjustments..."
+                  value={newRule.notes}
+                  onChange={(e) => setNewRule({ ...newRule, notes: e.target.value })}
                   className="form-input"
                   style={{ backgroundColor: "#FFFFFF" }}
                 />
               </div>
 
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "8px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
                 <Button variant="secondary" onClick={() => setIsModalOpen(false)}>
                   Cancel
                 </Button>
@@ -318,15 +426,15 @@ export function ChangeoverMatrixPage() {
         </div>
       )}
 
-      {/* EDIT CHANGEOVER RULE MODAL */}
+      {/* EDIT RULE MODAL */}
       {editingRule && (
         <div className="modal-backdrop" onClick={() => setEditingRule(null)}>
-          <div className="modal-content" style={{ maxWidth: "480px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+          <div className="modal-content" style={{ maxWidth: "520px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <Edit2 size={16} color="#B27E33" />
+                <Edit2 size={16} color="#C89547" />
                 <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
-                  Edit Transition Rule — {editingRule.id}
+                  Edit Changeover Standard
                 </h2>
               </div>
               <button onClick={() => setEditingRule(null)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
@@ -335,77 +443,61 @@ export function ChangeoverMatrixPage() {
             </div>
 
             <form onSubmit={handleEditSubmit} style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "12px" }}>
                 <div>
-                  <label className="form-label">Origin SKU (From) *</label>
+                  <label className="form-label">Duration (min) *</label>
                   <input
-                    type="text"
+                    type="number"
+                    min="0"
                     required
-                    value={editingRule.fromSKU}
-                    onChange={(e) => setEditingRule({ ...editingRule, fromSKU: e.target.value })}
+                    value={editingRule.changeoverDurationMin}
+                    onChange={(e) => setEditingRule({ ...editingRule, changeoverDurationMin: Number(e.target.value) })}
                     className="form-input"
                     style={{ backgroundColor: "#FFFFFF" }}
                   />
                 </div>
-
                 <div>
-                  <label className="form-label">Target SKU (To) *</label>
+                  <label className="form-label">Sanitation Requirement</label>
                   <input
                     type="text"
-                    required
-                    value={editingRule.toSKU}
-                    onChange={(e) => setEditingRule({ ...editingRule, toSKU: e.target.value })}
+                    value={editingRule.sanitationClass}
+                    onChange={(e) => setEditingRule({ ...editingRule, sanitationClass: e.target.value })}
                     className="form-input"
                     style={{ backgroundColor: "#FFFFFF" }}
                   />
                 </div>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
-                <div>
-                  <label className="form-label">Production Line</label>
-                  <select
-                    className="form-select"
-                    value={editingRule.line}
-                    onChange={(e) => setEditingRule({ ...editingRule, line: e.target.value })}
-                    style={{ backgroundColor: "#FFFFFF" }}
-                  >
-                    <option value="Line 1 (Aseptic)">Line 1 (Aseptic)</option>
-                    <option value="Line 2 (Formulation)">Line 2 (Formulation)</option>
-                    <option value="Line 3 (Canning)">Line 3 (Canning)</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="form-label">SMED Target (Mins)</label>
-                  <input
-                    type="number"
-                    min="5"
-                    value={editingRule.targetSMEDMins}
-                    onChange={(e) => setEditingRule({ ...editingRule, targetSMEDMins: e.target.value })}
-                    className="form-input"
-                    style={{ backgroundColor: "#FFFFFF" }}
-                  />
-                </div>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <input
+                  type="checkbox"
+                  id="editAllergenCheck"
+                  checked={editingRule.allergenCleaningRequired}
+                  onChange={(e) => setEditingRule({ ...editingRule, allergenCleaningRequired: e.target.checked })}
+                  style={{ width: "16px", height: "16px", accentColor: "#C89547" }}
+                />
+                <label htmlFor="editAllergenCheck" style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-primary)", cursor: "pointer" }}>
+                  Requires Deep Allergen Sanitation & QA Swab Validation
+                </label>
               </div>
 
               <div>
-                <label className="form-label">Cleanout Protocol</label>
-                <input
-                  type="text"
-                  value={editingRule.cleanType}
-                  onChange={(e) => setEditingRule({ ...editingRule, cleanType: e.target.value })}
+                <label className="form-label">Notes</label>
+                <textarea
+                  rows={2}
+                  value={editingRule.notes || ""}
+                  onChange={(e) => setEditingRule({ ...editingRule, notes: e.target.value })}
                   className="form-input"
                   style={{ backgroundColor: "#FFFFFF" }}
                 />
               </div>
 
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
-                <Button variant="secondary" type="button" onClick={() => setEditingRule(null)}>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "8px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
+                <Button variant="secondary" onClick={() => setEditingRule(null)}>
                   Cancel
                 </Button>
                 <Button variant="primary" type="submit">
-                  Save Changes
+                  Update Standard
                 </Button>
               </div>
             </form>

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   HeartPulse,
   Search,
@@ -15,9 +15,11 @@ import { Card } from "../../../components/common/Card";
 import { Badge } from "../../../components/common/Badge";
 import { Button } from "../../../components/common/Button";
 import { StatCard } from "../../../components/common/StatCard";
+import { useMasterData } from "../../../context/MasterDataContext";
 import { useApp } from "../../../context/AppContext";
 
 export function MissingDataPage() {
+  const { dataHealthStats = {} } = useMasterData();
   const { addToast } = useApp();
 
   const [missingRecords, setMissingRecords] = useState([
@@ -42,16 +44,18 @@ export function MissingDataPage() {
     addToast("All missing attributes remediated across Master Data tables!", "success");
   };
 
-  const filteredRecords = missingRecords.filter((m) => {
-    if (!searchQuery.trim()) return true;
-    const q = searchQuery.toLowerCase();
-    return (
-      m.recordKey.toLowerCase().includes(q) ||
-      m.table.toLowerCase().includes(q) ||
-      m.field.toLowerCase().includes(q) ||
-      m.id.toLowerCase().includes(q)
-    );
-  });
+  const filteredRecords = useMemo(() => {
+    return missingRecords.filter((m) => {
+      if (!searchQuery.trim()) return true;
+      const q = searchQuery.toLowerCase();
+      return (
+        m.recordKey.toLowerCase().includes(q) ||
+        m.table.toLowerCase().includes(q) ||
+        m.field.toLowerCase().includes(q) ||
+        m.id.toLowerCase().includes(q)
+      );
+    });
+  }, [missingRecords, searchQuery]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%", maxWidth: "1200px", margin: "0 auto", minWidth: 0 }}>
@@ -90,7 +94,7 @@ export function MissingDataPage() {
         </div>
       </div>
 
-      {/* KPI Tickers - 2x2 on mobile, 4 on desktop */}
+      {/* KPI Tickers */}
       <div
         className="kpi-grid-responsive grid-4"
         style={{
@@ -102,118 +106,144 @@ export function MissingDataPage() {
         }}
       >
         <StatCard
-          title="Incomplete Fields"
+          title="Schema Completeness"
+          value={`${dataHealthStats.completeness || 98.4}%`}
+          unit="Master Rate"
+          icon={HeartPulse}
+          colorVariant="emerald"
+        />
+        <StatCard
+          title="Open Missing Fields"
           value={openCount.toString()}
-          unit="Records"
-          trend={{ value: "Mandatory schema gaps", isPositive: openCount === 0, text: "" }}
+          unit="Attributes"
           icon={AlertTriangle}
           colorVariant={openCount > 0 ? "amber" : "emerald"}
         />
         <StatCard
-          title="Completeness Score"
-          value="98.6%"
-          unit="Integrity"
-          trend={{ value: "+1.2% this week", isPositive: true, text: "" }}
-          icon={HeartPulse}
+          title="Auto-Fix Rules"
+          value="12"
+          unit="Available"
+          icon={Wrench}
           colorVariant="cyan"
         />
         <StatCard
-          title="Audited Tables"
-          value="16 Tables"
-          unit="Full Scope"
-          trend={{ value: "Item, WorkCenter, BOM, Routings", isPositive: true, text: "" }}
-          icon={Layers}
-          colorVariant="emerald"
-        />
-        <StatCard
-          title="Auto-Fix Rules"
+          title="Integrity Target"
           value="100%"
-          unit="Deterministic"
-          trend={{ value: "Heuristic defaults available", isPositive: true, text: "" }}
+          unit="Threshold"
           icon={ShieldCheck}
           colorVariant="emerald"
         />
       </div>
 
-      {/* Table */}
-      <Card style={{ padding: "18px", minWidth: 0, width: "100%", boxSizing: "border-box" }}>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", alignItems: "center", marginBottom: "14px", justifyContent: "space-between" }}>
-          <div style={{ position: "relative", minWidth: "220px", flex: 1 }}>
-            <Search size={15} color="var(--text-muted)" style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)" }} />
+      {/* Main Table Card */}
+      <Card
+        style={{
+          backgroundColor: "#FFFFFF",
+          border: "1px solid var(--border-subtle)",
+          borderRadius: "14px",
+          overflow: "hidden"
+        }}
+      >
+        {/* Controls Bar */}
+        <div
+          style={{
+            padding: "16px 20px",
+            borderBottom: "1px solid var(--border-subtle)",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "12px",
+            backgroundColor: "var(--bg-card-subtle)"
+          }}
+        >
+          <div style={{ position: "relative", minWidth: "240px", flex: 1 }}>
+            <Search
+              size={15}
+              style={{
+                position: "absolute",
+                left: "12px",
+                top: "50%",
+                transform: "translateY(-50%)",
+                color: "var(--text-muted)"
+              }}
+            />
             <input
               type="text"
-              placeholder="Search incomplete record, table, field..."
+              placeholder="Search by record key, table or missing attribute..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="form-input"
-              style={{ paddingLeft: "32px", height: "36px", fontSize: "12px", backgroundColor: "#FFFFFF" }}
+              style={{
+                paddingLeft: "36px",
+                backgroundColor: "#FFFFFF",
+                fontSize: "12px",
+                width: "100%"
+              }}
             />
           </div>
         </div>
 
-        <div className="data-table-container" style={{ width: "100%", overflowX: "auto", WebkitOverflowScrolling: "touch", display: "block" }}>
-          <table className="data-table" style={{ width: "100%", minWidth: "700px" }}>
+        {/* Table View */}
+        <div style={{ overflowX: "auto", width: "100%" }}>
+          <table className="data-table" style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
             <thead>
-              <tr>
-                <th>Anomaly Ref</th>
-                <th>Master Table</th>
-                <th>Record Identifier</th>
-                <th>Missing Field</th>
-                <th>Remediation Suggestion</th>
-                <th>Status</th>
-                <th>Action</th>
+              <tr style={{ borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Anomalous Record</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Target Master Table</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Missing Attribute</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Recommended Value</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Status</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", textAlign: "right" }}>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {filteredRecords.map((m) => {
-                const isOpen = m.status === "Open";
-
-                return (
-                  <tr key={m.id}>
-                    <td>
-                      <span style={{ fontWeight: 800, color: "#8C5B23", fontFamily: "var(--font-mono)" }}>{m.id}</span>
-                    </td>
-                    <td>
-                      <Badge variant="cyan">{m.table}</Badge>
-                    </td>
-                    <td>
-                      <strong style={{ color: "var(--text-primary)" }}>{m.recordKey}</strong>
-                    </td>
-                    <td style={{ color: "#DC2626", fontWeight: 700, fontSize: "12px" }}>{m.field}</td>
-                    <td style={{ fontSize: "12px", color: "var(--text-secondary)", fontWeight: 600 }}>{m.suggestion}</td>
-                    <td>
-                      <Badge variant={isOpen ? "amber" : "emerald"}>{m.status}</Badge>
-                    </td>
-                    <td>
-                      {isOpen ? (
-                        <button
-                          onClick={() => handleAutofill(m.id)}
-                          title="Auto-Fix Attribute"
-                          style={{
-                            width: "30px",
-                            height: "30px",
-                            borderRadius: "6px",
-                            backgroundColor: "var(--color-primary)",
-                            color: "#FFFFFF",
-                            border: "none",
-                            cursor: "pointer",
-                            display: "inline-flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            boxShadow: "0 2px 4px rgba(140, 91, 35, 0.2)"
-                          }}
-                        >
-                          <Wrench size={13} />
-                        </button>
-                      ) : (
-                        <span style={{ fontSize: "11px", color: "#059669", fontWeight: 800, display: "inline-flex", alignItems: "center", gap: "4px" }}>
-                          <CheckCircle2 size={13} /> Fixed
-                        </span>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
+              {filteredRecords.map((m) => (
+                <tr key={m.id} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+                  <td style={{ padding: "12px 16px" }}>
+                    <div style={{ fontWeight: 800, color: "var(--text-primary)", fontSize: "13px" }}>{m.recordKey}</div>
+                    <div style={{ fontSize: "11px", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>{m.id}</div>
+                  </td>
+                  <td style={{ padding: "12px 16px" }}>
+                    <Badge variant="cyan">{m.table}</Badge>
+                  </td>
+                  <td style={{ padding: "12px 16px", fontWeight: 700, color: "#D97706", fontSize: "12px" }}>
+                    {m.field}
+                  </td>
+                  <td style={{ padding: "12px 16px", fontSize: "12px", color: "var(--text-secondary)" }}>
+                    {m.suggestion}
+                  </td>
+                  <td style={{ padding: "12px 16px" }}>
+                    <Badge variant={m.status === "Open" ? "amber" : "emerald"}>
+                      {m.status}
+                    </Badge>
+                  </td>
+                  <td style={{ padding: "12px 16px", textAlign: "right" }}>
+                    {m.status === "Open" ? (
+                      <button
+                        onClick={() => handleAutofill(m.id)}
+                        title="Auto-Fill Missing Value"
+                        style={{
+                          width: "30px",
+                          height: "30px",
+                          borderRadius: "6px",
+                          backgroundColor: "var(--bg-card-subtle)",
+                          color: "#059669",
+                          border: "1px solid var(--border-subtle)",
+                          cursor: "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center"
+                        }}
+                      >
+                        <Wrench size={13} />
+                      </button>
+                    ) : (
+                      <span style={{ fontSize: "12px", color: "#059669", fontWeight: 700 }}>Resolved</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>

@@ -1,57 +1,61 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   Building2,
   Users,
   Plus,
-  CheckCircle2,
   Search,
   Filter,
   X,
   Edit2,
+  Trash2,
   Layers,
   ShieldCheck,
-  Briefcase
+  Briefcase,
+  CheckCircle2
 } from "lucide-react";
 import { Card } from "../../../components/common/Card";
 import { Badge } from "../../../components/common/Badge";
 import { Button } from "../../../components/common/Button";
 import { StatCard } from "../../../components/common/StatCard";
+import { useMasterData } from "../../../context/MasterDataContext";
 import { useApp } from "../../../context/AppContext";
 
 export function DepartmentsPage() {
+  const { departments = [], addDepartment, updateDepartment, deleteDepartment, plants = [], employees = [], activePlantId } = useMasterData();
   const { addToast } = useApp();
 
-  const [departments, setDepartments] = useState([
-    { id: "DEP-01", name: "Operations / Shop Floor", code: "OPS", head: "Robert Thorne", membersCount: 48, plant: "Plant 1 (Austin)", status: "Active" },
-    { id: "DEP-02", name: "Maintenance & Reliability", code: "MAINT", head: "Marcus Vance", membersCount: 14, plant: "Plant 1 (Austin)", status: "Active" },
-    { id: "DEP-03", name: "Quality Assurance & Lab", code: "QA", head: "Sarah Jenkins", membersCount: 12, plant: "Plant 1 (Austin)", status: "Active" },
-    { id: "DEP-04", name: "Warehouse & Logistics", code: "WHSE", head: "Elena Rostova", membersCount: 16, plant: "Plant 1 (Austin)", status: "Active" },
-    { id: "DEP-05", name: "IT & Digital Automation", code: "IT", head: "Alexander Vance", membersCount: 6, plant: "All Plants", status: "Active" }
-  ]);
-
   const [searchQuery, setSearchQuery] = useState("");
+  const [plantFilter, setPlantFilter] = useState("ALL");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingDept, setEditingDept] = useState(null);
 
   const [newDept, setNewDept] = useState({
-    name: "",
     code: "",
-    head: "",
-    membersCount: 5,
-    plant: "Plant 1 (Austin)"
+    name: "",
+    plantId: activePlantId || "PLT-01",
+    deptHead: "Robert Thorne",
+    operatingShifts: "3 Shifts (24/7 Continuous)",
+    costCenter: "CC-4010"
   });
 
-  const totalPersonnel = departments.reduce((sum, d) => sum + (d.membersCount || 0), 0);
+  const totalPersonnel = useMemo(() => {
+    return employees.length || 48;
+  }, [employees]);
 
-  const filteredDepts = departments.filter((d) => {
-    if (!searchQuery.trim()) return true;
-    const q = searchQuery.toLowerCase();
-    return (
-      d.name.toLowerCase().includes(q) ||
-      d.code.toLowerCase().includes(q) ||
-      d.head.toLowerCase().includes(q)
-    );
-  });
+  const filteredDepts = useMemo(() => {
+    return departments.filter((d) => {
+      const matchesPlant = plantFilter === "ALL" || d.plantId === plantFilter;
+      const q = searchQuery.toLowerCase().trim();
+      const matchesSearch =
+        !q ||
+        (d.name || "").toLowerCase().includes(q) ||
+        (d.code || "").toLowerCase().includes(q) ||
+        (d.deptHead || "").toLowerCase().includes(q) ||
+        (d.costCenter || "").toLowerCase().includes(q);
+
+      return matchesPlant && matchesSearch;
+    });
+  }, [departments, plantFilter, searchQuery]);
 
   const handleAddSubmit = (e) => {
     e.preventDefault();
@@ -60,20 +64,17 @@ export function DepartmentsPage() {
       return;
     }
 
-    const created = {
-      id: `DEP-0${departments.length + 1}`,
-      name: newDept.name,
-      code: newDept.code.toUpperCase(),
-      head: newDept.head || "Unassigned",
-      membersCount: Number(newDept.membersCount) || 1,
-      plant: newDept.plant,
-      status: "Active"
-    };
-
-    setDepartments([...departments, created]);
-    addToast(`Department "${created.name}" created successfully!`, "success");
+    const created = addDepartment(newDept);
+    addToast(`Department "${created.name}" registered!`, "success");
     setIsModalOpen(false);
-    setNewDept({ name: "", code: "", head: "", membersCount: 5, plant: "Plant 1 (Austin)" });
+    setNewDept({
+      code: "",
+      name: "",
+      plantId: activePlantId || "PLT-01",
+      deptHead: "Robert Thorne",
+      operatingShifts: "3 Shifts (24/7 Continuous)",
+      costCenter: "CC-4010"
+    });
   };
 
   const handleEditSubmit = (e) => {
@@ -83,11 +84,16 @@ export function DepartmentsPage() {
       return;
     }
 
-    setDepartments((prev) =>
-      prev.map((d) => (d.id === editingDept.id ? editingDept : d))
-    );
+    updateDepartment(editingDept.departmentId, editingDept);
     addToast(`Department "${editingDept.name}" updated successfully!`, "success");
     setEditingDept(null);
+  };
+
+  const handleDelete = (departmentId, name) => {
+    if (window.confirm(`Are you sure you want to delete Department "${name}"?`)) {
+      deleteDepartment(departmentId);
+      addToast(`Department "${name}" deleted.`, "info");
+    }
   };
 
   return (
@@ -110,7 +116,7 @@ export function DepartmentsPage() {
         </div>
       </div>
 
-      {/* KPI Tickers - 2x2 on mobile, 4 on desktop */}
+      {/* KPI Tickers */}
       <div
         className="kpi-grid-responsive grid-4"
         style={{
@@ -122,198 +128,263 @@ export function DepartmentsPage() {
         }}
       >
         <StatCard
-          title="Total Departments"
+          title="Departments"
           value={departments.length.toString()}
           unit="Active Units"
           icon={Building2}
           colorVariant="emerald"
         />
         <StatCard
-          title="Staff Headcount"
+          title="Direct Plant Labor"
           value={totalPersonnel.toString()}
-          unit="Personnel"
+          unit="Headcount"
           icon={Users}
           colorVariant="cyan"
         />
         <StatCard
-          title="Department Leads"
+          title="Cost Centers"
           value={departments.length.toString()}
-          unit="Designated"
+          unit="Financial Nodes"
           icon={Briefcase}
           colorVariant="amber"
         />
         <StatCard
-          title="Cost Center Audit"
+          title="Org Alignment"
           value="100%"
-          unit="Validated"
-          icon={CheckCircle2}
+          unit="Integrated"
+          icon={ShieldCheck}
           colorVariant="emerald"
         />
       </div>
 
-      {/* Departments Table */}
-      <Card style={{ padding: "18px", minWidth: 0, width: "100%", boxSizing: "border-box" }}>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", alignItems: "center", marginBottom: "14px", justifyContent: "space-between" }}>
-          <div style={{ position: "relative", minWidth: "220px", flex: 1 }}>
-            <Search size={15} color="var(--text-muted)" style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)" }} />
+      {/* Main Table Card */}
+      <Card
+        style={{
+          backgroundColor: "#FFFFFF",
+          border: "1px solid var(--border-subtle)",
+          borderRadius: "14px",
+          overflow: "hidden"
+        }}
+      >
+        {/* Controls Bar */}
+        <div
+          style={{
+            padding: "16px 20px",
+            borderBottom: "1px solid var(--border-subtle)",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "12px",
+            backgroundColor: "var(--bg-card-subtle)"
+          }}
+        >
+          <div style={{ position: "relative", minWidth: "240px", flex: 1 }}>
+            <Search
+              size={15}
+              style={{
+                position: "absolute",
+                left: "12px",
+                top: "50%",
+                transform: "translateY(-50%)",
+                color: "var(--text-muted)"
+              }}
+            />
             <input
               type="text"
-              placeholder="Search department name, code, lead..."
+              placeholder="Search department name, code, manager or cost center..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="form-input"
-              style={{ paddingLeft: "32px", height: "36px", fontSize: "12px", backgroundColor: "#FFFFFF" }}
+              style={{
+                paddingLeft: "36px",
+                backgroundColor: "#FFFFFF",
+                fontSize: "12px",
+                width: "100%"
+              }}
             />
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+            <select
+              value={plantFilter}
+              onChange={(e) => setPlantFilter(e.target.value)}
+              className="form-input"
+              style={{ fontSize: "12px", padding: "6px 10px", width: "auto", backgroundColor: "#FFFFFF" }}
+            >
+              <option value="ALL">All Plants</option>
+              {plants.map((p) => (
+                <option key={p.id} value={p.id}>{p.name.split(" - ")[0]}</option>
+              ))}
+            </select>
           </div>
         </div>
 
-        <div className="data-table-container" style={{ width: "100%", overflowX: "auto", WebkitOverflowScrolling: "touch", display: "block" }}>
-          <table className="data-table" style={{ width: "100%", minWidth: "680px" }}>
+        {/* Table View */}
+        <div style={{ overflowX: "auto", width: "100%" }}>
+          <table className="data-table" style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
             <thead>
-              <tr>
-                <th>Dept Code</th>
-                <th>Department Name</th>
-                <th>Department Lead</th>
-                <th>Staff Headcount</th>
-                <th>Plant Scope</th>
-                <th>Status</th>
-                <th>Actions</th>
+              <tr style={{ borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Dept Code</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Department Name</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Department Head / Lead</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Plant Facility</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Cost Center</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Status</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", textAlign: "right" }}>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {filteredDepts.map((d) => (
-                <tr key={d.id}>
-                  <td>
-                    <span style={{ fontWeight: 800, color: "#8C5B23", fontFamily: "var(--font-mono)" }}>{d.code}</span>
-                  </td>
-                  <td>
-                    <strong style={{ color: "var(--text-primary)" }}>{d.name}</strong>
-                  </td>
-                  <td>
-                    <span style={{ fontSize: "12px", color: "var(--text-primary)", fontWeight: 600 }}>{d.head}</span>
-                  </td>
-                  <td>
-                    <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "#059669" }}>{d.membersCount} Staff</span>
-                  </td>
-                  <td>
-                    <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>{d.plant}</span>
-                  </td>
-                  <td>
-                    <Badge variant="emerald">{d.status}</Badge>
-                  </td>
-                  <td>
-                    <button
-                      onClick={() => setEditingDept({ ...d })}
-                      title="Edit Department"
-                      style={{
-                        width: "30px",
-                        height: "30px",
-                        borderRadius: "6px",
-                        backgroundColor: "var(--bg-card-subtle)",
-                        color: "var(--text-primary)",
-                        border: "1px solid var(--border-subtle)",
-                        cursor: "pointer",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        justifyContent: "center"
-                      }}
-                    >
-                      <Edit2 size={13} />
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {filteredDepts.map((d) => {
+                const plantName = plants.find((p) => p.id === d.plantId)?.name?.split(" - ")[0] || "Indore Plant 1";
+                return (
+                  <tr key={d.departmentId} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+                    <td style={{ padding: "12px 16px", fontFamily: "var(--font-mono)", fontWeight: 800, color: "#8C5B23" }}>
+                      {d.code}
+                    </td>
+                    <td style={{ padding: "12px 16px", fontWeight: 800, color: "var(--text-primary)", fontSize: "13px" }}>
+                      {d.name}
+                    </td>
+                    <td style={{ padding: "12px 16px", fontSize: "12px", color: "var(--text-primary)", fontWeight: 600 }}>
+                      {d.deptHead}
+                    </td>
+                    <td style={{ padding: "12px 16px", fontSize: "12px", color: "var(--text-secondary)" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                        <Building2 size={12} color="#C89547" />
+                        <span>{plantName}</span>
+                      </div>
+                    </td>
+                    <td style={{ padding: "12px 16px", fontFamily: "var(--font-mono)", fontSize: "12px", color: "#6B5B4E" }}>
+                      {d.costCenter}
+                    </td>
+                    <td style={{ padding: "12px 16px" }}>
+                      <Badge variant="emerald">{d.status || "Active"}</Badge>
+                    </td>
+                    <td style={{ padding: "12px 16px", textAlign: "right" }}>
+                      <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                        <button
+                          onClick={() => setEditingDept({ ...d })}
+                          title="Edit Department"
+                          style={{ width: "30px", height: "30px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", color: "var(--text-primary)", border: "1px solid var(--border-subtle)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+                        >
+                          <Edit2 size={13} />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(d.departmentId, d.name)}
+                          title="Delete Department"
+                          style={{ width: "30px", height: "30px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", color: "#EF4444", border: "1px solid var(--border-subtle)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
       </Card>
 
-      {/* ADD DEPARTMENT MODAL */}
+      {/* ADD DEPT MODAL */}
       {isModalOpen && (
         <div className="modal-backdrop" onClick={() => setIsModalOpen(false)}>
-          <div className="modal-content" style={{ maxWidth: "480px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+          <div className="modal-content" style={{ maxWidth: "520px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
-              <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)" }}>
-                Add New Department
-              </h2>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Building2 size={18} color="#C89547" />
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                  Add Department
+                </h2>
+              </div>
               <button onClick={() => setIsModalOpen(false)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
                 <X size={18} />
               </button>
             </div>
 
             <form onSubmit={handleAddSubmit} style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "12px" }}>
                 <div>
-                  <label className="form-label">Department Code *</label>
+                  <label className="form-label">Dept Code *</label>
                   <input
                     type="text"
                     required
-                    placeholder="e.g. ENG"
+                    placeholder="e.g. MAINT"
                     value={newDept.code}
-                    onChange={(e) => setNewDept({ ...newDept, code: e.target.value })}
+                    onChange={(e) => setNewDept({ ...newDept, code: e.target.value.toUpperCase() })}
                     className="form-input"
                     style={{ backgroundColor: "#FFFFFF" }}
                   />
                 </div>
-
                 <div>
-                  <label className="form-label">Headcount</label>
+                  <label className="form-label">Department Name *</label>
                   <input
-                    type="number"
-                    min="1"
-                    value={newDept.membersCount}
-                    onChange={(e) => setNewDept({ ...newDept, membersCount: e.target.value })}
+                    type="text"
+                    required
+                    placeholder="e.g. Maintenance & Engineering"
+                    value={newDept.name}
+                    onChange={(e) => setNewDept({ ...newDept, name: e.target.value })}
                     className="form-input"
                     style={{ backgroundColor: "#FFFFFF" }}
                   />
                 </div>
               </div>
 
-              <div>
-                <label className="form-label">Department Name *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Process Engineering"
-                  value={newDept.name}
-                  onChange={(e) => setNewDept({ ...newDept, name: e.target.value })}
-                  className="form-input"
-                  style={{ backgroundColor: "#FFFFFF" }}
-                />
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div>
+                  <label className="form-label">Department Head / Manager</label>
+                  <input
+                    type="text"
+                    value={newDept.deptHead}
+                    onChange={(e) => setNewDept({ ...newDept, deptHead: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+                <div>
+                  <label className="form-label">Plant Facility</label>
+                  <select
+                    value={newDept.plantId}
+                    onChange={(e) => setNewDept({ ...newDept, plantId: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  >
+                    {plants.map((p) => (
+                      <option key={p.id} value={p.id}>{p.name.split(" - ")[0]}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
-              <div>
-                <label className="form-label">Department Lead</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Sarah Jenkins"
-                  value={newDept.head}
-                  onChange={(e) => setNewDept({ ...newDept, head: e.target.value })}
-                  className="form-input"
-                  style={{ backgroundColor: "#FFFFFF" }}
-                />
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div>
+                  <label className="form-label">Cost Center Code</label>
+                  <input
+                    type="text"
+                    value={newDept.costCenter}
+                    onChange={(e) => setNewDept({ ...newDept, costCenter: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+                <div>
+                  <label className="form-label">Operating Shifts</label>
+                  <input
+                    type="text"
+                    value={newDept.operatingShifts}
+                    onChange={(e) => setNewDept({ ...newDept, operatingShifts: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
               </div>
 
-              <div>
-                <label className="form-label">Plant Facility Scope</label>
-                <select
-                  className="form-select"
-                  value={newDept.plant}
-                  onChange={(e) => setNewDept({ ...newDept, plant: e.target.value })}
-                  style={{ backgroundColor: "#FFFFFF" }}
-                >
-                  <option value="Plant 1 (Austin)">Plant 1 (Austin)</option>
-                  <option value="Plant 2 (Dallas)">Plant 2 (Dallas)</option>
-                  <option value="All Plants">All Plants (Enterprise Global)</option>
-                </select>
-              </div>
-
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "8px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
                 <Button variant="secondary" onClick={() => setIsModalOpen(false)}>
                   Cancel
                 </Button>
                 <Button variant="primary" type="submit">
-                  Create Department
+                  Save Department
                 </Button>
               </div>
             </form>
@@ -321,46 +392,23 @@ export function DepartmentsPage() {
         </div>
       )}
 
-      {/* EDIT DEPARTMENT MODAL */}
+      {/* EDIT DEPT MODAL */}
       {editingDept && (
         <div className="modal-backdrop" onClick={() => setEditingDept(null)}>
-          <div className="modal-content" style={{ maxWidth: "480px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+          <div className="modal-content" style={{ maxWidth: "520px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
-              <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)" }}>
-                Edit Department — {editingDept.code}
-              </h2>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Edit2 size={16} color="#C89547" />
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                  Edit Department — {editingDept.code}
+                </h2>
+              </div>
               <button onClick={() => setEditingDept(null)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
                 <X size={18} />
               </button>
             </div>
 
             <form onSubmit={handleEditSubmit} style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
-                <div>
-                  <label className="form-label">Department Code *</label>
-                  <input
-                    type="text"
-                    required
-                    value={editingDept.code}
-                    onChange={(e) => setEditingDept({ ...editingDept, code: e.target.value })}
-                    className="form-input"
-                    style={{ backgroundColor: "#FFFFFF" }}
-                  />
-                </div>
-
-                <div>
-                  <label className="form-label">Headcount</label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={editingDept.membersCount}
-                    onChange={(e) => setEditingDept({ ...editingDept, membersCount: Number(e.target.value) })}
-                    className="form-input"
-                    style={{ backgroundColor: "#FFFFFF" }}
-                  />
-                </div>
-              </div>
-
               <div>
                 <label className="form-label">Department Name *</label>
                 <input
@@ -373,52 +421,35 @@ export function DepartmentsPage() {
                 />
               </div>
 
-              <div>
-                <label className="form-label">Department Lead</label>
-                <input
-                  type="text"
-                  value={editingDept.head}
-                  onChange={(e) => setEditingDept({ ...editingDept, head: e.target.value })}
-                  className="form-input"
-                  style={{ backgroundColor: "#FFFFFF" }}
-                />
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                 <div>
-                  <label className="form-label">Plant Scope</label>
-                  <select
-                    className="form-select"
-                    value={editingDept.plant}
-                    onChange={(e) => setEditingDept({ ...editingDept, plant: e.target.value })}
+                  <label className="form-label">Department Head</label>
+                  <input
+                    type="text"
+                    value={editingDept.deptHead}
+                    onChange={(e) => setEditingDept({ ...editingDept, deptHead: e.target.value })}
+                    className="form-input"
                     style={{ backgroundColor: "#FFFFFF" }}
-                  >
-                    <option value="Plant 1 (Austin)">Plant 1 (Austin)</option>
-                    <option value="Plant 2 (Dallas)">Plant 2 (Dallas)</option>
-                    <option value="All Plants">All Plants (Enterprise Global)</option>
-                  </select>
+                  />
                 </div>
-
                 <div>
-                  <label className="form-label">Status</label>
-                  <select
-                    className="form-select"
-                    value={editingDept.status}
-                    onChange={(e) => setEditingDept({ ...editingDept, status: e.target.value })}
+                  <label className="form-label">Cost Center</label>
+                  <input
+                    type="text"
+                    value={editingDept.costCenter}
+                    onChange={(e) => setEditingDept({ ...editingDept, costCenter: e.target.value })}
+                    className="form-input"
                     style={{ backgroundColor: "#FFFFFF" }}
-                  >
-                    <option value="Active">Active</option>
-                    <option value="Inactive">Inactive</option>
-                  </select>
+                  />
                 </div>
               </div>
 
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "8px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
                 <Button variant="secondary" onClick={() => setEditingDept(null)}>
                   Cancel
                 </Button>
                 <Button variant="primary" type="submit">
-                  Save Changes
+                  Update Department
                 </Button>
               </div>
             </form>

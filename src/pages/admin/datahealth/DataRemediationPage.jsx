@@ -16,11 +16,11 @@ import { Card } from "../../../components/common/Card";
 import { Badge } from "../../../components/common/Badge";
 import { Button } from "../../../components/common/Button";
 import { StatCard } from "../../../components/common/StatCard";
-import { useAdmin } from "../../../context/AdminContext";
+import { useMasterData } from "../../../context/MasterDataContext";
 import { useApp } from "../../../context/AppContext";
 
 export function DataRemediationPage() {
-  const { dataHealthStats = {}, setDataHealthStats } = useAdmin();
+  const { dataHealthStats = {} } = useMasterData();
   const { addToast } = useApp();
 
   const [isFixing, setIsFixing] = useState(false);
@@ -30,21 +30,9 @@ export function DataRemediationPage() {
     { id: "REM-803", rule: "Fuzzy Duplicate Cluster Merge", affectedTable: "Raw Ingredients", recordsHealed: 1, status: "Auto-Healed", timestamp: "Today, 10:30 AM" }
   ]);
 
-  const openAnomalies = (dataHealthStats.missingDataCount || 0) + (dataHealthStats.duplicatesCount || 0) + (dataHealthStats.invalidRefsCount || 0) + (dataHealthStats.brokenRelCount || 0);
-
   const handleRunRemediation = () => {
     setIsFixing(true);
     setTimeout(() => {
-      if (setDataHealthStats) {
-        setDataHealthStats({
-          missingDataCount: 0,
-          duplicatesCount: 0,
-          invalidRefsCount: 0,
-          brokenRelCount: 0,
-          staleRecordsCount: 0,
-          healthScore: 100.0
-        });
-      }
       setIsFixing(false);
       addToast("Automated Data Remediation Complete: All master anomalies resolved & healed!", "success");
     }, 800);
@@ -60,7 +48,7 @@ export function DataRemediationPage() {
               Automated Data Remediation & Self-Healing
             </h1>
             <Badge variant="emerald">
-              HEALTH SCORE: {dataHealthStats.healthScore || 100}%
+              HEALTH SCORE: {dataHealthStats.completeness || 98.4}%
             </Badge>
           </div>
         </div>
@@ -78,7 +66,7 @@ export function DataRemediationPage() {
         </div>
       </div>
 
-      {/* KPI Tickers - 2x2 on mobile, 4 on desktop */}
+      {/* KPI Tickers */}
       <div
         className="kpi-grid-responsive grid-4"
         style={{
@@ -91,101 +79,89 @@ export function DataRemediationPage() {
       >
         <StatCard
           title="Overall Health Score"
-          value={`${dataHealthStats.healthScore || 96.2}%`}
+          value={`${dataHealthStats.completeness || 98.4}%`}
           unit="Quality Index"
           trend={{ value: "Master Data certified", isPositive: true, text: "" }}
           icon={HeartPulse}
           colorVariant="emerald"
         />
         <StatCard
-          title="Open Anomalies"
-          value={openAnomalies.toString()}
-          unit="Active Items"
-          trend={{ value: "Safe for auto-remediation", isPositive: openAnomalies === 0, text: "" }}
+          title="Active Remediation Rules"
+          value="14 Rules"
+          unit="Self-Healing"
+          trend={{ value: "Continuous background engine", isPositive: true, text: "" }}
           icon={Wrench}
-          colorVariant={openAnomalies > 0 ? "amber" : "emerald"}
-        />
-        <StatCard
-          title="Referential Integrity"
-          value="100%"
-          unit="Consistency"
-          trend={{ value: "Strict SQL schema enforcement", isPositive: true, text: "" }}
-          icon={CheckCircle2}
           colorVariant="cyan"
         />
         <StatCard
-          title="Self-Healing Engine"
+          title="Total Healed Records"
+          value="3,142"
+          unit="Lifetime"
+          trend={{ value: "Zero manual intervention", isPositive: true, text: "" }}
+          icon={CheckCircle2}
+          colorVariant="emerald"
+        />
+        <StatCard
+          title="Engine Readiness"
           value="100%"
-          unit="Deterministic"
-          trend={{ value: "Zero data destruction", isPositive: true, text: "" }}
+          unit="Operational"
+          trend={{ value: "Auto-trigger enabled", isPositive: true, text: "" }}
           icon={ShieldCheck}
           colorVariant="emerald"
         />
       </div>
 
-      {/* Action Banner Card */}
-      <Card style={{ padding: "20px", backgroundColor: "var(--bg-card)" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px" }}>
-          <div>
-            <h3 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)" }}>
-              One-Click Enterprise Master Data Sanitization
-            </h3>
-            <span style={{ fontSize: "12px", color: "var(--text-secondary)", fontWeight: 600, display: "inline-block", marginTop: "4px" }}>
-              Runs consistency rules across Item Master, Product Families, Routings, Work Centers, and CCP limits.
-            </span>
+      {/* Self-Healing Log Card */}
+      <Card
+        style={{
+          backgroundColor: "#FFFFFF",
+          border: "1px solid var(--border-subtle)",
+          borderRadius: "14px",
+          padding: "20px"
+        }}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "10px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <History size={18} color="#C89547" />
+            <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+              Recent Self-Healing Execution Log
+            </h2>
           </div>
-
-          <Button
-            variant="primary"
-            icon={Zap}
-            onClick={handleRunRemediation}
-            disabled={isFixing}
-            style={{ padding: "8px 16px" }}
-          >
-            {isFixing ? "Fixing All..." : "Auto-Repair All Master Tables"}
-          </Button>
-        </div>
-      </Card>
-
-      {/* Remediation Audit Log Table */}
-      <Card style={{ padding: "18px", minWidth: 0, width: "100%", boxSizing: "border-box" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "14px" }}>
-          <History size={16} color="var(--accent-gold)" />
-          <h3 style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)" }}>
-            Recent Self-Healing Operations
-          </h3>
+          <Badge variant="cyan">3 AUTOMATED ACTIONS TODAY</Badge>
         </div>
 
-        <div className="data-table-container" style={{ width: "100%", overflowX: "auto", WebkitOverflowScrolling: "touch", display: "block" }}>
-          <table className="data-table" style={{ width: "100%", minWidth: "680px" }}>
+        <div style={{ overflowX: "auto", width: "100%" }}>
+          <table className="data-table" style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
             <thead>
-              <tr>
-                <th>Operation Ref</th>
-                <th>Remediation Rule Applied</th>
-                <th>Target Schema</th>
-                <th>Records Healed</th>
-                <th>Execution Time</th>
-                <th>Status</th>
+              <tr style={{ borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Remediation ID</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Heuristic Rule Applied</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Target Master Table</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Records Healed</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Execution Timestamp</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Status</th>
               </tr>
             </thead>
             <tbody>
-              {remediationLog.map((log) => (
-                <tr key={log.id}>
-                  <td>
-                    <span style={{ fontWeight: 800, color: "#8C5B23", fontFamily: "var(--font-mono)" }}>{log.id}</span>
+              {remediationLog.map((r) => (
+                <tr key={r.id} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+                  <td style={{ padding: "12px 16px", fontFamily: "var(--font-mono)", fontWeight: 800, color: "#8C5B23" }}>
+                    {r.id}
                   </td>
-                  <td>
-                    <strong style={{ color: "var(--text-primary)" }}>{log.rule}</strong>
+                  <td style={{ padding: "12px 16px", fontWeight: 700, color: "var(--text-primary)", fontSize: "13px" }}>
+                    {r.rule}
                   </td>
-                  <td>
-                    <Badge variant="cyan">{log.affectedTable}</Badge>
+                  <td style={{ padding: "12px 16px" }}>
+                    <Badge variant="cyan">{r.affectedTable}</Badge>
                   </td>
-                  <td style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "#059669" }}>
-                    {log.recordsHealed} record
+                  <td style={{ padding: "12px 16px", fontFamily: "var(--font-mono)", fontWeight: 700, color: "#059669" }}>
+                    {r.recordsHealed} record
                   </td>
-                  <td style={{ fontSize: "12px", color: "var(--text-muted)" }}>{log.timestamp}</td>
-                  <td>
-                    <Badge variant="emerald" dot>{log.status}</Badge>
+                  <td style={{ padding: "12px 16px", fontSize: "12px", color: "var(--text-secondary)" }}>
+                    {r.timestamp}
+                  </td>
+                  <td style={{ padding: "12px 16px" }}>
+                    <Badge variant="emerald">{r.status}</Badge>
                   </td>
                 </tr>
               ))}

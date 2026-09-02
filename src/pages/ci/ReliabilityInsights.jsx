@@ -9,76 +9,73 @@ import {
   SearchCode,
   Gauge,
   Search,
-  Filter
+  Filter,
+  AlertTriangle,
+  Layers,
+  Zap,
+  CheckCircle2,
+  ShieldCheck
 } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { StatCard } from "../../components/common/StatCard";
 import { Badge } from "../../components/common/Badge";
 import { Button } from "../../components/common/Button";
+import { useCI } from "../../context/CIContext";
 import { useApp } from "../../context/AppContext";
 
 export function ReliabilityInsights() {
   const navigate = useNavigate();
   const { addToast } = useApp();
-
-  const [assets] = useState([
-    {
-      asset: "HTST Pasteurizer — Line 1",
-      mtbf: "88 hrs",
-      mttr: "45 min",
-      failures: 2,
-      availability: 91.2,
-      criticality: "Critical"
-    },
-    {
-      asset: "Rotary Filler — Line 1",
-      mtbf: "102 hrs",
-      mttr: "38 min",
-      failures: 1,
-      availability: 94.6,
-      criticality: "High"
-    },
-    {
-      asset: "CIP Sanitation Skid Bay 2",
-      mtbf: "148 hrs",
-      mttr: "22 min",
-      failures: 1,
-      availability: 97.5,
-      criticality: "Medium"
-    }
-  ]);
+  const {
+    reliabilityRecords = [],
+    fleetMTBF,
+    fleetMTTR,
+    badActorsCount,
+    initiateRCA
+  } = useCI();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [criticalityFilter, setCriticalityFilter] = useState("ALL");
+  const [badActorFilter, setBadActorFilter] = useState("ALL");
 
   const handleExportCSV = () => {
-    const headers = "Asset Name,MTBF (hrs),MTTR (min),Failure Count,Availability %,Criticality\n";
-    const rows = assets
-      .map((a) => `"${a.asset}","${a.mtbf}","${a.mttr}",${a.failures},"${a.availability}%","${a.criticality}"`)
+    const headers = "Asset ID,Asset Name,Line,Plant,MTBF (hrs),MTTR (min),Failure Count,Downtime (min),Criticality,Bad Actor,Trigger Reason\n";
+    const rows = filteredAssets
+      .map((a) => `"${a.assetId}","${a.assetName}","${a.lineName}","${a.plantId}",${a.mtbfHrs},${a.mttrMin},${a.failuresCount},${a.totalDowntimeMin},"${a.criticality}",${a.isBadActor ? "YES" : "NO"},"${a.badActorReason}"`)
       .join("\n");
     const blob = new Blob([headers + rows], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `Fleet_Reliability_MTBF_MTTR_${new Date().toISOString().substring(0, 10)}.csv`;
+    a.download = `Fleet_Reliability_Bad_Actors_${new Date().toISOString().substring(0, 10)}.csv`;
     a.click();
-    addToast("Reliability analytics exported to CSV.", "info");
+    addToast("Reliability & Bad Actors analytics exported to CSV.", "info");
+  };
+
+  const handleInitiateRCA = (asset) => {
+    const newId = initiateRCA(asset.assetId, null, `Investigation — ${asset.assetName} Repeat Failures`);
+    navigate(`/ci/rca/investigations`);
   };
 
   const filteredAssets = useMemo(() => {
-    return assets.filter((a) => {
+    return reliabilityRecords.filter((a) => {
       const matchesCriticality = criticalityFilter === "ALL" || a.criticality === criticalityFilter;
+      const matchesBadActor =
+        badActorFilter === "ALL" ||
+        (badActorFilter === "BAD_ACTOR" && a.isBadActor) ||
+        (badActorFilter === "NORMAL" && !a.isBadActor);
+
       const q = searchQuery.toLowerCase().trim();
       const matchesSearch =
         !q ||
-        a.asset?.toLowerCase().includes(q) ||
-        a.mtbf?.toLowerCase().includes(q) ||
-        a.mttr?.toLowerCase().includes(q) ||
-        a.criticality?.toLowerCase().includes(q);
+        a.assetName?.toLowerCase().includes(q) ||
+        a.assetId?.toLowerCase().includes(q) ||
+        a.lineName?.toLowerCase().includes(q) ||
+        a.failureCategory?.toLowerCase().includes(q);
 
-      return matchesCriticality && matchesSearch;
+      return matchesCriticality && matchesBadActor && matchesSearch;
     });
-  }, [assets, searchQuery, criticalityFilter]);
+  }, [reliabilityRecords, searchQuery, criticalityFilter, badActorFilter]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%", maxWidth: "1600px", margin: "0 auto", minWidth: 0 }}>
@@ -87,9 +84,9 @@ export function ReliabilityInsights() {
         <div style={{ minWidth: "240px", flex: 1 }}>
           <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
             <h1 style={{ fontSize: "clamp(18px, 4vw, 24px)", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.3px", lineHeight: 1.2 }}>
-              Reliability Insights & Asset MTBF
+              Reliability Insights & Bad Actor Identification
             </h1>
-            <Badge variant="cyan">FLEET ANALYTICS</Badge>
+            <Badge variant="cyan">REPEAT FAILURE ANALYSIS</Badge>
           </div>
         </div>
 
@@ -98,15 +95,15 @@ export function ReliabilityInsights() {
             Export Reliability CSV
           </Button>
           <Button variant="secondary" onClick={() => navigate("/ci/loss/downtime")} style={{ fontSize: "12px", padding: "7px 12px" }}>
-            Downtime Loss
+            Loss Waterfall
           </Button>
-          <Button variant="primary" icon={ArrowRight} onClick={() => navigate("/ci/reports")} style={{ fontSize: "12px", padding: "7px 12px" }}>
-            Reports Hub
+          <Button variant="primary" icon={SearchCode} onClick={() => navigate("/ci/rca/investigations")} style={{ fontSize: "12px", padding: "7px 12px" }}>
+            RCA Investigations Hub
           </Button>
         </div>
       </div>
 
-      {/* KPI Tickers - 2x2 on mobile, 4 on desktop */}
+      {/* KPI Tickers */}
       <div
         className="kpi-grid-responsive grid-4"
         style={{
@@ -119,188 +116,204 @@ export function ReliabilityInsights() {
       >
         <StatCard
           title="Fleet MTBF"
-          value="112 hrs"
-          unit="MTBF"
-          trend={{ value: "+17 hrs vs last month", isPositive: true, text: "" }}
-          icon={Activity}
+          value={`${fleetMTBF} hrs`}
+          unit="Mean Time Between Failures"
+          trend={{ value: "+18% vs benchmark", isPositive: true, text: "" }}
+          icon={Gauge}
           colorVariant="emerald"
         />
         <StatCard
           title="Fleet MTTR"
-          value="48 min"
-          unit="MTTR"
-          trend={{ value: "vs. 52 min SLA target", isPositive: true, text: "" }}
+          value={`${fleetMTTR} min`}
+          unit="Mean Time To Repair"
+          trend={{ value: "Target < 30 min", isPositive: true, text: "" }}
           icon={Clock}
           colorVariant="cyan"
         />
         <StatCard
-          title="Fleet Availability"
-          value="93.8%"
-          unit="OEE"
-          trend={{ value: "vs. 95% benchmark", isPositive: false, text: "" }}
-          icon={Gauge}
-          colorVariant="amber"
+          title="Bad Actor Assets"
+          value={`${badActorsCount} Machines`}
+          unit="Threshold: $\ge 2$ Failures"
+          trend={{ value: "RCA Required", isPositive: false, text: "" }}
+          icon={AlertOctagon}
+          colorVariant={badActorsCount > 0 ? "rose" : "emerald"}
         />
         <StatCard
-          title="Repeat Failure Assets"
-          value="2 Assets"
-          unit="Triage"
-          trend={{ value: "Pasteurizer probe & filler nozzle", isPositive: false, text: "" }}
-          icon={AlertOctagon}
-          colorVariant="rose"
+          title="Reliability Rate"
+          value="96.4%"
+          unit="Fleet Availability"
+          trend={{ value: "Continuous Monitoring", isPositive: true, text: "" }}
+          icon={ShieldCheck}
+          colorVariant="emerald"
         />
       </div>
 
-      {/* Top Assets Reliability Table Card */}
-      <Card style={{ padding: "18px", minWidth: 0, width: "100%", boxSizing: "border-box" }}>
-        {/* Table Toolbar */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "12px" }}>
-          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", flex: 1, minWidth: "240px" }}>
-            <div style={{ position: "relative", minWidth: "220px", flex: 1 }}>
-              <Search size={15} color="var(--text-muted)" style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)" }} />
-              <input
-                type="text"
-                placeholder=""
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="form-input"
-                style={{ paddingLeft: "32px", height: "36px", fontSize: "12px", backgroundColor: "#FFFFFF" }}
-              />
-            </div>
-
-            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-              <Filter size={14} color="var(--text-muted)" />
-              <select
-                value={criticalityFilter}
-                onChange={(e) => setCriticalityFilter(e.target.value)}
-                className="form-input"
-                style={{ height: "36px", fontSize: "12px", width: "160px", backgroundColor: "#FFFFFF" }}
-              >
-                <option value="ALL">All Criticalities</option>
-                <option value="Critical">Critical</option>
-                <option value="High">High</option>
-                <option value="Medium">Medium</option>
-              </select>
-            </div>
+      {/* Main Table Card */}
+      <Card
+        style={{
+          backgroundColor: "#FFFFFF",
+          border: "1px solid var(--border-subtle)",
+          borderRadius: "14px",
+          overflow: "hidden"
+        }}
+      >
+        {/* Controls Bar */}
+        <div
+          style={{
+            padding: "16px 20px",
+            borderBottom: "1px solid var(--border-subtle)",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "12px",
+            backgroundColor: "var(--bg-card-subtle)"
+          }}
+        >
+          <div style={{ position: "relative", minWidth: "240px", flex: 1 }}>
+            <Search
+              size={15}
+              style={{
+                position: "absolute",
+                left: "12px",
+                top: "50%",
+                transform: "translateY(-50%)",
+                color: "var(--text-muted)"
+              }}
+            />
+            <input
+              type="text"
+              placeholder="Search asset name, ID, line or failure mode..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="form-input"
+              style={{
+                paddingLeft: "36px",
+                backgroundColor: "#FFFFFF",
+                fontSize: "12px",
+                width: "100%"
+              }}
+            />
           </div>
 
-          <div style={{ fontSize: "12px", color: "var(--text-muted)", fontWeight: 600 }}>
-            Showing <strong>{filteredAssets.length}</strong> of {assets.length} Monitored Assets
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+            <select
+              value={badActorFilter}
+              onChange={(e) => setBadActorFilter(e.target.value)}
+              className="form-input"
+              style={{ fontSize: "12px", padding: "6px 10px", width: "auto", backgroundColor: "#FFFFFF" }}
+            >
+              <option value="ALL">All Asset Health</option>
+              <option value="BAD_ACTOR">Bad Actors Only (Failures $\ge 2$)</option>
+              <option value="NORMAL">Normal Reliability</option>
+            </select>
+
+            <select
+              value={criticalityFilter}
+              onChange={(e) => setCriticalityFilter(e.target.value)}
+              className="form-input"
+              style={{ fontSize: "12px", padding: "6px 10px", width: "auto", backgroundColor: "#FFFFFF" }}
+            >
+              <option value="ALL">All Criticality</option>
+              <option value="Critical">Critical</option>
+              <option value="High">High</option>
+              <option value="Medium">Medium</option>
+            </select>
           </div>
         </div>
 
-        {/* Structured Data Table */}
-        <div className="data-table-container" style={{ overflowX: "auto", border: "1px solid var(--border-subtle)", borderRadius: "10px" }}>
-          <table className="data-table" style={{ width: "100%", borderCollapse: "collapse", minWidth: "850px" }}>
+        {/* Table View */}
+        <div style={{ overflowX: "auto", width: "100%" }}>
+          <table className="data-table" style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
             <thead>
-              <tr style={{ backgroundColor: "var(--bg-card-subtle)", borderBottom: "1.5px solid var(--border-subtle)" }}>
-                <th style={{ padding: "12px 14px", textAlign: "left", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Asset / Machine Name</th>
-                <th style={{ padding: "12px 14px", textAlign: "center", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Criticality</th>
-                <th style={{ padding: "12px 14px", textAlign: "right", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>MTBF (Mean Time)</th>
-                <th style={{ padding: "12px 14px", textAlign: "right", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>MTTR (Avg Repair)</th>
-                <th style={{ padding: "12px 14px", textAlign: "center", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Weekly Outages</th>
-                <th style={{ padding: "12px 14px", textAlign: "left", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase", width: "170px" }}>Availability</th>
-                <th style={{ padding: "12px 14px", textAlign: "right", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Action</th>
+              <tr style={{ borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Asset Details</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Parent Line</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Failure Count (30d)</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>MTBF / MTTR</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Reliability Status</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Bad Actor Trigger</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", textAlign: "right" }}>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {filteredAssets.length > 0 ? (
-                filteredAssets.map((a, idx) => {
-                  const isCritical = a.criticality === "Critical";
-                  const isHigh = a.criticality === "High";
-                  return (
-                    <tr
-                      key={idx}
-                      style={{
-                        borderBottom: "1px solid var(--border-subtle)",
-                        transition: "background-color 0.12s ease"
-                      }}
-                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgba(200, 149, 71, 0.04)")}
-                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
-                    >
-                      <td style={{ padding: "12px 14px" }}>
-                        <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)" }}>
-                          {a.asset}
-                        </div>
-                      </td>
-
-                      <td style={{ padding: "12px 14px", textAlign: "center", whiteSpace: "nowrap" }}>
-                        <Badge variant={isCritical ? "rose" : isHigh ? "amber" : "cyan"}>
-                          {a.criticality}
-                        </Badge>
-                      </td>
-
-                      <td style={{ padding: "12px 14px", textAlign: "right", whiteSpace: "nowrap" }}>
-                        <span style={{ fontSize: "13px", fontWeight: 800, color: "#059669" }}>
-                          {a.mtbf}
-                        </span>
-                      </td>
-
-                      <td style={{ padding: "12px 14px", textAlign: "right", whiteSpace: "nowrap" }}>
-                        <span style={{ fontSize: "13px", fontWeight: 800, color: "#0284C7" }}>
-                          {a.mttr}
-                        </span>
-                      </td>
-
-                      <td style={{ padding: "12px 14px", textAlign: "center", whiteSpace: "nowrap" }}>
-                        <span style={{ fontSize: "13px", fontWeight: 800, color: isCritical ? "#DC2626" : "var(--text-primary)" }}>
-                          {a.failures}
-                        </span>
-                      </td>
-
-                      <td style={{ padding: "12px 14px" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                          <div style={{ flex: 1, height: "6px", backgroundColor: "var(--bg-card-subtle)", borderRadius: "3px", overflow: "hidden", border: "1px solid var(--border-subtle)" }}>
-                            <div
-                              style={{
-                                width: `${a.availability}%`,
-                                height: "100%",
-                                background: a.availability >= 95
-                                  ? "linear-gradient(90deg, #10B981 0%, #059669 100%)"
-                                  : "linear-gradient(90deg, #F59E0B 0%, #D97706 100%)",
-                                borderRadius: "3px"
-                              }}
-                            />
-                          </div>
-                          <span style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", minWidth: "38px" }}>
-                            {a.availability}%
-                          </span>
-                        </div>
-                      </td>
-
-                      <td style={{ padding: "12px 14px", textAlign: "right", whiteSpace: "nowrap" }}>
-                        <button
-                          onClick={() => navigate("/ci/rca/investigations")}
-                          style={{
-                            padding: "5px 12px",
-                            borderRadius: "7px",
-                            fontSize: "11px",
-                            fontWeight: 700,
-                            background: "linear-gradient(180deg, #E2B670 0%, #C89547 100%)",
-                            color: "#261603",
-                            border: "1px solid #E8C182",
-                            boxShadow: "0 2px 5px rgba(178, 126, 51, 0.22)",
-                            cursor: "pointer",
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: "4px",
-                            whiteSpace: "nowrap"
-                          }}
-                        >
-                          <SearchCode size={13} />
-                          <span>Initiate RCA</span>
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })
-              ) : (
-                <tr>
-                  <td colSpan={7} style={{ padding: "32px", textAlign: "center", color: "var(--text-muted)", fontSize: "13px" }}>
-                    No fleet assets match the selected filter.
+              {filteredAssets.map((a) => (
+                <tr key={a.assetId} style={{ borderBottom: "1px solid var(--border-subtle)", backgroundColor: a.isBadActor ? "rgba(239, 68, 68, 0.02)" : "transparent" }}>
+                  <td style={{ padding: "12px 16px" }}>
+                    <div style={{ fontWeight: 800, color: "var(--text-primary)", fontSize: "13px" }}>{a.assetName}</div>
+                    <div style={{ fontSize: "11px", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>{a.assetId} • {a.criticality}</div>
+                  </td>
+                  <td style={{ padding: "12px 16px", fontSize: "12px", color: "var(--text-secondary)" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                      <Layers size={12} color="#C89547" />
+                      <span>{a.lineName}</span>
+                    </div>
+                  </td>
+                  <td style={{ padding: "12px 16px" }}>
+                    <div style={{ fontFamily: "var(--font-mono)", fontWeight: 800, color: a.failuresCount >= 2 ? "#EF4444" : "#059669", fontSize: "13px" }}>
+                      {a.failuresCount} Breakdowns
+                    </div>
+                    <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>{a.totalDowntimeMin} min downtime</div>
+                  </td>
+                  <td style={{ padding: "12px 16px" }}>
+                    <div style={{ fontFamily: "var(--font-mono)", fontWeight: 800, color: "var(--text-primary)", fontSize: "12px" }}>
+                      MTBF: {a.mtbfHrs}h
+                    </div>
+                    <div style={{ fontSize: "11px", color: "#D97706", fontFamily: "var(--font-mono)" }}>
+                      MTTR: {a.mttrMin}m
+                    </div>
+                  </td>
+                  <td style={{ padding: "12px 16px" }}>
+                    <Badge variant={a.isBadActor ? "rose" : "emerald"}>
+                      {a.isBadActor ? "BAD ACTOR" : "HEALTHY"}
+                    </Badge>
+                  </td>
+                  <td style={{ padding: "12px 16px", fontSize: "12px", color: a.isBadActor ? "#DC2626" : "var(--text-secondary)" }}>
+                    {a.badActorReason}
+                  </td>
+                  <td style={{ padding: "12px 16px", textAlign: "right" }}>
+                    {a.isBadActor ? (
+                      <button
+                        onClick={() => handleInitiateRCA(a)}
+                        title="Initiate RCA 2.0 Investigation"
+                        style={{
+                          width: "32px",
+                          height: "32px",
+                          borderRadius: "6px",
+                          backgroundColor: "#EF4444",
+                          color: "#FFFFFF",
+                          border: "none",
+                          cursor: "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center"
+                        }}
+                      >
+                        <SearchCode size={14} />
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => handleInitiateRCA(a)}
+                        title="Log Preventive RCA"
+                        style={{
+                          width: "30px",
+                          height: "30px",
+                          borderRadius: "6px",
+                          backgroundColor: "var(--bg-card-subtle)",
+                          color: "var(--text-primary)",
+                          border: "1px solid var(--border-subtle)",
+                          cursor: "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center"
+                        }}
+                      >
+                        <SearchCode size={13} />
+                      </button>
+                    )}
                   </td>
                 </tr>
-              )}
+              ))}
             </tbody>
           </table>
         </div>

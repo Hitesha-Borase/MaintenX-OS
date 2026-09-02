@@ -14,55 +14,83 @@ import {
   ArrowRight,
   Sparkles,
   TrendingDown,
-  X
+  X,
+  Gauge,
+  Clock,
+  Layers,
+  Zap,
+  AlertTriangle
 } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { StatCard } from "../../components/common/StatCard";
 import { Badge } from "../../components/common/Badge";
 import { Button } from "../../components/common/Button";
+import { useCI } from "../../context/CIContext";
+import { useMasterData } from "../../context/MasterDataContext";
 import { useApp } from "../../context/AppContext";
 
 export function CIDashboard() {
   const navigate = useNavigate();
   const { addToast } = useApp();
+  const { currentPlant } = useMasterData();
+  const {
+    fleetMTBF,
+    fleetMTTR,
+    realizedSavingsTotal,
+    projectedSavingsTotal,
+    badActorsCount,
+    openRcaCount,
+    activeProjectsCount,
+    overdueCapaCount,
+    openCapexCount,
+    pendingBenefitsCount,
+    investigations = [],
+    lossRecords = [],
+    ciProjects = [],
+    standards = [],
+    verifiedSolutions = [],
+    initiateRCA
+  } = useCI();
 
   const [isCreateRcaOpen, setIsCreateRcaOpen] = useState(false);
   const [rcaForm, setRcaForm] = useState({
     title: "",
     area: "Aseptic Bottling Line 1",
     severity: "High",
-    owner: "David Kim (Lead CI)",
     description: ""
   });
 
   const handleCreateRca = (e) => {
     e.preventDefault();
-    if (!rcaForm.title) {
+    if (!rcaForm.title.trim()) {
       addToast("Please provide an investigation title.", "warning");
       return;
     }
 
-    addToast(`RCA Incident "${rcaForm.title}" logged successfully!`, "success");
+    const newId = initiateRCA("AST-002", null, rcaForm.title);
     setIsCreateRcaOpen(false);
     setRcaForm({
       title: "",
       area: "Aseptic Bottling Line 1",
       severity: "High",
-      owner: "David Kim (Lead CI)",
       description: ""
     });
+    navigate(`/ci/rca/investigations`);
   };
 
   const handleExportReport = () => {
     const csvContent =
       "Metric,Value,Status\n" +
-      "Active RCA Investigations,2,Active\n" +
-      "Overdue CAPA Items,3,Overdue\n" +
-      "Weekly OEE Loss,12.4%,Opportunity\n" +
-      "CI Savings YTD,$148200,Verified\n" +
-      "Downtime Loss,6.2%,Critical\n" +
-      "Quality Loss,3.1%,Warning\n" +
-      "Yield Loss,3.1%,Tracked\n";
+      `Fleet MTBF,${fleetMTBF} hrs,Dynamic\n` +
+      `Fleet MTTR,${fleetMTTR} min,Dynamic\n` +
+      `Active RCA Investigations,${openRcaCount},Active\n` +
+      `Overdue CAPA Items,${overdueCapaCount},Overdue\n` +
+      `Bad Actor Assets,${badActorsCount},Repeat Failures\n` +
+      `Active CI Projects,${activeProjectsCount},Active\n` +
+      `Realized YTD Savings,$${realizedSavingsTotal.toLocaleString()},Verified\n` +
+      `Projected Annual Savings,$${projectedSavingsTotal.toLocaleString()},Target\n` +
+      `Open Capex Projects,${openCapexCount},Engineering\n`;
+
     const blob = new Blob([csvContent], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -81,24 +109,24 @@ export function CIDashboard() {
             <h1 style={{ fontSize: "clamp(18px, 4vw, 24px)", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.3px", lineHeight: 1.2 }}>
               CI / Engineering Control Center
             </h1>
-            <Badge variant="cyan">CONTINUOUS IMPROVEMENT</Badge>
+            <Badge variant="cyan">CONTINUOUS IMPROVEMENT & RELIABILITY</Badge>
           </div>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
           <Button variant="secondary" icon={Download} onClick={handleExportReport} style={{ fontSize: "12px", padding: "7px 12px" }}>
-            Export Report
+            Export Executive Report
           </Button>
           <Button variant="secondary" icon={Briefcase} onClick={() => navigate("/ci/projects/actions")} style={{ fontSize: "12px", padding: "7px 12px" }}>
-            Project Actions
+            CAPA Actions
           </Button>
           <Button variant="primary" icon={Plus} onClick={() => setIsCreateRcaOpen(true)} style={{ fontSize: "12px", padding: "7px 12px" }}>
-            + Log RCA Incident
+            Log RCA Incident
           </Button>
         </div>
       </div>
 
-      {/* KPI Stats - 2x2 on mobile, 4 on desktop */}
+      {/* KPI Stats - Dynamic and Decision-Oriented */}
       <div
         className="kpi-grid-responsive grid-4"
         style={{
@@ -110,41 +138,138 @@ export function CIDashboard() {
         }}
       >
         <StatCard
-          title="Open RCA Investigations"
-          value="2 Active"
-          unit="RCA"
-          trend={{ value: "CCP excursion + Cap NCR", isPositive: false, text: "" }}
-          icon={SearchCode}
-          colorVariant="rose"
-          onClick={() => navigate("/ci/rca/investigations")}
+          title="Fleet MTBF"
+          value={`${fleetMTBF} hrs`}
+          unit="Mean Time Between Failures"
+          trend={{ value: "+18% vs Last Quarter", isPositive: true, text: "" }}
+          icon={Gauge}
+          colorVariant="emerald"
+          onClick={() => navigate("/ci/reliability")}
         />
         <StatCard
-          title="CAPA Actions Due"
-          value="3 Overdue"
-          unit="CAPA"
-          trend={{ value: "Corrective actions past target", isPositive: false, text: "" }}
-          icon={CheckCircle}
-          colorVariant="amber"
-          onClick={() => navigate("/ci/capa/owners")}
-        />
-        <StatCard
-          title="Total OEE Loss (Week)"
-          value="12.4%"
-          unit="OEE Gap"
-          trend={{ value: "Downtime + Quality + Speed", isPositive: false, text: "" }}
-          icon={LineChart}
+          title="Fleet MTTR"
+          value={`${fleetMTTR} min`}
+          unit="Mean Time To Repair"
+          trend={{ value: "-12 min benchmark", isPositive: true, text: "" }}
+          icon={Clock}
           colorVariant="cyan"
-          onClick={() => navigate("/ci/loss/downtime")}
+          onClick={() => navigate("/ci/reliability")}
         />
         <StatCard
-          title="CI Savings YTD"
-          value="$148,200"
-          unit="Verified"
-          trend={{ value: "Verified project savings", isPositive: true, text: "" }}
+          title="Realized YTD Savings"
+          value={`$${realizedSavingsTotal.toLocaleString()}`}
+          unit="Verified Benefit"
+          trend={{ value: `$${projectedSavingsTotal.toLocaleString()} Projected`, isPositive: true, text: "" }}
           icon={DollarSign}
           colorVariant="emerald"
           onClick={() => navigate("/ci/projects/savings")}
         />
+        <StatCard
+          title="Open RCA Investigations"
+          value={`${openRcaCount} Active`}
+          unit="RCA 2.0"
+          trend={{ value: `${badActorsCount} Bad Actors Identified`, isPositive: false, text: "" }}
+          icon={SearchCode}
+          colorVariant={openRcaCount > 0 ? "rose" : "emerald"}
+          onClick={() => navigate("/ci/rca/investigations")}
+        />
+      </div>
+
+      {/* Secondary KPI Bar */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+          gap: "12px",
+          width: "100%",
+          minWidth: 0
+        }}
+      >
+        <Card
+          onClick={() => navigate("/ci/reliability")}
+          style={{
+            backgroundColor: "#FFFFFF",
+            border: "1px solid var(--border-subtle)",
+            borderRadius: "12px",
+            padding: "14px 16px",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between"
+          }}
+        >
+          <div>
+            <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Bad Actor Assets</div>
+            <div style={{ fontSize: "18px", fontWeight: 800, color: "#EF4444", marginTop: "2px" }}>{badActorsCount} Critical</div>
+            <div style={{ fontSize: "11px", color: "var(--text-secondary)" }}>Repeat Failures $\ge 2$</div>
+          </div>
+          <AlertTriangle size={24} color="#EF4444" />
+        </Card>
+
+        <Card
+          onClick={() => navigate("/ci/projects/actions")}
+          style={{
+            backgroundColor: "#FFFFFF",
+            border: "1px solid var(--border-subtle)",
+            borderRadius: "12px",
+            padding: "14px 16px",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between"
+          }}
+        >
+          <div>
+            <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Overdue CAPA Items</div>
+            <div style={{ fontSize: "18px", fontWeight: 800, color: overdueCapaCount > 0 ? "#D97706" : "#059669", marginTop: "2px" }}>
+              {overdueCapaCount} Actions
+            </div>
+            <div style={{ fontSize: "11px", color: "var(--text-secondary)" }}>Target Date Passed</div>
+          </div>
+          <CheckCircle size={24} color={overdueCapaCount > 0 ? "#D97706" : "#059669"} />
+        </Card>
+
+        <Card
+          onClick={() => navigate("/ci/projects/benefits")}
+          style={{
+            backgroundColor: "#FFFFFF",
+            border: "1px solid var(--border-subtle)",
+            borderRadius: "12px",
+            padding: "14px 16px",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between"
+          }}
+        >
+          <div>
+            <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Awaiting Verification</div>
+            <div style={{ fontSize: "18px", fontWeight: 800, color: "#0284C7", marginTop: "2px" }}>{pendingBenefitsCount} Projects</div>
+            <div style={{ fontSize: "11px", color: "var(--text-secondary)" }}>Ready for GM Lock</div>
+          </div>
+          <ShieldCheck size={24} color="#0284C7" />
+        </Card>
+
+        <Card
+          onClick={() => navigate("/ci/engineering")}
+          style={{
+            backgroundColor: "#FFFFFF",
+            border: "1px solid var(--border-subtle)",
+            borderRadius: "12px",
+            padding: "14px 16px",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between"
+          }}
+        >
+          <div>
+            <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Engineering Capex</div>
+            <div style={{ fontSize: "18px", fontWeight: 800, color: "#8C5B23", marginTop: "2px" }}>{openCapexCount} Open</div>
+            <div style={{ fontSize: "11px", color: "var(--text-secondary)" }}>Redesign Initiatives</div>
+          </div>
+          <Zap size={24} color="#C89547" />
+        </Card>
       </div>
 
       {/* Operational Modules Responsive Grid */}
@@ -164,49 +289,32 @@ export function CIDashboard() {
               <h3 style={{ fontSize: "12px", fontWeight: 800, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.5px" }}>
                 Active RCA Investigations
               </h3>
-              <Badge variant="rose">2 PENDING</Badge>
+              <Badge variant="rose">{openRcaCount} PENDING</Badge>
             </div>
 
             <div style={{ fontSize: "12px", display: "flex", flexDirection: "column", gap: "8px" }}>
-              <div
-                onClick={() => navigate("/ci/rca/investigations")}
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  padding: "8px 10px",
-                  borderRadius: "8px",
-                  backgroundColor: "var(--bg-card-subtle)",
-                  border: "1px solid var(--border-subtle)",
-                  cursor: "pointer"
-                }}
-              >
-                <div>
-                  <div style={{ fontWeight: 700, color: "var(--text-primary)" }}>INV-802 (CCP Excursion)</div>
-                  <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>Pasteurizer Temp Drop</div>
+              {investigations.slice(0, 2).map((inv) => (
+                <div
+                  key={inv.id}
+                  onClick={() => navigate("/ci/rca/investigations")}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    padding: "8px 10px",
+                    borderRadius: "8px",
+                    backgroundColor: "var(--bg-card-subtle)",
+                    border: "1px solid var(--border-subtle)",
+                    cursor: "pointer"
+                  }}
+                >
+                  <div style={{ minWidth: 0, flex: 1, paddingRight: "8px" }}>
+                    <div style={{ fontWeight: 700, color: "var(--text-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{inv.id} — {inv.title}</div>
+                    <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>{inv.assetName} • Phase: {inv.currentPhase}</div>
+                  </div>
+                  <Badge variant={inv.severity === "Critical" ? "rose" : "amber"}>{inv.status.toUpperCase()}</Badge>
                 </div>
-                <Badge variant="rose">ACTIVE</Badge>
-              </div>
-
-              <div
-                onClick={() => navigate("/ci/rca/evidence")}
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  padding: "8px 10px",
-                  borderRadius: "8px",
-                  backgroundColor: "var(--bg-card-subtle)",
-                  border: "1px solid var(--border-subtle)",
-                  cursor: "pointer"
-                }}
-              >
-                <div>
-                  <div style={{ fontWeight: 700, color: "var(--text-primary)" }}>INV-803 (Cap NCR)</div>
-                  <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>Capper Torque Fault</div>
-                </div>
-                <Badge variant="amber">EVIDENCE PHASE</Badge>
-              </div>
+              ))}
             </div>
           </div>
 
@@ -229,7 +337,7 @@ export function CIDashboard() {
               gap: "6px"
             }}
           >
-            <span>View All RCAs</span>
+            <span>Open RCA 2.0 Hub</span>
             <ArrowRight size={14} />
           </button>
         </Card>
@@ -239,24 +347,20 @@ export function CIDashboard() {
           <div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
               <h3 style={{ fontSize: "12px", fontWeight: 800, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                Loss Analysis Summary
+                Operational Loss Waterfall
               </h3>
-              <Badge variant="amber">12.4% GAP</Badge>
+              <Badge variant="amber">{lossRecords.length} IMPACT ZONES</Badge>
             </div>
 
             <div style={{ fontSize: "12px", display: "flex", flexDirection: "column", gap: "8px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 8px", backgroundColor: "var(--bg-card-subtle)", borderRadius: "6px" }}>
-                <span style={{ color: "var(--text-secondary)" }}>Downtime Loss:</span>
-                <strong style={{ color: "#DC2626", fontFamily: "var(--font-mono)", fontSize: "13px" }}>6.2%</strong>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 8px", backgroundColor: "var(--bg-card-subtle)", borderRadius: "6px" }}>
-                <span style={{ color: "var(--text-secondary)" }}>Quality Loss:</span>
-                <strong style={{ color: "#D97706", fontFamily: "var(--font-mono)", fontSize: "13px" }}>3.1%</strong>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 8px", backgroundColor: "var(--bg-card-subtle)", borderRadius: "6px" }}>
-                <span style={{ color: "var(--text-secondary)" }}>Yield Loss:</span>
-                <strong style={{ color: "#0284C7", fontFamily: "var(--font-mono)", fontSize: "13px" }}>3.1%</strong>
-              </div>
+              {lossRecords.map((loss) => (
+                <div key={loss.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 8px", backgroundColor: "var(--bg-card-subtle)", borderRadius: "6px" }}>
+                  <span style={{ color: "var(--text-secondary)", fontSize: "12px" }}>{loss.category}:</span>
+                  <strong style={{ color: loss.category.includes("Downtime") ? "#DC2626" : loss.category.includes("Quality") ? "#D97706" : "#0284C7", fontFamily: "var(--font-mono)", fontSize: "13px" }}>
+                    ${loss.financialImpactUSD?.toLocaleString()} ({loss.hoursLost} hrs)
+                  </strong>
+                </div>
+              ))}
             </div>
           </div>
 
@@ -290,21 +394,21 @@ export function CIDashboard() {
               <h3 style={{ fontSize: "12px", fontWeight: 800, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.5px" }}>
                 CI Projects & Savings
               </h3>
-              <Badge variant="emerald">ON TRACK</Badge>
+              <Badge variant="emerald">{activeProjectsCount} ACTIVE</Badge>
             </div>
 
             <div style={{ fontSize: "12px", display: "flex", flexDirection: "column", gap: "8px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 8px", backgroundColor: "var(--bg-card-subtle)", borderRadius: "6px" }}>
-                <span style={{ color: "var(--text-secondary)" }}>Active Kaizen Projects:</span>
-                <strong style={{ color: "var(--text-primary)", fontSize: "13px" }}>4 Active</strong>
+                <span style={{ color: "var(--text-secondary)" }}>Realized YTD Benefit:</span>
+                <strong style={{ color: "#059669", fontFamily: "var(--font-mono)", fontSize: "13px" }}>${realizedSavingsTotal.toLocaleString()}</strong>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 8px", backgroundColor: "var(--bg-card-subtle)", borderRadius: "6px" }}>
-                <span style={{ color: "var(--text-secondary)" }}>Verified Annualized Savings:</span>
-                <strong style={{ color: "#059669", fontFamily: "var(--font-mono)", fontSize: "13px" }}>$148,200</strong>
+                <span style={{ color: "var(--text-secondary)" }}>Projected Annual Target:</span>
+                <strong style={{ color: "var(--text-primary)", fontFamily: "var(--font-mono)", fontSize: "13px" }}>${projectedSavingsTotal.toLocaleString()}</strong>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 8px", backgroundColor: "var(--bg-card-subtle)", borderRadius: "6px" }}>
-                <span style={{ color: "var(--text-secondary)" }}>Implemented Standards:</span>
-                <strong style={{ color: "#0284C7", fontSize: "13px" }}>12 SOPs</strong>
+                <span style={{ color: "var(--text-secondary)" }}>Controlled Standards:</span>
+                <strong style={{ color: "#0284C7", fontSize: "13px" }}>{standards.length} SOPs</strong>
               </div>
             </div>
           </div>
@@ -328,7 +432,7 @@ export function CIDashboard() {
               gap: "6px"
             }}
           >
-            <span>View CI Projects</span>
+            <span>View Kaizen Projects</span>
             <ArrowRight size={14} />
           </button>
         </Card>
@@ -338,7 +442,7 @@ export function CIDashboard() {
           <div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
               <h3 style={{ fontSize: "12px", fontWeight: 800, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                Standards & Governance
+                Standards & Verified Solutions
               </h3>
               <Badge variant="cyan">ISO 22000</Badge>
             </div>
@@ -346,15 +450,15 @@ export function CIDashboard() {
             <div style={{ fontSize: "12px", display: "flex", flexDirection: "column", gap: "8px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 8px", backgroundColor: "var(--bg-card-subtle)", borderRadius: "6px" }}>
                 <span style={{ color: "var(--text-secondary)" }}>Verified Solutions:</span>
-                <strong style={{ color: "var(--text-primary)", fontSize: "13px" }}>8 Verified</strong>
+                <strong style={{ color: "var(--text-primary)", fontSize: "13px" }}>{verifiedSolutions.length} Published</strong>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 8px", backgroundColor: "var(--bg-card-subtle)", borderRadius: "6px" }}>
                 <span style={{ color: "var(--text-secondary)" }}>Audited Standards:</span>
                 <strong style={{ color: "#059669", fontSize: "13px" }}>100% Compliant</strong>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 8px", backgroundColor: "var(--bg-card-subtle)", borderRadius: "6px" }}>
-                <span style={{ color: "var(--text-secondary)" }}>Reliability Insights:</span>
-                <strong style={{ color: "#8C5B23", fontSize: "13px" }}>MTBF +18%</strong>
+                <span style={{ color: "var(--text-secondary)" }}>Engineering Capex:</span>
+                <strong style={{ color: "#8C5B23", fontSize: "13px" }}>{openCapexCount} Active</strong>
               </div>
             </div>
           </div>
@@ -377,7 +481,7 @@ export function CIDashboard() {
               gap: "6px"
             }}
           >
-            <span>Engineering Standards</span>
+            <span>Controlled Standards</span>
             <ArrowRight size={14} />
           </button>
         </Card>
@@ -389,8 +493,8 @@ export function CIDashboard() {
           <div className="modal-content" style={{ maxWidth: "540px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <SearchCode size={18} color="#B27E33" />
-                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)" }}>
+                <SearchCode size={18} color="#C89547" />
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
                   Log New Root Cause Investigation
                 </h2>
               </div>
@@ -422,10 +526,9 @@ export function CIDashboard() {
                     onChange={(e) => setRcaForm({ ...rcaForm, area: e.target.value })}
                     style={{ backgroundColor: "#FFFFFF" }}
                   >
-                    <option value="Aseptic Bottling Line 1">Aseptic Bottling Line 1</option>
-                    <option value="Thermal Processing Bay 2">Thermal Processing Bay 2</option>
-                    <option value="CIP Sanitation Loop">CIP Sanitation Loop</option>
-                    <option value="Packaging & Case Packing">Packaging & Case Packing</option>
+                    <option value="Aseptic Bottling Line 1">Line 1 — Aseptic Bottling</option>
+                    <option value="Line 2 — Formulation & Pasteurizer">Line 2 — Formulation & Pasteurizer</option>
+                    <option value="Line 3 — Canning Line">Line 3 — Canning Line</option>
                   </select>
                 </div>
 
@@ -442,17 +545,6 @@ export function CIDashboard() {
                     <option value="Medium">Medium (Speed Loss)</option>
                   </select>
                 </div>
-              </div>
-
-              <div>
-                <label className="form-label">Lead Investigator</label>
-                <input
-                  type="text"
-                  value={rcaForm.owner}
-                  onChange={(e) => setRcaForm({ ...rcaForm, owner: e.target.value })}
-                  className="form-input"
-                  style={{ backgroundColor: "#FFFFFF" }}
-                />
               </div>
 
               <div>

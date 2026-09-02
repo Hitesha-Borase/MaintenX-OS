@@ -72,7 +72,7 @@ export function RolesPage() {
             Permissions Matrix
           </Button>
           <Button variant="primary" icon={Plus} onClick={() => setIsModalOpen(true)} style={{ fontSize: "12px", padding: "7px 12px" }}>
-            + Create Custom Role
+            Create Custom Role
           </Button>
         </div>
       </div>

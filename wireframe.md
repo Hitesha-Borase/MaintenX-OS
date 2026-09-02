@@ -5,7 +5,7 @@
 > **Target Audience:** Engineers, Product Managers, AI Assistants (ChatGPT/Claude), and System Architects.  
 > **Platform Summary:** MaintenX-OS is an enterprise-grade Smart Manufacturing Operating System integrating **CMMS (Computerized Maintenance Management System)**, **EAM (Enterprise Asset Management)**, and **Continuous Improvement (CI / Kaizen / RCA-CAPA OS)** into a unified real-time operational cloud.
 
----
+--- 
 # 📑 TABLE OF CONTENTS
 1. [Core Platform Architecture & Tech Stack](#1-core-platform-architecture--tech-stack)
 2. [The 4 Primary Dashboards & User Roles](#2-the-4-primary-dashboards--user-roles)

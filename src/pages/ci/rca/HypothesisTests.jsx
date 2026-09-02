@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Zap,
@@ -14,145 +14,93 @@ import {
   RotateCcw,
   Sparkles,
   FlaskConical,
-  XCircle
+  XCircle,
+  Search,
+  Filter,
+  CheckCircle,
+  X
 } from "lucide-react";
 import { Card } from "../../../components/common/Card";
 import { Button } from "../../../components/common/Button";
 import { Badge } from "../../../components/common/Badge";
 import { StatCard } from "../../../components/common/StatCard";
+import { useCI } from "../../../context/CIContext";
 import { useApp } from "../../../context/AppContext";
 
 export function HypothesisTests() {
   const navigate = useNavigate();
   const { addToast } = useApp();
+  const { hypotheses = [], investigations = [], validateRootCause } = useCI();
 
-  const [hypotheses, setHypotheses] = useState([
-    {
-      id: 1,
-      inv: "INV-802",
-      category: "Sensor Drift & Instrumentation",
-      statement: "Temperature sensor RTD PT100 probe drift caused a false temperature dip reading.",
-      testMethod: "Calibrated probe against Fluke 9142 dry-well reference calibrator across 80°C - 95°C range.",
-      result: "DISPROVEN: RTD reading accurate to ±0.04°C; true physical product thermal drop confirmed.",
-      tested: true,
-      verdict: "Disproven"
-    },
-    {
-      id: 2,
-      inv: "INV-802",
-      category: "Hydraulic & Pressure Loss",
-      statement: "Pneumatic modulating steam control valve diaphragm micro-leak caused sudden steam pressure collapse.",
-      testMethod: "Acoustic ultrasonic leak audit and loop pressure hold test on Spirax Sarco steam manifold.",
-      result: "CONFIRMED: Diaphragm perforated at 4.2 bar; steam mass flow dropped by 28% during event.",
-      tested: true,
-      verdict: "Confirmed"
-    },
-    {
-      id: 3,
-      inv: "INV-803",
-      category: "Tooling & Mold Wear",
-      statement: "Capping chuck spindle #4 torque clutch slipping under dynamic high-speed rotational load.",
-      testMethod: "Rotational dynamic torque verification using wireless telemetry cap transducer at 600 BPM.",
-      result: "Pending physical trial on next production changeover window.",
-      tested: false,
-      verdict: "Pending"
-    }
-  ]);
+  const [selectedRcaFilter, setSelectedRcaFilter] = useState("ALL");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
-  const [selectedInvFilter, setSelectedInvFilter] = useState("ALL");
-  const [selectedInv, setSelectedInv] = useState("INV-802");
-  const [category, setCategory] = useState("Hydraulic & Pressure Loss");
-  const [statement, setStatement] = useState("");
-  const [testMethod, setTestMethod] = useState("");
-
-  const filteredHypotheses = hypotheses.filter((h) => {
-    return selectedInvFilter === "ALL" || h.inv === selectedInvFilter;
+  const [newHyp, setNewHyp] = useState({
+    rcaId: investigations[0]?.id || "RCA-2026-001",
+    statement: "",
+    testMethod: ""
   });
 
-  const handleTest = (id, verdict) => {
-    setHypotheses((prev) =>
-      prev.map((h) =>
-        h.id === id
-          ? {
-              ...h,
-              tested: true,
-              verdict,
-              result: verdict === "Confirmed" ? "CONFIRMED: Physical test validated causal link." : "DISPROVEN: Hypothesis ruled out by empirical test data."
-            }
-          : h
-      )
-    );
-    addToast(`Hypothesis marked as "${verdict}". 8D cause verification updated!`, "success");
-  };
-
-  const handleAdd = (e) => {
-    e.preventDefault();
-    if (!statement.trim()) {
-      addToast("Please provide a hypothesis statement.", "warning");
-      return;
-    }
-
-    const newItem = {
-      id: Date.now(),
-      inv: selectedInv,
-      category,
-      statement,
-      testMethod: testMethod.trim() || "Empirical bench testing and SCADA telemetry validation.",
-      result: "Pending physical testing by CI engineering team.",
-      tested: false,
-      verdict: "Pending"
-    };
-
-    setHypotheses((prev) => [newItem, ...prev]);
-    addToast(`Hypothesis logged for ${selectedInv}!`, "success");
-    setStatement("");
-    setTestMethod("");
+  const handleValidate = (rcaId, hypId, isConfirmed) => {
+    validateRootCause(rcaId, hypId, isConfirmed);
   };
 
   const handleExportCSV = () => {
-    const headers = "ID,Investigation,Category,Hypothesis Statement,Test Method,Verdict,Tested\n";
+    const headers = "Hypothesis ID,RCA ID,Statement,Test Method,Evidence Result,Validation Status,Validated By,Validated At\n";
     const rows = filteredHypotheses
-      .map((h) => `"${h.id}","${h.inv}","${h.category}","${h.statement}","${h.testMethod}","${h.verdict}",${h.tested}`)
+      .map((h) => `"${h.id}","${h.rcaId}","${h.statement}","${h.testMethod}","${h.evidenceResult || "-"}","${h.validationStatus}","${h.validatedBy || "-"}","${h.validatedAt || "-"}"`)
       .join("\n");
     const blob = new Blob([headers + rows], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `RCA_Hypotheses_${new Date().toISOString().substring(0, 10)}.csv`;
+    a.download = `Root_Cause_Hypotheses_${new Date().toISOString().substring(0, 10)}.csv`;
     a.click();
-    addToast("Hypotheses exported to CSV.", "info");
+    addToast("Hypotheses test results exported to CSV.", "info");
   };
 
-  const testedCount = hypotheses.filter((h) => h.tested).length;
-  const pendingCount = hypotheses.filter((h) => !h.tested).length;
+  const filteredHypotheses = useMemo(() => {
+    return hypotheses.filter((h) => {
+      const matchesRca = selectedRcaFilter === "ALL" || h.rcaId === selectedRcaFilter;
+      const q = searchQuery.toLowerCase().trim();
+      const matchesSearch =
+        !q ||
+        h.statement.toLowerCase().includes(q) ||
+        h.testMethod.toLowerCase().includes(q) ||
+        h.rcaId.toLowerCase().includes(q);
+
+      return matchesRca && matchesSearch;
+    });
+  }, [hypotheses, selectedRcaFilter, searchQuery]);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%", maxWidth: "1200px", margin: "0 auto", minWidth: 0 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%", maxWidth: "1600px", margin: "0 auto", minWidth: 0 }}>
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px", width: "100%" }}>
         <div style={{ minWidth: "240px", flex: 1 }}>
           <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
             <h1 style={{ fontSize: "clamp(18px, 4vw, 24px)", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.3px", lineHeight: 1.2 }}>
-              Hypothesis & Physical Tests
+              RCA 2.0 — Hypothesis Testing & Cause Validation
             </h1>
-            <Badge variant="cyan">{hypotheses.length} LOGGED HYPOTHESES</Badge>
+            <Badge variant="cyan">CAUSE VALIDATION ENGINE</Badge>
           </div>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
           <Button variant="secondary" icon={Download} onClick={handleExportCSV} style={{ fontSize: "12px", padding: "7px 12px" }}>
-            Export CSV
+            Export Test Results
           </Button>
           <Button variant="secondary" onClick={() => navigate("/ci/rca/evidence")} style={{ fontSize: "12px", padding: "7px 12px" }}>
-            Evidence Locker
+            View Evidence
           </Button>
-          <Button variant="primary" icon={ArrowRight} onClick={() => navigate("/ci/rca/occurrence")} style={{ fontSize: "12px", padding: "7px 12px" }}>
-            Occurrence Cause
+          <Button variant="primary" onClick={() => navigate("/ci/capa/corrective")} style={{ fontSize: "12px", padding: "7px 12px" }}>
+            Proceed to CAPA Actions
           </Button>
         </div>
       </div>
 
-      {/* KPI Tickers - 2x2 on mobile, 4 on desktop */}
+      {/* KPI Tickers */}
       <div
         className="kpi-grid-responsive grid-4"
         style={{
@@ -164,281 +112,176 @@ export function HypothesisTests() {
         }}
       >
         <StatCard
-          title="Total Hypotheses"
+          title="Tested Hypotheses"
           value={hypotheses.length.toString()}
           unit="Formulated"
-          trend={{ value: "Root cause decision tree", isPositive: true, text: "" }}
           icon={FlaskConical}
           colorVariant="cyan"
-          onClick={() => setSelectedInvFilter("ALL")}
         />
         <StatCard
-          title="Physically Tested"
-          value={testedCount.toString()}
-          unit="Validated"
-          trend={{ value: "Lab & trial data completed", isPositive: true, text: "" }}
+          title="Validated Root Causes"
+          value={hypotheses.filter((h) => h.validationStatus === "Confirmed Root Cause").length.toString()}
+          unit="Confirmed"
           icon={CheckCircle2}
           colorVariant="emerald"
         />
         <StatCard
-          title="Pending Trials"
-          value={pendingCount.toString()}
-          unit="In Queue"
-          trend={{ value: "Requires production test", isPositive: pendingCount === 0, text: "" }}
-          icon={AlertTriangle}
-          colorVariant={pendingCount > 0 ? "amber" : "emerald"}
+          title="Refuted Causes"
+          value={hypotheses.filter((h) => h.validationStatus === "Refuted").length.toString()}
+          unit="Ruled Out"
+          icon={XCircle}
+          colorVariant="rose"
         />
         <StatCard
-          title="Root Cause Confidence"
-          value="98.2%"
-          unit="Empirical"
-          trend={{ value: "Physical mechanism verified", isPositive: true, text: "" }}
-          icon={Sparkles}
+          title="Evidence Strength"
+          value="Empirical"
+          unit="SCADA + Physical"
+          icon={Zap}
           colorVariant="emerald"
         />
       </div>
 
-      {/* Case Filter Row */}
-      <Card style={{ padding: "14px", minWidth: 0, width: "100%", boxSizing: "border-box" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-            <span style={{ fontSize: "11px", fontWeight: 800, color: "var(--text-muted)", textTransform: "uppercase" }}>Filter by Investigation:</span>
-            {["ALL", "INV-802", "INV-803"].map((f) => (
-              <button
-                key={f}
-                onClick={() => setSelectedInvFilter(f)}
-                style={{
-                  padding: "4px 10px",
-                  borderRadius: "6px",
-                  fontSize: "11px",
-                  fontWeight: selectedInvFilter === f ? 800 : 600,
-                  backgroundColor: selectedInvFilter === f ? "linear-gradient(180deg, #E2B670 0%, #C89547 100%)" : "var(--bg-card-subtle)",
-                  color: selectedInvFilter === f ? "#261603" : "var(--text-secondary)",
-                  border: selectedInvFilter === f ? "1px solid #E8C182" : "1px solid var(--border-subtle)",
-                  background: selectedInvFilter === f ? "linear-gradient(180deg, #E2B670 0%, #C89547 100%)" : "var(--bg-card-subtle)",
-                  cursor: "pointer"
-                }}
-              >
-                {f}
-              </button>
-            ))}
-          </div>
-
-          <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>
-            Showing {filteredHypotheses.length} of {hypotheses.length} test records
-          </div>
-        </div>
-      </Card>
-
-      {/* Hypotheses List */}
-      <div style={{ display: "flex", flexDirection: "column", gap: "12px", width: "100%" }}>
-        {filteredHypotheses.map((h) => {
-          const isConfirmed = h.verdict === "Confirmed";
-          const isDisproven = h.verdict === "Disproven";
-          const borderColor = isConfirmed ? "#059669" : isDisproven ? "#DC2626" : "#D97706";
-
-          return (
-            <Card
-              key={h.id}
+      {/* Main Table Card */}
+      <Card
+        style={{
+          backgroundColor: "#FFFFFF",
+          border: "1px solid var(--border-subtle)",
+          borderRadius: "14px",
+          overflow: "hidden"
+        }}
+      >
+        {/* Controls Bar */}
+        <div
+          style={{
+            padding: "16px 20px",
+            borderBottom: "1px solid var(--border-subtle)",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "12px",
+            backgroundColor: "var(--bg-card-subtle)"
+          }}
+        >
+          <div style={{ position: "relative", minWidth: "240px", flex: 1 }}>
+            <Search
+              size={15}
               style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "12px",
-                padding: "16px",
-                borderLeft: `4px solid ${borderColor}`,
-                boxSizing: "border-box",
-                minWidth: 0,
+                position: "absolute",
+                left: "12px",
+                top: "50%",
+                transform: "translateY(-50%)",
+                color: "var(--text-muted)"
+              }}
+            />
+            <input
+              type="text"
+              placeholder="Search hypothesis statement, test method or RCA ID..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="form-input"
+              style={{
+                paddingLeft: "36px",
+                backgroundColor: "#FFFFFF",
+                fontSize: "12px",
                 width: "100%"
               }}
+            />
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+            <select
+              value={selectedRcaFilter}
+              onChange={(e) => setSelectedRcaFilter(e.target.value)}
+              className="form-input"
+              style={{ fontSize: "12px", padding: "6px 10px", width: "auto", backgroundColor: "#FFFFFF" }}
             >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "8px" }}>
-                <div style={{ minWidth: "220px", flex: 1 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                    <Zap size={16} color={borderColor} />
-                    <span style={{ fontSize: "12px", fontWeight: 800, color: "var(--text-primary)", fontFamily: "var(--font-mono)" }}>
-                      {h.inv}
-                    </span>
-                    <Badge variant="cyan">{h.category}</Badge>
-                    <Badge variant={isConfirmed ? "emerald" : isDisproven ? "rose" : "amber"}>
-                      {h.verdict}
-                    </Badge>
-                  </div>
+              <option value="ALL">All Active RCAs</option>
+              {investigations.map((inv) => (
+                <option key={inv.id} value={inv.id}>{inv.id} — {inv.title.substring(0, 32)}...</option>
+              ))}
+            </select>
+          </div>
+        </div>
 
-                  <h3 style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)", marginTop: "6px", lineHeight: 1.4 }}>
+        {/* Table View */}
+        <div style={{ overflowX: "auto", width: "100%" }}>
+          <table className="data-table" style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
+            <thead>
+              <tr style={{ borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Linked RCA</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Hypothesis Statement</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Test Method / Protocol</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Evidence & Result</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Validation Verdict</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", textAlign: "right" }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredHypotheses.map((h) => (
+                <tr key={h.id} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+                  <td style={{ padding: "12px 16px", fontFamily: "var(--font-mono)", fontWeight: 800, color: "#8C5B23" }}>
+                    {h.rcaId}
+                  </td>
+                  <td style={{ padding: "12px 16px", fontWeight: 700, color: "var(--text-primary)", fontSize: "13px" }}>
                     {h.statement}
-                  </h3>
-                </div>
-
-                <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
-                  {!h.tested ? (
-                    <>
+                  </td>
+                  <td style={{ padding: "12px 16px", fontSize: "12px", color: "var(--text-secondary)" }}>
+                    {h.testMethod}
+                  </td>
+                  <td style={{ padding: "12px 16px", fontSize: "12px", color: h.validationStatus === "Confirmed Root Cause" ? "#059669" : "var(--text-secondary)", fontWeight: 600 }}>
+                    {h.evidenceResult || "Pending trial execution"}
+                  </td>
+                  <td style={{ padding: "12px 16px" }}>
+                    <Badge variant={h.validationStatus === "Confirmed Root Cause" ? "emerald" : h.validationStatus === "Refuted" ? "rose" : "amber"}>
+                      {h.validationStatus}
+                    </Badge>
+                  </td>
+                  <td style={{ padding: "12px 16px", textAlign: "right" }}>
+                    <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
                       <button
-                        onClick={() => handleTest(h.id, "Confirmed")}
+                        onClick={() => handleValidate(h.rcaId, h.id, true)}
+                        title="Confirm & Validate Root Cause"
                         style={{
-                          padding: "5px 10px",
+                          width: "30px",
+                          height: "30px",
                           borderRadius: "6px",
-                          fontSize: "11px",
-                          fontWeight: 700,
-                          backgroundColor: "#059669",
-                          color: "#FFFFFF",
-                          border: "none",
-                          cursor: "pointer",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: "4px"
-                        }}
-                      >
-                        <Check size={13} /> Confirm Cause
-                      </button>
-                      <button
-                        onClick={() => handleTest(h.id, "Disproven")}
-                        style={{
-                          padding: "5px 10px",
-                          borderRadius: "6px",
-                          fontSize: "11px",
-                          fontWeight: 700,
                           backgroundColor: "var(--bg-card-subtle)",
-                          color: "#DC2626",
+                          color: "#059669",
                           border: "1px solid var(--border-subtle)",
                           cursor: "pointer",
                           display: "inline-flex",
                           alignItems: "center",
-                          gap: "4px"
+                          justifyContent: "center"
                         }}
                       >
-                        <XCircle size={13} /> Disprove
+                        <CheckCircle size={14} />
                       </button>
-                    </>
-                  ) : (
-                    <button
-                      onClick={() => navigate("/ci/rca/occurrence")}
-                      style={{
-                        padding: "5px 10px",
-                        borderRadius: "6px",
-                        fontSize: "11px",
-                        fontWeight: 700,
-                        background: "linear-gradient(180deg, #E2B670 0%, #C89547 100%)",
-                        color: "#261603",
-                        border: "1px solid #E8C182",
-                        boxShadow: "0 2px 6px rgba(178, 126, 51, 0.25)",
-                        cursor: "pointer",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "4px"
-                      }}
-                    >
-                      <span>Occurrence Cause</span>
-                      <ArrowRight size={13} />
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "10px", fontSize: "12px", backgroundColor: "var(--bg-card-subtle)", padding: "12px", borderRadius: "8px", border: "1px solid var(--border-subtle)" }}>
-                <div>
-                  <span style={{ color: "var(--text-muted)", fontSize: "10px", fontWeight: 800, textTransform: "uppercase" }}>Test Protocol & Setup:</span>
-                  <div style={{ color: "var(--text-primary)", marginTop: "2px", lineHeight: 1.4 }}>{h.testMethod}</div>
-                </div>
-
-                <div>
-                  <span style={{ color: "var(--text-muted)", fontSize: "10px", fontWeight: 800, textTransform: "uppercase" }}>Empirical Test Findings:</span>
-                  <div style={{ color: isConfirmed ? "#059669" : isDisproven ? "#DC2626" : "var(--text-secondary)", fontWeight: 600, marginTop: "2px", lineHeight: 1.4 }}>
-                    {h.result}
-                  </div>
-                </div>
-              </div>
-            </Card>
-          );
-        })}
-      </div>
-
-      {/* Add Hypothesis Form Card */}
-      <Card style={{ padding: "18px", minWidth: 0, width: "100%", boxSizing: "border-box" }}>
-        <div style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)", marginBottom: "12px" }}>
-          Formulate Potential Causal Hypothesis for Physical Testing
+                      <button
+                        onClick={() => handleValidate(h.rcaId, h.id, false)}
+                        title="Refute Hypothesis"
+                        style={{
+                          width: "30px",
+                          height: "30px",
+                          borderRadius: "6px",
+                          backgroundColor: "var(--bg-card-subtle)",
+                          color: "#EF4444",
+                          border: "1px solid var(--border-subtle)",
+                          cursor: "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center"
+                        }}
+                      >
+                        <XCircle size={14} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-
-        <form onSubmit={handleAdd} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "12px" }}>
-            <div>
-              <label className="form-label">Target RCA Investigation *</label>
-              <select
-                value={selectedInv}
-                onChange={(e) => setSelectedInv(e.target.value)}
-                className="form-select"
-                style={{ backgroundColor: "#FFFFFF", height: "38px" }}
-              >
-                <option value="INV-802">INV-802: HTST Pasteurizer CCP Temp Excursion</option>
-                <option value="INV-803">INV-803: Orange Cap Thread Dimension Out-of-Spec</option>
-                <option value="INV-804">INV-804: CIP Pump Seal Leakage Incident</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="form-label">Failure Mechanism Category *</label>
-              <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                className="form-select"
-                style={{ backgroundColor: "#FFFFFF", height: "38px" }}
-              >
-                <option value="Hydraulic & Pressure Loss">Hydraulic & Pressure Loss</option>
-                <option value="Sensor Drift & Instrumentation">Sensor Drift & Instrumentation</option>
-                <option value="Mechanical Fatigue & Alignment">Mechanical Fatigue & Alignment</option>
-                <option value="Thermal / Heating Loop">Thermal / Heating Loop</option>
-                <option value="Tooling & Mold Wear">Tooling & Mold Wear</option>
-                <option value="Operator / Recipe Parameters">Operator / Recipe Parameters</option>
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label className="form-label">Hypothesis Statement *</label>
-            <input
-              type="text"
-              placeholder="e.g. Steam modulating valve actuator diaphragm perished, causing backpressure loss under 95°C CIP..."
-              value={statement}
-              onChange={(e) => setStatement(e.target.value)}
-              className="form-input"
-              style={{ backgroundColor: "#FFFFFF", height: "38px" }}
-              required
-            />
-          </div>
-
-          <div>
-            <label className="form-label">Empirical Test Protocol / Simulation Plan</label>
-            <textarea
-              rows={2}
-              placeholder="Describe physical test, pressure hold, electrical measurement, or bench simulation to prove/disprove..."
-              value={testMethod}
-              onChange={(e) => setTestMethod(e.target.value)}
-              className="form-textarea"
-              style={{ backgroundColor: "#FFFFFF" }}
-            />
-          </div>
-
-          <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "4px" }}>
-            <button
-              type="submit"
-              style={{
-                padding: "8px 18px",
-                borderRadius: "8px",
-                fontSize: "12px",
-                fontWeight: 700,
-                background: "linear-gradient(180deg, #E2B670 0%, #C89547 100%)",
-                color: "#261603",
-                border: "1px solid #E8C182",
-                boxShadow: "0 2px 6px rgba(178, 126, 51, 0.25)",
-                cursor: "pointer",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px"
-              }}
-            >
-              <Zap size={14} /> Log Hypothesis for Testing
-            </button>
-          </div>
-        </form>
       </Card>
     </div>
   );
