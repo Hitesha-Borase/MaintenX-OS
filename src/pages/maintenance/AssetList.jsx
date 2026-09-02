@@ -21,11 +21,13 @@ import { Button } from "../../components/common/Button";
 import { DataTable } from "../../components/tables/DataTable";
 import { Modal } from "../../components/common/Modal";
 import { useCMMS } from "../../context/CMMSContext";
+import { useMasterData } from "../../context/MasterDataContext";
 import { useApp } from "../../context/AppContext";
 import { useNavigate } from "react-router-dom";
 
 export function AssetList() {
-  const { assets, updateAssetStatus } = useCMMS();
+  const { assets, updateAssetStatus, addAsset } = useCMMS();
+  const { logAudit } = useMasterData();
   const { openQrModal, addToast, setIsQuickActionOpen } = useApp();
   const navigate = useNavigate();
 
@@ -40,13 +42,63 @@ export function AssetList() {
   const [newPlant, setNewPlant] = useState("Plant 1 - North Facility");
   const [newLine, setNewLine] = useState("Line 1 (Aseptic Bottling)");
   const [newLocation, setNewLocation] = useState("");
+  const [newCriticality, setNewCriticality] = useState("Medium");
 
   const handleCreateAsset = (e) => {
     e.preventDefault();
-    if (!newId.trim() || !newName.trim()) return;
-    addToast(`Asset ${newId} created successfully in Asset Registry!`);
+    const cleanId = newId.trim();
+    const cleanName = newName.trim();
+
+    if (!cleanId || !cleanName) {
+      addToast("Please fill in required fields: Asset Tag ID and Machine Name", "error");
+      return;
+    }
+
+    // Duplicate ID check
+    const isDuplicate = assets.some((a) => a.id.toLowerCase() === cleanId.toLowerCase());
+    if (isDuplicate) {
+      addToast(`Asset Tag ID "${cleanId}" already exists. Please enter a unique ID.`, "error");
+      return;
+    }
+
+    const created = addAsset({
+      id: cleanId,
+      name: cleanName,
+      type: newType,
+      plant: newPlant,
+      department: "Packaging",
+      line: newLine,
+      location: newLocation.trim() || "Bay 4A - Main Hall",
+      criticality: newCriticality,
+      status: "Operational",
+      health: 100,
+      manufacturer: "Standard OEM",
+      model: "Series-2026",
+      serialNumber: `SN-${cleanId}`,
+      commissionDate: new Date().toISOString().substring(0, 10),
+      nameplatePower: "35 kW",
+      ratedSpeed: "600 RPM"
+    });
+
+    if (logAudit) {
+      logAudit({
+        entityId: cleanId,
+        entityType: "Asset Master",
+        action: "Asset Created",
+        field: "Registration",
+        oldValue: "-",
+        newValue: `${cleanName} (${cleanId})`,
+        notes: `Registered to ${newLine}, Criticality: ${newCriticality}`
+      });
+    }
+
+    addToast(`Asset ${cleanId} created successfully in Asset Registry!`);
     setIsAddAssetModalOpen(false);
-    navigate(`/maintenance/assets/${newId}`);
+    setNewId("");
+    setNewName("");
+    setNewLocation("");
+    setNewCriticality("Medium");
+    navigate(`/maintenance/assets/${cleanId}`);
   };
 
   const columns = [
@@ -236,15 +288,26 @@ export function AssetList() {
             </div>
           </div>
 
-          <div className="form-group">
-            <label className="form-label">Physical Location / Bay</label>
-            <input
-              type="text"
-              className="form-input"
-              placeholder="e.g. Bay 4B - Cleanroom Zone B"
-              value={newLocation}
-              onChange={(e) => setNewLocation(e.target.value)}
-            />
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+            <div className="form-group">
+              <label className="form-label">Physical Location / Bay</label>
+              <input
+                type="text"
+                className="form-input"
+                placeholder="e.g. Bay 4B - Cleanroom Zone B"
+                value={newLocation}
+                onChange={(e) => setNewLocation(e.target.value)}
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Criticality Rating</label>
+              <select className="form-select" value={newCriticality} onChange={(e) => setNewCriticality(e.target.value)}>
+                <option value="Critical">Critical (Plant Stoppage Risk)</option>
+                <option value="High">High (Line Stoppage Risk)</option>
+                <option value="Medium">Medium (Secondary Equipment)</option>
+                <option value="Low">Low (Non-Critical Auxiliary)</option>
+              </select>
+            </div>
           </div>
 
           <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px", marginTop: "12px" }}>

@@ -316,6 +316,22 @@ export function CMMSProvider({ children }) {
     );
   };
 
+  const updateAsset = (assetId, updatedFields) => {
+    setAssets((prev) =>
+      prev.map((asset) => {
+        if (asset.id === assetId) {
+          return {
+            ...asset,
+            ...updatedFields,
+            id: asset.id, // preserve ID immutability
+            lastUpdated: new Date().toISOString().replace("T", " ").substring(0, 16)
+          };
+        }
+        return asset;
+      })
+    );
+  };
+
   // Work Order Actions
   const addWorkOrder = (newWO) => {
     const id = newWO.id || `WO-2026-${Math.floor(1000 + Math.random() * 9000)}`;
@@ -808,6 +824,7 @@ export function CMMSProvider({ children }) {
         setAssets,
         assetHierarchy,
         addAsset,
+        updateAsset,
         updateAssetStatus,
 
         // Work Orders
