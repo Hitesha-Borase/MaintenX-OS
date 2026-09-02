@@ -13,11 +13,14 @@ import {
   CheckCheck,
   AlertTriangle,
   CheckCircle,
-  Clock
+  Clock,
+  Building2,
+  ChevronDown
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useApp } from "../../context/AppContext";
 import { useRole } from "../../context/RoleContext";
+import { useMasterData } from "../../context/MasterDataContext";
 import { Button } from "../common/Button";
 
 export function Header() {
@@ -33,9 +36,13 @@ export function Header() {
 
   const navigate = useNavigate();
   const { currentRole, setRoleById, ROLES, logout } = useRole();
+  const { plants = [], activePlantId, setActivePlantId, company } = useMasterData();
+
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showRoleSubmenu, setShowRoleSubmenu] = useState(false);
   const [showNotificationsMenu, setShowNotificationsMenu] = useState(false);
+  const [showPlantDropdown, setShowPlantDropdown] = useState(false);
+
   const [notifications, setNotifications] = useState([
     { id: 1, title: "Line 1 PM Task Alert", desc: "High-Speed Rotary Filler PM due in 30 mins", time: "2m ago", type: "warning", unread: true },
     { id: 2, title: "Batch Formulation Completed", desc: "BAT-2026-0892 bottle filling at 77% attainment", time: "15m ago", type: "success", unread: false },
@@ -44,6 +51,7 @@ export function Header() {
 
   const profileDropdownRef = useRef(null);
   const notificationsDropdownRef = useRef(null);
+  const plantDropdownRef = useRef(null);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -54,6 +62,9 @@ export function Header() {
       }
       if (notificationsDropdownRef.current && !notificationsDropdownRef.current.contains(e.target)) {
         setShowNotificationsMenu(false);
+      }
+      if (plantDropdownRef.current && !plantDropdownRef.current.contains(e.target)) {
+        setShowPlantDropdown(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -77,6 +88,7 @@ export function Header() {
   };
 
   const unreadCount = notifications.filter(n => n.unread).length;
+  const currentPlantObj = plants.find((p) => p.id === activePlantId) || plants[0] || { name: "Indore Plant", code: "PLT-01" };
 
   return (
     <header
@@ -122,11 +134,11 @@ export function Header() {
             MaintenX <span style={{ color: "#B27E33" }}>OS</span>
           </span>
           <span className="header-logo-subtext" style={{ fontSize: "9px", color: "var(--text-muted, #8C7B6E)", letterSpacing: "0.08em", textTransform: "uppercase", fontWeight: 700, lineHeight: 1, whiteSpace: "nowrap" }}>
-            Manufacturing Cloud
+            {company?.name || "Kiaan BevCorp Global"}
           </span>
         </div>
 
-        {/* Sidebar Toggle Button (< / > Icon in rounded pill) */}
+        {/* Sidebar Toggle Button */}
         <button
           onClick={() => {
             if (window.innerWidth <= 768) {
@@ -157,8 +169,88 @@ export function Header() {
         </button>
       </div>
 
+      {/* Center Left: Plant Context Switcher Dropdown */}
+      <div ref={plantDropdownRef} style={{ position: "relative", flexShrink: 0 }}>
+        <button
+          onClick={() => setShowPlantDropdown(!showPlantDropdown)}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "6px",
+            padding: "5px 10px",
+            backgroundColor: "#FFFFFF",
+            border: "1px solid var(--border-subtle)",
+            borderRadius: "8px",
+            cursor: "pointer",
+            fontSize: "12px",
+            fontWeight: 700,
+            color: "var(--text-primary)",
+            boxShadow: "0 1px 3px rgba(70, 45, 15, 0.04)"
+          }}
+          title="Switch Active Manufacturing Plant"
+        >
+          <Building2 size={14} color="#C89547" />
+          <span>{currentPlantObj.name?.split(" - ")[0]}</span>
+          <ChevronDown size={12} color="var(--text-muted)" />
+        </button>
+
+        {showPlantDropdown && (
+          <div
+            style={{
+              position: "absolute",
+              top: "38px",
+              left: 0,
+              width: "220px",
+              backgroundColor: "#FFFFFF",
+              border: "1px solid var(--border-subtle)",
+              borderRadius: "10px",
+              boxShadow: "0 12px 28px rgba(0,0,0,0.15)",
+              zIndex: 100,
+              padding: "6px",
+              display: "flex",
+              flexDirection: "column",
+              gap: "4px"
+            }}
+          >
+            <div style={{ fontSize: "10px", fontWeight: 800, color: "var(--text-muted)", padding: "4px 8px", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+              Select Plant Facility
+            </div>
+            {plants.map((plant) => (
+              <button
+                key={plant.id}
+                onClick={() => {
+                  setActivePlantId(plant.id);
+                  setShowPlantDropdown(false);
+                  addToast(`Active facility switched to ${plant.name}`, "info");
+                }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  padding: "8px 10px",
+                  borderRadius: "6px",
+                  border: "none",
+                  backgroundColor: plant.id === activePlantId ? "rgba(200, 149, 71, 0.12)" : "transparent",
+                  color: plant.id === activePlantId ? "#8C5B23" : "var(--text-primary)",
+                  fontWeight: plant.id === activePlantId ? 800 : 600,
+                  fontSize: "12px",
+                  cursor: "pointer",
+                  textAlign: "left"
+                }}
+              >
+                <div>
+                  <div>{plant.name.split(" - ")[0]}</div>
+                  <div style={{ fontSize: "10px", color: "var(--text-muted)" }}>{plant.code} • {plant.city}</div>
+                </div>
+                {plant.id === activePlantId && <CheckCircle size={14} color="#059669" />}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* Center: Search Input Bar */}
-      <div style={{ flex: 1, display: "flex", justifyContent: "center", maxWidth: "600px", minWidth: 0 }}>
+      <div style={{ flex: 1, display: "flex", justifyContent: "center", maxWidth: "480px", minWidth: 0 }}>
         <div
           onClick={() => setIsSearchOpen(true)}
           className="header-search-box"
@@ -180,7 +272,7 @@ export function Header() {
           title="Search anything (Cmd+K / Ctrl+K)"
         >
           <span className="header-search-text" style={{ fontSize: "12px", color: "var(--text-muted, #A09082)", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            Search...
+            Search SKU, Machine, BOM, Work Orders...
           </span>
           <div
             className="header-search-icon-btn"
@@ -203,7 +295,6 @@ export function Header() {
 
       {/* Far Right: Notification Bell, Fast Action Button, Profile Avatar */}
       <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
-
         {/* Notification Bell Dropdown */}
         <div ref={notificationsDropdownRef} style={{ position: "relative", flexShrink: 0 }}>
           <button
@@ -274,7 +365,6 @@ export function Header() {
                 animation: "fadeIn 0.15s ease-out"
               }}
             >
-              {/* Notifications Header */}
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--border-subtle, #EFEAE2)", paddingBottom: "8px" }}>
                 <span style={{ fontSize: "13px", fontWeight: 800, color: "var(--text-primary, #261603)" }}>
                   Notifications ({notifications.length})
@@ -288,7 +378,6 @@ export function Header() {
                 </button>
               </div>
 
-              {/* Notification List */}
               <div style={{ display: "flex", flexDirection: "column", gap: "6px", maxHeight: "240px", overflowY: "auto" }}>
                 {notifications.map((n) => (
                   <div
@@ -299,52 +388,27 @@ export function Header() {
                     style={{
                       padding: "8px 10px",
                       borderRadius: "8px",
-                      backgroundColor: n.unread ? "rgba(200, 149, 71, 0.08)" : "var(--bg-card-subtle, #FAF6F0)",
-                      border: "1px solid var(--border-subtle, #EFEAE2)",
+                      backgroundColor: n.unread ? "rgba(200, 149, 71, 0.08)" : "transparent",
+                      border: "1px solid",
+                      borderColor: n.unread ? "rgba(200, 149, 71, 0.3)" : "transparent",
+                      cursor: "pointer",
                       display: "flex",
-                      gap: "8px",
-                      cursor: "pointer"
+                      flexDirection: "column",
+                      gap: "2px"
                     }}
                   >
-                    <div style={{ marginTop: "2px", flexShrink: 0 }}>
-                      {n.type === "warning" && <AlertTriangle size={14} color="#D97706" />}
-                      {n.type === "success" && <CheckCircle size={14} color="#059669" />}
-                      {n.type === "info" && <Clock size={14} color="#0284C7" />}
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span style={{ fontSize: "12px", fontWeight: n.unread ? 800 : 600, color: "var(--text-primary, #261603)" }}>
+                        {n.title}
+                      </span>
+                      <span style={{ fontSize: "10px", color: "var(--text-muted, #8C7B6E)" }}>{n.time}</span>
                     </div>
-                    <div style={{ flex: 1, overflow: "hidden" }}>
-                      <div style={{ fontSize: "12px", fontWeight: n.unread ? 800 : 600, color: "var(--text-primary, #261603)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{n.title}</span>
-                        <span style={{ fontSize: "10px", color: "var(--text-muted, #8C7B6E)", fontWeight: 500, flexShrink: 0 }}>{n.time}</span>
-                      </div>
-                      <p style={{ fontSize: "11px", color: "var(--text-secondary, #6B5B4E)", margin: "2px 0 0 0", lineHeight: 1.3 }}>
-                        {n.desc}
-                      </p>
-                    </div>
+                    <p style={{ margin: 0, fontSize: "11px", color: "var(--text-secondary, #6B5B4E)", lineHeight: 1.3 }}>
+                      {n.desc}
+                    </p>
                   </div>
                 ))}
               </div>
-
-              {/* View Notifications Page */}
-              <button
-                onClick={() => {
-                  setShowNotificationsMenu(false);
-                  navigate(`/${currentRole.id}/notifications`);
-                }}
-                style={{
-                  width: "100%",
-                  padding: "8px",
-                  borderRadius: "8px",
-                  backgroundColor: "var(--bg-card-subtle, #FAF6F0)",
-                  border: "1px solid var(--border-subtle, #EFEAE2)",
-                  color: "#B27E33",
-                  fontSize: "12px",
-                  fontWeight: 800,
-                  cursor: "pointer",
-                  textAlign: "center"
-                }}
-              >
-                View Notifications Center →
-              </button>
             </div>
           )}
         </div>
@@ -401,7 +465,7 @@ export function Header() {
             }}
             title="User Profile & Role Settings"
           >
-            {currentRole?.label?.charAt(0) || "M"}
+            {currentRole?.label?.charAt(0) || "P"}
           </button>
 
           {/* Profile Dropdown Menu */}
@@ -425,7 +489,6 @@ export function Header() {
                 animation: "fadeIn 0.15s ease-out"
               }}
             >
-              {/* Profile Header */}
               <div
                 style={{
                   padding: "10px 12px",
@@ -452,136 +515,64 @@ export function Header() {
                     flexShrink: 0
                   }}
                 >
-                  {currentRole?.label?.charAt(0) || "M"}
+                  {currentRole?.label?.charAt(0) || "P"}
                 </div>
                 <div style={{ overflow: "hidden" }}>
-                  <div style={{ fontSize: "13px", fontWeight: 800, color: "var(--text-primary, #261603)", whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}>
+                  <div style={{ fontSize: "13px", fontWeight: 800, color: "var(--text-primary, #261603)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                     Alexander Vance
                   </div>
-                  <div style={{ fontSize: "11px", color: "#8C5B23", fontWeight: 700, whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}>
+                  <div style={{ fontSize: "11px", color: "#B27E33", fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                     {currentRole?.label}
                   </div>
                 </div>
               </div>
 
-              {/* My Profile */}
-              <div
-                onClick={() => { setShowProfileMenu(false); navigate("/profile"); }}
-                style={{ padding: "9px 12px", borderRadius: "8px", fontSize: "13px", fontWeight: 600, color: "var(--text-primary, #261603)", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px" }}
-                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "var(--bg-card-subtle, #FAF6F0)")}
-                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
+              <button
+                onClick={() => {
+                  setShowProfileMenu(false);
+                  navigate("/admin/users");
+                }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  padding: "8px 12px",
+                  borderRadius: "8px",
+                  border: "none",
+                  backgroundColor: "transparent",
+                  color: "var(--text-primary, #261603)",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  textAlign: "left"
+                }}
               >
-                <User size={15} color="#B27E33" />
-                <span>My Profile</span>
-              </div>
+                <User size={14} /> Profile & Settings
+              </button>
 
-              {/* Switch Role Submenu */}
-              <div
-                onClick={() => setShowRoleSubmenu(!showRoleSubmenu)}
-                style={{ padding: "9px 12px", borderRadius: "8px", fontSize: "13px", fontWeight: 600, color: "var(--text-primary, #261603)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}
-                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "var(--bg-card-subtle, #FAF6F0)")}
-                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                  <RefreshCw size={15} color="#0284C7" />
-                  <span>Switch Role</span>
-                </div>
-                <ChevronRight size={13} color="var(--text-muted, #8C7B6E)" style={{ transform: showRoleSubmenu ? "rotate(90deg)" : "none", transition: "transform 0.15s ease" }} />
-              </div>
-
-              {showRoleSubmenu && (
-                <div style={{ maxHeight: "160px", overflowY: "auto", backgroundColor: "var(--bg-card-subtle, #FAF6F0)", borderRadius: "8px", padding: "4px", margin: "2px 0 4px 0", display: "flex", flexDirection: "column", gap: "2px" }}>
-                  {ROLES.map((r) => (
-                    <div
-                      key={r.id}
-                      onClick={() => { setRoleById(r.id); setShowProfileMenu(false); setShowRoleSubmenu(false); addToast(`Switched role to ${r.label}`, "info"); }}
-                      style={{ padding: "6px 10px", borderRadius: "6px", fontSize: "12px", fontWeight: currentRole.id === r.id ? 800 : 500, color: currentRole.id === r.id ? "#261603" : "var(--text-primary, #261603)", background: currentRole.id === r.id ? "linear-gradient(180deg, #E2B670 0%, #C89547 100%)" : "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}
-                    >
-                      <span>{r.label}</span>
-                      {currentRole.id === r.id && <span style={{ fontSize: "9px", color: "#261603", fontWeight: 800 }}>● Active</span>}
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Account Settings */}
-              <div
-                onClick={() => { setShowProfileMenu(false); navigate("/configuration"); }}
-                style={{ padding: "9px 12px", borderRadius: "8px", fontSize: "13px", fontWeight: 600, color: "var(--text-primary, #261603)", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px" }}
-                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "var(--bg-card-subtle, #FAF6F0)")}
-                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
-              >
-                <Settings size={15} color="#6B5B4E" />
-                <span>Account Settings</span>
-              </div>
-
-              <div style={{ height: "1px", backgroundColor: "var(--border-subtle, #EFEAE2)", margin: "4px 0" }} />
-
-              {/* Sign Out */}
-              <div
+              <button
                 onClick={handleLogout}
-                style={{ padding: "9px 12px", borderRadius: "8px", fontSize: "13px", fontWeight: 700, color: "#DC2626", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px" }}
-                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgba(239, 68, 68, 0.1)")}
-                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  padding: "8px 12px",
+                  borderRadius: "8px",
+                  border: "none",
+                  backgroundColor: "transparent",
+                  color: "#DC2626",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  textAlign: "left"
+                }}
               >
-                <LogOut size={15} color="#DC2626" />
-                <span>Sign Out</span>
-              </div>
+                <LogOut size={14} /> Log Out
+              </button>
             </div>
           )}
         </div>
       </div>
-
-      <style>{`
-        @media (max-width: 640px) {
-          .header-logo-subtext {
-            display: none !important;
-          }
-          .header-search-text {
-            display: none !important;
-          }
-          .header-search-box {
-            width: 34px !important;
-            min-width: 34px !important;
-            padding: 0 !important;
-            justify-content: center !important;
-            border: none !important;
-            background: transparent !important;
-            box-shadow: none !important;
-            flex: none !important;
-          }
-          .header-search-icon-btn {
-            width: 34px !important;
-            height: 34px !important;
-            border-radius: 10px !important;
-          }
-          .header-fast-action-text {
-            display: none !important;
-          }
-          .header-fast-action-btn {
-            padding: 0 !important;
-            width: 34px !important;
-            height: 34px !important;
-            justify-content: center !important;
-            border-radius: 10px !important;
-          }
-          .app-header {
-            padding: 8px 12px !important;
-            gap: 8px !important;
-          }
-          .notifications-dropdown-popover,
-          .profile-dropdown-popover {
-            position: fixed !important;
-            top: 54px !important;
-            left: 12px !important;
-            right: 12px !important;
-            width: auto !important;
-            max-width: none !important;
-            box-shadow: 0 10px 30px rgba(43, 29, 17, 0.25) !important;
-            z-index: 1000 !important;
-          }
-        }
-      `}</style>
     </header>
   );
 }

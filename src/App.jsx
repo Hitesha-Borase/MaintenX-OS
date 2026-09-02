@@ -8,6 +8,7 @@ import { QualityProvider } from "./context/QualityContext";
 import { InventoryProvider } from "./context/InventoryContext";
 import { ExceptionProvider } from "./context/ExceptionContext";
 import { AdminProvider } from "./context/AdminContext";
+import { MasterDataProvider } from "./context/MasterDataContext";
 
 import { AppLayout } from "./components/layout/AppLayout";
 import { Login } from "./pages/auth/Login";
@@ -815,6 +816,21 @@ export function AppContent() {
           <Route path="/reports" element={<RoleProtectedRoute><ReportsPage /></RoleProtectedRoute>} />
           <Route path="/shopfloor" element={<RoleProtectedRoute><OperatorDashboard /></RoleProtectedRoute>} />
 
+          {/* ========================================================= */}
+          {/* MASTER DATA, GOVERNANCE & MIGRATION DIRECT ROUTES         */}
+          {/* ========================================================= */}
+          <Route path="/master-data/items" element={<RoleProtectedRoute><ItemMasterPage /></RoleProtectedRoute>} />
+          <Route path="/master-data/bom" element={<RoleProtectedRoute><BOMRecipesPage /></RoleProtectedRoute>} />
+          <Route path="/master-data/work-centers" element={<RoleProtectedRoute><WorkCentersMasterPage /></RoleProtectedRoute>} />
+          <Route path="/master-data/machine-capability" element={<RoleProtectedRoute><MachineCapabilityPage /></RoleProtectedRoute>} />
+          <Route path="/master-data/skills" element={<RoleProtectedRoute><SkillsMasterPage /></RoleProtectedRoute>} />
+          <Route path="/master-data/quality-specs" element={<RoleProtectedRoute><QualitySpecsPage /></RoleProtectedRoute>} />
+          <Route path="/governance/permissions" element={<RoleProtectedRoute><PermissionsMatrixPage /></RoleProtectedRoute>} />
+          <Route path="/governance/audit" element={<RoleProtectedRoute><AuditLogsPage /></RoleProtectedRoute>} />
+          <Route path="/migration" element={<RoleProtectedRoute><MigrationPage /></RoleProtectedRoute>} />
+          <Route path="/roles" element={<RoleProtectedRoute><PermissionsMatrixPage /></RoleProtectedRoute>} />
+          <Route path="/audit" element={<RoleProtectedRoute><AuditLogsPage /></RoleProtectedRoute>} />
+
           {/* Catch-all */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
@@ -827,19 +843,21 @@ export default function App() {
   return (
     <AppProvider>
       <RoleProvider>
-        <CMMSProvider>
-          <ProductionProvider>
-            <QualityProvider>
-              <InventoryProvider>
-                <ExceptionProvider>
-                  <AdminProvider>
-                    <AppContent />
-                  </AdminProvider>
-                </ExceptionProvider>
-              </InventoryProvider>
-            </QualityProvider>
-          </ProductionProvider>
-        </CMMSProvider>
+        <MasterDataProvider>
+          <CMMSProvider>
+            <ProductionProvider>
+              <QualityProvider>
+                <InventoryProvider>
+                  <ExceptionProvider>
+                    <AdminProvider>
+                      <AppContent />
+                    </AdminProvider>
+                  </ExceptionProvider>
+                </InventoryProvider>
+              </QualityProvider>
+            </ProductionProvider>
+          </CMMSProvider>
+        </MasterDataProvider>
       </RoleProvider>
     </AppProvider>
   );

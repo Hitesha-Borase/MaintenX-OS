@@ -1,99 +1,122 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
-  Award,
+  Users,
   Plus,
   CheckCircle2,
   Search,
   X,
   Edit2,
-  Users,
+  Award,
+  GraduationCap,
   ShieldCheck,
-  Calendar,
-  GraduationCap
+  Eye,
+  Star,
+  Building2,
+  Layers
 } from "lucide-react";
 import { Card } from "../../../components/common/Card";
 import { Badge } from "../../../components/common/Badge";
 import { Button } from "../../../components/common/Button";
 import { StatCard } from "../../../components/common/StatCard";
+import { useMasterData } from "../../../context/MasterDataContext";
 import { useApp } from "../../../context/AppContext";
 
 export function SkillsMasterPage() {
+  const { employees = [], addEmployee, updateEmployee, lines = [], plants = [] } = useMasterData();
   const { addToast } = useApp();
 
-  const [skills, setSkills] = useState([
-    { id: "SKL-01", name: "Isobaric Filler Operation & CIP Sanitization", tier: "Level 3 - Expert", certValidity: "12 Months", certifiedCount: 14, department: "Operations", status: "Active" },
-    { id: "SKL-02", name: "High-Speed Can Seamer Mechanical Timing", tier: "Level 4 - Master", certValidity: "24 Months", certifiedCount: 6, department: "Maintenance", status: "Active" },
-    { id: "SKL-03", name: "Laboratory Refractometry & Microbiological Swabs", tier: "Level 3 - Expert", certValidity: "12 Months", certifiedCount: 10, department: "Quality", status: "Active" },
-    { id: "SKL-04", name: "Automated Laser Guided Vehicle (AGV) Dispatch", tier: "Level 2 - Operator", certValidity: "12 Months", certifiedCount: 18, department: "Warehouse", status: "Active" }
-  ]);
-
   const [searchQuery, setSearchQuery] = useState("");
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [newSkill, setNewSkill] = useState({
+  const [deptFilter, setDeptFilter] = useState("ALL");
+  const [skillLevelFilter, setSkillLevelFilter] = useState("ALL");
+
+  // Modals
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editingEmp, setEditingEmp] = useState(null);
+  const [viewingEmp, setViewingEmp] = useState(null);
+
+  const [newEmp, setNewEmp] = useState({
     name: "",
-    tier: "Level 3 - Expert",
-    certValidity: "12 Months",
-    certifiedCount: 5,
-    department: "Operations"
+    email: "",
+    department: "Maintenance & Reliability",
+    role: "Maintenance Technician",
+    plantId: "PLT-01",
+    skillLevel: "Level 3 (Senior Technician)",
+    skills: ["Precision Shaft Alignment", "Vibration Analysis"],
+    certifications: ["OSHA 30-Hour Safety"],
+    assignedLineIds: ["LIN-01"]
   });
 
-  const totalCertified = skills.reduce((sum, s) => sum + (s.certifiedCount || 0), 0);
+  const [skillInput, setSkillInput] = useState("");
+  const [certInput, setCertInput] = useState("");
 
-  const filteredSkills = skills.filter((s) => {
-    if (!searchQuery.trim()) return true;
-    const q = searchQuery.toLowerCase();
-    return (
-      s.name.toLowerCase().includes(q) ||
-      s.id.toLowerCase().includes(q) ||
-      s.department.toLowerCase().includes(q) ||
-      s.tier.toLowerCase().includes(q)
-    );
-  });
+  const filteredEmployees = useMemo(() => {
+    return employees.filter((e) => {
+      const matchesDept = deptFilter === "ALL" || e.department?.includes(deptFilter);
+      const matchesLevel = skillLevelFilter === "ALL" || e.skillLevel?.includes(skillLevelFilter);
+      const q = searchQuery.toLowerCase().trim();
+      const matchesSearch =
+        !q ||
+        e.name?.toLowerCase().includes(q) ||
+        e.employeeId?.toLowerCase().includes(q) ||
+        e.role?.toLowerCase().includes(q) ||
+        e.department?.toLowerCase().includes(q) ||
+        e.skills?.some((s) => s.toLowerCase().includes(q));
+
+      return matchesDept && matchesLevel && matchesSearch;
+    });
+  }, [employees, deptFilter, skillLevelFilter, searchQuery]);
 
   const handleAddSubmit = (e) => {
     e.preventDefault();
-    if (!newSkill.name.trim()) {
-      addToast("Please provide skill description.", "warning");
+    if (!newEmp.name.trim()) {
+      addToast("Please provide Employee Name.", "warning");
       return;
     }
+    const created = addEmployee(newEmp);
+    addToast(`Employee ${created.employeeId} (${created.name}) onboarded with certified skills!`, "success");
+    setIsAddModalOpen(false);
+    setNewEmp({
+      name: "",
+      email: "",
+      department: "Maintenance & Reliability",
+      role: "Maintenance Technician",
+      plantId: "PLT-01",
+      skillLevel: "Level 3 (Senior Technician)",
+      skills: ["Precision Shaft Alignment", "Vibration Analysis"],
+      certifications: ["OSHA 30-Hour Safety"],
+      assignedLineIds: ["LIN-01"]
+    });
+  };
 
-    const created = {
-      id: `SKL-0${skills.length + 1}`,
-      name: newSkill.name,
-      tier: newSkill.tier,
-      certValidity: newSkill.certValidity || "12 Months",
-      certifiedCount: Number(newSkill.certifiedCount) || 1,
-      department: newSkill.department,
-      status: "Active"
-    };
-
-    setSkills([...skills, created]);
-    addToast(`Skill "${created.id}" created for ${created.department}!`, "success");
-    setIsModalOpen(false);
-    setNewSkill({ name: "", tier: "Level 3 - Expert", certValidity: "12 Months", certifiedCount: 5, department: "Operations" });
+  const handleEditSubmit = (e) => {
+    e.preventDefault();
+    if (!editingEmp.name.trim()) return;
+    updateEmployee(editingEmp.employeeId, editingEmp);
+    addToast(`Employee ${editingEmp.employeeId} skills & profile updated!`, "success");
+    setEditingEmp(null);
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%", maxWidth: "1200px", margin: "0 auto", minWidth: 0 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%", maxWidth: "1600px", margin: "0 auto", minWidth: 0 }}>
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px", width: "100%" }}>
         <div style={{ minWidth: "240px", flex: 1 }}>
           <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
             <h1 style={{ fontSize: "clamp(18px, 4vw, 24px)", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.3px", lineHeight: 1.2 }}>
-              Skills & Operator Qualifications
+              Employee & Skill Qualification Matrix
             </h1>
-            <Badge variant="emerald">{skills.length} CERTIFIED SKILLS</Badge>
+            <Badge variant="cyan">{employees.length} CERTIFIED WORKFORCE</Badge>
           </div>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-          <Button variant="primary" icon={Plus} onClick={() => setIsModalOpen(true)} style={{ fontSize: "12px", padding: "7px 12px" }}>
-            + Add Certified Skill
+          <Button variant="primary" icon={Plus} onClick={() => setIsAddModalOpen(true)} style={{ fontSize: "12px", padding: "7px 12px" }}>
+            + Onboard Employee & Skills
           </Button>
         </div>
       </div>
 
-      {/* KPI Tickers - 2x2 on mobile, 4 on desktop */}
+      {/* KPI Tickers - 4 Responsive Cards */}
       <div
         className="kpi-grid-responsive grid-4"
         style={{
@@ -105,206 +128,446 @@ export function SkillsMasterPage() {
         }}
       >
         <StatCard
-          title="Skill Profiles"
-          value={skills.length.toString()}
-          unit="Certified Tracks"
-          trend={{ value: "Core machinery competencies", isPositive: true, text: "" }}
-          icon={GraduationCap}
+          title="Master Level 4 Trainers"
+          value={employees.filter((e) => e.skillLevel?.includes("Level 4")).length.toString()}
+          unit="Certified SME"
+          trend={{ value: "Cross-functional leads", isPositive: true, text: "" }}
+          icon={Award}
           colorVariant="emerald"
         />
         <StatCard
-          title="Certified Personnel"
-          value={`${totalCertified} Staff`}
-          unit="Active Badges"
-          trend={{ value: "Cross-trained coverage", isPositive: true, text: "" }}
-          icon={Users}
+          title="Autonomous Operators (L2-L3)"
+          value={employees.filter((e) => e.skillLevel?.includes("Level 2") || e.skillLevel?.includes("Level 3")).length.toString()}
+          unit="Certified"
+          trend={{ value: "Shopfloor autonomous TPM", isPositive: true, text: "" }}
+          icon={GraduationCap}
           colorVariant="cyan"
         />
         <StatCard
-          title="Master Level 4"
-          value="6 Techs"
-          unit="Maintenance"
-          trend={{ value: "Seamer timing masters", isPositive: true, text: "" }}
-          icon={Award}
+          title="Certified Skill Competencies"
+          value="48"
+          unit="Skills"
+          trend={{ value: "LOTO, 5-Why, HACCP, Alignment", isPositive: true, text: "" }}
+          icon={ShieldCheck}
           colorVariant="amber"
         />
         <StatCard
-          title="Compliance Rate"
+          title="Compliance Audit Readiness"
           value="100%"
-          unit="Audit Ready"
-          trend={{ value: "Zero expired certifications", isPositive: true, text: "" }}
-          icon={ShieldCheck}
+          unit="OSHA / ISO"
+          trend={{ value: "Valid training records", isPositive: true, text: "" }}
+          icon={CheckCircle2}
           colorVariant="emerald"
         />
       </div>
 
-      {/* Table */}
-      <Card style={{ padding: "18px", minWidth: 0, width: "100%", boxSizing: "border-box" }}>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", alignItems: "center", marginBottom: "14px", justifyContent: "space-between" }}>
-          <div style={{ position: "relative", minWidth: "220px", flex: 1 }}>
-            <Search size={15} color="var(--text-muted)" style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)" }} />
-            <input
-              type="text"
-              placeholder="Search skill, department, tier..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+      {/* Main Table Card */}
+      <Card style={{ padding: "18px", width: "100%", boxSizing: "border-box", minWidth: 0 }}>
+        {/* Table Toolbar */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "12px" }}>
+          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", flex: 1, minWidth: "240px" }}>
+            <div style={{ position: "relative", minWidth: "220px", flex: 1 }}>
+              <Search size={15} color="var(--text-muted)" style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)" }} />
+              <input
+                type="text"
+                placeholder=""
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="form-input"
+                style={{ paddingLeft: "32px", height: "36px", fontSize: "12px", backgroundColor: "#FFFFFF" }}
+              />
+            </div>
+
+            <select
+              value={deptFilter}
+              onChange={(e) => setDeptFilter(e.target.value)}
               className="form-input"
-              style={{ paddingLeft: "32px", height: "36px", fontSize: "12px", backgroundColor: "#FFFFFF" }}
-            />
+              style={{ height: "36px", fontSize: "12px", width: "180px", backgroundColor: "#FFFFFF" }}
+            >
+              <option value="ALL">All Departments</option>
+              <option value="Maintenance">Maintenance</option>
+              <option value="Production">Production</option>
+              <option value="Quality">Quality Assurance</option>
+              <option value="IT">IT & CI</option>
+            </select>
+
+            <select
+              value={skillLevelFilter}
+              onChange={(e) => setSkillLevelFilter(e.target.value)}
+              className="form-input"
+              style={{ height: "36px", fontSize: "12px", width: "160px", backgroundColor: "#FFFFFF" }}
+            >
+              <option value="ALL">All Skill Levels</option>
+              <option value="Level 4">Level 4 (Master)</option>
+              <option value="Level 3">Level 3 (Senior)</option>
+              <option value="Level 2">Level 2 (Operator)</option>
+            </select>
+          </div>
+
+          <div style={{ fontSize: "12px", color: "var(--text-muted)", fontWeight: 600 }}>
+            Showing <strong>{filteredEmployees.length}</strong> of {employees.length} Certified Staff
           </div>
         </div>
 
-        <div className="data-table-container" style={{ width: "100%", overflowX: "auto", WebkitOverflowScrolling: "touch", display: "block" }}>
-          <table className="data-table" style={{ width: "100%", minWidth: "680px" }}>
+        {/* Structured Data Table */}
+        <div className="data-table-container" style={{ overflowX: "auto", border: "1px solid var(--border-subtle)", borderRadius: "10px" }}>
+          <table className="data-table" style={{ width: "100%", borderCollapse: "collapse", minWidth: "980px" }}>
             <thead>
-              <tr>
-                <th>Skill Code</th>
-                <th>Skill Description</th>
-                <th>Competency Tier</th>
-                <th>Certification Validity</th>
-                <th>Certified Count</th>
-                <th>Department</th>
-                <th>Action</th>
+              <tr style={{ backgroundColor: "var(--bg-card-subtle)", borderBottom: "1.5px solid var(--border-subtle)" }}>
+                <th style={{ padding: "12px 14px", textAlign: "left", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Employee ID</th>
+                <th style={{ padding: "12px 14px", textAlign: "left", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Employee Name & Role</th>
+                <th style={{ padding: "12px 14px", textAlign: "left", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Department</th>
+                <th style={{ padding: "12px 14px", textAlign: "left", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Plant Facility</th>
+                <th style={{ padding: "12px 14px", textAlign: "left", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Skill Qualification Level</th>
+                <th style={{ padding: "12px 14px", textAlign: "left", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Key Certified Skills</th>
+                <th style={{ padding: "12px 14px", textAlign: "left", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Status</th>
+                <th style={{ padding: "12px 14px", textAlign: "right", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {filteredSkills.map((s) => (
-                <tr key={s.id}>
-                  <td>
-                    <span style={{ fontWeight: 800, color: "#8C5B23", fontFamily: "var(--font-mono)" }}>{s.id}</span>
-                  </td>
-                  <td>
-                    <strong style={{ color: "var(--text-primary)" }}>{s.name}</strong>
-                  </td>
-                  <td>
-                    <Badge variant={s.tier.includes("Master") ? "amber" : "cyan"}>{s.tier}</Badge>
-                  </td>
-                  <td style={{ fontSize: "12px", color: "var(--text-secondary)", fontWeight: 600 }}>{s.certValidity}</td>
-                  <td style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "#059669" }}>{s.certifiedCount} Staff</td>
-                  <td>
-                    <span style={{ fontSize: "12px", color: "var(--text-primary)", fontWeight: 600 }}>{s.department}</span>
-                  </td>
-                  <td>
-                    <button
-                      onClick={() => addToast(`Opened training matrix for ${s.name}`, "info")}
-                      title="Edit Skill"
+              {filteredEmployees.length > 0 ? (
+                filteredEmployees.map((emp) => {
+                  return (
+                    <tr
+                      key={emp.employeeId}
                       style={{
-                        width: "30px",
-                        height: "30px",
-                        borderRadius: "6px",
-                        backgroundColor: "var(--bg-card-subtle)",
-                        color: "var(--text-primary)",
-                        border: "1px solid var(--border-subtle)",
-                        cursor: "pointer",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        justifyContent: "center"
+                        borderBottom: "1px solid var(--border-subtle)",
+                        transition: "background-color 0.12s ease"
                       }}
+                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgba(200, 149, 71, 0.04)")}
+                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
                     >
-                      <Edit2 size={13} />
-                    </button>
+                      <td style={{ padding: "12px 14px", whiteSpace: "nowrap" }}>
+                        <span style={{ fontSize: "12px", fontFamily: "var(--font-mono)", fontWeight: 800, color: "#0284C7" }}>
+                          {emp.employeeId}
+                        </span>
+                      </td>
+
+                      <td style={{ padding: "12px 14px" }}>
+                        <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)" }}>
+                          {emp.name}
+                        </div>
+                        <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>
+                          {emp.role}
+                        </div>
+                      </td>
+
+                      <td style={{ padding: "12px 14px", whiteSpace: "nowrap" }}>
+                        <span style={{ fontSize: "12px", color: "var(--text-primary)", fontWeight: 600 }}>
+                          {emp.department}
+                        </span>
+                      </td>
+
+                      <td style={{ padding: "12px 14px", whiteSpace: "nowrap" }}>
+                        <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
+                          {emp.plantName || "Indore Plant"}
+                        </span>
+                      </td>
+
+                      <td style={{ padding: "12px 14px", whiteSpace: "nowrap" }}>
+                        <Badge variant={emp.skillLevel?.includes("Level 4") ? "emerald" : emp.skillLevel?.includes("Level 3") ? "cyan" : "amber"}>
+                          {emp.skillLevel}
+                        </Badge>
+                      </td>
+
+                      <td style={{ padding: "12px 14px" }}>
+                        <div style={{ display: "flex", gap: "4px", flexWrap: "wrap", maxWidth: "260px" }}>
+                          {emp.skills?.slice(0, 2).map((s, idx) => (
+                            <span key={idx} style={{ fontSize: "11px", padding: "2px 6px", borderRadius: "4px", backgroundColor: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)" }}>
+                              {s}
+                            </span>
+                          ))}
+                          {(emp.skills?.length || 0) > 2 && (
+                            <span style={{ fontSize: "11px", color: "var(--text-muted)", padding: "2px 4px" }}>
+                              +{emp.skills.length - 2} more
+                            </span>
+                          )}
+                        </div>
+                      </td>
+
+                      <td style={{ padding: "12px 14px", whiteSpace: "nowrap" }}>
+                        <Badge variant={emp.status === "Active" ? "emerald" : "rose"}>
+                          {emp.status}
+                        </Badge>
+                      </td>
+
+                      <td style={{ padding: "12px 14px", textAlign: "right", whiteSpace: "nowrap" }}>
+                        <div style={{ display: "flex", justifyContent: "flex-end", gap: "6px" }}>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            icon={Eye}
+                            onClick={() => setViewingEmp(emp)}
+                            style={{ fontSize: "11px", padding: "4px 8px" }}
+                            title="View Skill Matrix & Certifications"
+                          >
+                            Details
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            icon={Edit2}
+                            onClick={() => setEditingEmp(emp)}
+                            style={{ fontSize: "11px", padding: "4px 8px" }}
+                            title="Edit Employee Qualifications"
+                          >
+                            Edit
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan={8} style={{ padding: "32px", textAlign: "center", color: "var(--text-muted)", fontSize: "13px" }}>
+                    No employee records match the department or skill level filter.
                   </td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
         </div>
       </Card>
 
-      {/* ADD SKILL MODAL */}
-      {isModalOpen && (
-        <div className="modal-backdrop" onClick={() => setIsModalOpen(false)}>
-          <div className="modal-content" style={{ maxWidth: "480px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
-              <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)" }}>
-                Add Operator Qualification Track
-              </h2>
-              <button onClick={() => setIsModalOpen(false)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+      {/* ONBOARD EMPLOYEE MODAL */}
+      {isAddModalOpen && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(38, 22, 3, 0.55)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+            padding: "16px"
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: "#FFFFFF",
+              borderRadius: "14px",
+              width: "100%",
+              maxWidth: "600px",
+              maxHeight: "90vh",
+              display: "flex",
+              flexDirection: "column",
+              boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
+              border: "1px solid var(--border-subtle)",
+              overflow: "hidden"
+            }}
+          >
+            <div style={{ padding: "18px 22px", borderBottom: "1px solid var(--border-subtle)", display: "flex", justifyContent: "space-between", alignItems: "center", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Users size={18} color="#B27E33" />
+                <h3 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                  Onboard Employee & Skill Qualifications
+                </h3>
+              </div>
+              <button onClick={() => setIsAddModalOpen(false)} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-muted)" }}>
                 <X size={18} />
               </button>
             </div>
 
-            <form onSubmit={handleAddSubmit} style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
-              <div>
-                <label className="form-label">Skill Description *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Nitrogen Dosing Calibration & Safety"
-                  value={newSkill.name}
-                  onChange={(e) => setNewSkill({ ...newSkill, name: e.target.value })}
-                  className="form-input"
-                  style={{ backgroundColor: "#FFFFFF" }}
-                />
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
+            <form onSubmit={handleAddSubmit} style={{ padding: "22px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                 <div>
-                  <label className="form-label">Competency Tier</label>
-                  <select
-                    className="form-select"
-                    value={newSkill.tier}
-                    onChange={(e) => setNewSkill({ ...newSkill, tier: e.target.value })}
-                    style={{ backgroundColor: "#FFFFFF" }}
-                  >
-                    <option value="Level 1 - Trainee">Level 1 - Trainee</option>
-                    <option value="Level 2 - Operator">Level 2 - Operator</option>
-                    <option value="Level 3 - Expert">Level 3 - Expert</option>
-                    <option value="Level 4 - Master">Level 4 - Master</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="form-label">Department</label>
-                  <select
-                    className="form-select"
-                    value={newSkill.department}
-                    onChange={(e) => setNewSkill({ ...newSkill, department: e.target.value })}
-                    style={{ backgroundColor: "#FFFFFF" }}
-                  >
-                    <option value="Operations">Operations</option>
-                    <option value="Maintenance">Maintenance</option>
-                    <option value="Quality">Quality</option>
-                    <option value="Warehouse">Warehouse</option>
-                  </select>
-                </div>
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
-                <div>
-                  <label className="form-label">Certification Validity</label>
+                  <label style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase" }}>Full Name *</label>
                   <input
                     type="text"
-                    placeholder="e.g. 12 Months"
-                    value={newSkill.certValidity}
-                    onChange={(e) => setNewSkill({ ...newSkill, certValidity: e.target.value })}
+                    required
+                    placeholder="e.g. Clara Oswald"
+                    value={newEmp.name}
+                    onChange={(e) => setNewEmp({ ...newEmp, name: e.target.value })}
                     className="form-input"
-                    style={{ backgroundColor: "#FFFFFF" }}
+                    style={{ height: "36px", fontSize: "12px", marginTop: "4px" }}
                   />
                 </div>
 
                 <div>
-                  <label className="form-label">Certified Staff Count</label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={newSkill.certifiedCount}
-                    onChange={(e) => setNewSkill({ ...newSkill, certifiedCount: e.target.value })}
+                  <label style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase" }}>Department</label>
+                  <select
+                    value={newEmp.department}
+                    onChange={(e) => setNewEmp({ ...newEmp, department: e.target.value })}
                     className="form-input"
-                    style={{ backgroundColor: "#FFFFFF" }}
-                  />
+                    style={{ height: "36px", fontSize: "12px", marginTop: "4px" }}
+                  >
+                    <option value="Maintenance & Reliability">Maintenance & Reliability</option>
+                    <option value="Plant Operations">Plant Operations</option>
+                    <option value="Quality Assurance">Quality Assurance</option>
+                    <option value="Production">Production</option>
+                  </select>
                 </div>
               </div>
 
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
-                <Button variant="secondary" onClick={() => setIsModalOpen(false)}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div>
+                  <label style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase" }}>Role Title</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Maintenance Technician"
+                    value={newEmp.role}
+                    onChange={(e) => setNewEmp({ ...newEmp, role: e.target.value })}
+                    className="form-input"
+                    style={{ height: "36px", fontSize: "12px", marginTop: "4px" }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase" }}>Skill Qualification Level</label>
+                  <select
+                    value={newEmp.skillLevel}
+                    onChange={(e) => setNewEmp({ ...newEmp, skillLevel: e.target.value })}
+                    className="form-input"
+                    style={{ height: "36px", fontSize: "12px", marginTop: "4px" }}
+                  >
+                    <option value="Level 4 (Master / Trainer)">Level 4 (Master / Trainer)</option>
+                    <option value="Level 3 (Senior Technician)">Level 3 (Senior Technician)</option>
+                    <option value="Level 2 (Autonomous Operator)">Level 2 (Autonomous Operator)</option>
+                    <option value="Level 1 (Apprentice / In Training)">Level 1 (Apprentice / In Training)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Skills Tag Input */}
+              <div>
+                <label style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase" }}>Certified Competencies</label>
+                <div style={{ display: "flex", gap: "8px", marginTop: "4px" }}>
+                  <input
+                    type="text"
+                    placeholder="e.g. HACCP CCP-1, LOTO Protocol, 5-Why RCA"
+                    value={skillInput}
+                    onChange={(e) => setSkillInput(e.target.value)}
+                    className="form-input"
+                    style={{ height: "34px", fontSize: "12px", flex: 1 }}
+                  />
+                  <Button
+                    variant="secondary"
+                    type="button"
+                    onClick={() => {
+                      if (skillInput.trim()) {
+                        setNewEmp({ ...newEmp, skills: [...newEmp.skills, skillInput.trim()] });
+                        setSkillInput("");
+                      }
+                    }}
+                    style={{ fontSize: "12px" }}
+                  >
+                    Add Skill
+                  </Button>
+                </div>
+
+                <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginTop: "8px" }}>
+                  {newEmp.skills.map((s, idx) => (
+                    <span key={idx} style={{ fontSize: "11px", padding: "3px 8px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)", display: "flex", alignItems: "center", gap: "6px" }}>
+                      {s}
+                      <X size={12} cursor="pointer" onClick={() => setNewEmp({ ...newEmp, skills: newEmp.skills.filter((_, i) => i !== idx) })} />
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "12px" }}>
+                <Button variant="secondary" type="button" onClick={() => setIsAddModalOpen(false)} style={{ fontSize: "12px" }}>
                   Cancel
                 </Button>
-                <Button variant="primary" type="submit">
-                  Save Skill
+                <Button variant="primary" type="submit" style={{ fontSize: "12px" }}>
+                  Save & Certify Employee
                 </Button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* VIEW EMPLOYEE MODAL */}
+      {viewingEmp && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(38, 22, 3, 0.55)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+            padding: "16px"
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: "#FFFFFF",
+              borderRadius: "14px",
+              width: "100%",
+              maxWidth: "680px",
+              boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
+              border: "1px solid var(--border-subtle)",
+              overflow: "hidden"
+            }}
+          >
+            <div style={{ padding: "18px 22px", borderBottom: "1px solid var(--border-subtle)", display: "flex", justifyContent: "space-between", alignItems: "center", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <Users size={20} color="#B27E33" />
+                <div>
+                  <h3 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                    {viewingEmp.name}
+                  </h3>
+                  <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>
+                    ID: {viewingEmp.employeeId} • {viewingEmp.role} ({viewingEmp.department})
+                  </div>
+                </div>
+              </div>
+              <button onClick={() => setViewingEmp(null)} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-muted)" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ padding: "22px", display: "flex", flexDirection: "column", gap: "16px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", backgroundColor: "var(--bg-card-subtle)", padding: "14px", borderRadius: "10px" }}>
+                <div>
+                  <div style={{ fontSize: "11px", color: "var(--text-muted)", fontWeight: 700, textTransform: "uppercase" }}>Qualification Level</div>
+                  <Badge variant="emerald" style={{ marginTop: "4px" }}>{viewingEmp.skillLevel}</Badge>
+                </div>
+                <div>
+                  <div style={{ fontSize: "11px", color: "var(--text-muted)", fontWeight: 700, textTransform: "uppercase" }}>Assigned Facility</div>
+                  <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)", marginTop: "4px" }}>{viewingEmp.plantName || "Indore Plant"}</div>
+                </div>
+              </div>
+
+              <div>
+                <div style={{ fontSize: "12px", fontWeight: 800, color: "var(--text-primary)", marginBottom: "8px" }}>Certified Skills ({viewingEmp.skills?.length || 0})</div>
+                <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                  {viewingEmp.skills?.map((s, idx) => (
+                    <span key={idx} style={{ fontSize: "12px", padding: "4px 10px", borderRadius: "6px", backgroundColor: "rgba(200, 149, 71, 0.1)", border: "1px solid rgba(200, 149, 71, 0.3)", color: "#8C5B23", fontWeight: 700 }}>
+                      ✓ {s}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <div style={{ fontSize: "12px", fontWeight: 800, color: "var(--text-primary)", marginBottom: "8px" }}>Accreditations & Professional Certifications</div>
+                <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                  {viewingEmp.certifications?.map((c, idx) => (
+                    <Badge key={idx} variant="cyan">📜 {c}</Badge>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ padding: "14px 22px", borderTop: "1px solid var(--border-subtle)", display: "flex", justifyContent: "flex-end", backgroundColor: "var(--bg-card-subtle)" }}>
+              <Button variant="secondary" onClick={() => setViewingEmp(null)} style={{ fontSize: "12px" }}>
+                Close
+              </Button>
+            </div>
           </div>
         </div>
       )}
