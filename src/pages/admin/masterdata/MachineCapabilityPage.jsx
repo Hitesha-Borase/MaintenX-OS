@@ -671,6 +671,135 @@ export function MachineCapabilityPage() {
           </div>
         </div>
       )}
+
+      {/* EDIT ASSET MODAL */}
+      {editingAsset && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(38, 22, 3, 0.55)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+            padding: "16px"
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: "#FFFFFF",
+              borderRadius: "14px",
+              width: "100%",
+              maxWidth: "580px",
+              boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
+              border: "1px solid var(--border-subtle)",
+              overflow: "hidden"
+            }}
+          >
+            <div style={{ padding: "18px 22px", borderBottom: "1px solid var(--border-subtle)", display: "flex", justifyContent: "space-between", alignItems: "center", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Edit2 size={18} color="#B27E33" />
+                <h3 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                  Edit Machine Asset — {editingAsset.assetId}
+                </h3>
+              </div>
+              <button onClick={() => setEditingAsset(null)} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-muted)" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditSubmit} style={{ padding: "22px", display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div>
+                <label style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase" }}>Machine / Asset Name *</label>
+                <input
+                  type="text"
+                  required
+                  value={editingAsset.name}
+                  onChange={(e) => setEditingAsset({ ...editingAsset, name: e.target.value })}
+                  className="form-input"
+                  style={{ height: "36px", fontSize: "12px", marginTop: "4px" }}
+                />
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div>
+                  <label style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase" }}>Asset Type</label>
+                  <select
+                    value={editingAsset.type}
+                    onChange={(e) => setEditingAsset({ ...editingAsset, type: e.target.value })}
+                    className="form-input"
+                    style={{ height: "36px", fontSize: "12px", marginTop: "4px" }}
+                  >
+                    <option value="Packaging / Filling">Packaging / Filling</option>
+                    <option value="Thermal Processing">Thermal Processing</option>
+                    <option value="Packaging / Capping">Packaging / Capping</option>
+                    <option value="Forming / Molding">Forming / Molding</option>
+                    <option value="Inspection / QA">Inspection / QA</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase" }}>Assigned Line</label>
+                  <select
+                    value={editingAsset.lineId}
+                    onChange={(e) => {
+                      const l = lines.find((line) => line.lineId === e.target.value);
+                      setEditingAsset({ ...editingAsset, lineId: e.target.value, lineName: l?.name });
+                    }}
+                    className="form-input"
+                    style={{ height: "36px", fontSize: "12px", marginTop: "4px" }}
+                  >
+                    {lines.map((l) => (
+                      <option key={l.lineId} value={l.lineId}>{l.lineCode} — {l.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div>
+                  <label style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase" }}>Criticality Rating</label>
+                  <select
+                    value={editingAsset.criticality}
+                    onChange={(e) => setEditingAsset({ ...editingAsset, criticality: e.target.value })}
+                    className="form-input"
+                    style={{ height: "36px", fontSize: "12px", marginTop: "4px" }}
+                  >
+                    <option value="Critical (Class A)">Critical (Class A)</option>
+                    <option value="High (Class B)">High (Class B)</option>
+                    <option value="Medium (Class C)">Medium (Class C)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase" }}>Manufacturer OEM</label>
+                  <input
+                    type="text"
+                    value={editingAsset.manufacturer || ""}
+                    onChange={(e) => setEditingAsset({ ...editingAsset, manufacturer: e.target.value })}
+                    className="form-input"
+                    style={{ height: "36px", fontSize: "12px", marginTop: "4px" }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "12px" }}>
+                <Button variant="secondary" type="button" onClick={() => setEditingAsset(null)} style={{ fontSize: "12px" }}>
+                  Cancel
+                </Button>
+                <Button variant="primary" type="submit" style={{ fontSize: "12px" }}>
+                  Save Changes
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

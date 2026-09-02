@@ -567,6 +567,128 @@ export function SkillsMasterPage() {
           </div>
         </div>
       )}
+
+      {/* EDIT EMPLOYEE MODAL */}
+      {editingEmp && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(38, 22, 3, 0.55)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+            padding: "16px"
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: "#FFFFFF",
+              borderRadius: "14px",
+              width: "100%",
+              maxWidth: "580px",
+              boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
+              border: "1px solid var(--border-subtle)",
+              overflow: "hidden"
+            }}
+          >
+            <div style={{ padding: "18px 22px", borderBottom: "1px solid var(--border-subtle)", display: "flex", justifyContent: "space-between", alignItems: "center", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Edit2 size={18} color="#B27E33" />
+                <h3 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                  Edit Qualifications — {editingEmp.name}
+                </h3>
+              </div>
+              <button onClick={() => setEditingEmp(null)} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-muted)" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditSubmit} style={{ padding: "22px", display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "12px" }}>
+                <div>
+                  <label style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase" }}>Full Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingEmp.name}
+                    onChange={(e) => setEditingEmp({ ...editingEmp, name: e.target.value })}
+                    className="form-input"
+                    style={{ height: "36px", fontSize: "12px", marginTop: "4px" }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase" }}>Employee ID</label>
+                  <input
+                    type="text"
+                    disabled
+                    value={editingEmp.employeeId}
+                    className="form-input"
+                    style={{ height: "36px", fontSize: "12px", marginTop: "4px", backgroundColor: "var(--bg-card-subtle)", cursor: "not-allowed" }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div>
+                  <label style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase" }}>Department</label>
+                  <select
+                    value={editingEmp.department}
+                    onChange={(e) => setEditingEmp({ ...editingEmp, department: e.target.value })}
+                    className="form-input"
+                    style={{ height: "36px", fontSize: "12px", marginTop: "4px" }}
+                  >
+                    <option value="Maintenance & Reliability">Maintenance & Reliability</option>
+                    <option value="Production Operations">Production Operations</option>
+                    <option value="Quality Assurance">Quality Assurance</option>
+                    <option value="Continuous Improvement">Continuous Improvement</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase" }}>Skill Qualification Level</label>
+                  <select
+                    value={editingEmp.skillLevel}
+                    onChange={(e) => setEditingEmp({ ...editingEmp, skillLevel: e.target.value })}
+                    className="form-input"
+                    style={{ height: "36px", fontSize: "12px", marginTop: "4px" }}
+                  >
+                    <option value="Level 4 (Master Expert)">Level 4 (Master Expert)</option>
+                    <option value="Level 3 (Senior Technician)">Level 3 (Senior Technician)</option>
+                    <option value="Level 2 (Certified Operator)">Level 2 (Certified Operator)</option>
+                    <option value="Level 1 (Trainee)">Level 1 (Trainee)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase" }}>Role / Designation</label>
+                <input
+                  type="text"
+                  value={editingEmp.role}
+                  onChange={(e) => setEditingEmp({ ...editingEmp, role: e.target.value })}
+                  className="form-input"
+                  style={{ height: "36px", fontSize: "12px", marginTop: "4px" }}
+                />
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "12px" }}>
+                <Button variant="secondary" type="button" onClick={() => setEditingEmp(null)} style={{ fontSize: "12px" }}>
+                  Cancel
+                </Button>
+                <Button variant="primary" type="submit" style={{ fontSize: "12px" }}>
+                  Save Changes
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

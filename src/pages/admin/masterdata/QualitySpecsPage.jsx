@@ -523,6 +523,152 @@ export function QualitySpecsPage() {
         />
       )}
 
+      {/* EDIT SPEC MODAL */}
+      {editingSpec && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(38, 22, 3, 0.55)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+            padding: "16px"
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: "#FFFFFF",
+              borderRadius: "14px",
+              width: "100%",
+              maxWidth: "600px",
+              boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
+              border: "1px solid var(--border-subtle)",
+              overflow: "hidden"
+            }}
+          >
+            <div style={{ padding: "18px 22px", borderBottom: "1px solid var(--border-subtle)", display: "flex", justifyContent: "space-between", alignItems: "center", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Edit2 size={18} color="#B27E33" />
+                <h3 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                  Edit Quality Parameter — {editingSpec.specId}
+                </h3>
+              </div>
+              <button onClick={() => setEditingSpec(null)} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-muted)" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditSubmit} style={{ padding: "22px", display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr", gap: "12px" }}>
+                <div>
+                  <label style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase" }}>Parameter Tested *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingSpec.parameter}
+                    onChange={(e) => setEditingSpec({ ...editingSpec, parameter: e.target.value })}
+                    className="form-input"
+                    style={{ height: "36px", fontSize: "12px", marginTop: "4px" }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase" }}>UOM *</label>
+                  <input
+                    type="text"
+                    value={editingSpec.uom}
+                    onChange={(e) => setEditingSpec({ ...editingSpec, uom: e.target.value })}
+                    className="form-input"
+                    style={{ height: "36px", fontSize: "12px", marginTop: "4px" }}
+                  />
+                </div>
+              </div>
+
+              {/* Target & Tolerances */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "12px", backgroundColor: "var(--bg-card-subtle)", padding: "12px", borderRadius: "8px" }}>
+                <div>
+                  <label style={{ fontSize: "11px", fontWeight: 700, color: "#8C5B23", textTransform: "uppercase" }}>Target Value</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingSpec.target}
+                    onChange={(e) => setEditingSpec({ ...editingSpec, target: e.target.value })}
+                    className="form-input"
+                    style={{ height: "34px", fontSize: "12px", marginTop: "4px" }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase" }}>Minimum (LCL)</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingSpec.min}
+                    onChange={(e) => setEditingSpec({ ...editingSpec, min: e.target.value })}
+                    className="form-input"
+                    style={{ height: "34px", fontSize: "12px", marginTop: "4px" }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase" }}>Maximum (UCL)</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingSpec.max}
+                    onChange={(e) => setEditingSpec({ ...editingSpec, max: e.target.value })}
+                    className="form-input"
+                    style={{ height: "34px", fontSize: "12px", marginTop: "4px" }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div>
+                  <label style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase" }}>Criticality Category</label>
+                  <select
+                    value={editingSpec.criticality}
+                    onChange={(e) => setEditingSpec({ ...editingSpec, criticality: e.target.value })}
+                    className="form-input"
+                    style={{ height: "36px", fontSize: "12px", marginTop: "4px" }}
+                  >
+                    <option value="Critical CCP (HACCP-1)">Critical CCP (HACCP-1)</option>
+                    <option value="Quality Spec">Quality Spec (Sensory/Physical)</option>
+                    <option value="Legal Metrology / Legal">Legal Metrology / Legal</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase" }}>Test Method / Device</label>
+                  <input
+                    type="text"
+                    value={editingSpec.testMethod || ""}
+                    onChange={(e) => setEditingSpec({ ...editingSpec, testMethod: e.target.value })}
+                    className="form-input"
+                    style={{ height: "36px", fontSize: "12px", marginTop: "4px" }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "12px" }}>
+                <Button variant="secondary" type="button" onClick={() => setEditingSpec(null)} style={{ fontSize: "12px" }}>
+                  Cancel
+                </Button>
+                <Button variant="primary" type="submit" style={{ fontSize: "12px" }}>
+                  Save Changes
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* APPROVAL WORKFLOW MODAL */}
       {approvalModalSpec && (
         <ApprovalWorkflowModal
