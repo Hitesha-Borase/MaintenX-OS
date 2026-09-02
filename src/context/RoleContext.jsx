@@ -456,7 +456,7 @@ export function RoleProvider({ children }) {
     if (currentRole.id === "maintenance") {
       allowedPaths.push("/work-orders", "/assets", "/breakdowns", "/pm", "/spare-parts", "/calibration", "/troubleshooting", "/cmms");
     } else if (currentRole.id === "plant_manager") {
-      allowedPaths.push("/work-orders", "/assets", "/breakdowns", "/pm", "/spare-parts", "/calibration", "/troubleshooting", "/planning", "/production", "/quality", "/inventory", "/labour", "/maintenance", "/performance", "/cmms");
+      allowedPaths.push("/work-orders", "/assets", "/breakdowns", "/pm", "/spare-parts", "/calibration", "/troubleshooting", "/planning", "/production", "/quality", "/inventory", "/labour", "/maintenance", "/performance", "/cmms", "/master-data", "/reports", "/governance", "/migration");
     } else if (currentRole.id === "ci_engineer") {
       allowedPaths.push("/ci", "/quality", "/rca", "/capa");
     }

@@ -355,6 +355,7 @@ import { CapacityPage } from "./pages/planning/CapacityPage";
 import { ConstraintsPage } from "./pages/planning/ConstraintsPage";
 import { RecoveryPage } from "./pages/planning/RecoveryPage";
 import { ProductionOrdersPage } from "./pages/production/ProductionOrdersPage";
+import { ProductionDashboard } from "./pages/production/ProductionDashboard";
 import { BatchesPage } from "./pages/production/BatchesPage";
 import { DowntimeLossPage } from "./pages/production/DowntimeLossPage";
 import { ShiftPerformancePage } from "./pages/production/ShiftPerformancePage";
@@ -560,11 +561,13 @@ export function AppContent() {
           <Route path="/planning/constraints" element={<RoleProtectedRoute><ConstraintsPage /></RoleProtectedRoute>} />
           <Route path="/planning/recovery" element={<RoleProtectedRoute><RecoveryPage /></RoleProtectedRoute>} />
 
+          <Route path="/production" element={<RoleProtectedRoute><ProductionDashboard /></RoleProtectedRoute>} />
           <Route path="/production/orders" element={<RoleProtectedRoute><ProductionOrdersPage /></RoleProtectedRoute>} />
           <Route path="/production/batches" element={<RoleProtectedRoute><BatchesPage /></RoleProtectedRoute>} />
           <Route path="/production/downtime-loss" element={<RoleProtectedRoute><DowntimeLossPage /></RoleProtectedRoute>} />
           <Route path="/production/shift-performance" element={<RoleProtectedRoute><ShiftPerformancePage /></RoleProtectedRoute>} />
 
+          <Route path="/quality" element={<RoleProtectedRoute><QualityDashboard /></RoleProtectedRoute>} />
           <Route path="/quality/status" element={<RoleProtectedRoute><QualityStatusPage /></RoleProtectedRoute>} />
           <Route path="/quality/holds" element={<RoleProtectedRoute><HoldsPage /></RoleProtectedRoute>} />
           <Route path="/quality/qa-release" element={<RoleProtectedRoute><QAReleasePage /></RoleProtectedRoute>} />
@@ -575,13 +578,17 @@ export function AppContent() {
           <Route path="/maintenance/breakdowns-overview" element={<RoleProtectedRoute><BreakdownsOverviewPage /></RoleProtectedRoute>} />
           <Route path="/maintenance/reliability-overview" element={<RoleProtectedRoute><ReliabilityOverviewPage /></RoleProtectedRoute>} />
 
+          <Route path="/labour" element={<RoleProtectedRoute><StaffingPage /></RoleProtectedRoute>} />
           <Route path="/labour/staffing" element={<RoleProtectedRoute><StaffingPage /></RoleProtectedRoute>} />
           <Route path="/labour/performance" element={<RoleProtectedRoute><LabourPerformancePage /></RoleProtectedRoute>} />
           <Route path="/labour/hours" element={<RoleProtectedRoute><LabourHoursPage /></RoleProtectedRoute>} />
 
+          <Route path="/inventory" element={<RoleProtectedRoute><WarehouseInventoryPage /></RoleProtectedRoute>} />
           <Route path="/warehouse/inventory" element={<RoleProtectedRoute><WarehouseInventoryPage /></RoleProtectedRoute>} />
           <Route path="/warehouse/material-shortage" element={<RoleProtectedRoute><MaterialShortagePage /></RoleProtectedRoute>} />
           <Route path="/warehouse/finished-goods" element={<RoleProtectedRoute><FinishedGoodsPage /></RoleProtectedRoute>} />
+
+          <Route path="/reports" element={<RoleProtectedRoute><ReportsPage /></RoleProtectedRoute>} />
 
           {/* ========================================================= */}
           {/* 4. OPERATOR ROUTES                                        */}
