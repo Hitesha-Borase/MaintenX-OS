@@ -28,6 +28,7 @@ export function LabourStandardsPage() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingStandard, setEditingStandard] = useState(null);
   const [newStandard, setNewStandard] = useState({
     line: "Line 1 — Aseptic Bottling",
     standardCrew: 8,
@@ -60,6 +61,13 @@ export function LabourStandardsPage() {
     setStandards([...standards, created]);
     addToast(`Labour standard created for ${created.line}!`, "success");
     setIsModalOpen(false);
+  };
+
+  const handleEditSubmit = (e) => {
+    e.preventDefault();
+    setStandards(standards.map((s) => (s.id === editingStandard.id ? { ...editingStandard, standardCrew: Number(editingStandard.standardCrew) || 8, stdLaborHoursPer1kUnits: Number(editingStandard.stdLaborHoursPer1kUnits) || 2.0 } : s)));
+    addToast(`Labour standard for ${editingStandard.line} updated!`, "success");
+    setEditingStandard(null);
   };
 
   return (
@@ -173,7 +181,7 @@ export function LabourStandardsPage() {
                   </td>
                   <td>
                     <button
-                      onClick={() => addToast(`Opened manning balance for ${s.line}`, "info")}
+                      onClick={() => setEditingStandard({ ...s })}
                       title="Edit Labour Standard"
                       style={{
                         width: "30px",
@@ -270,6 +278,73 @@ export function LabourStandardsPage() {
                 </Button>
                 <Button variant="primary" type="submit">
                   Save Standard
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT STANDARD MODAL */}
+      {editingStandard && (
+        <div className="modal-backdrop" onClick={() => setEditingStandard(null)}>
+          <div className="modal-content" style={{ maxWidth: "480px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Edit2 size={16} color="#B27E33" />
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                  Edit Labour Standard — {editingStandard.line}
+                </h2>
+              </div>
+              <button onClick={() => setEditingStandard(null)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditSubmit} style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
+                <div>
+                  <label className="form-label">Standard Crew Size (Ops)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={editingStandard.standardCrew}
+                    onChange={(e) => setEditingStandard({ ...editingStandard, standardCrew: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+
+                <div>
+                  <label className="form-label">Labor Hours / 1k Units</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={editingStandard.stdLaborHoursPer1kUnits}
+                    onChange={(e) => setEditingStandard({ ...editingStandard, stdLaborHoursPer1kUnits: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="form-label">Direct Wage Rate</label>
+                <input
+                  type="text"
+                  value={editingStandard.directCostPerHour}
+                  onChange={(e) => setEditingStandard({ ...editingStandard, directCostPerHour: e.target.value })}
+                  className="form-input"
+                  style={{ backgroundColor: "#FFFFFF" }}
+                />
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
+                <Button variant="secondary" type="button" onClick={() => setEditingStandard(null)}>
+                  Cancel
+                </Button>
+                <Button variant="primary" type="submit">
+                  Save Changes
                 </Button>
               </div>
             </form>

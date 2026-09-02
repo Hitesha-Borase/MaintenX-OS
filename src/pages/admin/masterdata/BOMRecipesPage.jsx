@@ -117,6 +117,52 @@ export function BOMRecipesPage() {
     setIsAddModalOpen(false);
   };
 
+  const handleEditAddComponent = () => {
+    if (!editingBOM) return;
+    const defaultSku = skus.find((s) => s.category !== "Finished Goods") || skus[0];
+    setEditingBOM((prev) => ({
+      ...prev,
+      components: [
+        ...(prev.components || []),
+        {
+          id: `c_${Date.now()}`,
+          skuId: defaultSku?.skuId || "SKU-101",
+          skuCode: defaultSku?.skuCode || "ING-1001",
+          name: defaultSku?.name || "Liquid Cane Sugar",
+          quantity: 100,
+          uom: defaultSku?.uom || "Kg"
+        }
+      ]
+    }));
+  };
+
+  const handleEditRemoveComponent = (compIdx) => {
+    if (!editingBOM) return;
+    setEditingBOM((prev) => ({
+      ...prev,
+      components: (prev.components || []).filter((_, idx) => idx !== compIdx)
+    }));
+  };
+
+  const handleEditSubmit = (e) => {
+    e.preventDefault();
+    if (!editingBOM) return;
+    if (!editingBOM.components?.length) {
+      addToast("Please add at least one ingredient component to the recipe BOM.", "warning");
+      return;
+    }
+    const selectedSku = skus.find((s) => s.skuId === editingBOM.finishedSkuId);
+    updateBOM(editingBOM.bomId, {
+      finishedSkuId: editingBOM.finishedSkuId,
+      finishedSkuName: selectedSku?.name || editingBOM.finishedSkuName,
+      batchSize: editingBOM.batchSize,
+      yieldTarget: editingBOM.yieldTarget,
+      components: editingBOM.components
+    });
+    addToast(`Recipe BOM ${editingBOM.bomNumber} updated successfully!`, "success");
+    setEditingBOM(null);
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%", maxWidth: "1600px", margin: "0 auto", minWidth: 0 }}>
       {/* Header */}
@@ -312,6 +358,14 @@ export function BOMRecipesPage() {
 
                       <td style={{ padding: "12px 14px", textAlign: "right", whiteSpace: "nowrap" }}>
                         <div style={{ display: "flex", justifyContent: "flex-end", gap: "6px" }}>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            icon={Edit2}
+                            onClick={() => setEditingBOM({ ...bom })}
+                            style={{ padding: "6px 8px" }}
+                            title="Edit BOM Recipe"
+                          />
                           <Button
                             variant="secondary"
                             size="sm"
@@ -564,6 +618,190 @@ export function BOMRecipesPage() {
             addToast(`Change request registered for ${approvalModalBOM.bomNumber}!`, "info");
           }}
         />
+      )}
+
+      {/* EDIT BOM MODAL */}
+      {editingBOM && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(38, 22, 3, 0.55)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+            padding: "20px"
+          }}
+          onClick={() => setEditingBOM(null)}
+        >
+          <div
+            style={{
+              backgroundColor: "#FFFFFF",
+              borderRadius: "14px",
+              width: "100%",
+              maxWidth: "680px",
+              maxHeight: "90vh",
+              overflowY: "auto",
+              boxShadow: "0 20px 40px rgba(0,0,0,0.15)",
+              border: "1px solid var(--border-subtle)"
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ padding: "18px 22px", borderBottom: "1px solid var(--border-subtle)", display: "flex", justifyContent: "space-between", alignItems: "center", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Edit2 size={18} color="#B27E33" />
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                  Edit Recipe Formula — {editingBOM.bomNumber}
+                </h2>
+              </div>
+              <button
+                onClick={() => setEditingBOM(null)}
+                style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-muted)" }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditSubmit}>
+              <div style={{ padding: "22px", display: "flex", flexDirection: "column", gap: "16px" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "var(--text-primary)", marginBottom: "6px" }}>
+                      Target Finished SKU
+                    </label>
+                    <select
+                      value={editingBOM.finishedSkuId}
+                      onChange={(e) => {
+                        const s = skus.find((item) => item.skuId === e.target.value);
+                        setEditingBOM({ ...editingBOM, finishedSkuId: e.target.value, finishedSkuName: s?.name || editingBOM.finishedSkuName });
+                      }}
+                      className="form-input"
+                    >
+                      {skus.map((s) => (
+                        <option key={s.skuId} value={s.skuId}>
+                          {s.skuCode} — {s.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "var(--text-primary)", marginBottom: "6px" }}>
+                      Standard Batch Size
+                    </label>
+                    <input
+                      type="text"
+                      value={editingBOM.batchSize}
+                      onChange={(e) => setEditingBOM({ ...editingBOM, batchSize: e.target.value })}
+                      className="form-input"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "var(--text-primary)", marginBottom: "6px" }}>
+                    Expected Yield Target (%)
+                  </label>
+                  <input
+                    type="text"
+                    value={editingBOM.yieldTarget}
+                    onChange={(e) => setEditingBOM({ ...editingBOM, yieldTarget: e.target.value })}
+                    className="form-input"
+                  />
+                </div>
+
+                <div style={{ borderTop: "1px dashed var(--border-subtle)", paddingTop: "14px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+                    <label style={{ fontSize: "13px", fontWeight: 800, color: "var(--text-primary)" }}>
+                      Recipe Ingredients / BOM Components ({editingBOM.components?.length || 0})
+                    </label>
+                    <Button variant="secondary" size="sm" icon={Plus} type="button" onClick={handleEditAddComponent} style={{ fontSize: "11px", padding: "3px 8px" }}>
+                      Add Ingredient
+                    </Button>
+                  </div>
+
+                  <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                    {(editingBOM.components || []).map((comp, idx) => (
+                      <div
+                        key={comp.id || idx}
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: "2fr 1fr 1fr 36px",
+                          gap: "8px",
+                          alignItems: "center",
+                          backgroundColor: "var(--bg-card-subtle)",
+                          padding: "8px 10px",
+                          borderRadius: "8px"
+                        }}
+                      >
+                        <select
+                          value={comp.skuId}
+                          onChange={(e) => {
+                            const picked = skus.find((s) => s.skuId === e.target.value);
+                            const updated = [...editingBOM.components];
+                            updated[idx] = {
+                              ...comp,
+                              skuId: picked?.skuId,
+                              skuCode: picked?.skuCode,
+                              name: picked?.name,
+                              uom: picked?.uom
+                            };
+                            setEditingBOM({ ...editingBOM, components: updated });
+                          }}
+                          className="form-input"
+                          style={{ height: "32px", fontSize: "12px" }}
+                        >
+                          {skus.map((s) => (
+                            <option key={s.skuId} value={s.skuId}>{s.skuCode} ({s.name})</option>
+                          ))}
+                        </select>
+
+                        <input
+                          type="number"
+                          placeholder="Qty"
+                          value={comp.quantity}
+                          onChange={(e) => {
+                            const updated = [...editingBOM.components];
+                            updated[idx] = { ...comp, quantity: Number(e.target.value) };
+                            setEditingBOM({ ...editingBOM, components: updated });
+                          }}
+                          className="form-input"
+                          style={{ height: "32px", fontSize: "12px" }}
+                        />
+
+                        <div style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)" }}>
+                          {comp.uom}
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleEditRemoveComponent(idx)}
+                          style={{ background: "transparent", border: "none", cursor: "pointer", color: "#DC2626" }}
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ padding: "14px 22px", borderTop: "1px solid var(--border-subtle)", display: "flex", justifyContent: "flex-end", gap: "8px", backgroundColor: "var(--bg-card-subtle)" }}>
+                <Button variant="secondary" type="button" onClick={() => setEditingBOM(null)} style={{ fontSize: "12px" }}>
+                  Cancel
+                </Button>
+                <Button variant="primary" type="submit" style={{ fontSize: "12px" }}>
+                  Save Changes
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );
