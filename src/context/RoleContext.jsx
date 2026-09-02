@@ -406,7 +406,7 @@ export function RoleProvider({ children }) {
   });
 
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    return localStorage.getItem("flowstate_auth") === "true";
+    return sessionStorage.getItem("flowstate_auth") === "true";
   });
 
   useEffect(() => {
@@ -416,12 +416,12 @@ export function RoleProvider({ children }) {
   const login = (roleId) => {
     setRoleById(roleId);
     setIsAuthenticated(true);
-    localStorage.setItem("flowstate_auth", "true");
+    sessionStorage.setItem("flowstate_auth", "true");
   };
 
   const logout = () => {
     setIsAuthenticated(false);
-    localStorage.removeItem("flowstate_auth");
+    sessionStorage.removeItem("flowstate_auth");
   };
 
   const setRoleById = (roleId) => {
