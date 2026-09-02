@@ -685,6 +685,9 @@ body {
   .header-brand-title {
     font-size: 13px !important;
   }
+  .header-logo-subtext {
+    display: none !important;
+  }
   .fast-action-label {
     display: none !important;
   }
