@@ -3,8 +3,7 @@ import {
   Search,
   Plus,
   Bell,
-  ChevronLeft,
-  ChevronRight,
+  Menu,
   Flame,
   User,
   Settings,
@@ -14,14 +13,12 @@ import {
   AlertTriangle,
   CheckCircle,
   Clock,
-  Building2,
   ChevronDown
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useApp } from "../../context/AppContext";
 import { useRole } from "../../context/RoleContext";
 import { useMasterData } from "../../context/MasterDataContext";
-import { Button } from "../common/Button";
 
 export function Header() {
   const {
@@ -36,12 +33,11 @@ export function Header() {
 
   const navigate = useNavigate();
   const { currentRole, setRoleById, ROLES, logout } = useRole();
-  const { plants = [], activePlantId, setActivePlantId, company } = useMasterData();
+  const { company } = useMasterData();
 
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showRoleSubmenu, setShowRoleSubmenu] = useState(false);
   const [showNotificationsMenu, setShowNotificationsMenu] = useState(false);
-  const [showPlantDropdown, setShowPlantDropdown] = useState(false);
 
   const [notifications, setNotifications] = useState([
     { id: 1, title: "Line 1 PM Task Alert", desc: "High-Speed Rotary Filler PM due in 30 mins", time: "2m ago", type: "warning", unread: true },
@@ -51,7 +47,6 @@ export function Header() {
 
   const profileDropdownRef = useRef(null);
   const notificationsDropdownRef = useRef(null);
-  const plantDropdownRef = useRef(null);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -62,9 +57,6 @@ export function Header() {
       }
       if (notificationsDropdownRef.current && !notificationsDropdownRef.current.contains(e.target)) {
         setShowNotificationsMenu(false);
-      }
-      if (plantDropdownRef.current && !plantDropdownRef.current.contains(e.target)) {
-        setShowPlantDropdown(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -83,12 +75,11 @@ export function Header() {
   };
 
   const markAllRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, unread: false })));
+    setNotifications((prev) => prev.map((n) => ({ ...n, unread: false })));
     addToast("All notifications marked as read.", "success");
   };
 
-  const unreadCount = notifications.filter(n => n.unread).length;
-  const currentPlantObj = plants.find((p) => p.id === activePlantId) || plants[0] || { name: "Indore Plant", code: "PLT-01" };
+  const unreadCount = notifications.filter((n) => n.unread).length;
 
   return (
     <header
@@ -105,16 +96,16 @@ export function Header() {
         backgroundColor: "var(--bg-header, #FFFDF9)",
         borderBottom: "1px solid var(--border-subtle, #EFEAE2)",
         padding: "10px 20px",
-        gap: "12px"
+        gap: "16px"
       }}
     >
-      {/* Far Left: Branding Logo & Sidebar Collapse Toggle */}
-      <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
+      {/* Far Left: Branding Logo & Hamburger Menu Toggle */}
+      <div style={{ display: "flex", alignItems: "center", gap: "12px", flexShrink: 0 }}>
         {/* Gold Flame Icon */}
         <div
           style={{
-            width: "34px",
-            height: "34px",
+            width: "36px",
+            height: "36px",
             borderRadius: "10px",
             background: "linear-gradient(135deg, #E2B670 0%, #C89547 50%, #B27E33 100%)",
             display: "flex",
@@ -133,12 +124,12 @@ export function Header() {
           <span style={{ fontSize: "14px", fontWeight: 900, letterSpacing: "-0.2px", color: "var(--text-primary, #261603)", lineHeight: 1, marginBottom: "2px", whiteSpace: "nowrap" }}>
             MaintenX <span style={{ color: "#B27E33" }}>OS</span>
           </span>
-          <span className="header-logo-subtext" style={{ fontSize: "9px", color: "var(--text-muted, #8C7B6E)", letterSpacing: "0.08em", textTransform: "uppercase", fontWeight: 700, lineHeight: 1, whiteSpace: "nowrap" }}>
-            {company?.name || "Kiaan BevCorp Global"}
+          <span className="header-logo-subtext" style={{ fontSize: "8px", color: "var(--text-muted, #8C7B6E)", letterSpacing: "0.08em", textTransform: "uppercase", fontWeight: 700, lineHeight: 1, whiteSpace: "nowrap" }}>
+            MANUFACTURING CLOUD
           </span>
         </div>
 
-        {/* Sidebar Toggle Button */}
+        {/* Hamburger Menu Toggle Button */}
         <button
           onClick={() => {
             if (window.innerWidth <= 768) {
@@ -151,119 +142,39 @@ export function Header() {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            width: "32px",
-            height: "32px",
-            borderRadius: "8px",
+            width: "34px",
+            height: "34px",
+            borderRadius: "10px",
             backgroundColor: "#FFFFFF",
             border: "1px solid var(--border-subtle, #EFEAE2)",
             color: "var(--text-secondary, #6B5B4E)",
             cursor: "pointer",
             boxShadow: "0 1px 3px rgba(70, 45, 15, 0.04)",
-            marginLeft: "2px",
+            marginLeft: "4px",
             flexShrink: 0,
             transition: "all 0.15s ease"
           }}
           title={sidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
         >
-          {sidebarCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+          <Menu size={16} />
         </button>
-      </div>
-
-      {/* Center Left: Plant Context Switcher Dropdown */}
-      <div ref={plantDropdownRef} style={{ position: "relative", flexShrink: 0 }}>
-        <button
-          onClick={() => setShowPlantDropdown(!showPlantDropdown)}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "6px",
-            padding: "5px 10px",
-            backgroundColor: "#FFFFFF",
-            border: "1px solid var(--border-subtle)",
-            borderRadius: "8px",
-            cursor: "pointer",
-            fontSize: "12px",
-            fontWeight: 700,
-            color: "var(--text-primary)",
-            boxShadow: "0 1px 3px rgba(70, 45, 15, 0.04)"
-          }}
-          title="Switch Active Manufacturing Plant"
-        >
-          <Building2 size={14} color="#C89547" />
-          <span>{currentPlantObj.name?.split(" - ")[0]}</span>
-          <ChevronDown size={12} color="var(--text-muted)" />
-        </button>
-
-        {showPlantDropdown && (
-          <div
-            style={{
-              position: "absolute",
-              top: "38px",
-              left: 0,
-              width: "220px",
-              backgroundColor: "#FFFFFF",
-              border: "1px solid var(--border-subtle)",
-              borderRadius: "10px",
-              boxShadow: "0 12px 28px rgba(0,0,0,0.15)",
-              zIndex: 100,
-              padding: "6px",
-              display: "flex",
-              flexDirection: "column",
-              gap: "4px"
-            }}
-          >
-            <div style={{ fontSize: "10px", fontWeight: 800, color: "var(--text-muted)", padding: "4px 8px", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-              Select Plant Facility
-            </div>
-            {plants.map((plant) => (
-              <button
-                key={plant.id}
-                onClick={() => {
-                  setActivePlantId(plant.id);
-                  setShowPlantDropdown(false);
-                  addToast(`Active facility switched to ${plant.name}`, "info");
-                }}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  padding: "8px 10px",
-                  borderRadius: "6px",
-                  border: "none",
-                  backgroundColor: plant.id === activePlantId ? "rgba(200, 149, 71, 0.12)" : "transparent",
-                  color: plant.id === activePlantId ? "#8C5B23" : "var(--text-primary)",
-                  fontWeight: plant.id === activePlantId ? 800 : 600,
-                  fontSize: "12px",
-                  cursor: "pointer",
-                  textAlign: "left"
-                }}
-              >
-                <div>
-                  <div>{plant.name.split(" - ")[0]}</div>
-                  <div style={{ fontSize: "10px", color: "var(--text-muted)" }}>{plant.code} • {plant.city}</div>
-                </div>
-                {plant.id === activePlantId && <CheckCircle size={14} color="#059669" />}
-              </button>
-            ))}
-          </div>
-        )}
       </div>
 
       {/* Center: Search Input Bar */}
-      <div style={{ flex: 1, display: "flex", justifyContent: "center", maxWidth: "480px", minWidth: 0 }}>
+      <div style={{ flex: 1, display: "flex", justifyContent: "center", maxWidth: "560px", minWidth: 0 }}>
         <div
           onClick={() => setIsSearchOpen(true)}
           className="header-search-box"
           style={{
             width: "100%",
-            height: "36px",
+            height: "38px",
             backgroundColor: "#FFFFFF",
             border: "1px solid var(--border-subtle, #EFEAE2)",
-            borderRadius: "12px",
+            borderRadius: "14px",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            padding: "3px 4px 3px 12px",
+            padding: "3px 4px 3px 14px",
             cursor: "pointer",
             boxShadow: "0 1px 4px rgba(70, 45, 15, 0.04)",
             transition: "all 0.15s ease",
@@ -271,15 +182,15 @@ export function Header() {
           }}
           title="Search anything (Cmd+K / Ctrl+K)"
         >
-          <span className="header-search-text" style={{ fontSize: "12px", color: "var(--text-muted, #A09082)", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            Search SKU, Machine, BOM, Work Orders...
+          <span className="header-search-text" style={{ fontSize: "13px", color: "var(--text-muted, #A09082)", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            Search...
           </span>
           <div
             className="header-search-icon-btn"
             style={{
-              width: "28px",
-              height: "28px",
-              borderRadius: "8px",
+              width: "30px",
+              height: "30px",
+              borderRadius: "10px",
               background: "linear-gradient(180deg, #E2B670 0%, #C89547 100%)",
               color: "#261603",
               display: "flex",
@@ -288,13 +199,13 @@ export function Header() {
               flexShrink: 0
             }}
           >
-            <Search size={13} />
+            <Search size={14} />
           </div>
         </div>
       </div>
 
-      {/* Far Right: Notification Bell, Fast Action Button, Profile Avatar */}
-      <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
+      {/* Far Right: Notification Bell, + Fast Action, User Avatar */}
+      <div style={{ display: "flex", alignItems: "center", gap: "10px", flexShrink: 0 }}>
         {/* Notification Bell Dropdown */}
         <div ref={notificationsDropdownRef} style={{ position: "relative", flexShrink: 0 }}>
           <button
@@ -303,8 +214,8 @@ export function Header() {
               setShowProfileMenu(false);
             }}
             style={{
-              width: "34px",
-              height: "34px",
+              width: "36px",
+              height: "36px",
               borderRadius: "10px",
               backgroundColor: showNotificationsMenu ? "var(--bg-card-subtle, #FAF6F0)" : "#FFFFFF",
               border: showNotificationsMenu ? "1.5px solid #C89547" : "1px solid var(--border-subtle, #EFEAE2)",
@@ -325,10 +236,10 @@ export function Header() {
               <span
                 style={{
                   position: "absolute",
-                  top: "-3px",
-                  right: "-3px",
-                  width: "15px",
-                  height: "15px",
+                  top: "-4px",
+                  right: "-4px",
+                  width: "16px",
+                  height: "16px",
                   borderRadius: "50%",
                   backgroundColor: "#C89547",
                   color: "#FFFFFF",
@@ -336,7 +247,8 @@ export function Header() {
                   fontWeight: 800,
                   display: "flex",
                   alignItems: "center",
-                  justifyContent: "center"
+                  justifyContent: "center",
+                  border: "1.5px solid #FFFFFF"
                 }}
               >
                 {unreadCount}
@@ -351,7 +263,7 @@ export function Header() {
               style={{
                 position: "absolute",
                 right: 0,
-                top: "44px",
+                top: "46px",
                 width: "310px",
                 backgroundColor: "#FFFFFF",
                 border: "1px solid var(--border-highlight, #E2B670)",
@@ -383,7 +295,7 @@ export function Header() {
                   <div
                     key={n.id}
                     onClick={() => {
-                      setNotifications(prev => prev.map(item => item.id === n.id ? { ...item, unread: false } : item));
+                      setNotifications((prev) => prev.map((item) => item.id === n.id ? { ...item, unread: false } : item));
                     }}
                     style={{
                       padding: "8px 10px",
@@ -413,31 +325,6 @@ export function Header() {
           )}
         </div>
 
-        {/* + Fast Action Button */}
-        <Button
-          variant="primary"
-          size="sm"
-          icon={Plus}
-          onClick={() => setIsQuickActionOpen(true)}
-          className="header-fast-action-btn"
-          style={{
-            background: "linear-gradient(180deg, #E2B670 0%, #C89547 100%)",
-            color: "#261603",
-            border: "none",
-            borderRadius: "10px",
-            padding: "6px 12px",
-            fontWeight: 800,
-            fontSize: "12px",
-            display: "flex",
-            alignItems: "center",
-            gap: "4px",
-            boxShadow: "0 2px 6px rgba(200, 149, 71, 0.3)",
-            flexShrink: 0
-          }}
-        >
-          <span className="header-fast-action-text">Fast Action</span>
-        </Button>
-
         {/* Profile Avatar & Dropdown */}
         <div ref={profileDropdownRef} style={{ position: "relative", flexShrink: 0 }}>
           <button
@@ -450,8 +337,8 @@ export function Header() {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              width: "34px",
-              height: "34px",
+              width: "36px",
+              height: "36px",
               padding: 0,
               borderRadius: "50%",
               background: "linear-gradient(135deg, #E2B670 0%, #C89547 100%)",
@@ -461,11 +348,11 @@ export function Header() {
               transition: "all 0.18s ease",
               boxShadow: "0 2px 8px rgba(178, 126, 51, 0.3)",
               fontWeight: 900,
-              fontSize: "13px"
+              fontSize: "14px"
             }}
             title="User Profile & Role Settings"
           >
-            {currentRole?.label?.charAt(0) || "P"}
+            {currentRole?.label?.charAt(0) || "O"}
           </button>
 
           {/* Profile Dropdown Menu */}
@@ -475,7 +362,7 @@ export function Header() {
               style={{
                 position: "absolute",
                 right: 0,
-                top: "44px",
+                top: "46px",
                 width: "240px",
                 backgroundColor: "#FFFFFF",
                 border: "1px solid var(--border-highlight, #E2B670)",
@@ -515,7 +402,7 @@ export function Header() {
                     flexShrink: 0
                   }}
                 >
-                  {currentRole?.label?.charAt(0) || "P"}
+                  {currentRole?.label?.charAt(0) || "O"}
                 </div>
                 <div style={{ overflow: "hidden" }}>
                   <div style={{ fontSize: "13px", fontWeight: 800, color: "var(--text-primary, #261603)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
@@ -560,14 +447,14 @@ export function Header() {
                   borderRadius: "8px",
                   border: "none",
                   backgroundColor: "transparent",
-                  color: "#DC2626",
+                  color: "var(--red-500, #EF4444)",
                   fontSize: "12px",
                   fontWeight: 600,
                   cursor: "pointer",
                   textAlign: "left"
                 }}
               >
-                <LogOut size={14} /> Log Out
+                <LogOut size={14} /> Logout Session
               </button>
             </div>
           )}

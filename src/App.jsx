@@ -9,6 +9,7 @@ import { InventoryProvider } from "./context/InventoryContext";
 import { ExceptionProvider } from "./context/ExceptionContext";
 import { AdminProvider } from "./context/AdminContext";
 import { MasterDataProvider } from "./context/MasterDataContext";
+import { PlanningProvider } from "./context/PlanningContext";
 
 import { AppLayout } from "./components/layout/AppLayout";
 import { Login } from "./pages/auth/Login";
@@ -853,15 +854,17 @@ export default function App() {
         <MasterDataProvider>
           <CMMSProvider>
             <ProductionProvider>
-              <QualityProvider>
-                <InventoryProvider>
-                  <ExceptionProvider>
-                    <AdminProvider>
-                      <AppContent />
-                    </AdminProvider>
-                  </ExceptionProvider>
-                </InventoryProvider>
-              </QualityProvider>
+              <PlanningProvider>
+                <QualityProvider>
+                  <InventoryProvider>
+                    <ExceptionProvider>
+                      <AdminProvider>
+                        <AppContent />
+                      </AdminProvider>
+                    </ExceptionProvider>
+                  </InventoryProvider>
+                </QualityProvider>
+              </PlanningProvider>
             </ProductionProvider>
           </CMMSProvider>
         </MasterDataProvider>
