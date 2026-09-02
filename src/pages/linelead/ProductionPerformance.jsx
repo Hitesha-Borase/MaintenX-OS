@@ -80,9 +80,6 @@ export function ProductionPerformance() {
           <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
             Production Performance & Pace Analytics
           </h1>
-          <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-            Monitor real-time filler speed, target attainment, and recovery pace simulations
-          </p>
         </div>
 
         <Button variant="primary" icon={Gauge} onClick={() => setIsSimModalOpen(true)}>

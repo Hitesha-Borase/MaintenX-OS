@@ -1,10 +1,24 @@
 import React, { useState, useMemo } from "react";
-import { Building, DollarSign, AlertTriangle, Zap, TrendingUp, BrainCircuit, RefreshCw, BarChart2 } from "lucide-react";
+import { 
+  Building, 
+  DollarSign, 
+  AlertTriangle, 
+  Zap, 
+  TrendingUp, 
+  BrainCircuit, 
+  RefreshCw, 
+  BarChart2, 
+  Download, 
+  CheckCircle2, 
+  Send, 
+  ChevronRight 
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "../../components/common/Card";
 import { StatCard } from "../../components/common/StatCard";
 import { Button } from "../../components/common/Button";
 import { Badge } from "../../components/common/Badge";
+import { Modal } from "../../components/common/Modal";
 import { useApp } from "../../context/AppContext";
 
 // Contexts for Enterprise Data Integration
@@ -38,12 +52,31 @@ export function ExecutiveDashboard() {
   const [selectedPlantId, setSelectedPlantId] = useState("ALL");
   const [refreshing, setRefreshing] = useState(false);
 
+  // Modals state
+  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
+  const [isPlantModalOpen, setIsPlantModalOpen] = useState(false);
+  const [activePlantDetail, setActivePlantDetail] = useState(null);
+
   const handleRefresh = () => {
     setRefreshing(true);
     setTimeout(() => {
       setRefreshing(false);
       addToast("Executive portfolio data synced with operational modules.", "success");
     }, 800);
+  };
+
+  const handleExportBoardReport = () => {
+    addToast("Generating Executive Board Summary Report (PDF)... Download started.", "success");
+  };
+
+  const handleOpenPlantModal = (plant) => {
+    setActivePlantDetail(plant);
+    setIsPlantModalOpen(true);
+  };
+
+  const handleApproveAiSubmit = () => {
+    addToast("AI Routing Recommendation Approved! Production order routed to Austin Skid 2 (PDF Section 18 Governance).", "success");
+    setIsAiModalOpen(false);
   };
 
   // --- Dynamic Enterprise Calculations ---
@@ -83,7 +116,7 @@ export function ExecutiveDashboard() {
       // Plant-specific CI Projects
       const activeCI = ciProjects.filter(p => p.plantId === plant.id && p.status === "Active").length;
 
-      // Determine Status (Simplified Mock Logic for demo purposes)
+      // Determine Status
       let status = "Optimal";
       if (Number(pAch) < 85) status = "Warning";
       if (Number(pAch) < 70) status = "Critical";
@@ -92,7 +125,12 @@ export function ExecutiveDashboard() {
         ...plant,
         achievement: pAch + "%",
         activeCI,
-        status
+        status,
+        lines: plant.lines || 4,
+        oee: plant.oee || "84.2%",
+        cost: plant.cost || "$142.5K",
+        scrapRate: plant.scrapRate || "0.4%",
+        mtbf: plant.mtbf || "142 hrs"
       };
     });
   }, [activePlants, productionOrders, ciProjects]);
@@ -151,37 +189,39 @@ export function ExecutiveDashboard() {
   const topLosses = useMemo(() => {
     let filteredLosses = lossRecords;
     if (selectedPlantId !== "ALL") {
-      // Assuming lossRecords have a plantId or we map them. 
-      // For this mockup, if plantId doesn't exist on lossRecord, we just take top 3 globally.
       filteredLosses = lossRecords.filter(l => !l.plantId || l.plantId === selectedPlantId);
     }
     
     // Sort by financial impact descending
     const sorted = [...filteredLosses].sort((a, b) => (b.financialImpactUSD || 0) - (a.financialImpactUSD || 0));
-    return sorted.slice(0, 3); // Top 3
+    return sorted.slice(0, 3);
   }, [lossRecords, selectedPlantId]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "24px", width: "100%" }}>
-      {/* Header */}
-      <div className="mobile-flex-col" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "16px" }}>
+      {/* Top Header */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
         <div>
-          <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)" }}>
-            Executive Dashboard
+          <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.5px" }}>
+            Enterprise Executive Command Center
           </h1>
+          <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>
+            Multi-plant manufacturing performance, financial loss drivers, and predictive AI insights
+          </p>
         </div>
 
-        <div className="mobile-flex-col" style={{ display: "flex", gap: "12px", alignItems: "center", width: "fit-content" }}>
+        <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
+          {/* Plant Selector */}
           <select
             value={selectedPlantId}
             onChange={(e) => setSelectedPlantId(e.target.value)}
-            className="input-field"
             style={{
               padding: "8px 12px",
               borderRadius: "8px",
-              backgroundColor: "#FFFFFF",
-              color: "var(--text-primary)",
               border: "1px solid var(--border-subtle)",
+              backgroundColor: "var(--bg-card)",
+              color: "var(--text-primary)",
+              fontWeight: 600,
               outline: "none",
               fontSize: "13px",
               cursor: "pointer",
@@ -194,49 +234,55 @@ export function ExecutiveDashboard() {
             ))}
           </select>
 
+          <Button variant="success" icon={Download} onClick={handleExportBoardReport}>
+            Export Board Report (PDF)
+          </Button>
+
           <Button
             variant="secondary"
             icon={RefreshCw}
             onClick={handleRefresh}
-            style={{ animation: refreshing ? "spin 1s linear infinite" : "none" }}
+            style={{
+              animation: refreshing ? "spin 1s linear infinite" : "none"
+            }}
           >
             Sync Data
           </Button>
         </div>
       </div>
 
-      {/* Stats Grid - Enterprise KPI Summary */}
-      <div className="grid-4">
+      {/* Top Executive Stats Row */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "16px" }}>
         <div onClick={() => navigate("/production")} style={{ cursor: "pointer", transition: "transform 0.2s" }} onMouseEnter={(e) => e.currentTarget.style.transform = "translateY(-2px)"} onMouseLeave={(e) => e.currentTarget.style.transform = "none"}>
           <StatCard
-            title="Production Achievement"
+            title="Production Attainment"
             value={`${productionStats.achievement}%`}
-            description="Actual vs Target"
-            icon={Building}
+            description={`${productionStats.totalActual.toLocaleString()} / ${productionStats.totalTarget.toLocaleString()} units`}
+            icon={TrendingUp}
             color="#0284C7"
           />
         </div>
-        
-        <div onClick={() => navigate("/ci/reliability")} style={{ cursor: "pointer", transition: "transform 0.2s" }} onMouseEnter={(e) => e.currentTarget.style.transform = "translateY(-2px)"} onMouseLeave={(e) => e.currentTarget.style.transform = "none"}>
+
+        <div onClick={() => navigate("/maintenance")} style={{ cursor: "pointer", transition: "transform 0.2s" }} onMouseEnter={(e) => e.currentTarget.style.transform = "translateY(-2px)"} onMouseLeave={(e) => e.currentTarget.style.transform = "none"}>
           <StatCard
-            title="Enterprise Reliability"
-            value={`${fleetMTBF} hrs`}
-            description={`MTTR: ${fleetMTTR} mins`}
+            title="Enterprise Fleet MTBF"
+            value={`${fleetMTBF}h`}
+            description="Mean Time Between Failures"
             icon={Zap}
             color="#D97706"
           />
         </div>
-        
-        <div onClick={() => navigate("/ci/projects/savings")} style={{ cursor: "pointer", transition: "transform 0.2s" }} onMouseEnter={(e) => e.currentTarget.style.transform = "translateY(-2px)"} onMouseLeave={(e) => e.currentTarget.style.transform = "none"}>
+
+        <div onClick={() => navigate("/ci/projects")} style={{ cursor: "pointer", transition: "transform 0.2s" }} onMouseEnter={(e) => e.currentTarget.style.transform = "translateY(-2px)"} onMouseLeave={(e) => e.currentTarget.style.transform = "none"}>
           <StatCard
-            title="CI Savings Realized"
+            title="Realized CI Savings"
             value={`$${(realizedSavingsTotal / 1000).toFixed(1)}K`}
-            description={`Projected: $${(projectedSavingsTotal / 1000).toFixed(1)}K`}
-            icon={TrendingUp}
+            description={`Pipeline: $${(projectedSavingsTotal / 1000).toFixed(1)}K`}
+            icon={DollarSign}
             color="#059669"
           />
         </div>
-        
+
         <div onClick={() => navigate("/costing")} style={{ cursor: "pointer", transition: "transform 0.2s" }} onMouseEnter={(e) => e.currentTarget.style.transform = "translateY(-2px)"} onMouseLeave={(e) => e.currentTarget.style.transform = "none"}>
           <StatCard
             title="Manufacturing Cost (MTD)"
@@ -267,7 +313,10 @@ export function ExecutiveDashboard() {
               {plantPerformance.map((plant, idx) => (
                 <div
                   key={idx}
-                  onClick={() => setSelectedPlantId(plant.id)}
+                  onClick={() => {
+                    setSelectedPlantId(plant.id);
+                    handleOpenPlantModal(plant);
+                  }}
                   style={{
                     display: "flex",
                     justifyContent: "space-between",
@@ -308,6 +357,7 @@ export function ExecutiveDashboard() {
                     <Badge variant={plant.status === "Optimal" ? "emerald" : (plant.status === "Warning" ? "warning" : "destructive")}>
                       {plant.status}
                     </Badge>
+                    <ChevronRight size={16} color="var(--text-muted)" />
                   </div>
                 </div>
               ))}
@@ -409,15 +459,15 @@ export function ExecutiveDashboard() {
           <Card style={{ backgroundColor: "#FFFFFF", border: "1px solid rgba(124, 58, 237, 0.3)", background: "linear-gradient(135deg, rgba(124, 58, 237, 0.04) 0%, #FFFFFF 100%)", padding: "20px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
               <BrainCircuit size={18} color="#7C3AED" />
-              <h3 style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>Executive AI Briefing</h3>
+              <h3 style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>Executive AI Briefing & Governance</h3>
             </div>
             <p style={{ fontSize: "12px", color: "var(--text-secondary)", lineHeight: "1.6" }}>
               Enterprise production achievement is <strong style={{ color: "#0284C7" }}>{productionStats.achievement}%</strong>. 
               {Number(productionStats.achievement) < 90 ? " Focus on resolving top downtime events to meet monthly volume targets." : " Output is tracking well against targets."}
             </p>
-            <div style={{ marginTop: "16px" }}>
-              <Button variant="primary" size="sm" style={{ width: "100%" }} onClick={() => addToast("Detailed Briefing Generated in AI Hub.", "info")}>
-                Access Full AI Analysis
+            <div style={{ marginTop: "16px", display: "flex", gap: "8px" }}>
+              <Button variant="primary" size="sm" style={{ flex: 1 }} onClick={() => setIsAiModalOpen(true)}>
+                Approve AI Recommendation
               </Button>
             </div>
           </Card>
@@ -440,6 +490,69 @@ export function ExecutiveDashboard() {
         </div>
 
       </div>
+
+      {/* AI Recommendation Governance Approval Modal */}
+      <Modal
+        isOpen={isAiModalOpen}
+        onClose={() => setIsAiModalOpen(false)}
+        title="AI Routing Governance Approval"
+        subtitle="PDF Page 5 Section 18 Governance: Observe → Analyze → Recommend → Human Approves"
+        maxWidth="500px"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setIsAiModalOpen(false)}>
+              Reject Recommendation
+            </Button>
+            <Button variant="primary" icon={Send} onClick={handleApproveAiSubmit}>
+              Authorize AI Action
+            </Button>
+          </>
+        }
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+          <div style={{ padding: "12px", borderRadius: "8px", backgroundColor: "rgba(124, 58, 237, 0.08)", border: "1px solid rgba(124, 58, 237, 0.2)", fontSize: "13px" }}>
+            <strong>Recommendation:</strong> Route 5,000 L raw inventory to Austin Skid 2 Filler to capture 1.8% OEE lift.
+          </div>
+          <div style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
+            Per <strong>Strict PDF Rule 18</strong>: AI must NOT independently execute critical decisions. Executive approval authorizes the APS scheduling engine to reassign batch routing.
+          </div>
+        </div>
+      </Modal>
+
+      {/* Plant Deep-Dive Drill-Down Modal */}
+      <Modal
+        isOpen={isPlantModalOpen}
+        onClose={() => setIsPlantModalOpen(false)}
+        title={`Plant Deep-Dive: ${activePlantDetail?.name}`}
+        subtitle={`MTD Manufacturing Cost: ${activePlantDetail?.cost}`}
+        maxWidth="540px"
+        footer={
+          <Button variant="secondary" onClick={() => setIsPlantModalOpen(false)}>
+            Close Drill-Down View
+          </Button>
+        }
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: "14px", fontSize: "13px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+            <div style={{ padding: "12px", backgroundColor: "var(--bg-card-subtle)", borderRadius: "8px" }}>
+              <span style={{ color: "var(--text-muted)", fontSize: "11px" }}>Active Lines:</span>
+              <div style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)" }}>{activePlantDetail?.lines} Packaging Lines</div>
+            </div>
+            <div style={{ padding: "12px", backgroundColor: "var(--bg-card-subtle)", borderRadius: "8px" }}>
+              <span style={{ color: "var(--text-muted)", fontSize: "11px" }}>Plant OEE Average:</span>
+              <div style={{ fontSize: "16px", fontWeight: 800, color: "#0284C7" }}>{activePlantDetail?.oee}</div>
+            </div>
+            <div style={{ padding: "12px", backgroundColor: "var(--bg-card-subtle)", borderRadius: "8px" }}>
+              <span style={{ color: "var(--text-muted)", fontSize: "11px" }}>Scrap Rate:</span>
+              <div style={{ fontSize: "16px", fontWeight: 800, color: "#059669" }}>{activePlantDetail?.scrapRate}</div>
+            </div>
+            <div style={{ padding: "12px", backgroundColor: "var(--bg-card-subtle)", borderRadius: "8px" }}>
+              <span style={{ color: "var(--text-muted)", fontSize: "11px" }}>Equipment MTBF:</span>
+              <div style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)" }}>{activePlantDetail?.mtbf}</div>
+            </div>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

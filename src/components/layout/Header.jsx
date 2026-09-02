@@ -13,7 +13,9 @@ import {
   AlertTriangle,
   CheckCircle,
   Clock,
-  ChevronDown
+  ChevronDown,
+  ShieldCheck,
+  ShieldAlert
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useApp } from "../../context/AppContext";
@@ -47,16 +49,19 @@ export function Header() {
 
   const profileDropdownRef = useRef(null);
   const notificationsDropdownRef = useRef(null);
+  const roleDropdownRef = useRef(null);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
     function handleClickOutside(e) {
       if (profileDropdownRef.current && !profileDropdownRef.current.contains(e.target)) {
         setShowProfileMenu(false);
-        setShowRoleSubmenu(false);
       }
       if (notificationsDropdownRef.current && !notificationsDropdownRef.current.contains(e.target)) {
         setShowNotificationsMenu(false);
+      }
+      if (roleDropdownRef.current && !roleDropdownRef.current.contains(e.target)) {
+        setShowRoleSubmenu(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);

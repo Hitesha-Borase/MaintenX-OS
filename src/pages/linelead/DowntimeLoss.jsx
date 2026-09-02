@@ -62,9 +62,6 @@ export function DowntimeLoss() {
           <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
             Shift Downtime & Loss Logs (RCA 2.0)
           </h1>
-          <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-            Record unscheduled breakdowns, categorize loss drivers, and dispatch corrective maintenance
-          </p>
         </div>
 
         <Button variant="danger" icon={Plus} onClick={() => setIsLogModalOpen(true)}>

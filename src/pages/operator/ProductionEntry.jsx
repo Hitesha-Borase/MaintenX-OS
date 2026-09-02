@@ -1,7 +1,8 @@
 import React, { useState } from "react";
-import { Factory, Plus, Minus, Send, CheckCircle2, AlertOctagon, RotateCcw } from "lucide-react";
+import { Factory, Plus, Minus, Send, CheckCircle2, AlertOctagon, RotateCcw, AlertTriangle } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { Button } from "../../components/common/Button";
+import { Modal } from "../../components/common/Modal";
 import { useProduction } from "../../context/ProductionContext";
 import { useApp } from "../../context/AppContext";
 
@@ -14,6 +15,10 @@ export function ProductionEntry() {
   const [producedAdd, setProducedAdd] = useState(500);
   const [scrapAdd, setScrapAdd] = useState(10);
   const [reworkAdd, setReworkAdd] = useState(5);
+
+  const [isScrapModalOpen, setIsScrapModalOpen] = useState(false);
+  const [defectCode, setDefectCode] = useState("Cap Seal Deformation / Dent");
+  const [scrapNotes, setScrapNotes] = useState("Found during capper exit inspection");
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -38,12 +43,27 @@ export function ProductionEntry() {
     setReworkAdd(5);
   };
 
+  const handleLogScrapSubmit = (e) => {
+    e.preventDefault();
+    setProductionOrders((prev) =>
+      prev.map((o) => o.id === activeOrder.id ? { ...o, scrapQuantity: o.scrapQuantity + Number(scrapAdd) } : o)
+    );
+    addToast(`Scrap reject of +${scrapAdd} units logged under defect category: "${defectCode}". Sent to Quality & Costing.`, "danger");
+    setIsScrapModalOpen(false);
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%" }}>
-      <div>
-        <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
-          Production HMI Entry
-        </h1>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
+        <div>
+          <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
+            Production HMI Entry & Scrap Logging
+          </h1>
+        </div>
+
+        <Button variant="danger" icon={AlertTriangle} onClick={() => setIsScrapModalOpen(true)}>
+          Log Scrap Defect Reason
+        </Button>
       </div>
 
       <Card style={{ backgroundColor: "#FFFFFF", border: "1px solid var(--border-subtle)" }}>
@@ -155,8 +175,6 @@ export function ProductionEntry() {
                 <Plus size={16} />
               </button>
             </div>
-
-
           </Card>
 
           {/* Scrap Count Card */}
@@ -254,8 +272,6 @@ export function ProductionEntry() {
                 <Plus size={16} />
               </button>
             </div>
-
-
           </Card>
 
           {/* Rework Count Card */}
@@ -353,8 +369,6 @@ export function ProductionEntry() {
                 <Plus size={16} />
               </button>
             </div>
-
-
           </Card>
         </div>
 
@@ -362,6 +376,71 @@ export function ProductionEntry() {
           Submit Production Log
         </Button>
       </form>
+
+      {/* Log Scrap Defect Reason Modal */}
+      <Modal
+        isOpen={isScrapModalOpen}
+        onClose={() => setIsScrapModalOpen(false)}
+        title="Categorize Scrap Reject Reason"
+        subtitle="Specify Defect Code & Material Impact"
+        maxWidth="480px"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setIsScrapModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="danger" icon={Send} onClick={handleLogScrapSubmit}>
+              Confirm Defect Log
+            </Button>
+          </>
+        }
+      >
+        <form onSubmit={handleLogScrapSubmit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+          <div>
+            <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-primary)", display: "block", marginBottom: "6px" }}>
+              Defect Category / Reason Code
+            </label>
+            <select
+              value={defectCode}
+              onChange={(e) => setDefectCode(e.target.value)}
+              className="input-field"
+            >
+              <option value="Cap Seal Deformation / Dent">Cap Seal Deformation / Dent</option>
+              <option value="Label Misalignment / Tear">Label Misalignment / Tear</option>
+              <option value="Volume Underfill / Overfill">Volume Underfill / Overfill</option>
+              <option value="Bottle Neck Contamination">Bottle Neck Contamination</option>
+              <option value="Date Code Barcode Smudge">Date Code Barcode Smudge</option>
+            </select>
+          </div>
+
+          <div>
+            <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-primary)", display: "block", marginBottom: "6px" }}>
+              Scrap Reject Quantity
+            </label>
+            <input
+              type="number"
+              value={scrapAdd}
+              onChange={(e) => setScrapAdd(Number(e.target.value))}
+              className="input-field"
+              min={1}
+              required
+            />
+          </div>
+
+          <div>
+            <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-primary)", display: "block", marginBottom: "6px" }}>
+              Operator Notes
+            </label>
+            <input
+              type="text"
+              value={scrapNotes}
+              onChange={(e) => setScrapNotes(e.target.value)}
+              className="input-field"
+              required
+            />
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

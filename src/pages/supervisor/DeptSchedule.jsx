@@ -44,9 +44,6 @@ export function DeptSchedule() {
           <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
             Department Run Schedule
           </h1>
-          <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-            Authorize, pause, and control line execution sequences across department lines
-          </p>
         </div>
 
         <Button variant="secondary" icon={RefreshCw} onClick={() => navigate("/planner/aps/scheduler")}>
