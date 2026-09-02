@@ -317,6 +317,17 @@ export const NAVIGATION_CONFIG = {
         { label: "Command Center", path: "/command-center", icon: "LayoutDashboard" }
       ]
     },
+    {
+      group: "Master Data",
+      items: [
+        { label: "SKUs Master", path: "/master-data/items", icon: "Package" },
+        { label: "BOMs & Recipes", path: "/master-data/bom", icon: "FlaskConical" },
+        { label: "Lines Master", path: "/master-data/work-centers", icon: "Layers" },
+        { label: "Assets Master", path: "/master-data/machine-capability", icon: "Cpu" },
+        { label: "Staff & Skills", path: "/master-data/skills", icon: "Users" },
+        { label: "QA Specs", path: "/master-data/quality-specs", icon: "ShieldCheck" }
+      ]
+    },
     { label: "Production", path: "/production", icon: "Factory" },
     { label: "Quality", path: "/quality", icon: "ShieldCheck" },
     { label: "Inventory", path: "/inventory", icon: "Package" },
