@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { FileCheck, Check, X, ShieldCheck } from "lucide-react";
+import { FileCheck, Check, X, ShieldCheck, HelpCircle, CheckSquare } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { Button } from "../../components/common/Button";
 import { Badge } from "../../components/common/Badge";
@@ -28,23 +28,43 @@ export function Approvals() {
     addToast(`Approval Request ${id} (${type}) has been Rejected.`, "danger");
   };
 
+  const handleClarification = (id, type) => {
+    setRequests(prev =>
+      prev.map(r => r.id === id ? { ...r, status: "Returned for Clarification" } : r)
+    );
+    addToast(`Request ${id} returned to Line Lead for technical clarification.`, "warning");
+  };
+
+  const handleBulkApprove = () => {
+    setRequests(prev => prev.map(r => ({ ...r, status: "Approved" })));
+    addToast("All pending shift approval requests bulk-authorized.", "success");
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%" }}>
-      <div>
-        <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
-          Pending Shift Approvals
-        </h1>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
+        <div>
+          <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
+            Pending Shift Approvals
+          </h1>
+          <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
+            Authorize quality releases, sanitation checklists, PM audits, and rework approvals
+          </p>
+        </div>
 
+        <Button variant="success" icon={CheckSquare} onClick={handleBulkApprove}>
+          Bulk Approve All Pending
+        </Button>
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
         {requests.map((r) => (
-          <Card key={r.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
+          <Card key={r.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px", backgroundColor: "#FFFFFF", border: "1px solid var(--border-subtle)" }}>
             <div>
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <FileCheck size={16} color="#F59E0B" />
-                <span style={{ fontSize: "14px", fontWeight: 700, color: "#FFFFFF" }}>{r.id}: {r.type}</span>
-                <Badge variant={r.status === "Approved" ? "emerald" : r.status === "Rejected" ? "danger" : "warning"}>
+                <FileCheck size={16} color="#D97706" />
+                <span style={{ fontSize: "14px", fontWeight: 700, color: "var(--text-primary)" }}>{r.id}: {r.type}</span>
+                <Badge variant={r.status === "Approved" ? "emerald" : r.status === "Rejected" ? "danger" : r.status.includes("Returned") ? "amber" : "warning"}>
                   {r.status}
                 </Badge>
               </div>
@@ -54,12 +74,15 @@ export function Approvals() {
             </div>
 
             {r.status === "Pending" && (
-              <div style={{ display: "flex", gap: "6px" }}>
-                <Button variant="success" size="sm" icon={Check} onClick={() => handleApprove(r.id, r.type)}>
-                  Approve
+              <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                <Button variant="secondary" size="sm" icon={HelpCircle} onClick={() => handleClarification(r.id, r.type)}>
+                  Clarify
                 </Button>
                 <Button variant="danger" size="sm" icon={X} onClick={() => handleReject(r.id, r.type)}>
                   Reject
+                </Button>
+                <Button variant="success" size="sm" icon={Check} onClick={() => handleApprove(r.id, r.type)}>
+                  Approve
                 </Button>
               </div>
             )}
