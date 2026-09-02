@@ -129,7 +129,7 @@ export function Header() {
           </span>
         </div>
 
-        {/* Hamburger Menu Toggle Button */}
+        {/* Sidebar Toggle Button (3 Lines Menu Icon) */}
         <button
           onClick={() => {
             if (window.innerWidth <= 768) {
@@ -154,9 +154,9 @@ export function Header() {
             flexShrink: 0,
             transition: "all 0.15s ease"
           }}
-          title={sidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+          title="Toggle Sidebar Menu"
         >
-          <Menu size={16} />
+          <Menu size={18} />
         </button>
       </div>
 

@@ -10,6 +10,16 @@ export function InventoryProvider({ children }) {
   });
 
   const [zones, setZones] = useState(WAREHOUSE_ZONES);
+  
+  const [shipments, setShipments] = useState([
+    { id: "SHP-001", item: "Glass Bottles 1L", volume: "20,000 Pcs", status: "TRANSIT", supplier: "GlassCorp", expected: "2026-09-02" },
+    { id: "SHP-002", item: "Liquid Cane Sugar 500L", volume: "2 Drums", status: "ARRIVED", supplier: "Sugar Valley", expected: "2026-09-02" }
+  ]);
+  
+  const [pickLists, setPickLists] = useState([
+    { id: "PL-101", order: "ORD-991", status: "PENDING", items: 2 },
+    { id: "PL-102", order: "ORD-992", status: "IN_PROGRESS", items: 5 }
+  ]);
 
   useEffect(() => {
     localStorage.setItem("flowstate_inventory_lots", JSON.stringify(lots));
@@ -21,7 +31,8 @@ export function InventoryProvider({ children }) {
       ...newLot,
       lotNumber,
       receivedDate: new Date().toISOString().substring(0, 10),
-      qaStatus: newLot.qaStatus || "Quarantine"
+      qaStatus: newLot.qaStatus || "Quarantine",
+      status: "STAGED"
     };
     setLots((prev) => [lotWithMeta, ...prev]);
     return lotWithMeta;
@@ -30,9 +41,21 @@ export function InventoryProvider({ children }) {
   const transferLotLocation = (lotNumber, newLocation) => {
     setLots((prev) =>
       prev.map((lot) =>
-        lot.lotNumber === lotNumber ? { ...lot, location: newLocation } : lot
+        lot.lotNumber === lotNumber ? { ...lot, location: newLocation, status: "PUT-AWAY" } : lot
       )
     );
+  };
+  
+  const receiveShipment = (id) => {
+    setShipments(prev => prev.map(s => s.id === id ? { ...s, status: "RECEIVED" } : s));
+  };
+  
+  const startPickList = (id) => {
+    setPickLists(prev => prev.map(p => p.id === id ? { ...p, status: "IN_PROGRESS" } : p));
+  };
+  
+  const completePickList = (id) => {
+    setPickLists(prev => prev.map(p => p.id === id ? { ...p, status: "STAGED_FOR_ISSUE" } : p));
   };
 
   return (
@@ -41,6 +64,11 @@ export function InventoryProvider({ children }) {
         lots,
         setLots,
         zones,
+        shipments,
+        receiveShipment,
+        pickLists,
+        startPickList,
+        completePickList,
         addLot,
         transferLotLocation
       }}

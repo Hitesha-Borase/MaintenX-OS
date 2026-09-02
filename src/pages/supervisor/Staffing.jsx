@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Users, CheckCircle } from "lucide-react";
+import { Users, CheckCircle, Wand2 } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { Button } from "../../components/common/Button";
 import { Badge } from "../../components/common/Badge";
@@ -27,6 +27,15 @@ export function Staffing() {
     addToast("Shift staffing roster authorized.", "success");
   };
 
+  const handleAutoFill = () => {
+    setCrew([
+      { id: 1, name: "Elena Rostova", station: "Line 1 Filler HMI", status: "Allocated (Aseptic Cert)" },
+      { id: 2, name: "Carlos Mendez", station: "Line 1 Case Packer", status: "Allocated (Packaging Cert)" },
+      { id: 3, name: "Sarah Jenkins", station: "Line 1 CIP Station", status: "Allocated (Sanitation Cert)" }
+    ]);
+    addToast("Auto-filled station roster by matching certified operator skills.", "success");
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
@@ -34,16 +43,24 @@ export function Staffing() {
           <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
             Shift Staffing Allocations
           </h1>
-
+          <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
+            Assign certified operators to machine stations and lock shift rosters
+          </p>
         </div>
 
-        {!approved ? (
-          <Button variant="success" icon={CheckCircle} onClick={handleApproveStaffing}>
-            Authorize Staffing
+        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+          <Button variant="secondary" icon={Wand2} onClick={handleAutoFill}>
+            Auto-Fill by Skill
           </Button>
-        ) : (
-          <Badge variant="emerald">Staffing Roster Signed</Badge>
-        )}
+
+          {!approved ? (
+            <Button variant="success" icon={CheckCircle} onClick={handleApproveStaffing}>
+              Authorize Staffing
+            </Button>
+          ) : (
+            <Badge variant="emerald">Staffing Roster Signed</Badge>
+          )}
+        </div>
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>

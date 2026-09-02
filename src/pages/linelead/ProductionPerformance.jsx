@@ -21,7 +21,8 @@ export function ProductionPerformance() {
   const [isOverrideActive, setIsOverrideActive] = useState(false);
 
   const actual = activeOrder.producedQuantity;
-  const remaining = Math.max(0, overrideTarget - actual);
+  const targetNum = Number(overrideTarget) || 0;
+  const remaining = Math.max(0, targetNum - actual);
   const calculatedRecoveryBPM = Math.round(remaining / (hoursLeft * 60)) || 0;
 
   const handleOpenOverrideModal = () => {
@@ -177,7 +178,7 @@ export function ProductionPerformance() {
             <input
               type="number"
               value={overrideTarget}
-              onChange={(e) => setOverrideTarget(Math.max(actual, parseInt(e.target.value) || 0))}
+              onChange={(e) => setOverrideTarget(e.target.value === "" ? "" : parseInt(e.target.value) || 0)}
               className="input-field"
             />
           </div>

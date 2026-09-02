@@ -1,30 +1,22 @@
-import React, { useState } from "react";
-import { FileText } from "lucide-react";
+import React from "react";
+import { FileText, ArrowRight } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Card } from "../../../components/common/Card";
 import { Badge } from "../../../components/common/Badge";
 import { useApp } from "../../../context/AppContext";
+import { useInventory } from "../../../context/InventoryContext";
 
 export function PickLists() {
   const { addToast } = useApp();
+  const navigate = useNavigate();
+  const { pickLists, startPickList } = useInventory();
 
-  const [lists, setLists] = useState([
-    { id: "PK-102", order: "ORD-904", itemsCount: "2 Items (Caps, Bottles)", date: "2026-08-31", status: "Active" },
-    { id: "PK-103", order: "ORD-905", itemsCount: "1 Item (Concentrate)", date: "2026-08-31", status: "Staged" }
-  ]);
-
-  const handleToggleStatus = (id, currentStatus) => {
-    setLists(prev => prev.map(l => {
-      if (l.id === id) {
-        if (currentStatus === "Active") {
-          addToast("Pick list marked as Staged.", "success");
-          return { ...l, status: "Staged" };
-        } else {
-          addToast("Pick list marked as Active.", "info");
-          return { ...l, status: "Active" };
-        }
-      }
-      return l;
-    }));
+  const handleStartPicking = (id, currentStatus) => {
+    if (currentStatus === "PENDING") {
+      startPickList(id);
+      addToast(`Pick list ${id} started.`, "success");
+    }
+    navigate("/warehouse/picking/execution");
   };
 
   return (
@@ -39,8 +31,9 @@ export function PickLists() {
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-        {lists.map((l) => {
-          const isActive = l.status === "Active";
+        {pickLists.map((l) => {
+          const isPending = l.status === "PENDING";
+          const isInProgress = l.status === "IN_PROGRESS";
           return (
             <Card 
               key={l.id} 
@@ -59,19 +52,35 @@ export function PickLists() {
                 </div>
                 <span style={{ fontSize: "16px", color: "var(--text-primary)", fontWeight: 500, lineHeight: 1.5 }}>
                   Pick List: {l.id} <span style={{ margin: "0 4px" }}>•</span> Order: {l.order} <br/>
-                  <span style={{ fontSize: "14px", color: "var(--text-secondary)" }}>Payload: {l.itemsCount} <span style={{ margin: "0 4px" }}>•</span> Created: {l.date}</span>
+                  <span style={{ fontSize: "14px", color: "var(--text-secondary)" }}>Payload: {l.items} Items <span style={{ margin: "0 4px" }}>•</span> Status: {l.status}</span>
                 </span>
               </div>
               
-              <div 
-                onClick={() => handleToggleStatus(l.id, l.status)}
-                style={{ cursor: "pointer", transition: "opacity 0.2s" }}
-                onMouseOver={(e) => e.currentTarget.style.opacity = 0.8}
-                onMouseOut={(e) => e.currentTarget.style.opacity = 1}
-              >
-                <Badge variant={isActive ? "cyan" : "emerald"}>
+              <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+                <Badge variant={isPending ? "slate" : isInProgress ? "cyan" : "emerald"}>
                   {l.status.toUpperCase()}
                 </Badge>
+                
+                {(isPending || isInProgress) && (
+                  <button 
+                    onClick={() => handleStartPicking(l.id, l.status)}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      padding: "8px 16px",
+                      backgroundColor: "#C89547",
+                      color: "#1A0F02",
+                      border: "none",
+                      borderRadius: "8px",
+                      fontSize: "14px",
+                      fontWeight: 700,
+                      cursor: "pointer"
+                    }}
+                  >
+                    {isPending ? "Start Picking" : "Continue"} <ArrowRight size={16} />
+                  </button>
+                )}
               </div>
             </Card>
           );

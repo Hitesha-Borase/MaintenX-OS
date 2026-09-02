@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   TrendingUp,
@@ -10,31 +10,57 @@ import {
   Factory,
   Users,
   ChevronRight,
-  ClipboardList
+  ClipboardList,
+  Play,
+  Send
 } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { StatCard } from "../../components/common/StatCard";
 import { Badge } from "../../components/common/Badge";
 import { Button } from "../../components/common/Button";
+import { Modal } from "../../components/common/Modal";
 import { useProduction } from "../../context/ProductionContext";
 import { useExceptions } from "../../context/ExceptionContext";
+import { useApp } from "../../context/AppContext";
 
 export function SupervisorDashboard() {
   const navigate = useNavigate();
   const { productionOrders } = useProduction();
   const { exceptions } = useExceptions();
+  const { addToast } = useApp();
+
+  const [isShiftModalOpen, setIsShiftModalOpen] = useState(false);
+  const [shiftName, setShiftName] = useState("Shift A (Day - 06:00 to 14:00)");
 
   const activeOrders = productionOrders.filter((o) => o.status === "Running");
   const openP1Count = exceptions.filter((e) => e.severity === "P1" && e.status !== "Resolved").length;
 
+  const handleAuthorizeShift = () => {
+    addToast(`Shift Authorized successfully: ${shiftName}. All lines linked.`, "success");
+    setIsShiftModalOpen(false);
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%" }}>
       {/* Header */}
-      <div>
-        <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
-          Operations Supervisor Command Center
-        </h1>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
+        <div>
+          <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
+            Operations Supervisor Command Center
+          </h1>
+          <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
+            Real-time department execution, shift governance & exception control
+          </p>
+        </div>
 
+        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+          <Button variant="success" icon={Play} onClick={() => setIsShiftModalOpen(true)}>
+            Authorize Shift Start
+          </Button>
+          <Button variant="danger" icon={AlertTriangle} onClick={() => navigate("/supervisor/exceptions")}>
+            Quick Escalate P1
+          </Button>
+        </div>
       </div>
 
       {/* KPI Stats Grid */}
@@ -143,6 +169,45 @@ export function SupervisorDashboard() {
           </Button>
         </Card>
       </div>
+
+      {/* Authorize Shift Start Modal */}
+      <Modal
+        isOpen={isShiftModalOpen}
+        onClose={() => setIsShiftModalOpen(false)}
+        title="Authorize Department Shift Start"
+        subtitle="Department: Beverage & Bottling Operations"
+        maxWidth="500px"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setIsShiftModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="success" icon={Send} onClick={handleAuthorizeShift}>
+              Confirm & Authorize Shift
+            </Button>
+          </>
+        }
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+          <div>
+            <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-primary)", display: "block", marginBottom: "6px" }}>
+              Active Shift Roster
+            </label>
+            <select
+              value={shiftName}
+              onChange={(e) => setShiftName(e.target.value)}
+              className="input-field"
+            >
+              <option value="Shift A (Day - 06:00 to 14:00)">Shift A (Day - 06:00 to 14:00)</option>
+              <option value="Shift B (Evening - 14:00 to 22:00)">Shift B (Evening - 14:00 to 22:00)</option>
+              <option value="Shift C (Night - 22:00 to 06:00)">Shift C (Night - 22:00 to 06:00)</option>
+            </select>
+          </div>
+          <div style={{ padding: "12px", borderRadius: "8px", backgroundColor: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)", fontSize: "12px", color: "var(--text-secondary)" }}>
+            Authorizing shift start will link assigned operators, lock baseline H/B targets, and activate shop floor telemetry data stream.
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

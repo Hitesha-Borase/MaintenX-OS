@@ -3,9 +3,11 @@ import { Shuffle, Save } from "lucide-react";
 import { Card } from "../../../components/common/Card";
 import { Button } from "../../../components/common/Button";
 import { useApp } from "../../../context/AppContext";
+import { useInventory } from "../../../context/InventoryContext";
 
 export function LocationTransfers() {
   const { addToast } = useApp();
+  const { transferLotLocation } = useInventory();
 
   const [lot, setLot] = useState("LOT-ORG-442");
   const [fromLoc, setFromLoc] = useState("WH-A Rack 1");
@@ -13,8 +15,11 @@ export function LocationTransfers() {
 
   const handleTransfer = (e) => {
     e.preventDefault();
-
+    transferLotLocation(lot, toLoc);
     addToast(`Material lot ${lot} successfully transferred to location ${toLoc}.`, "success");
+    setLot("");
+    setFromLoc("");
+    setToLoc("");
   };
 
   return (
