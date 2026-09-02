@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Package, Send, CheckCircle2, Clock } from "lucide-react";
+import { Package, Send, CheckCircle2, Clock, PhoneCall, AlertTriangle } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { Button } from "../../components/common/Button";
 import { Badge } from "../../components/common/Badge";
@@ -44,12 +44,25 @@ export function MaterialRequest() {
     addToast(`Confirmed receipt of materials for Request ${reqId}.`, "success");
   };
 
+  const handleCallWarehouseRunner = () => {
+    addToast("Urgent notification & pager ping sent to Warehouse Staging Kitting Runner.", "warning");
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%" }}>
-      <div>
-        <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
-          Material Requisition
-        </h1>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
+        <div>
+          <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
+            Material Requisition & Line Feedstock
+          </h1>
+          <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
+            Queue raw ingredient & packaging deliveries from WMS staging to Line 1
+          </p>
+        </div>
+
+        <Button variant="warning" icon={PhoneCall} onClick={handleCallWarehouseRunner}>
+          Call Warehouse Staging Runner
+        </Button>
       </div>
 
       <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>

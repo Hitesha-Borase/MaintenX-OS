@@ -1,7 +1,8 @@
 import React, { useState } from "react";
-import { FileText, Printer, CheckCircle, Award } from "lucide-react";
+import { FileText, Printer, CheckCircle, Award, ShieldCheck } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { Button } from "../../components/common/Button";
+import { Badge } from "../../components/common/Badge";
 import { useApp } from "../../context/AppContext";
 import { useProduction } from "../../context/ProductionContext";
 
@@ -14,7 +15,7 @@ export function WorkInstructions() {
 
   const handleAcknowledge = () => {
     setAcknowledged(true);
-    addToast("SOP safety and operation controls acknowledged.", "success");
+    addToast("SOP safety, PPE requirements, and CCP operational controls acknowledged.", "success");
   };
 
   const steps = [
@@ -30,24 +31,37 @@ export function WorkInstructions() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
         <div>
           <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
-            Work Instructions & SOPs
+            Work Instructions & Digital SOPs
           </h1>
+          <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
+            Step-by-step manufacturing procedures, PPE safety rules, and critical CCP control limits
+          </p>
         </div>
 
-        <Button variant="secondary" icon={Printer} onClick={() => window.print()}>
-          Print Manual
-        </Button>
+        <div style={{ display: "flex", gap: "8px" }}>
+          <Button variant="secondary" icon={Printer} onClick={() => window.print()}>
+            Print Manual
+          </Button>
+
+          {!acknowledged ? (
+            <Button variant="success" icon={ShieldCheck} onClick={handleAcknowledge}>
+              Acknowledge SOP Clearance
+            </Button>
+          ) : (
+            <Badge variant="emerald">SOP Cleared & Acknowledged</Badge>
+          )}
+        </div>
       </div>
 
-      <Card style={{ borderLeft: "3px solid #A855F7" }}>
+      <Card style={{ borderLeft: "3px solid #A855F7", backgroundColor: "#FFFFFF", border: "1px solid var(--border-subtle)", padding: "18px" }}>
         <div style={{ display: "flex", alignItems: "flex-start", gap: "12px" }}>
           <FileText size={24} color="#A855F7" style={{ flexShrink: 0, marginTop: "2px" }} />
           <div>
-            <h3 style={{ fontSize: "15px", fontWeight: 700, color: "#FFFFFF" }}>
+            <h3 style={{ fontSize: "15px", fontWeight: 800, color: "var(--text-primary)" }}>
               {activeOrder.workInstructions}
             </h3>
-            <p style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "4px" }}>
-              Associated with Active Job: <strong style={{ color: "#38BDF8" }}>{activeOrder.orderNumber}</strong> ({activeOrder.productName})
+            <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "4px" }}>
+              Associated with Active Job: <strong style={{ color: "#0284C7" }}>{activeOrder.orderNumber}</strong> ({activeOrder.productName})
             </p>
           </div>
         </div>
@@ -55,8 +69,8 @@ export function WorkInstructions() {
 
       <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
         {steps.map((step, idx) => (
-          <Card key={idx} style={{ padding: "16px" }}>
-            <h4 style={{ fontSize: "13px", fontWeight: 700, color: "#FFFFFF", marginBottom: "6px" }}>
+          <Card key={idx} style={{ padding: "16px", backgroundColor: "#FFFFFF", border: "1px solid var(--border-subtle)" }}>
+            <h4 style={{ fontSize: "13px", fontWeight: 800, color: "var(--text-primary)", marginBottom: "6px" }}>
               {step.title}
             </h4>
             <p style={{ fontSize: "13px", color: "var(--text-secondary)", lineHeight: 1.5 }}>
@@ -66,11 +80,11 @@ export function WorkInstructions() {
         ))}
       </div>
 
-      <Card style={{ display: "flex", justifyContent: "space-between", alignItems: "center", backgroundColor: acknowledged ? "rgba(16, 185, 129, 0.08)" : "var(--bg-card-subtle)" }}>
+      <Card style={{ display: "flex", justifyContent: "space-between", alignItems: "center", backgroundColor: acknowledged ? "rgba(16, 185, 129, 0.08)" : "#FFFFFF", border: "1px solid var(--border-subtle)", padding: "16px 20px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
           <Award size={20} color={acknowledged ? "#10B981" : "var(--text-muted)"} />
-          <span style={{ fontSize: "13px", fontWeight: 600, color: acknowledged ? "#10B981" : "#FFFFFF" }}>
-            {acknowledged ? "Instructions Acknowledged" : "I have read and agree to follow these SOPs."}
+          <span style={{ fontSize: "13px", fontWeight: 700, color: acknowledged ? "#059669" : "var(--text-primary)" }}>
+            {acknowledged ? "Instructions & Safety Protocols Acknowledged" : "I have read and agree to follow these manufacturing SOPs."}
           </span>
         </div>
 

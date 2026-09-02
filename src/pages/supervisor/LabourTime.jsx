@@ -42,9 +42,15 @@ export function LabourTime() {
           </p>
         </div>
 
-        <Button variant="success" icon={ShieldCheck} onClick={handleVerifyAll}>
-          Verify & Lock Timecards
-        </Button>
+        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+          <Button variant="warning" icon={DollarSign} onClick={() => addToast("Shift Overtime Hours (+2.0 hrs) authorized for all 3 operators.", "success")}>
+            Authorize Shift Overtime Hours
+          </Button>
+
+          <Button variant="success" icon={ShieldCheck} onClick={handleVerifyAll}>
+            Verify & Lock Timecards
+          </Button>
+        </div>
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>

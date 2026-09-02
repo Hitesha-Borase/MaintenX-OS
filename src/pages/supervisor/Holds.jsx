@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ShieldAlert, Check, Trash, RefreshCw, FileText, Send } from "lucide-react";
+import { ShieldAlert, Check, Trash, RefreshCw, FileText, Send, Lock, ShieldCheck } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { Button } from "../../components/common/Button";
 import { Badge } from "../../components/common/Badge";
@@ -15,17 +15,27 @@ export function Holds() {
   ]);
 
   const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
+  const [isReleaseModalOpen, setIsReleaseModalOpen] = useState(false);
   const [activeHold, setActiveHold] = useState(null);
   const [noteText, setNoteText] = useState("");
+  const [supervisorPin, setSupervisorPin] = useState("****");
+  const [releaseActionType, setReleaseActionType] = useState("Authorize Release");
 
-  const handleRelease = (id, batch) => {
-    setHolds(prev => prev.filter(h => h.id !== id));
-    addToast(`Batch ${batch} released from Quality Hold status. Inventory gate unlocked.`, "success");
+  const handleOpenReleaseModal = (hold, action) => {
+    setActiveHold(hold);
+    setReleaseActionType(action);
+    setIsReleaseModalOpen(true);
   };
 
-  const handleRework = (id, batch) => {
-    setHolds(prev => prev.filter(h => h.id !== id));
-    addToast(`Batch ${batch} routed to Rework Loop. Blend re-calculation initiated.`, "warning");
+  const handleConfirmReleaseSubmit = (e) => {
+    e.preventDefault();
+    setHolds(prev => prev.filter(h => h.id !== activeHold?.id));
+    if (releaseActionType === "Authorize Release") {
+      addToast(`Batch ${activeHold?.batch} released from Quality Hold (PIN Verified). Inventory gate UNLOCKED (PDF Section 10).`, "success");
+    } else {
+      addToast(`Batch ${activeHold?.batch} authorized for Rework Loop (PIN Verified).`, "warning");
+    }
+    setIsReleaseModalOpen(false);
   };
 
   const handleScrap = (id, batch) => {
@@ -80,10 +90,10 @@ export function Holds() {
                 <Button variant="secondary" size="sm" icon={FileText} onClick={() => handleOpenNote(h)}>
                   Add Note
                 </Button>
-                <Button variant="warning" size="sm" icon={RefreshCw} onClick={() => handleRework(h.id, h.batch)}>
+                <Button variant="warning" size="sm" icon={RefreshCw} onClick={() => handleOpenReleaseModal(h, "Request Rework")}>
                   Request Rework
                 </Button>
-                <Button variant="success" size="sm" icon={Check} onClick={() => handleRelease(h.id, h.batch)}>
+                <Button variant="success" size="sm" icon={Lock} onClick={() => handleOpenReleaseModal(h, "Authorize Release")}>
                   Authorize Release
                 </Button>
                 <Button variant="danger" size="sm" icon={Trash} onClick={() => handleScrap(h.id, h.batch)}>
@@ -126,6 +136,43 @@ export function Holds() {
               rows={4}
               required
             />
+          </div>
+        </form>
+      </Modal>
+
+      {/* Sign Off QA Release & Rework Authorization Modal */}
+      <Modal
+        isOpen={isReleaseModalOpen}
+        onClose={() => setIsReleaseModalOpen(false)}
+        title={`QA Release Gate Sign-Off (${releaseActionType})`}
+        subtitle={`Batch ID: ${activeHold?.batch} — Mandatory Human Governance`}
+        maxWidth="480px"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setIsReleaseModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="success" icon={ShieldCheck} onClick={handleConfirmReleaseSubmit}>
+              Confirm & Unlock QA Gate
+            </Button>
+          </>
+        }
+      >
+        <form onSubmit={handleConfirmReleaseSubmit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+          <div>
+            <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-primary)", display: "block", marginBottom: "6px" }}>
+              Supervisor Digital Security PIN Code
+            </label>
+            <input
+              type="password"
+              value={supervisorPin}
+              onChange={(e) => setSupervisorPin(e.target.value)}
+              className="input-field"
+              required
+            />
+          </div>
+          <div style={{ fontSize: "12px", color: "var(--text-secondary)", padding: "10px", backgroundColor: "rgba(16, 185, 129, 0.08)", borderRadius: "6px" }}>
+            Per <strong>PDF Page 4 Section 10 QA Release Gate Rule</strong>: Entering PIN verifies that all CCP re-testing requirements pass and unlocks finished goods inventory for shipping.
           </div>
         </form>
       </Modal>

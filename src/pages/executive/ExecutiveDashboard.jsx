@@ -1,15 +1,21 @@
 import React, { useState } from "react";
-import { Building, DollarSign, AlertTriangle, Zap, TrendingUp, BrainCircuit, RefreshCw } from "lucide-react";
+import { Building, DollarSign, AlertTriangle, Zap, TrendingUp, BrainCircuit, RefreshCw, Download, CheckCircle2, Send, ChevronRight } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { StatCard } from "../../components/common/StatCard";
 import { Button } from "../../components/common/Button";
 import { Badge } from "../../components/common/Badge";
+import { Modal } from "../../components/common/Modal";
 import { useApp } from "../../context/AppContext";
 
 export function ExecutiveDashboard() {
   const { addToast } = useApp();
   const [selectedPlant, setSelectedPlant] = useState("All");
   const [refreshing, setRefreshing] = useState(false);
+
+  // Modals state
+  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
+  const [isPlantModalOpen, setIsPlantModalOpen] = useState(false);
+  const [activePlantDetail, setActivePlantDetail] = useState(null);
 
   const handleRefresh = () => {
     setRefreshing(true);
@@ -19,10 +25,24 @@ export function ExecutiveDashboard() {
     }, 800);
   };
 
+  const handleExportBoardReport = () => {
+    addToast("Generating Executive Board Summary Report (PDF)... Download started.", "success");
+  };
+
+  const handleOpenPlantModal = (plant) => {
+    setActivePlantDetail(plant);
+    setIsPlantModalOpen(true);
+  };
+
+  const handleApproveAiSubmit = () => {
+    addToast("AI Routing Recommendation Approved! Production order routed to Austin Skid 2 (PDF Section 18 Governance).", "success");
+    setIsAiModalOpen(false);
+  };
+
   const plants = [
-    { name: "Austin Main Plant", oee: "84.2%", cost: "$142.5K", status: "Optimal" },
-    { name: "Chicago East Plant", oee: "78.9%", cost: "$198.2K", status: "Warning" },
-    { name: "Boston Logistics Hub", oee: "89.5%", cost: "$92.1K", status: "Optimal" }
+    { name: "Austin Main Plant", oee: "84.2%", cost: "$142.5K", status: "Optimal", lines: 4, scrapRate: "0.4%", mtbf: "142 hrs" },
+    { name: "Chicago East Plant", oee: "78.9%", cost: "$198.2K", status: "Warning", lines: 3, scrapRate: "1.2%", mtbf: "98 hrs" },
+    { name: "Boston Logistics Hub", oee: "89.5%", cost: "$92.1K", status: "Optimal", lines: 2, scrapRate: "0.2%", mtbf: "210 hrs" }
   ];
 
   return (
@@ -31,8 +51,11 @@ export function ExecutiveDashboard() {
       <div className="mobile-flex-col" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "16px" }}>
         <div>
           <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)" }}>
-            Executive Dashboard
+            Executive Portfolio & Multi-Plant Control
           </h1>
+          <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
+            Multi-facility OEE tracking, manufacturing cost variance, and AI-governed decision support
+          </p>
         </div>
 
         <div className="mobile-flex-col" style={{ display: "flex", gap: "12px", alignItems: "center", width: "fit-content" }}>
@@ -57,6 +80,10 @@ export function ExecutiveDashboard() {
             <option value="Chicago">Chicago Plant</option>
             <option value="Boston">Boston Plant</option>
           </select>
+
+          <Button variant="success" icon={Download} onClick={handleExportBoardReport}>
+            Export Board Report (PDF)
+          </Button>
 
           <Button
             variant="secondary"
@@ -120,6 +147,7 @@ export function ExecutiveDashboard() {
               {plants.map((plant, idx) => (
                 <div
                   key={idx}
+                  onClick={() => handleOpenPlantModal(plant)}
                   style={{
                     display: "flex",
                     justifyContent: "space-between",
@@ -158,6 +186,7 @@ export function ExecutiveDashboard() {
                       <span style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)", fontFamily: "var(--font-mono)" }}>{plant.oee}</span>
                     </div>
                     <Badge variant={plant.status === "Optimal" ? "emerald" : "warning"}>{plant.status}</Badge>
+                    <ChevronRight size={16} color="var(--text-muted)" />
                   </div>
                 </div>
               ))}
@@ -221,14 +250,14 @@ export function ExecutiveDashboard() {
           <Card style={{ backgroundColor: "#FFFFFF", border: "1px solid rgba(124, 58, 237, 0.3)", background: "linear-gradient(135deg, rgba(124, 58, 237, 0.04) 0%, #FFFFFF 100%)", padding: "20px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
               <BrainCircuit size={18} color="#7C3AED" />
-              <h3 style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>Executive AI Briefing</h3>
+              <h3 style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>Executive AI Briefing & Governance</h3>
             </div>
             <p style={{ fontSize: "12px", color: "var(--text-secondary)", lineHeight: "1.6" }}>
               Enterprise OEE holds steady at <strong style={{ color: "#0284C7" }}>84.2%</strong>. Materials variance is up <strong style={{ color: "#DC2626" }}>2.9%</strong> due to raw milk pricing fluctuations. Suggest routing additional raw inventory to Austin Skid 2 to capitalize on high reliability MTBF capacity.
             </p>
-            <div style={{ marginTop: "16px" }}>
-              <Button variant="primary" size="sm" style={{ width: "100%" }} onClick={() => addToast("Detailed Briefing Generated in AI Hub.", "info")}>
-                Access Full AI Analysis
+            <div style={{ marginTop: "16px", display: "flex", gap: "8px" }}>
+              <Button variant="primary" size="sm" style={{ flex: 1 }} onClick={() => setIsAiModalOpen(true)}>
+                Approve AI Recommendation
               </Button>
             </div>
           </Card>
@@ -276,6 +305,69 @@ export function ExecutiveDashboard() {
         </div>
 
       </div>
+
+      {/* AI Recommendation Governance Approval Modal */}
+      <Modal
+        isOpen={isAiModalOpen}
+        onClose={() => setIsAiModalOpen(false)}
+        title="AI Routing Governance Approval"
+        subtitle="PDF Page 5 Section 18 Governance: Observe → Analyze → Recommend → Human Approves"
+        maxWidth="500px"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setIsAiModalOpen(false)}>
+              Reject Recommendation
+            </Button>
+            <Button variant="primary" icon={Send} onClick={handleApproveAiSubmit}>
+              Authorize AI Action
+            </Button>
+          </>
+        }
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+          <div style={{ padding: "12px", borderRadius: "8px", backgroundColor: "rgba(124, 58, 237, 0.08)", border: "1px solid rgba(124, 58, 237, 0.2)", fontSize: "13px" }}>
+            <strong>Recommendation:</strong> Route 5,000 L raw inventory to Austin Skid 2 Filler to capture 1.8% OEE lift.
+          </div>
+          <div style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
+            Per <strong>Strict PDF Rule 18</strong>: AI must NOT independently execute critical decisions. Executive approval authorizes the APS scheduling engine to reassign batch routing.
+          </div>
+        </div>
+      </Modal>
+
+      {/* Plant Deep-Dive Drill-Down Modal */}
+      <Modal
+        isOpen={isPlantModalOpen}
+        onClose={() => setIsPlantModalOpen(false)}
+        title={`Plant Deep-Dive: ${activePlantDetail?.name}`}
+        subtitle={`MTD Manufacturing Cost: ${activePlantDetail?.cost}`}
+        maxWidth="540px"
+        footer={
+          <Button variant="secondary" onClick={() => setIsPlantModalOpen(false)}>
+            Close Drill-Down View
+          </Button>
+        }
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: "14px", fontSize: "13px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+            <div style={{ padding: "12px", backgroundColor: "var(--bg-card-subtle)", borderRadius: "8px" }}>
+              <span style={{ color: "var(--text-muted)", fontSize: "11px" }}>Active Lines:</span>
+              <div style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)" }}>{activePlantDetail?.lines} Packaging Lines</div>
+            </div>
+            <div style={{ padding: "12px", backgroundColor: "var(--bg-card-subtle)", borderRadius: "8px" }}>
+              <span style={{ color: "var(--text-muted)", fontSize: "11px" }}>Plant OEE Average:</span>
+              <div style={{ fontSize: "16px", fontWeight: 800, color: "#0284C7" }}>{activePlantDetail?.oee}</div>
+            </div>
+            <div style={{ padding: "12px", backgroundColor: "var(--bg-card-subtle)", borderRadius: "8px" }}>
+              <span style={{ color: "var(--text-muted)", fontSize: "11px" }}>Scrap Rate:</span>
+              <div style={{ fontSize: "16px", fontWeight: 800, color: "#059669" }}>{activePlantDetail?.scrapRate}</div>
+            </div>
+            <div style={{ padding: "12px", backgroundColor: "var(--bg-card-subtle)", borderRadius: "8px" }}>
+              <span style={{ color: "var(--text-muted)", fontSize: "11px" }}>Equipment MTBF:</span>
+              <div style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)" }}>{activePlantDetail?.mtbf}</div>
+            </div>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

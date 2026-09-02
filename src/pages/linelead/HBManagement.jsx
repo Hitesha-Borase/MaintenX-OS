@@ -218,39 +218,46 @@ export function HBManagement() {
                   <th style={{ padding: "10px 8px" }}>Actual</th>
                   <th style={{ padding: "10px 8px" }}>Variance</th>
                   <th style={{ padding: "10px 8px" }}>Loss Driver</th>
+                  <th style={{ padding: "10px 8px" }}>Cost Impact ($)</th>
                   <th style={{ padding: "10px 8px" }}>Status</th>
                   <th style={{ padding: "10px 8px", textAlign: "right" }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {hbLogs.map((log, idx) => (
-                  <tr key={idx} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
-                    <td style={{ padding: "10px 8px", fontWeight: 700, color: "var(--text-primary)" }}>{log.hour}</td>
-                    <td style={{ padding: "10px 8px", fontFamily: "var(--font-mono)" }}>{log.target.toLocaleString()}</td>
-                    <td style={{ padding: "10px 8px", fontFamily: "var(--font-mono)" }}>{log.actual.toLocaleString()}</td>
-                    <td style={{ padding: "10px 8px", fontWeight: 800, fontFamily: "var(--font-mono)", color: log.variance >= 0 ? "#059669" : "#DC2626" }}>
-                      {log.variance >= 0 ? `+${log.variance}` : log.variance}
-                    </td>
-                    <td style={{ padding: "10px 8px", color: log.lossDriver !== "None" ? "#D97706" : "var(--text-secondary)", fontWeight: 600 }}>
-                      {log.lossDriver}
-                    </td>
-                    <td style={{ padding: "10px 8px" }}>
-                      <Badge variant={log.status === "PASSED" ? "emerald" : "danger"}>
-                        {log.status}
-                      </Badge>
-                    </td>
-                    <td style={{ padding: "10px 8px", textAlign: "right" }}>
-                      <Button
-                        variant="secondary"
-                        size="xs"
-                        icon={Edit2}
-                        onClick={() => handleOpenEditModal(log, idx)}
-                      >
-                        Edit
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
+                {hbLogs.map((log, idx) => {
+                  const costImpact = log.variance < 0 ? Math.abs(log.variance) * 0.85 : 0;
+                  return (
+                    <tr key={idx} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+                      <td style={{ padding: "10px 8px", fontWeight: 700, color: "var(--text-primary)" }}>{log.hour}</td>
+                      <td style={{ padding: "10px 8px", fontFamily: "var(--font-mono)" }}>{log.target.toLocaleString()}</td>
+                      <td style={{ padding: "10px 8px", fontFamily: "var(--font-mono)" }}>{log.actual.toLocaleString()}</td>
+                      <td style={{ padding: "10px 8px", fontWeight: 800, fontFamily: "var(--font-mono)", color: log.variance >= 0 ? "#059669" : "#DC2626" }}>
+                        {log.variance >= 0 ? `+${log.variance}` : log.variance}
+                      </td>
+                      <td style={{ padding: "10px 8px", color: log.lossDriver !== "None" ? "#D97706" : "var(--text-secondary)", fontWeight: 600 }}>
+                        {log.lossDriver}
+                      </td>
+                      <td style={{ padding: "10px 8px", fontFamily: "var(--font-mono)", fontWeight: 700, color: costImpact > 0 ? "#DC2626" : "var(--text-muted)" }}>
+                        {costImpact > 0 ? `-$${costImpact.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "$0.00"}
+                      </td>
+                      <td style={{ padding: "10px 8px" }}>
+                        <Badge variant={log.status === "PASSED" ? "emerald" : "danger"}>
+                          {log.status}
+                        </Badge>
+                      </td>
+                      <td style={{ padding: "10px 8px", textAlign: "right" }}>
+                        <Button
+                          variant="secondary"
+                          size="xs"
+                          icon={Edit2}
+                          onClick={() => handleOpenEditModal(log, idx)}
+                        >
+                          Edit
+                        </Button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

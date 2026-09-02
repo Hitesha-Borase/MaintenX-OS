@@ -1,9 +1,10 @@
-import React from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Briefcase, Play, CheckCircle2, FileText, ArrowRight } from "lucide-react";
+import { Briefcase, Play, CheckCircle2, FileText, ArrowRight, Settings } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { Badge } from "../../components/common/Badge";
 import { Button } from "../../components/common/Button";
+import { Modal } from "../../components/common/Modal";
 import { useProduction } from "../../context/ProductionContext";
 import { useApp } from "../../context/AppContext";
 
@@ -12,22 +13,39 @@ export function MyJobs() {
   const { addToast } = useApp();
   const navigate = useNavigate();
 
-  const handleStartJob = (orderId) => {
-    updateOrderStatus(orderId, "Running");
-    addToast(`Job ${orderId} has been started successfully.`);
+  const [isStartModalOpen, setIsStartModalOpen] = useState(false);
+  const [selectedJobId, setSelectedJobId] = useState(null);
+  const [assetId, setAssetId] = useState("FM-001 High-Speed Filler");
+  const [operatorPin, setOperatorPin] = useState("****");
+
+  const handleOpenStartModal = (jobId) => {
+    setSelectedJobId(jobId);
+    setIsStartModalOpen(true);
+  };
+
+  const handleConfirmStartJob = (e) => {
+    e.preventDefault();
+    if (!selectedJobId) return;
+
+    updateOrderStatus(selectedJobId, "Running");
+    addToast(`Job ${selectedJobId} initiated on asset ${assetId}. Line status: Running.`, "success");
+    setIsStartModalOpen(false);
   };
 
   const handleCompleteJob = (orderId) => {
     updateOrderStatus(orderId, "Completed");
-    addToast(`Job ${orderId} has been marked as Completed.`);
+    addToast(`Job ${orderId} has been marked as Completed.`, "info");
   };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%" }}>
       <div>
         <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
-          My Assigned Jobs
+          My Assigned Jobs & Production Queue
         </h1>
+        <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
+          View scheduled work orders, initiate machine production runs, and monitor batch progress
+        </p>
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
@@ -75,10 +93,10 @@ export function MyJobs() {
                       variant="success"
                       size="sm"
                       icon={Play}
-                      onClick={() => handleStartJob(job.id)}
+                      onClick={() => handleOpenStartModal(job.id)}
                       style={{ padding: "5px 12px", fontSize: "11px", height: "30px", fontWeight: 700 }}
                     >
-                      Start Job
+                      Start Production Run
                     </Button>
                   )}
                   {isRunning && (
@@ -143,6 +161,56 @@ export function MyJobs() {
           );
         })}
       </div>
+
+      {/* Start Production Run Modal */}
+      <Modal
+        isOpen={isStartModalOpen}
+        onClose={() => setIsStartModalOpen(false)}
+        title="Start Machine Production Run"
+        subtitle={`Job ID: ${selectedJobId}`}
+        maxWidth="480px"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setIsStartModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="success" icon={Play} onClick={handleConfirmStartJob}>
+              Confirm & Start Run
+            </Button>
+          </>
+        }
+      >
+        <form onSubmit={handleConfirmStartJob} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+          <div>
+            <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-primary)", display: "block", marginBottom: "6px" }}>
+              Assigned Machine Asset
+            </label>
+            <select
+              value={assetId}
+              onChange={(e) => setAssetId(e.target.value)}
+              className="input-field"
+            >
+              <option value="FM-001 High-Speed Filler">FM-001 High-Speed Filler</option>
+              <option value="CAP-102 Aseptic Capper">CAP-102 Aseptic Capper</option>
+              <option value="LBL-500 Rotary Labeler">LBL-500 Rotary Labeler</option>
+              <option value="PAC-900 End-of-Line Case Packer">PAC-900 End-of-Line Case Packer</option>
+            </select>
+          </div>
+
+          <div>
+            <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-primary)", display: "block", marginBottom: "6px" }}>
+              Operator Digital PIN Verification
+            </label>
+            <input
+              type="password"
+              value={operatorPin}
+              onChange={(e) => setOperatorPin(e.target.value)}
+              className="input-field"
+              required
+            />
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

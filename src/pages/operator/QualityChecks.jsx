@@ -1,8 +1,9 @@
 import React, { useState } from "react";
-import { CheckSquare, ShieldCheck, AlertTriangle, Send } from "lucide-react";
+import { CheckSquare, ShieldCheck, AlertTriangle, Send, AlertOctagon } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { Button } from "../../components/common/Button";
 import { Badge } from "../../components/common/Badge";
+import { Modal } from "../../components/common/Modal";
 import { useApp } from "../../context/AppContext";
 
 export function QualityChecks() {
@@ -12,6 +13,10 @@ export function QualityChecks() {
   const [ph, setPh] = useState("3.72");
   const [torque, setTorque] = useState("15");
   const [sealPassed, setSealPassed] = useState(true);
+
+  const [isHoldModalOpen, setIsHoldModalOpen] = useState(false);
+  const [ccpParameter, setCcpParameter] = useState("Brix Sugar (°Bx) Exceeded Limit");
+  const [holdReason, setHoldReason] = useState("High Brix reading 12.5 °Bx at filler outlet nozzle");
 
   const [checkHistory, setCheckHistory] = useState([
     { time: "14:00", brix: "11.7 °Bx", ph: "3.71 pH", torque: "14 in-lbs", seal: "PASS" },
@@ -45,12 +50,27 @@ export function QualityChecks() {
     }
   };
 
+  const handleHoldSubmit = (e) => {
+    e.preventDefault();
+    addToast(`CCP Deviation triggered: "${ccpParameter}". Quality Hold Ticket raised. Batch LOCKED (PDF QA Release Gate Rule).`, "danger");
+    setIsHoldModalOpen(false);
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%" }}>
-      <div>
-        <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
-          Hourly Operator Quality Checks
-        </h1>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
+        <div>
+          <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
+            Hourly Operator Quality & CCP Checks
+          </h1>
+          <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
+            Log Brix, pH, and torque values audited against critical quality limits
+          </p>
+        </div>
+
+        <Button variant="danger" icon={AlertOctagon} onClick={() => setIsHoldModalOpen(true)}>
+          Trigger Quality Hold
+        </Button>
       </div>
 
       <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
@@ -202,6 +222,56 @@ export function QualityChecks() {
           </div>
         </div>
       </Card>
+
+      {/* Log CCP Deviation & Trigger Quality Hold Modal */}
+      <Modal
+        isOpen={isHoldModalOpen}
+        onClose={() => setIsHoldModalOpen(false)}
+        title="Log CCP Deviation & Trigger Quality Hold"
+        subtitle="PDF QA Release Gate Rule: Locks Batch Finished Goods"
+        maxWidth="500px"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setIsHoldModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="danger" icon={Send} onClick={handleHoldSubmit}>
+              Confirm Quality Hold Trigger
+            </Button>
+          </>
+        }
+      >
+        <form onSubmit={handleHoldSubmit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+          <div>
+            <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-primary)", display: "block", marginBottom: "6px" }}>
+              CCP Parameter Violation
+            </label>
+            <select
+              value={ccpParameter}
+              onChange={(e) => setCcpParameter(e.target.value)}
+              className="input-field"
+            >
+              <option value="Brix Sugar (°Bx) Exceeded Limit">Brix Sugar (°Bx) Exceeded Limit</option>
+              <option value="pH Acidity Out-of-Range">pH Acidity Out-of-Range</option>
+              <option value="Torque Failure / Loose Cap">Torque Failure / Loose Cap</option>
+              <option value="Induction Seal Leak Failure">Induction Seal Leak Failure</option>
+            </select>
+          </div>
+
+          <div>
+            <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-primary)", display: "block", marginBottom: "6px" }}>
+              Deviation Notes & Measured Values
+            </label>
+            <textarea
+              value={holdReason}
+              onChange={(e) => setHoldReason(e.target.value)}
+              className="input-field"
+              rows={3}
+              required
+            />
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }
