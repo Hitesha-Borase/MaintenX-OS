@@ -32,6 +32,19 @@ export function InventoryProvider({ children }) {
     { id: "PL-102", order: "ORD-992", status: "IN_PROGRESS", items: 5 }
   ]);
 
+  const [putAwayHistory, setPutAwayHistory] = useState([
+    {
+      lotNumber: "LOT-RM-GNG-0092",
+      materialName: "Organic Ginger Root Extract Fluid 20:1",
+      quantity: 120,
+      unit: "kg",
+      fromLocation: "Dock 02 - Receiving Staging",
+      toLocation: "Ambient Storage Bay 2 - Bin G-12",
+      timestamp: "2026-09-03 07:30 AM",
+      operator: "Alexander Vance"
+    }
+  ]);
+
   useEffect(() => {
     localStorage.setItem("flowstate_inventory_lots", JSON.stringify(lots));
   }, [lots]);
@@ -50,6 +63,37 @@ export function InventoryProvider({ children }) {
   };
 
   const transferLotLocation = (lotNumber, newLocation) => {
+    const targetLot = lots.find(l => l.lotNumber === lotNumber);
+    if (targetLot) {
+      setPutAwayHistory((prev) => [
+        {
+          lotNumber: targetLot.lotNumber,
+          materialName: targetLot.materialName,
+          quantity: targetLot.quantity,
+          unit: targetLot.unit,
+          fromLocation: targetLot.location,
+          toLocation: newLocation,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          operator: "Alexander Vance"
+        },
+        ...prev
+      ]);
+
+      // Update zone capacity dynamically
+      setZones((prev) =>
+        prev.map((z) => {
+          if (newLocation.toLowerCase().includes("cold") && z.id === "ZONE-COLD-A") {
+            return { ...z, occupied: Math.min(z.capacity, z.occupied + (targetLot.palletsCount || 1)) };
+          } else if (newLocation.toLowerCase().includes("ambient") && z.id === "ZONE-AMB-B") {
+            return { ...z, occupied: Math.min(z.capacity, z.occupied + (targetLot.palletsCount || 1)) };
+          } else if (newLocation.toLowerCase().includes("packaging") && z.id === "ZONE-PKG-C") {
+            return { ...z, occupied: Math.min(z.capacity, z.occupied + (targetLot.palletsCount || 1)) };
+          }
+          return z;
+        })
+      );
+    }
+
     setLots((prev) =>
       prev.map((lot) =>
         lot.lotNumber === lotNumber ? { ...lot, location: newLocation, status: "PUT-AWAY" } : lot
@@ -81,7 +125,8 @@ export function InventoryProvider({ children }) {
         startPickList,
         completePickList,
         addLot,
-        transferLotLocation
+        transferLotLocation,
+        putAwayHistory
       }}
     >
       {children}

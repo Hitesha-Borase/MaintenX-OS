@@ -423,6 +423,23 @@ function RoleProtectedRoute({ children }) {
   return children;
 }
 
+function DashboardDispatcher() {
+  const { currentRole } = useRole();
+  if (currentRole?.id === "admin") return <AdminDashboard />;
+  if (currentRole?.id === "master_admin") return <MasterDashboard />;
+  if (currentRole?.id === "warehouse") return <Navigate to="/warehouse/dashboard" replace />;
+  if (currentRole?.id === "maintenance") return <Navigate to="/maintenance" replace />;
+  if (currentRole?.id === "planner") return <Navigate to="/planner/dashboard" replace />;
+  if (currentRole?.id === "supervisor") return <Navigate to="/supervisor/dashboard" replace />;
+  if (currentRole?.id === "line_lead") return <Navigate to="/linelead/dashboard" replace />;
+  if (currentRole?.id === "operator") return <Navigate to="/operator/dashboard" replace />;
+  if (currentRole?.id === "quality") return <Navigate to="/quality/dashboard" replace />;
+  if (currentRole?.id === "ci_engineer") return <Navigate to="/ci/dashboard" replace />;
+  if (currentRole?.id === "plant_manager") return <Navigate to="/command-center" replace />;
+  if (currentRole?.id === "executive") return <Navigate to="/executive/dashboard" replace />;
+  return <Navigate to={currentRole?.defaultRoute || "/admin/console"} replace />;
+}
+
 export function AppContent() {
   const { currentRole, isAuthenticated } = useRole();
 
@@ -466,9 +483,24 @@ export function AppContent() {
           {/* ========================================================= */}
           {/* 1. SYSTEM ADMINISTRATOR ROUTES                            */}
           {/* ========================================================= */}
+          <Route path="/dashboard" element={<DashboardDispatcher />} />
+          <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/admin/console" element={<AdminDashboard />} />
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+
+          {/* 2. User Management */}
+          <Route path="/users" element={<UsersPage />} />
           <Route path="/admin/users" element={<UsersPage />} />
+          <Route path="/users/invitations" element={<UserInvitationsPage />} />
+          <Route path="/users/status" element={<UserStatusPage />} />
+          <Route path="/users/activity" element={<UserActivityPage />} />
+
+          {/* 3. Roles & Permissions */}
+          <Route path="/roles" element={<RolesPage />} />
           <Route path="/admin/roles" element={<RolesPage />} />
+          <Route path="/roles/permissions" element={<PermissionsMatrixPage />} />
+          <Route path="/roles/mapping" element={<RoleMappingPage />} />
+          <Route path="/roles/approval-permissions" element={<ApprovalPermissionsPage />} />
           <Route path="/admin/config" element={<ConfigurationPage />} />
           <Route path="/admin/devices" element={<IoTIntegrationPage />} />
 
@@ -859,11 +891,10 @@ export function AppContent() {
           <Route path="/governance/permissions" element={<RoleProtectedRoute><PermissionsMatrixPage /></RoleProtectedRoute>} />
           <Route path="/governance/audit" element={<RoleProtectedRoute><AuditLogsPage /></RoleProtectedRoute>} />
           <Route path="/migration" element={<RoleProtectedRoute><MigrationPage /></RoleProtectedRoute>} />
-          <Route path="/roles" element={<RoleProtectedRoute><PermissionsMatrixPage /></RoleProtectedRoute>} />
           <Route path="/audit" element={<RoleProtectedRoute><AuditLogsPage /></RoleProtectedRoute>} />
 
-          {/* Catch-all */}
-          <Route path="*" element={<Navigate to="/" replace />} />
+          {/* Catch-all for authenticated users: stay inside active session */}
+          <Route path="*" element={<Navigate to={currentRole?.defaultRoute || "/dashboard"} replace />} />
         </Route>
       </Routes>
     </BrowserRouter>
