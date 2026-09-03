@@ -125,7 +125,7 @@ export function PermissionsMatrixPage() {
         <StatCard
           title="Action Control Scopes"
           value="5 Actions"
-          unit="View/Create/Edit/Del/Approve"
+          unit="View / Create / Edit / Del / Approve"
           trend={{ value: "Zero-trust action authorization", isPositive: true, text: "" }}
           icon={Lock}
           colorVariant="amber"

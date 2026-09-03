@@ -100,6 +100,65 @@ export function ERPIntegrationPage() {
           </div>
         </div>
       </Card>
+
+      {/* Recent Sync Events */}
+      <Card
+        style={{
+          backgroundColor: "#FFFFFF",
+          border: "1px solid var(--border-subtle)",
+          borderRadius: "14px",
+          overflow: "hidden"
+        }}
+      >
+        <div
+          style={{
+            padding: "16px 20px",
+            borderBottom: "1px solid var(--border-subtle)",
+            backgroundColor: "var(--bg-card-subtle)",
+            display: "flex",
+            alignItems: "center",
+            gap: "10px"
+          }}
+        >
+          <Activity size={18} color="#C89547" />
+          <h3 style={{ fontSize: "15px", fontWeight: 700, color: "var(--text-primary)", margin: 0 }}>
+            Recent Synchronization Events
+          </h3>
+        </div>
+
+        <div style={{ overflowX: "auto", width: "100%" }}>
+          <table className="data-table" style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", minWidth: "600px" }}>
+            <thead>
+              <tr style={{ borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Timestamp</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Event Type</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Entity Scope</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Records Processed</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[
+                { time: "2 mins ago", type: "Delta Sync", scope: "Purchase Orders, Inventory", count: "142", status: "Success" },
+                { time: "17 mins ago", type: "Delta Sync", scope: "Production Orders", count: "38", status: "Success" },
+                { time: "32 mins ago", type: "Delta Sync", scope: "Master Data (SKUs)", count: "14", status: "Success" },
+                { time: "47 mins ago", type: "Delta Sync", scope: "Purchase Orders, Inventory", count: "129", status: "Success" },
+                { time: "1 hour ago", type: "Full Master Sync", scope: "All ERP Entities", count: "4,592", status: "Success" }
+              ].map((event, idx) => (
+                <tr key={idx} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+                  <td style={{ padding: "12px 16px", fontSize: "12px", color: "var(--text-secondary)" }}>{event.time}</td>
+                  <td style={{ padding: "12px 16px", fontSize: "13px", fontWeight: 700, color: "var(--text-primary)" }}>{event.type}</td>
+                  <td style={{ padding: "12px 16px", fontSize: "12px", color: "var(--text-primary)" }}>{event.scope}</td>
+                  <td style={{ padding: "12px 16px", fontSize: "12px", fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--text-primary)" }}>{event.count}</td>
+                  <td style={{ padding: "12px 16px" }}>
+                    <Badge variant={event.status === "Success" ? "emerald" : "red"}>{event.status}</Badge>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Card>
     </div>
   );
 }
