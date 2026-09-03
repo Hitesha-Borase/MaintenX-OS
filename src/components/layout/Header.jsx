@@ -420,29 +420,6 @@ export function Header() {
               </div>
 
               <button
-                onClick={() => {
-                  setShowProfileMenu(false);
-                  navigate("/admin/users");
-                }}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  padding: "8px 12px",
-                  borderRadius: "8px",
-                  border: "none",
-                  backgroundColor: "transparent",
-                  color: "var(--text-primary, #261603)",
-                  fontSize: "12px",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  textAlign: "left"
-                }}
-              >
-                <User size={14} /> Profile & Settings
-              </button>
-
-              <button
                 onClick={handleLogout}
                 style={{
                   display: "flex",
