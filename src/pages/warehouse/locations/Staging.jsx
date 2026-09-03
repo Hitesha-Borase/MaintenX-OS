@@ -15,7 +15,13 @@ import {
   CheckCircle2,
   Box,
   Truck,
-  Filter
+  Filter,
+  X,
+  Camera,
+  Scan,
+  Sparkles,
+  MapPin,
+  Barcode
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useApp } from "../../../context/AppContext";
@@ -24,12 +30,21 @@ import { useInventory } from "../../../context/InventoryContext";
 export function Staging() {
   const { addToast } = useApp();
   const navigate = useNavigate();
-  const { lots } = useInventory();
+  const { lots, transferLotLocation } = useInventory();
 
   // Search & Filter State
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("ALL");
   const [qaFilter, setQaFilter] = useState("ALL");
+
+  // Track verified scans per lot
+  const [verifiedLots, setVerifiedLots] = useState({});
+
+  // Modals state
+  const [scanModalLot, setScanModalLot] = useState(null);
+  const [lpnModalLot, setLpnModalLot] = useState(null);
+  const [quickPutAwayLot, setQuickPutAwayLot] = useState(null);
+  const [selectedQuickBin, setSelectedQuickBin] = useState("");
 
   // Filter lots that are staged for inbound put-away
   const stagedLots = lots.filter(lot => lot.status === "STAGED");
@@ -58,16 +73,50 @@ export function Staging() {
   const totalPallets = stagedLots.reduce((acc, lot) => acc + (lot.palletsCount || 2), 0);
   const coldLotsCount = stagedLots.filter(l => l.tempCheck && l.tempCheck.includes("Cold")).length;
 
-  const handlePrintLabel = (lotNumber) => {
-    addToast(`Printing GS1-128 LPN Pallet Tag for ${lotNumber}...`, "info");
-    setTimeout(() => {
-      addToast(`LPN Pallet Label dispatched to Zebra Dock Printer #2.`, "success");
-    }, 900);
+  const handleOpenScan = (lot) => {
+    setScanModalLot(lot);
   };
 
-  const handleVerifyBarcode = (lotNumber, barcode) => {
-    addToast(`Scanning Barcode [${barcode || "8902810044025"}]... Verified valid GS1 Lot ${lotNumber}.`, "success");
+  const handleConfirmScan = () => {
+    if (!scanModalLot) return;
+    setVerifiedLots(prev => ({ ...prev, [scanModalLot.lotNumber]: true }));
+    addToast(`Barcode Scan Validated! GS1-128 Lot ${scanModalLot.lotNumber} verified against PO ${scanModalLot.poNumber || "PO-2026-0881"}.`, "success");
+    setScanModalLot(null);
   };
+
+  const handleOpenLPN = (lot) => {
+    setLpnModalLot(lot);
+  };
+
+  const handlePrintLPNExecute = () => {
+    if (!lpnModalLot) return;
+    addToast(`Dispatching GS1-128 Pallet LPN Tag for ${lpnModalLot.lotNumber} to Zebra Dock Printer #2...`, "info");
+    setTimeout(() => {
+      addToast(`Pallet LPN Tag successfully printed (5 Copies).`, "success");
+      setLpnModalLot(null);
+    }, 800);
+  };
+
+  const handleOpenQuickPutAway = (lot) => {
+    setQuickPutAwayLot(lot);
+    setSelectedQuickBin(lot.recommendedBin || "Cold Storage Zone A - Rack R04-B2");
+  };
+
+  const handleConfirmQuickPutAway = () => {
+    if (!quickPutAwayLot) return;
+    const targetBin = selectedQuickBin || quickPutAwayLot.recommendedBin || "Cold Storage Zone A - Rack R04-B2";
+    transferLotLocation(quickPutAwayLot.lotNumber, targetBin);
+    addToast(`Put-Away Complete! Lot ${quickPutAwayLot.lotNumber} transferred to ${targetBin}.`, "success");
+    setQuickPutAwayLot(null);
+  };
+
+  // Bin list options grouped by storage zone
+  const availableBins = [
+    { zone: "Cold Storage Zone A (+4°C)", bins: ["Cold Storage Zone A - Rack R04-B2", "Cold Storage Zone A - Rack R02-A1", "Cold Storage Zone A - Rack R06-C3"] },
+    { zone: "Ambient Raw Storage Bay 2 (21°C)", bins: ["Ambient Storage Bay 2 - Bin G-12", "Ambient Storage Bay 2 - Bin TOTE-03", "Ambient Storage Bay 2 - Rack B-04"] },
+    { zone: "Packaging High-Bay 3 (Ambient Dry)", bins: ["Packaging High-Bay 3 - Racks P01-P06", "Packaging High-Bay 3 - Rack P04-A1", "Packaging High-Bay 3 - Rack P08-C2"] },
+    { zone: "Specialty Flavor & Ingredient Vault", bins: ["Specialty Vault - Rack FV-01-B2", "Specialty Vault - Bin S-09"] }
+  ];
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "24px", maxWidth: "100%", fontFamily: "var(--font-sans, system-ui, sans-serif)" }}>
@@ -98,7 +147,6 @@ export function Staging() {
               alignItems: "center",
               gap: "8px",
               padding: "10px 18px",
-              backgroundColor: "linear-gradient(135deg, #E2B670 0%, #C89547 50%, #B27E33 100%)",
               background: "linear-gradient(135deg, #E2B670 0%, #C89547 50%, #B27E33 100%)",
               color: "#261603",
               border: "none",
@@ -117,7 +165,6 @@ export function Staging() {
 
       {/* Top KPI Metrics Row */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "16px" }}>
-        {/* Metric 1 */}
         <div style={{ backgroundColor: "#FFFFFF", padding: "18px 20px", borderRadius: "14px", border: "1px solid var(--border-subtle, #E8DDCF)", boxShadow: "0 2px 8px rgba(40, 25, 10, 0.03)" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
             <span style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-secondary, #6B5B4E)" }}>ACTIVE STAGED PALLETS</span>
@@ -129,7 +176,6 @@ export function Staging() {
           <div style={{ fontSize: "11px", color: "#059669", fontWeight: 700, marginTop: "4px" }}>Across 5 Inbound Dock Bays</div>
         </div>
 
-        {/* Metric 2 */}
         <div style={{ backgroundColor: "#FFFFFF", padding: "18px 20px", borderRadius: "14px", border: "1px solid var(--border-subtle, #E8DDCF)", boxShadow: "0 2px 8px rgba(40, 25, 10, 0.03)" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
             <span style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-secondary, #6B5B4E)" }}>COLD-CHAIN MONITORED</span>
@@ -141,7 +187,6 @@ export function Staging() {
           <div style={{ fontSize: "11px", color: "#0284c7", fontWeight: 700, marginTop: "4px" }}>Within 2°C - 4°C Target Limit</div>
         </div>
 
-        {/* Metric 3 */}
         <div style={{ backgroundColor: "#FFFFFF", padding: "18px 20px", borderRadius: "14px", border: "1px solid var(--border-subtle, #E8DDCF)", boxShadow: "0 2px 8px rgba(40, 25, 10, 0.03)" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
             <span style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-secondary, #6B5B4E)" }}>AWAITING PUT-AWAY</span>
@@ -153,7 +198,6 @@ export function Staging() {
           <div style={{ fontSize: "11px", color: "#d97706", fontWeight: 700, marginTop: "4px" }}>Ready for Forklift Slotting</div>
         </div>
 
-        {/* Metric 4 */}
         <div style={{ backgroundColor: "#FFFFFF", padding: "18px 20px", borderRadius: "14px", border: "1px solid var(--border-subtle, #E8DDCF)", boxShadow: "0 2px 8px rgba(40, 25, 10, 0.03)" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
             <span style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-secondary, #6B5B4E)" }}>AVG DOCK DWELL TIME</span>
@@ -272,6 +316,7 @@ export function Staging() {
           filteredLots.map((lot) => {
             const isCold = lot.tempCheck && lot.tempCheck.includes("Cold");
             const isReleased = lot.qaStatus.toLowerCase().includes("approved");
+            const isScanned = verifiedLots[lot.lotNumber];
 
             return (
               <div 
@@ -320,6 +365,12 @@ export function Staging() {
                     <span style={{ fontSize: "12px", color: "#6B5B4E", fontFamily: "var(--font-mono, monospace)" }}>
                       PO: <strong>{lot.poNumber || "PO-2026-0881"}</strong>
                     </span>
+
+                    {isScanned && (
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "11px", fontWeight: 800, color: "#059669", background: "rgba(5, 150, 105, 0.12)", padding: "2px 8px", borderRadius: "10px" }}>
+                        <Check size={12} strokeWidth={3} /> GS1 SCANNED & VERIFIED
+                      </span>
+                    )}
                   </div>
 
                   <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
@@ -389,27 +440,27 @@ export function Staging() {
                   <div style={{ display: "flex", gap: "8px" }}>
                     <button
                       type="button"
-                      onClick={() => handleVerifyBarcode(lot.lotNumber, lot.barcode)}
+                      onClick={() => handleOpenScan(lot)}
                       style={{
                         display: "flex",
                         alignItems: "center",
                         gap: "6px",
                         padding: "7px 12px",
-                        backgroundColor: "#FFFFFF",
-                        border: "1px solid #E8DDCF",
+                        backgroundColor: isScanned ? "rgba(5, 150, 105, 0.08)" : "#FFFFFF",
+                        border: `1px solid ${isScanned ? "#10b981" : "#E8DDCF"}`,
                         borderRadius: "7px",
                         fontSize: "12px",
                         fontWeight: 700,
-                        color: "#6B5B4E",
+                        color: isScanned ? "#047857" : "#6B5B4E",
                         cursor: "pointer"
                       }}
                     >
-                      <QrCode size={13} color="#B27E33" /> Verify Scan
+                      <QrCode size={13} color={isScanned ? "#059669" : "#B27E33"} /> {isScanned ? "Re-Verify Scan" : "Verify Scan"}
                     </button>
 
                     <button
                       type="button"
-                      onClick={() => handlePrintLabel(lot.lotNumber)}
+                      onClick={() => handleOpenLPN(lot)}
                       style={{
                         display: "flex",
                         alignItems: "center",
@@ -429,7 +480,7 @@ export function Staging() {
                   </div>
 
                   <button 
-                    onClick={() => navigate("/warehouse/locations/bins")}
+                    onClick={() => handleOpenQuickPutAway(lot)}
                     style={{
                       display: "flex",
                       alignItems: "center",
@@ -454,6 +505,441 @@ export function Staging() {
           })
         )}
       </div>
+
+      {/* MODAL 1: QR & BARCODE SCANNER MODAL */}
+      {scanModalLot && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "rgba(38, 22, 3, 0.6)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+            padding: "16px"
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setScanModalLot(null);
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: "#FFFFFF",
+              borderRadius: "16px",
+              padding: "24px",
+              width: "100%",
+              maxWidth: "460px",
+              border: "1px solid #E8DDCF",
+              boxShadow: "0 10px 30px rgba(0,0,0,0.15)",
+              display: "flex",
+              flexDirection: "column",
+              gap: "18px"
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Scan size={20} color="#B27E33" />
+                <h3 style={{ fontSize: "16px", fontWeight: 850, color: "#2B1D11", margin: 0 }}>
+                  GS1-128 Handheld Barcode Scanner
+                </h3>
+              </div>
+              <button
+                onClick={() => setScanModalLot(null)}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "#8C7B6E" }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Simulated Scanner Viewport */}
+            <div
+              style={{
+                backgroundColor: "#181008",
+                borderRadius: "12px",
+                padding: "24px 16px",
+                textAlign: "center",
+                position: "relative",
+                overflow: "hidden",
+                border: "2px solid #C89547"
+              }}
+            >
+              {/* Laser Line */}
+              <div
+                style={{
+                  position: "absolute",
+                  left: 0,
+                  right: 0,
+                  top: "50%",
+                  height: "2px",
+                  background: "linear-gradient(90deg, transparent, #ef4444, #ff0000, #ef4444, transparent)",
+                  boxShadow: "0 0 10px #ff0000"
+                }}
+              />
+
+              <div style={{ fontSize: "32px", letterSpacing: "4px", color: "#FFFFFF", fontFamily: "var(--font-mono, monospace)", margin: "14px 0 8px 0" }}>
+                ||| | |||| | ||| |||| |
+              </div>
+              <div style={{ fontSize: "14px", color: "#E2B670", fontWeight: 700, fontFamily: "var(--font-mono, monospace)" }}>
+                {scanModalLot.barcode || "8902810044025"}
+              </div>
+              <div style={{ fontSize: "11px", color: "#A89A8E", marginTop: "6px" }}>
+                Active Camera • Opticon Laser Ready
+              </div>
+            </div>
+
+            {/* Decoded GS1 Data Block */}
+            <div style={{ backgroundColor: "#F6F3EE", borderRadius: "10px", padding: "12px 14px", fontSize: "12px", display: "flex", flexDirection: "column", gap: "6px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span style={{ color: "#6B5B4E" }}>(01) GTIN / SKU:</span>
+                <strong style={{ color: "#2B1D11" }}>{scanModalLot.materialCode}</strong>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span style={{ color: "#6B5B4E" }}>(10) Batch / Lot:</span>
+                <strong style={{ color: "#2B1D11", fontFamily: "var(--font-mono, monospace)" }}>{scanModalLot.lotNumber}</strong>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span style={{ color: "#6B5B4E" }}>(17) Expiry Date:</span>
+                <strong style={{ color: "#2B1D11" }}>{scanModalLot.expiryDate}</strong>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span style={{ color: "#6B5B4E" }}>(3102) Net Quantity:</span>
+                <strong style={{ color: "#2B1D11" }}>{scanModalLot.quantity} {scanModalLot.unit}</strong>
+              </div>
+            </div>
+
+            {/* Modal Buttons */}
+            <div style={{ display: "flex", gap: "10px" }}>
+              <button
+                type="button"
+                onClick={() => setScanModalLot(null)}
+                style={{
+                  flex: 1,
+                  padding: "10px",
+                  borderRadius: "8px",
+                  border: "1px solid #E8DDCF",
+                  backgroundColor: "#FFFFFF",
+                  fontSize: "13px",
+                  fontWeight: 700,
+                  color: "#6B5B4E",
+                  cursor: "pointer"
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmScan}
+                style={{
+                  flex: 1.5,
+                  padding: "10px",
+                  borderRadius: "8px",
+                  border: "none",
+                  backgroundColor: "#059669",
+                  color: "#FFFFFF",
+                  fontSize: "13px",
+                  fontWeight: 800,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "6px"
+                }}
+              >
+                <CheckCircle2 size={16} /> Confirm & Validate Scan
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 2: GS1-128 LPN PALLET TAG PRINT MODAL */}
+      {lpnModalLot && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "rgba(38, 22, 3, 0.6)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+            padding: "16px"
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setLpnModalLot(null);
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: "#FFFFFF",
+              borderRadius: "16px",
+              padding: "24px",
+              width: "100%",
+              maxWidth: "520px",
+              border: "1px solid #E8DDCF",
+              boxShadow: "0 10px 30px rgba(0,0,0,0.15)",
+              display: "flex",
+              flexDirection: "column",
+              gap: "16px"
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Printer size={20} color="#B27E33" />
+                <h3 style={{ fontSize: "16px", fontWeight: 850, color: "#2B1D11", margin: 0 }}>
+                  GS1-128 Logistics Pallet Tag (LPN)
+                </h3>
+              </div>
+              <button
+                onClick={() => setLpnModalLot(null)}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "#8C7B6E" }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Authentic Printable Industrial LPN Tag Preview */}
+            <div
+              style={{
+                border: "2px solid #2B1D11",
+                padding: "16px",
+                borderRadius: "8px",
+                backgroundColor: "#FFFFFF",
+                fontFamily: "var(--font-sans, sans-serif)",
+                display: "flex",
+                flexDirection: "column",
+                gap: "10px"
+              }}
+            >
+              {/* Header Box */}
+              <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "2px solid #2B1D11", paddingBottom: "8px" }}>
+                <div>
+                  <div style={{ fontSize: "14px", fontWeight: 900, color: "#000" }}>MAINTENX OS SMART PLANT 07</div>
+                  <div style={{ fontSize: "10px", color: "#444" }}>Industrial Manufacturing Logistics • Austin Facility</div>
+                </div>
+                <div style={{ textAlign: "right", fontSize: "12px", fontWeight: 800 }}>
+                  STAGE: DOCK INBOUND
+                </div>
+              </div>
+
+              {/* Material & Lot details */}
+              <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "8px", borderBottom: "1px solid #000", paddingBottom: "8px" }}>
+                <div>
+                  <div style={{ fontSize: "9px", color: "#666" }}>DESCRIPTION</div>
+                  <div style={{ fontSize: "13px", fontWeight: 800, color: "#000" }}>{lpnModalLot.materialName}</div>
+                  <div style={{ fontSize: "11px", color: "#333", marginTop: "2px" }}>SKU: {lpnModalLot.materialCode}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: "9px", color: "#666" }}>QUANTITY</div>
+                  <div style={{ fontSize: "16px", fontWeight: 900, color: "#000" }}>{lpnModalLot.quantity} {lpnModalLot.unit}</div>
+                  <div style={{ fontSize: "10px", color: "#333" }}>{lpnModalLot.palletsCount || 2} Pallets</div>
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px", borderBottom: "1px solid #000", paddingBottom: "8px", fontSize: "11px" }}>
+                <div>
+                  <div style={{ fontSize: "9px", color: "#666" }}>LOT NUMBER</div>
+                  <strong style={{ fontFamily: "var(--font-mono, monospace)" }}>{lpnModalLot.lotNumber}</strong>
+                </div>
+                <div>
+                  <div style={{ fontSize: "9px", color: "#666" }}>EXPIRY DATE</div>
+                  <strong>{lpnModalLot.expiryDate}</strong>
+                </div>
+                <div>
+                  <div style={{ fontSize: "9px", color: "#666" }}>TARGET STORAGE</div>
+                  <strong style={{ color: "#B27E33" }}>Zone A (+4°C)</strong>
+                </div>
+              </div>
+
+              {/* Barcode Graphic */}
+              <div style={{ textAlign: "center", padding: "10px 0 4px 0" }}>
+                <div style={{ fontSize: "28px", letterSpacing: "3px", color: "#000", fontFamily: "var(--font-mono, monospace)", lineHeight: 1 }}>
+                  ||||| | |||| ||| |||||| |||| | |||||| ||||
+                </div>
+                <div style={{ fontSize: "12px", fontFamily: "var(--font-mono, monospace)", fontWeight: 700, color: "#000", marginTop: "4px" }}>
+                  (00) 3 8902810 {lpnModalLot.barcode?.slice(-6) || "044025"} 001 4
+                </div>
+                <div style={{ fontSize: "9px", color: "#666", marginTop: "2px" }}>
+                  SERIAL SHIPPING CONTAINER CODE (SSCC-18)
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Buttons */}
+            <div style={{ display: "flex", gap: "10px" }}>
+              <button
+                type="button"
+                onClick={() => setLpnModalLot(null)}
+                style={{
+                  flex: 1,
+                  padding: "10px",
+                  borderRadius: "8px",
+                  border: "1px solid #E8DDCF",
+                  backgroundColor: "#FFFFFF",
+                  fontSize: "13px",
+                  fontWeight: 700,
+                  color: "#6B5B4E",
+                  cursor: "pointer"
+                }}
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                onClick={handlePrintLPNExecute}
+                style={{
+                  flex: 1.5,
+                  padding: "10px",
+                  borderRadius: "8px",
+                  border: "none",
+                  backgroundColor: "#C89547",
+                  color: "#1A0F02",
+                  fontSize: "13px",
+                  fontWeight: 800,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "6px"
+                }}
+              >
+                <Printer size={16} /> Print Tag (Zebra #2)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 3: QUICK ALLOCATE & PUT-AWAY MODAL */}
+      {quickPutAwayLot && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "rgba(38, 22, 3, 0.6)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+            padding: "16px"
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setQuickPutAwayLot(null);
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: "#FFFFFF",
+              borderRadius: "16px",
+              padding: "24px",
+              width: "100%",
+              maxWidth: "480px",
+              border: "1px solid #E8DDCF",
+              boxShadow: "0 10px 30px rgba(0,0,0,0.15)",
+              display: "flex",
+              flexDirection: "column",
+              gap: "16px"
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Layers size={20} color="#B27E33" />
+                <h3 style={{ fontSize: "16px", fontWeight: 850, color: "#2B1D11", margin: 0 }}>
+                  Allocate Storage Bin & Put-Away
+                </h3>
+              </div>
+              <button
+                onClick={() => setQuickPutAwayLot(null)}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "#8C7B6E" }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ backgroundColor: "#F6F3EE", borderRadius: "10px", padding: "14px", display: "flex", flexDirection: "column", gap: "6px", fontSize: "13px" }}>
+              <div>Material: <strong style={{ color: "#2B1D11" }}>{quickPutAwayLot.materialName}</strong></div>
+              <div>Lot Number: <strong style={{ color: "#2B1D11", fontFamily: "var(--font-mono, monospace)" }}>{quickPutAwayLot.lotNumber}</strong></div>
+              <div>Volume: <strong style={{ color: "#2B1D11" }}>{quickPutAwayLot.quantity} {quickPutAwayLot.unit} ({quickPutAwayLot.palletsCount || 2} Pallets)</strong></div>
+              <div>Current Location: <strong>{quickPutAwayLot.location}</strong></div>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+              <label style={{ fontSize: "12px", fontWeight: 750, color: "#2B1D11" }}>
+                SELECT DESTINATION RACK / BIN:
+              </label>
+              <select
+                value={selectedQuickBin}
+                onChange={(e) => setSelectedQuickBin(e.target.value)}
+                style={{
+                  padding: "11px 14px",
+                  borderRadius: "8px",
+                  border: "1px solid var(--border-subtle, #E8DDCF)",
+                  backgroundColor: "#F6F3EE",
+                  color: "#261603",
+                  fontSize: "13px",
+                  fontWeight: 700,
+                  outline: "none"
+                }}
+              >
+                {availableBins.map((grp, gIdx) => (
+                  <optgroup key={gIdx} label={grp.zone}>
+                    {grp.bins.map((b, bIdx) => (
+                      <option key={bIdx} value={b}>
+                        {b}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+            </div>
+
+            <div style={{ display: "flex", gap: "10px", marginTop: "4px" }}>
+              <button
+                type="button"
+                onClick={() => setQuickPutAwayLot(null)}
+                style={{
+                  flex: 1,
+                  padding: "10px",
+                  borderRadius: "8px",
+                  border: "1px solid #E8DDCF",
+                  backgroundColor: "#FFFFFF",
+                  fontSize: "13px",
+                  fontWeight: 700,
+                  color: "#6B5B4E",
+                  cursor: "pointer"
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmQuickPutAway}
+                style={{
+                  flex: 1.5,
+                  padding: "10px",
+                  borderRadius: "8px",
+                  border: "none",
+                  backgroundColor: "#C89547",
+                  color: "#1A0F02",
+                  fontSize: "13px",
+                  fontWeight: 800,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "6px"
+                }}
+              >
+                Confirm Put-Away <ArrowRight size={15} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

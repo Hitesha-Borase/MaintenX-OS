@@ -23,7 +23,11 @@ import {
   ChevronRight,
   Clock,
   MapPin,
-  Check
+  Check,
+  X,
+  Lock,
+  Unlock,
+  Download
 } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 
@@ -48,7 +52,6 @@ const TRACE_DATABASE = {
     tempLog: "3.4°C (Target: 2.0°C - 4.0°C • Compliant)",
     integrityScore: "100%",
     barcode: "8902810044025",
-    // Forward Chain
     productionOrders: ["PO-OR-8821", "PO-OR-8824"],
     batches: [
       {
@@ -81,7 +84,6 @@ const TRACE_DATABASE = {
         ]
       }
     ],
-    // Reverse Recall Summary
     recallImpact: {
       affectedBatches: 2,
       finishedCases: 2500,
@@ -233,11 +235,16 @@ export function Traceability() {
   const [activeTab, setActiveTab] = useState("FORWARD"); // FORWARD, BACKWARD, RECALL
   const [currentTrace, setCurrentTrace] = useState(TRACE_DATABASE["LOT-RM-ORG-4402"]);
 
+  // Interactive Modals State
+  const [isDossierModalOpen, setIsDossierModalOpen] = useState(false);
+  const [isQuarantineModalOpen, setIsQuarantineModalOpen] = useState(false);
+  const [isLockEnforced, setIsLockEnforced] = useState(false);
+  const [quarantineReason, setQuarantineReason] = useState("Supplier Cold-Chain Excursion");
+
   const handleSearch = (e) => {
     e && e.preventDefault();
     const cleanKey = lotInput.trim().toUpperCase();
 
-    // Check direct match or partial match
     let found = TRACE_DATABASE[cleanKey];
     if (!found) {
       const match = Object.keys(TRACE_DATABASE).find(k => k.includes(cleanKey) || cleanKey.includes(k));
@@ -246,9 +253,9 @@ export function Traceability() {
 
     if (found) {
       setCurrentTrace(found);
+      setIsLockEnforced(false);
       addToast(`Batch 360° Traceability record loaded for ${found.lotNumber}.`, "success");
     } else {
-      // Create a fallback dynamic trace structure for any entered code
       const generated = {
         lotNumber: cleanKey,
         materialName: `Material Component (${cleanKey})`,
@@ -294,6 +301,7 @@ export function Traceability() {
         }
       };
       setCurrentTrace(generated);
+      setIsLockEnforced(false);
       addToast(`Trace genealogy constructed for ${cleanKey}.`, "info");
     }
   };
@@ -301,18 +309,29 @@ export function Traceability() {
   const handleSelectPredefined = (lotCode) => {
     setLotInput(lotCode);
     setCurrentTrace(TRACE_DATABASE[lotCode] || TRACE_DATABASE["LOT-RM-ORG-4402"]);
+    setIsLockEnforced(false);
     addToast(`Loaded trace record for ${lotCode}.`, "success");
   };
 
-  const handleTriggerQuarantine = () => {
-    addToast(`Automated Hold Triggered! GS1 lock placed on all pallets associated with Lot ${currentTrace.lotNumber}. WMS dispatch blocked.`, "error");
+  const handleOpenQuarantineModal = () => {
+    setActiveTab("RECALL");
+    setIsQuarantineModalOpen(true);
   };
 
-  const handleExportPDF = () => {
-    addToast(`Generating FDA 21 CFR Part 11 & GS1-128 Audit Dossier for Lot ${currentTrace.lotNumber}...`, "info");
-    setTimeout(() => {
-      addToast(`Dossier exported: ${currentTrace.lotNumber}_Genealogy_Report.pdf`, "success");
-    }, 1200);
+  const handleEnforceQuarantineLock = () => {
+    setIsLockEnforced(true);
+    setIsQuarantineModalOpen(false);
+    addToast(`CRITICAL HOLD: Automated WMS Lock placed on Lot ${currentTrace.lotNumber}. Reason: ${quarantineReason}. All downstream dispatches halted.`, "error");
+  };
+
+  const handleReleaseQuarantineLock = () => {
+    setIsLockEnforced(false);
+    addToast(`Supervisor Authorized: Quarantine Hold lifted for Lot ${currentTrace.lotNumber}. Re-instated to active inventory.`, "success");
+  };
+
+  const handleDownloadDossier = () => {
+    addToast(`Dossier PDF dispatched to local downloads: ${currentTrace.lotNumber}_FDA_21CFR_Audit.pdf`, "success");
+    setIsDossierModalOpen(false);
   };
 
   return (
@@ -338,7 +357,7 @@ export function Traceability() {
 
         <div style={{ display: "flex", gap: "10px" }}>
           <button
-            onClick={handleExportPDF}
+            onClick={() => setIsDossierModalOpen(true)}
             style={{
               display: "flex",
               alignItems: "center",
@@ -358,25 +377,61 @@ export function Traceability() {
           </button>
 
           <button
-            onClick={handleTriggerQuarantine}
+            onClick={handleOpenQuarantineModal}
             style={{
               display: "flex",
               alignItems: "center",
               gap: "8px",
               padding: "10px 16px",
-              backgroundColor: "#fee2e2",
-              border: "1px solid #fca5a5",
+              backgroundColor: isLockEnforced ? "#7f1d1d" : "#fee2e2",
+              border: `1px solid ${isLockEnforced ? "#991b1b" : "#fca5a5"}`,
               borderRadius: "8px",
               fontSize: "13px",
               fontWeight: 800,
-              color: "#991b1b",
+              color: isLockEnforced ? "#FFFFFF" : "#991b1b",
               cursor: "pointer"
             }}
           >
-            <AlertTriangle size={15} color="#dc2626" /> Mock Recall / Hold
+            <AlertTriangle size={15} color={isLockEnforced ? "#FFFFFF" : "#dc2626"} /> {isLockEnforced ? "Quarantine Active" : "Mock Recall / Hold"}
           </button>
         </div>
       </div>
+
+      {/* Lock Enforced Alert Banner (if active) */}
+      {isLockEnforced && (
+        <div style={{ backgroundColor: "#fef2f2", border: "2px solid #ef4444", borderRadius: "12px", padding: "16px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <div style={{ width: "36px", height: "36px", borderRadius: "8px", background: "#ef4444", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Lock size={20} />
+            </div>
+            <div>
+              <strong style={{ fontSize: "14px", color: "#991b1b" }}>CRITICAL QUARANTINE HOLD ENFORCED ON LOT {currentTrace.lotNumber}</strong>
+              <div style={{ fontSize: "12.5px", color: "#7f1d1d", marginTop: "2px" }}>
+                Reason: {quarantineReason}. All {currentTrace.recallImpact.palletsCount} downstream pallets have been locked against shipping.
+              </div>
+            </div>
+          </div>
+
+          <button
+            onClick={handleReleaseQuarantineLock}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              padding: "8px 16px",
+              backgroundColor: "#059669",
+              color: "#FFFFFF",
+              border: "none",
+              borderRadius: "8px",
+              fontSize: "12.5px",
+              fontWeight: 800,
+              cursor: "pointer"
+            }}
+          >
+            <Unlock size={14} /> Release Hold (QA Sign-off)
+          </button>
+        </div>
+      )}
 
       {/* Interactive Search Bar & Quick Selector Chips */}
       <div style={{ backgroundColor: "#FFFFFF", padding: "20px 24px", borderRadius: "16px", border: "1px solid var(--border-subtle, #E8DDCF)", boxShadow: "0 2px 10px rgba(40, 25, 10, 0.03)", display: "flex", flexDirection: "column", gap: "14px" }}>
@@ -545,7 +600,7 @@ export function Traceability() {
       </div>
 
       {/* Mode View Tabs (Forward Traceability vs Backward Genealogy vs Mock Recall) */}
-      <div style={{ display: "flex", gap: "10px", borderBottom: "1px solid #E8DDCF", paddingBottom: "10px" }}>
+      <div style={{ display: "flex", gap: "10px", borderBottom: "1px solid #E8DDCF", paddingBottom: "10px", flexWrap: "wrap" }}>
         <button
           onClick={() => setActiveTab("FORWARD")}
           style={{
@@ -602,7 +657,7 @@ export function Traceability() {
       {activeTab === "FORWARD" && (
         <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
           {/* Main Selected Lot Hero Card */}
-          <div style={{ backgroundColor: "#FFFFFF", padding: "22px 26px", borderRadius: "16px", border: "1px solid var(--border-subtle, #E8DDCF)", borderLeft: "5px solid #C89547", boxShadow: "0 2px 10px rgba(40, 25, 10, 0.03)" }}>
+          <div style={{ backgroundColor: "#FFFFFF", padding: "22px 26px", borderRadius: "16px", border: "1px solid var(--border-subtle, #E8DDCF)", borderLeft: isLockEnforced ? "5px solid #ef4444" : "5px solid #C89547", boxShadow: "0 2px 10px rgba(40, 25, 10, 0.03)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "14px" }}>
               <div>
                 <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "6px" }}>
@@ -626,9 +681,15 @@ export function Traceability() {
               </div>
 
               <div style={{ textAlign: "right" }}>
-                <span style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "12px", fontWeight: 800, color: "#059669", background: "rgba(5, 150, 105, 0.1)", padding: "4px 10px", borderRadius: "20px" }}>
-                  <ShieldCheck size={14} /> {currentTrace.qaStatus}
-                </span>
+                {isLockEnforced ? (
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "12px", fontWeight: 800, color: "#991b1b", background: "#fee2e2", padding: "4px 10px", borderRadius: "20px" }}>
+                    <Lock size={14} /> QUARANTINE HOLD ACTIVE
+                  </span>
+                ) : (
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "12px", fontWeight: 800, color: "#059669", background: "rgba(5, 150, 105, 0.1)", padding: "4px 10px", borderRadius: "20px" }}>
+                    <ShieldCheck size={14} /> {currentTrace.qaStatus}
+                  </span>
+                )}
                 <div style={{ fontSize: "16px", fontWeight: 900, color: "#2B1D11", marginTop: "4px" }}>
                   Qty: {currentTrace.quantity}
                 </div>
@@ -817,21 +878,45 @@ export function Traceability() {
                 </p>
               </div>
 
-              <button
-                onClick={handleTriggerQuarantine}
-                style={{
-                  padding: "9px 18px",
-                  borderRadius: "8px",
-                  backgroundColor: "#dc2626",
-                  color: "#FFFFFF",
-                  border: "none",
-                  fontSize: "13px",
-                  fontWeight: 800,
-                  cursor: "pointer"
-                }}
-              >
-                Trigger Immediate WMS Lock
-              </button>
+              {isLockEnforced ? (
+                <button
+                  onClick={handleReleaseQuarantineLock}
+                  style={{
+                    padding: "9px 18px",
+                    borderRadius: "8px",
+                    backgroundColor: "#059669",
+                    color: "#FFFFFF",
+                    border: "none",
+                    fontSize: "13px",
+                    fontWeight: 800,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px"
+                  }}
+                >
+                  <Unlock size={14} /> Release Quarantine Hold
+                </button>
+              ) : (
+                <button
+                  onClick={handleOpenQuarantineModal}
+                  style={{
+                    padding: "9px 18px",
+                    borderRadius: "8px",
+                    backgroundColor: "#dc2626",
+                    color: "#FFFFFF",
+                    border: "none",
+                    fontSize: "13px",
+                    fontWeight: 800,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px"
+                  }}
+                >
+                  <Lock size={14} /> Trigger Immediate WMS Lock
+                </button>
+              )}
             </div>
           </div>
 
@@ -870,6 +955,248 @@ export function Traceability() {
                   <li key={idx}>{c}</li>
                 ))}
               </ul>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 1: FDA 21 CFR PART 11 AUDIT DOSSIER MODAL */}
+      {isDossierModalOpen && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "rgba(38, 22, 3, 0.6)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+            padding: "16px"
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setIsDossierModalOpen(false);
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: "#FFFFFF",
+              borderRadius: "16px",
+              padding: "24px",
+              width: "100%",
+              maxWidth: "600px",
+              maxHeight: "90vh",
+              overflowY: "auto",
+              border: "1px solid #E8DDCF",
+              boxShadow: "0 10px 30px rgba(0,0,0,0.15)",
+              display: "flex",
+              flexDirection: "column",
+              gap: "18px"
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <FileText size={20} color="#B27E33" />
+                <h3 style={{ fontSize: "16px", fontWeight: 850, color: "#2B1D11", margin: 0 }}>
+                  FDA 21 CFR Part 11 Electronic Batch Dossier
+                </h3>
+              </div>
+              <button
+                onClick={() => setIsDossierModalOpen(false)}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "#8C7B6E" }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Dossier Content Body */}
+            <div style={{ border: "1px solid #E8DDCF", borderRadius: "10px", padding: "16px", backgroundColor: "#F6F3EE", fontSize: "12.5px", display: "flex", flexDirection: "column", gap: "10px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid #E8DDCF", paddingBottom: "8px" }}>
+                <div>
+                  <strong style={{ color: "#2B1D11" }}>MaintenX OS Cloud • Plant 07 Regulatory Audit</strong>
+                  <div style={{ fontSize: "11px", color: "#6B5B4E" }}>Dossier ID: DOSSIER-2026-0885-CFR</div>
+                </div>
+                <span style={{ fontSize: "11px", color: "#059669", fontWeight: 750 }}>VALIDATED</span>
+              </div>
+
+              <div>Material Tracked: <strong>{currentTrace.materialName}</strong> ({currentTrace.lotNumber})</div>
+              <div>Source Supplier: <strong>{currentTrace.supplier}</strong> (PO {currentTrace.poNumber})</div>
+              <div>Intake Cold-Chain Verification: <strong>{currentTrace.tempLog}</strong></div>
+              <div>CCP Sign-Off: <strong>{currentTrace.batches[0]?.ccpStatus}</strong></div>
+              <div>Downstream Pallets: <strong>{currentTrace.recallImpact.palletsCount} Pallets Serialized</strong></div>
+              
+              <div style={{ marginTop: "6px", padding: "8px", backgroundColor: "#FFFFFF", borderRadius: "6px", border: "1px dashed #DACBB7", fontSize: "11px" }}>
+                <div style={{ color: "#6B5B4E" }}>Digital Signature Certificate:</div>
+                <strong style={{ fontFamily: "var(--font-mono, monospace)", color: "#2B1D11" }}>
+                  SHA256: 9f82c4...e8812b [Signed by Dr. Maya Lin, Lead QA Officer]
+                </strong>
+              </div>
+            </div>
+
+            {/* Modal Buttons */}
+            <div style={{ display: "flex", gap: "10px" }}>
+              <button
+                type="button"
+                onClick={() => setIsDossierModalOpen(false)}
+                style={{
+                  flex: 1,
+                  padding: "10px",
+                  borderRadius: "8px",
+                  border: "1px solid #E8DDCF",
+                  backgroundColor: "#FFFFFF",
+                  fontSize: "13px",
+                  fontWeight: 700,
+                  color: "#6B5B4E",
+                  cursor: "pointer"
+                }}
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                onClick={handleDownloadDossier}
+                style={{
+                  flex: 1.5,
+                  padding: "10px",
+                  borderRadius: "8px",
+                  border: "none",
+                  backgroundColor: "#C89547",
+                  color: "#1A0F02",
+                  fontSize: "13px",
+                  fontWeight: 800,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "6px"
+                }}
+              >
+                <Download size={15} /> Download Signed PDF Dossier
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 2: QUARANTINE CONTAINMENT ACTION MODAL */}
+      {isQuarantineModalOpen && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "rgba(38, 22, 3, 0.6)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+            padding: "16px"
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setIsQuarantineModalOpen(false);
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: "#FFFFFF",
+              borderRadius: "16px",
+              padding: "24px",
+              width: "100%",
+              maxWidth: "480px",
+              border: "1px solid #fca5a5",
+              boxShadow: "0 10px 30px rgba(0,0,0,0.2)",
+              display: "flex",
+              flexDirection: "column",
+              gap: "16px"
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <AlertTriangle size={20} color="#dc2626" />
+                <h3 style={{ fontSize: "16px", fontWeight: 850, color: "#991b1b", margin: 0 }}>
+                  Trigger WMS Quarantine Hold
+                </h3>
+              </div>
+              <button
+                onClick={() => setIsQuarantineModalOpen(false)}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "#8C7B6E" }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <p style={{ fontSize: "13px", color: "#6B5B4E", margin: 0 }}>
+              Initiating immediate stop-ship hold on Lot <strong style={{ color: "#2B1D11" }}>{currentTrace.lotNumber}</strong> and all {currentTrace.recallImpact.palletsCount} downstream pallets.
+            </p>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+              <label style={{ fontSize: "12px", fontWeight: 750, color: "#2B1D11" }}>
+                SELECT HOLD REASON:
+              </label>
+              <select
+                value={quarantineReason}
+                onChange={(e) => setQuarantineReason(e.target.value)}
+                style={{
+                  padding: "10px 14px",
+                  borderRadius: "8px",
+                  border: "1px solid #E8DDCF",
+                  backgroundColor: "#F6F3EE",
+                  color: "#261603",
+                  fontSize: "13px",
+                  fontWeight: 700,
+                  outline: "none"
+                }}
+              >
+                <option value="Supplier Cold-Chain Excursion">Supplier Cold-Chain Temperature Excursion</option>
+                <option value="Foreign Material Investigation">Potential Foreign Material Suspicion</option>
+                <option value="Microbiological Re-Testing">Microbiological Out-of-Spec (OOS) Hold</option>
+                <option value="Supplier Voluntary Advisory">Supplier Upstream Recall Advisory</option>
+              </select>
+            </div>
+
+            <div style={{ backgroundColor: "#fef2f2", borderRadius: "8px", padding: "12px", fontSize: "12px", color: "#991b1b" }}>
+              ⚠️ Enforcing this lock will instantly prevent pick-lists, staging transfers, and shipping manifests for all affected stock.
+            </div>
+
+            <div style={{ display: "flex", gap: "10px" }}>
+              <button
+                type="button"
+                onClick={() => setIsQuarantineModalOpen(false)}
+                style={{
+                  flex: 1,
+                  padding: "10px",
+                  borderRadius: "8px",
+                  border: "1px solid #E8DDCF",
+                  backgroundColor: "#FFFFFF",
+                  fontSize: "13px",
+                  fontWeight: 700,
+                  color: "#6B5B4E",
+                  cursor: "pointer"
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleEnforceQuarantineLock}
+                style={{
+                  flex: 1.5,
+                  padding: "10px",
+                  borderRadius: "8px",
+                  border: "none",
+                  backgroundColor: "#dc2626",
+                  color: "#FFFFFF",
+                  fontSize: "13px",
+                  fontWeight: 800,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "6px"
+                }}
+              >
+                <Lock size={15} /> Confirm WMS Lockout
+              </button>
             </div>
           </div>
         </div>
