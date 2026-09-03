@@ -555,6 +555,10 @@ export function AppContent() {
           <Route path="/maintenance/verified-solutions" element={<RoleProtectedRoute><MaintenanceVerifiedSolutions /></RoleProtectedRoute>} />
           <Route path="/repeat-failures" element={<RoleProtectedRoute><RepeatFailures /></RoleProtectedRoute>} />
           <Route path="/verified-solutions" element={<RoleProtectedRoute><MaintenanceVerifiedSolutions /></RoleProtectedRoute>} />
+          <Route path="/work-orders/open" element={<Navigate to="/maintenance/work-orders" replace />} />
+          <Route path="/assets/register" element={<Navigate to="/maintenance/assets" replace />} />
+          <Route path="/assets/360" element={<Navigate to="/maintenance/assets" replace />} />
+          <Route path="/breakdowns/analysis" element={<Navigate to="/maintenance/breakdowns-overview" replace />} />
 
           {/* ========================================================= */}
           {/* 3. PLANT MANAGER & COMMAND CENTER ROUTES                  */}

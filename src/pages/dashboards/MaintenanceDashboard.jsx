@@ -265,7 +265,7 @@ export function MaintenanceDashboard() {
             <h3 style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)" }}>
               Top Breakdown Causes by Downtime (Pareto Analysis)
             </h3>
-            <Button variant="ghost" size="sm" icon={ExternalLink} onClick={() => navigate("/breakdowns/analysis")}>
+            <Button variant="ghost" size="sm" icon={ExternalLink} onClick={() => navigate("/maintenance/breakdowns-overview")}>
               Analysis
             </Button>
           </div>
@@ -291,7 +291,7 @@ export function MaintenanceDashboard() {
             <h3 style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)" }}>
               Equipment Fleet Health
             </h3>
-            <Button variant="ghost" size="sm" icon={ExternalLink} onClick={() => navigate("/assets/register")}>
+            <Button variant="ghost" size="sm" icon={ExternalLink} onClick={() => navigate("/maintenance/assets")}>
               All Assets ({assets.length})
             </Button>
           </div>
@@ -348,7 +348,7 @@ export function MaintenanceDashboard() {
                         {a.vibration} mm/s
                       </td>
                       <td style={{ textAlign: "right" }}>
-                        <Button variant="ghost" size="sm" onClick={() => navigate(`/assets/360?id=${a.id}`)}>
+                        <Button variant="ghost" size="sm" onClick={() => navigate(`/maintenance/assets/${a.id}`)}>
                           Asset 360
                         </Button>
                       </td>
@@ -366,7 +366,7 @@ export function MaintenanceDashboard() {
             <h3 style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)" }}>
               Active Work Orders Dispatch Queue
             </h3>
-            <Button variant="ghost" size="sm" icon={ExternalLink} onClick={() => navigate("/work-orders/open")}>
+            <Button variant="ghost" size="sm" icon={ExternalLink} onClick={() => navigate("/maintenance/work-orders")}>
               All WOs ({workOrders.length})
             </Button>
           </div>
@@ -423,7 +423,7 @@ export function MaintenanceDashboard() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => navigate(`/work-orders/open?view=${wo.id}`)}
+                          onClick={() => navigate(`/maintenance/work-orders/${wo.id}`)}
                         >
                           View
                         </Button>
