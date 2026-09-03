@@ -55,7 +55,6 @@ export function MasterUsers() {
     <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
       <div>
         <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)" }}>Platform Users</h1>
-        <p style={{ color: "var(--text-secondary)", fontSize: "14px", marginTop: "4px" }}>Global directory of all users across all tenant companies</p>
       </div>
 
       <Card style={{ padding: "0" }}>

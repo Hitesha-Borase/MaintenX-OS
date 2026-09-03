@@ -60,7 +60,6 @@ export function CompanyAdmins() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: "16px" }}>
         <div>
           <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)" }}>Company Administrators</h1>
-          <p style={{ color: "var(--text-secondary)", fontSize: "14px", marginTop: "4px" }}>Manage primary admin accounts for all tenant companies</p>
         </div>
         <div style={{ display: "flex", gap: "12px" }}>
           <Button variant="primary" icon={Plus} onClick={handleAddAdmin}>Add Administrator</Button>

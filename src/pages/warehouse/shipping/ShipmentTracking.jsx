@@ -31,9 +31,6 @@ export function ShipmentTracking() {
         <h1 style={{ fontSize: "24px", fontWeight: 800, color: "#2d2825", margin: "0 0 8px 0" }}>
           Shipment Tracking
         </h1>
-        <p style={{ fontSize: "15px", color: "#7a7571", margin: 0 }}>
-          Operations overview of dispatched carriers and regional ETA times
-        </p>
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
@@ -44,6 +41,8 @@ export function ShipmentTracking() {
               key={t.id} 
               style={{ 
                 display: "flex", 
+                flexWrap: "wrap",
+                gap: "16px",
                 justifyContent: "space-between", 
                 alignItems: "center",
                 backgroundColor: "#ffffff",

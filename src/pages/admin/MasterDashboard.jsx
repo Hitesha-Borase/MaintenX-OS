@@ -40,8 +40,7 @@ export function MasterDashboard() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "24px", paddingBottom: "40px" }}>
       <div>
-        <h1 style={{ fontSize: "28px", fontWeight: 800, color: "var(--text-primary)" }}>SaaS Control Center</h1>
-        <p style={{ color: "var(--text-secondary)", fontSize: "14px", marginTop: "4px" }}>Global overview of all tenant companies and platform subscriptions</p>
+        <h1 style={{ fontSize: "28px", fontWeight: 800, color: "var(--text-primary)" }}>Control Center</h1>
       </div>
 
       {/* TOP METRICS ROW 1 */}

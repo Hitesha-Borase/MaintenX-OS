@@ -44,7 +44,6 @@ export function CompaniesList() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: "16px" }}>
         <div>
           <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)" }}>Companies</h1>
-          <p style={{ color: "var(--text-secondary)", fontSize: "14px", marginTop: "4px" }}>Manage all registered tenant companies</p>
         </div>
         <div style={{ display: "flex", gap: "12px" }}>
           <Button variant="primary" icon={Plus} onClick={() => setIsAddModalOpen(true)}>Add Company</Button>

@@ -295,10 +295,6 @@ export function Login() {
             <h2 className="login-hero-title">
               MaintenX OS
             </h2>
-
-            <p className="login-hero-desc">
-              Orbiting Astro-Manufacturing Operations Suite. Synchronized OEE logistics routing, predictive machine wear tracking, and telemetry feedback.
-            </p>
           </div>
         </div>
 

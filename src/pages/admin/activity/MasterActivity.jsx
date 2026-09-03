@@ -10,7 +10,6 @@ export function MasterActivity() {
     <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
       <div>
         <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)" }}>Activity Feed</h1>
-        <p style={{ color: "var(--text-secondary)", fontSize: "14px", marginTop: "4px" }}>Real-time updates of platform activities</p>
       </div>
 
       <Card style={{ padding: "0" }}>

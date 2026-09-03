@@ -20,9 +20,6 @@ export function Reject() {
         <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
           Disposition — Reject
         </h1>
-        <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-          Authorize full batch rejection and scrap. Requires human QA authorization and reason.
-        </p>
       </div>
 
       <form onSubmit={handleReject}>

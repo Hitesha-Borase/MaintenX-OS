@@ -22,9 +22,6 @@ export function PickingExecution() {
         <h1 style={{ fontSize: "24px", fontWeight: 800, color: "#2d2825", margin: "0 0 8px 0" }}>
           Picking Execution Console
         </h1>
-        <p style={{ fontSize: "15px", color: "#7a7571", margin: 0 }}>
-          Reconcile staging requests by physically picking items from racks to staging bays
-        </p>
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
