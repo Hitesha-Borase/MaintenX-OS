@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 
 export const ROLES = [
+  { id: "master_admin", label: "Master Admin", icon: "Globe", defaultRoute: "/master/dashboard", step: "0. Platform" },
   { id: "admin", label: "System Administrator", icon: "ShieldAlert", defaultRoute: "/admin/console", step: "1. Setup" },
   { id: "planner", label: "Planner / Scheduler", icon: "CalendarRange", defaultRoute: "/planner/dashboard", step: "2. Plan" },
   { id: "warehouse", label: "Warehouse / Receiver", icon: "Package", defaultRoute: "/warehouse/dashboard", step: "3. Materials" },
@@ -378,6 +379,20 @@ export const NAVIGATION_CONFIG = {
     { label: "Notifications", path: "/executive/notifications", icon: "Bell" },
     { label: "Profile", path: "/executive/profile", icon: "User" }
   ],
+  master_admin: [
+    { label: "Dashboard", path: "/master/dashboard", icon: "LayoutDashboard" },
+    { label: "Companies", path: "/master/companies", icon: "Building2" },
+    { label: "Company Administrators", path: "/master/company-admins", icon: "UserCog" },
+    { label: "Plans & Pricing", path: "/master/plans-pricing", icon: "Tag" },
+    { label: "Subscriptions", path: "/master/subscriptions", icon: "CreditCard" },
+    { label: "Payments", path: "/master/payments", icon: "Banknote" },
+    { label: "Modules & Features", path: "/master/modules", icon: "Layers" },
+    { label: "Platform Users", path: "/master/platform-users", icon: "Users" },
+    { label: "Analytics", path: "/master/analytics", icon: "LineChart" },
+    { label: "Activity & Audit Logs", path: "/master/audit-logs", icon: "FileText" },
+    { label: "Support Tickets", path: "/master/support-tickets", icon: "Headset" },
+    { label: "Platform Settings", path: "/master/settings", icon: "Settings" }
+  ],
   admin: [
     {
       group: "Settings",
@@ -432,7 +447,7 @@ export function RoleProvider({ children }) {
   };
 
   const canAccessPath = (path) => {
-    if (currentRole.id === "admin") return true;
+    if (currentRole.id === "admin" || currentRole.id === "master_admin") return true;
 
     const config = NAVIGATION_CONFIG[currentRole.id];
     if (!config) return false;
