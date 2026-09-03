@@ -11,6 +11,7 @@ export function StatCard({
   icon: Icon,
   badge = null,
   colorVariant = "blue",
+  color,
   onClick,
   className = ""
 }) {
@@ -23,7 +24,7 @@ export function StatCard({
     indigo: "#6366F1"
   };
 
-  const accentColor = colorMap[colorVariant] || "#8C5B23";
+  const accentColor = color || colorMap[colorVariant] || "#8C5B23";
 
   return (
     <Card
@@ -37,11 +38,27 @@ export function StatCard({
         flexDirection: "column",
         justifyContent: "center",
         gap: "4px",
-        borderRadius: "8px"
+        borderRadius: "8px",
+        minWidth: 0,
+        width: "100%",
+        boxSizing: "border-box"
       }}
     >
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <span style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "4px" }}>
+        <span
+          className="stat-title"
+          style={{
+            fontSize: "11px",
+            fontWeight: 700,
+            color: "var(--text-secondary)",
+            textTransform: "uppercase",
+            letterSpacing: "0.04em",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap"
+          }}
+          title={title}
+        >
           {title}
         </span>
         {Icon && (
@@ -53,7 +70,8 @@ export function StatCard({
               color: accentColor,
               display: "flex",
               alignItems: "center",
-              justifyContent: "center"
+              justifyContent: "center",
+              flexShrink: 0
             }}
           >
             <Icon size={14} />
@@ -61,12 +79,12 @@ export function StatCard({
         )}
       </div>
 
-      <div style={{ display: "flex", alignItems: "baseline", gap: "6px", margin: "2px 0 0 0" }}>
+      <div style={{ display: "flex", alignItems: "baseline", gap: "4px", margin: "2px 0 0 0", flexWrap: "wrap" }}>
         <span className="stat-value" style={{ fontFamily: "var(--font-sans)", fontSize: "20px", fontWeight: 800, lineHeight: 1.2, color: "var(--text-primary)" }}>
           {value}
         </span>
         {unit && (
-          <span style={{ fontSize: "12px", fontWeight: 600, color: "var(--text-muted)", fontFamily: "var(--font-sans)" }}>
+          <span style={{ fontSize: "11px", fontWeight: 600, color: "var(--text-muted)", fontFamily: "var(--font-sans)" }}>
             {unit}
           </span>
         )}
@@ -74,31 +92,31 @@ export function StatCard({
 
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "auto", paddingTop: "4px" }}>
         {description && !trend && !badge && (
-          <div style={{ fontSize: "12px", color: "var(--text-muted)", fontWeight: 500 }}>
+          <div className="stat-desc" style={{ fontSize: "11px", color: "var(--text-muted)", fontWeight: 500, lineHeight: 1.2 }}>
             {description}
           </div>
         )}
         
         {trend && (
-          <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px" }}>
+          <div className="stat-trend" style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "11px", flexWrap: "wrap" }}>
             <span
               style={{
-                color: trend.isPositive ? "#34D399" : "#F87171",
+                color: trend.isPositive ? "#059669" : "#DC2626",
                 fontWeight: 600
               }}
             >
               {trend.value}
             </span>
-            <span style={{ color: "var(--text-muted)" }}>{trend.text}</span>
+            {trend.text && <span style={{ color: "var(--text-muted)" }}>{trend.text}</span>}
           </div>
         )}
 
         {badge && (
           <div style={{ marginTop: "2px" }}>
-          <Badge variant={badge.variant || "slate"} dot={badge.dot}>
-            {badge.label}
-          </Badge>
-        </div>
+            <Badge variant={badge.variant || "slate"} dot={badge.dot}>
+              {badge.label}
+            </Badge>
+          </div>
         )}
       </div>
     </Card>

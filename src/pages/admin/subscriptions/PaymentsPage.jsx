@@ -46,56 +46,63 @@ export function PaymentsPage() {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: "16px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "100%" }}>
+      {/* Header */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
         <div>
-          <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)" }}>Payments & Invoicing</h1>
-          <p style={{ color: "var(--text-secondary)", fontSize: "14px", marginTop: "4px" }}>Manage platform billing, invoices, and payment history</p>
+          <h1 style={{ fontSize: "clamp(20px, 4vw, 26px)", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.3px", margin: 0 }}>
+            Payments & Invoicing
+          </h1>
+          <p style={{ color: "var(--text-secondary)", fontSize: "13px", marginTop: "2px", margin: 0 }}>
+            Manage platform billing, invoices, and payment history
+          </p>
         </div>
-        <div style={{ display: "flex", gap: "12px" }}>
-          <Button variant="outline" icon={Download}>Export Report</Button>
-        </div>
+        <Button variant="outline" icon={Download} style={{ fontSize: "13px", padding: "8px 14px", fontWeight: 600 }}>
+          Export Report
+        </Button>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px" }}>
-        <Card style={{ padding: "20px", display: "flex", alignItems: "center", gap: "16px", borderTop: `4px solid #10B981` }}>
-          <div style={{ padding: "12px", backgroundColor: `#10B98115`, borderRadius: "12px", color: "#10B981" }}>
-            <DollarSign size={24} />
+      {/* Metric Cards - 2-column side-by-side on mobile (Aamne-Samne) */}
+      <div className="grid-2" style={{ gap: "10px" }}>
+        <Card style={{ padding: "12px 14px", display: "flex", alignItems: "center", gap: "10px", borderTop: `3px solid #10B981`, minWidth: 0, borderRadius: "12px" }}>
+          <div style={{ padding: "8px", backgroundColor: `#10B98115`, borderRadius: "8px", color: "#10B981", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <DollarSign size={16} />
           </div>
-          <div>
-            <div style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-secondary)" }}>Total Collected (YTD)</div>
-            <div style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)" }}>${totalRevenue.toLocaleString()}</div>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div style={{ fontSize: "10.5px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.03em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Total Collected</div>
+            <div style={{ fontSize: "18px", fontWeight: 800, color: "var(--text-primary)", lineHeight: 1.2, marginTop: "2px" }}>${totalRevenue.toLocaleString()}</div>
           </div>
         </Card>
-        <Card style={{ padding: "20px", display: "flex", alignItems: "center", gap: "16px", borderTop: `4px solid #EF4444` }}>
-          <div style={{ padding: "12px", backgroundColor: `#EF444415`, borderRadius: "12px", color: "#EF4444" }}>
-            <DollarSign size={24} />
+        <Card style={{ padding: "12px 14px", display: "flex", alignItems: "center", gap: "10px", borderTop: `3px solid #EF4444`, minWidth: 0, borderRadius: "12px" }}>
+          <div style={{ padding: "8px", backgroundColor: `#EF444415`, borderRadius: "8px", color: "#EF4444", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <DollarSign size={16} />
           </div>
-          <div>
-            <div style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-secondary)" }}>Overdue Payments</div>
-            <div style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)" }}>${overdueAmount.toLocaleString()}</div>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div style={{ fontSize: "10.5px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.03em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Overdue Payments</div>
+            <div style={{ fontSize: "18px", fontWeight: 800, color: "#EF4444", lineHeight: 1.2, marginTop: "2px" }}>${overdueAmount.toLocaleString()}</div>
           </div>
         </Card>
       </div>
 
-      <Card style={{ padding: "0" }}>
-        <div style={{ padding: "20px", borderBottom: "1px solid var(--border-color)", display: "flex", gap: "16px", flexWrap: "wrap" }}>
-          <div style={{ flex: 1, minWidth: "250px", position: "relative" }}>
-            <Search size={18} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
+      <Card style={{ padding: "0", overflow: "hidden", borderRadius: "14px" }}>
+        {/* Search & Filter Bar */}
+        <div style={{ padding: "14px 16px", borderBottom: "1px solid var(--border-subtle)", display: "flex", gap: "10px", flexWrap: "wrap", backgroundColor: "#FFFFFF" }}>
+          <div style={{ flex: "1 1 100%", minWidth: "180px", position: "relative" }}>
+            <Search size={15} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
             <input 
               type="text" 
               placeholder="Search by invoice ID or company..." 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ width: "100%", padding: "10px 10px 10px 40px", borderRadius: "8px", border: "1px solid var(--border-color)", backgroundColor: "var(--bg-body)" }}
+              style={{ width: "100%", padding: "8px 12px 8px 34px", borderRadius: "8px", border: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)", fontSize: "13px", boxSizing: "border-box" }}
             />
           </div>
-          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-            <Filter size={16} color="var(--text-secondary)" />
+          <div style={{ display: "flex", gap: "8px", alignItems: "center", width: "100%" }}>
+            <Filter size={14} color="var(--text-secondary)" style={{ flexShrink: 0 }} />
             <select 
               value={statusFilter} 
               onChange={(e) => setStatusFilter(e.target.value)}
-              style={{ padding: "10px", borderRadius: "8px", border: "1px solid var(--border-color)", backgroundColor: "var(--bg-body)", color: "var(--text-primary)" }}
+              style={{ flex: 1, minWidth: 0, padding: "7px 10px", borderRadius: "8px", border: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)", color: "var(--text-primary)", fontSize: "12px", fontWeight: 600 }}
             >
               <option value="All">All Statuses</option>
               <option value="Paid">Paid</option>
@@ -105,8 +112,60 @@ export function PaymentsPage() {
           </div>
         </div>
 
-        <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: "900px" }}>
+        {/* Mobile View: 2-Column Side-by-Side Invoice Cards (Aamne-Samne) */}
+        <div className="mobile-cards-view grid-2" style={{ padding: "12px", gap: "10px" }}>
+          {filteredPayments.map(payment => (
+            <div 
+              key={payment.id} 
+              style={{ 
+                padding: "12px", 
+                backgroundColor: "var(--bg-card-subtle)", 
+                borderRadius: "10px", 
+                border: "1px solid var(--border-subtle)",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "space-between",
+                gap: "8px",
+                minWidth: 0
+              }}
+            >
+              <div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "6px" }}>
+                  <span style={{ fontWeight: 800, fontSize: "12px", color: "var(--text-primary)", fontFamily: "monospace" }}>{payment.id}</span>
+                  <Badge variant={payment.status === "Paid" ? "emerald" : payment.status === "Overdue" ? "destructive" : "warning"} style={{ fontSize: "10px", padding: "2px 6px" }}>
+                    {payment.status}
+                  </Badge>
+                </div>
+
+                <div style={{ marginTop: "6px" }}>
+                  <div style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)" }}>
+                    ${payment.amount.toLocaleString()}
+                  </div>
+                  <div style={{ fontSize: "11px", fontWeight: 600, color: "var(--text-primary)", marginTop: "2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    🏢 {payment.company}
+                  </div>
+                  <div style={{ fontSize: "10px", color: "var(--text-muted)", marginTop: "1px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {payment.plan} • {payment.date}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", gap: "4px", justifyContent: "flex-end", paddingTop: "6px", borderTop: "1px solid var(--border-subtle)" }}>
+                <Button variant="ghost" size="sm" onClick={() => handleViewInvoice(payment)} title="View Invoice" style={{ padding: "4px" }}><FileText size={13} /></Button>
+                <Button variant="ghost" size="sm" onClick={() => handleDownload(payment.id)} title="Download PDF" style={{ padding: "4px" }}><Download size={13} /></Button>
+              </div>
+            </div>
+          ))}
+          {filteredPayments.length === 0 && (
+            <div style={{ padding: "30px", textAlign: "center", color: "var(--text-secondary)", gridColumn: "1 / -1" }}>
+              No payments found matching criteria.
+            </div>
+          )}
+        </div>
+
+        {/* Desktop View: Full Width Table */}
+        <div className="desktop-table-view" style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ backgroundColor: "var(--bg-card-subtle)", borderBottom: "1px solid var(--border-color)", textAlign: "left" }}>
                 <th style={{ padding: "16px 20px", fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase" }}>Invoice ID</th>
