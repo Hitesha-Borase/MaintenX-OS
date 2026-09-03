@@ -50,7 +50,6 @@ export function PaymentsPage() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: "16px" }}>
         <div>
           <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)" }}>Payments & Invoicing</h1>
-          <p style={{ color: "var(--text-secondary)", fontSize: "14px", marginTop: "4px" }}>Manage platform billing, invoices, and payment history</p>
         </div>
         <div style={{ display: "flex", gap: "12px" }}>
           <Button variant="outline" icon={Download}>Export Report</Button>

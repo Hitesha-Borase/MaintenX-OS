@@ -51,7 +51,6 @@ export function MasterAuditLogs() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: "16px" }}>
         <div>
           <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)" }}>Activity & Audit Logs</h1>
-          <p style={{ color: "var(--text-secondary)", fontSize: "14px", marginTop: "4px" }}>Security and compliance audit trail for platform actions</p>
         </div>
         <div style={{ display: "flex", gap: "12px" }}>
           <Button variant="outline" icon={Download} onClick={handleExport}>Export Logs</Button>

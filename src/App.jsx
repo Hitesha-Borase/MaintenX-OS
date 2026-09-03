@@ -430,13 +430,13 @@ export function AppContent() {
     <BrowserRouter>
       <Routes>
         {/* Public Landing Page and Section Routes */}
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/landing" element={<LandingPage />} />
-        <Route path="/home" element={<LandingPage />} />
-        <Route path="/features" element={<LandingPage />} />
-        <Route path="/why-us" element={<LandingPage />} />
-        <Route path="/pricing" element={<LandingPage />} />
-        <Route path="/contact" element={<LandingPage />} />
+        <Route path="/" element={!isAuthenticated ? <LandingPage /> : <Navigate to={currentRole?.defaultRoute || "/dashboard"} replace />} />
+        <Route path="/landing" element={!isAuthenticated ? <LandingPage /> : <Navigate to={currentRole?.defaultRoute || "/dashboard"} replace />} />
+        <Route path="/home" element={!isAuthenticated ? <LandingPage /> : <Navigate to={currentRole?.defaultRoute || "/dashboard"} replace />} />
+        <Route path="/features" element={!isAuthenticated ? <LandingPage /> : <Navigate to={currentRole?.defaultRoute || "/dashboard"} replace />} />
+        <Route path="/why-us" element={!isAuthenticated ? <LandingPage /> : <Navigate to={currentRole?.defaultRoute || "/dashboard"} replace />} />
+        <Route path="/pricing" element={!isAuthenticated ? <LandingPage /> : <Navigate to={currentRole?.defaultRoute || "/dashboard"} replace />} />
+        <Route path="/contact" element={!isAuthenticated ? <LandingPage /> : <Navigate to={currentRole?.defaultRoute || "/dashboard"} replace />} />
 
         {/* Authentication Route */}
         <Route path="/login" element={!isAuthenticated ? <Login /> : <Navigate to={currentRole?.defaultRoute || "/dashboard"} replace />} />

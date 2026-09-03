@@ -22,7 +22,6 @@ export function ManageModules() {
     <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
       <div>
         <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)" }}>Modules & Features</h1>
-        <p style={{ color: "var(--text-secondary)", fontSize: "14px", marginTop: "4px" }}>Global view of enabled modules and feature toggles per company</p>
       </div>
 
       <Card style={{ padding: "0" }}>

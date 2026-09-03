@@ -31,9 +31,6 @@ export function ShipmentOrders() {
         <h1 style={{ fontSize: "24px", fontWeight: 800, color: "#2d2825", margin: "0 0 8px 0" }}>
           Shipment Purchase Orders
         </h1>
-        <p style={{ fontSize: "15px", color: "#7a7571", margin: 0 }}>
-          Reconcile customer shipment schedules and carrier allocations
-        </p>
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
@@ -42,6 +39,8 @@ export function ShipmentOrders() {
             key={s.id || idx} 
             style={{ 
               display: "flex", 
+              flexWrap: "wrap",
+              gap: "16px",
               justifyContent: "space-between", 
               alignItems: "center",
               backgroundColor: "#ffffff",
@@ -54,7 +53,7 @@ export function ShipmentOrders() {
             <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
               <FileText size={24} color="#38bdf8" strokeWidth={2} />
               <span style={{ fontSize: "15px", color: "#71717a" }}>
-                Payload: {s.cargo} <span style={{ margin: "0 4px" }}>•</span> Target shipping: {s.date}
+                Payload: {s.cargo} <br /> Target shipping: {s.date}
               </span>
             </div>
             

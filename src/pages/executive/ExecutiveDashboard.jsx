@@ -205,9 +205,6 @@ export function ExecutiveDashboard() {
           <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.5px" }}>
             Enterprise Executive Command Center
           </h1>
-          <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>
-            Multi-plant manufacturing performance, financial loss drivers, and predictive AI insights
-          </p>
         </div>
 
         <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>

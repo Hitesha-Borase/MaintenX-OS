@@ -40,9 +40,6 @@ export function BinsRacks() {
         <h1 style={{ fontSize: "24px", fontWeight: 800, color: "#2d2825", margin: "0 0 8px 0" }}>
           Bins & Storage Racks Put-Away
         </h1>
-        <p style={{ fontSize: "15px", color: "#7a7571", margin: 0 }}>
-          Allocate storage slots and confirm put-away for staged items
-        </p>
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
@@ -56,6 +53,8 @@ export function BinsRacks() {
               key={s.lotNumber} 
               style={{ 
                 display: "flex", 
+                flexWrap: "wrap",
+                gap: "16px",
                 justifyContent: "space-between", 
                 alignItems: "center",
                 backgroundColor: "#ffffff",
@@ -66,7 +65,7 @@ export function BinsRacks() {
                 boxShadow: "0 2px 8px rgba(0,0,0,0.02)"
               }}
             >
-              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px", minWidth: "250px" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "24px" }}>
                   <Layers size={24} color="#C89547" strokeWidth={2} />
                   <span style={{ 
@@ -85,11 +84,11 @@ export function BinsRacks() {
                 </div>
                 <div style={{ fontSize: "15px", color: "#71717a", marginTop: "4px", marginLeft: "48px" }}>
                   <strong style={{ color: "#2B1D11" }}>{s.materialName}</strong> <br/>
-                  Lot: {s.lotNumber} <span style={{ margin: "0 4px" }}>•</span> Qty: {s.quantity} {s.unit}
+                  Lot: {s.lotNumber} <br /> Qty: {s.quantity} {s.unit}
                 </div>
               </div>
 
-              <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap" }}>
                 <select 
                   style={{
                     padding: "10px",
