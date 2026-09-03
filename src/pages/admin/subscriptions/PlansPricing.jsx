@@ -38,63 +38,75 @@ export function PlansPricing() {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: "16px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "100%" }}>
+      {/* Header */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
         <div>
-          <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)" }}>Plans & Pricing</h1>
+          <h1 style={{ fontSize: "clamp(20px, 4vw, 26px)", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.3px", margin: 0 }}>
+            Plans & Pricing
+          </h1>
+          <p style={{ color: "var(--text-secondary)", fontSize: "13px", marginTop: "2px", margin: 0 }}>
+            Define subscription tiers and platform pricing for tenants
+          </p>
         </div>
-        <div style={{ display: "flex", gap: "12px" }}>
-          <Button variant="primary" icon={Plus} onClick={handleCreatePlan}>Create New Plan</Button>
-        </div>
+        <Button 
+          variant="primary" 
+          icon={Plus} 
+          onClick={handleCreatePlan}
+          style={{ fontSize: "13px", padding: "8px 14px", fontWeight: 700 }}
+        >
+          Create New Plan
+        </Button>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "24px" }}>
+      {/* Plans Grid - 2x2 on mobile (aamne-samne), 4 on desktop */}
+      <div className="kpi-grid-responsive grid-4" style={{ gap: "10px" }}>
         {plans.map((plan) => (
-          <Card key={plan.id} style={{ padding: "0", overflow: "hidden", display: "flex", flexDirection: "column", position: "relative" }}>
+          <Card key={plan.id} style={{ padding: "0", overflow: "hidden", display: "flex", flexDirection: "column", position: "relative", minWidth: 0 }}>
             {plan.status === "Inactive" && (
               <div style={{ position: "absolute", inset: 0, backgroundColor: "rgba(255,255,255,0.6)", zIndex: 1, display: "flex", justifyContent: "center", alignItems: "center" }}>
-                <Badge variant="secondary" style={{ fontSize: "14px", padding: "8px 16px" }}>INACTIVE</Badge>
+                <Badge variant="secondary" style={{ fontSize: "12px", padding: "4px 10px" }}>INACTIVE</Badge>
               </div>
             )}
-            <div style={{ padding: "24px", borderBottom: "1px solid var(--border-color)", backgroundColor: plan.name === "Enterprise" ? "rgba(37, 99, 235, 0.05)" : "transparent" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ padding: "14px 16px", borderBottom: "1px solid var(--border-color)", backgroundColor: plan.name === "Enterprise" ? "rgba(37, 99, 235, 0.05)" : "transparent" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "6px" }}>
                 <Badge variant={plan.name === "Enterprise" ? "primary" : plan.name === "Professional" ? "emerald" : "secondary"}>{plan.name}</Badge>
-                <div style={{ display: "flex", gap: "8px", position: "relative", zIndex: 2 }}>
-                  <Button variant="ghost" size="sm" onClick={() => toggleStatus(plan.id, plan.status)} title={plan.status === "Active" ? "Deactivate Plan" : "Activate Plan"}>
-                    {plan.status === "Active" ? <X size={16} /> : <Check size={16} />}
+                <div style={{ display: "flex", gap: "4px", position: "relative", zIndex: 2 }}>
+                  <Button variant="ghost" size="sm" onClick={() => toggleStatus(plan.id, plan.status)} title={plan.status === "Active" ? "Deactivate Plan" : "Activate Plan"} style={{ padding: "4px" }}>
+                    {plan.status === "Active" ? <X size={14} /> : <Check size={14} />}
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={() => handleEditPlan(plan)} title="Edit Plan"><Edit2 size={16} /></Button>
-                  <Button variant="ghost" size="sm" onClick={() => handleRemovePlan(plan.id)} title="Delete Plan"><Trash2 size={16} color="#EF4444" /></Button>
+                  <Button variant="ghost" size="sm" onClick={() => handleEditPlan(plan)} title="Edit Plan" style={{ padding: "4px" }}><Edit2 size={14} /></Button>
+                  <Button variant="ghost" size="sm" onClick={() => handleRemovePlan(plan.id)} title="Delete Plan" style={{ padding: "4px" }}><Trash2 size={14} color="#EF4444" /></Button>
                 </div>
               </div>
-              <div style={{ marginTop: "24px", display: "flex", alignItems: "baseline", gap: "4px" }}>
-                <span style={{ fontSize: "36px", fontWeight: 800, color: "var(--text-primary)" }}>${plan.priceMonthly}</span>
-                <span style={{ fontSize: "14px", color: "var(--text-secondary)", fontWeight: 600 }}>/mo</span>
+              <div style={{ marginTop: "12px", display: "flex", alignItems: "baseline", gap: "3px" }}>
+                <span style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)", lineHeight: 1 }}>${plan.priceMonthly}</span>
+                <span style={{ fontSize: "12px", color: "var(--text-secondary)", fontWeight: 600 }}>/mo</span>
               </div>
-              <div style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>or ${plan.priceAnnual}/year</div>
+              <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>or ${plan.priceAnnual}/yr</div>
             </div>
             
-            <div style={{ padding: "24px", flex: 1, display: "flex", flexDirection: "column", gap: "16px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px" }}>
+            <div style={{ padding: "14px 16px", flex: 1, display: "flex", flexDirection: "column", gap: "10px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px" }}>
                 <span style={{ color: "var(--text-secondary)" }}>User Limit</span>
-                <span style={{ fontWeight: 600, color: "var(--text-primary)" }}>{plan.userLimit}</span>
+                <span style={{ fontWeight: 700, color: "var(--text-primary)" }}>{plan.userLimit}</span>
               </div>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px" }}>
                 <span style={{ color: "var(--text-secondary)" }}>Trial Duration</span>
-                <span style={{ fontWeight: 600, color: "var(--text-primary)" }}>{plan.duration}</span>
+                <span style={{ fontWeight: 700, color: "var(--text-primary)" }}>{plan.duration}</span>
               </div>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px" }}>
                 <span style={{ color: "var(--text-secondary)" }}>Access Level</span>
-                <span style={{ fontWeight: 600, color: "var(--text-primary)" }}>{plan.accessLevel}</span>
+                <span style={{ fontWeight: 700, color: "var(--text-primary)" }}>{plan.accessLevel}</span>
               </div>
               
-              <div style={{ marginTop: "8px", paddingTop: "16px", borderTop: "1px dashed var(--border-color)" }}>
-                <div style={{ fontSize: "12px", fontWeight: 700, textTransform: "uppercase", color: "var(--text-secondary)", marginBottom: "12px", letterSpacing: "0.5px" }}>Features</div>
-                <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+              <div style={{ marginTop: "4px", paddingTop: "10px", borderTop: "1px dashed var(--border-color)" }}>
+                <div style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase", color: "var(--text-secondary)", marginBottom: "8px", letterSpacing: "0.03em" }}>Features</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
                   {plan.features.map((feature, i) => (
-                    <div key={i} style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", color: "var(--text-primary)" }}>
-                      <Check size={14} color="#10B981" />
-                      <span>{feature}</span>
+                    <div key={i} style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "11.5px", color: "var(--text-primary)" }}>
+                      <Check size={12} color="#10B981" style={{ flexShrink: 0 }} />
+                      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{feature}</span>
                     </div>
                   ))}
                 </div>

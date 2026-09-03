@@ -45,8 +45,8 @@ export function QualityDashboard() {
         </h1>
       </div>
 
-      {/* KPI Stats */}
-      <div className="grid-3" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))" }}>
+      {/* KPI Stats - 2x2 on mobile, 4 on desktop */}
+      <div className="kpi-grid-responsive grid-4">
         <div onClick={() => navigate("/quality/checks/product")} style={{ cursor: "pointer" }}>
           <StatCard
             title="Pending Quality Checks"

@@ -204,7 +204,7 @@ body {
 
 .kpi-grid-responsive {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 16px;
 }
 
@@ -215,14 +215,34 @@ body {
 }
 
 @media (max-width: 1024px) {
-  .grid-4, .grid-6 {
+  .grid-4, .grid-6, .kpi-grid-responsive {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 12px !important;
+  }
+  .grid-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 12px !important;
   }
 }
 
 @media (max-width: 768px) {
-  .grid-2, .grid-3, .grid-4, .grid-6 {
-    grid-template-columns: repeat(1, minmax(0, 1fr)) !important;
+  /* Side-by-side 2-column layout on mobile (Aamne-Samne) */
+  .grid-2, .grid-3, .grid-4, .grid-6, .kpi-grid-responsive {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+  }
+  .page-content-wrapper {
+    padding: 14px 10px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .grid-2, .grid-3, .grid-4, .grid-6, .kpi-grid-responsive {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+  }
+  .page-content-wrapper {
+    padding: 12px 8px !important;
   }
 }
 
@@ -237,6 +257,40 @@ body {
   padding: 12px 14px !important;
   border-radius: 8px !important;
   min-height: auto;
+  min-width: 0 !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+@media (max-width: 768px) {
+  .stat-card {
+    padding: 10px 10px !important;
+  }
+  .stat-card .stat-title {
+    font-size: 10px !important;
+    letter-spacing: 0.02em !important;
+  }
+  .stat-card .stat-value {
+    font-size: 18px !important;
+  }
+  .stat-card .stat-desc {
+    font-size: 10px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .stat-card {
+    padding: 8px 8px !important;
+  }
+  .stat-card .stat-title {
+    font-size: 9.5px !important;
+  }
+  .stat-card .stat-value {
+    font-size: 16px !important;
+  }
+  .stat-card .stat-desc {
+    font-size: 9.5px !important;
+  }
 }
 
 .stat-value {
@@ -844,8 +898,23 @@ textarea.input-field {
   .print-only { position: absolute; left: 0; top: 0; width: 100%; margin: 0 !important; box-shadow: none !important; border: none !important; }
   .no-print { display: none !important; }
 }
-@media (min-width: 769px) {
+@media (min-width: 1025px) {
   .mobile-backdrop-overlay {
     display: none !important;
+  }
+  .mobile-cards-view {
+    display: none !important;
+  }
+  .desktop-table-view {
+    display: block !important;
+  }
+}
+
+@media (max-width: 1024px) {
+  .desktop-table-view {
+    display: none !important;
+  }
+  .mobile-cards-view {
+    display: grid !important;
   }
 }

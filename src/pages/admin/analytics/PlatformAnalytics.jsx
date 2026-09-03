@@ -12,52 +12,53 @@ export function PlatformAnalytics() {
         <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)" }}>Platform Analytics</h1>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px" }}>
-        <Card style={{ padding: "20px", display: "flex", alignItems: "center", gap: "16px" }}>
-          <div style={{ padding: "12px", backgroundColor: "rgba(37, 99, 235, 0.1)", borderRadius: "12px", color: "#2563EB" }}>
-            <Activity size={24} />
+      {/* Metric Cards - 2x2 on mobile, 4 on desktop */}
+      <div className="kpi-grid-responsive grid-4">
+        <Card style={{ padding: "14px 16px", display: "flex", alignItems: "center", gap: "12px", minWidth: 0 }}>
+          <div style={{ padding: "10px", backgroundColor: "rgba(37, 99, 235, 0.1)", borderRadius: "10px", color: "#2563EB", flexShrink: 0 }}>
+            <Activity size={20} />
           </div>
-          <div>
-            <div style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-secondary)" }}>Total Companies</div>
-            <div style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)" }}>{companies.length}</div>
-          </div>
-        </Card>
-        
-        <Card style={{ padding: "20px", display: "flex", alignItems: "center", gap: "16px" }}>
-          <div style={{ padding: "12px", backgroundColor: "rgba(16, 185, 129, 0.1)", borderRadius: "12px", color: "#10B981" }}>
-            <Users size={24} />
-          </div>
-          <div>
-            <div style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-secondary)" }}>Total Users</div>
-            <div style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)" }}>{users.length}</div>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div style={{ fontSize: "11.5px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.03em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Total Companies</div>
+            <div style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)", lineHeight: 1.2, marginTop: "2px" }}>{companies.length}</div>
           </div>
         </Card>
         
-        <Card style={{ padding: "20px", display: "flex", alignItems: "center", gap: "16px" }}>
-          <div style={{ padding: "12px", backgroundColor: "rgba(245, 158, 11, 0.1)", borderRadius: "12px", color: "#F59E0B" }}>
-            <TrendingUp size={24} />
+        <Card style={{ padding: "14px 16px", display: "flex", alignItems: "center", gap: "12px", minWidth: 0 }}>
+          <div style={{ padding: "10px", backgroundColor: "rgba(16, 185, 129, 0.1)", borderRadius: "10px", color: "#10B981", flexShrink: 0 }}>
+            <Users size={20} />
           </div>
-          <div>
-            <div style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-secondary)" }}>Avg Session Time</div>
-            <div style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)" }}>24m</div>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div style={{ fontSize: "11.5px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.03em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Total Users</div>
+            <div style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)", lineHeight: 1.2, marginTop: "2px" }}>{users.length}</div>
+          </div>
+        </Card>
+        
+        <Card style={{ padding: "14px 16px", display: "flex", alignItems: "center", gap: "12px", minWidth: 0 }}>
+          <div style={{ padding: "10px", backgroundColor: "rgba(245, 158, 11, 0.1)", borderRadius: "10px", color: "#F59E0B", flexShrink: 0 }}>
+            <TrendingUp size={20} />
+          </div>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div style={{ fontSize: "11.5px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.03em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Avg Session</div>
+            <div style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)", lineHeight: 1.2, marginTop: "2px" }}>24m</div>
           </div>
         </Card>
 
-        <Card style={{ padding: "20px", display: "flex", alignItems: "center", gap: "16px" }}>
-          <div style={{ padding: "12px", backgroundColor: "rgba(139, 92, 246, 0.1)", borderRadius: "12px", color: "#8B5CF6" }}>
-            <BarChart3 size={24} />
+        <Card style={{ padding: "14px 16px", display: "flex", alignItems: "center", gap: "12px", minWidth: 0 }}>
+          <div style={{ padding: "10px", backgroundColor: "rgba(139, 92, 246, 0.1)", borderRadius: "10px", color: "#8B5CF6", flexShrink: 0 }}>
+            <BarChart3 size={20} />
           </div>
-          <div>
-            <div style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-secondary)" }}>API Requests</div>
-            <div style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)" }}>1.2M</div>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div style={{ fontSize: "11.5px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.03em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>API Requests</div>
+            <div style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)", lineHeight: 1.2, marginTop: "2px" }}>1.2M</div>
           </div>
         </Card>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(400px, 1fr))", gap: "24px" }}>
+      <div className="grid-2-responsive" style={{ gap: "20px" }}>
         
         {/* Subscription Distribution */}
-        <Card style={{ padding: "24px" }}>
+        <Card style={{ padding: "20px" }}>
           <h2 style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-primary)", marginBottom: "20px" }}>Subscription Distribution</h2>
           <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
             {Object.entries(

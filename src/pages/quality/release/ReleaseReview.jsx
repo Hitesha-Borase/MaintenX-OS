@@ -63,9 +63,9 @@ export function ReleaseReview() {
         </Button>
       </div>
 
-      <Card style={{ display: "flex", flexDirection: "column", gap: "24px", padding: "24px", borderRadius: "16px" }}>
-        <h3 style={{ fontSize: "18px", fontWeight: 700, color: "var(--text-primary)", margin: 0 }}>Reviewing Batch: {batchInfo.id}</h3>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px", fontSize: "14px" }}>
+      <Card style={{ display: "flex", flexDirection: "column", gap: "20px", padding: "20px", borderRadius: "16px" }}>
+        <h3 style={{ fontSize: "17px", fontWeight: 700, color: "var(--text-primary)", margin: 0 }}>Reviewing Batch: {batchInfo.id}</h3>
+        <div className="grid-2" style={{ fontSize: "14px" }}>
           {[
             { label: "CCP Temperature", value: batchInfo.ccpTemp },
             { label: "Brix Level", value: batchInfo.brix },
@@ -73,20 +73,20 @@ export function ReleaseReview() {
             { label: "Pre-Op Check", value: batchInfo.preOp },
             { label: "Open Deviations", value: batchInfo.deviations }
           ].map((item, idx) => (
-            <div key={idx} style={{ padding: "16px", borderRadius: "12px", backgroundColor: "var(--bg-card-subtle)", border: "1px solid var(--border-color)" }}>
-              <span style={{ fontSize: "13px", color: "var(--text-secondary)", display: "block", marginBottom: "4px", fontWeight: 600 }}>{item.label}</span>
-              <strong style={{ color: item.label === "Open Deviations" && item.value !== "None" ? "#EF4444" : "var(--text-primary)", fontSize: "16px", fontWeight: 700 }}>{item.value}</strong>
+            <div key={idx} style={{ padding: "12px 14px", borderRadius: "10px", backgroundColor: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)", minWidth: 0, boxSizing: "border-box" }}>
+              <span style={{ fontSize: "11px", color: "var(--text-secondary)", display: "block", marginBottom: "4px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.02em" }}>{item.label}</span>
+              <strong style={{ color: item.label === "Open Deviations" && item.value !== "None" ? "#EF4444" : "var(--text-primary)", fontSize: "15px", fontWeight: 700, wordBreak: "break-word" }}>{item.value}</strong>
             </div>
           ))}
         </div>
 
         {!released && !blocked ? (
-          <div style={{ display: "flex", gap: "12px", marginTop: "8px", flexWrap: "wrap" }}>
-            <Button variant="primary" icon={ShieldCheck} onClick={handleApprove} style={{ flex: 1, minWidth: "200px", justifyContent: "center", padding: "12px", backgroundColor: "#10B981", borderColor: "#10B981" }}>
-              Approve & Release Batch
+          <div style={{ display: "flex", gap: "10px", marginTop: "8px", flexWrap: "wrap" }}>
+            <Button variant="primary" icon={ShieldCheck} onClick={handleApprove} style={{ flex: 1, minWidth: "140px", justifyContent: "center", padding: "10px 14px", backgroundColor: "#10B981", borderColor: "#10B981", fontSize: "13px" }}>
+              Approve & Release
             </Button>
-            <Button variant="outline" icon={AlertOctagon} onClick={handleBlock} style={{ flex: 1, minWidth: "200px", justifyContent: "center", padding: "12px", color: "#EF4444", borderColor: "#EF4444" }}>
-              Block & HOLD Batch
+            <Button variant="outline" icon={AlertOctagon} onClick={handleBlock} style={{ flex: 1, minWidth: "140px", justifyContent: "center", padding: "10px 14px", color: "#EF4444", borderColor: "#EF4444", fontSize: "13px" }}>
+              Block & HOLD
             </Button>
           </div>
         ) : (
