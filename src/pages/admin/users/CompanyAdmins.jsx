@@ -63,9 +63,6 @@ export function CompanyAdmins() {
           <h1 style={{ fontSize: "clamp(20px, 4vw, 26px)", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.3px", margin: 0 }}>
             Company Administrators
           </h1>
-          <p style={{ color: "var(--text-secondary)", fontSize: "13px", marginTop: "2px", margin: 0 }}>
-            Manage primary admin accounts for all tenant companies
-          </p>
         </div>
         <Button 
           variant="primary" 
@@ -182,13 +179,15 @@ export function CompanyAdmins() {
             <tbody>
               {filteredAdmins.map(user => (
                 <tr key={user.id} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
-                  <td style={{ padding: "16px 20px", display: "flex", alignItems: "center", gap: "12px" }}>
-                    <div style={{ width: "32px", height: "32px", borderRadius: "16px", backgroundColor: "rgba(37, 99, 235, 0.1)", color: "#2563EB", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700 }}>
-                      {user.name.charAt(0)}
-                    </div>
-                    <div>
-                      <div style={{ fontWeight: 600, color: "var(--text-primary)" }}>{user.name}</div>
-                      <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "2px" }}>{user.name.toLowerCase().replace(" ", ".")}@example.com</div>
+                  <td style={{ padding: "16px 20px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                      <div style={{ width: "32px", height: "32px", borderRadius: "16px", backgroundColor: "rgba(37, 99, 235, 0.1)", color: "#2563EB", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, flexShrink: 0 }}>
+                        {user.name.charAt(0)}
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 600, color: "var(--text-primary)", whiteSpace: "nowrap" }}>{user.name}</div>
+                        <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "2px", whiteSpace: "nowrap" }}>{user.name.toLowerCase().replace(" ", ".")}@example.com</div>
+                      </div>
                     </div>
                   </td>
                   <td style={{ padding: "16px 20px" }}>

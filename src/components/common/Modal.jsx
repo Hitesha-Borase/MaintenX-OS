@@ -53,7 +53,7 @@ export function Modal({
           </Button>
         </div>
 
-        <div style={{ padding: "24px", overflowY: "auto", maxHeight: "calc(85vh - 140px)" }}>
+        <div style={{ padding: "16px", overflowY: "auto", maxHeight: "calc(85vh - 140px)" }}>
           {children}
         </div>
 

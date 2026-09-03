@@ -50,30 +50,27 @@ export function SupportTickets() {
         <h1 style={{ fontSize: "clamp(20px, 4vw, 26px)", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.3px", margin: 0 }}>
           Support Tickets
         </h1>
-        <p style={{ color: "var(--text-secondary)", fontSize: "13px", marginTop: "2px", margin: 0 }}>
-          Manage platform-level support requests from tenant companies
-        </p>
       </div>
 
       <Card style={{ padding: "0", overflow: "hidden", borderRadius: "14px" }}>
         {/* Search & Filter Bar */}
-        <div style={{ padding: "14px 16px", borderBottom: "1px solid var(--border-subtle)", display: "flex", gap: "10px", flexWrap: "wrap", backgroundColor: "#FFFFFF" }}>
-          <div style={{ flex: "1 1 100%", minWidth: "180px", position: "relative" }}>
+        <div style={{ padding: "14px 16px", borderBottom: "1px solid var(--border-subtle)", display: "flex", gap: "10px", flexWrap: "nowrap", backgroundColor: "#FFFFFF" }}>
+          <div style={{ flex: 1, minWidth: 0, position: "relative" }}>
             <Search size={15} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
             <input 
               type="text" 
-              placeholder="Search tickets by company or subject..." 
+              placeholder="Search by company or subject..." 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ width: "100%", padding: "8px 12px 8px 34px", borderRadius: "8px", border: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)", fontSize: "13px", boxSizing: "border-box" }}
+              style={{ width: "100%", padding: "8px 12px 8px 34px", borderRadius: "8px", border: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)", fontSize: "13px", boxSizing: "border-box", outline: "none" }}
             />
           </div>
-          <div style={{ display: "flex", gap: "8px", alignItems: "center", width: "100%" }}>
-            <Filter size={14} color="var(--text-secondary)" style={{ flexShrink: 0 }} />
+          <div style={{ display: "flex", gap: "8px", alignItems: "center", flexShrink: 0 }}>
+            <Filter size={14} color="var(--text-secondary)" style={{ flexShrink: 0, display: "none" }} className="hide-on-mobile" />
             <select 
               value={statusFilter} 
               onChange={(e) => setStatusFilter(e.target.value)}
-              style={{ flex: 1, minWidth: 0, padding: "7px 10px", borderRadius: "8px", border: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)", color: "var(--text-primary)", fontSize: "12px", fontWeight: 600 }}
+              style={{ width: "110px", padding: "8px 10px", borderRadius: "8px", border: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)", color: "var(--text-primary)", fontSize: "13px", fontWeight: 500, outline: "none", boxSizing: "border-box" }}
             >
               <option value="All">All Statuses</option>
               <option value="Open">Open</option>
@@ -84,7 +81,7 @@ export function SupportTickets() {
         </div>
 
         {/* Mobile View: 2-Column Side-by-Side Ticket Cards (Aamne-Samne) */}
-        <div className="mobile-cards-view grid-2" style={{ padding: "12px", gap: "10px" }}>
+        <div className="mobile-cards-view" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", padding: "12px", gap: "10px" }}>
           {filteredTickets.map(ticket => (
             <div 
               key={ticket.id} 

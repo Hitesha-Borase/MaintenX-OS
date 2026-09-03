@@ -57,29 +57,26 @@ export function MasterUsers() {
         <h1 style={{ fontSize: "clamp(20px, 4vw, 26px)", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.3px", margin: 0 }}>
           Platform Users
         </h1>
-        <p style={{ color: "var(--text-secondary)", fontSize: "13px", marginTop: "2px", margin: 0 }}>
-          Global directory of all users across all tenant companies
-        </p>
       </div>
 
       <Card style={{ padding: "0" }}>
-        <div style={{ padding: "16px", borderBottom: "1px solid var(--border-color)", display: "flex", gap: "10px", flexWrap: "wrap" }}>
-          <div style={{ flex: "1 1 100%", minWidth: "200px", position: "relative" }}>
-            <Search size={16} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
+        <div style={{ padding: "14px 16px", borderBottom: "1px solid var(--border-subtle)", display: "flex", gap: "10px", flexWrap: "wrap", backgroundColor: "#FFFFFF" }}>
+          <div style={{ flex: "1 1 200px", position: "relative" }}>
+            <Search size={15} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
             <input 
               type="text" 
               placeholder="Search by name, role, or company..." 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ width: "100%", padding: "8px 10px 8px 36px", borderRadius: "8px", border: "1px solid var(--border-color)", backgroundColor: "var(--bg-body)", fontSize: "13px" }}
+              style={{ width: "100%", padding: "8px 12px 8px 34px", borderRadius: "8px", border: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)", fontSize: "13px", boxSizing: "border-box", outline: "none" }}
             />
           </div>
-          <div style={{ display: "flex", gap: "8px", alignItems: "center", width: "100%" }}>
-            <Filter size={15} color="var(--text-secondary)" style={{ flexShrink: 0 }} />
+          <div style={{ display: "flex", gap: "8px", alignItems: "center", flex: "1 1 150px", maxWidth: "200px" }}>
+            <Filter size={14} color="var(--text-secondary)" style={{ flexShrink: 0 }} />
             <select 
               value={statusFilter} 
               onChange={(e) => setStatusFilter(e.target.value)}
-              style={{ flex: 1, minWidth: 0, padding: "8px 10px", borderRadius: "8px", border: "1px solid var(--border-color)", backgroundColor: "var(--bg-body)", color: "var(--text-primary)", fontSize: "12px" }}
+              style={{ flex: 1, minWidth: 0, padding: "8px 10px", borderRadius: "8px", border: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)", color: "var(--text-primary)", fontSize: "13px", fontWeight: 500, outline: "none", boxSizing: "border-box" }}
             >
               <option value="All">All Statuses</option>
               <option value="Active">Active</option>
@@ -147,24 +144,31 @@ export function MasterUsers() {
         <div className="desktop-table-view" style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
-              <tr style={{ backgroundColor: "var(--bg-card-subtle)", borderBottom: "1px solid var(--border-color)", textAlign: "left" }}>
-                <th style={{ padding: "16px 20px", fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase" }}>User Name</th>
-                <th style={{ padding: "16px 20px", fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase" }}>Company</th>
-                <th style={{ padding: "16px 20px", fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase" }}>Role</th>
-                <th style={{ padding: "16px 20px", fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase" }}>Status</th>
-                <th style={{ padding: "16px 20px", fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase", textAlign: "right" }}>Actions</th>
+              <tr style={{ backgroundColor: "var(--bg-card-subtle)", borderBottom: "1px solid var(--border-subtle)", textAlign: "left" }}>
+                <th style={{ padding: "16px 20px", fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase", whiteSpace: "nowrap" }}>User Name</th>
+                <th style={{ padding: "16px 20px", fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase", whiteSpace: "nowrap" }}>Company</th>
+                <th style={{ padding: "16px 20px", fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase", whiteSpace: "nowrap" }}>Role</th>
+                <th style={{ padding: "16px 20px", fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase", whiteSpace: "nowrap" }}>Status</th>
+                <th style={{ padding: "16px 20px", fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase", textAlign: "right", whiteSpace: "nowrap" }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {filteredUsers.map(user => (
-                <tr key={user.id} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
-                  <td style={{ padding: "16px 20px", fontWeight: 600, color: "var(--text-primary)" }}>{user.name}</td>
-                  <td style={{ padding: "16px 20px", fontWeight: 500, color: "var(--text-secondary)" }}>{user.company}</td>
-                  <td style={{ padding: "16px 20px", fontSize: "14px", color: "var(--text-primary)" }}>{user.role}</td>
-                  <td style={{ padding: "16px 20px" }}>
+                <tr key={user.id} style={{ borderBottom: "1px solid var(--border-subtle)" }} className="hover-row">
+                  <td style={{ padding: "16px 20px", fontWeight: 700, color: "var(--text-primary)", whiteSpace: "nowrap" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                      <div style={{ width: "32px", height: "32px", borderRadius: "50%", backgroundColor: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, color: "var(--text-primary)", fontSize: "12px" }}>
+                        {user.name.charAt(0)}
+                      </div>
+                      {user.name}
+                    </div>
+                  </td>
+                  <td style={{ padding: "16px 20px", fontWeight: 600, color: "var(--text-secondary)", whiteSpace: "nowrap" }}>{user.company}</td>
+                  <td style={{ padding: "16px 20px", fontSize: "14px", fontWeight: 500, color: "var(--text-primary)", whiteSpace: "nowrap" }}>{user.role}</td>
+                  <td style={{ padding: "16px 20px", whiteSpace: "nowrap" }}>
                     <Badge variant={user.status === "Active" ? "emerald" : "secondary"}>{user.status}</Badge>
                   </td>
-                  <td style={{ padding: "16px 20px", textAlign: "right" }}>
+                  <td style={{ padding: "16px 20px", textAlign: "right", whiteSpace: "nowrap" }}>
                     <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
                       <Button variant="ghost" size="sm" onClick={() => handleViewProfile(user)} title="View Profile"><Eye size={16} /></Button>
                       {user.status === "Active" ? (

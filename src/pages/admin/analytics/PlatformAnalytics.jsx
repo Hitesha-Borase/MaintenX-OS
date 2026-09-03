@@ -1,5 +1,6 @@
 import React from "react";
 import { Card } from "../../../components/common/Card";
+import { StatCard } from "../../../components/common/StatCard";
 import { BarChart3, TrendingUp, Users, Activity } from "lucide-react";
 import { useMasterAdmin } from "../../../context/MasterAdminContext";
 
@@ -12,47 +13,32 @@ export function PlatformAnalytics() {
         <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)" }}>Platform Analytics</h1>
       </div>
 
-      {/* Metric Cards - 2x2 on mobile, 4 on desktop */}
-      <div className="kpi-grid-responsive grid-4">
-        <Card style={{ padding: "14px 16px", display: "flex", alignItems: "center", gap: "12px", minWidth: 0 }}>
-          <div style={{ padding: "10px", backgroundColor: "rgba(37, 99, 235, 0.1)", borderRadius: "10px", color: "#2563EB", flexShrink: 0 }}>
-            <Activity size={20} />
-          </div>
-          <div style={{ minWidth: 0, flex: 1 }}>
-            <div style={{ fontSize: "11.5px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.03em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Total Companies</div>
-            <div style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)", lineHeight: 1.2, marginTop: "2px" }}>{companies.length}</div>
-          </div>
-        </Card>
-        
-        <Card style={{ padding: "14px 16px", display: "flex", alignItems: "center", gap: "12px", minWidth: 0 }}>
-          <div style={{ padding: "10px", backgroundColor: "rgba(16, 185, 129, 0.1)", borderRadius: "10px", color: "#10B981", flexShrink: 0 }}>
-            <Users size={20} />
-          </div>
-          <div style={{ minWidth: 0, flex: 1 }}>
-            <div style={{ fontSize: "11.5px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.03em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Total Users</div>
-            <div style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)", lineHeight: 1.2, marginTop: "2px" }}>{users.length}</div>
-          </div>
-        </Card>
-        
-        <Card style={{ padding: "14px 16px", display: "flex", alignItems: "center", gap: "12px", minWidth: 0 }}>
-          <div style={{ padding: "10px", backgroundColor: "rgba(245, 158, 11, 0.1)", borderRadius: "10px", color: "#F59E0B", flexShrink: 0 }}>
-            <TrendingUp size={20} />
-          </div>
-          <div style={{ minWidth: 0, flex: 1 }}>
-            <div style={{ fontSize: "11.5px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.03em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Avg Session</div>
-            <div style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)", lineHeight: 1.2, marginTop: "2px" }}>24m</div>
-          </div>
-        </Card>
-
-        <Card style={{ padding: "14px 16px", display: "flex", alignItems: "center", gap: "12px", minWidth: 0 }}>
-          <div style={{ padding: "10px", backgroundColor: "rgba(139, 92, 246, 0.1)", borderRadius: "10px", color: "#8B5CF6", flexShrink: 0 }}>
-            <BarChart3 size={20} />
-          </div>
-          <div style={{ minWidth: 0, flex: 1 }}>
-            <div style={{ fontSize: "11.5px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.03em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>API Requests</div>
-            <div style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)", lineHeight: 1.2, marginTop: "2px" }}>1.2M</div>
-          </div>
-        </Card>
+      {/* Metric Cards - compact 4-column layout */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px" }}>
+        <StatCard
+          title="TOTAL COMPANIES"
+          value={companies.length}
+          icon={Activity}
+          colorVariant="blue"
+        />
+        <StatCard
+          title="TOTAL USERS"
+          value={users.length}
+          icon={Users}
+          colorVariant="emerald"
+        />
+        <StatCard
+          title="AVG SESSION"
+          value="24m"
+          icon={TrendingUp}
+          colorVariant="amber"
+        />
+        <StatCard
+          title="API REQUESTS"
+          value="1.2M"
+          icon={BarChart3}
+          colorVariant="indigo"
+        />
       </div>
 
       <div className="grid-2-responsive" style={{ gap: "20px" }}>
