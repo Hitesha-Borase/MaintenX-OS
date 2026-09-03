@@ -31,9 +31,6 @@ export function Traceability() {
         <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
           Supply Lot Traceability
         </h1>
-        <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-          Query raw materials lot codes to trace vendor sources and associated production runs
-        </p>
       </div>
 
       <form onSubmit={handleSearch}>
@@ -78,3 +75,4 @@ export function Traceability() {
     </div>
   );
 }
+

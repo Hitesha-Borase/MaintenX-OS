@@ -51,9 +51,6 @@ export function ReceiveMaterial() {
         <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>
           Inbound Material Receiving
         </h1>
-        <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginTop: "4px", fontWeight: 500 }}>
-          Log and verify inbound carrier deliveries and assign Quality control lot codes
-        </p>
       </div>
 
       <form onSubmit={handleReceive}>
@@ -123,3 +120,4 @@ export function ReceiveMaterial() {
     </div>
   );
 }
+

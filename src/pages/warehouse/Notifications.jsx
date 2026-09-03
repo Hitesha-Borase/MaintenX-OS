@@ -99,9 +99,6 @@ export function Notifications() {
               </span>
             )}
           </div>
-          <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginTop: "4px", fontWeight: 500 }}>
-            Active staging picks notifications and inbound carrier arrival logs
-          </p>
         </div>
         <div style={{ display: "flex", gap: "12px" }}>
           <Button variant="outline" size="sm" icon={CheckCircle2} onClick={handleMarkAllRead}>
@@ -185,7 +182,6 @@ export function Notifications() {
                       {n.badge && <Badge variant={n.type === "danger" ? "danger" : "primary"}>{n.badge}</Badge>}
                       <span style={{ fontSize: "13px", color: "var(--text-muted)", fontWeight: 500 }}>{n.time}</span>
                     </div>
-                    <p style={{ fontSize: "14px", color: "var(--text-secondary)", margin: 0, lineHeight: 1.5 }}>{n.msg}</p>
                   </div>
                 </div>
                 
@@ -205,3 +201,4 @@ export function Notifications() {
     </div>
   );
 }
+

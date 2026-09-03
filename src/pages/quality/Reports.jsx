@@ -19,9 +19,6 @@ export function Reports() {
         <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)" }}>
           Quality Assurance Reports
         </h1>
-        <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginTop: "4px" }}>
-          Access CCP logs, batch release summaries, and quality events reports
-        </p>
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
@@ -59,3 +56,4 @@ export function Reports() {
     </div>
   );
 }
+

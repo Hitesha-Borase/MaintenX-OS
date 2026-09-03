@@ -32,9 +32,6 @@ export function ProcessChecks() {
         <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>
           In-Process Checks
         </h1>
-        <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginTop: "4px", fontWeight: 500 }}>
-          Operations overview of active line process parameters
-        </p>
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
@@ -75,3 +72,4 @@ export function ProcessChecks() {
     </div>
   );
 }
+

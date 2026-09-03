@@ -13,9 +13,6 @@ export function Profile() {
         <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)" }}>
           Quality Assurance Lead Profile
         </h1>
-        <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginTop: "4px" }}>
-          Verify QA authorizations and compliance certifications
-        </p>
       </div>
 
       <div className="grid-3">
@@ -85,3 +82,4 @@ export function Profile() {
     </div>
   );
 }
+

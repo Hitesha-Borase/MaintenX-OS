@@ -22,9 +22,6 @@ export function CleaningVerification() {
         <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)" }}>
           Cleaning & Verification Sign-Off
         </h1>
-        <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginTop: "4px" }}>
-          Verify and authorize chemical clean validation swabs
-        </p>
       </div>
 
       <form onSubmit={handleVerify}>
@@ -57,3 +54,4 @@ export function CleaningVerification() {
     </div>
   );
 }
+

@@ -44,9 +44,6 @@ export function RawMaterials() {
         <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>
           Raw Material Inventory
         </h1>
-        <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginTop: "4px", fontWeight: 500 }}>
-          Operations overview of raw concentrates and liquid feedstocks
-        </p>
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
@@ -124,10 +121,11 @@ export function RawMaterials() {
 
         {rmLots.length === 0 && materials.length === 0 && (
           <div style={{ padding: "40px", textAlign: "center" }}>
-            <p style={{ color: "var(--text-secondary)" }}>No raw materials in inventory.</p>
           </div>
         )}
       </div>
     </div>
   );
 }
+
+

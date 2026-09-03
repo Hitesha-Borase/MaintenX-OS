@@ -54,7 +54,12 @@ import {
   X,
   Truck,
   LogOut,
-  FlaskConical
+  FlaskConical,
+  CreditCard,
+  UserCog,
+  Tag,
+  Banknote,
+  Headset
 } from "lucide-react";
 import { useRole } from "../../context/RoleContext";
 import { useApp } from "../../context/AppContext";
@@ -113,7 +118,12 @@ const iconMap = {
   UserCheck,
   Server,
   Activity,
-  FlaskConical
+  FlaskConical,
+  CreditCard,
+  UserCog,
+  Tag,
+  Banknote,
+  Headset
 };
 
 export function Sidebar() {

@@ -43,9 +43,6 @@ export function FinishedGoodsPage() {
             </h1>
             <Badge variant="emerald">105 Pallets Ready for Dispatch</Badge>
           </div>
-          <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>
-            Pallet staging bays, QA-released inventory tracking, carrier appointment schedules, and electronic Bill of Lading (BoL).
-          </p>
         </div>
       </div>
 
@@ -154,3 +151,4 @@ export function FinishedGoodsPage() {
     </div>
   );
 }
+

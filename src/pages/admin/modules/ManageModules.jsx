@@ -1,0 +1,97 @@
+import React, { useState } from "react";
+import { useMasterAdmin } from "../../../context/MasterAdminContext";
+import { Card } from "../../../components/common/Card";
+import { Badge } from "../../../components/common/Badge";
+import { Button } from "../../../components/common/Button";
+import { Layers, Check, X, Search, Filter } from "lucide-react";
+
+export function ManageModules() {
+  const { companies, toggleCompanyModule } = useMasterAdmin();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [planFilter, setPlanFilter] = useState("All");
+
+  const moduleKeys = ["production", "quality", "maintenance", "warehouse", "ci"];
+
+  const filteredCompanies = companies.filter(c => {
+    const matchesSearch = c.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesPlan = planFilter === "All" || c.subscription === planFilter;
+    return matchesSearch && matchesPlan;
+  });
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+      <div>
+        <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)" }}>Modules & Features</h1>
+        <p style={{ color: "var(--text-secondary)", fontSize: "14px", marginTop: "4px" }}>Global view of enabled modules and feature toggles per company</p>
+      </div>
+
+      <Card style={{ padding: "0" }}>
+        <div style={{ padding: "20px", borderBottom: "1px solid var(--border-color)", display: "flex", gap: "16px", flexWrap: "wrap" }}>
+          <div style={{ flex: 1, minWidth: "250px", position: "relative" }}>
+            <Search size={18} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
+            <input 
+              type="text" 
+              placeholder="Search companies..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{ width: "100%", padding: "10px 10px 10px 40px", borderRadius: "8px", border: "1px solid var(--border-color)", backgroundColor: "var(--bg-body)" }}
+            />
+          </div>
+          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+            <Filter size={16} color="var(--text-secondary)" />
+            <select 
+              value={planFilter} 
+              onChange={(e) => setPlanFilter(e.target.value)}
+              style={{ padding: "10px", borderRadius: "8px", border: "1px solid var(--border-color)", backgroundColor: "var(--bg-body)", color: "var(--text-primary)" }}
+            >
+              <option value="All">All Plans</option>
+              <option value="Enterprise">Enterprise</option>
+              <option value="Professional">Professional</option>
+              <option value="Basic">Basic</option>
+              <option value="Trial">Trial</option>
+            </select>
+          </div>
+        </div>
+
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: "900px" }}>
+            <thead>
+              <tr style={{ backgroundColor: "var(--bg-card-subtle)", borderBottom: "1px solid var(--border-color)", textAlign: "left" }}>
+                <th style={{ padding: "16px 20px", fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase" }}>Company Name</th>
+                {moduleKeys.map(mod => (
+                  <th key={mod} style={{ padding: "16px 20px", fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase", textAlign: "center" }}>{mod}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {filteredCompanies.map(company => (
+                <tr key={company.id} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+                  <td style={{ padding: "16px 20px" }}>
+                    <div style={{ fontWeight: 600, color: "var(--text-primary)" }}>{company.name}</div>
+                    <Badge variant={company.subscription === "Enterprise" ? "primary" : company.subscription === "Professional" ? "emerald" : "secondary"} style={{ marginTop: "4px" }}>
+                      {company.subscription}
+                    </Badge>
+                  </td>
+                  {moduleKeys.map(mod => (
+                    <td key={mod} style={{ padding: "16px 20px", textAlign: "center" }}>
+                      <label style={{ display: "inline-flex", alignItems: "center", cursor: "pointer" }} title={`Toggle ${mod} for ${company.name}`}>
+                        <div style={{ position: "relative", width: "40px", height: "24px", backgroundColor: company.modules[mod] ? "#10B981" : "#D1D5DB", borderRadius: "12px", transition: "0.3s" }} onClick={() => toggleCompanyModule(company.id, mod)}>
+                          <div style={{ position: "absolute", top: "2px", left: company.modules[mod] ? "18px" : "2px", width: "20px", height: "20px", backgroundColor: "white", borderRadius: "50%", transition: "0.3s" }} />
+                        </div>
+                      </label>
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {filteredCompanies.length === 0 && (
+            <div style={{ padding: "40px", textAlign: "center", color: "var(--text-secondary)" }}>
+              No companies found matching criteria.
+            </div>
+          )}
+        </div>
+      </Card>
+    </div>
+  );
+}

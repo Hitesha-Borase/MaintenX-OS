@@ -27,71 +27,83 @@ export function WorkInstructions() {
   ];
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
-        <div>
-          <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "16px", width: "100%", maxWidth: "100%", boxSizing: "border-box" }}>
+      {/* Header & Controls */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px", width: "100%" }}>
+        <div style={{ minWidth: 0, flex: "1 1 auto" }}>
+          <h1 style={{ fontSize: "clamp(18px, 4vw, 22px)", fontWeight: 800, color: "var(--text-primary)", margin: 0, letterSpacing: "-0.3px" }}>
             Work Instructions & Digital SOPs
           </h1>
         </div>
 
-        <div style={{ display: "flex", gap: "8px" }}>
-          <Button variant="secondary" icon={Printer} onClick={() => window.print()}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", alignItems: "center" }}>
+          <Button variant="secondary" icon={Printer} onClick={() => window.print()} style={{ fontSize: "12px", height: "34px", padding: "6px 12px" }}>
             Print Manual
           </Button>
 
           {!acknowledged ? (
-            <Button variant="success" icon={ShieldCheck} onClick={handleAcknowledge}>
+            <Button variant="success" icon={ShieldCheck} onClick={handleAcknowledge} style={{ fontSize: "12px", height: "34px", padding: "6px 14px", fontWeight: 700 }}>
               Acknowledge SOP Clearance
             </Button>
           ) : (
-            <Badge variant="emerald">SOP Cleared & Acknowledged</Badge>
+            <Badge variant="emerald" style={{ padding: "6px 12px", fontSize: "12px" }}>SOP Cleared & Acknowledged</Badge>
           )}
         </div>
       </div>
 
-      <Card style={{ borderLeft: "3px solid #A855F7", backgroundColor: "#FFFFFF", border: "1px solid var(--border-subtle)", padding: "18px" }}>
-        <div style={{ display: "flex", alignItems: "flex-start", gap: "12px" }}>
-          <FileText size={24} color="#A855F7" style={{ flexShrink: 0, marginTop: "2px" }} />
-          <div>
-            <h3 style={{ fontSize: "15px", fontWeight: 800, color: "var(--text-primary)" }}>
+      {/* Active SOP Document Header Card */}
+      <Card style={{ borderLeft: "4px solid #A855F7", backgroundColor: "#FFFFFF", border: "1px solid var(--border-subtle)", padding: "16px 18px", boxSizing: "border-box", minWidth: 0 }}>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: "12px", minWidth: 0 }}>
+          <div style={{ width: "38px", height: "38px", borderRadius: "10px", backgroundColor: "rgba(168, 85, 247, 0.12)", display: "flex", alignItems: "center", justifyContent: "center", color: "#A855F7", flexShrink: 0 }}>
+            <FileText size={20} />
+          </div>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <h3 style={{ fontSize: "clamp(14px, 3.5vw, 16px)", fontWeight: 800, color: "var(--text-primary)", margin: 0, wordBreak: "break-word", lineHeight: 1.3 }}>
               {activeOrder.workInstructions}
             </h3>
-            <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "4px" }}>
-              Associated with Active Job: <strong style={{ color: "#0284C7" }}>{activeOrder.orderNumber}</strong> ({activeOrder.productName})
-            </p>
+            <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "6px", display: "flex", flexWrap: "wrap", alignItems: "center", gap: "6px" }}>
+              <span>Associated with Active Job:</span>
+              <span style={{ backgroundColor: "rgba(2, 132, 199, 0.1)", color: "#0284C7", padding: "2px 8px", borderRadius: "6px", fontWeight: 700, fontFamily: "var(--font-mono)" }}>
+                {activeOrder.orderNumber}
+              </span>
+              <span style={{ color: "var(--text-muted)" }}>({activeOrder.productName})</span>
+            </div>
           </div>
         </div>
       </Card>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+      {/* Step by Step Procedures */}
+      <div style={{ display: "flex", flexDirection: "column", gap: "10px", width: "100%", boxSizing: "border-box" }}>
         {steps.map((step, idx) => (
-          <Card key={idx} style={{ padding: "16px", backgroundColor: "#FFFFFF", border: "1px solid var(--border-subtle)" }}>
-            <h4 style={{ fontSize: "13px", fontWeight: 800, color: "var(--text-primary)", marginBottom: "6px" }}>
+          <Card key={idx} style={{ padding: "14px 16px", backgroundColor: "#FFFFFF", border: "1px solid var(--border-subtle)", boxSizing: "border-box", minWidth: 0 }}>
+            <h4 style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)", marginBottom: "6px", wordBreak: "break-word" }}>
               {step.title}
             </h4>
-            <p style={{ fontSize: "13px", color: "var(--text-secondary)", lineHeight: 1.5 }}>
+            <p style={{ fontSize: "13px", color: "var(--text-secondary)", lineHeight: 1.55, margin: 0, wordBreak: "break-word" }}>
               {step.text}
             </p>
           </Card>
         ))}
       </div>
 
-      <Card style={{ display: "flex", justifyContent: "space-between", alignItems: "center", backgroundColor: acknowledged ? "rgba(16, 185, 129, 0.08)" : "#FFFFFF", border: "1px solid var(--border-subtle)", padding: "16px 20px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <Award size={20} color={acknowledged ? "#10B981" : "var(--text-muted)"} />
-          <span style={{ fontSize: "13px", fontWeight: 700, color: acknowledged ? "#059669" : "var(--text-primary)" }}>
+      {/* Bottom Digital Compliance Sign-Off Card */}
+      <Card style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px", backgroundColor: acknowledged ? "rgba(16, 185, 129, 0.08)" : "#FFFFFF", border: acknowledged ? "1px solid rgba(16, 185, 129, 0.3)" : "1px solid var(--border-subtle)", padding: "14px 18px", boxSizing: "border-box", minWidth: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", flex: "1 1 200px", minWidth: 0 }}>
+          <Award size={22} color={acknowledged ? "#10B981" : "var(--text-muted)"} style={{ flexShrink: 0 }} />
+          <span style={{ fontSize: "13px", fontWeight: 700, color: acknowledged ? "#059669" : "var(--text-primary)", wordBreak: "break-word" }}>
             {acknowledged ? "Instructions & Safety Protocols Acknowledged" : "I have read and agree to follow these manufacturing SOPs."}
           </span>
         </div>
 
-        {!acknowledged ? (
-          <Button variant="success" icon={CheckCircle} onClick={handleAcknowledge}>
-            Acknowledge
-          </Button>
-        ) : (
-          <Badge variant="emerald">Acknowledged</Badge>
-        )}
+        <div style={{ flexShrink: 0 }}>
+          {!acknowledged ? (
+            <Button variant="success" icon={CheckCircle} onClick={handleAcknowledge} style={{ fontSize: "12px", height: "34px", padding: "6px 14px", fontWeight: 700 }}>
+              Acknowledge
+            </Button>
+          ) : (
+            <Badge variant="emerald" style={{ padding: "4px 10px" }}>Acknowledged</Badge>
+          )}
+        </div>
       </Card>
     </div>
   );

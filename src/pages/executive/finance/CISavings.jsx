@@ -35,9 +35,9 @@ export function CISavings() {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "16px", width: "100%", maxWidth: "100%", boxSizing: "border-box" }}>
       <div>
-        <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
+        <h1 style={{ fontSize: "clamp(18px, 4vw, 22px)", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.3px", margin: 0 }}>
           Continuous Improvement (CI) Savings
         </h1>
       </div>
@@ -48,41 +48,44 @@ export function CISavings() {
         <StatCard title="Benefits Verified" value="84.2%" description="Audit verified" icon={TrendingUp} color="#7C3AED" />
       </div>
 
-      <Card style={{ backgroundColor: "#FFFFFF", border: "1px solid var(--border-subtle)", padding: "20px" }}>
-        <h3 style={{ fontSize: "15px", fontWeight: 800, color: "var(--text-primary)", marginBottom: "16px", margin: "0 0 16px 0" }}>
+      <Card style={{ backgroundColor: "#FFFFFF", border: "1px solid var(--border-subtle)", padding: "16px 18px", boxSizing: "border-box", minWidth: 0 }}>
+        <h3 style={{ fontSize: "15px", fontWeight: 800, color: "var(--text-primary)", margin: "0 0 14px 0" }}>
           CI Savings Portfolio
         </h3>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "12px", width: "100%" }}>
           {savingProjects.map((p, idx) => (
             <div
               key={idx}
               style={{
-                padding: "16px",
-                borderRadius: "8px",
+                padding: "14px 16px",
+                borderRadius: "10px",
                 backgroundColor: "var(--bg-card-subtle)",
                 border: "1px solid var(--border-subtle)",
                 display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                flexWrap: "wrap",
-                gap: "14px"
+                flexDirection: "column",
+                gap: "10px",
+                boxSizing: "border-box",
+                minWidth: 0
               }}
             >
-              <div style={{ flex: 1, minWidth: "200px" }}>
-                <span style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "8px" }}>
+                <span style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)", wordBreak: "break-word", flex: "1 1 200px" }}>
                   {p.id}: {p.title}
                 </span>
-                <div style={{ display: "flex", gap: "16px", marginTop: "4px", fontSize: "12px", color: "var(--text-secondary)", flexWrap: "wrap" }}>
+                <Badge variant={p.status === "Verified" ? "emerald" : "warning"}>
+                  {p.status}
+                </Badge>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px", paddingTop: "4px", borderTop: "1px dashed var(--border-subtle)" }}>
+                <div style={{ display: "flex", gap: "14px", fontSize: "12px", color: "var(--text-secondary)", flexWrap: "wrap" }}>
                   <span>Projected: <strong style={{ color: "var(--text-primary)", fontFamily: "var(--font-mono)" }}>{p.projected}</strong></span>
                   <span>Actual Realized: <strong style={{ color: "#059669", fontFamily: "var(--font-mono)" }}>{p.actual}</strong></span>
                 </div>
-              </div>
 
-              <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap", flexShrink: 0 }}>
-                <Badge variant={p.status === "Verified" ? "emerald" : "warning"}>{p.status}</Badge>
                 {p.status === "Pending Verification" && (
-                  <Button variant="success" size="xs" icon={Award} onClick={() => handleOpenVerifyModal(p)}>
+                  <Button variant="success" size="xs" icon={Award} onClick={() => handleOpenVerifyModal(p)} style={{ fontSize: "12px", height: "30px", padding: "4px 12px", fontWeight: 700 }}>
                     Verify Benefits
                   </Button>
                 )}

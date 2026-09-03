@@ -21,9 +21,6 @@ export function Rework() {
         <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)" }}>
           Disposition — Rework
         </h1>
-        <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginTop: "4px" }}>
-          Authorize batch rework with re-processing instructions for defects that can be salvaged.
-        </p>
       </div>
 
       <form onSubmit={handleRework}>
@@ -58,3 +55,4 @@ export function Rework() {
     </div>
   );
 }
+

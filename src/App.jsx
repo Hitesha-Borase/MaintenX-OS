@@ -11,9 +11,11 @@ import { AdminProvider } from "./context/AdminContext";
 import { MasterDataProvider } from "./context/MasterDataContext";
 import { PlanningProvider } from "./context/PlanningContext";
 import { CIProvider } from "./context/CIContext";
+import { MasterAdminProvider } from "./context/MasterAdminContext";
 
 import { AppLayout } from "./components/layout/AppLayout";
 import { Login } from "./pages/auth/Login";
+import { LandingPage } from "./pages/landing/LandingPage";
 import { PlaceholderPage } from "./pages/PlaceholderPage";
 import { AlertOctagon } from "lucide-react";
 
@@ -22,6 +24,24 @@ import { AlertOctagon } from "lucide-react";
 // ==========================================
 // 1. Dashboard
 import { AdminDashboard } from "./pages/admin/AdminDashboard";
+
+// ==========================================
+// MASTER ADMIN PORTAL PAGES
+// ==========================================
+import { MasterDashboard } from "./pages/admin/MasterDashboard";
+import { CompaniesList } from "./pages/admin/companies/CompaniesList";
+import { CompanyDetails } from "./pages/admin/companies/CompanyDetails";
+import { MasterUsers } from "./pages/admin/users/MasterUsers";
+import { CompanyAdmins } from "./pages/admin/users/CompanyAdmins";
+import { ManageSubscriptions } from "./pages/admin/subscriptions/ManageSubscriptions";
+import { ManageModules } from "./pages/admin/modules/ManageModules";
+import { MasterActivity } from "./pages/admin/activity/MasterActivity";
+import { MasterAuditLogs } from "./pages/admin/audit/MasterAuditLogs";
+import { PlatformSettings } from "./pages/admin/settings/PlatformSettings";
+import { PlansPricing } from "./pages/admin/subscriptions/PlansPricing";
+import { PaymentsPage } from "./pages/admin/subscriptions/PaymentsPage";
+import { PlatformAnalytics } from "./pages/admin/analytics/PlatformAnalytics";
+import { SupportTickets } from "./pages/admin/support/SupportTickets";
 
 // 2. User Management
 import { UsersPage } from "./pages/admin/users/UsersPage";
@@ -409,28 +429,48 @@ export function AppContent() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/login" element={!isAuthenticated ? <Login /> : <Navigate to="/" replace />} />
+        {/* Public Landing Page and Section Routes */}
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/landing" element={<LandingPage />} />
+        <Route path="/home" element={<LandingPage />} />
+        <Route path="/features" element={<LandingPage />} />
+        <Route path="/why-us" element={<LandingPage />} />
+        <Route path="/pricing" element={<LandingPage />} />
+        <Route path="/contact" element={<LandingPage />} />
+
+        {/* Authentication Route */}
+        <Route path="/login" element={!isAuthenticated ? <Login /> : <Navigate to={currentRole?.defaultRoute || "/dashboard"} replace />} />
 
         <Route element={isAuthenticated ? <AppLayout /> : <Navigate to="/login" replace />}>
-          {/* Default Route redirects to current role default or /dashboard */}
-          <Route path="/" element={<Navigate to={currentRole?.defaultRoute || "/dashboard"} replace />} />
+          {/* Default Route alias redirects to current role default or /dashboard */}
+          <Route path="/app" element={<Navigate to={currentRole?.defaultRoute || "/dashboard"} replace />} />
+
+          {/* ========================================================= */}
+          {/* MASTER ADMIN ROUTES                                       */}
+          {/* ========================================================= */}
+          <Route path="/master/dashboard" element={<MasterDashboard />} />
+          <Route path="/master/companies" element={<CompaniesList />} />
+          <Route path="/master/companies/add" element={<Navigate to="/master/companies" replace />} />
+          <Route path="/master/companies/:id" element={<CompanyDetails />} />
+          <Route path="/master/company-admins" element={<CompanyAdmins />} />
+          <Route path="/master/plans-pricing" element={<PlansPricing />} />
+          <Route path="/master/subscriptions" element={<ManageSubscriptions />} />
+          <Route path="/master/payments" element={<PaymentsPage />} />
+          <Route path="/master/modules" element={<ManageModules />} />
+          <Route path="/master/platform-users" element={<MasterUsers />} />
+          <Route path="/master/analytics" element={<PlatformAnalytics />} />
+          <Route path="/master/audit-logs" element={<MasterAuditLogs />} />
+          <Route path="/master/support-tickets" element={<SupportTickets />} />
+          <Route path="/master/settings" element={<PlatformSettings />} />
 
           {/* ========================================================= */}
           {/* 1. SYSTEM ADMINISTRATOR ROUTES                            */}
           {/* ========================================================= */}
-          <Route path="/dashboard" element={<AdminDashboard />} />
-
-          {/* User Management */}
-          <Route path="/users" element={<UsersPage />} />
-          <Route path="/users/invitations" element={<UserInvitationsPage />} />
-          <Route path="/users/status" element={<UserStatusPage />} />
-          <Route path="/users/activity" element={<UserActivityPage />} />
-
-          {/* Roles & Permissions */}
-          <Route path="/roles" element={<RolesPage />} />
-          <Route path="/roles/permissions" element={<PermissionsMatrixPage />} />
-          <Route path="/roles/mapping" element={<RoleMappingPage />} />
-          <Route path="/roles/approval-permissions" element={<ApprovalPermissionsPage />} />
+          <Route path="/admin/console" element={<AdminDashboard />} />
+          <Route path="/admin/users" element={<UsersPage />} />
+          <Route path="/admin/roles" element={<RolesPage />} />
+          <Route path="/admin/config" element={<ConfigurationPage />} />
+          <Route path="/admin/devices" element={<IoTIntegrationPage />} />
 
           {/* Organization */}
           <Route path="/organization" element={<Navigate to="/organization/companies" replace />} />
@@ -483,12 +523,7 @@ export function AppContent() {
           <Route path="/migration" element={<MigrationPage />} />
           <Route path="/system-reports" element={<SystemReportsPage />} />
 
-          {/* Legacy Admin Links */}
-          <Route path="/admin/console" element={<AdminDashboard />} />
-          <Route path="/admin/users" element={<UsersPage />} />
-          <Route path="/admin/roles" element={<RolesPage />} />
-          <Route path="/admin/config" element={<ConfigurationPage />} />
-          <Route path="/admin/devices" element={<IoTIntegrationPage />} />
+
 
           {/* ========================================================= */}
           {/* 2. MAINTENANCE / CMMS ROUTES                              */}
@@ -547,8 +582,18 @@ export function AppContent() {
           <Route path="/production/shift-performance" element={<RoleProtectedRoute><ShiftPerformancePage /></RoleProtectedRoute>} />
 
           <Route path="/quality" element={<RoleProtectedRoute><QualityDashboard /></RoleProtectedRoute>} />
+          <Route path="/quality/dashboard" element={<RoleProtectedRoute><QualityDashboard /></RoleProtectedRoute>} />
+          <Route path="/quality/checks/product" element={<RoleProtectedRoute><QualityProductChecks /></RoleProtectedRoute>} />
+          <Route path="/quality/checks/ccp" element={<RoleProtectedRoute><QualityCCPChecks /></RoleProtectedRoute>} />
+          <Route path="/quality/sanitation/preop" element={<RoleProtectedRoute><QualityPreOpChecklist /></RoleProtectedRoute>} />
+          <Route path="/quality/events/holds" element={<RoleProtectedRoute><QualityHolds /></RoleProtectedRoute>} />
+          <Route path="/quality/events/deviations" element={<RoleProtectedRoute><QualityDeviations /></RoleProtectedRoute>} />
+          <Route path="/quality/events/investigations" element={<RoleProtectedRoute><QualityInvestigations /></RoleProtectedRoute>} />
+          <Route path="/quality/release/queue" element={<RoleProtectedRoute><QualityReleaseQueue /></RoleProtectedRoute>} />
+          <Route path="/quality/release/review" element={<RoleProtectedRoute><QualityReleaseReview /></RoleProtectedRoute>} />
+          <Route path="/quality/disposition/release" element={<RoleProtectedRoute><QualityDispositionRelease /></RoleProtectedRoute>} />
+          <Route path="/quality/batch/records" element={<RoleProtectedRoute><QualityQualityRecords /></RoleProtectedRoute>} />
           <Route path="/quality/status" element={<RoleProtectedRoute><QualityStatusPage /></RoleProtectedRoute>} />
-          <Route path="/quality/holds" element={<RoleProtectedRoute><HoldsPage /></RoleProtectedRoute>} />
           <Route path="/quality/qa-release" element={<RoleProtectedRoute><QAReleasePage /></RoleProtectedRoute>} />
           <Route path="/quality/trends" element={<RoleProtectedRoute><QualityTrendsPage /></RoleProtectedRoute>} />
 
@@ -837,9 +882,11 @@ export default function App() {
                   <InventoryProvider>
                     <ExceptionProvider>
                       <AdminProvider>
-                        <CIProvider>
-                          <AppContent />
-                        </CIProvider>
+                        <MasterAdminProvider>
+                          <CIProvider>
+                            <AppContent />
+                          </CIProvider>
+                        </MasterAdminProvider>
                       </AdminProvider>
                     </ExceptionProvider>
                   </InventoryProvider>

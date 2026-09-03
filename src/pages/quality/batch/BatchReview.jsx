@@ -27,9 +27,6 @@ export function BatchReview() {
         <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)" }}>
           Active Batch Quality Review
         </h1>
-        <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginTop: "4px" }}>
-          Reconcile in-process quality parameters before final release approval
-        </p>
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
@@ -64,3 +61,4 @@ export function BatchReview() {
     </div>
   );
 }
+

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useRole } from "../../context/RoleContext";
 import { useApp } from "../../context/AppContext";
 import {
@@ -22,7 +23,8 @@ import {
   Settings,
   Flame,
   Eye,
-  EyeOff
+  EyeOff,
+  ArrowLeft
 } from "lucide-react";
 import { Button } from "../../components/common/Button";
 
@@ -44,6 +46,7 @@ const iconMap = {
 };
 
 export function Login() {
+  const navigate = useNavigate();
   const { login, ROLES } = useRole();
   const { addToast } = useApp();
 
@@ -75,6 +78,7 @@ export function Login() {
     login(selectedRole);
     const roleObj = ROLES.find((r) => r.id === selectedRole);
     addToast(`Successfully authenticated as ${roleObj?.label || "User"}! Welcome to MaintenX OS.`, "success");
+    navigate(roleObj?.defaultRoute || "/dashboard");
   };
 
   return (
@@ -300,31 +304,70 @@ export function Login() {
 
         {/* Right Panel: Floating Warm Acrylic Glass Login Box */}
         <div className="login-right-panel">
-          {/* Logo & Sub-Branding Header */}
-          <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
-            <div
+          {/* Header section with small back arrow button above MaintenX OS */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+            {/* Small Back Arrow Button to Landing Page */}
+            <button
+              type="button"
+              onClick={() => navigate("/")}
+              title="Back to Landing Page"
+              aria-label="Back to Landing Page"
               style={{
-                width: "46px",
-                height: "46px",
-                borderRadius: "12px",
-                background: "linear-gradient(135deg, #E2B670 0%, #C89547 50%, #B27E33 100%)",
-                display: "flex",
+                width: "28px",
+                height: "28px",
+                borderRadius: "8px",
+                backgroundColor: "rgba(200, 149, 71, 0.08)",
+                border: "1px solid rgba(200, 149, 71, 0.25)",
+                color: "#9A6B25",
+                display: "inline-flex",
                 alignItems: "center",
                 justifyContent: "center",
-                color: "#261603",
-                boxShadow: "0 4px 14px rgba(200, 149, 71, 0.35)",
-                flexShrink: 0
+                cursor: "pointer",
+                padding: 0,
+                transition: "all 0.2s ease"
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = "rgba(200, 149, 71, 0.18)";
+                e.currentTarget.style.borderColor = "#C89547";
+                e.currentTarget.style.color = "#261603";
+                e.currentTarget.style.transform = "translateX(-2px)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "rgba(200, 149, 71, 0.08)";
+                e.currentTarget.style.borderColor = "rgba(200, 149, 71, 0.25)";
+                e.currentTarget.style.color = "#9A6B25";
+                e.currentTarget.style.transform = "translateX(0)";
               }}
             >
-              <Flame size={24} />
-            </div>
-            <div>
-              <h1 style={{ fontSize: "22px", fontWeight: 900, color: "#2B1D11", letterSpacing: "-0.3px", margin: 0 }}>
-                MaintenX <span style={{ color: "#B27E33" }}>OS</span>
-              </h1>
-              <span style={{ fontSize: "10px", color: "var(--text-muted)", letterSpacing: "0.08em", textTransform: "uppercase", fontWeight: 800 }}>
-                Operations Console
-              </span>
+              <ArrowLeft size={14} strokeWidth={2.5} />
+            </button>
+
+            {/* Logo & Sub-Branding Header */}
+            <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+              <div
+                style={{
+                  width: "46px",
+                  height: "46px",
+                  borderRadius: "12px",
+                  background: "linear-gradient(135deg, #E2B670 0%, #C89547 50%, #B27E33 100%)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#261603",
+                  boxShadow: "0 4px 14px rgba(200, 149, 71, 0.35)",
+                  flexShrink: 0
+                }}
+              >
+                <Flame size={24} />
+              </div>
+              <div>
+                <h1 style={{ fontSize: "22px", fontWeight: 900, color: "#2B1D11", letterSpacing: "-0.3px", margin: 0 }}>
+                  MaintenX <span style={{ color: "#B27E33" }}>OS</span>
+                </h1>
+                <span style={{ fontSize: "10px", color: "var(--text-muted)", letterSpacing: "0.08em", textTransform: "uppercase", fontWeight: 800 }}>
+                  Operations Console
+                </span>
+              </div>
             </div>
           </div>
 
