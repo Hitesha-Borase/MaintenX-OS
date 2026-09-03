@@ -6,7 +6,18 @@ const InventoryContext = createContext();
 export function InventoryProvider({ children }) {
   const [lots, setLots] = useState(() => {
     const saved = localStorage.getItem("flowstate_inventory_lots");
-    return saved ? JSON.parse(saved) : INITIAL_INVENTORY_LOTS;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        const hasStaged = parsed.some(l => l.status === "STAGED");
+        if (hasStaged) return parsed;
+        const stagedFromInitial = INITIAL_INVENTORY_LOTS.filter(l => l.status === "STAGED");
+        return [...stagedFromInitial, ...parsed];
+      } catch (e) {
+        return INITIAL_INVENTORY_LOTS;
+      }
+    }
+    return INITIAL_INVENTORY_LOTS;
   });
 
   const [zones, setZones] = useState(WAREHOUSE_ZONES);
