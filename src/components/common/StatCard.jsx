@@ -79,8 +79,8 @@ export function StatCard({
         )}
       </div>
 
-      <div style={{ display: "flex", alignItems: "baseline", gap: "4px", margin: "2px 0 0 0", flexWrap: "wrap" }}>
-        <span className="stat-value" style={{ fontFamily: "var(--font-sans)", fontSize: "20px", fontWeight: 800, lineHeight: 1.2, color: "var(--text-primary)" }}>
+      <div style={{ display: "flex", alignItems: "baseline", flexWrap: "wrap", gap: "4px", margin: "2px 0 0 0" }}>
+        <span className="stat-value" style={{ fontFamily: "var(--font-sans)", fontSize: "20px", fontWeight: 800, lineHeight: 1.2, color: "var(--text-primary)", wordBreak: "keep-all" }}>
           {value}
         </span>
         {unit && (

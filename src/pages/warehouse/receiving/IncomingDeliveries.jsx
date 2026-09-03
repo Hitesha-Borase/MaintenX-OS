@@ -22,9 +22,6 @@ export function IncomingDeliveries() {
         <h1 style={{ fontSize: "24px", fontWeight: 800, color: "#2d2825", margin: "0 0 8px 0" }}>
           Incoming Shipments & Deliveries
         </h1>
-        <p style={{ fontSize: "15px", color: "#7a7571", margin: 0 }}>
-          Monitor inbound raw feedstock deliveries and status updates
-        </p>
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
@@ -32,9 +29,11 @@ export function IncomingDeliveries() {
           <div 
             key={d.id} 
             style={{ 
-              display: "flex", 
+              display: "flex",
+              flexWrap: "wrap", 
               justifyContent: "space-between", 
               alignItems: "center",
+              gap: "16px",
               backgroundColor: "#ffffff",
               padding: "24px",
               borderRadius: "16px",
@@ -42,7 +41,7 @@ export function IncomingDeliveries() {
               boxShadow: "0 2px 8px rgba(0,0,0,0.02)"
             }}
           >
-            <div style={{ display: "flex", flex: 1, flexDirection: "column", gap: "8px" }}>
+            <div style={{ display: "flex", flex: 1, flexDirection: "column", gap: "8px", minWidth: "250px" }}>
                <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
                 <Truck size={24} color="#38BDF8" strokeWidth={2} />
                 <span style={{ fontSize: "16px", fontWeight: 700, color: "#2B1D11" }}>
@@ -50,11 +49,11 @@ export function IncomingDeliveries() {
                 </span>
               </div>
               <span style={{ fontSize: "15px", color: "#71717a", marginLeft: "40px" }}>
-                Item: {d.item} <span style={{ margin: "0 4px" }}>•</span> Volume: {d.volume}
+                Item: {d.item} <br /> Volume: {d.volume}
               </span>
             </div>
             
-            <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap" }}>
               <div 
                 onClick={() => handleToggleStatus(d.id, d.status)}
                 style={{ cursor: d.status === "TRANSIT" ? "pointer" : "default", transition: "opacity 0.2s" }}

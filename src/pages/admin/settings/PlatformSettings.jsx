@@ -15,7 +15,6 @@ export function PlatformSettings() {
     <div style={{ display: "flex", flexDirection: "column", gap: "24px", maxWidth: "800px" }}>
       <div>
         <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)" }}>Platform Settings</h1>
-        <p style={{ color: "var(--text-secondary)", fontSize: "14px", marginTop: "4px" }}>Global configuration for the MaintenX SaaS platform</p>
       </div>
 
       <Card style={{ padding: "24px", display: "flex", flexDirection: "column", gap: "24px" }}>

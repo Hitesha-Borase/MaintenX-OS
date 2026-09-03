@@ -32,9 +32,6 @@ export function PlaceholderPage() {
         <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)" }}>
           {pageTitle}
         </h1>
-        <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>
-          MaintenX OS Enterprise System Module
-        </p>
       </div>
 
       <Card style={{ padding: "32px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: "20px" }}>

@@ -21,9 +21,6 @@ export function Downgrade() {
         <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
           Disposition — Downgrade
         </h1>
-        <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-          Downgrade batch to a lower product grade or alternate use. Requires QA human authorization.
-        </p>
       </div>
 
       <form onSubmit={handleDowngrade}>

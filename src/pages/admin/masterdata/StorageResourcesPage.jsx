@@ -266,7 +266,7 @@ export function StorageResourcesPage() {
                 </tr>
               ) : (
                 filteredResources.map((r) => {
-                  const code = r.resourceCode || r.id;
+                  const code = r.resourceCode || r.code || r.storageId || r.id;
                   const type = r.resourceType || r.type;
                   const temp = r.temperatureZone || r.tempControl;
                   const plantName = plants.find((p) => p.id === r.plantId)?.name?.split(" - ")[0] || "Indore Plant 1";

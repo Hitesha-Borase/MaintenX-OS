@@ -43,7 +43,6 @@ export function ManageSubscriptions() {
     <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
       <div>
         <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)" }}>Manage Subscriptions</h1>
-        <p style={{ color: "var(--text-secondary)", fontSize: "14px", marginTop: "4px" }}>Overview of platform subscription plans across all tenants</p>
       </div>
 
       {/* Plan Metric Cards - 2x2 on mobile, 4 on desktop */}
