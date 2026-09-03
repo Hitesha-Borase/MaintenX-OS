@@ -3,10 +3,12 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { Info, ArrowLeft, Cpu } from "lucide-react";
 import { Card } from "../components/common/Card";
 import { Button } from "../components/common/Button";
+import { useRole } from "../context/RoleContext";
 
 export function PlaceholderPage() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { currentRole } = useRole();
 
   // Try to generate a human-friendly title from the path
   const pathParts = location.pathname.split("/").filter(Boolean);
@@ -48,7 +50,7 @@ export function PlaceholderPage() {
         </div>
 
         <div style={{ display: "flex", gap: "12px" }}>
-          <Button variant="secondary" onClick={() => navigate("/")}>
+          <Button variant="secondary" onClick={() => navigate(currentRole?.defaultRoute || "/dashboard")}>
             Go to Default Dashboard
           </Button>
         </div>
