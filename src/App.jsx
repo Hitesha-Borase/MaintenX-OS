@@ -15,6 +15,7 @@ import { MasterAdminProvider } from "./context/MasterAdminContext";
 
 import { AppLayout } from "./components/layout/AppLayout";
 import { Login } from "./pages/auth/Login";
+import { LandingPage } from "./pages/landing/LandingPage";
 import { PlaceholderPage } from "./pages/PlaceholderPage";
 import { AlertOctagon } from "lucide-react";
 
@@ -428,11 +429,21 @@ export function AppContent() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/login" element={!isAuthenticated ? <Login /> : <Navigate to="/" replace />} />
+        {/* Public Landing Page and Section Routes */}
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/landing" element={<LandingPage />} />
+        <Route path="/home" element={<LandingPage />} />
+        <Route path="/features" element={<LandingPage />} />
+        <Route path="/why-us" element={<LandingPage />} />
+        <Route path="/pricing" element={<LandingPage />} />
+        <Route path="/contact" element={<LandingPage />} />
+
+        {/* Authentication Route */}
+        <Route path="/login" element={!isAuthenticated ? <Login /> : <Navigate to={currentRole?.defaultRoute || "/dashboard"} replace />} />
 
         <Route element={isAuthenticated ? <AppLayout /> : <Navigate to="/login" replace />}>
-          {/* Default Route redirects to current role default or /dashboard */}
-          <Route path="/" element={<Navigate to={currentRole?.defaultRoute || "/dashboard"} replace />} />
+          {/* Default Route alias redirects to current role default or /dashboard */}
+          <Route path="/app" element={<Navigate to={currentRole?.defaultRoute || "/dashboard"} replace />} />
 
           {/* ========================================================= */}
           {/* MASTER ADMIN ROUTES                                       */}
