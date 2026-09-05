@@ -16,10 +16,10 @@ export function ManageSubscriptions() {
   const [planFilter, setPlanFilter] = useState("All");
 
   const plans = [
-    { name: "Enterprise", count: companies.filter(c => c.subscription === "Enterprise").length, color: "#2563EB" },
-    { name: "Professional", count: companies.filter(c => c.subscription === "Professional").length, color: "#10B981" },
-    { name: "Basic", count: companies.filter(c => c.subscription === "Basic").length, color: "#6B7280" },
-    { name: "Trial", count: companies.filter(c => c.subscription === "Trial").length, color: "#F59E0B" }
+    { name: "MaintenX OS Complete", count: companies.filter(c => c.subscription === "MaintenX OS Complete").length, color: "#2563EB" },
+    { name: "Bundles", count: companies.filter(c => c.subscription === "Bundles").length, color: "#10B981" },
+    { name: "Individual Modules", count: companies.filter(c => c.subscription === "Individual Modules").length, color: "#F59E0B" },
+    { name: "Plant Pilot", count: companies.filter(c => c.subscription === "Plant Pilot").length, color: "#6B7280" }
   ];
 
   const filteredCompanies = companies.filter(c => {
@@ -46,8 +46,8 @@ export function ManageSubscriptions() {
         <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)" }}>Manage Subscriptions</h1>
       </div>
 
-      {/* Plan Metric Cards - 4 in a row on desktop, auto wrapping to keep them compact */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px" }}>
+      {/* Plan Metric Cards - 4 in a row on desktop, 2x2 on mobile (aamne-samne) */}
+      <div className="kpi-grid-responsive grid-4">
         {plans.map(p => (
           <StatCard
             key={p.name}
@@ -80,10 +80,10 @@ export function ManageSubscriptions() {
               style={{ flex: 1, minWidth: 0, padding: "7px 10px", borderRadius: "8px", border: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)", color: "var(--text-primary)", fontSize: "12px", fontWeight: 600 }}
             >
               <option value="All">All Plans</option>
-              <option value="Enterprise">Enterprise</option>
-              <option value="Professional">Professional</option>
-              <option value="Basic">Basic</option>
-              <option value="Trial">Trial</option>
+              <option value="MaintenX OS Complete">MaintenX OS Complete</option>
+              <option value="Bundles">Bundles</option>
+              <option value="Individual Modules">Individual Modules</option>
+              <option value="Plant Pilot">Plant Pilot</option>
             </select>
           </div>
         </div>

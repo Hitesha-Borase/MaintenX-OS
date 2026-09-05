@@ -65,9 +65,14 @@ export function PlansPricing() {
                 <Badge variant="secondary" style={{ fontSize: "12px", padding: "4px 10px" }}>INACTIVE</Badge>
               </div>
             )}
-            <div style={{ padding: "14px 16px", borderBottom: "1px solid var(--border-color)", backgroundColor: plan.name === "Enterprise" ? "rgba(37, 99, 235, 0.05)" : "transparent" }}>
+            <div style={{ padding: "14px 16px", borderBottom: "1px solid var(--border-color)", backgroundColor: (plan.isPopular || plan.name === "Bundles") ? "rgba(200, 149, 71, 0.08)" : plan.name === "MaintenX OS Complete" ? "rgba(37, 99, 235, 0.05)" : "transparent" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "6px" }}>
-                <Badge variant={plan.name === "Enterprise" ? "primary" : plan.name === "Professional" ? "emerald" : "secondary"}>{plan.name}</Badge>
+                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  <Badge variant={plan.name === "MaintenX OS Complete" ? "primary" : (plan.isPopular || plan.name === "Bundles") ? "amber" : plan.name === "Individual Modules" ? "warning" : "secondary"}>{plan.name}</Badge>
+                  {(plan.isPopular || plan.name === "Bundles") && (
+                    <span style={{ fontSize: "9px", fontWeight: 800, color: "#B27E33", backgroundColor: "rgba(200, 149, 71, 0.15)", padding: "1px 6px", borderRadius: "4px" }}>POPULAR</span>
+                  )}
+                </div>
                 <div style={{ display: "flex", gap: "4px", position: "relative", zIndex: 2 }}>
                   <Button variant="ghost" size="sm" onClick={() => toggleStatus(plan.id, plan.status)} title={plan.status === "Active" ? "Deactivate Plan" : "Activate Plan"} style={{ padding: "4px" }}>
                     {plan.status === "Active" ? <X size={14} /> : <Check size={14} />}
@@ -76,11 +81,20 @@ export function PlansPricing() {
                   <Button variant="ghost" size="sm" onClick={() => handleRemovePlan(plan.id)} title="Delete Plan" style={{ padding: "4px" }}><Trash2 size={14} color="#EF4444" /></Button>
                 </div>
               </div>
-              <div style={{ marginTop: "12px", display: "flex", alignItems: "baseline", gap: "3px" }}>
-                <span style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)", lineHeight: 1 }}>${plan.priceMonthly}</span>
-                <span style={{ fontSize: "12px", color: "var(--text-secondary)", fontWeight: 600 }}>/mo</span>
+              <div style={{ fontSize: "11px", color: "var(--text-secondary)", marginTop: "6px" }}>
+                {plan.subtitle || (plan.priceMonthly === 0 ? "Free 7-Day Evaluation" : `${plan.duration || "Unlimited"} Production`)}
               </div>
-              <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>or ${plan.priceAnnual}/yr</div>
+              <div style={{ marginTop: "10px", display: "flex", alignItems: "baseline", gap: "3px" }}>
+                <span style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)", lineHeight: 1 }}>
+                  {plan.priceMonthly === 0 ? "₹0" : `$${plan.priceMonthly.toLocaleString()}`}
+                </span>
+                <span style={{ fontSize: "12px", color: "var(--text-secondary)", fontWeight: 600 }}>
+                  {plan.priceMonthly === 0 ? " / 7 days" : ` ${plan.currency || "CAD"}/mo`}
+                </span>
+              </div>
+              <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>
+                {plan.priceMonthly === 0 ? "Free Evaluation Period" : `or $${(plan.priceAnnual || plan.priceMonthly * 10).toLocaleString()} ${plan.currency || "CAD"}/yr`}
+              </div>
             </div>
             
             <div style={{ padding: "14px 16px", flex: 1, display: "flex", flexDirection: "column", gap: "10px" }}>

@@ -13,8 +13,8 @@ export function PlatformAnalytics() {
         <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)" }}>Platform Analytics</h1>
       </div>
 
-      {/* Metric Cards - compact 4-column layout */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px" }}>
+      {/* Metric Cards - 4 in a row on desktop, 2x2 on mobile (aamne-samne) */}
+      <div className="kpi-grid-responsive grid-4">
         <StatCard
           title="TOTAL COMPANIES"
           value={companies.length}

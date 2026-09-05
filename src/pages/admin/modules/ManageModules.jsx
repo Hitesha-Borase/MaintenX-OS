@@ -10,7 +10,16 @@ export function ManageModules() {
   const [searchTerm, setSearchTerm] = useState("");
   const [planFilter, setPlanFilter] = useState("All");
 
-  const moduleKeys = ["production", "quality", "maintenance", "warehouse", "ci"];
+  const moduleKeys = [
+    { key: "plan",         label: "Plan",          color: "#6366F1" },
+    { key: "produce",      label: "Produce",        color: "#F59E0B" },
+    { key: "verify",       label: "Verify",         color: "#10B981" },
+    { key: "maintain",     label: "Maintain",       color: "#3B82F6" },
+    { key: "move",         label: "Move",           color: "#8B5CF6" },
+    { key: "people",       label: "Manage People",  color: "#EC4899" },
+    { key: "improve",      label: "Improve",        color: "#14B8A6" },
+    { key: "intelligence",label: "Intelligence",   color: "#F97316" },
+  ];
 
   const filteredCompanies = companies.filter(c => {
     const matchesSearch = c.name.toLowerCase().includes(searchTerm.toLowerCase());
@@ -44,10 +53,10 @@ export function ManageModules() {
               style={{ flex: 1, minWidth: 0, padding: "8px 10px", borderRadius: "8px", border: "1px solid var(--border-color)", backgroundColor: "var(--bg-body)", color: "var(--text-primary)", fontSize: "12px" }}
             >
               <option value="All">All Plans</option>
-              <option value="Enterprise">Enterprise</option>
-              <option value="Professional">Professional</option>
-              <option value="Basic">Basic</option>
-              <option value="Trial">Trial</option>
+              <option value="MaintenX OS Complete">MaintenX OS Complete</option>
+              <option value="Bundles">Bundles</option>
+              <option value="Individual Modules">Individual Modules</option>
+              <option value="Plant Pilot">Plant Pilot (Trial)</option>
             </select>
           </div>
         </div>
@@ -77,13 +86,13 @@ export function ManageModules() {
 
               <div style={{ display: "flex", flexDirection: "column", gap: "6px", paddingTop: "6px", borderTop: "1px solid var(--border-subtle)" }}>
                 {moduleKeys.map(mod => (
-                  <div key={mod} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ fontSize: "11px", fontWeight: 600, color: "var(--text-secondary)", textTransform: "capitalize" }}>{mod}</span>
-                    <div 
-                      style={{ position: "relative", width: "32px", height: "18px", backgroundColor: company.modules[mod] ? "#10B981" : "#D1D5DB", borderRadius: "9px", cursor: "pointer", transition: "0.2s" }} 
-                      onClick={() => toggleCompanyModule(company.id, mod)}
+                  <div key={mod.key} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ fontSize: "11px", fontWeight: 600, color: "var(--text-secondary)" }}>{mod.label}</span>
+                    <div
+                      style={{ position: "relative", width: "32px", height: "18px", backgroundColor: (company.modules || {})[mod.key] ? mod.color : "#D1D5DB", borderRadius: "9px", cursor: "pointer", transition: "0.2s" }}
+                      onClick={() => toggleCompanyModule(company.id, mod.key)}
                     >
-                      <div style={{ position: "absolute", top: "2px", left: company.modules[mod] ? "16px" : "2px", width: "14px", height: "14px", backgroundColor: "white", borderRadius: "50%", transition: "0.2s" }} />
+                      <div style={{ position: "absolute", top: "2px", left: (company.modules || {})[mod.key] ? "16px" : "2px", width: "14px", height: "14px", backgroundColor: "white", borderRadius: "50%", transition: "0.2s" }} />
                     </div>
                   </div>
                 ))}
@@ -104,7 +113,9 @@ export function ManageModules() {
               <tr style={{ backgroundColor: "var(--bg-card-subtle)", borderBottom: "1px solid var(--border-color)", textAlign: "left" }}>
                 <th style={{ padding: "16px 20px", fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase" }}>Company Name</th>
                 {moduleKeys.map(mod => (
-                  <th key={mod} style={{ padding: "16px 20px", fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase", textAlign: "center" }}>{mod}</th>
+                  <th key={mod.key} style={{ padding: "16px 20px", fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase", textAlign: "center" }}>
+                    {mod.label}
+                  </th>
                 ))}
               </tr>
             </thead>
@@ -118,10 +129,31 @@ export function ManageModules() {
                     </Badge>
                   </td>
                   {moduleKeys.map(mod => (
-                    <td key={mod} style={{ padding: "16px 20px", textAlign: "center" }}>
-                      <label style={{ display: "inline-flex", alignItems: "center", cursor: "pointer" }} title={`Toggle ${mod} for ${company.name}`}>
-                        <div style={{ position: "relative", width: "40px", height: "24px", backgroundColor: company.modules[mod] ? "#10B981" : "#D1D5DB", borderRadius: "12px", transition: "0.3s" }} onClick={() => toggleCompanyModule(company.id, mod)}>
-                          <div style={{ position: "absolute", top: "2px", left: company.modules[mod] ? "18px" : "2px", width: "20px", height: "20px", backgroundColor: "white", borderRadius: "50%", transition: "0.3s" }} />
+                    <td key={mod.key} style={{ padding: "16px 20px", textAlign: "center" }}>
+                      <label style={{ display: "inline-flex", alignItems: "center", cursor: "pointer" }} title={`Toggle ${mod.label} for ${company.name}`}>
+                        <div 
+                          style={{ 
+                            position: "relative", 
+                            width: "40px", 
+                            height: "24px", 
+                            backgroundColor: (company.modules || {})[mod.key] ? mod.color || "#10B981" : "#D1D5DB", 
+                            borderRadius: "12px", 
+                            transition: "0.3s" 
+                          }} 
+                          onClick={() => toggleCompanyModule(company.id, mod.key)}
+                        >
+                          <div 
+                            style={{ 
+                              position: "absolute", 
+                              top: "2px", 
+                              left: (company.modules || {})[mod.key] ? "18px" : "2px", 
+                              width: "20px", 
+                              height: "20px", 
+                              backgroundColor: "white", 
+                              borderRadius: "50%", 
+                              transition: "0.3s" 
+                            }} 
+                          />
                         </div>
                       </label>
                     </td>

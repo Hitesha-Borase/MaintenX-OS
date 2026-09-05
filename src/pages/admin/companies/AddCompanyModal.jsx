@@ -13,7 +13,7 @@ export function AddCompanyModal({ isOpen, onClose }) {
     name: "",
     admin: "",
     adminEmail: "",
-    subscription: "Enterprise"
+    subscription: "MaintenX OS Complete"
   });
 
   const handleCreate = () => {
@@ -29,7 +29,7 @@ export function AddCompanyModal({ isOpen, onClose }) {
       name: "",
       admin: "",
       adminEmail: "",
-      subscription: "Enterprise"
+      subscription: "MaintenX OS Complete"
     });
   };
 
@@ -104,10 +104,10 @@ export function AddCompanyModal({ isOpen, onClose }) {
               onChange={e => setFormData({...formData, subscription: e.target.value})}
               className="form-select"
             >
-              <option value="Trial">Trial (14 Days)</option>
-              <option value="Basic">Basic Plan</option>
-              <option value="Professional">Professional Plan</option>
-              <option value="Enterprise">Enterprise Plan</option>
+              <option value="Plant Pilot">Plant Pilot (7 Days)</option>
+              <option value="Individual Modules">Individual Modules ($1,499 CAD/mo)</option>
+              <option value="Bundles">Bundles ($3,499 CAD/mo)</option>
+              <option value="MaintenX OS Complete">MaintenX OS Complete ($5,499 CAD/mo)</option>
             </select>
           </div>
         </div>

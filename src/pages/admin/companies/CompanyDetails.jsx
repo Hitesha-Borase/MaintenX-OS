@@ -4,7 +4,7 @@ import { Card } from "../../../components/common/Card";
 import { Badge } from "../../../components/common/Badge";
 import { Button } from "../../../components/common/Button";
 import { useParams, useNavigate } from "react-router-dom";
-import { Building2, ArrowLeft, ShieldAlert, CreditCard, Layers, Activity, Settings, Users, UserCog, LineChart, Clock, Trash2, Calendar } from "lucide-react";
+import { Building2, ArrowLeft, ShieldAlert, CreditCard, Layers, Activity, Settings, Users, UserCog, LineChart, Clock, Trash2, Calendar, MapPin, Plus } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 
 export function CompanyDetails() {
@@ -22,6 +22,7 @@ export function CompanyDetails() {
 
   const tabs = [
     { id: "overview", label: "Overview", icon: Building2 },
+    { id: "plants", label: "Plants & Sites", icon: MapPin },
     { id: "admins", label: "Administrators", icon: UserCog },
     { id: "users", label: "Users", icon: Users },
     { id: "subscription", label: "Subscription", icon: CreditCard },
@@ -132,6 +133,61 @@ export function CompanyDetails() {
             </div>
           )}
 
+          {activeTab === "plants" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <h3 style={{ fontSize: "16px", fontWeight: 700 }}>Manufacturing Facilities & Plants</h3>
+                  <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "2px" }}>
+                    Active plant sites configured under {company.name}.
+                  </p>
+                </div>
+                <Button variant="primary" size="sm" icon={Plus} onClick={() => navigate("/organization/plants")}>
+                  Manage / Provision Plants
+                </Button>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "16px" }}>
+                {[
+                  { id: "PLT-01", name: "Indore Facility (Site 1)", code: "IND-01", location: "Indore, MP, India", lines: 4, capacity: "320,000 Units/Day", status: "Operational" },
+                  { id: "PLT-02", name: "Austin Plant (Site 2)", code: "ATX-02", location: "Austin, Texas, USA", lines: 3, capacity: "240,000 Units/Day", status: "Operational" },
+                  ...(company.plants > 2 ? [{ id: "PLT-03", name: "Pune Expansion (Site 3)", code: "PUN-03", location: "Pune, Maharashtra, India", lines: 2, capacity: "180,000 Units/Day", status: "Operational" }] : [])
+                ].slice(0, Math.max(1, company.plants || 1)).map((plant) => (
+                  <div key={plant.id} style={{ padding: "18px", border: "1px solid var(--border-color)", borderRadius: "12px", backgroundColor: "var(--bg-card-subtle)", display: "flex", flexDirection: "column", gap: "12px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                        <div style={{ padding: "8px", backgroundColor: "rgba(37, 99, 235, 0.1)", borderRadius: "8px", color: "#2563EB" }}>
+                          <Building2 size={18} />
+                        </div>
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: "15px", color: "var(--text-primary)" }}>{plant.name}</div>
+                          <div style={{ fontSize: "12px", color: "var(--text-secondary)" }}>Code: {plant.code}</div>
+                        </div>
+                      </div>
+                      <Badge variant="emerald">{plant.status}</Badge>
+                    </div>
+
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", fontSize: "12px", paddingTop: "8px", borderTop: "1px solid var(--border-subtle)" }}>
+                      <div>
+                        <span style={{ color: "var(--text-secondary)" }}>Location:</span>
+                        <div style={{ fontWeight: 600, color: "var(--text-primary)", marginTop: "2px" }}>{plant.location}</div>
+                      </div>
+                      <div>
+                        <span style={{ color: "var(--text-secondary)" }}>Lines / Cells:</span>
+                        <div style={{ fontWeight: 600, color: "var(--text-primary)", marginTop: "2px" }}>{plant.lines} Active Lines</div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "8px", borderTop: "1px solid var(--border-subtle)", fontSize: "12px" }}>
+                      <span style={{ color: "var(--text-secondary)" }}>Rated Capacity:</span>
+                      <span style={{ fontWeight: 700, color: "#10B981" }}>{plant.capacity}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {activeTab === "admins" && (
             <div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
@@ -188,7 +244,7 @@ export function CompanyDetails() {
                 }}>Extend Subscription</Button>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px" }}>
-                {["Trial", "Basic", "Professional", "Enterprise", "Custom"].map(plan => (
+                {["Plant Pilot", "Individual Modules", "Bundles", "MaintenX OS Complete", "Custom"].map(plan => (
                   <div key={plan} onClick={() => { updateCompanySubscription(company.id, plan); addToast(`${plan} Plan Assigned`, "success"); }} style={{ border: `2px solid ${company.subscription === plan ? "#2563EB" : "var(--border-color)"}`, borderRadius: "12px", padding: "16px", cursor: "pointer", backgroundColor: company.subscription === plan ? "rgba(37, 99, 235, 0.05)" : "transparent", display: "flex", flexDirection: "column", gap: "8px" }}>
                     <div style={{ fontWeight: 700, fontSize: "16px", color: "var(--text-primary)" }}>{plan}</div>
                     {company.subscription === plan && <Badge variant="primary" style={{ alignSelf: "flex-start" }}>Current Plan</Badge>}

@@ -11,57 +11,72 @@ export function MasterAdminProvider({ children }) {
         id: "C-1001",
         name: "Global Foods Inc.",
         status: "Active",
-        subscription: "Enterprise",
+        subscription: "MaintenX OS Complete",
         admin: "Alice Smith",
         adminEmail: "alice@globalfoods.com",
         usersCount: 145,
+        plants: 3,
         createdAt: "2024-01-15",
         expiryDate: "2025-01-15",
         lastActivity: "2026-09-02 10:30",
+        currency: "CAD",
         modules: {
-          production: true,
-          quality: true,
-          maintenance: true,
-          warehouse: true,
-          ci: true
+          plan: true,
+          produce: true,
+          verify: true,
+          maintain: true,
+          move: true,
+          people: true,
+          improve: true,
+          intelligence: true
         }
       },
       {
         id: "C-1002",
         name: "Sunrise Beverages",
         status: "Active",
-        subscription: "Professional",
+        subscription: "Bundles",
         admin: "Bob Johnson",
         adminEmail: "bob@sunrisebev.com",
         usersCount: 42,
+        plants: 1,
         createdAt: "2024-03-22",
         expiryDate: "2025-03-22",
         lastActivity: "2026-09-01 14:15",
+        currency: "CAD",
         modules: {
-          production: true,
-          quality: true,
-          maintenance: false,
-          warehouse: true,
-          ci: false
+          plan: true,
+          produce: true,
+          verify: true,
+          maintain: true,
+          move: false,
+          people: false,
+          improve: false,
+          intelligence: false
         }
       },
       {
         id: "C-1003",
         name: "Valley Dairies",
         status: "Suspended",
-        subscription: "Basic",
+        subscription: "Individual Modules",
         admin: "Charlie Davis",
         adminEmail: "charlie@valleydairies.com",
         usersCount: 18,
+        plants: 1,
         createdAt: "2023-11-05",
         expiryDate: "2024-11-05",
         lastActivity: "2026-08-15 09:00",
+        currency: "CAD",
         modules: {
-          production: true,
-          quality: false,
-          maintenance: false,
-          warehouse: false,
-          ci: false
+          plan: false,
+          produce: true,
+          verify: true,
+          maintain: false,
+          move: false,
+          people: false,
+          improve: false,
+          intelligence: false
         }
       }
     ];
@@ -106,14 +121,113 @@ export function MasterAdminProvider({ children }) {
     ];
   });
 
+  const DEFAULT_PLANS = [
+    {
+      id: 1,
+      name: "Plant Pilot",
+      subtitle: "Free 7-Day Evaluation",
+      priceMonthly: 0,
+      priceAnnual: 0,
+      currency: "CAD",
+      duration: "7 Days",
+      userLimit: 5,
+      accessLevel: "Trial",
+      status: "Active",
+      isPopular: false,
+      ctaText: "Start Free Pilot",
+      modules: ["produce"],
+      features: [
+        "1 Packaging or Bottling Line",
+        "Operator HMI Touchscreen Console",
+        "Micro-Stop & Downtime Logging",
+        "Standard Shift OEE Metrics",
+        "Community Knowledge Base"
+      ]
+    },
+    {
+      id: 2,
+      name: "Individual Modules",
+      subtitle: "Single Dedicated Line",
+      priceMonthly: 1499,
+      priceAnnual: 14990,
+      currency: "CAD",
+      duration: "Unlimited",
+      userLimit: 10,
+      accessLevel: "Standard",
+      status: "Active",
+      isPopular: false,
+      ctaText: "Choose Modules",
+      modules: ["produce", "verify"],
+      features: [
+        "Everything in Plant Pilot",
+        "OPC-UA & MQTT SCADA Ingest",
+        "Inline CCP Quality Gate Validation",
+        "PM Checklist & Work Order Dispatch",
+        "10 Concurrent Operator Logins"
+      ]
+    },
+    {
+      id: 3,
+      name: "Bundles",
+      subtitle: "Full Multi-Line Bottling Plant",
+      priceMonthly: 3499,
+      priceAnnual: 34990,
+      currency: "CAD",
+      duration: "Unlimited",
+      userLimit: 50,
+      accessLevel: "Advanced",
+      status: "Active",
+      isPopular: true,
+      ctaText: "Launch Bundles",
+      modules: ["plan", "produce", "verify", "maintain", "move"],
+      features: [
+        "Everything in Individual Modules",
+        "Unlimited Production & Packaging Lines",
+        "Dynamic APS Capacity Scheduler",
+        "Governed AI Shift Recovery & Bottlenecks",
+        "Spare Parts & Lot Traceability",
+        "Dedicated 24/7 Support Engineer"
+      ]
+    },
+    {
+      id: 4,
+      name: "MaintenX OS Complete",
+      subtitle: "Multi-Facility Corporate Cloud",
+      priceMonthly: 5499,
+      priceAnnual: 54990,
+      currency: "CAD",
+      duration: "Unlimited",
+      userLimit: "Unlimited",
+      accessLevel: "Full",
+      status: "Active",
+      isPopular: false,
+      ctaText: "Contact Enterprise",
+      modules: ["plan", "produce", "verify", "maintain", "move", "people", "improve", "intelligence"],
+      features: [
+        "Multi-Plant Executive Portfolio",
+        "21 CFR Part 11 Electronic Signatures",
+        "Custom ERP & MES API Connectors",
+        "On-Premises or Sovereign Private Cloud",
+        "99.99% Guaranteed Availability SLA"
+      ]
+    }
+  ];
+
   const [plans, setPlans] = useState(() => {
     const saved = localStorage.getItem("master_plans");
-    return saved ? JSON.parse(saved) : [
-      { id: 1, name: "Trial", priceMonthly: 0, priceAnnual: 0, duration: "14 Days", userLimit: 5, accessLevel: "Basic", status: "Active", features: ["Core Modules", "Community Support"] },
-      { id: 2, name: "Basic", priceMonthly: 49, priceAnnual: 490, duration: "Unlimited", userLimit: 10, accessLevel: "Standard", status: "Active", features: ["Production", "Inventory", "Email Support"] },
-      { id: 3, name: "Professional", priceMonthly: 199, priceAnnual: 1990, duration: "Unlimited", userLimit: 50, accessLevel: "Advanced", status: "Active", features: ["All Basic", "Quality", "Maintenance", "Priority Support"] },
-      { id: 4, name: "Enterprise", priceMonthly: 499, priceAnnual: 4990, duration: "Unlimited", userLimit: "Unlimited", accessLevel: "Full", status: "Active", features: ["All Professional", "CI", "Custom API", "24/7 Support", "Dedicated Success Manager"] }
-    ];
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        // Only keep if it follows the canonical unified 4 plans schema
+        const isValidUnified = Array.isArray(parsed) && parsed.some(p => p.name === "Plant Pilot" || p.name === "Bundles" || p.name === "MaintenX OS Complete");
+        if (isValidUnified) {
+          return parsed;
+        }
+      } catch (e) {
+        console.error("Failed to parse master_plans from localStorage", e);
+      }
+    }
+    return DEFAULT_PLANS;
   });
 
   const [payments, setPayments] = useState(() => {
@@ -304,15 +418,30 @@ export function MasterAdminProvider({ children }) {
   };
 
   const addPlan = (planDetails) => {
-    const newPlan = { ...planDetails, id: Date.now(), status: "Active" };
+    const newPlan = {
+      ...planDetails,
+      id: Date.now(),
+      status: "Active",
+      currency: planDetails.currency || "CAD",
+      priceAnnual: planDetails.priceAnnual !== undefined ? planDetails.priceAnnual : ((planDetails.priceMonthly || 0) * 10),
+      features: Array.isArray(planDetails.features) ? planDetails.features : ["Standard Features", "Platform Support"]
+    };
     setPlans(prev => [...prev, newPlan]);
     addActivity("Plan Created", `New subscription plan ${planDetails.name} created.`);
     addAuditLog("Master Admin", "Create Plan", planDetails.name);
   };
 
-  const editPlan = (planId, newPrice) => {
-    setPlans(prev => prev.map(p => p.id === planId ? { ...p, priceMonthly: newPrice } : p));
-    addActivity("Plan Updated", `Price updated for plan ID ${planId}.`);
+  const editPlan = (planId, updatedData) => {
+    setPlans(prev => prev.map(p => {
+      if (p.id === planId) {
+        if (typeof updatedData === "object" && updatedData !== null) {
+          return { ...p, ...updatedData };
+        }
+        return { ...p, priceMonthly: updatedData };
+      }
+      return p;
+    }));
+    addActivity("Plan Updated", `Plan ID ${planId} was updated.`);
     addAuditLog("Master Admin", "Edit Plan", String(planId));
   };
   

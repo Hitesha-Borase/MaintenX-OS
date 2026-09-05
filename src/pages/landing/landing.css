@@ -386,18 +386,12 @@
   padding: 30px 24px 44px 24px;
 }
 
-.saas-features-top-row {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
-  margin-bottom: 16px;
-}
-
+.saas-features-top-row,
 .saas-features-bottom-row {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 390px));
-  justify-content: center;
+  grid-template-columns: repeat(4, 1fr);
   gap: 16px;
+  margin-bottom: 16px;
 }
 
 .saas-feature-card {
@@ -951,6 +945,11 @@
     grid-template-columns: 1fr;
     gap: 36px;
   }
+  .saas-features-top-row,
+  .saas-features-bottom-row {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+  }
   .saas-pricing-grid {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -975,17 +974,113 @@
   .saas-hero-stats-row {
     grid-template-columns: repeat(2, 1fr);
   }
-  .saas-features-top-row {
-    grid-template-columns: 1fr;
-  }
+  .saas-features-top-row,
   .saas-features-bottom-row {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-bottom: 10px;
   }
-  .saas-pricing-grid {
-    grid-template-columns: 1fr;
+  .saas-feature-card {
+    padding: 14px 12px;
+  }
+  .saas-feature-name {
+    font-size: 14px;
+  }
+  .saas-feature-desc {
+    font-size: 11px;
+    line-height: 1.4;
+  }
+  .saas-why-section {
+    padding: 36px 16px;
   }
   .saas-why-metrics-grid {
-    grid-template-columns: 1fr;
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 8px !important;
+    margin-top: 20px;
+  }
+  .saas-metric-box {
+    padding: 12px 6px !important;
+    border-radius: 10px;
+  }
+  .saas-metric-value {
+    font-size: 15px !important;
+    line-height: 1.2;
+    margin-bottom: 4px;
+    word-break: break-word;
+  }
+  .saas-metric-title {
+    font-size: 9.5px !important;
+    line-height: 1.2;
+    letter-spacing: 0;
+  }
+  .saas-pricing-section {
+    padding: 36px 12px;
+  }
+  .saas-pricing-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    align-items: stretch;
+  }
+  .saas-price-card {
+    padding: 16px 10px;
+    border-radius: 12px;
+    gap: 12px;
+  }
+  .saas-price-card.popular-plan {
+    transform: none !important;
+  }
+  .saas-popular-tag {
+    font-size: 8px;
+    padding: 2px 7px;
+    top: -9px;
+    letter-spacing: 0.05em;
+  }
+  .saas-plan-header {
+    padding-bottom: 10px;
+  }
+  .saas-plan-title {
+    font-size: 13.5px;
+    margin-bottom: 2px;
+    line-height: 1.2;
+  }
+  .saas-plan-subtitle {
+    font-size: 10px;
+    margin-bottom: 8px;
+    line-height: 1.2;
+  }
+  .saas-plan-price-wrap {
+    flex-wrap: wrap;
+    gap: 2px;
+    align-items: baseline;
+  }
+  .saas-plan-price {
+    font-size: 17px;
+    line-height: 1.1;
+  }
+  .saas-plan-period {
+    font-size: 9.5px;
+  }
+  .saas-plan-features {
+    margin-top: 10px !important;
+    gap: 7px;
+  }
+  .saas-plan-feature-item {
+    font-size: 10px;
+    line-height: 1.3;
+    gap: 6px;
+    align-items: flex-start;
+  }
+  .saas-plan-feature-item svg {
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .saas-plan-btn {
+    padding: 8px 6px;
+    font-size: 11px;
+    border-radius: 6px;
   }
   .saas-footer-grid {
     grid-template-columns: 1fr;

@@ -31,12 +31,14 @@ import "./landing.css";
 
 import { useApp } from "../../context/AppContext";
 import { useRole } from "../../context/RoleContext";
+import { useMasterAdmin } from "../../context/MasterAdminContext";
 
 export function LandingPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { addToast } = useApp();
   const { isAuthenticated, currentRole, login } = useRole();
+  const { plans } = useMasterAdmin();
 
   // Demo Modal State
   const [isDemoModalOpen, setIsDemoModalOpen] = useState(false);
@@ -47,7 +49,7 @@ export function LandingPage() {
   const [selectedPlan, setSelectedPlan] = useState({
     id: "pilot",
     name: "Plant Pilot",
-    price: "₹0",
+    price: "$0",
     period: "/ 7 days",
     isFree: true
   });
@@ -75,10 +77,10 @@ export function LandingPage() {
 
   const handlePlanChange = (planId) => {
     const plansMap = {
-      pilot: { id: "pilot", name: "Plant Pilot", price: "₹0", period: "/ 7 days", isFree: true },
-      starter: { id: "starter", name: "Starter Line", price: "₹5,999", period: "/ month", isFree: false },
-      standard: { id: "standard", name: "Standard Facility", price: "₹14,999", period: "/ month", isFree: false },
-      enterprise: { id: "enterprise", name: "Enterprise Pro", price: "₹29,999", period: "/ month", isFree: false }
+      pilot: { id: "pilot", name: "Plant Pilot", price: "$0", period: "/ 7 days", isFree: true },
+      starter: { id: "starter", name: "Individual Modules", price: "$1,499 CAD", period: "/ month", isFree: false },
+      standard: { id: "standard", name: "Bundles", price: "$3,499 CAD", period: "/ month", isFree: false },
+      enterprise: { id: "enterprise", name: "MaintenX OS Complete", price: "$5,499 CAD", period: "/ month", isFree: false }
     };
     const chosen = plansMap[planId] || plansMap.pilot;
     setSelectedPlan(chosen);
@@ -278,12 +280,12 @@ export function LandingPage() {
             </div>
 
             <h1 className="saas-hero-title">
-              Transform Your
-              <span className="saas-hero-gradient-text">Manufacturing Productivity</span>
+              MaintenX OS —
+              <span className="saas-hero-gradient-text"> Manufacturing Operating System</span>
             </h1>
 
             <p className="saas-hero-desc">
-              The all-in-one industrial Operating System for high-speed factories. Connect shop-floor machines, automate inline CCP quality quarantine, and govern shift recovery with authorized AI.
+              One Operating System for Your Entire Factory. Connect shop-floor machines, automate inline CCP quality quarantine, and govern shift recovery with authorized AI.
             </p>
 
             {/* 4 Quick Stat Badges in a Horizontal Row */}
@@ -415,89 +417,71 @@ export function LandingPage() {
           </p>
         </div>
 
-        {/* Top Row: 3 Feature Cards */}
         <div className="saas-features-top-row">
           <div className="saas-feature-card">
             <div className="saas-feature-header">
-              <div className="saas-feature-icon-box">
-                <Activity size={18} />
-              </div>
-              <span className="card-kpi-pill">580+ BPM LIVE</span>
+              <div className="saas-feature-icon-box"><Gauge size={18} /></div>
             </div>
-            <h3 className="saas-feature-name">Sub-Second SCADA Telemetry</h3>
-            <p className="saas-feature-desc">
-              Live speed ingest, rotary filler pressures, and instantaneous micro-stop logging directly at machine consoles.
-            </p>
-            <span onClick={handleLaunchApp} className="saas-feature-arrow-link">
-              Explore SCADA <ArrowRight size={13} />
-            </span>
+            <h3 className="saas-feature-name">Plan</h3>
+            <p className="saas-feature-desc">Schedule orders, manage capacity, and optimize workflows with dynamic APS.</p>
           </div>
 
           <div className="saas-feature-card">
             <div className="saas-feature-header">
-              <div className="saas-feature-icon-box">
-                <Gauge size={18} />
-              </div>
-              <span className="card-kpi-pill">PARETO LOSS</span>
+              <div className="saas-feature-icon-box"><Activity size={18} /></div>
             </div>
-            <h3 className="saas-feature-name">Downtime & Loss Analytics</h3>
-            <p className="saas-feature-desc">
-              Hour-by-hour pace tracking with automatic financial loss calculation ($/min) and Pareto downtime categorization.
-            </p>
-            <span onClick={handleLaunchApp} className="saas-feature-arrow-link">
-              Explore OEE <ArrowRight size={13} />
-            </span>
+            <h3 className="saas-feature-name">Produce</h3>
+            <p className="saas-feature-desc">Execute batches, track OEE, and log micro-stops directly at machine consoles.</p>
           </div>
 
           <div className="saas-feature-card">
             <div className="saas-feature-header">
-              <div className="saas-feature-icon-box">
-                <ShieldCheck size={18} />
-              </div>
-              <span className="card-kpi-pill">INLINE CCP GATE</span>
+              <div className="saas-feature-icon-box"><ShieldCheck size={18} /></div>
             </div>
-            <h3 className="saas-feature-name">Autonomous CCP Quality Gate</h3>
-            <p className="saas-feature-desc">
-              Inline Brix, pH, and seal verification with instant GS1-128 digital quarantine holds preventing out-of-spec leaks.
-            </p>
-            <span onClick={handleLaunchApp} className="saas-feature-arrow-link">
-              Explore Quality <ArrowRight size={13} />
-            </span>
+            <h3 className="saas-feature-name">Verify</h3>
+            <p className="saas-feature-desc">Automate inline CCP quality quarantine and enforce specification limits.</p>
+          </div>
+
+          <div className="saas-feature-card">
+            <div className="saas-feature-header">
+              <div className="saas-feature-icon-box"><Activity size={18} /></div>
+            </div>
+            <h3 className="saas-feature-name">Maintain</h3>
+            <p className="saas-feature-desc">Manage assets, dispatch PM checklists, and track reliability analytics.</p>
           </div>
         </div>
 
-        {/* Bottom Row: 2 Feature Cards Centered */}
         <div className="saas-features-bottom-row">
           <div className="saas-feature-card">
             <div className="saas-feature-header">
-              <div className="saas-feature-icon-box">
-                <BrainCircuit size={18} />
-              </div>
-              <span className="card-kpi-pill">RULE 18 AI RECOVERY</span>
+              <div className="saas-feature-icon-box"><Boxes size={18} /></div>
             </div>
-            <h3 className="saas-feature-name">Governed AI Shift Recovery</h3>
-            <p className="saas-feature-desc">
-              Predictive bottleneck mitigation and dynamic line re-routing requiring mandatory human supervisor authorization.
-            </p>
-            <span onClick={handleLaunchApp} className="saas-feature-arrow-link">
-              Explore Recovery <ArrowRight size={13} />
-            </span>
+            <h3 className="saas-feature-name">Move</h3>
+            <p className="saas-feature-desc">Track material movements, lots, and warehouse dispatching instantly.</p>
           </div>
 
           <div className="saas-feature-card">
             <div className="saas-feature-header">
-              <div className="saas-feature-icon-box">
-                <Building2 size={18} />
-              </div>
-              <span className="card-kpi-pill">PORTFOLIO OEE</span>
+              <div className="saas-feature-icon-box"><Users size={18} /></div>
             </div>
-            <h3 className="saas-feature-name">Multi-Plant Executive Control</h3>
-            <p className="saas-feature-desc">
-              Cross-facility portfolio OEE benchmarking, 21 CFR Part 11 audit trails, and 1-click boardroom executive summaries.
-            </p>
-            <span onClick={handleLaunchApp} className="saas-feature-arrow-link">
-              Explore Governance <ArrowRight size={13} />
-            </span>
+            <h3 className="saas-feature-name">Manage People</h3>
+            <p className="saas-feature-desc">Oversee shift schedules, labor standards, and operator access.</p>
+          </div>
+
+          <div className="saas-feature-card">
+            <div className="saas-feature-header">
+              <div className="saas-feature-icon-box"><TrendingUp size={18} /></div>
+            </div>
+            <h3 className="saas-feature-name">Improve</h3>
+            <p className="saas-feature-desc">Drive CI projects, RCA, CAPA, and track verified solutions for growth.</p>
+          </div>
+
+          <div className="saas-feature-card">
+            <div className="saas-feature-header">
+              <div className="saas-feature-icon-box"><BrainCircuit size={18} /></div>
+            </div>
+            <h3 className="saas-feature-name">Intelligence</h3>
+            <p className="saas-feature-desc">Predictive insights, AI recovery, and automated anomaly alerts.</p>
           </div>
         </div>
       </section>
@@ -525,11 +509,11 @@ export function LandingPage() {
             <div className="saas-why-checklist">
               <div className="saas-checklist-item">
                 <div className="saas-checklist-icon"><Check size={14} strokeWidth={3} /></div>
-                <span>Increase overall plant OEE by up to 18%</span>
+                <span>Increase overall plant OEE visibility and tracking</span>
               </div>
               <div className="saas-checklist-item">
                 <div className="saas-checklist-icon"><Check size={14} strokeWidth={3} /></div>
-                <span>Save 15+ hours per week on manual shift paperwork & logs</span>
+                <span>Save hours per week on manual shift paperwork & logs</span>
               </div>
               <div className="saas-checklist-item">
                 <div className="saas-checklist-icon"><Check size={14} strokeWidth={3} /></div>
@@ -550,34 +534,20 @@ export function LandingPage() {
             </div>
           </div>
 
-          {/* Right Column: 3 Metric Cards + Featured Impact Card */}
+          {/* Right Column: 3 Metric Cards */}
           <div>
             <div className="saas-why-metrics-grid">
               <div className="saas-metric-box">
-                <div className="saas-metric-value">40%</div>
-                <div className="saas-metric-title">Downtime Reduced</div>
+                <div className="saas-metric-value">Real-Time</div>
+                <div className="saas-metric-title">Downtime Tracking</div>
               </div>
               <div className="saas-metric-box">
-                <div className="saas-metric-value">15+</div>
-                <div className="saas-metric-title">Hours Saved / Week</div>
+                <div className="saas-metric-value">Automated</div>
+                <div className="saas-metric-title">Paperwork Savings</div>
               </div>
               <div className="saas-metric-box">
-                <div className="saas-metric-value">99.9%</div>
+                <div className="saas-metric-value">High</div>
                 <div className="saas-metric-title">CCP Intercept Rate</div>
-              </div>
-            </div>
-
-            {/* Featured Plant Impact Card */}
-            <div className="saas-impact-card">
-              <p className="saas-impact-quote">
-                "MaintenX OS synchronized our 4 packaging skids with sub-second SCADA telemetry, eliminating $140K in monthly micro-stop losses and enforcing automated quality holds across shifts."
-              </p>
-              <div className="saas-impact-author">
-                <div className="saas-impact-avatar">MV</div>
-                <div>
-                  <div style={{ fontSize: "14px", fontWeight: 800, color: "#261603" }}>Marcus Vance</div>
-                  <div style={{ fontSize: "12px", color: "#6B5B4E" }}>Director of Plant Operations, Austin Bottling Complex</div>
-                </div>
               </div>
             </div>
           </div>
@@ -602,123 +572,51 @@ export function LandingPage() {
         </div>
 
         <div className="saas-pricing-grid">
-          {/* Plan 1: Plant Pilot */}
-          <div className="saas-price-card">
-            <div>
-              <div className="saas-plan-header">
-                <h3 className="saas-plan-title">Plant Pilot</h3>
-                <div className="saas-plan-subtitle">Free 7-Day Evaluation</div>
-                <div className="saas-plan-price-wrap">
-                  <span className="saas-plan-price">₹0</span>
-                  <span className="saas-plan-period">/ 7 days</span>
+          {(plans && plans.length > 0 ? plans.filter(p => p.status !== "Inactive") : []).map((plan) => {
+            const isPopular = plan.isPopular || plan.name === "Bundles";
+            const priceText = plan.priceMonthly === 0 ? "₹0" : `$${plan.priceMonthly.toLocaleString()} ${plan.currency || "CAD"}`;
+            const periodText = plan.priceMonthly === 0 ? "/ 7 days" : "/ month";
+            const subtitleText = plan.subtitle || (plan.priceMonthly === 0 ? "Free 7-Day Evaluation" : `${plan.duration || "Unlimited"} Production`);
+            const ctaBtnText = plan.ctaText || (plan.priceMonthly === 0 ? "Start Free Pilot" : isPopular ? "Launch Bundles" : plan.name.toLowerCase().includes("complete") ? "Contact Enterprise" : "Choose Modules");
+
+            return (
+              <div key={plan.id} className={`saas-price-card ${isPopular ? "popular-plan" : ""}`}>
+                {isPopular && <div className="saas-popular-tag">MOST POPULAR</div>}
+                <div>
+                  <div className="saas-plan-header">
+                    <h3 className="saas-plan-title">{plan.name}</h3>
+                    <div className="saas-plan-subtitle">{subtitleText}</div>
+                    <div className="saas-plan-price-wrap">
+                      <span className="saas-plan-price">{priceText}</span>
+                      <span className="saas-plan-period">{periodText}</span>
+                    </div>
+                  </div>
+
+                  <ul className="saas-plan-features" style={{ marginTop: "20px" }}>
+                    {(plan.features || []).map((feat, idx) => (
+                      <li key={idx} className="saas-plan-feature-item">
+                        <Check size={14} color={isPopular ? "#B27E33" : "#059669"} />
+                        <span>{feat}</span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
+
+                <button
+                  onClick={() => handleOpenPlanModal({ 
+                    id: String(plan.id), 
+                    name: plan.name, 
+                    price: priceText, 
+                    period: periodText, 
+                    isFree: plan.priceMonthly === 0 
+                  })}
+                  className="saas-plan-btn"
+                >
+                  {ctaBtnText}
+                </button>
               </div>
-
-              <ul className="saas-plan-features" style={{ marginTop: "20px" }}>
-                <li className="saas-plan-feature-item"><Check size={14} color="#059669" /> 1 Packaging or Bottling Line</li>
-                <li className="saas-plan-feature-item"><Check size={14} color="#059669" /> Operator HMI Touchscreen Console</li>
-                <li className="saas-plan-feature-item"><Check size={14} color="#059669" /> Micro-Stop & Downtime Logging</li>
-                <li className="saas-plan-feature-item"><Check size={14} color="#059669" /> Standard Shift OEE Metrics</li>
-                <li className="saas-plan-feature-item"><Check size={14} color="#059669" /> Community Knowledge Base</li>
-              </ul>
-            </div>
-
-            <button
-              onClick={() => handleOpenPlanModal({ id: "pilot", name: "Plant Pilot", price: "₹0", period: "/ 7 days", isFree: true })}
-              className="saas-plan-btn"
-            >
-              Start Free Pilot
-            </button>
-          </div>
-
-          {/* Plan 2: Starter Line */}
-          <div className="saas-price-card">
-            <div>
-              <div className="saas-plan-header">
-                <h3 className="saas-plan-title">Starter Line</h3>
-                <div className="saas-plan-subtitle">Single Dedicated Line</div>
-                <div className="saas-plan-price-wrap">
-                  <span className="saas-plan-price">₹5,999</span>
-                  <span className="saas-plan-period">/ month</span>
-                </div>
-              </div>
-
-              <ul className="saas-plan-features" style={{ marginTop: "20px" }}>
-                <li className="saas-plan-feature-item"><Check size={14} color="#059669" /> Everything in Plant Pilot</li>
-                <li className="saas-plan-feature-item"><Check size={14} color="#059669" /> OPC-UA & MQTT SCADA Ingest</li>
-                <li className="saas-plan-feature-item"><Check size={14} color="#059669" /> Inline CCP Quality Gate Validation</li>
-                <li className="saas-plan-feature-item"><Check size={14} color="#059669" /> PM Checklist & Work Order Dispatch</li>
-                <li className="saas-plan-feature-item"><Check size={14} color="#059669" /> 10 Concurrent Operator Logins</li>
-              </ul>
-            </div>
-
-            <button
-              onClick={() => handleOpenPlanModal({ id: "starter", name: "Starter Line", price: "₹5,999", period: "/ month", isFree: false })}
-              className="saas-plan-btn"
-            >
-              Choose Starter
-            </button>
-          </div>
-
-          {/* Plan 3: Standard Facility (HIGHLIGHTED / MOST POPULAR) */}
-          <div className="saas-price-card popular-plan">
-            <div className="saas-popular-tag">MOST POPULAR</div>
-            <div>
-              <div className="saas-plan-header">
-                <h3 className="saas-plan-title">Standard Facility</h3>
-                <div className="saas-plan-subtitle">Full Multi-Line Bottling Plant</div>
-                <div className="saas-plan-price-wrap">
-                  <span className="saas-plan-price">₹14,999</span>
-                  <span className="saas-plan-period">/ month</span>
-                </div>
-              </div>
-
-              <ul className="saas-plan-features" style={{ marginTop: "20px" }}>
-                <li className="saas-plan-feature-item"><Check size={14} color="#B27E33" /> Everything in Starter Line</li>
-                <li className="saas-plan-feature-item"><Check size={14} color="#B27E33" /> Unlimited Production & Packaging Lines</li>
-                <li className="saas-plan-feature-item"><Check size={14} color="#B27E33" /> Dynamic APS Capacity Scheduler</li>
-                <li className="saas-plan-feature-item"><Check size={14} color="#B27E33" /> Governed AI Shift Recovery & Bottlenecks</li>
-                <li className="saas-plan-feature-item"><Check size={14} color="#B27E33" /> Spare Parts & Lot Traceability</li>
-                <li className="saas-plan-feature-item"><Check size={14} color="#B27E33" /> Dedicated 24/7 Support Engineer</li>
-              </ul>
-            </div>
-
-            <button
-              onClick={() => handleOpenPlanModal({ id: "standard", name: "Standard Facility", price: "₹14,999", period: "/ month", isFree: false })}
-              className="saas-plan-btn"
-            >
-              Launch Facility Plan
-            </button>
-          </div>
-
-          {/* Plan 4: Enterprise Multi-Plant */}
-          <div className="saas-price-card">
-            <div>
-              <div className="saas-plan-header">
-                <h3 className="saas-plan-title">Enterprise Pro</h3>
-                <div className="saas-plan-subtitle">Multi-Facility Corporate Cloud</div>
-                <div className="saas-plan-price-wrap">
-                  <span className="saas-plan-price">₹29,999</span>
-                  <span className="saas-plan-period">/ month</span>
-                </div>
-              </div>
-
-              <ul className="saas-plan-features" style={{ marginTop: "20px" }}>
-                <li className="saas-plan-feature-item"><Check size={14} color="#059669" /> Multi-Plant Executive Portfolio</li>
-                <li className="saas-plan-feature-item"><Check size={14} color="#059669" /> 21 CFR Part 11 Electronic Signatures</li>
-                <li className="saas-plan-feature-item"><Check size={14} color="#059669" /> Custom ERP & MES API Connectors</li>
-                <li className="saas-plan-feature-item"><Check size={14} color="#059669" /> On-Premises or Sovereign Private Cloud</li>
-                <li className="saas-plan-feature-item"><Check size={14} color="#059669" /> 99.99% Guaranteed Availability SLA</li>
-              </ul>
-            </div>
-
-            <button
-              onClick={() => handleOpenPlanModal({ id: "enterprise", name: "Enterprise Pro", price: "₹29,999", period: "/ month", isFree: false })}
-              className="saas-plan-btn"
-            >
-              Contact Enterprise
-            </button>
-          </div>
+            );
+          })}
         </div>
       </section>
 

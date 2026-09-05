@@ -321,6 +321,7 @@ export const NAVIGATION_CONFIG = {
     {
       group: "Master Data",
       items: [
+        { label: "Plants & Facilities", path: "/organization/plants", icon: "Building2" },
         { label: "SKUs Master", path: "/master-data/items", icon: "Package" },
         { label: "BOMs & Recipes", path: "/master-data/bom", icon: "FlaskConical" },
         { label: "Lines Master", path: "/master-data/work-centers", icon: "Layers" },

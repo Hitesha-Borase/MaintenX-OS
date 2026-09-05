@@ -1554,6 +1554,43 @@ export function MasterDataProvider({ children }) {
   }, []);
 
   // ============================================================================
+  // 0. PLANT FACILITIES MUTATIONS
+  // ============================================================================
+  
+  const addPlant = (plantData) => {
+    const newId = `PLT-0${plants.length + 1}`;
+    const newRecord = {
+      id: newId,
+      companyId: companies[0].id,
+      code: (plantData.code || `PLT-${plants.length + 1}`).toUpperCase(),
+      name: plantData.name,
+      location: plantData.location || "",
+      city: plantData.city || "",
+      state: plantData.state || "",
+      country: plantData.country || "",
+      capacity: plantData.dailyCapacity || "0 Units/Day",
+      operatingShifts: plantData.operatingShifts || 3,
+      status: plantData.status || "Active",
+      timezone: plantData.timezone || "Asia/Kolkata (IST)",
+      effectiveFrom: new Date().toISOString().substring(0, 10),
+      effectiveTo: "2030-12-31"
+    };
+    setPlants((prev) => [newRecord, ...prev]);
+    logAudit({ entityId: newRecord.code, entityType: "Plant Facility", action: "Provisioned", newValue: `${newRecord.name} (${newRecord.code})` });
+    return newRecord;
+  };
+
+  const updatePlant = (plantId, updated) => {
+    setPlants((prev) => prev.map((p) => (p.id === plantId ? { ...p, ...updated } : p)));
+    logAudit({ entityId: plantId, entityType: "Plant Facility", action: "Updated", notes: "Plant configuration modified" });
+  };
+
+  const deletePlant = (plantId) => {
+    setPlants((prev) => prev.filter((p) => p.id !== plantId));
+    logAudit({ entityId: plantId, entityType: "Plant Facility", action: "Deleted" });
+  };
+
+  // ============================================================================
   // 1. PRODUCT FAMILY MUTATIONS
   // ============================================================================
   const addProductFamily = (familyData) => {
@@ -2475,6 +2512,9 @@ export function MasterDataProvider({ children }) {
         company: companies[0],
         companies,
         plants,
+        addPlant,
+        updatePlant,
+        deletePlant,
         activePlantId,
         setActivePlantId,
         departments,

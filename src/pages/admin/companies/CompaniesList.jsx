@@ -80,7 +80,7 @@ export function CompaniesList() {
               <option value="Active">Active</option>
               <option value="Suspended">Suspended</option>
               <option value="Inactive">Inactive</option>
-              <option value="Trial">Trial</option>
+              <option value="Trial">Trial / Pilot</option>
               <option value="Expired">Expired Subscription</option>
             </select>
           </div>
@@ -111,7 +111,7 @@ export function CompaniesList() {
 
                 <div style={{ marginTop: "6px", display: "flex", flexDirection: "column", gap: "3px" }}>
                   <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-                    <Badge variant={company.subscription === "Enterprise" ? "primary" : company.subscription === "Professional" ? "emerald" : company.subscription === "Trial" ? "warning" : "secondary"} style={{ fontSize: "10px", padding: "1px 5px" }}>
+                    <Badge variant={company.subscription === "MaintenX OS Complete" ? "primary" : company.subscription === "Bundles" ? "emerald" : company.subscription === "Plant Pilot" ? "warning" : "secondary"} style={{ fontSize: "10px", padding: "1px 5px" }}>
                       {company.subscription}
                     </Badge>
                     <span style={{ fontSize: "11px", color: "var(--text-secondary)", fontWeight: 600 }}>{company.usersCount} Users</span>
@@ -163,7 +163,7 @@ export function CompaniesList() {
                     <div style={{ fontSize: "12px", color: "var(--text-secondary)" }}>{company.adminEmail}</div>
                   </td>
                   <td style={{ padding: "16px 20px" }}>
-                    <Badge variant={company.subscription === "Enterprise" ? "primary" : company.subscription === "Professional" ? "emerald" : company.subscription === "Trial" ? "warning" : "secondary"}>
+                    <Badge variant={company.subscription === "MaintenX OS Complete" ? "primary" : company.subscription === "Bundles" ? "emerald" : company.subscription === "Plant Pilot" ? "warning" : "secondary"}>
                       {company.subscription}
                     </Badge>
                     <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "4px", fontWeight: 600 }}>{company.usersCount} Users</div>

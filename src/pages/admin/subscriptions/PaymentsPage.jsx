@@ -60,8 +60,8 @@ export function PaymentsPage() {
         </Button>
       </div>
 
-      {/* Metric Cards - systematic compact grid */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 300px))", gap: "16px" }}>
+      {/* Metric Cards - 2 cards side by side (aamne-samne) */}
+      <div className="kpi-grid-responsive grid-2" style={{ maxWidth: "600px" }}>
         <StatCard
           title="TOTAL COLLECTED"
           value={`$${totalRevenue.toLocaleString()}`}
