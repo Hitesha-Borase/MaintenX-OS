@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Card } from "../../../components/common/Card";
+import { StatCard } from "../../../components/common/StatCard";
 import { Badge } from "../../../components/common/Badge";
 import { Button } from "../../../components/common/Button";
 import { Search, Filter, Download, DollarSign, FileText } from "lucide-react";
@@ -53,35 +54,26 @@ export function PaymentsPage() {
           <h1 style={{ fontSize: "clamp(20px, 4vw, 26px)", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.3px", margin: 0 }}>
             Payments & Invoicing
           </h1>
-          <p style={{ color: "var(--text-secondary)", fontSize: "13px", marginTop: "2px", margin: 0 }}>
-            Manage platform billing, invoices, and payment history
-          </p>
         </div>
         <Button variant="outline" icon={Download} style={{ fontSize: "13px", padding: "8px 14px", fontWeight: 600 }}>
           Export Report
         </Button>
       </div>
 
-      {/* Metric Cards - 2-column side-by-side on mobile (Aamne-Samne) */}
-      <div className="grid-2" style={{ gap: "10px" }}>
-        <Card style={{ padding: "12px 14px", display: "flex", alignItems: "center", gap: "10px", borderTop: `3px solid #10B981`, minWidth: 0, borderRadius: "12px" }}>
-          <div style={{ padding: "8px", backgroundColor: `#10B98115`, borderRadius: "8px", color: "#10B981", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <DollarSign size={16} />
-          </div>
-          <div style={{ minWidth: 0, flex: 1 }}>
-            <div style={{ fontSize: "10.5px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.03em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Total Collected</div>
-            <div style={{ fontSize: "18px", fontWeight: 800, color: "var(--text-primary)", lineHeight: 1.2, marginTop: "2px" }}>${totalRevenue.toLocaleString()}</div>
-          </div>
-        </Card>
-        <Card style={{ padding: "12px 14px", display: "flex", alignItems: "center", gap: "10px", borderTop: `3px solid #EF4444`, minWidth: 0, borderRadius: "12px" }}>
-          <div style={{ padding: "8px", backgroundColor: `#EF444415`, borderRadius: "8px", color: "#EF4444", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <DollarSign size={16} />
-          </div>
-          <div style={{ minWidth: 0, flex: 1 }}>
-            <div style={{ fontSize: "10.5px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.03em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Overdue Payments</div>
-            <div style={{ fontSize: "18px", fontWeight: 800, color: "#EF4444", lineHeight: 1.2, marginTop: "2px" }}>${overdueAmount.toLocaleString()}</div>
-          </div>
-        </Card>
+      {/* Metric Cards - systematic compact grid */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 300px))", gap: "16px" }}>
+        <StatCard
+          title="TOTAL COLLECTED"
+          value={`$${totalRevenue.toLocaleString()}`}
+          icon={DollarSign}
+          colorVariant="emerald"
+        />
+        <StatCard
+          title="OVERDUE PAYMENTS"
+          value={`$${overdueAmount.toLocaleString()}`}
+          icon={DollarSign}
+          colorVariant="rose"
+        />
       </div>
 
       <Card style={{ padding: "0", overflow: "hidden", borderRadius: "14px" }}>

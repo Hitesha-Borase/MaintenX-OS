@@ -48,15 +48,11 @@ export function MasterAuditLogs() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "100%" }}>
-      {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
         <div>
           <h1 style={{ fontSize: "clamp(20px, 4vw, 26px)", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.3px", margin: 0 }}>
             Activity & Audit Logs
           </h1>
-          <p style={{ color: "var(--text-secondary)", fontSize: "13px", marginTop: "2px", margin: 0 }}>
-            Security and compliance audit trail for platform actions
-          </p>
         </div>
         <Button variant="outline" icon={Download} onClick={handleExport} style={{ fontSize: "13px", padding: "8px 14px", fontWeight: 600 }}>
           Export Logs
@@ -66,22 +62,22 @@ export function MasterAuditLogs() {
       <Card style={{ padding: "0", overflow: "hidden", borderRadius: "14px" }}>
         {/* Search & Filter Bar */}
         <div style={{ padding: "14px 16px", borderBottom: "1px solid var(--border-subtle)", display: "flex", gap: "10px", flexWrap: "wrap", backgroundColor: "#FFFFFF" }}>
-          <div style={{ flex: "1 1 100%", minWidth: "180px", position: "relative" }}>
+          <div style={{ flex: "1 1 200px", position: "relative" }}>
             <Search size={15} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
             <input 
               type="text" 
               placeholder="Search by user or target..." 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ width: "100%", padding: "8px 12px 8px 34px", borderRadius: "8px", border: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)", fontSize: "13px", boxSizing: "border-box" }}
+              style={{ width: "100%", padding: "8px 12px 8px 34px", borderRadius: "8px", border: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)", fontSize: "13px", boxSizing: "border-box", outline: "none" }}
             />
           </div>
-          <div style={{ display: "flex", gap: "8px", alignItems: "center", width: "100%" }}>
+          <div style={{ display: "flex", gap: "8px", alignItems: "center", flex: "1 1 150px", maxWidth: "200px" }}>
             <Filter size={14} color="var(--text-secondary)" style={{ flexShrink: 0 }} />
             <select 
               value={eventFilter} 
               onChange={(e) => setEventFilter(e.target.value)}
-              style={{ flex: 1, minWidth: 0, padding: "7px 10px", borderRadius: "8px", border: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)", color: "var(--text-primary)", fontSize: "12px", fontWeight: 600 }}
+              style={{ flex: 1, minWidth: 0, padding: "8px 10px", borderRadius: "8px", border: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)", color: "var(--text-primary)", fontSize: "13px", fontWeight: 500, outline: "none", boxSizing: "border-box" }}
             >
               {uniqueEvents.map(event => (
                 <option key={event} value={event}>{event}</option>
@@ -142,24 +138,24 @@ export function MasterAuditLogs() {
         <div className="desktop-table-view" style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
-              <tr style={{ backgroundColor: "var(--bg-card-subtle)", borderBottom: "1px solid var(--border-color)", textAlign: "left" }}>
-                <th style={{ padding: "16px 20px", fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase" }}>Log ID</th>
-                <th style={{ padding: "16px 20px", fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase" }}>Date / Time</th>
-                <th style={{ padding: "16px 20px", fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase" }}>User</th>
-                <th style={{ padding: "16px 20px", fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase" }}>Event</th>
-                <th style={{ padding: "16px 20px", fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase" }}>Target</th>
-                <th style={{ padding: "16px 20px", fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase" }}>IP Address</th>
+              <tr style={{ backgroundColor: "var(--bg-card-subtle)", borderBottom: "1px solid var(--border-subtle)", textAlign: "left" }}>
+                <th style={{ padding: "16px 20px", fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase", whiteSpace: "nowrap" }}>Log ID</th>
+                <th style={{ padding: "16px 20px", fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase", whiteSpace: "nowrap" }}>Date / Time</th>
+                <th style={{ padding: "16px 20px", fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase", whiteSpace: "nowrap" }}>User</th>
+                <th style={{ padding: "16px 20px", fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase", whiteSpace: "nowrap" }}>Event</th>
+                <th style={{ padding: "16px 20px", fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase", whiteSpace: "nowrap" }}>Target</th>
+                <th style={{ padding: "16px 20px", fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase", whiteSpace: "nowrap" }}>IP Address</th>
               </tr>
             </thead>
             <tbody>
               {filteredLogs.map(log => (
-                <tr key={log.id} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
-                  <td style={{ padding: "16px 20px", fontSize: "12px", fontFamily: "monospace", color: "var(--text-muted)" }}>{log.id}</td>
-                  <td style={{ padding: "16px 20px", fontSize: "13px", color: "var(--text-secondary)" }}>{log.date}</td>
-                  <td style={{ padding: "16px 20px", fontWeight: 600, color: "var(--text-primary)" }}>{log.user}</td>
-                  <td style={{ padding: "16px 20px", fontWeight: 500, color: "#2563EB" }}>{log.event}</td>
-                  <td style={{ padding: "16px 20px" }}>{log.target}</td>
-                  <td style={{ padding: "16px 20px", fontSize: "12px", color: "var(--text-muted)" }}>{log.ip}</td>
+                <tr key={log.id} style={{ borderBottom: "1px solid var(--border-subtle)" }} className="hover-row">
+                  <td style={{ padding: "16px 20px", fontSize: "12px", fontFamily: "monospace", color: "var(--text-muted)", whiteSpace: "nowrap" }}>{log.id}</td>
+                  <td style={{ padding: "16px 20px", fontSize: "13px", color: "var(--text-secondary)", whiteSpace: "nowrap" }}>{log.date}</td>
+                  <td style={{ padding: "16px 20px", fontWeight: 600, color: "var(--text-primary)", whiteSpace: "nowrap" }}>{log.user}</td>
+                  <td style={{ padding: "16px 20px", fontWeight: 500, color: "#2563EB", whiteSpace: "nowrap" }}>{log.event}</td>
+                  <td style={{ padding: "16px 20px", fontWeight: 500, color: "var(--text-primary)", whiteSpace: "nowrap" }}>{log.target}</td>
+                  <td style={{ padding: "16px 20px", fontSize: "12px", color: "var(--text-muted)", whiteSpace: "nowrap" }}>{log.ip}</td>
                 </tr>
               ))}
             </tbody>

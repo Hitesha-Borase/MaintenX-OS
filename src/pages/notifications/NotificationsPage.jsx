@@ -191,8 +191,8 @@ export function NotificationsPage() {
               <div
                 key={n.id}
                 style={{
-                  backgroundColor: n.read ? "var(--bg-card-subtle)" : "rgba(56, 189, 248, 0.08)",
-                  border: n.read ? "1px solid var(--border-subtle)" : "1px solid rgba(56, 189, 248, 0.3)",
+                  backgroundColor: n.read ? "var(--bg-card-subtle, #FAF6F0)" : "rgba(200, 149, 71, 0.08)",
+                  border: n.read ? "1px solid var(--border-subtle, #EFEAE2)" : "1.5px solid rgba(200, 149, 71, 0.35)",
                   borderRadius: "8px",
                   padding: "14px 16px",
                   display: "flex",
@@ -207,11 +207,11 @@ export function NotificationsPage() {
                   <div style={{ marginTop: "2px" }}>{getNotifIcon(n.type)}</div>
                   <div>
                     <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                      <h3 style={{ fontSize: "14px", fontWeight: 700, color: n.read ? "var(--text-primary)" : "#FFFFFF" }}>
+                      <h3 style={{ fontSize: "14px", fontWeight: 700, color: "var(--text-primary, #2B1D11)" }}>
                         {n.title}
                       </h3>
                       {!n.read && (
-                        <span style={{ width: "6px", height: "6px", borderRadius: "50%", backgroundColor: "#38BDF8" }} />
+                        <span style={{ width: "7px", height: "7px", borderRadius: "50%", backgroundColor: "#C89547" }} />
                       )}
                     </div>
 
@@ -275,10 +275,10 @@ export function NotificationsPage() {
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px", backgroundColor: "var(--bg-card-subtle)", borderRadius: "6px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px", backgroundColor: "var(--bg-card-subtle, #FAF6F0)", borderRadius: "8px", border: "1px solid var(--border-subtle, #EFEAE2)" }}>
                 <div>
-                  <strong style={{ color: "#FFFFFF", fontSize: "13px" }}>Critical P1 Breakdown SMS Alerts</strong>
-                  <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>Receive immediate SMS for line down events</div>
+                  <strong style={{ color: "var(--text-primary, #2B1D11)", fontSize: "13px" }}>Critical P1 Breakdown SMS Alerts</strong>
+                  <div style={{ fontSize: "11px", color: "var(--text-muted, #8C7B6E)" }}>Receive immediate SMS for line down events</div>
                 </div>
                 <input
                   type="checkbox"
@@ -289,14 +289,14 @@ export function NotificationsPage() {
                     });
                     addToast("SMS alert preference updated.", "info");
                   }}
-                  style={{ width: "18px", height: "18px", accentColor: "#38BDF8", cursor: "pointer" }}
+                  style={{ width: "18px", height: "18px", accentColor: "#C89547", cursor: "pointer" }}
                 />
               </div>
 
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px", backgroundColor: "var(--bg-card-subtle)", borderRadius: "6px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px", backgroundColor: "var(--bg-card-subtle, #FAF6F0)", borderRadius: "8px", border: "1px solid var(--border-subtle, #EFEAE2)" }}>
                 <div>
-                  <strong style={{ color: "#FFFFFF", fontSize: "13px" }}>PM Due & Overdue Email Digests</strong>
-                  <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>Daily 06:00 shift dispatch summaries</div>
+                  <strong style={{ color: "var(--text-primary, #2B1D11)", fontSize: "13px" }}>PM Due & Overdue Email Digests</strong>
+                  <div style={{ fontSize: "11px", color: "var(--text-muted, #8C7B6E)" }}>Daily 06:00 shift dispatch summaries</div>
                 </div>
                 <input
                   type="checkbox"
@@ -307,14 +307,14 @@ export function NotificationsPage() {
                     });
                     addToast("Email alert preference updated.", "info");
                   }}
-                  style={{ width: "18px", height: "18px", accentColor: "#38BDF8", cursor: "pointer" }}
+                  style={{ width: "18px", height: "18px", accentColor: "#C89547", cursor: "pointer" }}
                 />
               </div>
 
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px", backgroundColor: "var(--bg-card-subtle)", borderRadius: "6px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px", backgroundColor: "var(--bg-card-subtle, #FAF6F0)", borderRadius: "8px", border: "1px solid var(--border-subtle, #EFEAE2)" }}>
                 <div>
-                  <strong style={{ color: "#FFFFFF", fontSize: "13px" }}>IoT Anomaly Audio Alert</strong>
-                  <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>Sound audible alarm when vibration exceeds 3.5 mm/s</div>
+                  <strong style={{ color: "var(--text-primary, #2B1D11)", fontSize: "13px" }}>IoT Anomaly Audio Alert</strong>
+                  <div style={{ fontSize: "11px", color: "var(--text-muted, #8C7B6E)" }}>Sound audible alarm when vibration exceeds 3.5 mm/s</div>
                 </div>
                 <input
                   type="checkbox"
@@ -325,7 +325,7 @@ export function NotificationsPage() {
                     });
                     addToast("Audio alert preference updated.", "info");
                   }}
-                  style={{ width: "18px", height: "18px", accentColor: "#38BDF8", cursor: "pointer" }}
+                  style={{ width: "18px", height: "18px", accentColor: "#C89547", cursor: "pointer" }}
                 />
               </div>
 

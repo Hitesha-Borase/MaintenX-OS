@@ -45,9 +45,6 @@ export function PlansPricing() {
           <h1 style={{ fontSize: "clamp(20px, 4vw, 26px)", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.3px", margin: 0 }}>
             Plans & Pricing
           </h1>
-          <p style={{ color: "var(--text-secondary)", fontSize: "13px", marginTop: "2px", margin: 0 }}>
-            Define subscription tiers and platform pricing for tenants
-          </p>
         </div>
         <Button 
           variant="primary" 

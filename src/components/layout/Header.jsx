@@ -188,7 +188,6 @@ export function Header() {
           title="Search anything (Cmd+K / Ctrl+K)"
         >
           <span className="header-search-text" style={{ fontSize: "13px", color: "var(--text-muted, #A09082)", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            Search...
           </span>
           <div
             className="header-search-icon-btn"
@@ -326,6 +325,30 @@ export function Header() {
                   </div>
                 ))}
               </div>
+
+              <div style={{ borderTop: "1px solid var(--border-subtle, #EFEAE2)", paddingTop: "8px", textAlign: "center" }}>
+                <button
+                  onClick={() => {
+                    setShowNotificationsMenu(false);
+                    navigate(currentRole?.id === "maintenance" ? "/maintenance/notifications" : "/notifications");
+                  }}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: "#C89547",
+                    fontSize: "12px",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    padding: "4px 8px",
+                    borderRadius: "6px",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px"
+                  }}
+                >
+                  View full notifications center →
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -418,6 +441,32 @@ export function Header() {
                   </div>
                 </div>
               </div>
+
+              <button
+                onClick={() => {
+                  setShowProfileMenu(false);
+                  navigate(currentRole?.id === "maintenance" ? "/maintenance/profile" : "/profile");
+                }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  padding: "8px 12px",
+                  borderRadius: "8px",
+                  border: "none",
+                  backgroundColor: "transparent",
+                  color: "var(--text-primary, #261603)",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  textAlign: "left",
+                  transition: "background-color 0.15s ease"
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "var(--bg-card-subtle, #FAF6F0)")}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
+              >
+                <User size={14} color="#C89547" /> My Profile
+              </button>
 
               <button
                 onClick={handleLogout}

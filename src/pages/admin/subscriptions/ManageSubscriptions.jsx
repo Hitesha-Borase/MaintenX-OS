@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useMasterAdmin } from "../../../context/MasterAdminContext";
 import { Card } from "../../../components/common/Card";
+import { StatCard } from "../../../components/common/StatCard";
 import { Badge } from "../../../components/common/Badge";
 import { Button } from "../../../components/common/Button";
 import { CreditCard, Eye, Trash2, Search, Filter } from "lucide-react";
@@ -45,20 +46,17 @@ export function ManageSubscriptions() {
         <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)" }}>Manage Subscriptions</h1>
       </div>
 
-      {/* Plan Metric Cards - 2x2 on mobile, 4 on desktop */}
-      <div className="kpi-grid-responsive grid-4">
+      {/* Plan Metric Cards - 4 in a row on desktop, auto wrapping to keep them compact */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px" }}>
         {plans.map(p => (
-          <Card key={p.name} style={{ padding: "14px 16px", display: "flex", alignItems: "center", gap: "12px", borderTop: `3px solid ${p.color}`, minWidth: 0 }}>
-            <div style={{ padding: "10px", backgroundColor: `${p.color}15`, borderRadius: "10px", color: p.color, flexShrink: 0 }}>
-              <CreditCard size={20} />
-            </div>
-            <div style={{ minWidth: 0, flex: 1 }}>
-              <div style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.03em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</div>
-              <div style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)", lineHeight: 1.2, marginTop: "2px" }}>
-                {p.count} <span style={{ fontSize: "11px", fontWeight: 600, color: "var(--text-muted)" }}>Active</span>
-              </div>
-            </div>
-          </Card>
+          <StatCard
+            key={p.name}
+            title={p.name.toUpperCase()}
+            value={p.count}
+            unit="Active"
+            icon={CreditCard}
+            color={p.color}
+          />
         ))}
       </div>
 

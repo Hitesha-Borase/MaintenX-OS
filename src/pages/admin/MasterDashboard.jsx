@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useMasterAdmin } from "../../context/MasterAdminContext";
 import { Card } from "../../components/common/Card";
+import { StatCard } from "../../components/common/StatCard";
 import { Building2, Users, CreditCard, Activity, AlertCircle, Plus, ShieldCheck, Layers, ArrowUpRight, ArrowDownRight, Headset } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { AddCompanyModal } from "./companies/AddCompanyModal";
@@ -45,67 +46,51 @@ export function MasterDashboard() {
 
       {/* TOP METRICS ROW 1 - 2x2 on mobile, 4 on desktop */}
       <div className="kpi-grid-responsive grid-4">
-        <Card style={{ padding: "14px 16px", cursor: "pointer", display: "flex", flexDirection: "column", justifyContent: "space-between", minWidth: 0 }} onClick={() => navigate("/master/companies")}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "6px" }}>
-            <div style={{ minWidth: 0, flex: 1 }}>
-              <div style={{ color: "var(--text-secondary)", fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Total Companies</div>
-              <div style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)", marginTop: "4px", lineHeight: 1.2 }}>{totalCompanies}</div>
-              <div style={{ display: "flex", alignItems: "center", gap: "3px", color: "#10B981", fontSize: "11px", marginTop: "4px", fontWeight: 600 }}>
-                <ArrowUpRight size={13} /> <span>+2 this month</span>
-              </div>
-            </div>
-            <div style={{ padding: "8px", backgroundColor: "rgba(37, 99, 235, 0.1)", borderRadius: "8px", color: "#2563EB", flexShrink: 0 }}>
-              <Building2 size={18} />
-            </div>
-          </div>
-        </Card>
+        <StatCard
+          title="Total Companies"
+          value={totalCompanies}
+          trend={{ value: <><ArrowUpRight size={11} style={{marginBottom:'-2px', marginRight:'2px'}}/>+2 this month</>, isPositive: true }}
+          icon={Building2}
+          colorVariant="cyan"
+          onClick={() => navigate("/master/companies")}
+          className="cursor-pointer hover-card"
+        />
         
-        <Card style={{ padding: "14px 16px", cursor: "pointer", display: "flex", flexDirection: "column", justifyContent: "space-between", minWidth: 0 }} onClick={() => navigate("/master/companies")}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "6px" }}>
-            <div style={{ minWidth: 0, flex: 1 }}>
-              <div style={{ color: "var(--text-secondary)", fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Active / Suspended</div>
-              <div style={{ display: "flex", alignItems: "baseline", gap: "4px", marginTop: "4px", lineHeight: 1.2 }}>
-                <span style={{ fontSize: "24px", fontWeight: 800, color: "#10B981" }}>{activeCompanies}</span>
-                <span style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-muted)" }}>/</span>
-                <span style={{ fontSize: "18px", fontWeight: 700, color: "#EF4444" }}>{suspendedCompanies}</span>
-              </div>
-              <div style={{ fontSize: "11px", color: "var(--text-secondary)", marginTop: "4px", fontWeight: 600 }}>Active vs Suspended</div>
+        <StatCard
+          title="Active / Suspended"
+          value={
+            <div style={{ display: "flex", alignItems: "baseline", gap: "4px", paddingRight: "10px" }}>
+              <span style={{ color: "#10B981" }}>{activeCompanies}</span>
+              <span style={{ fontSize: "16px", color: "var(--text-muted)", fontWeight: 500 }}>/</span>
+              <span style={{ fontSize: "18px", color: "#EF4444" }}>{suspendedCompanies}</span>
             </div>
-            <div style={{ padding: "8px", backgroundColor: "rgba(16, 185, 129, 0.1)", borderRadius: "8px", color: "#10B981", flexShrink: 0 }}>
-              <Activity size={18} />
-            </div>
-          </div>
-        </Card>
+          }
+          description="Active vs Suspended"
+          icon={Activity}
+          colorVariant="emerald"
+          onClick={() => navigate("/master/companies")}
+          className="cursor-pointer hover-card"
+        />
 
-        <Card style={{ padding: "14px 16px", cursor: "pointer", display: "flex", flexDirection: "column", justifyContent: "space-between", minWidth: 0 }} onClick={() => navigate("/master/platform-users")}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "6px" }}>
-            <div style={{ minWidth: 0, flex: 1 }}>
-              <div style={{ color: "var(--text-secondary)", fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Global Users</div>
-              <div style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)", marginTop: "4px", lineHeight: 1.2 }}>{totalUsers}</div>
-              <div style={{ display: "flex", alignItems: "center", gap: "3px", color: "#10B981", fontSize: "11px", marginTop: "4px", fontWeight: 600 }}>
-                <ArrowUpRight size={13} /> <span>+12% growth</span>
-              </div>
-            </div>
-            <div style={{ padding: "8px", backgroundColor: "rgba(139, 92, 246, 0.1)", borderRadius: "8px", color: "#8B5CF6", flexShrink: 0 }}>
-              <Users size={18} />
-            </div>
-          </div>
-        </Card>
+        <StatCard
+          title="Global Users"
+          value={totalUsers}
+          trend={{ value: <><ArrowUpRight size={11} style={{marginBottom:'-2px', marginRight:'2px'}}/>+12% growth</>, isPositive: true }}
+          icon={Users}
+          colorVariant="indigo"
+          onClick={() => navigate("/master/platform-users")}
+          className="cursor-pointer hover-card"
+        />
 
-        <Card style={{ padding: "14px 16px", cursor: "pointer", display: "flex", flexDirection: "column", justifyContent: "space-between", minWidth: 0 }} onClick={() => navigate("/master/subscriptions")}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "6px" }}>
-            <div style={{ minWidth: 0, flex: 1 }}>
-              <div style={{ color: "var(--text-secondary)", fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Active Subs</div>
-              <div style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)", marginTop: "4px", lineHeight: 1.2 }}>{activeSubscriptions}</div>
-              <div style={{ display: "flex", alignItems: "center", gap: "3px", color: "#F59E0B", fontSize: "11px", marginTop: "4px", fontWeight: 600 }}>
-                <AlertCircle size={13} /> <span>{expiringSubscriptions} Expiring Soon</span>
-              </div>
-            </div>
-            <div style={{ padding: "8px", backgroundColor: "rgba(245, 158, 11, 0.1)", borderRadius: "8px", color: "#F59E0B", flexShrink: 0 }}>
-              <CreditCard size={18} />
-            </div>
-          </div>
-        </Card>
+        <StatCard
+          title="Active Subs"
+          value={activeSubscriptions}
+          trend={{ value: <><AlertCircle size={11} style={{marginBottom:'-2px', marginRight:'2px'}}/>{expiringSubscriptions} Expiring Soon</>, isPositive: false }}
+          icon={CreditCard}
+          colorVariant="amber"
+          onClick={() => navigate("/master/subscriptions")}
+          className="cursor-pointer hover-card"
+        />
       </div>
 
       {/* CHARTS & GRAPHS ROW - 2 columns on desktop, 1 column full-width on mobile */}

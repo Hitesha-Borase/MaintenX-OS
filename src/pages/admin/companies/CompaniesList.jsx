@@ -147,8 +147,8 @@ export function CompaniesList() {
                 <th style={{ padding: "16px 20px", fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase" }}>Admin & Email</th>
                 <th style={{ padding: "16px 20px", fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase" }}>Plan & Users</th>
                 <th style={{ padding: "16px 20px", fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase" }}>Status</th>
-                <th style={{ padding: "16px 20px", fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase" }}>Dates</th>
-                <th style={{ padding: "16px 20px", fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase", textAlign: "right" }}>Actions</th>
+                <th style={{ padding: "16px 20px", fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase", whiteSpace: "nowrap" }}>Dates</th>
+                <th style={{ padding: "16px 20px", fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase", textAlign: "right", whiteSpace: "nowrap" }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -171,7 +171,7 @@ export function CompaniesList() {
                   <td style={{ padding: "16px 20px" }}>
                     <Badge variant={company.status === "Active" ? "emerald" : "destructive"}>{company.status}</Badge>
                   </td>
-                  <td style={{ padding: "16px 20px" }}>
+                  <td style={{ padding: "16px 20px", whiteSpace: "nowrap" }}>
                     <div style={{ fontSize: "12px", color: "var(--text-secondary)" }}>Created: <span style={{color: "var(--text-primary)", fontWeight: 500}}>{company.createdAt}</span></div>
                     <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>Expiry: <span style={{color: "var(--text-primary)", fontWeight: 500}}>{company.expiryDate || "N/A"}</span></div>
                     <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>Active: <span style={{color: "var(--text-primary)", fontWeight: 500}}>{company.lastActivity || "N/A"}</span></div>
