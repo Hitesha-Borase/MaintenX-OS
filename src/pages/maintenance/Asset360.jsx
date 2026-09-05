@@ -30,7 +30,10 @@ import {
   DollarSign,
   UserCheck,
   Flame,
-  AlertOctagon
+  AlertOctagon,
+  Gauge,
+  CalendarCheck,
+  SearchCode
 } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { StatCard } from "../../components/common/StatCard";
@@ -70,11 +73,19 @@ export function Asset360() {
   const { currentRole } = useRole();
   const { openQrModal, addToast, setIsQuickActionOpen } = useApp();
 
-  // Active Tab state - EXACT 5 TABS
-  const [activeTab, setActiveTab] = useState("INFO");
+  const [selectedAssetId, setSelectedAssetId] = useState(id || assets[0]?.id || "AST-001");
+
+  React.useEffect(() => {
+    if (id) {
+      setSelectedAssetId(id);
+    }
+  }, [id]);
+
+  // Active Tab state - 10 CLIENT SPECIFIED SECTIONS
+  const [activeTab, setActiveTab] = useState("OVERVIEW");
 
   // Lookup Asset
-  const asset = assets.find((a) => a.id === id) || assets[0] || {
+  const asset = assets.find((a) => a.id === selectedAssetId) || assets[0] || {
     id: id || "AST-001",
     name: "Unknown Asset",
     type: "Packaging & Bottling",
@@ -378,79 +389,94 @@ export function Asset360() {
     return timeline.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
   }, [linkedBDs, linkedWOs, linkedPMs, linkedCals]);
 
-  // Tabs Definition - EXACT 5 TABS
+  // Tabs Definition - 10 Consolidated Sections
   const tabs = [
-    { id: "INFO", label: "INFO", icon: FileText },
-    { id: "PRODUCTION", label: "PRODUCTION", icon: Cpu },
-    {
-      id: "MAINTENANCE",
-      label: "MAINTENANCE",
-      icon: Wrench,
-      badge: openWOCount > 0 ? openWOCount : undefined
-    },
-    {
-      id: "DOWNTIME",
-      label: "DOWNTIME",
-      icon: AlertTriangle,
-      badge: linkedBDs.length > 0 ? linkedBDs.length : undefined
-    },
-    {
-      id: "AUDIT",
-      label: "AUDIT",
-      icon: History,
-      badge: assetAudits.length > 0 ? assetAudits.length : undefined
-    }
+    { id: "OVERVIEW", label: "Overview", icon: Activity },
+    { id: "INFO", label: "Asset Information", icon: FileText },
+    { id: "STATUS", label: "Current Status", icon: Gauge },
+    { id: "PM", label: "Preventive Maintenance", icon: CalendarCheck, badge: linkedPMs.length > 0 ? linkedPMs.length : undefined },
+    { id: "WORK_ORDERS", label: "Work Orders", icon: Wrench, badge: openWOCount > 0 ? openWOCount : undefined },
+    { id: "BREAKDOWNS", label: "Breakdowns", icon: AlertOctagon, badge: linkedBDs.length > 0 ? linkedBDs.length : undefined },
+    { id: "HISTORY", label: "Maintenance History", icon: History, badge: machineHistory.length > 0 ? machineHistory.length : undefined },
+    { id: "RELIABILITY", label: "Reliability", icon: TrendingUp },
+    { id: "TROUBLESHOOTING", label: "Troubleshooting", icon: SearchCode },
+    { id: "IMPACT", label: "Maintenance Impact", icon: DollarSign }
   ];
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "24px", width: "100%", maxWidth: "1600px", margin: "0 auto", boxSizing: "border-box" }}>
       {/* Top Header / Banner */}
-      <Card style={{ padding: "24px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
-          <div>
-            <button
-              onClick={() => navigate("/maintenance/assets")}
-              className="btn btn-ghost"
-              style={{
-                padding: "4px 8px",
-                fontSize: "12px",
-                marginBottom: "8px",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px"
-              }}
-            >
-              <ArrowLeft size={14} /> Back to Asset Directory
-            </button>
+      <Card className="asset-360-header-card" style={{ padding: "clamp(14px, 3vw, 24px)", width: "100%", boxSizing: "border-box" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px", width: "100%" }}>
+          <div style={{ width: "100%", maxWidth: "100%", minWidth: 0, flex: 1 }}>
+            {/* Top Navigation & Switcher Row */}
+            <div className="asset-360-top-controls" style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "12px", flexWrap: "wrap", width: "100%" }}>
+              <button
+                onClick={() => navigate("/maintenance/assets")}
+                className="btn btn-ghost"
+                style={{
+                  padding: "4px 8px",
+                  fontSize: "12px",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  whiteSpace: "nowrap"
+                }}
+              >
+                <ArrowLeft size={14} /> Back to Asset Directory
+              </button>
 
-            <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap", flex: 1, minWidth: "220px", maxWidth: "100%" }}>
+                <span style={{ fontSize: "11px", color: "var(--text-muted)", fontWeight: 600, whiteSpace: "nowrap" }}>SWITCH ASSET:</span>
+                <select
+                  className="form-select asset-360-switch-select"
+                  value={asset.id}
+                  onChange={(e) => {
+                    setSelectedAssetId(e.target.value);
+                    navigate(`/maintenance/asset-360/${e.target.value}`, { replace: true });
+                  }}
+                  style={{ fontSize: "12px", padding: "4px 8px", height: "32px", width: "auto", flex: 1, minWidth: "160px", maxWidth: "100%" }}
+                >
+                  {assets.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.id} — {a.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Asset Identity Details */}
+            <div style={{ display: "flex", alignItems: "flex-start", gap: "12px", width: "100%" }}>
               <div
                 style={{
-                  width: "48px",
-                  height: "48px",
+                  width: "44px",
+                  height: "44px",
                   borderRadius: "10px",
                   backgroundColor: "rgba(56, 189, 248, 0.15)",
                   color: "#38BDF8",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  flexShrink: 0
+                  flexShrink: 0,
+                  marginTop: "2px"
                 }}
               >
-                <Wrench size={24} />
+                <Wrench size={22} />
               </div>
 
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-                  <h1 style={{ fontSize: "22px", fontWeight: 800, color: "var(--text-primary)" }}>
+              <div style={{ minWidth: 0, flex: 1, width: "100%" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                  <h1 style={{ fontSize: "clamp(17px, 3.5vw, 24px)", fontWeight: 800, color: "var(--text-primary)", lineHeight: 1.25, wordBreak: "break-word", margin: 0 }}>
                     {asset.name}
                   </h1>
                   <span
                     style={{
                       fontFamily: "var(--font-mono)",
-                      fontSize: "14px",
+                      fontSize: "13px",
                       fontWeight: 700,
-                      color: "var(--accent-blue)"
+                      color: "var(--accent-blue)",
+                      whiteSpace: "nowrap"
                     }}
                   >
                     [{asset.id}]
@@ -485,19 +511,20 @@ export function Asset360() {
                 <div
                   style={{
                     display: "flex",
-                    gap: "14px",
-                    marginTop: "6px",
+                    gap: "6px 14px",
+                    marginTop: "8px",
                     fontSize: "12px",
                     color: "var(--text-muted)",
-                    flexWrap: "wrap"
+                    flexWrap: "wrap",
+                    alignItems: "center"
                   }}
                 >
                   <span>Plant: <strong style={{ color: "var(--text-primary)" }}>{asset.plant || "Plant 1"}</strong></span>
-                  <span>•</span>
+                  <span style={{ opacity: 0.4 }}>•</span>
                   <span>Area: <strong style={{ color: "var(--text-primary)" }}>{asset.department || "Packaging"}</strong></span>
-                  <span>•</span>
+                  <span style={{ opacity: 0.4 }}>•</span>
                   <span>Line: <strong style={{ color: "var(--text-primary)" }}>{asset.line || "Line 1"}</strong></span>
-                  <span>•</span>
+                  <span style={{ opacity: 0.4 }}>•</span>
                   <span>Location: <strong style={{ color: "var(--text-primary)" }}>{asset.location || "Bay 4A"}</strong></span>
                 </div>
               </div>
@@ -505,12 +532,12 @@ export function Asset360() {
           </div>
 
           {/* Common Top Header Actions */}
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-              <span style={{ fontSize: "11px", color: "var(--text-muted)", fontWeight: 600 }}>SET STATUS:</span>
+          <div className="asset-360-actions-row" style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap", width: "100%", justifyContent: "flex-start", marginTop: "6px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+              <span style={{ fontSize: "11px", color: "var(--text-muted)", fontWeight: 600, whiteSpace: "nowrap" }}>SET STATUS:</span>
               <select
                 className="form-select"
-                style={{ width: "auto", height: "36px", fontSize: "12px", border: "1px solid var(--border-active)" }}
+                style={{ width: "auto", minWidth: "160px", height: "34px", fontSize: "12px", border: "1px solid var(--border-active)" }}
                 value={asset.status}
                 onChange={(e) => handleStatusChange(e.target.value)}
               >
@@ -522,42 +549,44 @@ export function Asset360() {
               </select>
             </div>
 
-            <Button
-              variant="secondary"
-              size="sm"
-              icon={Edit}
-              onClick={() => {
-                setActiveTab("INFO");
-                setIsEditingInfo(true);
-              }}
-            >
-              Edit Asset
-            </Button>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+              <Button
+                variant="secondary"
+                size="sm"
+                icon={Edit}
+                onClick={() => {
+                  setActiveTab("INFO");
+                  setIsEditingInfo(true);
+                }}
+              >
+                Edit Asset
+              </Button>
 
-            <Button
-              variant="secondary"
-              size="sm"
-              icon={QrCode}
-              onClick={() =>
-                openQrModal(`Asset QR: ${asset.id}`, asset.id, {
-                  name: asset.name,
-                  line: asset.line,
-                  location: asset.location,
-                  status: asset.status
-                })
-              }
-            >
-              Asset QR
-            </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                icon={QrCode}
+                onClick={() =>
+                  openQrModal(`Asset QR: ${asset.id}`, asset.id, {
+                    name: asset.name,
+                    line: asset.line,
+                    location: asset.location,
+                    status: asset.status
+                  })
+                }
+              >
+                Asset QR
+              </Button>
 
-            <Button
-              variant="primary"
-              size="sm"
-              icon={Plus}
-              onClick={() => setIsQuickActionOpen(true)}
-            >
-              + Create WO
-            </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                icon={Plus}
+                onClick={() => setIsQuickActionOpen(true)}
+              >
+                + Create WO
+              </Button>
+            </div>
           </div>
         </div>
       </Card>
@@ -608,40 +637,275 @@ export function Asset360() {
       </div>
 
       {/* EXACT 5 TABS NAVIGATION */}
-      <Card style={{ padding: "0 16px" }}>
+      <Card style={{ padding: "0 clamp(8px, 2vw, 16px)", width: "100%", boxSizing: "border-box" }}>
         <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
       </Card>
 
       {/* ========================================================================= */}
-      {/* TAB 1: INFO                                                               */}
+      {/* SECTION: OVERVIEW                                                         */}
+      {/* ========================================================================= */}
+      {activeTab === "OVERVIEW" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+          {/* Real-time Sensor Telemetry Card */}
+          <Card>
+            <div className="asset-tab-card-header">
+              <div className="asset-tab-card-header-title">
+                <h3 style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                  <Activity size={18} style={{ color: "#10B981" }} /> Live Condition Telemetry & IoT Sensor Gauges
+                </h3>
+                <p>
+                  Continuous edge telemetry streaming from machine vibration transducers and thermal probes
+                </p>
+              </div>
+              <div className="asset-tab-card-header-actions">
+                <Badge variant="emerald" dot>LIVE TELEMETRY STREAM</Badge>
+              </div>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "12px" }}>
+              <div style={{ padding: "14px", borderRadius: "8px", backgroundColor: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)" }}>
+                <span style={{ fontSize: "11px", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 600 }}>Bearing Vibration</span>
+                <div style={{ fontSize: "20px", fontWeight: 800, color: (asset.vibration || 2.1) > 3.0 ? "#EF4444" : "#10B981", marginTop: "4px", fontFamily: "var(--font-mono)" }}>
+                  {asset.vibration || 2.1} mm/s
+                </div>
+                <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>ISO-10816 limit: &lt; 3.0 mm/s</span>
+              </div>
+
+              <div style={{ padding: "14px", borderRadius: "8px", backgroundColor: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)" }}>
+                <span style={{ fontSize: "11px", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 600 }}>Housing Temp</span>
+                <div style={{ fontSize: "20px", fontWeight: 800, color: (asset.temperature || 62.4) > 75 ? "#EF4444" : "#38BDF8", marginTop: "4px", fontFamily: "var(--font-mono)" }}>
+                  {asset.temperature || 62.4}°C
+                </div>
+                <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>Thermal ceiling: &lt; 80°C</span>
+              </div>
+
+              <div style={{ padding: "14px", borderRadius: "8px", backgroundColor: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)" }}>
+                <span style={{ fontSize: "11px", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 600 }}>Pneumatic Pressure</span>
+                <div style={{ fontSize: "20px", fontWeight: 800, color: "#F59E0B", marginTop: "4px", fontFamily: "var(--font-mono)" }}>
+                  {asset.pressure || 6.2} Bar
+                </div>
+                <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>Operating nominal: 6.0 ± 0.5 Bar</span>
+              </div>
+
+              <div style={{ padding: "14px", borderRadius: "8px", backgroundColor: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)" }}>
+                <span style={{ fontSize: "11px", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 600 }}>Lubrication Reservoir</span>
+                <div style={{ fontSize: "20px", fontWeight: 800, color: "#10B981", marginTop: "4px", fontFamily: "var(--font-mono)" }}>
+                  {asset.oilLevel || 88}%
+                </div>
+                <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>Synthetic food-grade grease</span>
+              </div>
+            </div>
+          </Card>
+
+          {/* Consolidated Section Navigation Cards */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "14px" }}>
+            <Card style={{ cursor: "pointer" }} onClick={() => setActiveTab("INFO")}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)" }}>Asset Information</span>
+                <Badge variant="cyan">{asset.id}</Badge>
+              </div>
+              <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "6px" }}>
+                OEM: {asset.manufacturer || "Standard OEM"} • Model: {asset.model || "Series-2026"} • {asset.line}
+              </div>
+              <div style={{ marginTop: "10px", fontSize: "12px", color: "var(--accent-blue)", fontWeight: 600 }}>
+                View Specifications →
+              </div>
+            </Card>
+
+            <Card style={{ cursor: "pointer" }} onClick={() => setActiveTab("STATUS")}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)" }}>Current Status</span>
+                <Badge variant={asset.status === "Operational" ? "emerald" : "rose"} dot>{asset.status}</Badge>
+              </div>
+              <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "6px" }}>
+                Runtime: {(asset.runtimeHours || 14820).toLocaleString()} hrs • Health: {asset.health}% • Speed: {asset.ratedSpeed || "600 RPM"}
+              </div>
+              <div style={{ marginTop: "10px", fontSize: "12px", color: "var(--accent-blue)", fontWeight: 600 }}>
+                View Status Details →
+              </div>
+            </Card>
+
+            <Card style={{ cursor: "pointer" }} onClick={() => setActiveTab("PM")}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)" }}>Preventive Maintenance</span>
+                <Badge variant="cyan">{linkedPMs.length} Schedules</Badge>
+              </div>
+              <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "6px" }}>
+                Next scheduled PM: {linkedPMs[0]?.dueDate || "Upcoming"} • Assigned: {linkedPMs[0]?.assignedTo || "Marcus Vance"}
+              </div>
+              <div style={{ marginTop: "10px", fontSize: "12px", color: "var(--accent-blue)", fontWeight: 600 }}>
+                Manage PM Schedules →
+              </div>
+            </Card>
+
+            <Card style={{ cursor: "pointer" }} onClick={() => setActiveTab("WORK_ORDERS")}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)" }}>Work Orders</span>
+                <Badge variant={openWOCount > 0 ? "amber" : "emerald"}>{openWOCount} Open</Badge>
+              </div>
+              <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "6px" }}>
+                {linkedWOs.length} total work orders on file • Labour: {totalLabourHours} hrs logged
+              </div>
+              <div style={{ marginTop: "10px", fontSize: "12px", color: "var(--accent-blue)", fontWeight: 600 }}>
+                View Work Orders →
+              </div>
+            </Card>
+
+            <Card style={{ cursor: "pointer" }} onClick={() => setActiveTab("BREAKDOWNS")}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)" }}>Breakdowns</span>
+                <Badge variant={activeBDCount > 0 ? "rose" : "emerald"}>{activeBDCount} Active</Badge>
+              </div>
+              <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "6px" }}>
+                Total Downtime: {totalDowntimeMins} mins • Failure Code: {linkedBDs[0]?.failureCode || "None"}
+              </div>
+              <div style={{ marginTop: "10px", fontSize: "12px", color: "var(--accent-blue)", fontWeight: 600 }}>
+                View Breakdown Stoppages →
+              </div>
+            </Card>
+
+            <Card style={{ cursor: "pointer" }} onClick={() => setActiveTab("HISTORY")}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)" }}>Maintenance History</span>
+                <Badge variant="cyan">{machineHistory.length} Events</Badge>
+              </div>
+              <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "6px" }}>
+                Chronological timeline of all PMs, repairs, parts changes and calibrations
+              </div>
+              <div style={{ marginTop: "10px", fontSize: "12px", color: "var(--accent-blue)", fontWeight: 600 }}>
+                View History Timeline →
+              </div>
+            </Card>
+
+            <Card style={{ cursor: "pointer" }} onClick={() => setActiveTab("RELIABILITY")}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)" }}>Reliability</span>
+                <Badge variant="cyan">{asset.mtbf || 342}h MTBF</Badge>
+              </div>
+              <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "6px" }}>
+                MTTR: {asset.mttr || 1.4}h • Repeat Outages: {asset.recentFailuresCount || linkedBDs.length}
+              </div>
+              <div style={{ marginTop: "10px", fontSize: "12px", color: "var(--accent-blue)", fontWeight: 600 }}>
+                Inspect Reliability Analytics →
+              </div>
+            </Card>
+
+            <Card style={{ cursor: "pointer" }} onClick={() => setActiveTab("TROUBLESHOOTING")}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)" }}>Troubleshooting</span>
+                <Badge variant="cyan">7-Step Diagnostics</Badge>
+              </div>
+              <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "6px" }}>
+                Diagnostic checks, verified repair procedures, and calibration certificates
+              </div>
+              <div style={{ marginTop: "10px", fontSize: "12px", color: "var(--accent-blue)", fontWeight: 600 }}>
+                Open Troubleshooting →
+              </div>
+            </Card>
+
+            <Card style={{ cursor: "pointer" }} onClick={() => setActiveTab("IMPACT")}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)" }}>Maintenance Impact</span>
+                <Badge variant="amber">Financial Tracking</Badge>
+              </div>
+              <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "6px" }}>
+                Connected Line: {asset.line} • Production Orders mapped: {productionOrders.length}
+              </div>
+              <div style={{ marginTop: "10px", fontSize: "12px", color: "var(--accent-blue)", fontWeight: 600 }}>
+                Analyze Cost & Production Loss →
+              </div>
+            </Card>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* SECTION: CURRENT STATUS                                                   */}
+      {/* ========================================================================= */}
+      {activeTab === "STATUS" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+          <Card>
+            <div className="asset-tab-card-header">
+              <div className="asset-tab-card-header-title">
+                <h3 style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                  <Gauge size={18} style={{ color: "#38BDF8" }} /> Live Operational Status & Equipment Health
+                </h3>
+                <p>Real-time machine runtime, attainment, and operational condition state</p>
+              </div>
+              <div className="asset-tab-card-header-actions">
+                <Badge variant={asset.status === "Operational" ? "emerald" : "rose"} dot>{asset.status}</Badge>
+              </div>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "12px" }}>
+              <div style={{ padding: "14px", borderRadius: "8px", backgroundColor: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)" }}>
+                <span style={{ fontSize: "11px", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 600 }}>Operational State</span>
+                <div style={{ fontSize: "18px", fontWeight: 800, color: asset.status === "Operational" ? "#10B981" : "#EF4444", marginTop: "4px" }}>
+                  {asset.status === "Operational" ? "RUNNING (Steady)" : asset.status === "Breakdown" ? "HALTED (Breakdown)" : asset.status}
+                </div>
+                <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>Condition monitoring active</span>
+              </div>
+
+              <div style={{ padding: "14px", borderRadius: "8px", backgroundColor: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)" }}>
+                <span style={{ fontSize: "11px", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 600 }}>Running Attainment</span>
+                <div style={{ fontSize: "18px", fontWeight: 800, color: "#10B981", marginTop: "4px", fontFamily: "var(--font-mono)" }}>
+                  98.4%
+                </div>
+                <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>Target 95.0%</span>
+              </div>
+
+              <div style={{ padding: "14px", borderRadius: "8px", backgroundColor: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)" }}>
+                <span style={{ fontSize: "11px", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 600 }}>Cumulative Runtime</span>
+                <div style={{ fontSize: "18px", fontWeight: 800, color: "var(--text-primary)", marginTop: "4px", fontFamily: "var(--font-mono)" }}>
+                  {(asset.runtimeHours || 14820).toLocaleString()} hrs
+                </div>
+                <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>Since initial commissioning</span>
+              </div>
+
+              <div style={{ padding: "14px", borderRadius: "8px", backgroundColor: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)" }}>
+                <span style={{ fontSize: "11px", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 600 }}>Design Speed</span>
+                <div style={{ fontSize: "18px", fontWeight: 800, color: "#38BDF8", marginTop: "4px", fontFamily: "var(--font-mono)" }}>
+                  {asset.ratedSpeed || "600 RPM"}
+                </div>
+                <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>Nameplate rated speed</span>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* SECTION: ASSET INFORMATION                                                */}
       {/* ========================================================================= */}
       {activeTab === "INFO" && (
         <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
           <Card>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-              <div>
-                <h3 style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-primary)" }}>
+            <div className="asset-tab-card-header">
+              <div className="asset-tab-card-header-title">
+                <h3>
                   Asset Master Identity & Technical Specifications
                 </h3>
-                <p style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
+                <p>
                   Core engineering data, plant hierarchy assignment and system metadata
                 </p>
               </div>
 
-              {!isEditingInfo ? (
-                <Button variant="secondary" size="sm" icon={Edit} onClick={() => setIsEditingInfo(true)}>
-                  Edit Information
-                </Button>
-              ) : (
-                <div style={{ display: "flex", gap: "8px" }}>
-                  <Button variant="secondary" size="sm" icon={X} onClick={() => setIsEditingInfo(false)}>
-                    Cancel
+              <div className="asset-tab-card-header-actions">
+                {!isEditingInfo ? (
+                  <Button variant="secondary" size="sm" icon={Edit} onClick={() => setIsEditingInfo(true)}>
+                    Edit Information
                   </Button>
-                  <Button variant="primary" size="sm" icon={Save} onClick={handleSaveInfo}>
-                    Save Changes
-                  </Button>
-                </div>
-              )}
+                ) : (
+                  <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                    <Button variant="secondary" size="sm" icon={X} onClick={() => setIsEditingInfo(false)}>
+                      Cancel
+                    </Button>
+                    <Button variant="primary" size="sm" icon={Save} onClick={handleSaveInfo}>
+                      Save Changes
+                    </Button>
+                  </div>
+                )}
+              </div>
             </div>
 
             {isEditingInfo ? (
@@ -994,23 +1258,23 @@ export function Asset360() {
       )}
 
       {/* ========================================================================= */}
-      {/* TAB 2: PRODUCTION                                                         */}
+      {/* SECTION: MAINTENANCE IMPACT & PRODUCTION                                  */}
       {/* ========================================================================= */}
-      {activeTab === "PRODUCTION" && (
+      {(activeTab === "IMPACT" || activeTab === "PRODUCTION") && (
         <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
           {/* Production Assignment Card */}
           <Card>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-              <div>
-                <h3 style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-primary)" }}>
+            <div className="asset-tab-card-header">
+              <div className="asset-tab-card-header-title">
+                <h3>
                   Production Line Assignment & Work Center
                 </h3>
-                <p style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
+                <p>
                   Manufacturing schedule linkage, routing capabilities, and eligible lines
                 </p>
               </div>
 
-              <div style={{ display: "flex", gap: "8px" }}>
+              <div className="asset-tab-card-header-actions">
                 <Button variant="secondary" size="sm" icon={Edit} onClick={() => setIsEditProdModalOpen(true)}>
                   Edit Assignment
                 </Button>
@@ -1081,13 +1345,17 @@ export function Asset360() {
           {/* Current Production Status & Active Orders */}
           <div className="grid-2">
             <Card>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
-                <h3 style={{ fontSize: "15px", fontWeight: 700, color: "var(--text-primary)" }}>
-                  Current Shift & Production Order
-                </h3>
-                <Badge variant={activeProdOrder?.status === "In Progress" ? "emerald" : "blue"}>
-                  {activeProdOrder?.status || "In Progress"}
-                </Badge>
+              <div className="asset-tab-card-header">
+                <div className="asset-tab-card-header-title">
+                  <h3 style={{ fontSize: "15px" }}>
+                    Current Shift & Production Order
+                  </h3>
+                </div>
+                <div className="asset-tab-card-header-actions">
+                  <Badge variant={activeProdOrder?.status === "In Progress" ? "emerald" : "blue"}>
+                    {activeProdOrder?.status || "In Progress"}
+                  </Badge>
+                </div>
               </div>
 
               {activeProdOrder ? (
@@ -1125,7 +1393,7 @@ export function Asset360() {
                 Live Production Metrics & Telemetry
               </h3>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "12px" }}>
                 <div style={{ padding: "14px", borderRadius: "8px", backgroundColor: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)" }}>
                   <div style={{ fontSize: "11px", color: "var(--text-muted)", fontWeight: 700, textTransform: "uppercase" }}>Current Speed</div>
                   <div style={{ fontSize: "20px", fontWeight: 800, fontFamily: "var(--font-mono)", color: asset.status === "Breakdown" || asset.status === "DOWN" ? "#EF4444" : "#10B981", marginTop: "4px" }}>
@@ -1163,9 +1431,9 @@ export function Asset360() {
       )}
 
       {/* ========================================================================= */}
-      {/* TAB 3: MAINTENANCE                                                        */}
+      {/* SECTION: MAINTENANCE (PM, WORK ORDERS, HISTORY, TROUBLESHOOTING)          */}
       {/* ========================================================================= */}
-      {activeTab === "MAINTENANCE" && (
+      {(activeTab === "PM" || activeTab === "WORK_ORDERS" || activeTab === "HISTORY" || activeTab === "TROUBLESHOOTING" || activeTab === "MAINTENANCE") && (
         <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
           {/* Maintenance Health Bar */}
           <div className="grid-4">
@@ -1231,17 +1499,17 @@ export function Asset360() {
 
           {/* 1. Preventive Maintenance Schedules */}
           <Card>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-              <div>
-                <h3 style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-primary)" }}>
+            <div className="asset-tab-card-header">
+              <div className="asset-tab-card-header-title">
+                <h3>
                   Preventive Maintenance (PM) Schedules
                 </h3>
-                <p style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
+                <p>
                   Recurring inspections, scheduled lubrications, and calibration checklists
                 </p>
               </div>
 
-              <div style={{ display: "flex", gap: "8px" }}>
+              <div className="asset-tab-card-header-actions">
                 <Button variant="secondary" size="sm" onClick={() => navigate("/maintenance/pm-schedules")}>
                   View All PM Schedules
                 </Button>
@@ -1268,9 +1536,9 @@ export function Asset360() {
                       gap: "12px"
                     }}
                   >
-                    <div>
-                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                        <span style={{ fontFamily: "var(--font-mono)", fontSize: "12px", fontWeight: 700, color: "var(--accent-blue)" }}>
+                    <div style={{ flex: "1 1 240px", minWidth: 0, width: "100%" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap", marginBottom: "4px" }}>
+                        <span style={{ fontFamily: "var(--font-mono)", fontSize: "12px", fontWeight: 700, color: "var(--accent-blue)", whiteSpace: "nowrap", flexShrink: 0 }}>
                           {pm.id}
                         </span>
                         <Badge variant="cyan">{pm.frequency || "Monthly"}</Badge>
@@ -1306,17 +1574,17 @@ export function Asset360() {
 
           {/* 2. Work Orders */}
           <Card>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-              <div>
-                <h3 style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-primary)" }}>
+            <div className="asset-tab-card-header">
+              <div className="asset-tab-card-header-title">
+                <h3>
                   Work Orders ({linkedWOs.length})
                 </h3>
-                <p style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
+                <p>
                   Corrective repairs, emergency interventions, and planned servicing records
                 </p>
               </div>
 
-              <div style={{ display: "flex", gap: "8px" }}>
+              <div className="asset-tab-card-header-actions">
                 <Button variant="secondary" size="sm" onClick={() => navigate("/maintenance/work-orders")}>
                   View All Work Orders
                 </Button>
@@ -1345,9 +1613,9 @@ export function Asset360() {
                       gap: "12px"
                     }}
                   >
-                    <div>
-                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                        <span style={{ fontFamily: "var(--font-mono)", fontSize: "12px", fontWeight: 700, color: "var(--accent-blue)" }}>
+                    <div style={{ flex: "1 1 240px", minWidth: 0, width: "100%" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap", marginBottom: "4px" }}>
+                        <span style={{ fontFamily: "var(--font-mono)", fontSize: "12px", fontWeight: 700, color: "var(--accent-blue)", whiteSpace: "nowrap", flexShrink: 0 }}>
                           {wo.id}
                         </span>
                         <Badge variant={wo.priority?.includes("P1") ? "rose" : wo.priority?.includes("P2") ? "amber" : "cyan"}>
@@ -1381,17 +1649,17 @@ export function Asset360() {
 
           {/* 3. Spare Parts & Consumables */}
           <Card>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-              <div>
-                <h3 style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-primary)" }}>
+            <div className="asset-tab-card-header">
+              <div className="asset-tab-card-header-title">
+                <h3>
                   Linked Spare Parts & Consumables
                 </h3>
-                <p style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
+                <p>
                   Bill of Materials (BOM) components assigned to {asset.id}
                 </p>
               </div>
 
-              <div style={{ display: "flex", gap: "8px" }}>
+              <div className="asset-tab-card-header-actions">
                 <Button variant="secondary" size="sm" onClick={() => navigate("/maintenance/spare-parts")}>
                   View Spare Parts Inventory
                 </Button>
@@ -1419,7 +1687,7 @@ export function Asset360() {
                     {linkedParts.map((p) => (
                       <tr key={p.partNo}>
                         <td style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "#38BDF8" }}>{p.partNo}</td>
-                        <td style={{ fontWeight: 600, color: "#FFFFFF" }}>{p.name}</td>
+                        <td style={{ fontWeight: 600, color: "var(--text-primary, #2B1D11)" }}>{p.name}</td>
                         <td>{p.category}</td>
                         <td style={{ fontFamily: "var(--font-mono)", fontWeight: 700 }}>{p.stock} units</td>
                         <td>${p.unitCost?.toFixed(2) || "120.00"}</td>
@@ -1443,17 +1711,17 @@ export function Asset360() {
 
           {/* 4. Calibration & Metrology */}
           <Card>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-              <div>
-                <h3 style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-primary)" }}>
+            <div className="asset-tab-card-header">
+              <div className="asset-tab-card-header-title">
+                <h3>
                   Instrumentation & Calibration Records
                 </h3>
-                <p style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
+                <p>
                   Metrology compliance, sensor verification, and NIST certificates
                 </p>
               </div>
 
-              <div style={{ display: "flex", gap: "8px" }}>
+              <div className="asset-tab-card-header-actions">
                 <Button variant="secondary" size="sm" onClick={() => navigate("/maintenance/calibration")}>
                   View Calibration Center
                 </Button>
@@ -1475,16 +1743,18 @@ export function Asset360() {
                       border: "1px solid var(--border-subtle)",
                       display: "flex",
                       justifyContent: "space-between",
-                      alignItems: "center"
+                      alignItems: "center",
+                      flexWrap: "wrap",
+                      gap: "10px"
                     }}
                   >
-                    <div>
-                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                        <span style={{ fontFamily: "var(--font-mono)", fontSize: "12px", fontWeight: 700, color: "#10B981" }}>
+                    <div style={{ flex: "1 1 240px", minWidth: 0, width: "100%" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap", marginBottom: "4px" }}>
+                        <span style={{ fontFamily: "var(--font-mono)", fontSize: "12px", fontWeight: 700, color: "#10B981", whiteSpace: "nowrap", flexShrink: 0 }}>
                           {cal.id}
                         </span>
                         <Badge variant={cal.status === "Valid" ? "emerald" : "rose"}>{cal.status || "Valid"}</Badge>
-                        <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>Cert: {cal.certificate || cal.certificateNumber || "CERT-99201"}</span>
+                        <span style={{ fontSize: "11px", color: "var(--text-muted)", whiteSpace: "nowrap" }}>Cert: {cal.certificate || cal.certificateNumber || "CERT-99201"}</span>
                       </div>
                       <div style={{ fontSize: "14px", fontWeight: 700, color: "var(--text-primary)", marginTop: "4px" }}>
                         {cal.name || cal.instrumentName || "Volumetric Flow Sensor"}
@@ -1494,7 +1764,7 @@ export function Asset360() {
                       </div>
                     </div>
 
-                    <div style={{ textAlign: "right" }}>
+                    <div style={{ textAlign: "right", flexShrink: 0 }}>
                       <span style={{ fontSize: "12px", color: "#34D399", fontWeight: 700 }}>
                         {cal.result || "PASS - Within Tolerance"}
                       </span>
@@ -1546,16 +1816,18 @@ export function Asset360() {
 
           {/* 6. Machine History Timeline */}
           <Card>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-              <div>
-                <h3 style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-primary)" }}>
+            <div className="asset-tab-card-header">
+              <div className="asset-tab-card-header-title">
+                <h3>
                   Machine Life-Cycle History Timeline
                 </h3>
-                <p style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
+                <p>
                   Unified chronological trail of Work Orders, Breakdowns, PMs, and Parts
                 </p>
               </div>
-              <Badge variant="cyan">{machineHistory.length} Total Events</Badge>
+              <div className="asset-tab-card-header-actions">
+                <Badge variant="cyan">{machineHistory.length} Total Events</Badge>
+              </div>
             </div>
 
             {machineHistory.length > 0 ? (
@@ -1565,12 +1837,13 @@ export function Asset360() {
                     key={idx}
                     style={{
                       display: "flex",
-                      gap: "16px",
-                      padding: "12px 16px",
+                      gap: "14px",
+                      padding: "12px 14px",
                       borderRadius: "8px",
                       backgroundColor: "var(--bg-card-subtle)",
                       border: "1px solid var(--border-subtle)",
-                      alignItems: "flex-start"
+                      alignItems: "flex-start",
+                      flexWrap: "wrap"
                     }}
                   >
                     <div
@@ -1594,9 +1867,9 @@ export function Asset360() {
                       {item.type === "Breakdown" ? <AlertTriangle size={18} /> : item.type === "Preventive Maintenance" ? <Clock size={18} /> : <Wrench size={18} />}
                     </div>
 
-                    <div style={{ flex: 1 }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <div style={{ flex: "1 1 240px", minWidth: 0 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "6px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
                           <Badge variant={item.badgeVariant}>{item.type}</Badge>
                           <span style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)" }}>{item.title}</span>
                         </div>
@@ -1617,9 +1890,9 @@ export function Asset360() {
       )}
 
       {/* ========================================================================= */}
-      {/* TAB 4: DOWNTIME                                                           */}
+      {/* SECTION: BREAKDOWNS & RELIABILITY                                         */}
       {/* ========================================================================= */}
-      {activeTab === "DOWNTIME" && (
+      {(activeTab === "BREAKDOWNS" || activeTab === "RELIABILITY" || activeTab === "DOWNTIME") && (
         <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
           {/* Downtime & Reliability Tickers */}
           <div className="grid-4">
@@ -1688,19 +1961,21 @@ export function Asset360() {
 
           {/* Downtime History Table */}
           <Card>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-              <div>
-                <h3 style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-primary)" }}>
+            <div className="asset-tab-card-header">
+              <div className="asset-tab-card-header-title">
+                <h3>
                   Historical Stoppages & Breakdown Events
                 </h3>
-                <p style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
+                <p>
                   Root causes, downtime duration, and corrective work order mapping for {asset.id}
                 </p>
               </div>
 
-              <Button variant="secondary" size="sm" onClick={() => navigate("/maintenance/breakdowns")}>
-                View All Breakdowns
-              </Button>
+              <div className="asset-tab-card-header-actions">
+                <Button variant="secondary" size="sm" onClick={() => navigate("/maintenance/breakdowns")}>
+                  View All Breakdowns
+                </Button>
+              </div>
             </div>
 
             {linkedBDs.length > 0 ? (
@@ -1820,22 +2095,22 @@ export function Asset360() {
       )}
 
       {/* ========================================================================= */}
-      {/* TAB 5: AUDIT                                                              */}
+      {/* SECTION: AUDIT TRAIL & HISTORY LOGS                                       */}
       {/* ========================================================================= */}
-      {activeTab === "AUDIT" && (
+      {(activeTab === "HISTORY" || activeTab === "AUDIT") && (
         <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
           <Card>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "12px" }}>
-              <div>
-                <h3 style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-primary)" }}>
+            <div className="asset-tab-card-header">
+              <div className="asset-tab-card-header-title">
+                <h3>
                   Centralized Audit Trail for {asset.id}
                 </h3>
-                <p style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
+                <p>
                   21 CFR Part 11 compliant audit records capturing status changes, work orders, PMs, and field edits
                 </p>
               </div>
 
-              <div style={{ display: "flex", gap: "8px" }}>
+              <div className="asset-tab-card-header-actions">
                 <Button
                   variant="secondary"
                   size="sm"

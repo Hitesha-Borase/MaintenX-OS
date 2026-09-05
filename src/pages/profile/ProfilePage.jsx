@@ -27,8 +27,8 @@ export function ProfilePage() {
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [formData, setFormData] = useState({
-    name: userProfile?.name || "Marcus Vance",
-    email: userProfile?.email || "m.vance@flowstate.ind",
+    name: userProfile?.name || "Alexander Vance",
+    email: userProfile?.email || "a.vance@maintenx.ind",
     phone: userProfile?.phone || "+1 (555) 392-8819",
     role: userProfile?.role || "Senior Reliability Technician & Maintenance Lead",
     plant: userProfile?.plant || "Plant 1 - North Facility",
@@ -44,7 +44,7 @@ export function ProfilePage() {
   };
 
   const assignedWOs = workOrders.filter(
-    (w) => w.assignedTechnician?.toLowerCase().includes("marcus") || w.assignedTechnician?.toLowerCase().includes("current")
+    (w) => w.assignedTechnician?.toLowerCase().includes("marcus") || w.assignedTechnician?.toLowerCase().includes("alexander") || w.assignedTechnician?.toLowerCase().includes("current")
   );
 
   return (
@@ -78,26 +78,26 @@ export function ProfilePage() {
               width: "72px",
               height: "72px",
               borderRadius: "50%",
-              backgroundColor: "#0284C7",
+              background: "linear-gradient(135deg, #E2B670 0%, #C89547 100%)",
+              color: "#261603",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               fontSize: "24px",
-              fontWeight: 800,
-              color: "#FFFFFF",
-              boxShadow: "0 0 20px rgba(2, 132, 199, 0.4)",
+              fontWeight: 900,
+              boxShadow: "0 4px 14px rgba(178, 126, 51, 0.35)",
               flexShrink: 0
             }}
           >
-            {userProfile?.avatar || "MV"}
+            {userProfile?.avatar || "AV"}
           </div>
 
           <div style={{ flex: 1, minWidth: "260px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-              <h2 style={{ fontSize: "20px", fontWeight: 800, color: "#FFFFFF" }}>
-                {userProfile?.name || "Marcus Vance"}
+              <h2 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary, #2B1D11)" }}>
+                {userProfile?.name || "Alexander Vance"}
               </h2>
-              <Badge variant="cyan">{userProfile?.role}</Badge>
+              <Badge variant="amber">{userProfile?.role}</Badge>
             </div>
 
             <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px", maxWidth: "680px" }}>
@@ -177,7 +177,7 @@ export function ProfilePage() {
                 }}
               >
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: "13px", color: "#FFFFFF" }}>{c.title}</div>
+                  <div style={{ fontWeight: 700, fontSize: "13px", color: "var(--text-primary, #2B1D11)" }}>{c.title}</div>
                   <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>
                     Issuer: {c.issuer} • Validated Year: {c.year}
                   </div>

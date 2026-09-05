@@ -1,14 +1,14 @@
 // Default Maintenance User Profile
 export const DEFAULT_USER_PROFILE = {
   id: "EMP-102",
-  name: "Marcus Vance",
-  email: "m.vance@flowstate.ind",
+  name: "Alexander Vance",
+  email: "a.vance@maintenx.ind",
   phone: "+1 (555) 392-8819",
   role: "Senior Reliability Technician & Maintenance Lead",
   department: "Plant Maintenance & Engineering",
   plant: "Plant 1 - North Facility",
   shift: "Shift A (06:00 - 14:30)",
-  avatar: "MV",
+  avatar: "AV",
   bio: "Senior Maintenance Specialist with 12+ years experience in rotary packaging machinery, condition monitoring, hydraulic loops, and predictive maintenance.",
   joinedDate: "March 2018",
   certifications: [

@@ -13,7 +13,9 @@ import {
   Factory,
   ArrowRight,
   TrendingUp,
-  AlertCircle
+  AlertCircle,
+  Eye,
+  ShieldCheck
 } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { Badge } from "../../components/common/Badge";
@@ -30,6 +32,8 @@ export function ProductionOrdersPage() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [selectedOrderDetails, setSelectedOrderDetails] = useState(null);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   // Create Order Modal
   const defaultSku = skus.find((s) => s.category === "Finished Goods") || skus[0] || { skuCode: "SKU-5001", name: "500ml Sparkling Citrus Soda", uom: "Bottles" };
@@ -292,44 +296,96 @@ export function ProductionOrdersPage() {
                         </div>
                       </td>
                       <td>
-                        <Badge variant={isRunning ? "emerald" : isCompleted ? "cyan" : "amber"}>
-                          {o.status || "Queued"}
+                        <Badge
+                          variant={
+                            (o.status || "").toLowerCase().includes("run") || o.status === "In Progress"
+                              ? "emerald"
+                              : o.status === "Completed" || o.status === "Released"
+                              ? "cyan"
+                              : o.status === "QA Pending"
+                              ? "purple"
+                              : o.status === "Scheduled"
+                              ? "blue"
+                              : o.status === "Planned"
+                              ? "slate"
+                              : "amber"
+                          }
+                        >
+                          {o.status || "Planned"}
                         </Badge>
                       </td>
                       <td>
-                        <div style={{ display: "flex", gap: "6px" }}>
-                          {isRunning ? (
+                        <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                          <button
+                            onClick={() => setSelectedOrderDetails(o)}
+                            title="View Full Production Order Details"
+                            style={{
+                              padding: "4px 8px",
+                              borderRadius: "6px",
+                              fontSize: "11px",
+                              fontWeight: 700,
+                              backgroundColor: "var(--bg-card-subtle)",
+                              color: "var(--text-primary)",
+                              border: "1px solid var(--border-subtle)",
+                              cursor: "pointer",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "4px"
+                            }}
+                          >
+                            <Eye size={12} /> Details
+                          </button>
+
+                          {o.status === "Planned" && (
                             <button
                               onClick={() => {
-                                updateOrderStatus(o.id, "Completed");
-                                addToast(`Order ${o.id} marked Completed!`, "success");
+                                updateOrderStatus(o.id, "Scheduled");
+                                addToast(`Order ${o.id} scheduled for line setup!`, "info");
                               }}
                               style={{
-                                padding: "4px 10px",
+                                padding: "4px 8px",
                                 borderRadius: "6px",
                                 fontSize: "11px",
                                 fontWeight: 700,
-                                backgroundColor: "rgba(5, 150, 105, 0.1)",
-                                color: "#059669",
-                                border: "1px solid rgba(5, 150, 105, 0.3)",
-                                cursor: "pointer",
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: "4px"
+                                backgroundColor: "rgba(59, 130, 246, 0.1)",
+                                color: "#2563EB",
+                                border: "1px solid rgba(59, 130, 246, 0.3)",
+                                cursor: "pointer"
                               }}
                             >
-                              <CheckCircle2 size={12} /> Finish
+                              Schedule
                             </button>
-                          ) : isCompleted ? (
-                            <span style={{ fontSize: "11px", color: "#059669", fontWeight: 700 }}>● Closed</span>
-                          ) : (
+                          )}
+
+                          {o.status === "Scheduled" && (
+                            <button
+                              onClick={() => {
+                                updateOrderStatus(o.id, "Released");
+                                addToast(`Order ${o.id} released to shop floor!`, "info");
+                              }}
+                              style={{
+                                padding: "4px 8px",
+                                borderRadius: "6px",
+                                fontSize: "11px",
+                                fontWeight: 700,
+                                backgroundColor: "rgba(139, 92, 246, 0.1)",
+                                color: "#7C3AED",
+                                border: "1px solid rgba(139, 92, 246, 0.3)",
+                                cursor: "pointer"
+                              }}
+                            >
+                              Release
+                            </button>
+                          )}
+
+                          {(o.status === "Released" || o.status === "Paused" || o.status === "Queued") && (
                             <button
                               onClick={() => {
                                 updateOrderStatus(o.id, "Running");
                                 addToast(`Order ${o.id} is now Running on ${o.line}!`, "success");
                               }}
                               style={{
-                                padding: "4px 10px",
+                                padding: "4px 8px",
                                 borderRadius: "6px",
                                 fontSize: "11px",
                                 fontWeight: 700,
@@ -344,6 +400,38 @@ export function ProductionOrdersPage() {
                             >
                               <Play size={12} /> Start
                             </button>
+                          )}
+
+                          {isRunning && (
+                            <button
+                              onClick={() => {
+                                updateOrderStatus(o.id, "QA Pending");
+                                addToast(`Order ${o.id} marked Complete ➔ Transferred to QA Pending Queue!`, "success");
+                              }}
+                              style={{
+                                padding: "4px 8px",
+                                borderRadius: "6px",
+                                fontSize: "11px",
+                                fontWeight: 700,
+                                backgroundColor: "rgba(5, 150, 105, 0.1)",
+                                color: "#059669",
+                                border: "1px solid rgba(5, 150, 105, 0.3)",
+                                cursor: "pointer",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "4px"
+                              }}
+                            >
+                              <CheckCircle2 size={12} /> Finish ➔ QA
+                            </button>
+                          )}
+
+                          {o.status === "QA Pending" && (
+                            <span style={{ fontSize: "11px", color: "#8B5CF6", fontWeight: 700 }}>● QA Reviewing</span>
+                          )}
+
+                          {isCompleted && (
+                            <span style={{ fontSize: "11px", color: "#059669", fontWeight: 700 }}>● Released</span>
                           )}
                         </div>
                       </td>
@@ -450,6 +538,116 @@ export function ProductionOrdersPage() {
                 </Button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* PRODUCTION ORDER DETAILS MODAL */}
+      {selectedOrderDetails && (
+        <div className="modal-backdrop" onClick={() => setSelectedOrderDetails(null)}>
+          <div className="modal-content" style={{ maxWidth: "620px", margin: "16px", maxHeight: "90vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Layers size={18} color="#B27E33" />
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                  Production Order Details — {selectedOrderDetails.id}
+                </h2>
+              </div>
+              <button onClick={() => setSelectedOrderDetails(null)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
+              {/* Order Status Ribbon */}
+              <div style={{ padding: "12px 16px", borderRadius: "10px", backgroundColor: "rgba(200, 149, 71, 0.08)", border: "1px solid #C89547", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
+                <div>
+                  <span style={{ fontSize: "11px", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 700 }}>Current Workflow Status</span>
+                  <div style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)" }}>{selectedOrderDetails.status || "Planned"}</div>
+                </div>
+                <Badge variant={selectedOrderDetails.status === "Running" ? "emerald" : "cyan"}>
+                  Shift: {selectedOrderDetails.activeShift || "Shift A"}
+                </Badge>
+              </div>
+
+              {/* Attributes Grid */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", fontSize: "13px" }}>
+                <div>
+                  <span style={{ color: "var(--text-muted)", fontSize: "11px", display: "block" }}>Master Product SKU</span>
+                  <strong style={{ color: "var(--text-primary)" }}>{getName(selectedOrderDetails)}</strong>
+                  <div style={{ fontSize: "11px", color: "#8C5B23", fontFamily: "var(--font-mono)", fontWeight: 700 }}>{getCode(selectedOrderDetails)}</div>
+                </div>
+                <div>
+                  <span style={{ color: "var(--text-muted)", fontSize: "11px", display: "block" }}>Target Production Line</span>
+                  <strong style={{ color: "var(--text-primary)" }}>{selectedOrderDetails.line}</strong>
+                  <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>{selectedOrderDetails.plant || "Indore Facility"}</div>
+                </div>
+                <div>
+                  <span style={{ color: "var(--text-muted)", fontSize: "11px", display: "block" }}>Planned Output Quantity</span>
+                  <strong style={{ color: "var(--text-primary)", fontFamily: "var(--font-mono)" }}>{getTarget(selectedOrderDetails).toLocaleString()} {selectedOrderDetails.unit || "Units"}</strong>
+                </div>
+                <div>
+                  <span style={{ color: "var(--text-muted)", fontSize: "11px", display: "block" }}>Actual Count Produced</span>
+                  <strong style={{ color: "#059669", fontFamily: "var(--font-mono)" }}>{getProduced(selectedOrderDetails).toLocaleString()} {selectedOrderDetails.unit || "Units"}</strong>
+                </div>
+                <div>
+                  <span style={{ color: "var(--text-muted)", fontSize: "11px", display: "block" }}>Active Batch Reference</span>
+                  <strong style={{ color: "#8C5B23", fontFamily: "var(--font-mono)" }}>{selectedOrderDetails.activeBatchId || `BAT-2026-${selectedOrderDetails.id.replace("PO-2026-", "")}`}</strong>
+                </div>
+                <div>
+                  <span style={{ color: "var(--text-muted)", fontSize: "11px", display: "block" }}>Line Speed & OEE</span>
+                  <strong>{selectedOrderDetails.currentSpeedBPM || 560} BPM (OEE: {selectedOrderDetails.currentOEE || 85.0}%)</strong>
+                </div>
+              </div>
+
+              {/* Material & Quality Readiness Card */}
+              <div style={{ padding: "12px", backgroundColor: "var(--bg-card-subtle)", borderRadius: "8px", border: "1px solid var(--border-subtle)" }}>
+                <div style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-primary)", marginBottom: "6px" }}>Readiness & Traceability Linkage</div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", fontSize: "11px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "#059669" }}>
+                    <ShieldCheck size={14} /> Material Lots Verified & Staged
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "#059669" }}>
+                    <CheckCircle2 size={14} /> CIP Line Sanitation Clear
+                  </div>
+                </div>
+              </div>
+
+              {/* Status Flow Buttons */}
+              <div style={{ borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
+                <span style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", display: "block", marginBottom: "8px" }}>Workflow State Transitions:</span>
+                <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                  {["Planned", "Scheduled", "Released", "Running", "QA Pending", "Completed"].map((st) => (
+                    <button
+                      key={st}
+                      onClick={() => {
+                        updateOrderStatus(selectedOrderDetails.id, st);
+                        setSelectedOrderDetails({ ...selectedOrderDetails, status: st });
+                        addToast(`Order ${selectedOrderDetails.id} transitioned to ${st}!`, "success");
+                      }}
+                      style={{
+                        padding: "6px 12px",
+                        borderRadius: "6px",
+                        fontSize: "11px",
+                        fontWeight: 700,
+                        backgroundColor: selectedOrderDetails.status === st ? "#C89547" : "var(--bg-card-subtle)",
+                        color: selectedOrderDetails.status === st ? "#261603" : "var(--text-secondary)",
+                        border: selectedOrderDetails.status === st ? "1px solid #E8C182" : "1px solid var(--border-subtle)",
+                        cursor: "pointer"
+                      }}
+                    >
+                      {st}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
+                <Button variant="secondary" onClick={() => setSelectedOrderDetails(null)}>
+                  Close
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       )}

@@ -3,14 +3,17 @@ import React from "react";
 export function Tabs({ tabs, activeTab, onChange, className = "" }) {
   return (
     <div
-      className={className}
+      className={`tabs-nav-container ${className}`}
       style={{
         display: "flex",
         alignItems: "center",
         gap: "4px",
         borderBottom: "1px solid var(--border-subtle)",
         overflowX: "auto",
-        paddingBottom: "1px"
+        WebkitOverflowScrolling: "touch",
+        paddingBottom: "1px",
+        scrollbarWidth: "none",
+        msOverflowStyle: "none"
       }}
     >
       {tabs.map((tab) => {

@@ -601,6 +601,35 @@ export function CMMSProvider({ children }) {
     );
   };
 
+  const updateBreakdown = (breakdownId, updatedFields) => {
+    setBreakdowns((prev) =>
+      prev.map((bd) => (bd.id === breakdownId ? { ...bd, ...updatedFields } : bd))
+    );
+  };
+
+  const updateBreakdownStatus = (breakdownId, newStatus, notes = "") => {
+    setBreakdowns((prev) =>
+      prev.map((bd) => {
+        if (bd.id === breakdownId) {
+          const updated = { ...bd, status: newStatus };
+          if (newStatus === "Resolved" || newStatus === "Closed") {
+            if (bd.assetId) {
+              updateAssetStatus(bd.assetId, "Operational", +25);
+            }
+            if (!bd.endTime) {
+              updated.endTime = new Date().toISOString().replace("T", " ").substring(0, 16);
+            }
+          }
+          if (notes) {
+            updated.resolution = notes;
+          }
+          return updated;
+        }
+        return bd;
+      })
+    );
+  };
+
   // Spare Parts Actions
   const addSparePart = (newPart) => {
     const partWithMeta = {
@@ -853,6 +882,8 @@ export function CMMSProvider({ children }) {
         setBreakdowns,
         reportBreakdown,
         resolveBreakdown,
+        updateBreakdown,
+        updateBreakdownStatus,
 
         // Spare Parts & BOM & Requests
         spareParts,

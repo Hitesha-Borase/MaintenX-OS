@@ -241,14 +241,42 @@ export function Traceability() {
   const [isLockEnforced, setIsLockEnforced] = useState(false);
   const [quarantineReason, setQuarantineReason] = useState("Supplier Cold-Chain Excursion");
 
+  // Client required action modals: Production Order, Location, Shipment
+  const [isProdOrderModalOpen, setIsProdOrderModalOpen] = useState(false);
+  const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
+  const [isShipmentModalOpen, setIsShipmentModalOpen] = useState(false);
+
   const handleSearch = (e) => {
     e && e.preventDefault();
     const cleanKey = lotInput.trim().toUpperCase();
 
+    // 1. Direct or partial match on Lot Number
     let found = TRACE_DATABASE[cleanKey];
     if (!found) {
       const match = Object.keys(TRACE_DATABASE).find(k => k.includes(cleanKey) || cleanKey.includes(k));
       if (match) found = TRACE_DATABASE[match];
+    }
+
+    // 2. Search by Batch, SKU, Supplier, or Finished Lot inside TRACE_DATABASE
+    if (!found) {
+      for (const item of Object.values(TRACE_DATABASE)) {
+        if (item.supplier && item.supplier.toUpperCase().includes(cleanKey)) {
+          found = item;
+          break;
+        }
+        if (item.materialCode && item.materialCode.toUpperCase().includes(cleanKey)) {
+          found = item;
+          break;
+        }
+        if (item.batches && item.batches.some(b => 
+          b.batchId.toUpperCase().includes(cleanKey) || 
+          b.sku.toUpperCase().includes(cleanKey) || 
+          (b.finishedLot && b.finishedLot.toUpperCase().includes(cleanKey))
+        )) {
+          found = item;
+          break;
+        }
+      }
     }
 
     if (found) {
@@ -695,6 +723,69 @@ export function Traceability() {
                 </div>
                 <div style={{ fontSize: "11px", color: "#8C7B6E" }}>Location: {currentTrace.currentLocation}</div>
               </div>
+            </div>
+
+            {/* Quick Trace Actions Bar */}
+            <div style={{ display: "flex", gap: "10px", marginTop: "16px", paddingTop: "14px", borderTop: "1px solid var(--border-subtle, #E8DDCF)", flexWrap: "wrap" }}>
+              <button
+                type="button"
+                onClick={() => setIsProdOrderModalOpen(true)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  padding: "7px 14px",
+                  borderRadius: "8px",
+                  backgroundColor: "#F6F3EE",
+                  border: "1px solid #E8DDCF",
+                  fontSize: "12px",
+                  fontWeight: 700,
+                  color: "#261603",
+                  cursor: "pointer"
+                }}
+              >
+                <Factory size={14} color="#B27E33" /> View Production Order
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsLocationModalOpen(true)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  padding: "7px 14px",
+                  borderRadius: "8px",
+                  backgroundColor: "#F6F3EE",
+                  border: "1px solid #E8DDCF",
+                  fontSize: "12px",
+                  fontWeight: 700,
+                  color: "#261603",
+                  cursor: "pointer"
+                }}
+              >
+                <MapPin size={14} color="#0284C7" /> View Warehouse Location
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsShipmentModalOpen(true)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  padding: "7px 14px",
+                  borderRadius: "8px",
+                  backgroundColor: "#F6F3EE",
+                  border: "1px solid #E8DDCF",
+                  fontSize: "12px",
+                  fontWeight: 700,
+                  color: "#261603",
+                  cursor: "pointer"
+                }}
+              >
+                <Truck size={14} color="#10B981" /> View Shipment Manifest
+              </button>
             </div>
           </div>
 
@@ -1197,6 +1288,202 @@ export function Traceability() {
               >
                 <Lock size={15} /> Confirm WMS Lockout
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* VIEW PRODUCTION ORDER MODAL */}
+      {isProdOrderModalOpen && (
+        <div className="modal-backdrop" onClick={() => setIsProdOrderModalOpen(false)}>
+          <div className="modal-content" style={{ maxWidth: "560px", margin: "16px", borderRadius: "14px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Factory size={18} color="#B27E33" />
+                <div>
+                  <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                    Linked Production Order: {currentTrace.productionOrders?.[0] || "PO-OR-8821"}
+                  </h2>
+                  <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+                    Batch Execution: {currentTrace.batches?.[0]?.batchId || "BAT-2026-0885"}
+                  </span>
+                </div>
+              </div>
+              <button onClick={() => setIsProdOrderModalOpen(false)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "12px", padding: "12px", borderRadius: "8px", backgroundColor: "var(--bg-card-subtle)", fontSize: "12px" }}>
+                <div>
+                  <span style={{ color: "var(--text-muted)", display: "block" }}>Target Finished Good:</span>
+                  <strong style={{ color: "var(--text-primary)" }}>{currentTrace.batches?.[0]?.product || "Sparkling Organic Soda"}</strong>
+                </div>
+                <div>
+                  <span style={{ color: "var(--text-muted)", display: "block" }}>Work Center / Line:</span>
+                  <strong style={{ color: "#0284C7" }}>{currentTrace.batches?.[0]?.line || "Packaging Line 1"}</strong>
+                </div>
+                <div>
+                  <span style={{ color: "var(--text-muted)", display: "block" }}>Quantity Produced:</span>
+                  <strong style={{ color: "#10B981" }}>{currentTrace.batches?.[0]?.quantityProduced || "36,000 Cans"}</strong>
+                </div>
+                <div>
+                  <span style={{ color: "var(--text-muted)", display: "block" }}>Execution Status:</span>
+                  <strong style={{ color: "#059669" }}>{currentTrace.batches?.[0]?.status || "Completed & Released"}</strong>
+                </div>
+              </div>
+
+              <div style={{ padding: "12px", borderRadius: "8px", border: "1px solid var(--border-subtle)", fontSize: "12px" }}>
+                <div style={{ fontWeight: 700, marginBottom: "4px" }}>Critical Control Points (CCPs) Verification:</div>
+                <p style={{ color: "var(--text-secondary)", margin: 0 }}>
+                  {currentTrace.batches?.[0]?.ccpStatus || "Pasteurization 72.4°C validated • In-line Metal Detector Clear"}
+                </p>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
+                <button
+                  type="button"
+                  onClick={() => setIsProdOrderModalOpen(false)}
+                  style={{
+                    padding: "8px 16px",
+                    borderRadius: "8px",
+                    border: "1px solid #E8DDCF",
+                    backgroundColor: "#FFFFFF",
+                    fontSize: "13px",
+                    fontWeight: 700,
+                    cursor: "pointer"
+                  }}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* VIEW WAREHOUSE LOCATION MODAL */}
+      {isLocationModalOpen && (
+        <div className="modal-backdrop" onClick={() => setIsLocationModalOpen(false)}>
+          <div className="modal-content" style={{ maxWidth: "560px", margin: "16px", borderRadius: "14px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <MapPin size={18} color="#0284C7" />
+                <div>
+                  <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                    Storage Bin Location Dossier
+                  </h2>
+                  <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+                    Lot Number: {currentTrace.lotNumber}
+                  </span>
+                </div>
+              </div>
+              <button onClick={() => setIsLocationModalOpen(false)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "12px", padding: "12px", borderRadius: "8px", backgroundColor: "var(--bg-card-subtle)", fontSize: "12px" }}>
+                <div>
+                  <span style={{ color: "var(--text-muted)", display: "block" }}>Current Location:</span>
+                  <strong style={{ color: "#8C5B23" }}>{currentTrace.currentLocation}</strong>
+                </div>
+                <div>
+                  <span style={{ color: "var(--text-muted)", display: "block" }}>Dock Receiving Intake:</span>
+                  <strong style={{ color: "var(--text-primary)" }}>{currentTrace.receivedLocation}</strong>
+                </div>
+                <div>
+                  <span style={{ color: "var(--text-muted)", display: "block" }}>Cold SLA Temperature:</span>
+                  <strong style={{ color: "#10B981" }}>{currentTrace.tempLog}</strong>
+                </div>
+                <div>
+                  <span style={{ color: "var(--text-muted)", display: "block" }}>Expiry Date:</span>
+                  <strong style={{ color: "var(--text-primary)", fontFamily: "var(--font-mono)" }}>{currentTrace.expiryDate}</strong>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
+                <button
+                  type="button"
+                  onClick={() => setIsLocationModalOpen(false)}
+                  style={{
+                    padding: "8px 16px",
+                    borderRadius: "8px",
+                    border: "1px solid #E8DDCF",
+                    backgroundColor: "#FFFFFF",
+                    fontSize: "13px",
+                    fontWeight: 700,
+                    cursor: "pointer"
+                  }}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* VIEW SHIPMENT MODAL */}
+      {isShipmentModalOpen && (
+        <div className="modal-backdrop" onClick={() => setIsShipmentModalOpen(false)}>
+          <div className="modal-content" style={{ maxWidth: "580px", margin: "16px", borderRadius: "14px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Truck size={18} color="#10B981" />
+                <div>
+                  <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                    Outbound Shipment Manifest & Chain of Custody
+                  </h2>
+                  <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+                    Bill of Lading: BOL-99410 • GS1-128 Validated
+                  </span>
+                </div>
+              </div>
+              <button onClick={() => setIsShipmentModalOpen(false)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "12px", padding: "12px", borderRadius: "8px", backgroundColor: "var(--bg-card-subtle)", fontSize: "12px" }}>
+                <div>
+                  <span style={{ color: "var(--text-muted)", display: "block" }}>Logistics Carrier:</span>
+                  <strong style={{ color: "var(--text-primary)" }}>Challenger Freight Lines Ltd.</strong>
+                </div>
+                <div>
+                  <span style={{ color: "var(--text-muted)", display: "block" }}>Trailer / Seal #:</span>
+                  <strong style={{ color: "#0284C7" }}>TR-5510 / SEAL-99410</strong>
+                </div>
+                <div>
+                  <span style={{ color: "var(--text-muted)", display: "block" }}>Exposed Retail Hubs:</span>
+                  <strong style={{ color: "var(--text-primary)" }}>{currentTrace.recallImpact?.customersExposed?.join(", ") || "Whole Foods DC 04"}</strong>
+                </div>
+                <div>
+                  <span style={{ color: "var(--text-muted)", display: "block" }}>Total Tracked Pallets:</span>
+                  <strong style={{ color: "#10B981" }}>{currentTrace.recallImpact?.palletsCount || 20} Pallets</strong>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
+                <button
+                  type="button"
+                  onClick={() => setIsShipmentModalOpen(false)}
+                  style={{
+                    padding: "8px 16px",
+                    borderRadius: "8px",
+                    border: "1px solid #E8DDCF",
+                    backgroundColor: "#FFFFFF",
+                    fontSize: "13px",
+                    fontWeight: 700,
+                    cursor: "pointer"
+                  }}
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         </div>
