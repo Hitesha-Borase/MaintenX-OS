@@ -329,7 +329,16 @@ export const NAVIGATION_CONFIG = {
         { label: "QA Specs", path: "/master-data/quality-specs", icon: "ShieldCheck" }
       ]
     },
-    { label: "Production", path: "/production", icon: "Factory" },
+    {
+      group: "Production",
+      items: [
+        { label: "Floor Dashboard", path: "/production", icon: "Factory" },
+        { label: "Production Orders", path: "/production/orders", icon: "Layers" },
+        { label: "Batches (eBR)", path: "/production/batches", icon: "Boxes" },
+        { label: "Downtime & Loss", path: "/production/downtime-loss", icon: "AlertTriangle" },
+        { label: "OEE Performance", path: "/performance/oee", icon: "Gauge" }
+      ]
+    },
     { label: "Quality", path: "/quality", icon: "ShieldCheck" },
     { label: "Inventory", path: "/inventory", icon: "Package" },
     { label: "Labour", path: "/labour", icon: "Users" },

@@ -16,17 +16,32 @@ import {
   ArrowRight,
   TrendingDown,
   ShoppingBag,
-  Info
+  Info,
+  Play,
+  Sparkles,
+  X,
+  Package,
+  Calendar,
+  Factory
 } from "lucide-react";
 
 export function NetRequirements() {
   const { mrpCalculations = [] } = usePlanning();
+  const { skus = [], boms = [], plants = [] } = useMasterData();
   const { addToast } = useApp();
   const [searchQuery, setSearchQuery] = useState("");
   const [riskFilter, setRiskFilter] = useState("ALL");
 
   const [requisitionModalSku, setRequisitionModalSku] = useState(null);
   const [reqQty, setReqQty] = useState(10000);
+
+  // MRP Run State
+  const [isMRPRunModalOpen, setIsMRPRunModalOpen] = useState(false);
+  const [mrpPeriod, setMrpPeriod] = useState("Next 7 Days (W36 - W37)");
+  const [mrpPlant, setMrpPlant] = useState("PLT-01 (Indore Facility)");
+  const [mrpProduct, setMrpProduct] = useState("ALL");
+  const [isCalculatingMRP, setIsCalculatingMRP] = useState(false);
+  const [mrpRunResults, setMrpRunResults] = useState(null);
 
   // KPIs
   const totalMaterials = mrpCalculations.length;
@@ -45,6 +60,40 @@ export function NetRequirements() {
 
     return matchesRisk && matchesSearch;
   });
+
+  const handleExecuteMRPRun = () => {
+    setIsCalculatingMRP(true);
+    addToast("Executing multi-level BOM explosion and lead-time offsetting...", "info");
+
+    setTimeout(() => {
+      setIsCalculatingMRP(false);
+      setMrpRunResults([
+        {
+          product: "500ml Sparkling Citrus Soda (SKU-5001)",
+          requiredUnits: 100000,
+          plant: mrpPlant,
+          materials: [
+            { component: "500ml PET Bottles", required: 100000, available: 14000, shortage: 86000, plannedPurchase: 90000, plannedProduction: 0, uom: "Units", status: "PO Recommended" },
+            { component: "28mm Tamper HDPE Cap", required: 100000, available: 45000, shortage: 55000, plannedPurchase: 60000, plannedProduction: 0, uom: "Units", status: "PO Recommended" },
+            { component: "Full-Body Shrink Label", required: 102000, available: 120000, shortage: 0, plannedPurchase: 0, plannedProduction: 0, uom: "Units", status: "Covered" },
+            { component: "Organic Orange Concentrate 65°Bx", required: 5000, available: 1200, shortage: 3800, plannedPurchase: 4000, plannedProduction: 0, uom: "Kg", status: "Expedite Purchase" },
+            { component: "Liquid Cane Sugar 67°Bx", required: 8500, available: 18500, shortage: 0, plannedPurchase: 0, plannedProduction: 0, uom: "Liters", status: "Covered" }
+          ]
+        },
+        {
+          product: "1L Tonic Water Natural Quinine (SKU-5002)",
+          requiredUnits: 40000,
+          plant: mrpPlant,
+          materials: [
+            { component: "1L Glass Bottle Standard", required: 40000, available: 50000, shortage: 0, plannedPurchase: 0, plannedProduction: 0, uom: "Units", status: "Covered" },
+            { component: "Crown Metal Cap", required: 41000, available: 20000, shortage: 21000, plannedPurchase: 25000, plannedProduction: 0, uom: "Units", status: "PO Recommended" },
+            { component: "Natural Quinine Extract", required: 200, available: 350, shortage: 0, plannedPurchase: 0, plannedProduction: 0, uom: "Kg", status: "Covered" }
+          ]
+        }
+      ]);
+      addToast("MRP calculation complete! Requirements exploded across BOM levels.", "success");
+    }, 1200);
+  };
 
   const handleCreateRequisitionSubmit = (e) => {
     e.preventDefault();
@@ -80,11 +129,22 @@ export function NetRequirements() {
             </h1>
             <Badge variant={criticalItems > 0 ? "rose" : "emerald"}>{criticalItems} SHORTAGE RISKS</Badge>
           </div>
+          <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>
+            Deterministic net requirements calculation, safety stock buffering, lead time offsetting, and automated purchase generation.
+          </p>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
           <Button variant="secondary" icon={Download} onClick={handleExportCSV} style={{ fontSize: "12px", padding: "7px 12px" }}>
             Export MRP Data
+          </Button>
+          <Button
+            variant="primary"
+            icon={Play}
+            onClick={() => setIsMRPRunModalOpen(true)}
+            style={{ fontSize: "12px", padding: "7px 12px", fontWeight: 700 }}
+          >
+            Run MRP Engine
           </Button>
         </div>
       </div>
@@ -363,6 +423,149 @@ export function NetRequirements() {
                 </Button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MRP RUN SIMULATION MODAL */}
+      {isMRPRunModalOpen && (
+        <div className="modal-backdrop" onClick={() => setIsMRPRunModalOpen(false)}>
+          <div className="modal-content" style={{ maxWidth: "880px", margin: "16px", maxHeight: "90vh", display: "flex", flexDirection: "column" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Play size={18} color="#B27E33" />
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                  MRP Engine — Multi-Level Bill of Materials Explosion
+                </h2>
+              </div>
+              <button onClick={() => setIsMRPRunModalOpen(false)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ padding: "20px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "16px" }}>
+              {/* Parameters Bar */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "12px", backgroundColor: "var(--bg-card-subtle)", padding: "14px", borderRadius: "10px", border: "1px solid var(--border-subtle)" }}>
+                <div>
+                  <label className="form-label" style={{ fontSize: "11px" }}>Planning Period Horizon</label>
+                  <select
+                    value={mrpPeriod}
+                    onChange={(e) => setMrpPeriod(e.target.value)}
+                    className="form-input"
+                    style={{ height: "34px", fontSize: "12px", backgroundColor: "#FFFFFF" }}
+                  >
+                    <option value="Next 7 Days (W36 - W37)">Next 7 Days (W36 - W37)</option>
+                    <option value="Next 14 Days (W36 - W38)">Next 14 Days (W36 - W38)</option>
+                    <option value="Next 30 Days (Monthly Horizon)">Next 30 Days (Monthly Horizon)</option>
+                    <option value="Full Q4 2026 Horizon">Full Q4 2026 Horizon</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="form-label" style={{ fontSize: "11px" }}>Target Plant / Facility</label>
+                  <select
+                    value={mrpPlant}
+                    onChange={(e) => setMrpPlant(e.target.value)}
+                    className="form-input"
+                    style={{ height: "34px", fontSize: "12px", backgroundColor: "#FFFFFF" }}
+                  >
+                    <option value="PLT-01 (Indore Facility)">Indore Facility (PLT-01)</option>
+                    <option value="PLT-02 (Pune Beverage Plant)">Pune Beverage Plant (PLT-02)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="form-label" style={{ fontSize: "11px" }}>Product Scope</label>
+                  <select
+                    value={mrpProduct}
+                    onChange={(e) => setMrpProduct(e.target.value)}
+                    className="form-input"
+                    style={{ height: "34px", fontSize: "12px", backgroundColor: "#FFFFFF" }}
+                  >
+                    <option value="ALL">All Master Product SKUs</option>
+                    <option value="SKU-5001">500ml Sparkling Citrus Soda</option>
+                    <option value="SKU-5002">1L Tonic Water Natural Quinine</option>
+                    <option value="SKU-5003">330ml Organic Ginger Beer</option>
+                  </select>
+                </div>
+
+                <div style={{ display: "flex", alignItems: "flex-end" }}>
+                  <Button
+                    variant="primary"
+                    icon={isCalculatingMRP ? Sparkles : Play}
+                    onClick={handleExecuteMRPRun}
+                    disabled={isCalculatingMRP}
+                    style={{ width: "100%", height: "34px", fontSize: "12px", justifyContent: "center" }}
+                  >
+                    {isCalculatingMRP ? "Exploding BOMs..." : "Run Calculation"}
+                  </Button>
+                </div>
+              </div>
+
+              {/* Exploded Results */}
+              {mrpRunResults ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                  {mrpRunResults.map((res, idx) => (
+                    <div key={idx} style={{ border: "1px solid var(--border-subtle)", borderRadius: "10px", overflow: "hidden" }}>
+                      <div style={{ padding: "12px 16px", backgroundColor: "rgba(200, 149, 71, 0.08)", borderBottom: "1px solid var(--border-subtle)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
+                        <div>
+                          <strong style={{ fontSize: "14px", color: "var(--text-primary)" }}>{res.product}</strong>
+                          <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>Gross Plan: {res.requiredUnits.toLocaleString()} units • {res.plant}</div>
+                        </div>
+                        <Badge variant="cyan">BOM Level 1 Explosion</Badge>
+                      </div>
+
+                      <div className="data-table-container">
+                        <table className="data-table" style={{ width: "100%", fontSize: "12px" }}>
+                          <thead>
+                            <tr>
+                              <th>Component Material</th>
+                              <th>Required</th>
+                              <th>Available Stock</th>
+                              <th>Shortage</th>
+                              <th>Planned Purchase</th>
+                              <th>Planned Production</th>
+                              <th>Action Status</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {res.materials.map((mat, mIdx) => (
+                              <tr key={mIdx}>
+                                <td style={{ fontWeight: 700, color: "var(--text-primary)" }}>{mat.component}</td>
+                                <td>{mat.required.toLocaleString()} {mat.uom}</td>
+                                <td>{mat.available.toLocaleString()} {mat.uom}</td>
+                                <td style={{ fontWeight: mat.shortage > 0 ? 800 : 400, color: mat.shortage > 0 ? "#DC2626" : "var(--text-muted)" }}>
+                                  {mat.shortage > 0 ? `${mat.shortage.toLocaleString()} ${mat.uom}` : "0 (Adequate)"}
+                                </td>
+                                <td style={{ fontWeight: mat.plannedPurchase > 0 ? 800 : 400, color: mat.plannedPurchase > 0 ? "#D97706" : "var(--text-muted)" }}>
+                                  {mat.plannedPurchase > 0 ? `${mat.plannedPurchase.toLocaleString()} ${mat.uom}` : "—"}
+                                </td>
+                                <td>{mat.plannedProduction > 0 ? `${mat.plannedProduction.toLocaleString()} ${mat.uom}` : "—"}</td>
+                                <td>
+                                  <Badge variant={mat.shortage > 0 ? (mat.status.includes("Expedite") ? "rose" : "amber") : "emerald"}>
+                                    {mat.status}
+                                  </Badge>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ padding: "30px", textAlign: "center", color: "var(--text-muted)", fontSize: "13px" }}>
+                  Select planning parameters above and click <strong>Run Calculation</strong> to simulate multi-level BOM explosion.
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", padding: "14px 20px", borderTop: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+              <Button variant="secondary" onClick={() => setIsMRPRunModalOpen(false)}>
+                Close
+              </Button>
+            </div>
           </div>
         </div>
       )}
