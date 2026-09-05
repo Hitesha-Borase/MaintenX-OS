@@ -81,27 +81,42 @@ export function TroubleshootingWizard() {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "24px", maxWidth: "1000px", margin: "0 auto", width: "100%" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "1000px", margin: "0 auto", width: "100%" }}>
       {/* Header */}
-      <div>
-        <button
-          onClick={() => navigate("/maintenance")}
-          className="btn btn-ghost"
-          style={{ padding: "4px 8px", fontSize: "12px", marginBottom: "8px", display: "inline-flex", alignItems: "center", gap: "6px" }}
-        >
-          <ArrowLeft size={14} /> Back to Maintenance
-        </button>
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)" }}>
-            Guided Troubleshooting & Diagnostic Wizard
-          </h1>
-          <Badge variant="cyan">Standardized 7-Step Method</Badge>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px" }}>
+        <div>
+          <button
+            onClick={() => navigate("/maintenance")}
+            className="btn btn-ghost"
+            style={{ padding: "4px 8px", fontSize: "12px", marginBottom: "8px", display: "inline-flex", alignItems: "center", gap: "6px" }}
+          >
+            <ArrowLeft size={14} /> Back to Maintenance
+          </button>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+            <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.3px" }}>
+              Guided Troubleshooting & Diagnostic Wizard
+            </h1>
+            <Badge variant="cyan">Standardized 7-Step Method</Badge>
+          </div>
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+          <Button
+            variant="secondary"
+            size="sm"
+            icon={Sparkles}
+            onClick={() => navigate("/maintenance/verified-solutions")}
+          >
+            Verified Solutions Library
+          </Button>
         </div>
       </div>
 
-      {/* Stepper Header */}
-      <Card style={{ padding: "16px 20px" }}>
-        <Stepper steps={steps} currentStep={currentStep} onStepClick={setCurrentStep} />
+      {/* Stepper Header with smooth horizontal scroll on mobile */}
+      <Card style={{ padding: "16px 20px", overflowX: "auto" }}>
+        <div style={{ minWidth: "640px" }}>
+          <Stepper steps={steps} currentStep={currentStep} onStepClick={setCurrentStep} />
+        </div>
       </Card>
 
       {/* Step Contents */}

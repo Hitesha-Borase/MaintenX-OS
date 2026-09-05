@@ -160,6 +160,7 @@ import { Workforce as SupervisorWorkforce } from "./pages/supervisor/Workforce";
 import { Staffing as SupervisorStaffing } from "./pages/supervisor/Staffing";
 import { LabourTime as SupervisorLabourTime } from "./pages/supervisor/LabourTime";
 import { SkillsTraining as SupervisorSkillsTraining } from "./pages/supervisor/SkillsTraining";
+import { Training as SupervisorTraining } from "./pages/supervisor/Training";
 import { QualityStatus as SupervisorQualityStatus } from "./pages/supervisor/QualityStatus";
 import { Holds as SupervisorHolds } from "./pages/supervisor/Holds";
 import { QualityEvents as SupervisorQualityEvents } from "./pages/supervisor/QualityEvents";
@@ -205,6 +206,8 @@ import { Profile as PlannerProfile } from "./pages/planner/Profile";
 // WAREHOUSE PAGES
 // ==========================================
 import { WarehouseDashboard } from "./pages/warehouse/WarehouseDashboard";
+import { PurchasingSupplierHub } from "./pages/purchasing/PurchasingSupplierHub";
+import { WMSOperationsPage } from "./pages/warehouse/WMSOperationsPage";
 import { IncomingDeliveries as WarehouseIncomingDeliveries } from "./pages/warehouse/receiving/IncomingDeliveries";
 import { ReceiveMaterial as WarehouseReceiveMaterial } from "./pages/warehouse/receiving/ReceiveMaterial";
 import { BarcodeScan as WarehouseBarcodeScan } from "./pages/warehouse/receiving/BarcodeScan";
@@ -332,6 +335,7 @@ import { Profile as ExecProfile } from "./pages/executive/Profile";
 // ==========================================
 import { MaintenanceDashboard } from "./pages/dashboards/MaintenanceDashboard";
 import { AssetList } from "./pages/maintenance/AssetList";
+import { AssetDetail } from "./pages/maintenance/AssetDetail";
 import { Asset360 } from "./pages/maintenance/Asset360";
 import { WorkOrderList } from "./pages/maintenance/WorkOrderList";
 import { WorkOrderDetail } from "./pages/maintenance/WorkOrderDetail";
@@ -351,6 +355,7 @@ import { MachineIoTPage } from "./pages/iot/MachineIoTPage";
 import { MaintenanceLabourPage } from "./pages/labour/MaintenanceLabourPage";
 import { RepeatFailures } from "./pages/maintenance/RepeatFailures";
 import { VerifiedSolutions as MaintenanceVerifiedSolutions } from "./pages/maintenance/VerifiedSolutions";
+import { MaintenanceHistory } from "./pages/maintenance/MaintenanceHistory";
 import { ReportsPage } from "./pages/reports/ReportsPage";
 import { NotificationsPage } from "./pages/notifications/NotificationsPage";
 import { ProfilePage } from "./pages/profile/ProfilePage";
@@ -560,37 +565,66 @@ export function AppContent() {
           {/* ========================================================= */}
           {/* 2. MAINTENANCE / CMMS ROUTES                              */}
           {/* ========================================================= */}
+          {/* 1. CMMS Dashboard */}
           <Route path="/maintenance" element={<RoleProtectedRoute><MaintenanceDashboard /></RoleProtectedRoute>} />
+          <Route path="/maintenance/dashboard" element={<RoleProtectedRoute><MaintenanceDashboard /></RoleProtectedRoute>} />
+
+          {/* 2. Asset List */}
           <Route path="/maintenance/assets" element={<RoleProtectedRoute><AssetList /></RoleProtectedRoute>} />
+
+          {/* 3. Asset Details */}
+          <Route path="/maintenance/asset-detail" element={<RoleProtectedRoute><AssetDetail /></RoleProtectedRoute>} />
+          <Route path="/maintenance/asset-detail/:id" element={<RoleProtectedRoute><AssetDetail /></RoleProtectedRoute>} />
+
+          {/* 4. Asset 360° */}
+          <Route path="/maintenance/asset-360" element={<RoleProtectedRoute><Asset360 /></RoleProtectedRoute>} />
+          <Route path="/maintenance/asset-360/:id" element={<RoleProtectedRoute><Asset360 /></RoleProtectedRoute>} />
           <Route path="/maintenance/assets/:id" element={<RoleProtectedRoute><Asset360 /></RoleProtectedRoute>} />
 
-          <Route path="/maintenance/work-orders" element={<RoleProtectedRoute><WorkOrderList /></RoleProtectedRoute>} />
-          <Route path="/maintenance/work-orders/:id" element={<RoleProtectedRoute><WorkOrderDetail /></RoleProtectedRoute>} />
-
-          <Route path="/maintenance/breakdowns" element={<RoleProtectedRoute><BreakdownList /></RoleProtectedRoute>} />
-          <Route path="/maintenance/breakdowns/:id" element={<RoleProtectedRoute><BreakdownDetail /></RoleProtectedRoute>} />
-
-          <Route path="/maintenance/pm-schedules" element={<RoleProtectedRoute><PMScheduleList /></RoleProtectedRoute>} />
+          {/* 5. Preventive Maintenance */}
+          <Route path="/maintenance/pm" element={<RoleProtectedRoute><PMScheduleList initialViewMode="list" /></RoleProtectedRoute>} />
+          <Route path="/maintenance/pm-schedules" element={<RoleProtectedRoute><PMScheduleList initialViewMode="list" /></RoleProtectedRoute>} />
           <Route path="/maintenance/pm-checklists" element={<RoleProtectedRoute><PMChecklistList /></RoleProtectedRoute>} />
           <Route path="/maintenance/pm-execute" element={<RoleProtectedRoute><PMChecklistExecute /></RoleProtectedRoute>} />
 
-          <Route path="/maintenance/spare-parts" element={<RoleProtectedRoute><SparePartsInventory /></RoleProtectedRoute>} />
+          {/* 6. Work Orders */}
+          <Route path="/maintenance/work-orders" element={<RoleProtectedRoute><WorkOrderList /></RoleProtectedRoute>} />
+          <Route path="/maintenance/work-orders/:id" element={<RoleProtectedRoute><WorkOrderDetail /></RoleProtectedRoute>} />
 
-          <Route path="/maintenance/calibration" element={<RoleProtectedRoute><CalibrationCenter /></RoleProtectedRoute>} />
+          {/* 7. Maintenance Calendar */}
+          <Route path="/maintenance/calendar" element={<RoleProtectedRoute><PMScheduleList initialViewMode="calendar" /></RoleProtectedRoute>} />
 
-          <Route path="/maintenance/failure-codes" element={<RoleProtectedRoute><FailureCodes /></RoleProtectedRoute>} />
-          <Route path="/maintenance/troubleshooting" element={<RoleProtectedRoute><TroubleshootingWizard /></RoleProtectedRoute>} />
+          {/* 8. Breakdown */}
+          <Route path="/maintenance/breakdowns" element={<RoleProtectedRoute><BreakdownList /></RoleProtectedRoute>} />
+          <Route path="/maintenance/breakdowns/:id" element={<RoleProtectedRoute><BreakdownDetail /></RoleProtectedRoute>} />
+
+          {/* 9. Maintenance History */}
+          <Route path="/maintenance/history" element={<RoleProtectedRoute><MaintenanceHistory /></RoleProtectedRoute>} />
+
+          {/* 10. Reliability */}
           <Route path="/maintenance/reliability" element={<RoleProtectedRoute><ReliabilityAnalytics /></RoleProtectedRoute>} />
+          <Route path="/maintenance/repeat-failures" element={<RoleProtectedRoute><RepeatFailures /></RoleProtectedRoute>} />
+
+          {/* 11. Troubleshooting */}
+          <Route path="/maintenance/troubleshooting" element={<RoleProtectedRoute><TroubleshootingWizard /></RoleProtectedRoute>} />
+          <Route path="/maintenance/verified-solutions" element={<RoleProtectedRoute><MaintenanceVerifiedSolutions /></RoleProtectedRoute>} />
+
+          {/* Auxiliary CMMS Utilities */}
+          <Route path="/maintenance/spare-parts" element={<RoleProtectedRoute><SparePartsInventory /></RoleProtectedRoute>} />
+          <Route path="/maintenance/calibration" element={<RoleProtectedRoute><CalibrationCenter /></RoleProtectedRoute>} />
+          <Route path="/maintenance/failure-codes" element={<RoleProtectedRoute><FailureCodes /></RoleProtectedRoute>} />
           <Route path="/machine-iot" element={<RoleProtectedRoute><MachineIoTPage /></RoleProtectedRoute>} />
           <Route path="/maintenance-labour" element={<RoleProtectedRoute><MaintenanceLabourPage /></RoleProtectedRoute>} />
-          <Route path="/maintenance/repeat-failures" element={<RoleProtectedRoute><RepeatFailures /></RoleProtectedRoute>} />
-          <Route path="/maintenance/verified-solutions" element={<RoleProtectedRoute><MaintenanceVerifiedSolutions /></RoleProtectedRoute>} />
           <Route path="/repeat-failures" element={<RoleProtectedRoute><RepeatFailures /></RoleProtectedRoute>} />
           <Route path="/verified-solutions" element={<RoleProtectedRoute><MaintenanceVerifiedSolutions /></RoleProtectedRoute>} />
           <Route path="/work-orders/open" element={<Navigate to="/maintenance/work-orders" replace />} />
           <Route path="/assets/register" element={<Navigate to="/maintenance/assets" replace />} />
-          <Route path="/assets/360" element={<Navigate to="/maintenance/assets" replace />} />
-          <Route path="/breakdowns/analysis" element={<Navigate to="/maintenance/breakdowns-overview" replace />} />
+          <Route path="/assets/360" element={<Navigate to="/maintenance/asset-360" replace />} />
+          <Route path="/breakdowns/analysis" element={<Navigate to="/maintenance/breakdowns" replace />} />
+
+          {/* Maintenance Notifications & Technician Profile */}
+          <Route path="/maintenance/notifications" element={<RoleProtectedRoute><NotificationsPage /></RoleProtectedRoute>} />
+          <Route path="/maintenance/profile" element={<RoleProtectedRoute><ProfilePage /></RoleProtectedRoute>} />
 
           {/* ========================================================= */}
           {/* 3. PLANT MANAGER & COMMAND CENTER ROUTES                  */}
@@ -700,6 +734,18 @@ export function AppContent() {
           <Route path="/supervisor/labour/staffing" element={<RoleProtectedRoute><SupervisorStaffing /></RoleProtectedRoute>} />
           <Route path="/supervisor/labour/time" element={<RoleProtectedRoute><SupervisorLabourTime /></RoleProtectedRoute>} />
           <Route path="/supervisor/labour/skills" element={<RoleProtectedRoute><SupervisorSkillsTraining /></RoleProtectedRoute>} />
+          <Route path="/supervisor/labour/training" element={<RoleProtectedRoute><SupervisorTraining /></RoleProtectedRoute>} />
+          <Route path="/supervisor/labour/performance" element={<RoleProtectedRoute><LabourPerformancePage /></RoleProtectedRoute>} />
+          
+          {/* Manage People Direct Aliases */}
+          <Route path="/people/employees" element={<RoleProtectedRoute><SupervisorWorkforce /></RoleProtectedRoute>} />
+          <Route path="/people/labour" element={<RoleProtectedRoute><SupervisorLabourTime /></RoleProtectedRoute>} />
+          <Route path="/people/live-hb" element={<RoleProtectedRoute><SupervisorHBManagement /></RoleProtectedRoute>} />
+          <Route path="/people/skills" element={<RoleProtectedRoute><SupervisorSkillsTraining /></RoleProtectedRoute>} />
+          <Route path="/people/training" element={<RoleProtectedRoute><SupervisorTraining /></RoleProtectedRoute>} />
+          <Route path="/people/productivity" element={<RoleProtectedRoute><LabourPerformancePage /></RoleProtectedRoute>} />
+          <Route path="/people/shifts" element={<RoleProtectedRoute><SupervisorStaffing /></RoleProtectedRoute>} />
+          <Route path="/labour/training" element={<RoleProtectedRoute><SupervisorTraining /></RoleProtectedRoute>} />
           <Route path="/supervisor/quality/status" element={<RoleProtectedRoute><SupervisorQualityStatus /></RoleProtectedRoute>} />
           <Route path="/supervisor/quality/holds" element={<RoleProtectedRoute><SupervisorHolds /></RoleProtectedRoute>} />
           <Route path="/supervisor/quality/events" element={<RoleProtectedRoute><SupervisorQualityEvents /></RoleProtectedRoute>} />
@@ -745,15 +791,22 @@ export function AppContent() {
           {/* 8. WAREHOUSE ROUTES                                       */}
           {/* ========================================================= */}
           <Route path="/warehouse/dashboard" element={<RoleProtectedRoute><WarehouseDashboard /></RoleProtectedRoute>} />
+          <Route path="/warehouse/purchasing" element={<RoleProtectedRoute><PurchasingSupplierHub /></RoleProtectedRoute>} />
+          <Route path="/warehouse/suppliers" element={<RoleProtectedRoute><PurchasingSupplierHub /></RoleProtectedRoute>} />
+          <Route path="/purchasing" element={<RoleProtectedRoute><PurchasingSupplierHub /></RoleProtectedRoute>} />
+          <Route path="/warehouse/inventory" element={<RoleProtectedRoute><WarehouseInventoryPage /></RoleProtectedRoute>} />
+          <Route path="/warehouse/locations" element={<RoleProtectedRoute><WarehouseList /></RoleProtectedRoute>} />
+          <Route path="/warehouse/locations/list" element={<RoleProtectedRoute><WarehouseList /></RoleProtectedRoute>} />
+          <Route path="/warehouse/wms" element={<RoleProtectedRoute><WMSOperationsPage /></RoleProtectedRoute>} />
           <Route path="/warehouse/receiving/incoming" element={<RoleProtectedRoute><WarehouseIncomingDeliveries /></RoleProtectedRoute>} />
           <Route path="/warehouse/receiving/receive" element={<RoleProtectedRoute><WarehouseReceiveMaterial /></RoleProtectedRoute>} />
           <Route path="/warehouse/receiving/scan" element={<RoleProtectedRoute><WarehouseBarcodeScan /></RoleProtectedRoute>} />
           <Route path="/warehouse/inventory/raw" element={<RoleProtectedRoute><WarehouseRawMaterials /></RoleProtectedRoute>} />
           <Route path="/warehouse/inventory/packaging" element={<RoleProtectedRoute><WarehousePackagingMaterials /></RoleProtectedRoute>} />
           <Route path="/warehouse/inventory/finished-goods" element={<RoleProtectedRoute><WarehouseFinishedGoods /></RoleProtectedRoute>} />
+          <Route path="/warehouse/finished-goods" element={<RoleProtectedRoute><WarehouseFinishedGoods /></RoleProtectedRoute>} />
           <Route path="/warehouse/inventory/lots" element={<RoleProtectedRoute><WarehouseLots /></RoleProtectedRoute>} />
           <Route path="/warehouse/inventory/status" element={<RoleProtectedRoute><WarehouseInventoryStatus /></RoleProtectedRoute>} />
-          <Route path="/warehouse/locations/list" element={<RoleProtectedRoute><WarehouseList /></RoleProtectedRoute>} />
           <Route path="/warehouse/locations/bins" element={<RoleProtectedRoute><WarehouseBinsRacks /></RoleProtectedRoute>} />
           <Route path="/warehouse/locations/staging" element={<RoleProtectedRoute><WarehouseStaging /></RoleProtectedRoute>} />
           <Route path="/warehouse/locations/transfers" element={<RoleProtectedRoute><WarehouseLocationTransfers /></RoleProtectedRoute>} />
@@ -764,6 +817,7 @@ export function AppContent() {
           <Route path="/warehouse/picking/lists" element={<RoleProtectedRoute><WarehousePickLists /></RoleProtectedRoute>} />
           <Route path="/warehouse/picking/execution" element={<RoleProtectedRoute><WarehousePickingExecution /></RoleProtectedRoute>} />
           <Route path="/warehouse/pallets-containers" element={<RoleProtectedRoute><WarehousePalletsContainers /></RoleProtectedRoute>} />
+          <Route path="/warehouse/shipping" element={<RoleProtectedRoute><WarehouseShipmentOrders /></RoleProtectedRoute>} />
           <Route path="/warehouse/shipping/orders" element={<RoleProtectedRoute><WarehouseShipmentOrders /></RoleProtectedRoute>} />
           <Route path="/warehouse/shipping/dispatch" element={<RoleProtectedRoute><WarehouseDispatch /></RoleProtectedRoute>} />
           <Route path="/warehouse/shipping/tracking" element={<RoleProtectedRoute><WarehouseShipmentTracking /></RoleProtectedRoute>} />
@@ -882,6 +936,32 @@ export function AppContent() {
           <Route path="/documents" element={<RoleProtectedRoute><WorkInstructions /></RoleProtectedRoute>} />
           <Route path="/reports" element={<RoleProtectedRoute><ReportsPage /></RoleProtectedRoute>} />
           <Route path="/shopfloor" element={<RoleProtectedRoute><OperatorDashboard /></RoleProtectedRoute>} />
+
+          {/* Notifications & Profile routes for all roles */}
+          <Route path="/notifications" element={<RoleProtectedRoute><NotificationsPage /></RoleProtectedRoute>} />
+          <Route path="/profile" element={<RoleProtectedRoute><ProfilePage /></RoleProtectedRoute>} />
+          <Route path="/operator/notifications" element={<RoleProtectedRoute><NotificationsPage /></RoleProtectedRoute>} />
+          <Route path="/operator/profile" element={<RoleProtectedRoute><ProfilePage /></RoleProtectedRoute>} />
+          <Route path="/linelead/notifications" element={<RoleProtectedRoute><NotificationsPage /></RoleProtectedRoute>} />
+          <Route path="/linelead/profile" element={<RoleProtectedRoute><ProfilePage /></RoleProtectedRoute>} />
+          <Route path="/supervisor/notifications" element={<RoleProtectedRoute><NotificationsPage /></RoleProtectedRoute>} />
+          <Route path="/supervisor/profile" element={<RoleProtectedRoute><ProfilePage /></RoleProtectedRoute>} />
+          <Route path="/planner/notifications" element={<RoleProtectedRoute><NotificationsPage /></RoleProtectedRoute>} />
+          <Route path="/planner/profile" element={<RoleProtectedRoute><ProfilePage /></RoleProtectedRoute>} />
+          <Route path="/quality/notifications" element={<RoleProtectedRoute><NotificationsPage /></RoleProtectedRoute>} />
+          <Route path="/quality/profile" element={<RoleProtectedRoute><ProfilePage /></RoleProtectedRoute>} />
+          <Route path="/ci/notifications" element={<RoleProtectedRoute><NotificationsPage /></RoleProtectedRoute>} />
+          <Route path="/ci/profile" element={<RoleProtectedRoute><ProfilePage /></RoleProtectedRoute>} />
+          <Route path="/warehouse/notifications" element={<RoleProtectedRoute><NotificationsPage /></RoleProtectedRoute>} />
+          <Route path="/warehouse/profile" element={<RoleProtectedRoute><ProfilePage /></RoleProtectedRoute>} />
+          <Route path="/costing/notifications" element={<RoleProtectedRoute><NotificationsPage /></RoleProtectedRoute>} />
+          <Route path="/costing/profile" element={<RoleProtectedRoute><ProfilePage /></RoleProtectedRoute>} />
+          <Route path="/executive/notifications" element={<RoleProtectedRoute><NotificationsPage /></RoleProtectedRoute>} />
+          <Route path="/executive/profile" element={<RoleProtectedRoute><ProfilePage /></RoleProtectedRoute>} />
+          <Route path="/command/notifications" element={<RoleProtectedRoute><NotificationsPage /></RoleProtectedRoute>} />
+          <Route path="/command/profile" element={<RoleProtectedRoute><ProfilePage /></RoleProtectedRoute>} />
+          <Route path="/admin/notifications" element={<RoleProtectedRoute><NotificationsPage /></RoleProtectedRoute>} />
+          <Route path="/admin/profile" element={<RoleProtectedRoute><ProfilePage /></RoleProtectedRoute>} />
 
           {/* ========================================================= */}
           {/* MASTER DATA, GOVERNANCE & MIGRATION DIRECT ROUTES         */}

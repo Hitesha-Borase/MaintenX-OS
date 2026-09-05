@@ -45,20 +45,22 @@ export const NAVIGATION_CONFIG = {
   supervisor: [
     { label: "Dashboard", path: "/supervisor/dashboard", icon: "LayoutDashboard" },
     { label: "Department Schedule", path: "/supervisor/dept-schedule", icon: "CalendarRange" },
-    { label: "H/B Management", path: "/supervisor/hb-management", icon: "Clock" },
+    {
+      group: "Manage People",
+      items: [
+        { label: "Employee / Operator List", path: "/supervisor/labour/workforce", icon: "Users" },
+        { label: "Labour", path: "/supervisor/labour/time", icon: "Clock" },
+        { label: "Live H/B", path: "/supervisor/hb-management", icon: "Activity" },
+        { label: "Skills", path: "/supervisor/labour/skills", icon: "Award" },
+        { label: "Training", path: "/supervisor/labour/training", icon: "BookOpen" },
+        { label: "Productivity", path: "/supervisor/labour/performance", icon: "LineChart" },
+        { label: "Shift Management", path: "/supervisor/labour/staffing", icon: "CalendarRange" }
+      ]
+    },
     {
       group: "Production",
       items: [
         { label: "Production Performance", path: "/supervisor/production/performance", icon: "LineChart" }
-      ]
-    },
-    {
-      group: "Labour",
-      items: [
-        { label: "Workforce", path: "/supervisor/labour/workforce", icon: "Users" },
-        { label: "Staffing", path: "/supervisor/labour/staffing", icon: "Users" },
-        { label: "Labour Time", path: "/supervisor/labour/time", icon: "Clock" },
-        { label: "Skills / Training", path: "/supervisor/labour/skills", icon: "Settings" }
       ]
     },
     {
@@ -68,7 +70,6 @@ export const NAVIGATION_CONFIG = {
       ]
     },
     { label: "Recovery", path: "/supervisor/recovery", icon: "Zap" },
-    { label: "Shift Handoff", path: "/supervisor/shift-handoff", icon: "Users" },
     { label: "Approvals", path: "/supervisor/approvals", icon: "FileCheck" },
     { label: "Reports", path: "/supervisor/reports", icon: "FileSpreadsheet" },
     { label: "Notifications", path: "/supervisor/notifications", icon: "Bell" },
@@ -124,6 +125,26 @@ export const NAVIGATION_CONFIG = {
   ],
   warehouse: [
     { label: "Dashboard", path: "/warehouse/dashboard", icon: "LayoutDashboard" },
+    {
+      group: "Move",
+      items: [
+        { label: "Purchasing", path: "/warehouse/purchasing", icon: "ShoppingBag" },
+        { label: "Supplier Management", path: "/warehouse/suppliers", icon: "Building2" },
+        { label: "Inventory", path: "/warehouse/inventory", icon: "Package" },
+        { label: "Warehouse", path: "/warehouse/locations/list", icon: "Factory" },
+        { label: "WMS", path: "/warehouse/wms", icon: "Boxes" },
+        { label: "Batch/Lot Traceability", path: "/warehouse/traceability", icon: "SearchCode" },
+        { label: "Finished Goods", path: "/warehouse/inventory/finished-goods", icon: "ShoppingBag" },
+        { label: "Shipping", path: "/warehouse/shipping/orders", icon: "Truck" }
+      ]
+    },
+    {
+      group: "Purchasing",
+      items: [
+        { label: "Purchasing & POs", path: "/warehouse/purchasing", icon: "ShoppingBag" },
+        { label: "Supplier Scorecards", path: "/warehouse/suppliers", icon: "Building2" }
+      ]
+    },
     {
       group: "Receiving",
       items: [
@@ -245,23 +266,23 @@ export const NAVIGATION_CONFIG = {
   ],
   maintenance: [
     {
-      group: "CMMS",
+      group: "MAINTAIN",
       items: [
-        { label: "Dashboard", path: "/maintenance", icon: "Wrench" },
-        { label: "Asset 360°", path: "/maintenance/assets", icon: "Wrench" },
-        { label: "Work Orders", path: "/maintenance/work-orders", icon: "Wrench" },
-        { label: "PM Scheduling", path: "/maintenance/pm-schedules", icon: "Wrench" },
-        { label: "PM Checklists", path: "/maintenance/pm-checklists", icon: "Wrench" },
-        { label: "Breakdowns", path: "/maintenance/breakdowns", icon: "Wrench" },
-        { label: "Troubleshooting", path: "/maintenance/troubleshooting", icon: "Wrench" },
-        { label: "Spare Parts", path: "/maintenance/spare-parts", icon: "Wrench" },
-        { label: "Calibration", path: "/maintenance/calibration", icon: "Wrench" },
-        { label: "Failure Codes", path: "/maintenance/failure-codes", icon: "Wrench" },
-        { label: "Maintenance KPIs", path: "/maintenance/reliability", icon: "Wrench" },
-        { label: "Repeat Failures", path: "/maintenance/repeat-failures", icon: "Wrench" },
-        { label: "Verified Solutions", path: "/maintenance/verified-solutions", icon: "Wrench" }
+        { label: "CMMS Dashboard", path: "/maintenance", icon: "LayoutDashboard" },
+        { label: "Asset List", path: "/maintenance/assets", icon: "Layers" },
+        { label: "Asset Details", path: "/maintenance/asset-detail", icon: "Cpu" },
+        { label: "Asset 360°", path: "/maintenance/asset-360", icon: "Wrench" },
+        { label: "Preventive Maintenance", path: "/maintenance/pm", icon: "CheckSquare" },
+        { label: "Work Orders", path: "/maintenance/work-orders", icon: "FileText" },
+        { label: "Maintenance Calendar", path: "/maintenance/calendar", icon: "CalendarRange" },
+        { label: "Breakdown", path: "/maintenance/breakdowns", icon: "AlertOctagon" },
+        { label: "Maintenance History", path: "/maintenance/history", icon: "Clock" },
+        { label: "Reliability", path: "/maintenance/reliability", icon: "Activity" },
+        { label: "Troubleshooting", path: "/maintenance/troubleshooting", icon: "SearchCode" }
       ]
-    }
+    },
+    { label: "Notifications", path: "/maintenance/notifications", icon: "Bell" },
+    { label: "Profile", path: "/maintenance/profile", icon: "User" }
   ],
   ci_engineer: [
     { label: "Dashboard", path: "/ci/dashboard", icon: "LayoutDashboard" },
@@ -471,7 +492,7 @@ export function RoleProvider({ children }) {
     if (currentRole.id === "maintenance") {
       allowedPaths.push("/work-orders", "/assets", "/breakdowns", "/pm", "/spare-parts", "/calibration", "/troubleshooting", "/cmms", "/ci");
     } else if (currentRole.id === "plant_manager") {
-      allowedPaths.push("/work-orders", "/assets", "/breakdowns", "/pm", "/spare-parts", "/calibration", "/troubleshooting", "/planning", "/production", "/quality", "/inventory", "/labour", "/maintenance", "/performance", "/cmms", "/master-data", "/reports", "/governance", "/migration");
+      allowedPaths.push("/work-orders", "/assets", "/breakdowns", "/pm", "/spare-parts", "/calibration", "/troubleshooting", "/planning", "/production", "/quality", "/inventory", "/labour", "/maintenance", "/performance", "/cmms", "/master-data", "/reports", "/governance", "/migration", "/supervisor", "/people");
     } else if (currentRole.id === "ci_engineer") {
       allowedPaths.push("/ci", "/quality", "/rca", "/capa");
     } else if (currentRole.id === "executive") {

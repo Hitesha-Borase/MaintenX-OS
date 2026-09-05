@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Users,
@@ -59,7 +59,9 @@ import {
   UserCog,
   Tag,
   Banknote,
-  Headset
+  Headset,
+  Award,
+  BookOpen
 } from "lucide-react";
 import { useRole } from "../../context/RoleContext";
 import { useApp } from "../../context/AppContext";
@@ -123,10 +125,13 @@ const iconMap = {
   UserCog,
   Tag,
   Banknote,
-  Headset
+  Headset,
+  Award,
+  BookOpen
 };
 
 export function Sidebar() {
+  const navigate = useNavigate();
   const { currentRole, logout, NAVIGATION_CONFIG } = useRole();
   const { sidebarCollapsed, setSidebarCollapsed, mobileMenuOpen, setMobileMenuOpen, addToast } = useApp();
   const location = useLocation();
@@ -167,6 +172,8 @@ export function Sidebar() {
     Inventory: true,
     Quality: true,
     CMMS: true,
+    MAINTAIN: true,
+    Maintain: true,
     Dashboards: true,
     Settings: true,
     Analytics: true,
@@ -728,7 +735,11 @@ export function Sidebar() {
           }}
         >
           {!isCollapsed ? (
-            <div style={{ display: "flex", alignItems: "center", gap: "10px", overflow: "hidden" }}>
+            <div
+              onClick={() => navigate(currentRole?.id === "maintenance" ? "/maintenance/profile" : "/profile")}
+              style={{ display: "flex", alignItems: "center", gap: "10px", overflow: "hidden", cursor: "pointer" }}
+              title="View Profile & Credentials"
+            >
               <div
                 style={{
                   width: "34px",
@@ -758,6 +769,7 @@ export function Sidebar() {
             </div>
           ) : (
             <div
+              onClick={() => navigate(currentRole?.id === "maintenance" ? "/maintenance/profile" : "/profile")}
               style={{
                 width: "34px",
                 height: "34px",
@@ -769,9 +781,10 @@ export function Sidebar() {
                 justifyContent: "center",
                 fontWeight: 800,
                 fontSize: "13px",
-                boxShadow: "0 2px 6px rgba(178, 126, 51, 0.25)"
+                boxShadow: "0 2px 6px rgba(178, 126, 51, 0.25)",
+                cursor: "pointer"
               }}
-              title={`${currentRole?.label} (Alexander Vance)`}
+              title={`${currentRole?.label} (Alexander Vance) - View Profile`}
             >
               {currentRole?.label?.charAt(0) || "U"}
             </div>

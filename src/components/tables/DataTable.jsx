@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { Search, ChevronLeft, ChevronRight, ArrowUpDown, Download, Filter } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, ArrowUpDown, Download, Filter, X } from "lucide-react";
 import { Button } from "../common/Button";
 import { useApp } from "../../context/AppContext";
 
@@ -114,45 +114,52 @@ export function DataTable({
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "12px", width: "100%" }}>
-      {/* Table Header Bar */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "12px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "12px", flex: 1, minWidth: "260px" }}>
-          {title && <h3 style={{ fontSize: "15px", fontWeight: 700, color: "var(--text-primary)", whiteSpace: "nowrap" }}>{title}</h3>}
+    <div style={{ display: "flex", flexDirection: "column", gap: "14px", width: "100%" }}>
+      {/* Table Header / Controls Bar */}
+      <div className="data-table-toolbar">
+        <div className="data-table-toolbar-left">
+          {title && (
+            <div className="data-table-title-group">
+              <h3 className="data-table-title">{title}</h3>
+              <span className="data-table-count-pill">{filteredData.length} records</span>
+            </div>
+          )}
           {searchable && (
-            <div style={{ position: "relative", width: "100%", maxWidth: "320px" }}>
-              <Search
-                size={15}
-                style={{
-                  position: "absolute",
-                  left: "10px",
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  color: "var(--text-muted)"
-                }}
-              />
+            <div className="data-table-search-box">
+              <Search size={15} className="data-table-search-icon" />
               <input
                 type="text"
-                className="form-input"
-                style={{ paddingLeft: "32px", fontSize: "12px", height: "34px" }}
-                placeholder=""
+                className="data-table-search-input"
+                placeholder={searchPlaceholder !== undefined ? searchPlaceholder : ""}
                 value={searchQuery}
                 onChange={(e) => {
                   setSearchQuery(e.target.value);
                   setCurrentPage(1);
                 }}
               />
+              {searchQuery && (
+                <button
+                  type="button"
+                  className="data-table-search-clear"
+                  onClick={() => {
+                    setSearchQuery("");
+                    setCurrentPage(1);
+                  }}
+                  title="Clear search"
+                >
+                  <X size={13} />
+                </button>
+              )}
             </div>
           )}
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+        <div className="data-table-toolbar-right">
           {filterKey && filterOptions.length > 0 && (
-            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+            <div className="data-table-filter-group">
               <Filter size={14} color="var(--text-muted)" />
               <select
-                className="form-select"
-                style={{ height: "34px", padding: "4px 10px", fontSize: "12px", width: "auto" }}
+                className="data-table-filter-select"
                 value={selectedFilter}
                 onChange={(e) => {
                   setSelectedFilter(e.target.value);
@@ -169,31 +176,49 @@ export function DataTable({
             </div>
           )}
 
-          <Button variant="secondary" size="sm" icon={Download} onClick={handleExportCSV}>
-            Export CSV
-          </Button>
+          <button
+            type="button"
+            className="data-table-export-btn"
+            onClick={handleExportCSV}
+            title="Download CSV report of current records"
+          >
+            <Download size={14} className="data-table-export-icon" />
+            <span>Export CSV</span>
+          </button>
 
           {actions}
         </div>
       </div>
 
-      {/* Data Table */}
+      {/* Horizontally Scrollable Table Body */}
       <div className="data-table-container">
         <table className="data-table">
           <thead>
             <tr>
-              {columns.map((col) => (
+              {columns.map((col, idx) => (
                 <th
-                  key={col.accessor}
+                  key={col.accessor || idx}
                   onClick={() => col.sortable !== false && handleSort(col.accessor)}
-                  style={{ cursor: col.sortable !== false ? "pointer" : "default", ...col.headerStyle }}
+                  style={{
+                    cursor: col.sortable !== false ? "pointer" : "default",
+                    ...col.headerStyle,
+                    ...(idx === 0 ? { paddingLeft: "20px" } : {}),
+                    ...(idx === columns.length - 1 ? { paddingRight: "20px" } : {})
+                  }}
                 >
-                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      justifyContent: col.headerStyle?.textAlign === "right" ? "flex-end" : "flex-start"
+                    }}
+                  >
                     <span>{col.header}</span>
                     {col.sortable !== false && (
                       <ArrowUpDown
                         size={12}
-                        color={sortConfig.key === col.accessor ? "var(--accent-blue)" : "var(--text-muted)"}
+                        color={sortConfig.key === col.accessor ? "var(--accent-amber, #C89547)" : "var(--text-muted)"}
                       />
                     )}
                   </div>
@@ -203,14 +228,21 @@ export function DataTable({
           </thead>
           <tbody>
             {paginatedData.length > 0 ? (
-              paginatedData.map((row, idx) => (
+              paginatedData.map((row, rowIdx) => (
                 <tr
-                  key={row.id || idx}
+                  key={row.id || rowIdx}
                   onClick={() => onRowClick && onRowClick(row)}
                   style={{ cursor: onRowClick ? "pointer" : "default" }}
                 >
-                  {columns.map((col) => (
-                    <td key={col.accessor} style={col.cellStyle}>
+                  {columns.map((col, cIdx) => (
+                    <td
+                      key={col.accessor || cIdx}
+                      style={{
+                        ...col.cellStyle,
+                        ...(cIdx === 0 ? { paddingLeft: "20px" } : {}),
+                        ...(cIdx === columns.length - 1 ? { paddingRight: "20px" } : {})
+                      }}
+                    >
                       {col.render ? col.render(row[col.accessor], row) : row[col.accessor]}
                     </td>
                   ))}
@@ -228,7 +260,7 @@ export function DataTable({
       </div>
 
       {/* Pagination Footer */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: "12px", color: "var(--text-secondary)" }}>
+      <div className="data-table-footer">
         <span>
           Showing {(currentPage - 1) * pageSize + (paginatedData.length ? 1 : 0)} - {Math.min(currentPage * pageSize, sortedData.length)} of {sortedData.length} entries
         </span>

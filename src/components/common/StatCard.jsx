@@ -53,9 +53,12 @@ export function StatCard({
             color: "var(--text-secondary)",
             textTransform: "uppercase",
             letterSpacing: "0.04em",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap"
+            lineHeight: 1.25,
+            wordBreak: "break-word",
+            display: "-webkit-box",
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: "vertical",
+            overflow: "hidden"
           }}
           title={title}
         >
