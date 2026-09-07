@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from "react";
+import masterDataService from "../services/masterDataService";
 
 const MasterDataContext = createContext();
 
@@ -1532,6 +1533,36 @@ export function MasterDataProvider({ children }) {
   useEffect(() => { localStorage.setItem("mx_admin_users", JSON.stringify(users)); }, [users]);
   useEffect(() => { localStorage.setItem("mx_master_audit_logs", JSON.stringify(auditLogs)); }, [auditLogs]);
   useEffect(() => { localStorage.setItem("mx_master_permissions", JSON.stringify(rolePermissions)); }, [rolePermissions]);
+
+  // Synchronize Master Data with Fastify REST API on mount
+  useEffect(() => {
+    async function fetchLiveMasterData() {
+      try {
+        const [liveSkus, liveBoms, liveLines, liveAssets] = await Promise.allSettled([
+          masterDataService.getSkus(),
+          masterDataService.getBoms(),
+          masterDataService.getLines(activePlantId),
+          masterDataService.getAssets(activePlantId),
+        ]);
+
+        if (liveSkus.status === "fulfilled" && Array.isArray(liveSkus.value) && liveSkus.value.length > 0) {
+          setSkus(liveSkus.value);
+        }
+        if (liveBoms.status === "fulfilled" && Array.isArray(liveBoms.value) && liveBoms.value.length > 0) {
+          setBoms(liveBoms.value);
+        }
+        if (liveLines.status === "fulfilled" && Array.isArray(liveLines.value) && liveLines.value.length > 0) {
+          setLines(liveLines.value);
+        }
+        if (liveAssets.status === "fulfilled" && Array.isArray(liveAssets.value) && liveAssets.value.length > 0) {
+          setAssets(liveAssets.value);
+        }
+      } catch (err) {
+        console.warn("MasterData backend sync fallback:", err.message);
+      }
+    }
+    fetchLiveMasterData();
+  }, [activePlantId]);
 
   // ============================================================================
   // CENTRALIZED AUDIT LOGGING HELPER

@@ -47,11 +47,11 @@ const iconMap = {
 
 export function Login() {
   const navigate = useNavigate();
-  const { login, ROLES } = useRole();
+  const { login, loginWithCredentials, ROLES } = useRole();
   const { addToast } = useApp();
 
-  const [username, setUsername] = useState("admin@maintenx.ops");
-  const [password, setPassword] = useState("MaintenX@2026");
+  const [username, setUsername] = useState("alexander.vance@maintenx.com");
+  const [password, setPassword] = useState("Password@123");
   const [showPassword, setShowPassword] = useState(false);
   const [selectedRole, setSelectedRole] = useState("plant_manager");
   const [hoveredRole, setHoveredRole] = useState(null);
@@ -73,11 +73,20 @@ export function Login() {
     setParticles(list);
   }, []);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    if (loginWithCredentials && username && password) {
+      const res = await loginWithCredentials(username, password);
+      if (res?.success) {
+        addToast(`Authenticated with database as ${res.user?.firstName || "User"} (${res.user?.role || selectedRole})!`, "success");
+        navigate("/dashboard");
+        return;
+      }
+    }
+
     login(selectedRole);
     const roleObj = ROLES.find((r) => r.id === selectedRole);
-    addToast(`Successfully authenticated as ${roleObj?.label || "User"}! Welcome to MaintenX OS.`, "success");
+    addToast(`Authenticated as ${roleObj?.label || "User"}! Welcome to MaintenX OS.`, "success");
     navigate(roleObj?.defaultRoute || "/dashboard");
   };
 

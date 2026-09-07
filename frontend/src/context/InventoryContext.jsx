@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { INITIAL_INVENTORY_LOTS, WAREHOUSE_ZONES } from "../data/mockInventory";
+import warehouseService from "../services/warehouseService";
 
 const InventoryContext = createContext();
 
@@ -45,11 +46,39 @@ export function InventoryProvider({ children }) {
     }
   ]);
 
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Sync state with Fastify warehouse backend on mount
+  const syncWithBackend = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const [remoteLots, remoteTx] = await Promise.allSettled([
+        warehouseService.getLots(),
+        warehouseService.getTransactions(),
+      ]);
+
+      if (remoteLots.status === "fulfilled" && Array.isArray(remoteLots.value) && remoteLots.value.length > 0) {
+        setLots(remoteLots.value);
+      }
+      if (remoteTx.status === "fulfilled" && Array.isArray(remoteTx.value) && remoteTx.value.length > 0) {
+        setPutAwayHistory((prev) => [...remoteTx.value, ...prev]);
+      }
+    } catch (err) {
+      console.warn("Warehouse backend sync fallback:", err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    syncWithBackend();
+  }, [syncWithBackend]);
+
   useEffect(() => {
     localStorage.setItem("flowstate_inventory_lots", JSON.stringify(lots));
   }, [lots]);
 
-  const addLot = (newLot) => {
+  const addLot = async (newLot) => {
     const lotNumber = newLot.lotNumber || `LOT-REC-${Math.floor(1000 + Math.random() * 9000)}`;
     const lotWithMeta = {
       ...newLot,
@@ -59,10 +88,27 @@ export function InventoryProvider({ children }) {
       status: "STAGED"
     };
     setLots((prev) => [lotWithMeta, ...prev]);
+
+    // Persist to PostgreSQL backend
+    try {
+      await warehouseService.recordStockMovement({
+        lotId: newLot.lotId || "00000000-0000-0000-0000-000000000001",
+        transactionType: "RECEIPT",
+        quantity: Number(newLot.quantity) || 1000,
+        uom: newLot.unit || "kg",
+        fromLocation: "INBOUND_RECEIVING",
+        toLocation: newLot.location || "STAGE-01",
+        referenceNumber: lotNumber,
+        notes: "Goods Receipt & LPN Ingestion",
+      });
+    } catch (err) {
+      console.warn("Recorded lot offline:", err.message);
+    }
+
     return lotWithMeta;
   };
 
-  const transferLotLocation = (lotNumber, newLocation) => {
+  const transferLotLocation = async (lotNumber, newLocation) => {
     const targetLot = lots.find(l => l.lotNumber === lotNumber);
     if (targetLot) {
       setPutAwayHistory((prev) => [
@@ -92,6 +138,22 @@ export function InventoryProvider({ children }) {
           return z;
         })
       );
+
+      // Persist transfer to PostgreSQL backend
+      try {
+        await warehouseService.recordStockMovement({
+          lotId: targetLot.id || "00000000-0000-0000-0000-000000000001",
+          transactionType: "TRANSFER",
+          quantity: Number(targetLot.quantity) || 100,
+          uom: targetLot.unit || "kg",
+          fromLocation: targetLot.location || "STAGING",
+          toLocation: newLocation,
+          referenceNumber: `TRF-${Date.now()}`,
+          notes: "Putaway transfer execution",
+        });
+      } catch (err) {
+        console.warn("Transferred lot offline:", err.message);
+      }
     }
 
     setLots((prev) =>
@@ -126,7 +188,9 @@ export function InventoryProvider({ children }) {
         completePickList,
         addLot,
         transferLotLocation,
-        putAwayHistory
+        putAwayHistory,
+        isLoading,
+        syncWithBackend
       }}
     >
       {children}

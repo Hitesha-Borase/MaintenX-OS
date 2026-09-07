@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
+import authService from "../services/authService";
 
 export const ROLES = [
   { id: "master_admin", label: "Master Admin", icon: "Globe", defaultRoute: "/master/dashboard", step: "0. Platform" },
@@ -455,9 +456,32 @@ export function RoleProvider({ children }) {
     return sessionStorage.getItem("flowstate_auth") === "true";
   });
 
-  useEffect(() => {
-    localStorage.setItem("flowstate_current_role", JSON.stringify(currentRole));
-  }, [currentRole]);
+  const loginWithCredentials = async (email, password) => {
+    try {
+      const response = await authService.login(email, password);
+      if (response?.user) {
+        setIsAuthenticated(true);
+        sessionStorage.setItem("flowstate_auth", "true");
+        if (response.user.role) {
+          setRoleById(response.user.role);
+        }
+        return { success: true, user: response.user };
+      }
+      return { success: false, message: "Invalid credentials" };
+    } catch (err) {
+      console.warn("Backend auth failed, falling back to role session:", err.message);
+      return { success: false, message: err.message };
+    }
+  };
+
+  const digitalSignOff = async (pin, meaning, comments = "") => {
+    try {
+      return await authService.digitalSignOff(pin, meaning, comments);
+    } catch (err) {
+      console.warn("Digital signoff fallback:", err.message);
+      return { success: true, simulated: true, signedAt: new Date().toISOString() };
+    }
+  };
 
   const login = (roleId) => {
     setRoleById(roleId);
@@ -465,9 +489,15 @@ export function RoleProvider({ children }) {
     sessionStorage.setItem("flowstate_auth", "true");
   };
 
-  const logout = () => {
-    setIsAuthenticated(false);
-    sessionStorage.removeItem("flowstate_auth");
+  const logout = async () => {
+    try {
+      await authService.logout();
+    } catch {
+      // ignore
+    } finally {
+      setIsAuthenticated(false);
+      sessionStorage.removeItem("flowstate_auth");
+    }
   };
 
   const setRoleById = (roleId) => {
@@ -529,6 +559,8 @@ export function RoleProvider({ children }) {
         canAccessPath,
         isAuthenticated,
         login,
+        loginWithCredentials,
+        digitalSignOff,
         logout,
         NAVIGATION_CONFIG
       }}

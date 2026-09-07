@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import maintenanceService from "../services/maintenanceService";
 import { INITIAL_ASSETS, ASSET_HIERARCHY_TREE } from "../data/mockAssets";
 import { INITIAL_WORK_ORDERS } from "../data/mockWorkOrders";
 import { INITIAL_PM_SCHEDULES, INITIAL_PM_PLANS } from "../data/mockPMSchedules";
@@ -136,6 +137,32 @@ export function CMMSProvider({ children }) {
     const saved = localStorage.getItem("flowstate_user_profile");
     return saved ? JSON.parse(saved) : DEFAULT_USER_PROFILE;
   });
+
+  // Synchronize CMMS Work Orders & PM Schedules with Fastify backend
+  useEffect(() => {
+    async function syncCMMSBackend() {
+      try {
+        const [remoteWOs, remotePMs, remoteSpares] = await Promise.allSettled([
+          maintenanceService.getWorkOrders(),
+          maintenanceService.getPMSchedules(),
+          maintenanceService.getSpareParts(),
+        ]);
+
+        if (remoteWOs.status === "fulfilled" && Array.isArray(remoteWOs.value) && remoteWOs.value.length > 0) {
+          setWorkOrders(remoteWOs.value);
+        }
+        if (remotePMs.status === "fulfilled" && Array.isArray(remotePMs.value) && remotePMs.value.length > 0) {
+          setPmSchedules(remotePMs.value);
+        }
+        if (remoteSpares.status === "fulfilled" && Array.isArray(remoteSpares.value) && remoteSpares.value.length > 0) {
+          setSpareParts(remoteSpares.value);
+        }
+      } catch (err) {
+        console.warn("CMMS backend sync fallback:", err.message);
+      }
+    }
+    syncCMMSBackend();
+  }, []);
 
   // Dynamic MTTR / MTBF recalculation based on actual Breakdowns
   useEffect(() => {
