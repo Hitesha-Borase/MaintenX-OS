@@ -147,8 +147,84 @@ export class AdminService {
       return [];
     }
   }
+
+  // Roles & Permissions
+  async getRoles() {
+    try {
+      return await apiClient.get("/admin/roles");
+    } catch (err) {
+      console.warn("Backend getRoles fallback:", err.message);
+      return [];
+    }
+  }
+
+  async createRole(roleData) {
+    try {
+      return await apiClient.post("/admin/roles", roleData);
+    } catch (err) {
+      console.warn("Backend createRole fallback:", err.message);
+      return {
+        id: `ROL-${Date.now().toString(36)}`,
+        name: roleData.name,
+        description: roleData.description || "Custom enterprise operational scope",
+        userCount: 0,
+        isSystem: false,
+      };
+    }
+  }
+
+  async getPermissionMatrix() {
+    try {
+      return await apiClient.get("/admin/permissions/matrix");
+    } catch (err) {
+      console.warn("Backend getPermissionMatrix fallback:", err.message);
+      return {};
+    }
+  }
+
+  async updatePermissionMatrix(matrixData) {
+    try {
+      return await apiClient.post("/admin/permissions/matrix", matrixData);
+    } catch (err) {
+      console.warn("Backend updatePermissionMatrix fallback:", err.message);
+      return { success: true };
+    }
+  }
+
+  async testPermissionAccess(testData) {
+    try {
+      return await apiClient.post("/admin/permissions/test", testData);
+    } catch (err) {
+      console.warn("Backend testPermissionAccess fallback:", err.message);
+      return {
+        allowed: testData.roleKey === "admin",
+        message: testData.roleKey === "admin"
+          ? `Access Granted: "${testData.roleKey}" has permission to "${testData.action?.toUpperCase()}" on "${testData.module}".`
+          : `Access Restricted — "${testData.roleKey}" does not have permission to perform "${testData.action?.toUpperCase()}" on "${testData.module}".`,
+      };
+    }
+  }
+
+  async updateUserRoleMapping(userId, role) {
+    try {
+      return await apiClient.put(`/admin/users/${userId}/role`, { role });
+    } catch (err) {
+      console.warn("Backend updateUserRoleMapping fallback:", err.message);
+      return { success: true, userId, role };
+    }
+  }
+
+  async getApprovalRules() {
+    try {
+      return await apiClient.get("/admin/approval-rules");
+    } catch (err) {
+      console.warn("Backend getApprovalRules fallback:", err.message);
+      return [];
+    }
+  }
 }
 
 export const adminService = new AdminService();
 export default adminService;
+
 

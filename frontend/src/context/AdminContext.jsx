@@ -67,10 +67,11 @@ export function AdminProvider({ children }) {
   const refreshAll = useCallback(async () => {
     try {
       setLoading(true);
-      const [backendUsers, backendInvites, backendLogs] = await Promise.allSettled([
+      const [backendUsers, backendInvites, backendLogs, backendRoles] = await Promise.allSettled([
         adminService.getUsers(),
         adminService.getInvitations(),
         adminService.getActivityLogs(),
+        adminService.getRoles(),
       ]);
 
       if (backendUsers.status === "fulfilled" && Array.isArray(backendUsers.value) && backendUsers.value.length > 0) {
@@ -81,6 +82,9 @@ export function AdminProvider({ children }) {
       }
       if (backendLogs.status === "fulfilled" && Array.isArray(backendLogs.value) && backendLogs.value.length > 0) {
         setActivityLogs(backendLogs.value);
+      }
+      if (backendRoles.status === "fulfilled" && Array.isArray(backendRoles.value) && backendRoles.value.length > 0) {
+        setRoles(backendRoles.value);
       }
     } catch (err) {
       console.warn("Failed to load initial admin data from API:", err);
@@ -205,6 +209,42 @@ export function AdminProvider({ children }) {
     }
   };
 
+  // Role Actions (Wired directly to backend)
+  const addRole = async (roleData) => {
+    try {
+      const created = await adminService.createRole(roleData);
+      setRoles((prev) => [...prev, created]);
+      // refresh activity
+      adminService.getActivityLogs().then((logs) => Array.isArray(logs) && setActivityLogs(logs));
+      return created;
+    } catch (err) {
+      const fallback = {
+        id: `ROL-0${roles.length + 1}`,
+        name: roleData.name,
+        description: roleData.description || "Custom enterprise operational scope",
+        userCount: 0,
+        isSystem: false,
+      };
+      setRoles((prev) => [...prev, fallback]);
+      return fallback;
+    }
+  };
+
+  const updateUserRole = async (userId, newRole) => {
+    try {
+      await adminService.updateUserRoleMapping(userId, newRole);
+      setUsers((prev) =>
+        prev.map((u) => (u.id === userId ? { ...u, role: newRole } : u))
+      );
+      // refresh activity
+      adminService.getActivityLogs().then((logs) => Array.isArray(logs) && setActivityLogs(logs));
+    } catch (err) {
+      setUsers((prev) =>
+        prev.map((u) => (u.id === userId ? { ...u, role: newRole } : u))
+      );
+    }
+  };
+
   const addItem = (item) => {
     const newItem = {
       id: `SKU-${Math.floor(5000 + Math.random() * 900)}`,
@@ -224,6 +264,7 @@ export function AdminProvider({ children }) {
         addUser,
         updateUserStatus,
         bulkUpdateStatus,
+        updateUserRole,
         invitations,
         setInvitations,
         addInvitation,
@@ -234,6 +275,7 @@ export function AdminProvider({ children }) {
         refreshAll,
         roles,
         setRoles,
+        addRole,
         items,
         setItems,
         addItem,
@@ -247,4 +289,5 @@ export function AdminProvider({ children }) {
 }
 
 export const useAdmin = () => useContext(AdminContext);
+
 

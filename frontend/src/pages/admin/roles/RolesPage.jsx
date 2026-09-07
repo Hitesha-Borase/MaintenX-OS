@@ -20,37 +20,40 @@ import { useApp } from "../../../context/AppContext";
 import { useNavigate } from "react-router-dom";
 
 export function RolesPage() {
-  const { roles = [], setRoles } = useAdmin();
+  const { roles = [], addRole } = useAdmin();
   const { addToast } = useApp();
   const navigate = useNavigate();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [newRole, setNewRole] = useState({
     name: "",
     description: "",
     isSystem: false
   });
 
-  const handleAddSubmit = (e) => {
+  const handleAddSubmit = async (e) => {
     e.preventDefault();
     if (!newRole.name.trim()) {
       addToast("Please provide a role title.", "warning");
       return;
     }
 
-    const created = {
-      id: `ROL-0${roles.length + 1}`,
-      name: newRole.name,
-      description: newRole.description || "Custom enterprise operational scope",
-      userCount: 0,
-      isSystem: false
-    };
-
-    setRoles([...roles, created]);
-    addToast(`Role "${created.name}" registered successfully!`, "success");
-    setIsModalOpen(false);
-    setNewRole({ name: "", description: "", isSystem: false });
+    try {
+      setIsSubmitting(true);
+      if (addRole) {
+        await addRole(newRole);
+      }
+      addToast(`Role "${newRole.name}" registered successfully!`, "success");
+      setIsModalOpen(false);
+      setNewRole({ name: "", description: "", isSystem: false });
+    } catch (err) {
+      addToast("Failed to create role: " + err.message, "error");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
+
 
   const totalUsers = roles.reduce((sum, r) => sum + (r.userCount || 0), 0);
 

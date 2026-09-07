@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   ShieldCheck,
   CheckCircle2,
@@ -14,6 +14,7 @@ import { Badge } from "../../../components/common/Badge";
 import { Button } from "../../../components/common/Button";
 import { StatCard } from "../../../components/common/StatCard";
 import { useApp } from "../../../context/AppContext";
+import adminService from "../../../services/adminService";
 
 export function ApprovalPermissionsPage() {
   const { addToast } = useApp();
@@ -24,6 +25,15 @@ export function ApprovalPermissionsPage() {
     { id: "APR-03", event: "Capital Asset Decommissioning / Scrap", tier: "Executive Sign-off", authorizedRoles: "Plant Manager + Corporate Ops", compliance: "GAAP Fixed Assets" },
     { id: "APR-04", event: "Emergency Schedule Override & Overtime", tier: "1-Tier Instant", authorizedRoles: "Plant Manager", compliance: "Internal Ops Policy" }
   ]);
+
+  useEffect(() => {
+    adminService.getApprovalRules().then((rules) => {
+      if (Array.isArray(rules) && rules.length > 0) {
+        setApprovalRules(rules);
+      }
+    });
+  }, []);
+
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%", maxWidth: "1200px", margin: "0 auto", minWidth: 0 }}>
