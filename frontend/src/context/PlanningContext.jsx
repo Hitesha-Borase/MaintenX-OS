@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect, useMemo } from "react";
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from "react";
+import planningService from "../services/planningService";
 import { useMasterData } from "./MasterDataContext";
 import { useProduction } from "./ProductionContext";
 import { useApp } from "./AppContext";
@@ -326,6 +327,28 @@ export function PlanningProvider({ children }) {
   useEffect(() => {
     localStorage.setItem("flowstate_planning_reservations", JSON.stringify(materialReservations));
   }, [materialReservations]);
+
+  // Synchronize Planning & Demand with Fastify backend on mount
+  useEffect(() => {
+    async function syncPlanningBackend() {
+      try {
+        const [remoteDemand, remoteSchedules] = await Promise.allSettled([
+          planningService.getDemandOrders(),
+          planningService.getAPSSchedules(),
+        ]);
+
+        if (remoteDemand.status === "fulfilled" && Array.isArray(remoteDemand.value) && remoteDemand.value.length > 0) {
+          setDemandOrders(remoteDemand.value);
+        }
+        if (remoteSchedules.status === "fulfilled" && Array.isArray(remoteSchedules.value) && remoteSchedules.value.length > 0) {
+          setSchedules(remoteSchedules.value);
+        }
+      } catch (err) {
+        console.warn("Planning backend sync fallback:", err.message);
+      }
+    }
+    syncPlanningBackend();
+  }, []);
 
   // ==========================================
   // 1. DEMAND ORDERS CRUD
