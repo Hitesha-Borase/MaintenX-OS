@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   GitCommit,
   Plus,
@@ -20,15 +20,26 @@ import { Button } from "../../../components/common/Button";
 import { StatCard } from "../../../components/common/StatCard";
 import { useMasterData } from "../../../context/MasterDataContext";
 import { useApp } from "../../../context/AppContext";
+import { masterDataService } from "../../../services/masterDataService";
 
 export function RoutingsPage() {
-  const { routings = [], addRouting, updateRouting, deleteRouting, skus = [], lines = [], operations = [] } = useMasterData();
+  const { routings = [], setRoutings, addRouting, updateRouting, deleteRouting, skus = [], lines = [], operations = [] } = useMasterData();
   const { addToast } = useApp();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [lineFilter, setLineFilter] = useState("ALL");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingRouting, setEditingRouting] = useState(null);
+
+  // Live fetch from backend on mount to ensure Network visibility
+  useEffect(() => {
+    masterDataService.getRoutings().then((res) => {
+      const data = res?.data?.data || res?.data || res;
+      if (Array.isArray(data) && data.length > 0 && typeof setRoutings === "function") {
+        setRoutings(data);
+      }
+    }).catch((err) => console.warn("Routings load:", err.message));
+  }, [setRoutings]);
 
   const finishedSkus = useMemo(() => skus.filter((s) => s.category === "Finished Goods"), [skus]);
 

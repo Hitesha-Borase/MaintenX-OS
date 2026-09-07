@@ -2021,6 +2021,7 @@ export function MasterDataProvider({ children }) {
       ]
     };
     setBoms((prev) => [newRecord, ...prev]);
+    masterDataService.createBom(newRecord).catch((err) => console.warn("API createBom:", err.message));
     logAudit({ entityId: newRecord.bomNumber, entityType: "BOM Recipe", action: "Created", newValue: `${newRecord.bomNumber} for ${newRecord.finishedSkuName}` });
     return newRecord;
   };
@@ -2029,6 +2030,7 @@ export function MasterDataProvider({ children }) {
     setBoms((prev) =>
       prev.map((b) => (b.bomId === bomId || b.bomNumber === bomId ? { ...b, ...updated, lastUpdated: new Date().toISOString().substring(0, 10) } : b))
     );
+    masterDataService.updateBom(bomId, updated).catch((err) => console.warn("API updateBom:", err.message));
     logAudit({ entityId: bomId, entityType: "BOM Recipe", action: "Updated" });
   };
 
@@ -2042,6 +2044,7 @@ export function MasterDataProvider({ children }) {
         return b;
       })
     );
+    masterDataService.updateBom(bomId, { status: "Under Review", approvalStatus: "Under Review" }).catch((err) => console.warn("API submitBOM:", err.message));
   };
 
   const approveBOM = (bomId, approver = "Sarah Jenkins") => {
@@ -2055,6 +2058,7 @@ export function MasterDataProvider({ children }) {
         return b;
       })
     );
+    masterDataService.updateBom(bomId, { status: "Active", approvalStatus: "Approved" }).catch((err) => console.warn("API approveBOM:", err.message));
   };
 
   const rejectBOM = (bomId, reason = "Tolerance out of spec") => {
@@ -2067,10 +2071,12 @@ export function MasterDataProvider({ children }) {
         return b;
       })
     );
+    masterDataService.updateBom(bomId, { status: "Draft", approvalStatus: "Draft", rejectionReason: reason }).catch((err) => console.warn("API rejectBOM:", err.message));
   };
 
   const deleteBOM = (bomId) => {
     setBoms((prev) => prev.filter((b) => b.bomId !== bomId && b.bomNumber !== bomId));
+    masterDataService.deleteBom(bomId).catch((err) => console.warn("API deleteBom:", err.message));
     logAudit({ entityId: bomId, entityType: "BOM Recipe", action: "Deleted" });
   };
 
@@ -2078,35 +2084,45 @@ export function MasterDataProvider({ children }) {
   // 8. OPERATIONS & ROUTINGS MUTATIONS
   // ============================================================================
   const addOperation = (opData) => {
+    const newId = `OP-0${operations.length + 1}`;
+    const codeVal = (opData.operationCode || opData.code || `OP-${operations.length + 1}`).toUpperCase();
     const newRecord = {
-      operationId: `OP-0${operations.length + 1}`,
-      operationCode: opData.operationCode || `OP-${operations.length + 1}`,
+      id: newId,
+      operationId: newId,
+      operationCode: codeVal,
+      code: codeVal,
       name: opData.name,
       sequence: Number(opData.sequence) || (operations.length + 1) * 10,
       department: opData.department || "Packaging",
-      stdDurationMin: Number(opData.stdDurationMin) || 45,
+      stdDurationMin: Number(opData.stdDurationMin || opData.stdTimeMins) || 45,
+      stdTimeMins: Number(opData.stdDurationMin || opData.stdTimeMins) || 45,
       setupDurationMin: Number(opData.setupDurationMin) || 15,
-      status: "Active"
+      status: opData.status || "Active"
     };
     setOperations((prev) => [newRecord, ...prev]);
+    masterDataService.createOperation(newRecord).catch((err) => console.warn("API createOperation:", err.message));
     logAudit({ entityId: newRecord.operationCode, entityType: "Operations Master", action: "Created", newValue: newRecord.name });
     return newRecord;
   };
 
   const updateOperation = (operationId, updated) => {
-    setOperations((prev) => prev.map((o) => (o.operationId === operationId ? { ...o, ...updated } : o)));
+    setOperations((prev) => prev.map((o) => (o.operationId === operationId || o.id === operationId ? { ...o, ...updated } : o)));
+    masterDataService.updateOperation(operationId, updated).catch((err) => console.warn("API updateOperation:", err.message));
     logAudit({ entityId: operationId, entityType: "Operations Master", action: "Updated" });
   };
 
   const deleteOperation = (operationId) => {
-    setOperations((prev) => prev.filter((o) => o.operationId !== operationId));
+    setOperations((prev) => prev.filter((o) => o.operationId !== operationId && o.id !== operationId));
+    masterDataService.deleteOperation(operationId).catch((err) => console.warn("API deleteOperation:", err.message));
     logAudit({ entityId: operationId, entityType: "Operations Master", action: "Deleted" });
   };
 
   const addRouting = (rtgData) => {
+    const newId = `RTG-00${routings.length + 1}`;
     const newRecord = {
-      routingId: `RTG-00${routings.length + 1}`,
-      routingCode: rtgData.routingCode || `RTG-${rtgData.skuCode || "5000"}-L1`,
+      id: newId,
+      routingId: newId,
+      routingCode: (rtgData.routingCode || `RTG-${rtgData.skuCode || "5000"}-L1`).toUpperCase(),
       skuId: rtgData.skuId,
       skuCode: rtgData.skuCode || skus.find((s) => s.skuId === rtgData.skuId)?.skuCode || "SKU-5001",
       skuName: rtgData.skuName || skus.find((s) => s.skuId === rtgData.skuId)?.name || "Product",
@@ -2124,17 +2140,20 @@ export function MasterDataProvider({ children }) {
       steps: rtgData.steps || []
     };
     setRoutings((prev) => [newRecord, ...prev]);
+    masterDataService.createRouting(newRecord).catch((err) => console.warn("API createRouting:", err.message));
     logAudit({ entityId: newRecord.routingCode, entityType: "Routings Master", action: "Created", newValue: `${newRecord.routingCode} for ${newRecord.skuCode}` });
     return newRecord;
   };
 
   const updateRouting = (routingId, updated) => {
-    setRoutings((prev) => prev.map((r) => (r.routingId === routingId ? { ...r, ...updated } : r)));
+    setRoutings((prev) => prev.map((r) => (r.routingId === routingId || r.id === routingId ? { ...r, ...updated } : r)));
+    masterDataService.updateRouting(routingId, updated).catch((err) => console.warn("API updateRouting:", err.message));
     logAudit({ entityId: routingId, entityType: "Routings Master", action: "Updated" });
   };
 
   const deleteRouting = (routingId) => {
-    setRoutings((prev) => prev.filter((r) => r.routingId !== routingId));
+    setRoutings((prev) => prev.filter((r) => r.routingId !== routingId && r.id !== routingId));
+    masterDataService.deleteRouting(routingId).catch((err) => console.warn("API deleteRouting:", err.message));
     logAudit({ entityId: routingId, entityType: "Routings Master", action: "Deleted" });
   };
 
@@ -2793,6 +2812,7 @@ export function MasterDataProvider({ children }) {
 
         // 7. BOMs / Recipes
         boms,
+        setBoms,
         addBOM,
         updateBOM,
         submitBOMForApproval,
@@ -2802,10 +2822,12 @@ export function MasterDataProvider({ children }) {
 
         // 8. Operations & Routings
         operations,
+        setOperations,
         addOperation,
         updateOperation,
         deleteOperation,
         routings,
+        setRoutings,
         addRouting,
         updateRouting,
         deleteRouting,
