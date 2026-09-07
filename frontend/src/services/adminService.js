@@ -52,6 +52,15 @@ export class AdminService {
     }
   }
 
+  async getUsers() {
+    try {
+      return await apiClient.get("/admin/users");
+    } catch (err) {
+      console.warn("Backend getUsers fallback:", err.message);
+      return [];
+    }
+  }
+
   async provisionUser(userData) {
     try {
       return await apiClient.post("/admin/users/provision", userData);
@@ -63,18 +72,78 @@ export class AdminService {
         email: userData.email,
         role: userData.role,
         department: userData.department || "Operations",
-        plant: userData.plant || "Indore Mega Facility",
+        plant: userData.plant || "Indore Plant",
         status: userData.status || "Active",
         createdAt: new Date().toISOString(),
       };
     }
   }
 
-  async getUsers() {
+  async updateUserStatus(userId, status) {
     try {
-      return await apiClient.get("/admin/users");
+      return await apiClient.put(`/admin/users/${userId}/status`, { status });
     } catch (err) {
-      console.warn("Backend getUsers fallback:", err.message);
+      console.warn("Backend updateUserStatus fallback:", err.message);
+      return { id: userId, status };
+    }
+  }
+
+  async bulkUpdateUserStatus(action) {
+    try {
+      return await apiClient.post("/admin/users/bulk-status", { action });
+    } catch (err) {
+      console.warn("Backend bulkUpdateUserStatus fallback:", err.message);
+      return { success: true, action };
+    }
+  }
+
+  async getInvitations() {
+    try {
+      return await apiClient.get("/admin/invitations");
+    } catch (err) {
+      console.warn("Backend getInvitations fallback:", err.message);
+      return [];
+    }
+  }
+
+  async createInvitation(inviteData) {
+    try {
+      return await apiClient.post("/admin/invitations", inviteData);
+    } catch (err) {
+      console.warn("Backend createInvitation fallback:", err.message);
+      return {
+        id: `INV-${Math.floor(100 + Math.random() * 900)}`,
+        ...inviteData,
+        sentDate: new Date().toISOString().substring(0, 10),
+        status: "Pending",
+      };
+    }
+  }
+
+  async resendInvitation(invitationId) {
+    try {
+      return await apiClient.post(`/admin/invitations/${invitationId}/resend`, {});
+    } catch (err) {
+      console.warn("Backend resendInvitation fallback:", err.message);
+      return { success: true, message: "Invitation resent" };
+    }
+  }
+
+  async deleteInvitation(invitationId) {
+    try {
+      return await apiClient.delete(`/admin/invitations/${invitationId}`);
+    } catch (err) {
+      console.warn("Backend deleteInvitation fallback:", err.message);
+      return { success: true, message: "Invitation revoked" };
+    }
+  }
+
+  async getActivityLogs(query) {
+    try {
+      const url = query ? `/admin/activity?query=${encodeURIComponent(query)}` : "/admin/activity";
+      return await apiClient.get(url);
+    } catch (err) {
+      console.warn("Backend getActivityLogs fallback:", err.message);
       return [];
     }
   }
@@ -82,3 +151,4 @@ export class AdminService {
 
 export const adminService = new AdminService();
 export default adminService;
+

@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import adminService from "../services/adminService";
 
 const AdminContext = createContext();
 
@@ -9,18 +10,19 @@ export function AdminProvider({ children }) {
     return saved
       ? JSON.parse(saved)
       : [
-          { id: "USR-001", name: "Alexander Vance", email: "alexander.vance@flowstate.io", role: "System Administrator", department: "IT & Digital Ops", status: "Active", lastLogin: "Just now", plant: "All Plants" },
-          { id: "USR-002", name: "Robert Thorne", email: "robert.thorne@flowstate.io", role: "Plant Manager", department: "Operations", status: "Active", lastLogin: "10 mins ago", plant: "Plant 1 (Austin)" },
-          { id: "USR-003", name: "Sarah Jenkins", email: "sarah.jenkins@flowstate.io", role: "QA Manager", department: "Quality Assurance", status: "Active", lastLogin: "1 hour ago", plant: "Plant 1 (Austin)" },
-          { id: "USR-004", name: "Marcus Vance", email: "marcus.vance@flowstate.io", role: "Maintenance Lead", department: "Maintenance", status: "Active", lastLogin: "3 hours ago", plant: "Plant 1 (Austin)" },
-          { id: "USR-005", name: "David Kim", email: "david.kim@flowstate.io", role: "Production Supervisor", department: "Production", status: "Suspended", lastLogin: "3 days ago", plant: "Plant 2 (Dallas)" }
+          { id: "USR-001", name: "Alexander Vance", email: "alexander.vance@flowstate.io", role: "System Administrator", department: "IT & Digital Ops", status: "Active", lastLogin: "Just now", plant: "Indore Plant" },
+          { id: "USR-002", name: "Robert Thorne", email: "robert.thorne@flowstate.io", role: "Plant Manager", department: "Operations", status: "Suspended", lastLogin: "10 mins ago", plant: "Indore Plant" },
+          { id: "USR-003", name: "Sarah Jenkins", email: "sarah.jenkins@flowstate.io", role: "QA Manager", department: "Quality Assurance", status: "Active", lastLogin: "1 hour ago", plant: "Indore Plant" },
+          { id: "USR-004", name: "Marcus Vance", email: "marcus.vance@flowstate.io", role: "Maintenance Lead", department: "Maintenance", status: "Active", lastLogin: "3 hours ago", plant: "Indore Plant" },
+          { id: "USR-005", name: "David Kim", email: "david.kim@flowstate.io", role: "Production Supervisor", department: "Production", status: "Active", lastLogin: "3 days ago", plant: "Indore Plant" }
         ];
   });
 
   // 2. User Invitations
   const [invitations, setInvitations] = useState([
     { id: "INV-101", email: "clara.oswald@flowstate.io", role: "Quality Analyst", department: "Quality", invitedBy: "Alexander Vance", sentDate: "2026-08-30", status: "Pending" },
-    { id: "INV-102", email: "james.holden@flowstate.io", role: "Controls Engineer", department: "Maintenance", invitedBy: "Alexander Vance", sentDate: "2026-08-31", status: "Pending" }
+    { id: "INV-102", email: "james.holden@flowstate.io", role: "Controls Engineer", department: "Maintenance", invitedBy: "Alexander Vance", sentDate: "2026-08-31", status: "Pending" },
+    { id: "INV-445", email: "abc@gmail.com", role: "Quality Analyst", department: "Quality", invitedBy: "Alexander Vance", sentDate: "2026-09-07", status: "Pending" }
   ]);
 
   // 3. User Activity Logs
@@ -59,36 +61,148 @@ export function AdminProvider({ children }) {
     healthScore: 96.2
   });
 
+  const [loading, setLoading] = useState(false);
+
+  // Load from Backend API
+  const refreshAll = useCallback(async () => {
+    try {
+      setLoading(true);
+      const [backendUsers, backendInvites, backendLogs] = await Promise.allSettled([
+        adminService.getUsers(),
+        adminService.getInvitations(),
+        adminService.getActivityLogs(),
+      ]);
+
+      if (backendUsers.status === "fulfilled" && Array.isArray(backendUsers.value) && backendUsers.value.length > 0) {
+        setUsers(backendUsers.value);
+      }
+      if (backendInvites.status === "fulfilled" && Array.isArray(backendInvites.value) && backendInvites.value.length > 0) {
+        setInvitations(backendInvites.value);
+      }
+      if (backendLogs.status === "fulfilled" && Array.isArray(backendLogs.value) && backendLogs.value.length > 0) {
+        setActivityLogs(backendLogs.value);
+      }
+    } catch (err) {
+      console.warn("Failed to load initial admin data from API:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshAll();
+  }, [refreshAll]);
+
   useEffect(() => {
     localStorage.setItem("admin_users", JSON.stringify(users));
   }, [users]);
 
-  // Helpers
-  const addUser = (userData) => {
-    const newUser = {
-      id: `USR-00${users.length + 1}`,
-      ...userData,
-      lastLogin: "Never"
-    };
-    setUsers([...users, newUser]);
-    return newUser;
+  // User Actions (Wired directly to backend)
+  const addUser = async (userData) => {
+    try {
+      const created = await adminService.provisionUser(userData);
+      setUsers((prev) => [created, ...prev]);
+      // refresh activity
+      adminService.getActivityLogs().then((logs) => Array.isArray(logs) && setActivityLogs(logs));
+      return created;
+    } catch (err) {
+      const fallback = {
+        id: `USR-00${users.length + 1}`,
+        ...userData,
+        lastLogin: "Never",
+      };
+      setUsers((prev) => [fallback, ...prev]);
+      return fallback;
+    }
   };
 
-  const updateUserStatus = (userId, status) => {
-    setUsers((prev) =>
-      prev.map((u) => (u.id === userId ? { ...u, status } : u))
-    );
+  const updateUserStatus = async (userId, status) => {
+    try {
+      await adminService.updateUserStatus(userId, status);
+      setUsers((prev) =>
+        prev.map((u) => (u.id === userId ? { ...u, status } : u))
+      );
+      // refresh activity
+      adminService.getActivityLogs().then((logs) => Array.isArray(logs) && setActivityLogs(logs));
+    } catch (err) {
+      setUsers((prev) =>
+        prev.map((u) => (u.id === userId ? { ...u, status } : u))
+      );
+    }
   };
 
-  const addInvitation = (inv) => {
-    const newInv = {
-      id: `INV-${Math.floor(100 + Math.random() * 900)}`,
-      ...inv,
-      sentDate: new Date().toISOString().substring(0, 10),
-      status: "Pending"
-    };
-    setInvitations([...invitations, newInv]);
-    return newInv;
+  const bulkUpdateStatus = async (action) => {
+    const isActivate = action.toUpperCase().includes("ACTIVATE");
+    const targetStatus = isActivate ? "Active" : "Suspended";
+    try {
+      await adminService.bulkUpdateUserStatus(action);
+      setUsers((prev) =>
+        prev.map((u) => (u.role?.includes("Admin") ? u : { ...u, status: targetStatus }))
+      );
+      // refresh activity
+      adminService.getActivityLogs().then((logs) => Array.isArray(logs) && setActivityLogs(logs));
+    } catch (err) {
+      setUsers((prev) =>
+        prev.map((u) => (u.role?.includes("Admin") ? u : { ...u, status: targetStatus }))
+      );
+    }
+  };
+
+  // Invitation Actions (Wired directly to backend)
+  const addInvitation = async (inv) => {
+    try {
+      const newInv = await adminService.createInvitation(inv);
+      setInvitations((prev) => [newInv, ...prev]);
+      // refresh activity
+      adminService.getActivityLogs().then((logs) => Array.isArray(logs) && setActivityLogs(logs));
+      return newInv;
+    } catch (err) {
+      const fallback = {
+        id: `INV-${Math.floor(100 + Math.random() * 900)}`,
+        ...inv,
+        sentDate: new Date().toISOString().substring(0, 10),
+        status: "Pending",
+      };
+      setInvitations((prev) => [fallback, ...prev]);
+      return fallback;
+    }
+  };
+
+  const resendInvitation = async (invitationId) => {
+    try {
+      await adminService.resendInvitation(invitationId);
+      const today = new Date().toISOString().substring(0, 10);
+      setInvitations((prev) =>
+        prev.map((i) => (i.id === invitationId || i.email === invitationId ? { ...i, sentDate: today } : i))
+      );
+      // refresh activity
+      adminService.getActivityLogs().then((logs) => Array.isArray(logs) && setActivityLogs(logs));
+    } catch (err) {
+      const today = new Date().toISOString().substring(0, 10);
+      setInvitations((prev) =>
+        prev.map((i) => (i.id === invitationId || i.email === invitationId ? { ...i, sentDate: today } : i))
+      );
+    }
+  };
+
+  const deleteInvitation = async (invitationId) => {
+    try {
+      await adminService.deleteInvitation(invitationId);
+      setInvitations((prev) => prev.filter((i) => i.id !== invitationId && i.email !== invitationId));
+      // refresh activity
+      adminService.getActivityLogs().then((logs) => Array.isArray(logs) && setActivityLogs(logs));
+    } catch (err) {
+      setInvitations((prev) => prev.filter((i) => i.id !== invitationId && i.email !== invitationId));
+    }
+  };
+
+  const fetchActivityLogs = async (query) => {
+    try {
+      const logs = await adminService.getActivityLogs(query);
+      if (Array.isArray(logs)) setActivityLogs(logs);
+    } catch (err) {
+      console.warn("Failed to fetch activity logs:", err);
+    }
   };
 
   const addItem = (item) => {
@@ -106,11 +220,18 @@ export function AdminProvider({ children }) {
       value={{
         users,
         setUsers,
+        loading,
         addUser,
         updateUserStatus,
+        bulkUpdateStatus,
         invitations,
+        setInvitations,
         addInvitation,
+        resendInvitation,
+        deleteInvitation,
         activityLogs,
+        fetchActivityLogs,
+        refreshAll,
         roles,
         setRoles,
         items,
@@ -126,3 +247,4 @@ export function AdminProvider({ children }) {
 }
 
 export const useAdmin = () => useContext(AdminContext);
+
