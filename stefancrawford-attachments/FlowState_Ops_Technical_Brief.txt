@@ -1,0 +1,984 @@
+﻿
+
+
+FLOWSTATE OPS
+
+Manufacturing Platform Technical Brief
+
+System model, modules, APIs, integrations, hardware assumptions, data flow and development questions
+
+Document field
+
+Value
+
+Prepared for
+
+Kiaan Tech / Development Partner
+
+Prepared by
+
+Stefan Crawford / FlowState Ops
+
+Version
+
+1.0 - Developer Discovery Brief
+
+Date
+
+September 7, 2026
+
+Status
+
+Requirements baseline; hardware discovery still required
+
+Target
+
+Independent, multi-company, multi-plant manufacturing SaaS
+
+
+
+PRIMARY OBJECTIVE: Rebuild FlowState Ops as one connected manufacturing operating system. It must execute real transactions across planning, production, quality, inventory, maintenance and traceability - not operate as a collection of disconnected dashboards.
+
+
+
+Core operating chain
+
+DEMAND  →  PLAN  →  MATERIALS  →  PRODUCE  →  VERIFY  →  RELEASE  →  STORE  →  SHIP  →  TRACE  →  IMPROVE
+
+This brief supplements the existing FlowState Ops Full Developer Rebuild Scope. It defines the architecture and discovery decisions Kiaan Tech must document before implementation continues.
+
+
+
+1. Required Outcome and Boundaries
+
+FlowState Ops is a food-manufacturing-first operating platform combining ERP, APS, MRP, MES, QMS, WMS, CMMS, traceability, labour, costing, continuous improvement and governed AI. Each module must use a shared relational data model and shared transaction history.
+
+1.1 Non-negotiable principles
+
+One canonical source of truth for every major business object and KPI.
+
+API-first backend; critical business logic must execute server-side.
+
+Strict tenant isolation by company and plant, with authorized master-owner visibility.
+
+Every critical transaction must record company, plant, department, line, order, batch/lot, equipment, user and timestamp where applicable.
+
+Finished goods must not become available or shippable until the required QA release succeeds.
+
+No hardcoded KPIs, demo metrics or UI-only workflows in production.
+
+Food-safety decisions, root-cause approval and release decisions remain human-controlled.
+
+The owner receives source code, database schema, API specification, deployment configuration and technical documentation.
+
+1.2 Delivery strategy
+
+The complete architecture must be defined now, but implementation should be milestone-based. Kiaan Tech must first complete discovery, the current-system gap assessment and hardware survey. No machine connection should be quoted as confirmed until PLC/controller access and protocol support are verified.
+
+2. Users and Access Model
+
+Role
+
+Primary system responsibility
+
+Operator
+
+Start/pause/complete jobs; record production, downtime, checks and evidence.
+
+Lead / Supervisor
+
+Control schedule execution, labour, pace, H/B, holds, recovery and approvals.
+
+Planner
+
+Forecast, net requirements, finite-capacity APS, materials and schedule publication.
+
+QA
+
+Specifications, CCP checks, holds, deviations, verification, disposition and release.
+
+Warehouse
+
+Receiving, lots, locations, reservations, staging, picking, shipping and counts.
+
+Maintenance
+
+Assets, work orders, PM, failures, spares, calibration and reliability.
+
+Plant / Executive
+
+Cross-module KPIs, constraints, risks, cost, recovery and drill-down.
+
+Company / System Admin
+
+Tenants, users, roles, plants, master data, modules, integrations and audit.
+
+
+
+
+
+3. System Model and Canonical Data Backbone
+
+The recommended system is a modular web application with a relational transactional core, documented APIs, an integration/event layer, object storage and a separate reporting/AI read layer. Critical workflows must remain usable when an optional AI or external integration is unavailable.
+
+Domain
+
+Core records
+
+Tenant and organization
+
+Company, plant, department, area, line, work centre, shift, user, role and permission.
+
+Product and process
+
+SKU, UOM, pack configuration, BOM/recipe version, routing, operation, target, changeover and yield rule.
+
+Demand and planning
+
+Customer, forecast, sales order, safety stock, schedule version, production order and packaging job.
+
+Materials and inventory
+
+Requirement, reservation, issue, consumption, lot, pallet, location, transfer, adjustment and receipt.
+
+Execution
+
+Batch record, process step, equipment use, operator assignment, output, scrap, downtime and timeline.
+
+Quality
+
+Specification, CCP, check, deviation, hold, disposition, release, complaint, RCA, CAPA and evidence.
+
+Maintenance
+
+Asset, work request/order, PM plan, failure code, spare part, calibration and machine history.
+
+Management
+
+KPI snapshot, labour time, cost, meeting, decision, action, CI project and verified solution.
+
+Governance
+
+Audit event, e-signature, notification, approval, document revision and integration event.
+
+
+
+3.1 Required record relationships
+
+Demand links to schedule, production order, batch, finished lot, shipment and customer.
+
+Every consumed raw-material and packaging lot links to the finished lots it created.
+
+Every production event updates labour, material, quality, inventory, traceability, cost and KPI records through controlled transactions.
+
+Every correction preserves the original value, revised value, reason, user, date/time and approval where required.
+
+Every integration message has an idempotency key, status, retry count, error detail and audit record.
+
+4. Main Functional Modules
+
+Module
+
+Minimum required capability
+
+Platform foundation
+
+Authentication, MFA, tenants, roles, row-level authorization, audit, master data, files, notifications and approvals.
+
+Demand / APS / MRP
+
+Orders, forecasts, safety stock, 14/90-day horizon, finite capacity, materials, labour, QA and maintenance constraints.
+
+Production / MES
+
+Production orders, digital batch records, operator job control, outputs, downtime, changeovers, yields and shift handoff.
+
+Quality / QMS
+
+Specifications, pre-op, CCP, pH, temperature, aw, O2, seal/weight checks, holds, deviations, release and complaints.
+
+Batch 360 / traceability
+
+One-step-back/forward genealogy, reverse and forward trace, mock recall, pallet/shipment/customer linkage.
+
+Inventory / WMS
+
+Receiving, lots, FEFO/FIFO, bins, reservations, issues, returns, holds, counts, staging, picking and shipping.
+
+Maintenance / CMMS
+
+Assets, work orders, PM, downtime links, failure codes, spares, calibration, MTBF, MTTR and costs.
+
+Labour / performance
+
+Assignments, skills, time, transfers, overtime, H/B, OEE, schedule attainment and recovery projections.
+
+RCA / CI
+
+Evidence-based hypotheses, occurrence/escape causes, actions, effectiveness checks, projects and verified solutions.
+
+Meeting intelligence / AI
+
+Transcription, issue/entity linking, action extraction, evidence summaries and governed recommendations.
+
+Costing / executive
+
+Material, packaging, labour, downtime, yield, maintenance cost, opportunity value and multi-plant dashboards.
+
+SOP / training / sanitation
+
+Controlled documents, revisions, acknowledgements, qualifications, sanitation schedules, ATP and pre-op release.
+
+
+
+5. Application and Deployment Architecture
+
+Layer
+
+Required design
+
+User experience
+
+Responsive browser application for desktop, tablet and mobile; role-specific home screens; large touch targets; barcode/QR and photo capture.
+
+Application/API
+
+Versioned REST or GraphQL APIs for transactions; WebSocket/subscription channel for live status; server-side validation and authorization.
+
+Domain services
+
+Planning, production, quality, inventory, traceability, maintenance, labour, documents, notifications, reporting and AI orchestration.
+
+Transactional data
+
+Production-grade relational database with migrations, constraints, revisioning, immutable audit events and tenant-scoped keys.
+
+Files and evidence
+
+Object storage for photos, certificates, manuals, recordings and documents; metadata stored in the relational database.
+
+Integration/event layer
+
+Webhook/event bus, job queue, retries, dead-letter/error queue, connector health and replay controls.
+
+Machine/edge layer
+
+Read-only-by-default industrial gateway or edge PC; protocol adapters; local buffering; secure outbound connection to cloud/API.
+
+Analytics/AI
+
+Governed reporting models and read-only AI retrieval with source lineage; no direct uncontrolled writes by AI.
+
+Operations
+
+Development, staging and production environments; CI/CD, monitoring, logs, traces, backup, restore, rollback and secrets management.
+
+
+
+ARCHITECTURE RULE: The software must never connect a cloud service directly to an unsegmented machine-control network. Machine data should pass through a controlled OT/IT boundary and approved edge gateway. Initial connections should be read-only unless a separate safety and change-control review approves writing commands.
+
+
+
+6. API Requirements
+
+Kiaan Tech must provide an OpenAPI 3.x specification or equivalent contract for every externally or internally consumed API. The examples below define required API families, not final URL naming.
+
+API family
+
+Example resources
+
+Purpose
+
+Identity / tenant
+
+/auth, /companies, /plants, /users, /roles, /permissions
+
+Login, MFA, tenancy, authorization and access review.
+
+Master data
+
+/items, /boms, /routings, /work-centres, /specifications
+
+Versioned product, process, capacity and quality definitions.
+
+Planning
+
+/demand, /forecasts, /schedules, /production-orders, /material-requirements
+
+Plan, validate, approve, publish and explain feasibility.
+
+Execution
+
+/jobs, /batches, /outputs, /downtime, /labour-events
+
+Start/pause/resume/complete, record actuals and enforce gates.
+
+Quality
+
+/quality-checks, /holds, /deviations, /releases, /complaints
+
+Record results, auto-hold failures and authorize disposition/release.
+
+Inventory / trace
+
+/lots, /inventory-transactions, /pallets, /shipments, /trace
+
+Immutable ledger, FEFO, genealogy and recall queries.
+
+Maintenance
+
+/assets, /work-orders, /pm-plans, /failures, /calibrations
+
+Lifecycle, history, parts, downtime and reliability.
+
+Integration
+
+/integration-events, /webhooks, /connectors, /machine-readings
+
+Ingestion, idempotency, health, retry and audit.
+
+Reporting / AI
+
+/kpis, /reports, /meetings, /ai-assistance
+
+Governed calculations, source lineage and human-approved actions.
+
+
+
+6.1 API control requirements
+
+OAuth 2.0/OIDC or equally strong scoped authentication; short-lived access tokens and secure service credentials.
+
+Tenant and plant authorization enforced server-side on every request.
+
+Idempotency protection for create, release, inventory and machine-event operations.
+
+Pagination, filtering, versioning, validation errors, rate limits and correlation IDs.
+
+Webhook signatures, retry policy, dead-letter handling and replay protection.
+
+Audit history for critical API calls and field-level correction history where regulated records are involved.
+
+Automated contract, security and end-to-end tests included in delivery.
+
+
+
+7. Hardware and Shop-Floor Integration
+
+7.1 Confirmed equipment evidence
+
+Item
+
+Confirmed information
+
+Not yet confirmed
+
+Packaging machine
+
+Plan It Packaging Systems Neptune RotoBagger. Visible screen shows S/N 20230 and Ref. 20082158.
+
+Exact machine configuration and installed options.
+
+Operator interface
+
+Omron-branded HMI is visible.
+
+HMI model, firmware, Ethernet port, runtime project access and supported communication drivers.
+
+Main controller
+
+Omron CP2E PLC confirmed. It has built-in Ethernet ports 1A/1B and serial communications terminals.
+
+Complete CP2E order code, firmware, IP addresses, memory/tag map, program ownership and enabled protocols.
+
+Ethernet switch
+
+Omron W4S1-05B five-port industrial Ethernet switching hub is installed beside the CP2E; two ports are visibly connected.
+
+Cable destinations, network addressing, unused-port approval and OT-security design.
+
+Installed gateway
+
+A device labelled TN-630-W4 / TQN6-211EW4-00 is installed with WAN, LAN, Wi-Fi/GPS indicators and RS-232/RS-485 terminals. A LAN cable is connected.
+
+Manufacturer documentation, current purpose, SIM/cloud account, IP settings, credentials, firmware, security status and whether it can safely be reused.
+
+Motor drive
+
+Danfoss VLT Micro Drive; P/N 132F0010; S/N 850225A250; 0.75 kW / 1.0 HP; 3 x 200-240 V input.
+
+Exact drive model/configuration, communications option and readable operating/fault parameters.
+
+Safety controller
+
+Omron G9SX-NSA222-T03, 24 VDC safety controller is present.
+
+Safety-system drawings and OEM-approved boundaries. It must not be used as a normal production-data interface.
+
+Power supply
+
+COSEL PJA150F-24, 24 VDC output, approximately 6.4 A, labelled PS1.
+
+Available spare capacity; not itself a data source.
+
+I/O expansion
+
+A black module marked 16ER / FXP is visible with output terminals and active channel LEDs.
+
+Manufacturer, full model, relationship to the main PLC and supported communications.
+
+Machine identifier
+
+Photo shows identifier C2008198250009.
+
+Whether this is a serial, assembly, enclosure or internal asset number.
+
+
+
+
+
+Figure 1. Neptune RotoBagger operator interface; Omron HMI confirmed from supplied photo.
+
+7.1.1 Cabinet evidence added September 7, 2026
+
+
+
+
+
+Figure 2. Installed TN-630-W4 gateway; connected LAN and serial-capable terminals are visible.
+
+Figure 3. Danfoss VLT Micro Drive, 0.75 kW / 1.0 HP, P/N 132F0010.
+
+
+
+Figure 4. Omron G9SX-NSA222-T03 safety controller. Safety functions remain outside normal FlowState control/write scope.
+
+
+
+
+
+Figure 5. Omron CP2E PLC with Ethernet and serial communications.
+
+Figure 6. Omron W4S1-05B five-port Ethernet switching hub.
+
+PLAN IT INTEGRATION CONCLUSION: The RotoBagger now has a confirmed Omron CP2E PLC, an Omron W4S1-05B Ethernet switch and a separate TN-630-W4 gateway. Kiaan must map the existing cables and addresses, verify the exact CP2E order code and supported read protocol, and obtain OEM/plant-IT approval before adding a read-only connection.
+
+
+
+7.1.2 Variovac VAC machine evidence
+
+Item
+
+Confirmed information
+
+Required confirmation
+
+Machine
+
+Variovac vacuum-packaging machine; HMI shows Variovac/Reiser support information and B&R Automation Studio 4.2.
+
+Machine model, serial number, OEM support entitlement and current backup status.
+
+Operator panel
+
+B&R Automation Panel 1000, label 5AP1120.101E-F05, 10.1-inch family.
+
+Firmware, connection module and whether panel is display-only or paired with a Panel PC.
+
+Industrial computer/controller
+
+A B&R Panel PC/PPC-family computing unit is mounted behind the panel; label image is partially blurred.
+
+Exact complete order code, CPU/runtime, Ethernet ports, IP address, licenses and whether PLC runtime executes here.
+
+Drive
+
+B&R ACOPOSinverter P74 with CAN indicators and a Modbus VPOS port.
+
+Exact drive order code and whether any diagnostic data should be read through the main controller.
+
+Power supply
+
+Siemens SITOP PSU100S, 24 VDC/10 A, 6EP1334-2BA20.
+
+Available capacity only; not a data source.
+
+Control platform
+
+B&R-based control environment is strongly indicated by the HMI, software and drive.
+
+PLC/I/O hardware inventory, program ownership, protocol licenses and OEM-approved external interface.
+
+
+
+
+
+
+
+Figure 7. Variovac operating interface; B&R Automation Studio 4.2 is indicated.
+
+Figure 8. B&R Automation Panel label 5AP1120.101E-F05.
+
+
+
+
+
+Figure 9. B&R industrial computer/controller; exact order code requires a clearer image.
+
+Figure 10. B&R ACOPOSinverter P74 drive.
+
+VAC INTEGRATION CONCLUSION: Treat the B&R controller/Panel PC as the primary integration candidate. Kiaan must confirm whether Variovac exposes an OEM-supported OPC UA, Modbus TCP, B&R PVI or other read-only interface. The ACOPOS drive and safety circuits are not the primary FlowState connection points.
+
+
+
+7.2 Recommended connectivity pattern
+
+Machine PLC/controller exposes approved read-only tags using its native industrial protocol.
+
+A protocol adapter or industrial edge gateway reads the machine on the local OT network.
+
+The gateway timestamps, normalizes and temporarily buffers data if the internet or application is unavailable.
+
+The gateway publishes events securely to the FlowState integration API or MQTT broker using outbound TLS.
+
+FlowState maps the machine event to tenant, plant, line, asset, production order, SKU, batch, shift and operator context.
+
+Validated events update live production, downtime, OEE, H/B, maintenance history and alerts.
+
+Operators classify unrecognized stops or correct context through an audited workflow; raw events remain unchanged.
+
+7.3 Supported connection methods
+
+Method
+
+When to use
+
+Status for this machine
+
+OPC UA
+
+Preferred when PLC/HMI/OEM exposes a secure tag server.
+
+To verify.
+
+EtherNet/IP
+
+Common for Rockwell-based controllers and gateways.
+
+To verify; Omron HMI does not prove Rockwell PLC.
+
+FINS / EtherNet/IP / OPC UA
+
+Possible for certain Omron controller families depending on exact model.
+
+To verify after cabinet inspection.
+
+Modbus TCP
+
+Useful when supported by controller, meter or gateway.
+
+To verify.
+
+MQTT
+
+Recommended gateway-to-platform event transport; not usually the native machine protocol.
+
+Proposed.
+
+REST / webhook
+
+For smart devices, middleware and software systems.
+
+Proposed where available.
+
+Digital I/O / pulse counter
+
+Fallback for run/stop/count when no accessible data protocol exists.
+
+Optional fallback.
+
+Manual tablet entry
+
+Temporary fallback for reason codes, QA checks and machines not yet connected.
+
+Required from launch.
+
+
+
+
+
+8. Hardware Assumptions and Required Components
+
+Component
+
+Working assumption
+
+Final decision owner
+
+Operator devices
+
+Industrial tablets or existing PCs on production/packaging areas, protected for washdown conditions where required.
+
+FlowState / plant IT
+
+Barcode scanning
+
+USB/Bluetooth/mobile-camera scanners for lots, materials, pallets and jobs; industrial scanners where reliability requires.
+
+Plant operations + Kiaan
+
+Machine gateway
+
+Assess the installed TN-630-W4 / TQN6-211EW4-00 device first. Reuse only if its ownership, configuration, supported protocols, security, buffering and maintainability satisfy the project requirements. Otherwise propose an approved industrial edge gateway.
+
+Kiaan proposal + plant IT/OEM approval
+
+Network
+
+Managed industrial Ethernet switch, segmented OT VLAN, firewall rules and no inbound public exposure.
+
+Plant IT / controls contractor
+
+Time
+
+All application, gateway and controller clocks synchronized to an approved NTP source.
+
+Plant IT
+
+Sensors / counters
+
+Use existing controller tags first; add isolated sensors, current switches or counters only where tags are unavailable.
+
+Controls contractor + OEM
+
+Printers / labels
+
+Network or USB printers integrated through approved print service where required.
+
+Warehouse/packaging + Kiaan
+
+Quality instruments
+
+Manual/API/CSV integration depending on meter capabilities and vendor support.
+
+QA + Kiaan
+
+Hosting
+
+Cloud-hosted application with secure outbound machine gateway; exact region, provider and residency to be proposed.
+
+Kiaan + owner approval
+
+
+
+SAFETY BOUNDARY: Phase 1 machine integration is monitoring and data collection. Remote machine start/stop, recipe download, setpoint changes or safety-function interaction are excluded unless separately engineered, risk-assessed, tested and approved by the machine OEM and qualified controls personnel.
+
+
+
+9. Machine Data Tags - Minimum Target
+
+Tag group
+
+Examples
+
+Use in FlowState
+
+State
+
+Power, auto/manual, running, idle, stopped, faulted, E-stop, changeover
+
+Machine state timeline and availability.
+
+Production
+
+Cycle count, good count, reject count, current speed, target speed, product/recipe
+
+Output, performance and schedule progress.
+
+Downtime
+
+Active alarm code/text, stop reason, stop start/end, reset event
+
+Downtime Pareto, maintenance trigger and OEE.
+
+Packaging process
+
+Bag count, film status, seal temperature, gas/vacuum or other available parameters
+
+Process confirmation and quality context; exact tags depend on installed machine options.
+
+Maintenance
+
+Motor hours, cycle hours, fault frequency, service counters
+
+PM triggers, MTBF/MTTR and predictive evidence.
+
+Context
+
+Machine ID, job/order ID, SKU, batch, operator, shift
+
+Transaction linkage and traceability.
+
+Health
+
+PLC/gateway online, last message time, queue depth, data quality flag
+
+Integration monitoring and stale-data alerts.
+
+
+
+10. End-to-End Data Flow
+
+Sales order or forecast creates demand by customer, SKU, quantity and required ship date.
+
+APS calculates a capacity-constrained plan using materials, labour, equipment, QA, smokehouse/drying, packaging and shipping constraints.
+
+MRP explodes the approved BOM and reserves available raw-material and packaging lots.
+
+A released production order creates the digital batch record, job instructions, labour plan and required quality checks.
+
+Operator actions and approved machine events record actual start/stop time, output, downtime, speed, personnel, equipment and material consumption.
+
+Quality checks apply pass/fail rules. A critical failure creates a deviation/hold and blocks finished-goods availability.
+
+Authorized QA release creates the finished-goods lot and inventory receipt.
+
+Warehouse allocates, picks and ships only released inventory using FEFO where required.
+
+Batch 360 traces customer shipment back to every contributing material lot and forward from supplier lot to affected customers.
+
+The same governed events calculate H/B, OEE, schedule attainment, yield, labour, cost, reliability and executive risk without duplicate calculations.
+
+11. Security, SaaS and Data Governance
+
+Strict company/tenant isolation using server-side authorization and tenant-scoped database controls; hiding menus is insufficient.
+
+Master-owner view may span companies only for explicitly authorized administrative and portfolio functions.
+
+Role, plant, department, line and action-level permissions; least-privilege defaults.
+
+MFA support, secure password reset, session controls, secrets management and access review.
+
+Immutable audit events and electronic signatures for controlled approvals and corrections.
+
+Encryption in transit and at rest, backup/restore testing, disaster recovery and defined retention policies.
+
+Development, staging and production separation; sanitized test data; no production credentials in code.
+
+Data export/portability by tenant and a documented offboarding process.
+
+Canadian privacy/data-residency requirements and the target hosting region must be agreed before production deployment.
+
+12. AI and Meeting Intelligence Guardrails
+
+AI may summarize records, identify contradictions, suggest hypotheses, draft actions and retrieve verified solutions.
+
+AI must cite the internal records used and label facts, calculations, hypotheses and recommendations separately.
+
+AI must not invent missing evidence, independently confirm a root cause, release product, close CAPA or alter critical records.
+
+Every AI-created proposed action must require an authorized human review before it writes to operational records.
+
+Core production, quality, inventory and maintenance workflows must continue when the AI service is unavailable.
+
+Prompt, model, source, output, reviewer and disposition should be logged for governed AI actions.
+
+13. Non-Functional Requirements
+
+Area
+
+Requirement to define and test
+
+Availability
+
+Target uptime, planned maintenance window, recovery time objective and recovery point objective.
+
+Performance
+
+Page/API response targets, concurrent users, machine-event throughput and report-generation limits.
+
+Offline tolerance
+
+Which shop-floor transactions queue locally, maximum offline duration and conflict resolution.
+
+Observability
+
+Central logs, metrics, traces, error monitoring, connector health and data-freshness indicators.
+
+Testing
+
+Unit, integration, API contract, security, performance, migration and role-based acceptance tests.
+
+Accessibility
+
+Keyboard use, readable contrast, clear status text and responsive/mobile usability.
+
+Support
+
+Incident severity, response targets, warranty, change control, release notes and production support ownership.
+
+Documentation
+
+Architecture, schema, API, deployment, backup/restore, runbook, admin, integration and operator guides.
+
+
+
+
+
+14. Questions Kiaan Tech Must Answer Before Development Continues
+
+Topic
+
+Required response
+
+Architecture and ownership
+
+What technology stack, hosting provider, region and deployment model do you propose? Will the full source repository, database schema, infrastructure configuration and credentials be owned by FlowState Ops?
+
+Current-system assessment
+
+How will you inventory the existing Base44 pages, entities, functions and integrations and classify each as Keep, Improve, Merge, Replace or Retire?
+
+Canonical model
+
+Provide the proposed entity-relationship model, tenant key strategy, status models, revision rules and audit model before UI development.
+
+API design
+
+Provide an API inventory and OpenAPI contract. How will authentication, authorization, versioning, idempotency, webhooks, retry and error queues work?
+
+Multi-tenancy
+
+How will you technically prevent one company from reading or writing another company’s data? How will this be tested?
+
+KPI governance
+
+Where are H/B, OEE, schedule attainment, yield and complaint rates calculated? How do you prevent duplicate or hardcoded calculations?
+
+Machine discovery
+
+Who will inspect each cabinet, identify PLC/HMI/network modules, confirm protocols and obtain the OEM program/tag documentation?
+
+Neptune RotoBagger
+
+Can you support an Omron-based machine environment? What exact HMI and PLC model information do you need, and which licensed drivers/software may be required?
+
+Edge hardware
+
+Which industrial gateway do you propose, what protocols/drivers will it support, how much local buffering is included and how is it patched/monitored?
+
+OT cybersecurity
+
+Provide the proposed OT/IT network diagram, VLAN/firewall rules, certificate management, remote-support method and read-only controls.
+
+Machine scope
+
+Which machine tags will be captured in Phase 1, at what scan/event rate, and how will machine state be converted into downtime and OEE events?
+
+Offline/failure mode
+
+What happens when the machine, gateway, plant network, internet, API or cloud service is unavailable? How are duplicate and late events handled?
+
+Quality controls
+
+How will critical failures automatically hold product and technically prevent inventory release or shipment until authorized QA approval?
+
+Traceability
+
+Demonstrate the data model and test plan for one-step-back, one-step-forward, reverse genealogy, forward genealogy and mock recall.
+
+AI governance
+
+Which AI/provider is proposed, what data is sent externally, how is tenant data protected, and how are human approvals and source citations enforced?
+
+Migration
+
+Which existing data will be migrated, how will counts/balances be reconciled, and what are the parallel-run, cutover and rollback plans?
+
+Testing and acceptance
+
+Provide milestone-specific acceptance tests and evidence. A screen or API endpoint alone is not an accepted completed feature.
+
+Cost and schedule
+
+Provide cost, duration, dependencies, exclusions, third-party licenses, recurring hosting/support costs and payment tied to accepted milestones.
+
+Support and warranty
+
+Who owns production incidents, response time, defects after launch, backups, monitoring, security patches and ongoing releases?
+
+
+
+15. Required Discovery Evidence From the Plant
+
+Full control-cabinet overview taken only by authorized, qualified personnel with safe access procedures.
+
+Clear PLC/controller CPU label and all communication-module labels.
+
+Omron HMI model/serial label, usually on the rear or side of the unit.
+
+Ethernet ports, switches, IP/network labels and unused communication ports.
+
+Electrical schematics pages showing PLC, HMI, network and I/O architecture.
+
+OEM manuals, controller/HMI backup files, tag/address list and current program ownership/password status.
+
+Existing remote-support hardware or VPN, if any.
+
+Approved list of data points needed from each machine and the business purpose for each.
+
+Plant IT network/security requirements, Wi-Fi coverage, hosting/data-residency requirements and responsible contacts.
+
+16. Required Developer Deliverables
+
+Discovery report and current-system Keep/Improve/Merge/Replace/Retire gap map.
+
+Solution architecture diagram covering cloud, application, database, integrations, OT/IT boundary and edge gateway.
+
+Canonical data model and entity-relationship diagram with tenant isolation design.
+
+API inventory and versioned OpenAPI specification.
+
+Machine-by-machine integration matrix: asset, PLC, HMI, protocol, gateway, tags, scan rate, ownership, risk and status.
+
+Security architecture, threat/risk review, permissions matrix and audit design.
+
+Migration plan, data mapping, reconciliation plan, cutover plan and rollback plan.
+
+Milestone plan with dependencies, cost, acceptance tests and definition of done.
+
+Automated test plan, CI/CD plan, monitoring plan, backup/restore test and support runbook.
+
+Source-code handover, database schema, infrastructure configuration, admin documentation and operator documentation.
+
+17. Definition of Done and Acceptance
+
+COMPLETION STANDARD: A page, chart, table, API endpoint or database table is not a completed feature. A feature is complete only when its workflow, database transaction, calculations, permissions, audit trail, error handling, reporting, tests and documentation work end to end.
+
+
+
+No critical workflow uses static/demo data or front-end-only validation.
+
+A failed critical quality check automatically creates a hold and prevents finished-goods release and shipment.
+
+The same production event correctly updates materials, batch history, labour, quality, inventory, traceability, cost and KPIs.
+
+H/B and OEE results reconcile from the underlying event data for daily, weekly, monthly, YTD and annual views.
+
+Machine data can be traced from raw reading through normalized event, transaction, KPI and displayed result.
+
+Tenant-isolation, authorization, migration, backup/restore and rollback tests pass before production cutover.
+
+FlowState Ops receives all source, credentials, schemas, specifications, configuration and documentation.
+
+18. Immediate Next Step
+
+Kiaan Tech should review this brief and return one consolidated Discovery Response covering the questions in Section 14. The response should include a proposed architecture, system model, API strategy, hardware-discovery plan, machine-integration approach, milestones, costs, exclusions and acceptance evidence. Development should proceed only after this response is agreed and Phase 0 discovery deliverables are approved.
+
+IMPORTANT: Do not purchase a gateway, PLC module, software licence or network hardware for either the Neptune RotoBagger or Variovac VAC machine until the controller/HMI models, available ports, supported protocols, OEM restrictions and plant cybersecurity design are verified.
+
+
+
+Source Basis
+
+Prepared from the FlowState Ops Full Developer Rebuild Scope (August 2026), the confirmed manufacturing requirements supplied by Stefan Crawford, and photographs of the Plan It Neptune RotoBagger and Variovac VAC machine controls. Evidence includes the Omron CP2E PLC, W4S1-05B switch, TN-630-W4 gateway, B&R Automation Panel, B&R industrial controller/Panel PC, ACOPOSinverter P74, drives, power supplies and safety components. Hardware details not legible or independently verified are explicitly marked as discovery requirements.

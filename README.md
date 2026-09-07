@@ -1,16 +1,54 @@
-# React + Vite
+# MaintenX OS — Manufacturing Operations Platform
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Welcome to **MaintenX OS**, a complete enterprise Manufacturing Execution System (MES), Advanced Planning & Scheduling (APS), Quality Management (QMS / 21 CFR Part 11), Warehouse & 360° Traceability (WMS), and Maintenance (CMMS) SaaS platform.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## 📂 Project Structure
 
-## React Compiler
+```text
+d:\kiaan\MaintenX-OS\
+│
+├── frontend/                            # React 18 + Vite Frontend Application (70+ Screens)
+│   ├── src/
+│   │   ├── context/                     # Global State Providers (Planning, Production, Quality, CMMS, etc.)
+│   │   ├── components/                  # Common UI, Layout, Charts, Tables
+│   │   ├── pages/                       # MES, APS, QMS, WMS, CMMS, Dashboards, Operator HMI
+│   │   └── data/                        # Manufacturing datasets
+│   ├── package.json
+│   └── vite.config.js
+│
+└── backend/                             # Fastify + TypeScript + Drizzle ORM + PostgreSQL REST API
+    ├── src/
+    │   ├── modules/                     # Domain modules (auth, planning, production, quality, warehouse, etc.)
+    │   ├── db/schema/                   # 53 Normalized Drizzle ORM Relational Schemas
+    │   ├── shared/engines/              # MRP, OEE, MTBF, Forecasting, 360° Traceability Engines
+    │   ├── plugins/                     # Swagger docs, JWT, Helmet, CORS, Rate Limiter
+    │   └── server.ts
+    ├── drizzle/migrations/              # SQL Database Migration Files
+    ├── package.json
+    ├── tsconfig.json
+    └── drizzle.config.ts
+```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+---
 
-## Expanding the Oxlint configuration
+## 🚀 Quick Start Guide
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+### 1. Run the Frontend:
+```bash
+cd frontend
+npm install
+npm run dev
+```
+Accessible at: **`http://localhost:5173`**
+
+### 2. Run the Backend:
+```bash
+cd backend
+npm install
+npm run dev
+```
+Accessible at: **`http://localhost:4000`**  
+Interactive Swagger API Docs: **`http://localhost:4000/docs`**  
+Health Check: **`http://localhost:4000/health`**

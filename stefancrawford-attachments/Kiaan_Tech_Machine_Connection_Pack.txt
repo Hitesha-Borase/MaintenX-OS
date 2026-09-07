@@ -1,0 +1,334 @@
+﻿
+
+
+FLOWSTATE OPS
+
+Machine Connection & Discovery Pack
+
+Plan It Neptune RotoBagger + Variovac VAC Machine
+
+Field
+
+Value
+
+Prepared for
+
+Kiaan Tech
+
+Prepared by
+
+Stefan Crawford / FlowState Ops
+
+Date
+
+September 7, 2026
+
+Purpose
+
+Confirm machine hardware, connection options, boundaries and evidence required before development.
+
+Status
+
+Discovery package - no live connection authorized
+
+
+
+INSTRUCTION TO KIAAN: Return one written Machine Discovery Response for each machine. Do not purchase hardware, change controller programs, assign IP addresses or connect to the production network until the OEM, qualified controls personnel and plant IT approve the design.
+
+
+
+1. Integration Standard
+
+Phase 1 is read-only monitoring and data collection.
+
+No remote start/stop, recipe download, setpoint write or safety interaction.
+
+Existing control networks and cables must be documented before changes.
+
+Raw readings must be timestamped, buffered, auditable and linked to the FlowState asset, job, batch and shift.
+
+Critical quality, release and food-safety decisions remain human-approved.
+
+1.1 Target data flow
+
+Machine controller → approved read interface → industrial edge gateway → outbound encrypted connection → FlowState integration API/MQTT → validation and normalization → production, downtime, OEE, H/B and maintenance records.
+
+
+
+2. Machine A - Plan It Neptune RotoBagger
+
+Component
+
+Confirmed evidence
+
+Kiaan action
+
+Machine/HMI
+
+Plan It Neptune RotoBagger with Omron operator interface.
+
+Confirm HMI model, firmware and project ownership.
+
+PLC
+
+Omron CP2E with Ethernet ports 1A/1B and serial terminals.
+
+Record complete order code, firmware, IP addresses, memory map and enabled read protocol.
+
+Network switch
+
+Omron W4S1-05B five-port industrial switching hub; two ports connected.
+
+Trace every cable and identify any approved spare port.
+
+Existing gateway
+
+TN-630-W4 / TQN6-211EW4-00 with WAN/LAN, Wi-Fi/GPS and RS-232/485; LAN cable connected.
+
+Identify manufacturer, purpose, owner, SIM/cloud account, firmware, credentials, security and supported PLC drivers.
+
+Drive
+
+Danfoss VLT Micro Drive, P/N 132F0010, 0.75 kW / 1 HP.
+
+Read drive diagnostics through the PLC only if approved.
+
+Safety
+
+Omron G9SX-NSA222-T03.
+
+Exclude from normal FlowState control/write scope.
+
+
+
+
+
+Figure 1. Confirmed Omron CP2E PLC.
+
+
+
+Figure 2. Confirmed Omron W4S1-05B industrial Ethernet switch.
+
+RECOMMENDED DISCOVERY PATH: First determine whether the installed TN-630-W4 gateway can safely read the CP2E. If it cannot, propose an approved industrial gateway using a confirmed CP2E-compatible read protocol. The W4S1 switch provides connectivity but does not store machine data or enforce network security.
+
+
+
+2.1 Initial Plan It tags
+
+Group
+
+Requested tags
+
+State
+
+Power, auto/manual, running, idle, stopped, faulted, E-stop, changeover.
+
+Production
+
+Cycle count, good bags, rejects, speed, target speed, active recipe/product.
+
+Downtime
+
+Alarm code/text, stop start/end, reset and reason-code trigger.
+
+Packaging
+
+Film status, seal/vacuum/gas parameters when available, batch/job identifier.
+
+Maintenance
+
+Run hours, cycles, drive/fault history and service counters.
+
+Health
+
+PLC/gateway online, last message, stale-data flag and gateway queue depth.
+
+
+
+
+
+3. Machine B - Variovac VAC Machine
+
+Component
+
+Confirmed evidence
+
+Kiaan action
+
+Machine/HMI
+
+Variovac/Reiser interface; software screen indicates B&R Automation Studio 4.2.
+
+Confirm machine model, serial number, software backup and OEM support status.
+
+Operator panel
+
+B&R Automation Panel 1000, 5AP1120.101E-F05.
+
+Confirm connection module and whether it is display-only or paired with the Panel PC.
+
+Controller/computer
+
+B&R Panel PC/PPC-family unit is mounted behind the panel; current label is blurred.
+
+Obtain exact order code, CPU/runtime, licenses, IP address, ports and source-program ownership.
+
+Drive
+
+B&R ACOPOSinverter P74 with CAN and Modbus VPOS interfaces.
+
+Do not use as the primary data source; confirm diagnostics available through the controller.
+
+Power
+
+Siemens SITOP PSU100S, 24 VDC/10 A, 6EP1334-2BA20.
+
+Power supply only; confirm spare capacity if adding hardware.
+
+Control network
+
+B&R-based system strongly indicated.
+
+Inventory B&R X20 I/O, Powerlink, Ethernet switches and all connected devices.
+
+
+
+
+
+Figure 3. B&R industrial computer/controller; exact order code still requires a clearer label image.
+
+
+
+Figure 4. B&R ACOPOSinverter P74 drive.
+
+RECOMMENDED DISCOVERY PATH: Treat the B&R controller/Panel PC as the primary integration candidate. Kiaan must ask Variovac/B&R which supported read-only interface is available. Investigate OEM-supported OPC UA, Modbus TCP, B&R PVI or another documented interface; do not assume availability from the photographs alone.
+
+
+
+3.1 Initial VAC tags
+
+Group
+
+Requested tags
+
+State
+
+Ready, automatic/manual, running, stopped, fault, safety stop, cleaning/setup.
+
+Production
+
+Machine cycles, packs produced, rejects, product/recipe, speed and operating hours.
+
+Process
+
+Vacuum level, sealing temperature/time, cooling-water status and film/web status where available.
+
+Alarms
+
+Active alarm number/text, first-out fault, acknowledgement and clear timestamps.
+
+Maintenance
+
+Vacuum-pump hours, machine hours, cycle counters, drive faults and scheduled-service counters.
+
+Health
+
+Controller/gateway online, data freshness and communication faults.
+
+
+
+
+
+4. Required Network and Security Design
+
+Provide an OT/IT network drawing for each machine, including every controller, HMI, switch, gateway and IP address.
+
+Use a segmented OT VLAN and firewall rules approved by plant IT.
+
+Prefer outbound TLS from the gateway; prohibit direct inbound internet exposure.
+
+Use unique credentials, least privilege, certificate rotation, patch ownership and logged remote support.
+
+Buffer readings locally during outages and safely replay without duplicates.
+
+Synchronize controller, gateway and platform time to an approved time source.
+
+Provide a rollback plan and prove that loss of FlowState cannot stop or alter the machine.
+
+5. Questions Kiaan Must Answer
+
+#
+
+Required response
+
+1
+
+Exact controller/HMI/gateway model, firmware, IP address and program ownership for each machine.
+
+2
+
+Exact supported read protocol and required OEM software/license.
+
+3
+
+Connection point, cable route, switch port and required new hardware.
+
+4
+
+Approved Phase 1 tag list, data types, addresses, units, scan/event rates and valid ranges.
+
+5
+
+How machine state, planned stop, unplanned downtime, good count and reject count will be derived.
+
+6
+
+Buffer duration, timestamp source, store-and-forward method, duplicate handling and stale-data detection.
+
+7
+
+OT VLAN, firewall, certificates, credentials, remote support, patching and monitoring design.
+
+8
+
+Test method proving the integration is read-only and cannot affect machine control or safety.
+
+9
+
+OEM and plant-IT approvals required, responsible person and target approval date.
+
+10
+
+Cost, schedule, dependencies, exclusions, recurring licenses/support and milestone acceptance evidence.
+
+
+
+6. Required Deliverables Before Connection
+
+Machine-by-machine hardware inventory and labelled network diagram.
+
+Complete PLC/Panel PC/HMI model numbers and backed-up programs.
+
+Tag/address register with business meaning and sample values.
+
+Protocol proof-of-concept on an isolated or approved test connection.
+
+Cybersecurity and remote-support design approved by plant IT.
+
+Read-only test evidence and OEM/controls approval.
+
+Gateway bill of materials only after the discovery evidence is accepted.
+
+Commissioning, rollback, monitoring and support runbooks.
+
+ACCEPTANCE GATE: No production connection is accepted until FlowState receives the network diagram, tag register, protocol test evidence, read-only verification, security approval, backup/rollback plan and an end-to-end demonstration using live but non-invasive machine data.
+
+
+
+7. Response Format for Kiaan Tech
+
+Kiaan should return one consolidated response with the following headings: (1) Plan It confirmed configuration, (2) VAC confirmed configuration, (3) proposed architecture, (4) protocols and tag map, (5) new hardware and licenses, (6) OT security, (7) testing and acceptance, (8) schedule and cost, (9) exclusions and risks, and (10) documents/source files to be handed over.
+
+Source Basis
+
+Prepared from the equipment photographs supplied by Stefan Crawford. Model transcriptions that remain partly obscured are intentionally marked for verification. Photographs do not authorize cabinet work, network changes, controller access or software changes.
