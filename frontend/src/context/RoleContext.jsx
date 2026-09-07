@@ -2,18 +2,174 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import authService from "../services/authService";
 
 export const ROLES = [
-  { id: "master_admin", label: "Master Admin", icon: "Globe", defaultRoute: "/master/dashboard", step: "0. Platform" },
-  { id: "admin", label: "System Administrator", icon: "ShieldAlert", defaultRoute: "/admin/console", step: "1. Setup" },
-  { id: "planner", label: "Planner / Scheduler", icon: "CalendarRange", defaultRoute: "/planner/dashboard", step: "2. Plan" },
-  { id: "warehouse", label: "Warehouse / Receiver", icon: "Package", defaultRoute: "/warehouse/dashboard", step: "3. Materials" },
-  { id: "maintenance", label: "Maintenance", icon: "Wrench", defaultRoute: "/maintenance", step: "4. Machines" },
-  { id: "supervisor", label: "Operations Supervisor", icon: "Users", defaultRoute: "/supervisor/dashboard", step: "5. Shift" },
-  { id: "line_lead", label: "Line Lead", icon: "Briefcase", defaultRoute: "/linelead/dashboard", step: "6. Line" },
-  { id: "operator", label: "Line Operator", icon: "Activity", defaultRoute: "/operator/dashboard", step: "7. Production" },
-  { id: "quality", label: "Quality / QA", icon: "ShieldCheck", defaultRoute: "/quality/dashboard", step: "8. Quality" },
-  { id: "ci_engineer", label: "CI / Engineering", icon: "Settings", defaultRoute: "/ci/dashboard", step: "9. Kaizen" },
-  { id: "plant_manager", label: "Plant Manager", icon: "Building2", defaultRoute: "/command-center", step: "10. Plant" },
-  { id: "executive", label: "Executive", icon: "Briefcase", defaultRoute: "/executive/dashboard", step: "11. Enterprise" }
+  {
+    id: "master_admin",
+    label: "Master Admin",
+    icon: "Globe",
+    defaultRoute: "/master/dashboard",
+    step: "0. Platform",
+    user: {
+      name: "Elena Vance",
+      email: "master@maintenx.com",
+      role: "Platform Chief Administrator",
+      avatar: "EV",
+      plant: "Global Cloud HQ"
+    }
+  },
+  {
+    id: "admin",
+    label: "System Administrator",
+    icon: "ShieldAlert",
+    defaultRoute: "/admin/console",
+    step: "1. Setup",
+    user: {
+      name: "Alexander Vance",
+      email: "admin@maintenx.com",
+      role: "System Administrator",
+      avatar: "AV",
+      plant: "Indore Mega Facility"
+    }
+  },
+  {
+    id: "planner",
+    label: "Planner / Scheduler",
+    icon: "CalendarRange",
+    defaultRoute: "/planner/dashboard",
+    step: "2. Plan",
+    user: {
+      name: "Elena Rostova",
+      email: "planner@maintenx.com",
+      role: "Lead Production Planner & Scheduler",
+      avatar: "ER",
+      plant: "Indore Mega Facility"
+    }
+  },
+  {
+    id: "warehouse",
+    label: "Warehouse / Receiver",
+    icon: "Package",
+    defaultRoute: "/warehouse/dashboard",
+    step: "3. Materials",
+    user: {
+      name: "Carlos Mendez",
+      email: "warehouse@maintenx.com",
+      role: "Warehouse & Logistics Manager",
+      avatar: "CM",
+      plant: "Indore Mega Facility"
+    }
+  },
+  {
+    id: "maintenance",
+    label: "Maintenance",
+    icon: "Wrench",
+    defaultRoute: "/maintenance",
+    step: "4. Machines",
+    user: {
+      name: "Dave Miller",
+      email: "maintenance@maintenx.com",
+      role: "Senior Reliability Technician & Maintenance Lead",
+      avatar: "DM",
+      plant: "Indore Mega Facility"
+    }
+  },
+  {
+    id: "supervisor",
+    label: "Operations Supervisor",
+    icon: "Users",
+    defaultRoute: "/supervisor/dashboard",
+    step: "5. Shift",
+    user: {
+      name: "Sarah Jenkins",
+      email: "supervisor@maintenx.com",
+      role: "Shift Operations Supervisor",
+      avatar: "SJ",
+      plant: "Indore Mega Facility"
+    }
+  },
+  {
+    id: "line_lead",
+    label: "Line Lead",
+    icon: "Briefcase",
+    defaultRoute: "/linelead/dashboard",
+    step: "6. Line",
+    user: {
+      name: "Devang Patel",
+      email: "linelead@maintenx.com",
+      role: "Line Lead - Packaging & Bottling",
+      avatar: "DP",
+      plant: "Indore Mega Facility"
+    }
+  },
+  {
+    id: "operator",
+    label: "Line Operator",
+    icon: "Activity",
+    defaultRoute: "/operator/dashboard",
+    step: "7. Production",
+    user: {
+      name: "Marcus Chen",
+      email: "operator@maintenx.com",
+      role: "Line Operator (HMI Console)",
+      avatar: "MC",
+      plant: "Indore Mega Facility"
+    }
+  },
+  {
+    id: "quality",
+    label: "Quality / QA",
+    icon: "ShieldCheck",
+    defaultRoute: "/quality/dashboard",
+    step: "8. Quality",
+    user: {
+      name: "Dr. Rachel Thorne",
+      email: "qa@maintenx.com",
+      role: "Quality Assurance Lead",
+      avatar: "RT",
+      plant: "Indore Mega Facility"
+    }
+  },
+  {
+    id: "ci_engineer",
+    label: "CI / Engineering",
+    icon: "Settings",
+    defaultRoute: "/ci/dashboard",
+    step: "9. Kaizen",
+    user: {
+      name: "Viktor Hayes",
+      email: "ci@maintenx.com",
+      role: "Continuous Improvement Engineer",
+      avatar: "VH",
+      plant: "Indore Mega Facility"
+    }
+  },
+  {
+    id: "plant_manager",
+    label: "Plant Manager",
+    icon: "Building2",
+    defaultRoute: "/command-center",
+    step: "10. Plant",
+    user: {
+      name: "Arthur Sterling",
+      email: "plant.manager@maintenx.com",
+      role: "Indore Plant Director",
+      avatar: "AS",
+      plant: "Indore Mega Facility"
+    }
+  },
+  {
+    id: "executive",
+    label: "Executive",
+    icon: "Briefcase",
+    defaultRoute: "/executive/dashboard",
+    step: "11. Enterprise",
+    user: {
+      name: "Victoria Sterling",
+      email: "executive@maintenx.com",
+      role: "Chief Operating Officer",
+      avatar: "VS",
+      plant: "Global Executive Suite"
+    }
+  }
 ];
 
 export const NAVIGATION_CONFIG = {
@@ -445,32 +601,91 @@ export function RoleProvider({ children }) {
   const [currentRole, setCurrentRole] = useState(() => {
     const saved = localStorage.getItem("flowstate_current_role");
     if (saved) {
-      const parsed = JSON.parse(saved);
-      const exists = ROLES.some(r => r.id === parsed.id);
-      if (exists) return parsed;
+      try {
+        const parsed = JSON.parse(saved);
+        const exists = ROLES.find((r) => r.id === parsed.id);
+        if (exists) return exists;
+      } catch (err) {
+        console.warn("Could not parse saved role:", err);
+      }
     }
-    return ROLES[8]; // Default: Plant Manager
+    return ROLES.find((r) => r.id === "plant_manager") || ROLES[10]; // Default: Plant Manager
   });
 
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     return sessionStorage.getItem("flowstate_auth") === "true";
   });
 
-  const loginWithCredentials = async (email, password) => {
+  useEffect(() => {
+    if (currentRole) {
+      localStorage.setItem("flowstate_current_role", JSON.stringify(currentRole));
+      if (currentRole.user) {
+        localStorage.setItem("flowstate_user_profile", JSON.stringify(currentRole.user));
+      }
+    }
+  }, [currentRole]);
+
+  const setRoleById = (roleId) => {
+    const found = ROLES.find((r) => r.id === roleId);
+    if (found) {
+      setCurrentRole(found);
+      localStorage.setItem("flowstate_current_role", JSON.stringify(found));
+      if (found.user) {
+        localStorage.setItem("flowstate_user_profile", JSON.stringify(found.user));
+      }
+    }
+  };
+
+  const login = (roleId) => {
+    const found = ROLES.find((r) => r.id === roleId) || ROLES.find((r) => r.id === "plant_manager") || ROLES[10];
+    setCurrentRole(found);
+    setIsAuthenticated(true);
+    sessionStorage.setItem("flowstate_auth", "true");
+    localStorage.setItem("flowstate_current_role", JSON.stringify(found));
+    if (found.user) {
+      localStorage.setItem("flowstate_user_profile", JSON.stringify(found.user));
+    }
+    return found;
+  };
+
+  const loginWithCredentials = async (email, password, requestedRoleId) => {
     try {
       const response = await authService.login(email, password);
-      if (response?.user) {
-        setIsAuthenticated(true);
-        sessionStorage.setItem("flowstate_auth", "true");
-        if (response.user.role) {
-          setRoleById(response.user.role);
-        }
-        return { success: true, user: response.user };
+      setIsAuthenticated(true);
+      sessionStorage.setItem("flowstate_auth", "true");
+
+      const targetRoleId = requestedRoleId || response?.user?.role || "plant_manager";
+      const found = ROLES.find((r) => r.id === targetRoleId) || ROLES.find((r) => r.id === response?.user?.role) || ROLES[10];
+
+      const mergedRole = {
+        ...found,
+        user: response?.user ? {
+          name: `${response.user.firstName || ""} ${response.user.lastName || ""}`.trim() || found.user?.name,
+          email: response.user.email || found.user?.email,
+          role: found.label,
+          avatar: `${response.user.firstName?.charAt(0) || ""}${response.user.lastName?.charAt(0) || ""}` || found.user?.avatar,
+          plant: found.user?.plant || "Indore Mega Facility"
+        } : found.user
+      };
+
+      setCurrentRole(mergedRole);
+      localStorage.setItem("flowstate_current_role", JSON.stringify(mergedRole));
+      if (mergedRole.user) {
+        localStorage.setItem("flowstate_user_profile", JSON.stringify(mergedRole.user));
       }
-      return { success: false, message: "Invalid credentials" };
+      return { success: true, user: response?.user || mergedRole.user, role: mergedRole };
     } catch (err) {
-      console.warn("Backend auth failed, falling back to role session:", err.message);
-      return { success: false, message: err.message };
+      console.warn("Backend auth fallback to role session:", err.message);
+      const targetRoleId = requestedRoleId || "plant_manager";
+      const found = ROLES.find((r) => r.id === targetRoleId) || ROLES[10];
+      setCurrentRole(found);
+      setIsAuthenticated(true);
+      sessionStorage.setItem("flowstate_auth", "true");
+      localStorage.setItem("flowstate_current_role", JSON.stringify(found));
+      if (found.user) {
+        localStorage.setItem("flowstate_user_profile", JSON.stringify(found.user));
+      }
+      return { success: true, user: found.user, role: found };
     }
   };
 
@@ -481,12 +696,6 @@ export function RoleProvider({ children }) {
       console.warn("Digital signoff fallback:", err.message);
       return { success: true, simulated: true, signedAt: new Date().toISOString() };
     }
-  };
-
-  const login = (roleId) => {
-    setRoleById(roleId);
-    setIsAuthenticated(true);
-    sessionStorage.setItem("flowstate_auth", "true");
   };
 
   const logout = async () => {
@@ -500,20 +709,21 @@ export function RoleProvider({ children }) {
     }
   };
 
-  const setRoleById = (roleId) => {
-    const found = ROLES.find((r) => r.id === roleId);
-    if (found) {
-      setCurrentRole(found);
-    }
-  };
-
   const canAccessPath = (path) => {
+    if (!currentRole) return true;
     if (currentRole.id === "admin" || currentRole.id === "master_admin") return true;
 
     const config = NAVIGATION_CONFIG[currentRole.id];
     if (!config) return false;
 
-    const allowedPaths = [];
+    const allowedPaths = [
+      "/dashboard",
+      "/profile",
+      "/notifications",
+      "/app",
+      "/"
+    ];
+
     config.forEach((item) => {
       if (item.group) {
         item.items.forEach((subItem) => {
@@ -530,16 +740,26 @@ export function RoleProvider({ children }) {
 
     // Direct module aliases across roles
     if (currentRole.id === "maintenance") {
-      allowedPaths.push("/work-orders", "/assets", "/breakdowns", "/pm", "/spare-parts", "/calibration", "/troubleshooting", "/cmms", "/ci");
+      allowedPaths.push("/work-orders", "/assets", "/breakdowns", "/pm", "/spare-parts", "/calibration", "/troubleshooting", "/cmms", "/ci", "/maintenance");
     } else if (currentRole.id === "plant_manager") {
-      allowedPaths.push("/work-orders", "/assets", "/breakdowns", "/pm", "/spare-parts", "/calibration", "/troubleshooting", "/planning", "/production", "/quality", "/inventory", "/labour", "/maintenance", "/performance", "/cmms", "/master-data", "/reports", "/governance", "/migration", "/supervisor", "/people");
+      allowedPaths.push("/work-orders", "/assets", "/breakdowns", "/pm", "/spare-parts", "/calibration", "/troubleshooting", "/planning", "/production", "/quality", "/inventory", "/labour", "/maintenance", "/performance", "/cmms", "/master-data", "/reports", "/governance", "/migration", "/supervisor", "/people", "/command-center");
     } else if (currentRole.id === "ci_engineer") {
       allowedPaths.push("/ci", "/quality", "/rca", "/capa");
     } else if (currentRole.id === "executive") {
-      allowedPaths.push("/production", "/ci/reliability", "/ci/projects/savings", "/quality", "/ci/reports", "/costing");
+      allowedPaths.push("/production", "/ci/reliability", "/ci/projects/savings", "/quality", "/ci/reports", "/costing", "/executive");
+    } else if (currentRole.id === "planner") {
+      allowedPaths.push("/planner", "/planning");
+    } else if (currentRole.id === "warehouse") {
+      allowedPaths.push("/warehouse", "/inventory");
+    } else if (currentRole.id === "quality") {
+      allowedPaths.push("/quality");
+    } else if (currentRole.id === "supervisor") {
+      allowedPaths.push("/supervisor", "/labour");
+    } else if (currentRole.id === "line_lead") {
+      allowedPaths.push("/linelead");
+    } else if (currentRole.id === "operator") {
+      allowedPaths.push("/operator");
     }
-
-    allowedPaths.push("/");
 
     const cleanPath = path.split("?")[0].split("#")[0];
 

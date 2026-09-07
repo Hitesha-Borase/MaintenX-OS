@@ -756,11 +756,11 @@ export function Sidebar() {
                   boxShadow: "0 2px 6px rgba(178, 126, 51, 0.25)"
                 }}
               >
-                {currentRole?.label?.charAt(0) || "U"}
+                {currentRole?.user?.avatar || currentRole?.label?.charAt(0) || "U"}
               </div>
               <div style={{ overflow: "hidden" }}>
                 <div style={{ fontSize: "12px", fontWeight: 800, color: "#2B1D11", whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}>
-                  Alexander Vance
+                  {currentRole?.user?.name || "Authorized User"}
                 </div>
                 <div style={{ fontSize: "11px", color: "var(--text-muted)", fontWeight: 600, whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}>
                   {currentRole?.label}
@@ -784,9 +784,9 @@ export function Sidebar() {
                 boxShadow: "0 2px 6px rgba(178, 126, 51, 0.25)",
                 cursor: "pointer"
               }}
-              title={`${currentRole?.label} (Alexander Vance) - View Profile`}
+              title={`${currentRole?.label} (${currentRole?.user?.name || "User"}) - View Profile`}
             >
-              {currentRole?.label?.charAt(0) || "U"}
+              {currentRole?.user?.avatar || currentRole?.label?.charAt(0) || "U"}
             </div>
           )}
 

@@ -378,9 +378,9 @@ export function Header() {
               fontWeight: 900,
               fontSize: "14px"
             }}
-            title="User Profile & Role Settings"
+            title={`User Profile (${currentRole?.user?.name || "User"} - ${currentRole?.label || "Role"})`}
           >
-            {currentRole?.label?.charAt(0) || "O"}
+            {currentRole?.user?.avatar || currentRole?.label?.charAt(0) || "U"}
           </button>
 
           {/* Profile Dropdown Menu */}
@@ -430,11 +430,11 @@ export function Header() {
                     flexShrink: 0
                   }}
                 >
-                  {currentRole?.label?.charAt(0) || "O"}
+                  {currentRole?.user?.avatar || currentRole?.label?.charAt(0) || "U"}
                 </div>
                 <div style={{ overflow: "hidden" }}>
                   <div style={{ fontSize: "13px", fontWeight: 800, color: "var(--text-primary, #261603)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    Alexander Vance
+                    {currentRole?.user?.name || "Authorized User"}
                   </div>
                   <div style={{ fontSize: "11px", color: "#B27E33", fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                     {currentRole?.label}
@@ -467,6 +467,51 @@ export function Header() {
               >
                 <User size={14} color="#C89547" /> My Profile
               </button>
+
+              {/* Switch Role Perspective */}
+              <div style={{ borderTop: "1px solid var(--border-subtle, #EFEAE2)", marginTop: "4px", paddingTop: "6px" }}>
+                <div style={{ fontSize: "10px", fontWeight: 800, color: "var(--text-muted, #8C7B6E)", textTransform: "uppercase", padding: "4px 8px", letterSpacing: "0.05em" }}>
+                  Switch Role Perspective
+                </div>
+                <div style={{ maxHeight: "180px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "2px" }}>
+                  {ROLES?.map((r) => (
+                    <button
+                      key={r.id}
+                      onClick={() => {
+                        setRoleById(r.id);
+                        setShowProfileMenu(false);
+                        addToast(`Switched perspective to ${r.label} (${r.user?.name || "User"})!`, "success");
+                        navigate(r.defaultRoute || "/dashboard");
+                      }}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        padding: "6px 10px",
+                        borderRadius: "6px",
+                        border: "none",
+                        backgroundColor: currentRole?.id === r.id ? "rgba(200, 149, 71, 0.15)" : "transparent",
+                        color: currentRole?.id === r.id ? "#8C5B23" : "var(--text-primary, #261603)",
+                        fontSize: "11px",
+                        fontWeight: currentRole?.id === r.id ? 800 : 600,
+                        cursor: "pointer",
+                        textAlign: "left"
+                      }}
+                      onMouseEnter={(e) => {
+                        if (currentRole?.id !== r.id) e.currentTarget.style.backgroundColor = "var(--bg-card-subtle, #FAF6F0)";
+                      }}
+                      onMouseLeave={(e) => {
+                        if (currentRole?.id !== r.id) e.currentTarget.style.backgroundColor = "transparent";
+                      }}
+                    >
+                      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {r.label}
+                      </span>
+                      {currentRole?.id === r.id && <CheckCircle size={12} color="#C89547" />}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
               <button
                 onClick={handleLogout}
