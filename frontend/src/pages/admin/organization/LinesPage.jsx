@@ -20,7 +20,7 @@ import { useMasterData } from "../../../context/MasterDataContext";
 import { useApp } from "../../../context/AppContext";
 
 export function LinesPage() {
-  const { lines = [], plants = [], assets = [] } = useMasterData();
+  const { lines = [], addLine, updateLine, deleteLine, plants = [], assets = [] } = useMasterData();
   const { addToast } = useApp();
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -28,29 +28,19 @@ export function LinesPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingLine, setEditingLine] = useState(null);
 
-  const [localLines, setLocalLines] = useState([
-    { lineId: "LIN-01", lineCode: "L1-BOTTLING", name: "Bottling Line 1 (Indore Aseptic)", plantId: "PLT-01", ratedSpeed: "38,000 BPH", type: "Rotary Aseptic PET", status: "Active" },
-    { lineId: "LIN-02", lineCode: "L2-PASTEURIZER", name: "Processing Cell 2 (Pasteurizer & Blend)", plantId: "PLT-01", ratedSpeed: "30,000 LPH", type: "HTST Continuous Flow", status: "Active" },
-    { lineId: "LIN-03", lineCode: "L3-CANNING", name: "Canning Line 3 (High Speed 330ml)", plantId: "PLT-01", ratedSpeed: "45,000 CPH", type: "High-Speed Sleek Can", status: "Active" }
-  ]);
-
-  const allLines = useMemo(() => {
-    return lines.length > 0 ? lines : localLines;
-  }, [lines, localLines]);
-
   const filteredLines = useMemo(() => {
-    return allLines.filter((l) => {
+    return lines.filter((l) => {
       const matchesPlant = plantFilter === "ALL" || l.plantId === plantFilter;
       const q = searchQuery.toLowerCase().trim();
       const matchesSearch =
         !q ||
         (l.name || "").toLowerCase().includes(q) ||
-        (l.lineCode || l.lineId || "").toLowerCase().includes(q) ||
-        (l.type || "").toLowerCase().includes(q);
+        (l.lineCode || l.code || l.lineId || "").toLowerCase().includes(q) ||
+        (l.type || l.lineType || "").toLowerCase().includes(q);
 
       return matchesPlant && matchesSearch;
     });
-  }, [allLines, plantFilter, searchQuery]);
+  }, [lines, plantFilter, searchQuery]);
 
   const [newLine, setNewLine] = useState({
     lineCode: "",
@@ -67,17 +57,7 @@ export function LinesPage() {
       return;
     }
 
-    const created = {
-      lineId: `LIN-0${allLines.length + 1}`,
-      lineCode: newLine.lineCode.toUpperCase(),
-      name: newLine.name,
-      plantId: newLine.plantId,
-      ratedSpeed: newLine.ratedSpeed,
-      type: newLine.type,
-      status: "Active"
-    };
-
-    setLocalLines([...allLines, created]);
+    const created = addLine(newLine);
     addToast(`Line "${created.name}" registered!`, "success");
     setIsModalOpen(false);
     setNewLine({ lineCode: "", name: "", plantId: "PLT-01", ratedSpeed: "40,000 BPH", type: "Rotary Aseptic PET" });
@@ -90,11 +70,16 @@ export function LinesPage() {
       return;
     }
 
-    setLocalLines((prev) =>
-      prev.map((l) => (l.lineId === editingLine.lineId ? editingLine : l))
-    );
+    updateLine(editingLine.lineId || editingLine.id, editingLine);
     addToast(`Line "${editingLine.name}" updated!`, "success");
     setEditingLine(null);
+  };
+
+  const handleDelete = (lineId, name) => {
+    if (window.confirm(`Are you sure you want to delete Line "${name}"?`)) {
+      deleteLine(lineId);
+      addToast(`Line "${name}" deleted.`, "info");
+    }
   };
 
   return (
@@ -239,9 +224,9 @@ export function LinesPage() {
               {filteredLines.map((l) => {
                 const plantName = plants.find((p) => p.id === l.plantId)?.name?.split(" - ")[0] || "Indore Plant 1";
                 return (
-                  <tr key={l.lineId} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+                  <tr key={l.lineId || l.id || l.lineCode} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
                     <td style={{ padding: "12px 16px", fontFamily: "var(--font-mono)", fontWeight: 800, color: "#8C5B23" }}>
-                      {l.lineCode || l.lineId}
+                      {l.lineCode || l.code || l.lineId}
                     </td>
                     <td style={{ padding: "12px 16px", fontWeight: 800, color: "var(--text-primary)", fontSize: "13px" }}>
                       {l.name}
@@ -253,22 +238,31 @@ export function LinesPage() {
                       </div>
                     </td>
                     <td style={{ padding: "12px 16px" }}>
-                      <Badge variant="cyan">{l.type || "Continuous Flow"}</Badge>
+                      <Badge variant="cyan">{l.type || l.lineType || "Continuous Flow"}</Badge>
                     </td>
                     <td style={{ padding: "12px 16px", fontFamily: "var(--font-mono)", fontWeight: 800, color: "#D97706" }}>
-                      {l.ratedSpeed || "38,000 BPH"}
+                      {l.ratedSpeed || `${l.ratedSpeedBPH ? l.ratedSpeedBPH.toLocaleString() : "38,000"} BPH`}
                     </td>
                     <td style={{ padding: "12px 16px" }}>
                       <Badge variant="emerald">{l.status || "Active"}</Badge>
                     </td>
                     <td style={{ padding: "12px 16px", textAlign: "right" }}>
-                      <button
-                        onClick={() => setEditingLine({ ...l })}
-                        title="Edit Line"
-                        style={{ width: "30px", height: "30px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", color: "var(--text-primary)", border: "1px solid var(--border-subtle)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
-                      >
-                        <Edit2 size={13} />
-                      </button>
+                      <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                        <button
+                          onClick={() => setEditingLine({ ...l })}
+                          title="Edit Line"
+                          style={{ width: "30px", height: "30px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", color: "var(--text-primary)", border: "1px solid var(--border-subtle)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+                        >
+                          <Edit2 size={13} />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(l.lineId || l.id, l.name)}
+                          title="Delete Line"
+                          style={{ width: "30px", height: "30px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", color: "#EF4444", border: "1px solid var(--border-subtle)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );

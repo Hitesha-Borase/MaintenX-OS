@@ -52,6 +52,14 @@ export const INITIAL_DEPARTMENTS = [
   { id: "DEP-05", plantId: "PLT-01", code: "CI-ENG", name: "Continuous Improvement & Engineering", managerId: "EMP-001", managerName: "Alexander Vance", costCenter: "CC-105", status: "Active" }
 ];
 
+export const INITIAL_WORK_CENTERS = [
+  { id: "WC-101", workCenterId: "WC-101", code: "FILL-01", name: "Rotary Isobaric Filler", lineId: "LIN-01", lineName: "Line 1 — Aseptic Bottling", plantId: "PLT-01", capacity: "38,000 BPH", category: "PACKAGING", status: "Active" },
+  { id: "WC-102", workCenterId: "WC-102", code: "CAPP-01", name: "Induction Cap Sealer", lineId: "LIN-01", lineName: "Line 1 — Aseptic Bottling", plantId: "PLT-01", capacity: "38,000 BPH", category: "PACKAGING", status: "Active" },
+  { id: "WC-103", workCenterId: "WC-103", code: "LABL-01", name: "Sleeve Rotary Labeler", lineId: "LIN-01", lineName: "Line 1 — Aseptic Bottling", plantId: "PLT-01", capacity: "40,000 BPH", category: "PACKAGING", status: "Active" },
+  { id: "WC-201", workCenterId: "WC-201", code: "PAST-02", name: "HTST Flash Pasteurizer", lineId: "LIN-02", lineName: "Line 2 — Formulation & Pasteurizer", plantId: "PLT-01", capacity: "30,000 L/hr", category: "PROCESSING", status: "Active" },
+  { id: "WC-301", workCenterId: "WC-301", code: "SEAM-03", name: "Can Seamer Station", lineId: "LIN-03", lineName: "Line 3 — Canning Line", plantId: "PLT-02", capacity: "45,000 CPH", category: "PACKAGING", status: "Active" }
+];
+
 export const INITIAL_PRODUCT_FAMILIES = [
   {
     familyId: "FAM-01",
@@ -1390,10 +1398,23 @@ export const INITIAL_ROLE_PERMISSIONS = {
 // ============================================================================
 
 export function MasterDataProvider({ children }) {
-  const [companies, setCompanies] = useState(INITIAL_COMPANIES);
-  const [plants, setPlants] = useState(INITIAL_PLANTS);
+  const [companies, setCompanies] = useState(() => {
+    const saved = localStorage.getItem("mx_master_companies");
+    return saved ? JSON.parse(saved) : INITIAL_COMPANIES;
+  });
+  const [plants, setPlants] = useState(() => {
+    const saved = localStorage.getItem("mx_master_plants");
+    return saved ? JSON.parse(saved) : INITIAL_PLANTS;
+  });
   const [activePlantId, setActivePlantId] = useState("PLT-01");
-  const [departments, setDepartments] = useState(INITIAL_DEPARTMENTS);
+  const [departments, setDepartments] = useState(() => {
+    const saved = localStorage.getItem("mx_master_departments");
+    return saved ? JSON.parse(saved) : INITIAL_DEPARTMENTS;
+  });
+  const [workCenters, setWorkCenters] = useState(() => {
+    const saved = localStorage.getItem("mx_master_workcenters");
+    return saved ? JSON.parse(saved) : INITIAL_WORK_CENTERS;
+  });
 
   // 1. Core Master Datasets with Cache Initialization
   const [productFamilies, setProductFamilies] = useState(() => {
@@ -1511,6 +1532,10 @@ export function MasterDataProvider({ children }) {
   });
 
   // Local Storage Synchronization
+  useEffect(() => { localStorage.setItem("mx_master_companies", JSON.stringify(companies)); }, [companies]);
+  useEffect(() => { localStorage.setItem("mx_master_plants", JSON.stringify(plants)); }, [plants]);
+  useEffect(() => { localStorage.setItem("mx_master_departments", JSON.stringify(departments)); }, [departments]);
+  useEffect(() => { localStorage.setItem("mx_master_workcenters", JSON.stringify(workCenters)); }, [workCenters]);
   useEffect(() => { localStorage.setItem("mx_master_families", JSON.stringify(productFamilies)); }, [productFamilies]);
   useEffect(() => { localStorage.setItem("mx_master_uoms", JSON.stringify(uoms)); }, [uoms]);
   useEffect(() => { localStorage.setItem("mx_master_skus", JSON.stringify(skus)); }, [skus]);
@@ -1534,25 +1559,50 @@ export function MasterDataProvider({ children }) {
   useEffect(() => { localStorage.setItem("mx_master_audit_logs", JSON.stringify(auditLogs)); }, [auditLogs]);
   useEffect(() => { localStorage.setItem("mx_master_permissions", JSON.stringify(rolePermissions)); }, [rolePermissions]);
 
-  // Synchronize Master Data with Fastify REST API on mount
+  // Synchronize Master Data with Fastify REST API on mount & plant change
   useEffect(() => {
     async function fetchLiveMasterData() {
       try {
-        const [liveSkus, liveBoms, liveLines, liveAssets] = await Promise.allSettled([
+        const [
+          liveCompanies,
+          livePlants,
+          liveDepts,
+          liveLines,
+          liveWcs,
+          liveSkus,
+          liveBoms,
+          liveAssets,
+        ] = await Promise.allSettled([
+          masterDataService.getCompanies(),
+          masterDataService.getPlants(),
+          masterDataService.getDepartments(activePlantId),
+          masterDataService.getLines(activePlantId),
+          masterDataService.getWorkCenters(activePlantId),
           masterDataService.getSkus(),
           masterDataService.getBoms(),
-          masterDataService.getLines(activePlantId),
           masterDataService.getAssets(activePlantId),
         ]);
 
+        if (liveCompanies.status === "fulfilled" && Array.isArray(liveCompanies.value) && liveCompanies.value.length > 0) {
+          setCompanies(liveCompanies.value);
+        }
+        if (livePlants.status === "fulfilled" && Array.isArray(livePlants.value) && livePlants.value.length > 0) {
+          setPlants(livePlants.value);
+        }
+        if (liveDepts.status === "fulfilled" && Array.isArray(liveDepts.value) && liveDepts.value.length > 0) {
+          setDepartments(liveDepts.value);
+        }
+        if (liveLines.status === "fulfilled" && Array.isArray(liveLines.value) && liveLines.value.length > 0) {
+          setLines(liveLines.value);
+        }
+        if (liveWcs.status === "fulfilled" && Array.isArray(liveWcs.value) && liveWcs.value.length > 0) {
+          setWorkCenters(liveWcs.value);
+        }
         if (liveSkus.status === "fulfilled" && Array.isArray(liveSkus.value) && liveSkus.value.length > 0) {
           setSkus(liveSkus.value);
         }
         if (liveBoms.status === "fulfilled" && Array.isArray(liveBoms.value) && liveBoms.value.length > 0) {
           setBoms(liveBoms.value);
-        }
-        if (liveLines.status === "fulfilled" && Array.isArray(liveLines.value) && liveLines.value.length > 0) {
-          setLines(liveLines.value);
         }
         if (liveAssets.status === "fulfilled" && Array.isArray(liveAssets.value) && liveAssets.value.length > 0) {
           setAssets(liveAssets.value);
@@ -1585,40 +1635,120 @@ export function MasterDataProvider({ children }) {
   }, []);
 
   // ============================================================================
+  // -1. COMPANY / LEGAL ENTITY MUTATIONS
+  // ============================================================================
+  const addCompany = (companyData) => {
+    const newId = `CMP-0${companies.length + 1}`;
+    const newRecord = {
+      id: newId,
+      companyId: newId,
+      code: (companyData.code || `CMP-0${companies.length + 1}`).toUpperCase(),
+      name: companyData.name,
+      taxId: companyData.taxId || "US-EIN-94821039",
+      currency: companyData.currency || "USD ($)",
+      hqLocation: companyData.hqLocation || companyData.headquarters || "Austin, Texas, USA",
+      fiscalYearStart: companyData.fiscalYearStart || "January",
+      status: companyData.status || "Active",
+    };
+    setCompanies((prev) => [newRecord, ...prev]);
+    masterDataService.createCompany(newRecord).catch((err) => console.warn("API createCompany:", err.message));
+    logAudit({ entityId: newRecord.code, entityType: "Legal Corporate Entity", action: "Registered", newValue: `${newRecord.name} (${newRecord.code})` });
+    return newRecord;
+  };
+
+  const updateCompany = (companyId, updated) => {
+    setCompanies((prev) =>
+      prev.map((c) => (c.id === companyId || c.companyId === companyId || c.code === companyId ? { ...c, ...updated } : c))
+    );
+    masterDataService.updateCompany(companyId, updated).catch((err) => console.warn("API updateCompany:", err.message));
+    logAudit({ entityId: companyId, entityType: "Legal Corporate Entity", action: "Updated", notes: "Entity configuration modified" });
+  };
+
+  const deleteCompany = (companyId) => {
+    setCompanies((prev) => prev.filter((c) => c.id !== companyId && c.companyId !== companyId));
+    masterDataService.deleteCompany(companyId).catch((err) => console.warn("API deleteCompany:", err.message));
+    logAudit({ entityId: companyId, entityType: "Legal Corporate Entity", action: "Deleted" });
+  };
+
+  // ============================================================================
   // 0. PLANT FACILITIES MUTATIONS
   // ============================================================================
-  
   const addPlant = (plantData) => {
     const newId = `PLT-0${plants.length + 1}`;
     const newRecord = {
       id: newId,
-      companyId: companies[0].id,
+      plantId: newId,
+      companyId: companies[0]?.id || "CMP-01",
       code: (plantData.code || `PLT-${plants.length + 1}`).toUpperCase(),
       name: plantData.name,
-      location: plantData.location || "",
-      city: plantData.city || "",
-      state: plantData.state || "",
-      country: plantData.country || "",
-      capacity: plantData.dailyCapacity || "0 Units/Day",
-      operatingShifts: plantData.operatingShifts || 3,
+      location: plantData.location || `${plantData.city || "Indore"}, ${plantData.country || "India"}`,
+      city: plantData.city || "Indore",
+      state: plantData.state || "MP",
+      country: plantData.country || "India",
+      capacity: plantData.dailyCapacity || plantData.capacity || "350,000 Units/Day",
+      dailyCapacity: plantData.dailyCapacity || plantData.capacity || "350,000 Units/Day",
+      operatingShifts: Number(plantData.operatingShifts) || 3,
+      linesCount: Number(plantData.linesCount) || 3,
       status: plantData.status || "Active",
       timezone: plantData.timezone || "Asia/Kolkata (IST)",
       effectiveFrom: new Date().toISOString().substring(0, 10),
       effectiveTo: "2030-12-31"
     };
     setPlants((prev) => [newRecord, ...prev]);
+    masterDataService.createPlant(newRecord).catch((err) => console.warn("API createPlant:", err.message));
     logAudit({ entityId: newRecord.code, entityType: "Plant Facility", action: "Provisioned", newValue: `${newRecord.name} (${newRecord.code})` });
     return newRecord;
   };
 
   const updatePlant = (plantId, updated) => {
-    setPlants((prev) => prev.map((p) => (p.id === plantId ? { ...p, ...updated } : p)));
+    setPlants((prev) =>
+      prev.map((p) => (p.id === plantId || p.plantId === plantId || p.code === plantId ? { ...p, ...updated } : p))
+    );
+    masterDataService.updatePlant(plantId, updated).catch((err) => console.warn("API updatePlant:", err.message));
     logAudit({ entityId: plantId, entityType: "Plant Facility", action: "Updated", notes: "Plant configuration modified" });
   };
 
   const deletePlant = (plantId) => {
-    setPlants((prev) => prev.filter((p) => p.id !== plantId));
+    setPlants((prev) => prev.filter((p) => p.id !== plantId && p.plantId !== plantId));
+    masterDataService.deletePlant(plantId).catch((err) => console.warn("API deletePlant:", err.message));
     logAudit({ entityId: plantId, entityType: "Plant Facility", action: "Deleted" });
+  };
+
+  // ============================================================================
+  // 0.1 DEPARTMENTS MUTATIONS
+  // ============================================================================
+  const addDepartment = (deptData) => {
+    const newId = `DEP-0${departments.length + 1}`;
+    const newRecord = {
+      id: newId,
+      departmentId: newId,
+      plantId: deptData.plantId || activePlantId || "PLT-01",
+      code: (deptData.code || `DEP-0${departments.length + 1}`).toUpperCase(),
+      name: deptData.name,
+      deptHead: deptData.deptHead || deptData.managerName || "Robert Thorne",
+      managerName: deptData.deptHead || deptData.managerName || "Robert Thorne",
+      costCenter: deptData.costCenter || "CC-101",
+      operatingShifts: deptData.operatingShifts || "3 Shifts (24/7 Continuous)",
+      status: deptData.status || "Active",
+    };
+    setDepartments((prev) => [newRecord, ...prev]);
+    masterDataService.createDepartment(newRecord).catch((err) => console.warn("API createDepartment:", err.message));
+    logAudit({ entityId: newRecord.code, entityType: "Department", action: "Created", newValue: `${newRecord.name} (${newRecord.code})` });
+    return newRecord;
+  };
+
+  const updateDepartment = (departmentId, updated) => {
+    setDepartments((prev) =>
+      prev.map((d) => (d.id === departmentId || d.departmentId === departmentId || d.code === departmentId ? { ...d, ...updated } : d))
+    );
+    masterDataService.updateDepartment(departmentId, updated).catch((err) => console.warn("API updateDepartment:", err.message));
+    logAudit({ entityId: departmentId, entityType: "Department", action: "Updated", notes: "Department hierarchy modified" });
+  };
+
+  const deleteDepartment = (departmentId) => {
+    setDepartments((prev) => prev.filter((d) => d.id !== departmentId && d.departmentId !== departmentId));
+    masterDataService.deleteDepartment(departmentId).catch((err) => console.warn("API deleteDepartment:", err.message));
+    logAudit({ entityId: departmentId, entityType: "Department", action: "Deleted" });
   };
 
   // ============================================================================
@@ -2013,39 +2143,100 @@ export function MasterDataProvider({ children }) {
   // ============================================================================
   const addLine = (lineData) => {
     const newRecord = {
+      id: `LIN-0${lines.length + 1}`,
       lineId: `LIN-0${lines.length + 1}`,
-      lineCode: lineData.lineCode || `LINE-${lines.length + 1}`,
+      lineCode: (lineData.lineCode || lineData.code || `LINE-${lines.length + 1}`).toUpperCase(),
+      code: (lineData.lineCode || lineData.code || `LINE-${lines.length + 1}`).toUpperCase(),
       name: lineData.name,
       plantId: lineData.plantId || activePlantId,
-      plantName: plants.find((p) => p.id === (lineData.plantId || activePlantId))?.name || "Indore Plant",
+      plantName: plants.find((p) => p.id === (lineData.plantId || activePlantId) || p.plantId === (lineData.plantId || activePlantId))?.name || "Indore Plant",
       departmentId: lineData.departmentId || "DEP-01",
-      capacity: lineData.capacity || "35,000 BPH",
-      ratedSpeedBPH: Number(lineData.ratedSpeedBPH) || 35000,
-      status: "Active",
+      capacity: lineData.capacity || lineData.ratedSpeed || "38,000 BPH",
+      type: lineData.type || "Continuous Flow",
+      lineType: lineData.lineType || "BOTTLING",
+      ratedSpeed: lineData.ratedSpeed || "38,000 BPH",
+      ratedSpeedBPH: Number(lineData.ratedSpeedBPH) || 38000,
+      status: lineData.status || "Active",
       supervisorId: lineData.supervisorId || "EMP-005",
       supervisorName: lineData.supervisorName || "David Kim",
       assignedAssetIds: lineData.assignedAssetIds || [],
       eligibleSkuIds: lineData.eligibleSkuIds || ["SKU-001"],
-      ratedOEE: lineData.ratedOEE || "85.0%",
-      currentRunningSku: "SKU-5001"
+      ratedOEE: lineData.ratedOEE || "88.0%",
+      currentRunningSku: "SKU-5001",
+      healthScore: 95,
     };
     setLines((prev) => [newRecord, ...prev]);
+    masterDataService.createLine(newRecord).catch((err) => console.warn("API createLine:", err.message));
     logAudit({ entityId: newRecord.lineCode, entityType: "Work Centers / Lines", action: "Created", newValue: newRecord.name });
     return newRecord;
   };
 
   const updateLine = (lineId, updated) => {
-    setLines((prev) => prev.map((l) => (l.lineId === lineId || l.lineCode === lineId ? { ...l, ...updated } : l)));
+    setLines((prev) =>
+      prev.map((l) => (l.lineId === lineId || l.id === lineId || l.lineCode === lineId ? { ...l, ...updated } : l))
+    );
+    masterDataService.updateLine(lineId, updated).catch((err) => console.warn("API updateLine:", err.message));
     logAudit({ entityId: lineId, entityType: "Work Centers / Lines", action: "Updated" });
   };
 
   const toggleLineStatus = (lineId) => {
-    setLines((prev) => prev.map((l) => (l.lineId === lineId || l.lineCode === lineId ? { ...l, status: l.status === "Active" ? "Inactive" : "Active" } : l)));
+    setLines((prev) =>
+      prev.map((l) => {
+        if (l.lineId === lineId || l.id === lineId || l.lineCode === lineId) {
+          const next = l.status === "Active" ? "Inactive" : "Active";
+          masterDataService.updateLine(lineId, { status: next }).catch((err) => console.warn("API toggleLineStatus:", err.message));
+          return { ...l, status: next };
+        }
+        return l;
+      })
+    );
   };
 
   const deleteLine = (lineId) => {
-    setLines((prev) => prev.filter((l) => l.lineId !== lineId && l.lineCode !== lineId));
+    setLines((prev) => prev.filter((l) => l.lineId !== lineId && l.id !== lineId && l.lineCode !== lineId));
+    masterDataService.deleteLine(lineId).catch((err) => console.warn("API deleteLine:", err.message));
     logAudit({ entityId: lineId, entityType: "Work Centers / Lines", action: "Deleted" });
+  };
+
+  // 9.1 WORK CENTERS MUTATIONS
+  const addWorkCenter = (wcData) => {
+    const newId = `WC-${Math.floor(400 + Math.random() * 99)}`;
+    const lineObj = lines.find((l) => l.lineId === wcData.lineId || l.id === wcData.lineId);
+    const newRecord = {
+      id: newId,
+      workCenterId: newId,
+      code: (wcData.code || `WC-0${workCenters.length + 1}`).toUpperCase(),
+      name: wcData.name,
+      lineId: wcData.lineId || lines[0]?.lineId || "LIN-01",
+      lineName: wcData.lineName || (lineObj ? lineObj.name : "Line 1 — Aseptic Bottling"),
+      plantId: wcData.plantId || (lineObj ? lineObj.plantId : "PLT-01"),
+      capacity: wcData.capacity || "38,000 BPH",
+      category: wcData.category || "PACKAGING",
+      status: wcData.status || "Active",
+    };
+    setWorkCenters((prev) => [newRecord, ...prev]);
+    masterDataService.createWorkCenter(newRecord).catch((err) => console.warn("API createWorkCenter:", err.message));
+    logAudit({ entityId: newRecord.code, entityType: "Work Center Cell", action: "Created", newValue: newRecord.name });
+    return newRecord;
+  };
+
+  const updateWorkCenter = (wcId, updated) => {
+    const lineObj = updated.lineId ? lines.find((l) => l.lineId === updated.lineId || l.id === updated.lineId) : undefined;
+    setWorkCenters((prev) =>
+      prev.map((w) =>
+        w.id === wcId || w.workCenterId === wcId || w.code === wcId
+          ? { ...w, ...updated, lineName: lineObj ? lineObj.name : (updated.lineName || w.lineName) }
+          : w
+      )
+    );
+    masterDataService.updateWorkCenter(wcId, updated).catch((err) => console.warn("API updateWorkCenter:", err.message));
+    logAudit({ entityId: wcId, entityType: "Work Center Cell", action: "Updated" });
+  };
+
+  const deleteWorkCenter = (wcId) => {
+    setWorkCenters((prev) => prev.filter((w) => w.id !== wcId && w.workCenterId !== wcId));
+    masterDataService.deleteWorkCenter(wcId).catch((err) => console.warn("API deleteWorkCenter:", err.message));
+    logAudit({ entityId: wcId, entityType: "Work Center Cell", action: "Deleted" });
   };
 
   const assignAssetToLine = (lineId, assetId) => {
@@ -2542,6 +2733,9 @@ export function MasterDataProvider({ children }) {
       value={{
         company: companies[0],
         companies,
+        addCompany,
+        updateCompany,
+        deleteCompany,
         plants,
         addPlant,
         updatePlant,
@@ -2549,6 +2743,13 @@ export function MasterDataProvider({ children }) {
         activePlantId,
         setActivePlantId,
         departments,
+        addDepartment,
+        updateDepartment,
+        deleteDepartment,
+        workCenters,
+        addWorkCenter,
+        updateWorkCenter,
+        deleteWorkCenter,
 
         // 1. Product Families
         productFamilies,
