@@ -50,11 +50,19 @@ export function Login() {
   const { login, loginWithCredentials, ROLES } = useRole();
   const { addToast } = useApp();
 
-  const [username, setUsername] = useState("alexander.vance@maintenx.com");
+  const [selectedRole, setSelectedRole] = useState("plant_manager");
+  const [username, setUsername] = useState("plant.manager@maintenx.com");
   const [password, setPassword] = useState("Password@123");
   const [showPassword, setShowPassword] = useState(false);
-  const [selectedRole, setSelectedRole] = useState("plant_manager");
   const [hoveredRole, setHoveredRole] = useState(null);
+
+  const handleRoleSelect = (roleId) => {
+    setSelectedRole(roleId);
+    const targetRole = ROLES.find((r) => r.id === roleId);
+    if (targetRole?.user?.email) {
+      setUsername(targetRole.user.email);
+    }
+  };
 
   // Generate warm floating particles
   const [particles, setParticles] = useState([]);
@@ -75,18 +83,23 @@ export function Login() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (loginWithCredentials && username && password) {
-      const res = await loginWithCredentials(username, password);
-      if (res?.success) {
-        addToast(`Authenticated with database as ${res.user?.firstName || "User"} (${res.user?.role || selectedRole})!`, "success");
-        navigate("/dashboard");
-        return;
+    const roleObj = ROLES.find((r) => r.id === selectedRole) || ROLES[10];
+
+    try {
+      if (loginWithCredentials && username && password) {
+        const res = await loginWithCredentials(username, password, selectedRole);
+        if (res?.success) {
+          addToast(`Authenticated as ${roleObj.label} (${res.user?.firstName ? `${res.user.firstName} ${res.user.lastName || ""}` : (roleObj.user?.name || "User")})!`, "success");
+          navigate(roleObj?.defaultRoute || "/dashboard");
+          return;
+        }
       }
+    } catch (err) {
+      console.warn("API Login failed, using role authentication:", err);
     }
 
     login(selectedRole);
-    const roleObj = ROLES.find((r) => r.id === selectedRole);
-    addToast(`Authenticated as ${roleObj?.label || "User"}! Welcome to MaintenX OS.`, "success");
+    addToast(`Authenticated as ${roleObj.label} (${roleObj.user?.name || "User"})! Welcome to MaintenX OS.`, "success");
     navigate(roleObj?.defaultRoute || "/dashboard");
   };
 
@@ -471,7 +484,7 @@ export function Login() {
                   return (
                     <div
                       key={role.id}
-                      onClick={() => setSelectedRole(role.id)}
+                      onClick={() => handleRoleSelect(role.id)}
                       onMouseEnter={() => setHoveredRole(role.id)}
                       onMouseLeave={() => setHoveredRole(null)}
                       style={{
