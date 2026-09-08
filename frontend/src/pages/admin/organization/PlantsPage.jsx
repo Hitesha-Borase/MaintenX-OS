@@ -194,7 +194,7 @@ export function PlantsPage() {
                           <Edit2 size={13} />
                         </button>
                         <button
-                          onClick={() => handleDelete(p.id, p.name)}
+                          onClick={() => handleDelete(p.id || p.plantId, p.name)}
                           title="Delete Plant"
                           style={{ width: "30px", height: "30px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", color: "#EF4444", border: "1px solid var(--border-subtle)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
                         >

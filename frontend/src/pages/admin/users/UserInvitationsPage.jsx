@@ -21,12 +21,12 @@ import { useAdmin } from "../../../context/AdminContext";
 import { useApp } from "../../../context/AppContext";
 
 export function UserInvitationsPage() {
-  const { invitations = [], addInvitation } = useAdmin();
+  const { invitations = [], addInvitation, resendInvitation, deleteInvitation } = useAdmin();
   const { addToast } = useApp();
 
-  const [invites, setInvites] = useState(invitations);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [deletingInvite, setDeletingInvite] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [newInvite, setNewInvite] = useState({
     email: "",
@@ -34,39 +34,52 @@ export function UserInvitationsPage() {
     department: "Quality"
   });
 
-  const handleResend = (email) => {
-    addToast(`Magic sign-up link re-dispatched to ${email}.`, "info");
+  const handleResend = async (id, email) => {
+    try {
+      if (resendInvitation) {
+        await resendInvitation(id || email);
+      }
+      addToast(`Magic sign-up link re-dispatched to ${email}.`, "info");
+    } catch (err) {
+      addToast("Failed to resend invite: " + err.message, "error");
+    }
   };
 
-  const handleConfirmRevoke = () => {
+  const handleConfirmRevoke = async () => {
     if (!deletingInvite) return;
-    setInvites((prev) => prev.filter((i) => i.id !== deletingInvite.id));
-    addToast(`Invitation for ${deletingInvite.email} revoked.`, "warning");
-    setDeletingInvite(null);
+    try {
+      if (deleteInvitation) {
+        await deleteInvitation(deletingInvite.id || deletingInvite.email);
+      }
+      addToast(`Invitation for ${deletingInvite.email} revoked.`, "warning");
+      setDeletingInvite(null);
+    } catch (err) {
+      addToast("Failed to revoke invite: " + err.message, "error");
+    }
   };
 
-  const handleAddSubmit = (e) => {
+  const handleAddSubmit = async (e) => {
     e.preventDefault();
     if (!newInvite.email.trim()) {
       addToast("Please provide recipient email.", "warning");
       return;
     }
 
-    const created = {
-      id: `INV-${Math.floor(100 + Math.random() * 900)}`,
-      email: newInvite.email,
-      role: newInvite.role,
-      department: newInvite.department,
-      sentDate: new Date().toISOString().substring(0, 10),
-      status: "Pending"
-    };
-
-    setInvites([created, ...invites]);
-    if (addInvitation) addInvitation(newInvite);
-    addToast(`Invitation sent to ${newInvite.email}!`, "success");
-    setIsModalOpen(false);
-    setNewInvite({ email: "", role: "Quality Analyst", department: "Quality" });
+    try {
+      setIsSubmitting(true);
+      if (addInvitation) {
+        await addInvitation(newInvite);
+      }
+      addToast(`Invitation sent to ${newInvite.email}!`, "success");
+      setIsModalOpen(false);
+      setNewInvite({ email: "", role: "Quality Analyst", department: "Quality" });
+    } catch (err) {
+      addToast("Failed to send invitation: " + err.message, "error");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
+
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%", maxWidth: "1200px", margin: "0 auto", minWidth: 0 }}>
@@ -77,7 +90,7 @@ export function UserInvitationsPage() {
             <h1 style={{ fontSize: "clamp(18px, 4vw, 24px)", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.3px", lineHeight: 1.2 }}>
               Pending User Onboarding Invitations
             </h1>
-            <Badge variant="cyan">{invites.length} PENDING INVITES</Badge>
+            <Badge variant="cyan">{invitations.length} PENDING INVITES</Badge>
           </div>
         </div>
 
@@ -101,7 +114,7 @@ export function UserInvitationsPage() {
       >
         <StatCard
           title="Pending Invitations"
-          value={invites.length.toString()}
+          value={invitations.length.toString()}
           unit="Awaiting Signup"
           icon={Mail}
           colorVariant="amber"
@@ -145,7 +158,7 @@ export function UserInvitationsPage() {
               </tr>
             </thead>
             <tbody>
-              {invites.map((i) => (
+              {invitations.map((i) => (
                 <tr key={i.id}>
                   <td>
                     <span style={{ fontWeight: 800, color: "#8C5B23", fontFamily: "var(--font-mono)" }}>{i.id}</span>
@@ -164,7 +177,7 @@ export function UserInvitationsPage() {
                   <td>
                     <div style={{ display: "flex", gap: "6px" }}>
                       <button
-                        onClick={() => handleResend(i.email)}
+                        onClick={() => handleResend(i.id, i.email)}
                         title="Resend Invite Link"
                         style={{
                           width: "30px",

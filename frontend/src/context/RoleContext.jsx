@@ -636,6 +636,16 @@ export function RoleProvider({ children }) {
     }
   };
 
+  // Sync JWT token with backend on mount if authenticated but token is missing
+  useEffect(() => {
+    const token = localStorage.getItem("maintenx_auth_token");
+    if (isAuthenticated && !token && currentRole?.user?.email) {
+      authService.login(currentRole.user.email, "Password@123").catch((e) => {
+        console.warn("Auto-token acquisition on startup:", e.message);
+      });
+    }
+  }, [isAuthenticated, currentRole]);
+
   const login = (roleId) => {
     const found = ROLES.find((r) => r.id === roleId) || ROLES.find((r) => r.id === "plant_manager") || ROLES[10];
     setCurrentRole(found);
@@ -644,6 +654,12 @@ export function RoleProvider({ children }) {
     localStorage.setItem("flowstate_current_role", JSON.stringify(found));
     if (found.user) {
       localStorage.setItem("flowstate_user_profile", JSON.stringify(found.user));
+      // Auto-authenticate with Fastify backend to obtain real JWT
+      if (found.user.email) {
+        authService.login(found.user.email, "Password@123").catch((err) => {
+          console.warn(`[RoleContext] Auto-auth for ${found.user.email}:`, err.message);
+        });
+      }
     }
     return found;
   };

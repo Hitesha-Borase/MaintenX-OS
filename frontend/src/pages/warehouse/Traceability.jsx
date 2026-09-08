@@ -30,6 +30,8 @@ import {
   Download
 } from "lucide-react";
 import { useApp } from "../../context/AppContext";
+import qualityService from "../../services/qualityService";
+
 
 // Comprehensive Mock Data for Batch 360° Traceability
 const TRACE_DATABASE = {
@@ -349,6 +351,11 @@ export function Traceability() {
   const handleEnforceQuarantineLock = () => {
     setIsLockEnforced(true);
     setIsQuarantineModalOpen(false);
+    qualityService.placeHold({
+      lotNumber: currentTrace.lotNumber,
+      reason: quarantineReason || "CRITICAL HOLD: Automated WMS Lock",
+      severity: "HIGH",
+    }).catch(err => console.warn("qualityService.placeHold offline:", err.message));
     addToast(`CRITICAL HOLD: Automated WMS Lock placed on Lot ${currentTrace.lotNumber}. Reason: ${quarantineReason}. All downstream dispatches halted.`, "error");
   };
 

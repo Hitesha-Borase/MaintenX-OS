@@ -22,6 +22,8 @@ import { StatCard } from "../../../components/common/StatCard";
 import { useMasterData } from "../../../context/MasterDataContext";
 import { useApp } from "../../../context/AppContext";
 
+import adminService from "../../../services/adminService";
+
 const ROLES_LIST = [
   { id: "admin", label: "Super Admin / System Administrator" },
   { id: "plant_manager", label: "Plant Manager" },
@@ -52,22 +54,56 @@ export function PermissionsMatrixPage() {
   const [testModule, setTestModule] = useState("BOM / Recipe");
   const [testAction, setTestAction] = useState("delete");
   const [testResult, setTestResult] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isTesting, setIsTesting] = useState(false);
 
   const currentRoleConfig = rolePermissions[selectedRoleKey] || { permissions: {} };
 
   const handleToggle = (module, action) => {
     const currentVal = !!currentRoleConfig.permissions?.[module]?.[action];
-    updatePermissionMatrix(selectedRoleKey, module, action, !currentVal);
+    if (updatePermissionMatrix) {
+      updatePermissionMatrix(selectedRoleKey, module, action, !currentVal);
+    }
   };
 
-  const handleTestPermission = () => {
-    const allowed = !!currentRoleConfig.permissions?.[testModule]?.[testAction];
-    setTestResult({
-      allowed,
-      message: allowed
-        ? `Access Granted: "${selectedRoleKey}" has permission to "${testAction.toUpperCase()}" on "${testModule}".`
-        : `Access Restricted — You don't have permission to perform "${testAction.toUpperCase()}" on "${testModule}".`
-    });
+  const handleSaveMatrix = async () => {
+    try {
+      setIsSaving(true);
+      await adminService.updatePermissionMatrix({
+        roleKey: selectedRoleKey,
+        permissions: currentRoleConfig.permissions
+      });
+      addToast(`Permissions matrix updated & synced across all role profiles!`, "success");
+    } catch (err) {
+      addToast("Failed to save matrix: " + err.message, "error");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleTestPermission = async () => {
+    try {
+      setIsTesting(true);
+      const res = await adminService.testPermissionAccess({
+        roleKey: selectedRoleKey,
+        module: testModule,
+        action: testAction
+      });
+      setTestResult({
+        allowed: res.allowed,
+        message: res.message
+      });
+    } catch (err) {
+      const allowed = !!currentRoleConfig.permissions?.[testModule]?.[testAction];
+      setTestResult({
+        allowed,
+        message: allowed
+          ? `Access Granted: "${selectedRoleKey}" has permission to "${testAction.toUpperCase()}" on "${testModule}".`
+          : `Access Restricted — You don't have permission to perform "${testAction.toUpperCase()}" on "${testModule}".`
+      });
+    } finally {
+      setIsTesting(false);
+    }
   };
 
   return (
@@ -87,13 +123,14 @@ export function PermissionsMatrixPage() {
           <Button
             variant="primary"
             icon={Save}
-            onClick={() => addToast(`Permissions matrix updated & synced across all role profiles!`, "success")}
+            onClick={handleSaveMatrix}
             style={{ fontSize: "12px", padding: "7px 12px" }}
           >
-            Save Matrix Configuration
+            {isSaving ? "Saving..." : "Save Matrix Configuration"}
           </Button>
         </div>
       </div>
+
 
       {/* KPI Tickers - 4 Responsive Cards */}
       <div

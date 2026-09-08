@@ -84,7 +84,7 @@ export function DepartmentsPage() {
       return;
     }
 
-    updateDepartment(editingDept.departmentId, editingDept);
+    updateDepartment(editingDept.departmentId || editingDept.id, editingDept);
     addToast(`Department "${editingDept.name}" updated successfully!`, "success");
     setEditingDept(null);
   };
@@ -238,7 +238,7 @@ export function DepartmentsPage() {
               {filteredDepts.map((d) => {
                 const plantName = plants.find((p) => p.id === d.plantId)?.name?.split(" - ")[0] || "Indore Plant 1";
                 return (
-                  <tr key={d.departmentId} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+                  <tr key={d.departmentId || d.id || d.code} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
                     <td style={{ padding: "12px 16px", fontFamily: "var(--font-mono)", fontWeight: 800, color: "#8C5B23" }}>
                       {d.code}
                     </td>
@@ -246,7 +246,7 @@ export function DepartmentsPage() {
                       {d.name}
                     </td>
                     <td style={{ padding: "12px 16px", fontSize: "12px", color: "var(--text-primary)", fontWeight: 600 }}>
-                      {d.deptHead}
+                      {d.deptHead || d.managerName}
                     </td>
                     <td style={{ padding: "12px 16px", fontSize: "12px", color: "var(--text-secondary)" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
@@ -270,7 +270,7 @@ export function DepartmentsPage() {
                           <Edit2 size={13} />
                         </button>
                         <button
-                          onClick={() => handleDelete(d.departmentId, d.name)}
+                          onClick={() => handleDelete(d.departmentId || d.id, d.name)}
                           title="Delete Department"
                           style={{ width: "30px", height: "30px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", color: "#EF4444", border: "1px solid var(--border-subtle)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
                         >

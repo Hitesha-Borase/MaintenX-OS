@@ -20,6 +20,7 @@ import { Button } from "../../components/common/Button";
 import { TraceabilityNodeGraph } from "../../components/charts/TraceabilityNodeGraph";
 import { TRACEABILITY_RECORDS } from "../../data/mockTraceability";
 import { useApp } from "../../context/AppContext";
+import traceabilityService from "../../services/traceabilityService";
 
 export function Batch360Traceability() {
   const { addToast } = useApp();
@@ -29,8 +30,13 @@ export function Batch360Traceability() {
 
   const currentRecord = TRACEABILITY_RECORDS[selectedBatchId] || TRACEABILITY_RECORDS["BAT-2026-0892"];
 
-  const handleSimulateRecall = () => {
-    addToast("Mock Recall Simulation: 100% of affected lots identified across 2 distribution centers in 4.2 seconds.", "warning");
+  const handleSimulateRecall = async () => {
+    try {
+      await traceabilityService.simulateRecall(selectedBatchId);
+      addToast(`Mock Recall Simulation: 100% of affected lots identified for ${selectedBatchId} and logged in PostgreSQL.`, "warning");
+    } catch (err) {
+      addToast(`Mock Recall Simulation offline: ${err.message}`, "warning");
+    }
     setIsRecallSimOpen(true);
   };
 

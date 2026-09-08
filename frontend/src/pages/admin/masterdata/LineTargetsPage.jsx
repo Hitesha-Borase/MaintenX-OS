@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   Gauge,
   Plus,
@@ -19,9 +19,10 @@ import { Button } from "../../../components/common/Button";
 import { StatCard } from "../../../components/common/StatCard";
 import { useMasterData } from "../../../context/MasterDataContext";
 import { useApp } from "../../../context/AppContext";
+import { masterDataService } from "../../../services/masterDataService";
 
 export function LineTargetsPage() {
-  const { lineTargets = [], addLineTarget, updateLineTarget, deleteLineTarget, lines = [], skus = [], plants = [], activePlantId } = useMasterData();
+  const { lineTargets = [], setLineTargets, addLineTarget, updateLineTarget, deleteLineTarget, lines = [], skus = [], plants = [], activePlantId } = useMasterData();
   const { addToast } = useApp();
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -30,18 +31,54 @@ export function LineTargetsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTarget, setEditingTarget] = useState(null);
 
-  const finishedSkus = useMemo(() => skus.filter((s) => s.category === "Finished Goods"), [skus]);
+  // Live fetch from backend API on mount
+  useEffect(() => {
+    masterDataService.getLineTargets().then((res) => {
+      const data = res?.data?.data || res?.data || res;
+      if (Array.isArray(data) && data.length > 0 && typeof setLineTargets === "function") {
+        setLineTargets(data);
+      }
+    }).catch((err) => console.warn("LineTargets live load:", err.message));
+  }, [setLineTargets]);
+
+  const finishedSkus = useMemo(() => {
+    if (!Array.isArray(skus) || skus.length === 0) return [];
+    const filtered = skus.filter((s) => {
+      const cat = (s.category || s.itemType || s.type || "").toLowerCase();
+      return (
+        cat.includes("finish") ||
+        cat.includes("bev") ||
+        cat.includes("good") ||
+        cat.includes("product") ||
+        cat === "finished_goods"
+      );
+    });
+    return filtered.length > 0 ? filtered : skus;
+  }, [skus]);
 
   const [newTarget, setNewTarget] = useState({
     plantId: activePlantId || "PLT-01",
-    lineId: lines[0]?.lineId || "LIN-01",
-    skuId: finishedSkus[0]?.skuId || "SKU-001",
+    lineId: lines[0]?.lineId || lines[0]?.id || "LIN-01",
+    skuId: finishedSkus[0]?.skuId || finishedSkus[0]?.id || "SKU-001",
     shift: "Morning Shift (06:00 - 14:00)",
     targetQuantity: 300000,
     targetHB: "37,500 Bottles/Hour",
     stdRunRate: 42000,
     oeeTargetPct: 88.5
   });
+
+  // Ensure default lineId and skuId are always valid when datasets load
+  React.useEffect(() => {
+    if (lines.length > 0 && (!newTarget.lineId || !lines.some((l) => (l.lineId || l.id) === newTarget.lineId))) {
+      setNewTarget((prev) => ({ ...prev, lineId: lines[0].lineId || lines[0].id }));
+    }
+  }, [lines]);
+
+  React.useEffect(() => {
+    if (finishedSkus.length > 0 && (!newTarget.skuId || !finishedSkus.some((s) => (s.skuId || s.id) === newTarget.skuId))) {
+      setNewTarget((prev) => ({ ...prev, skuId: finishedSkus[0].skuId || finishedSkus[0].id }));
+    }
+  }, [finishedSkus]);
 
   const filteredTargets = useMemo(() => {
     return lineTargets.filter((t) => {
@@ -61,14 +98,14 @@ export function LineTargetsPage() {
 
   const handleAddSubmit = (e) => {
     e.preventDefault();
-    const selLine = lines.find((l) => l.lineId === newTarget.lineId);
-    const selSku = skus.find((s) => s.skuId === newTarget.skuId);
+    const selLine = lines.find((l) => (l.lineId || l.id) === newTarget.lineId);
+    const selSku = (finishedSkus.length > 0 ? finishedSkus : skus).find((s) => (s.skuId || s.id) === newTarget.skuId) || finishedSkus[0] || skus[0];
 
     const created = addLineTarget({
       ...newTarget,
       lineName: selLine ? selLine.name : "Line 1",
-      skuCode: selSku ? selSku.skuCode : "SKU-5001",
-      skuName: selSku ? selSku.name : "Beverage",
+      skuCode: selSku ? (selSku.skuCode || selSku.code || "SKU-5001") : "SKU-5001",
+      skuName: selSku ? (selSku.name || selSku.skuName || "Beverage") : "Beverage",
       targetQuantity: Number(newTarget.targetQuantity) || 250000,
       stdRunRate: Number(newTarget.stdRunRate) || 40000,
       oeeTargetPct: Number(newTarget.oeeTargetPct) || 88.0
@@ -78,8 +115,8 @@ export function LineTargetsPage() {
     setIsModalOpen(false);
     setNewTarget({
       plantId: activePlantId || "PLT-01",
-      lineId: lines[0]?.lineId || "LIN-01",
-      skuId: finishedSkus[0]?.skuId || "SKU-001",
+      lineId: lines[0]?.lineId || lines[0]?.id || "LIN-01",
+      skuId: finishedSkus[0]?.skuId || finishedSkus[0]?.id || "SKU-001",
       shift: "Morning Shift (06:00 - 14:00)",
       targetQuantity: 300000,
       targetHB: "37,500 Bottles/Hour",
@@ -90,14 +127,15 @@ export function LineTargetsPage() {
 
   const handleEditSubmit = (e) => {
     e.preventDefault();
-    const selLine = lines.find((l) => l.lineId === editingTarget.lineId);
-    const selSku = skus.find((s) => s.skuId === editingTarget.skuId);
+    const selLine = lines.find((l) => (l.lineId || l.id) === editingTarget.lineId);
+    const selSku = skus.find((s) => (s.skuId || s.id) === editingTarget.skuId);
+    const targetKey = editingTarget.targetId || editingTarget.id;
 
-    updateLineTarget(editingTarget.targetId, {
+    updateLineTarget(targetKey, {
       ...editingTarget,
       lineName: selLine ? selLine.name : editingTarget.lineName,
-      skuCode: selSku ? selSku.skuCode : editingTarget.skuCode,
-      skuName: selSku ? selSku.name : editingTarget.skuName,
+      skuCode: selSku ? (selSku.skuCode || selSku.code) : editingTarget.skuCode,
+      skuName: selSku ? (selSku.name || selSku.skuName) : editingTarget.skuName,
       targetQuantity: Number(editingTarget.targetQuantity) || 250000,
       stdRunRate: Number(editingTarget.stdRunRate) || 40000,
       oeeTargetPct: Number(editingTarget.oeeTargetPct) || 88.0
@@ -273,8 +311,8 @@ export function LineTargetsPage() {
                   </td>
                 </tr>
               ) : (
-                filteredTargets.map((t) => (
-                  <tr key={t.targetId} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+                filteredTargets.map((t, idx) => (
+                  <tr key={t.targetId || t.id || idx} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
                     <td style={{ padding: "12px 16px" }}>
                       <div style={{ fontWeight: 800, color: "var(--text-primary)", fontSize: "13px" }}>{t.lineName}</div>
                       <div style={{ fontSize: "11px", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>{t.lineId}</div>
@@ -319,7 +357,7 @@ export function LineTargetsPage() {
                           <Edit2 size={13} />
                         </button>
                         <button
-                          onClick={() => handleDelete(t.targetId, t.lineName)}
+                          onClick={() => handleDelete(t.targetId || t.id, t.lineName)}
                           title="Delete Target"
                           style={{
                             width: "30px",
@@ -373,7 +411,9 @@ export function LineTargetsPage() {
                     style={{ backgroundColor: "#FFFFFF" }}
                   >
                     {lines.map((l) => (
-                      <option key={l.lineId} value={l.lineId}>{l.lineCode} — {l.name}</option>
+                      <option key={l.lineId || l.id || l.code} value={l.lineId || l.id}>
+                        {l.lineCode || l.code || l.lineId || l.id} — {l.name}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -386,7 +426,9 @@ export function LineTargetsPage() {
                     style={{ backgroundColor: "#FFFFFF" }}
                   >
                     {finishedSkus.map((s) => (
-                      <option key={s.skuId} value={s.skuId}>{s.skuCode} — {s.name}</option>
+                      <option key={s.skuId || s.id || s.code || s.skuCode} value={s.skuId || s.id}>
+                        {s.skuCode || s.code || s.skuId || s.id} — {s.name || s.skuName || "Product"}
+                      </option>
                     ))}
                   </select>
                 </div>

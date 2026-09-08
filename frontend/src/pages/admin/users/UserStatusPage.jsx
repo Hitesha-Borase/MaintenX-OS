@@ -18,27 +18,52 @@ import { useAdmin } from "../../../context/AdminContext";
 import { useApp } from "../../../context/AppContext";
 
 export function UserStatusPage() {
-  const { users = [], updateUserStatus } = useAdmin();
+  const { users = [], updateUserStatus, bulkUpdateStatus } = useAdmin();
   const { addToast } = useApp();
 
   const [filterState, setFilterState] = useState("ALL");
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const filteredUsers = users.filter((u) => {
     if (filterState === "ALL") return true;
     return u.status === filterState;
   });
 
-  const handleBulkAction = (targetStatus) => {
-    users.forEach((u) => {
-      if (u.role !== "System Administrator") {
-        updateUserStatus(u.id, targetStatus);
+  const handleBulkAction = async (targetStatus) => {
+    try {
+      setIsProcessing(true);
+      const action = targetStatus === "Active" ? "ACTIVATE_ALL" : "EMERGENCY_LOCK_ALL";
+      if (bulkUpdateStatus) {
+        await bulkUpdateStatus(action);
       }
-    });
-    addToast(`Bulk action executed: All standard accounts set to ${targetStatus}.`, "warning");
+      addToast(
+        targetStatus === "Active"
+          ? "All standard accounts successfully activated."
+          : "Emergency Lockout: All standard accounts suspended.",
+        targetStatus === "Active" ? "success" : "warning"
+      );
+    } catch (err) {
+      addToast("Failed to execute bulk action: " + err.message, "error");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleRowStatusChange = async (userId, currentStatus, userName) => {
+    const next = currentStatus === "Active" ? "Suspended" : "Active";
+    try {
+      if (updateUserStatus) {
+        await updateUserStatus(userId, next);
+      }
+      addToast(`${userName || userId} status updated to ${next}`, "info");
+    } catch (err) {
+      addToast("Failed to update status: " + err.message, "error");
+    }
   };
 
   const activeCount = users.filter((u) => u.status === "Active").length;
   const lockedCount = users.filter((u) => u.status === "Suspended").length;
+
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%", maxWidth: "1200px", margin: "0 auto", minWidth: 0 }}>
@@ -160,11 +185,7 @@ export function UserStatusPage() {
                     </td>
                     <td>
                       <button
-                        onClick={() => {
-                          const next = isActive ? "Suspended" : "Active";
-                          updateUserStatus(u.id, next);
-                          addToast(`${u.name} status updated to ${next}`, "info");
-                        }}
+                        onClick={() => handleRowStatusChange(u.id, u.status, u.name)}
                         style={{
                           padding: "4px 10px",
                           borderRadius: "6px",

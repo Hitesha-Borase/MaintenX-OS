@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   Layers,
   Plus,
@@ -18,15 +18,26 @@ import { Button } from "../../../components/common/Button";
 import { StatCard } from "../../../components/common/StatCard";
 import { useMasterData } from "../../../context/MasterDataContext";
 import { useApp } from "../../../context/AppContext";
+import { masterDataService } from "../../../services/masterDataService";
 
 export function OperationsPage() {
-  const { operations = [], addOperation, updateOperation, deleteOperation } = useMasterData();
+  const { operations = [], setOperations, addOperation, updateOperation, deleteOperation } = useMasterData();
   const { addToast } = useApp();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [deptFilter, setDeptFilter] = useState("ALL");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingOp, setEditingOp] = useState(null);
+
+  // Live fetch from backend on mount & filter change to ensure Network visibility
+  useEffect(() => {
+    masterDataService.getOperations(deptFilter).then((res) => {
+      const data = res?.data?.data || res?.data || res;
+      if (Array.isArray(data) && data.length > 0 && typeof setOperations === "function") {
+        setOperations(data);
+      }
+    }).catch((err) => console.warn("Operations load:", err.message));
+  }, [deptFilter, setOperations]);
 
   const [newOp, setNewOp] = useState({
     operationCode: "",

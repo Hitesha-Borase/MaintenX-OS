@@ -23,11 +23,21 @@ class ApiClient {
   }
 
   async request(endpoint, options = {}) {
-    const url = `${this.baseUrl}${endpoint.startsWith("/") ? endpoint : `/${endpoint}`}`;
+    const rawEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+    // Ensure all URL segments and query strings are safe and spaces are encoded
+    const cleanEndpoint = rawEndpoint.split("?").map((part, idx) => {
+      if (idx === 0) {
+        // Path part: replace unencoded spaces with %20
+        return part.replace(/ /g, "%20");
+      }
+      return part; // Query string part already formatted
+    }).join("?");
+
+    const url = `${this.baseUrl}${cleanEndpoint}`;
     const token = this.getToken();
 
     const headers = {
-      "Content-Type": "application/json",
+      ...(options.body !== undefined ? { "Content-Type": "application/json" } : {}),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(options.headers || {}),
     };

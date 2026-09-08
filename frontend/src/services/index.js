@@ -8,3 +8,5 @@ export { planningService } from "./planningService";
 export { maintenanceService } from "./maintenanceService";
 export { traceabilityService } from "./traceabilityService";
 export { dashboardService } from "./dashboardService";
+export { adminService } from "./adminService";
+
