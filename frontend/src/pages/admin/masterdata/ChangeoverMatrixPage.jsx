@@ -28,16 +28,40 @@ export function ChangeoverMatrixPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingRule, setEditingRule] = useState(null);
 
-  const finishedSkus = useMemo(() => skus.filter((s) => s.category === "Finished Goods"), [skus]);
+  const finishedSkus = useMemo(() => {
+    if (!Array.isArray(skus) || skus.length === 0) return [];
+    const filtered = skus.filter((s) => {
+      const cat = (s.category || s.itemType || s.type || "").toLowerCase();
+      return (
+        cat.includes("finish") ||
+        cat.includes("bev") ||
+        cat.includes("good") ||
+        cat.includes("product") ||
+        cat === "finished_goods"
+      );
+    });
+    return filtered.length > 0 ? filtered : skus;
+  }, [skus]);
 
   const [newRule, setNewRule] = useState({
-    fromSkuId: finishedSkus[0]?.skuId || "SKU-001",
-    toSkuId: finishedSkus[1]?.skuId || "SKU-002",
+    fromSkuId: finishedSkus[0]?.skuId || finishedSkus[0]?.id || "SKU-001",
+    toSkuId: finishedSkus[1]?.skuId || finishedSkus[1]?.id || "SKU-002",
     changeoverDurationMin: 35,
     sanitationClass: "Class B - Warm Water Flush & Sanitizer Rinse",
     allergenCleaningRequired: false,
     notes: ""
   });
+
+  React.useEffect(() => {
+    if (finishedSkus.length > 0) {
+      if (!newRule.fromSkuId || !finishedSkus.some(s => (s.skuId || s.id) === newRule.fromSkuId)) {
+        setNewRule(prev => ({ ...prev, fromSkuId: finishedSkus[0].skuId || finishedSkus[0].id }));
+      }
+      if (!newRule.toSkuId || !finishedSkus.some(s => (s.skuId || s.id) === newRule.toSkuId)) {
+        setNewRule(prev => ({ ...prev, toSkuId: (finishedSkus[1] || finishedSkus[0]).skuId || (finishedSkus[1] || finishedSkus[0]).id }));
+      }
+    }
+  }, [finishedSkus]);
 
   const filteredMatrix = useMemo(() => {
     return changeoverMatrix.filter((m) => {
@@ -343,7 +367,9 @@ export function ChangeoverMatrixPage() {
                     style={{ backgroundColor: "#FFFFFF" }}
                   >
                     {finishedSkus.map((s) => (
-                      <option key={s.skuId} value={s.skuId}>{s.skuCode} ({s.family})</option>
+                      <option key={s.skuId || s.id || s.code || s.skuCode} value={s.skuId || s.id}>
+                        {s.skuCode || s.code || s.skuId || s.id} — {s.name || s.skuName || s.family || "Product"}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -356,7 +382,9 @@ export function ChangeoverMatrixPage() {
                     style={{ backgroundColor: "#FFFFFF" }}
                   >
                     {finishedSkus.map((s) => (
-                      <option key={s.skuId} value={s.skuId}>{s.skuCode} ({s.family})</option>
+                      <option key={s.skuId || s.id || s.code || s.skuCode} value={s.skuId || s.id}>
+                        {s.skuCode || s.code || s.skuId || s.id} — {s.name || s.skuName || s.family || "Product"}
+                      </option>
                     ))}
                   </select>
                 </div>

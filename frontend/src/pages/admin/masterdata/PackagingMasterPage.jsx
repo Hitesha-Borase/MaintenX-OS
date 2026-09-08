@@ -29,11 +29,24 @@ export function PackagingMasterPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPkg, setEditingPkg] = useState(null);
 
-  const finishedSkus = useMemo(() => skus.filter((s) => s.category === "Finished Goods"), [skus]);
+  const finishedSkus = useMemo(() => {
+    if (!Array.isArray(skus) || skus.length === 0) return [];
+    const filtered = skus.filter((s) => {
+      const cat = (s.category || s.itemType || s.type || "").toLowerCase();
+      return (
+        cat.includes("finish") ||
+        cat.includes("bev") ||
+        cat.includes("good") ||
+        cat.includes("product") ||
+        cat === "finished_goods"
+      );
+    });
+    return filtered.length > 0 ? filtered : skus;
+  }, [skus]);
 
   const [newPkg, setNewPkg] = useState({
     packCode: "",
-    skuId: finishedSkus[0]?.skuId || "SKU-001",
+    skuId: finishedSkus[0]?.skuId || finishedSkus[0]?.id || "SKU-001",
     unitsPerPack: 24,
     packType: "Corrugated Tray & Shrink Wrap",
     packagingUom: "CASE-24",
@@ -41,6 +54,12 @@ export function PackagingMasterPage() {
     palletConfiguration: "60 Cases / 1,440 Units per Pallet",
     tareWeightKg: 12.5
   });
+
+  React.useEffect(() => {
+    if (finishedSkus.length > 0 && (!newPkg.skuId || !finishedSkus.some(s => (s.skuId || s.id) === newPkg.skuId))) {
+      setNewPkg(prev => ({ ...prev, skuId: finishedSkus[0].skuId || finishedSkus[0].id }));
+    }
+  }, [finishedSkus]);
 
   const filteredPkg = useMemo(() => {
     return packConfigs.filter((p) => {
@@ -362,7 +381,9 @@ export function PackagingMasterPage() {
                     style={{ backgroundColor: "#FFFFFF" }}
                   >
                     {finishedSkus.map((s) => (
-                      <option key={s.skuId} value={s.skuId}>{s.skuCode} — {s.name}</option>
+                      <option key={s.skuId || s.id || s.code || s.skuCode} value={s.skuId || s.id}>
+                        {s.skuCode || s.code || s.skuId || s.id} — {s.name || s.skuName || "Product"}
+                      </option>
                     ))}
                   </select>
                 </div>

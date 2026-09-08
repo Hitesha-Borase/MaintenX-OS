@@ -1,5 +1,7 @@
 import apiClient from "./apiClient";
 
+const enc = (val) => encodeURIComponent(String(val || "").trim());
+
 export const masterDataService = {
   // 1. Companies & Legal Entities
   async getCompanies() {
@@ -11,11 +13,11 @@ export const masterDataService = {
   },
 
   async updateCompany(id, companyData) {
-    return apiClient.put(`/master-data/companies/${id}`, companyData);
+    return apiClient.put(`/master-data/companies/${enc(id)}`, companyData);
   },
 
   async deleteCompany(id) {
-    return apiClient.delete(`/master-data/companies/${id}`);
+    return apiClient.delete(`/master-data/companies/${enc(id)}`);
   },
 
   // 2. Plants & Sites
@@ -28,16 +30,16 @@ export const masterDataService = {
   },
 
   async updatePlant(id, plantData) {
-    return apiClient.put(`/master-data/plants/${id}`, plantData);
+    return apiClient.put(`/master-data/plants/${enc(id)}`, plantData);
   },
 
   async deletePlant(id) {
-    return apiClient.delete(`/master-data/plants/${id}`);
+    return apiClient.delete(`/master-data/plants/${enc(id)}`);
   },
 
   // 3. Departments
   async getDepartments(plantId) {
-    const query = plantId && plantId !== "ALL" ? `?plantId=${plantId}` : "";
+    const query = plantId && plantId !== "ALL" ? `?plantId=${enc(plantId)}` : "";
     return apiClient.get(`/master-data/departments${query}`);
   },
 
@@ -46,16 +48,16 @@ export const masterDataService = {
   },
 
   async updateDepartment(id, deptData) {
-    return apiClient.put(`/master-data/departments/${id}`, deptData);
+    return apiClient.put(`/master-data/departments/${enc(id)}`, deptData);
   },
 
   async deleteDepartment(id) {
-    return apiClient.delete(`/master-data/departments/${id}`);
+    return apiClient.delete(`/master-data/departments/${enc(id)}`);
   },
 
   // 4. Production Lines
   async getLines(plantId) {
-    const query = plantId && plantId !== "ALL" ? `?plantId=${plantId}` : "";
+    const query = plantId && plantId !== "ALL" ? `?plantId=${enc(plantId)}` : "";
     return apiClient.get(`/master-data/lines${query}`);
   },
 
@@ -64,16 +66,16 @@ export const masterDataService = {
   },
 
   async updateLine(id, lineData) {
-    return apiClient.put(`/master-data/lines/${id}`, lineData);
+    return apiClient.put(`/master-data/lines/${enc(id)}`, lineData);
   },
 
   async deleteLine(id) {
-    return apiClient.delete(`/master-data/lines/${id}`);
+    return apiClient.delete(`/master-data/lines/${enc(id)}`);
   },
 
   // 5. Work Centers & Machine Cells
   async getWorkCenters(plantId) {
-    const query = plantId && plantId !== "ALL" ? `?plantId=${plantId}` : "";
+    const query = plantId && plantId !== "ALL" ? `?plantId=${enc(plantId)}` : "";
     return apiClient.get(`/master-data/work-centers${query}`);
   },
 
@@ -82,16 +84,16 @@ export const masterDataService = {
   },
 
   async updateWorkCenter(id, wcData) {
-    return apiClient.put(`/master-data/work-centers/${id}`, wcData);
+    return apiClient.put(`/master-data/work-centers/${enc(id)}`, wcData);
   },
 
   async deleteWorkCenter(id) {
-    return apiClient.delete(`/master-data/work-centers/${id}`);
+    return apiClient.delete(`/master-data/work-centers/${enc(id)}`);
   },
 
   // 6. Standard Operations
   async getOperations(department) {
-    const query = department && department !== "ALL" ? `?department=${department}` : "";
+    const query = department && department !== "ALL" ? `?department=${enc(department)}` : "";
     return apiClient.get(`/master-data/operations${query}`);
   },
 
@@ -100,11 +102,11 @@ export const masterDataService = {
   },
 
   async updateOperation(id, opData) {
-    return apiClient.put(`/master-data/operations/${id}`, opData);
+    return apiClient.put(`/master-data/operations/${enc(id)}`, opData);
   },
 
   async deleteOperation(id) {
-    return apiClient.delete(`/master-data/operations/${id}`);
+    return apiClient.delete(`/master-data/operations/${enc(id)}`);
   },
 
   // 7. Routings Master
@@ -117,11 +119,11 @@ export const masterDataService = {
   },
 
   async updateRouting(id, rtgData) {
-    return apiClient.put(`/master-data/routings/${id}`, rtgData);
+    return apiClient.put(`/master-data/routings/${enc(id)}`, rtgData);
   },
 
   async deleteRouting(id) {
-    return apiClient.delete(`/master-data/routings/${id}`);
+    return apiClient.delete(`/master-data/routings/${enc(id)}`);
   },
 
   // 8. Product Families
@@ -134,11 +136,11 @@ export const masterDataService = {
   },
 
   async updateProductFamily(id, familyData) {
-    return apiClient.put(`/master-data/product-families/${id}`, familyData);
+    return apiClient.put(`/master-data/product-families/${enc(id)}`, familyData);
   },
 
   async deleteProductFamily(id) {
-    return apiClient.delete(`/master-data/product-families/${id}`);
+    return apiClient.delete(`/master-data/product-families/${enc(id)}`);
   },
 
   // 9. Units of Measure (UOM)
@@ -151,11 +153,11 @@ export const masterDataService = {
   },
 
   async updateUom(id, uomData) {
-    return apiClient.put(`/master-data/uoms/${id}`, uomData);
+    return apiClient.put(`/master-data/uoms/${enc(id)}`, uomData);
   },
 
   async deleteUom(id) {
-    return apiClient.delete(`/master-data/uoms/${id}`);
+    return apiClient.delete(`/master-data/uoms/${enc(id)}`);
   },
 
   // 10. Packaging & Pack Configurations
@@ -168,11 +170,11 @@ export const masterDataService = {
   },
 
   async updatePackConfig(id, packData) {
-    return apiClient.put(`/master-data/pack-configs/${id}`, packData);
+    return apiClient.put(`/master-data/pack-configs/${enc(id)}`, packData);
   },
 
   async deletePackConfig(id) {
-    return apiClient.delete(`/master-data/pack-configs/${id}`);
+    return apiClient.delete(`/master-data/pack-configs/${enc(id)}`);
   },
 
   // 11. Line Targets
@@ -185,11 +187,11 @@ export const masterDataService = {
   },
 
   async updateLineTarget(id, targetData) {
-    return apiClient.put(`/master-data/line-targets/${id}`, targetData);
+    return apiClient.put(`/master-data/line-targets/${enc(id)}`, targetData);
   },
 
   async deleteLineTarget(id) {
-    return apiClient.delete(`/master-data/line-targets/${id}`);
+    return apiClient.delete(`/master-data/line-targets/${enc(id)}`);
   },
 
   // 12. Changeover Matrix
@@ -202,11 +204,11 @@ export const masterDataService = {
   },
 
   async updateChangeoverRule(id, ruleData) {
-    return apiClient.put(`/master-data/changeover-matrix/${id}`, ruleData);
+    return apiClient.put(`/master-data/changeover-matrix/${enc(id)}`, ruleData);
   },
 
   async deleteChangeoverRule(id) {
-    return apiClient.delete(`/master-data/changeover-matrix/${id}`);
+    return apiClient.delete(`/master-data/changeover-matrix/${enc(id)}`);
   },
 
   // 13. Sanitation & Allergens
@@ -240,12 +242,12 @@ export const masterDataService = {
   },
 
   async getAssets(plantId) {
-    const query = plantId && plantId !== "ALL" ? `?plantId=${plantId}` : "";
+    const query = plantId && plantId !== "ALL" ? `?plantId=${enc(plantId)}` : "";
     return apiClient.get(`/master-data/assets${query}`);
   },
 
   async getStaff(plantId) {
-    const query = plantId && plantId !== "ALL" ? `?plantId=${plantId}` : "";
+    const query = plantId && plantId !== "ALL" ? `?plantId=${enc(plantId)}` : "";
     return apiClient.get(`/master-data/staff${query}`);
   },
 

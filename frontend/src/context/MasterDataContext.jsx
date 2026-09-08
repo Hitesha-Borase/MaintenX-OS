@@ -1569,43 +1569,93 @@ export function MasterDataProvider({ children }) {
           liveDepts,
           liveLines,
           liveWcs,
+          liveOperations,
+          liveRoutings,
+          liveProductFamilies,
+          liveUoms,
+          livePackConfigs,
+          liveLineTargets,
+          liveChangeovers,
+          liveSanitations,
+          liveAllergens,
           liveSkus,
           liveBoms,
           liveAssets,
+          liveSpecs,
         ] = await Promise.allSettled([
           masterDataService.getCompanies(),
           masterDataService.getPlants(),
           masterDataService.getDepartments(activePlantId),
           masterDataService.getLines(activePlantId),
           masterDataService.getWorkCenters(activePlantId),
+          masterDataService.getOperations(),
+          masterDataService.getRoutings(),
+          masterDataService.getProductFamilies(),
+          masterDataService.getUoms(),
+          masterDataService.getPackConfigs(),
+          masterDataService.getLineTargets(),
+          masterDataService.getChangeoverRules(),
+          masterDataService.getSanitationClasses(),
+          masterDataService.getAllergenRules(),
           masterDataService.getSkus(),
           masterDataService.getBoms(),
           masterDataService.getAssets(activePlantId),
+          masterDataService.getQualitySpecs(),
         ]);
 
-        if (liveCompanies.status === "fulfilled" && Array.isArray(liveCompanies.value) && liveCompanies.value.length > 0) {
-          setCompanies(liveCompanies.value);
+        if (liveCompanies.status === "fulfilled" && Array.isArray(liveCompanies.value?.data || liveCompanies.value) && (liveCompanies.value?.data || liveCompanies.value).length > 0) {
+          setCompanies(liveCompanies.value?.data || liveCompanies.value);
         }
-        if (livePlants.status === "fulfilled" && Array.isArray(livePlants.value) && livePlants.value.length > 0) {
-          setPlants(livePlants.value);
+        if (livePlants.status === "fulfilled" && Array.isArray(livePlants.value?.data || livePlants.value) && (livePlants.value?.data || livePlants.value).length > 0) {
+          setPlants(livePlants.value?.data || livePlants.value);
         }
-        if (liveDepts.status === "fulfilled" && Array.isArray(liveDepts.value) && liveDepts.value.length > 0) {
-          setDepartments(liveDepts.value);
+        if (liveDepts.status === "fulfilled" && Array.isArray(liveDepts.value?.data || liveDepts.value) && (liveDepts.value?.data || liveDepts.value).length > 0) {
+          setDepartments(liveDepts.value?.data || liveDepts.value);
         }
-        if (liveLines.status === "fulfilled" && Array.isArray(liveLines.value) && liveLines.value.length > 0) {
-          setLines(liveLines.value);
+        if (liveLines.status === "fulfilled" && Array.isArray(liveLines.value?.data || liveLines.value) && (liveLines.value?.data || liveLines.value).length > 0) {
+          setLines(liveLines.value?.data || liveLines.value);
         }
-        if (liveWcs.status === "fulfilled" && Array.isArray(liveWcs.value) && liveWcs.value.length > 0) {
-          setWorkCenters(liveWcs.value);
+        if (liveWcs.status === "fulfilled" && Array.isArray(liveWcs.value?.data || liveWcs.value) && (liveWcs.value?.data || liveWcs.value).length > 0) {
+          setWorkCenters(liveWcs.value?.data || liveWcs.value);
         }
-        if (liveSkus.status === "fulfilled" && Array.isArray(liveSkus.value) && liveSkus.value.length > 0) {
-          setSkus(liveSkus.value);
+        if (liveOperations.status === "fulfilled" && Array.isArray(liveOperations.value?.data || liveOperations.value) && (liveOperations.value?.data || liveOperations.value).length > 0) {
+          setOperations(liveOperations.value?.data || liveOperations.value);
         }
-        if (liveBoms.status === "fulfilled" && Array.isArray(liveBoms.value) && liveBoms.value.length > 0) {
-          setBoms(liveBoms.value);
+        if (liveRoutings.status === "fulfilled" && Array.isArray(liveRoutings.value?.data || liveRoutings.value) && (liveRoutings.value?.data || liveRoutings.value).length > 0) {
+          setRoutings(liveRoutings.value?.data || liveRoutings.value);
         }
-        if (liveAssets.status === "fulfilled" && Array.isArray(liveAssets.value) && liveAssets.value.length > 0) {
-          setAssets(liveAssets.value);
+        if (liveProductFamilies.status === "fulfilled" && Array.isArray(liveProductFamilies.value?.data || liveProductFamilies.value) && (liveProductFamilies.value?.data || liveProductFamilies.value).length > 0) {
+          setProductFamilies(liveProductFamilies.value?.data || liveProductFamilies.value);
+        }
+        if (liveUoms.status === "fulfilled" && Array.isArray(liveUoms.value?.data || liveUoms.value) && (liveUoms.value?.data || liveUoms.value).length > 0) {
+          setUoms(liveUoms.value?.data || liveUoms.value);
+        }
+        if (livePackConfigs.status === "fulfilled" && Array.isArray(livePackConfigs.value?.data || livePackConfigs.value) && (livePackConfigs.value?.data || livePackConfigs.value).length > 0) {
+          setPackConfigs(livePackConfigs.value?.data || livePackConfigs.value);
+        }
+        if (liveLineTargets.status === "fulfilled" && Array.isArray(liveLineTargets.value?.data || liveLineTargets.value) && (liveLineTargets.value?.data || liveLineTargets.value).length > 0) {
+          setLineTargets(liveLineTargets.value?.data || liveLineTargets.value);
+        }
+        if (liveChangeovers.status === "fulfilled" && Array.isArray(liveChangeovers.value?.data || liveChangeovers.value) && (liveChangeovers.value?.data || liveChangeovers.value).length > 0) {
+          setChangeoverMatrix(liveChangeovers.value?.data || liveChangeovers.value);
+        }
+        if (liveSanitations.status === "fulfilled" && Array.isArray(liveSanitations.value?.data || liveSanitations.value) && (liveSanitations.value?.data || liveSanitations.value).length > 0) {
+          setSanitationClasses(liveSanitations.value?.data || liveSanitations.value);
+        }
+        if (liveAllergens.status === "fulfilled" && Array.isArray(liveAllergens.value?.data || liveAllergens.value) && (liveAllergens.value?.data || liveAllergens.value).length > 0) {
+          setAllergenRules(liveAllergens.value?.data || liveAllergens.value);
+        }
+        if (liveSkus.status === "fulfilled" && Array.isArray(liveSkus.value?.data || liveSkus.value) && (liveSkus.value?.data || liveSkus.value).length > 0) {
+          setSkus(liveSkus.value?.data || liveSkus.value);
+        }
+        if (liveBoms.status === "fulfilled" && Array.isArray(liveBoms.value?.data || liveBoms.value) && (liveBoms.value?.data || liveBoms.value).length > 0) {
+          setBoms(liveBoms.value?.data || liveBoms.value);
+        }
+        if (liveAssets.status === "fulfilled" && Array.isArray(liveAssets.value?.data || liveAssets.value) && (liveAssets.value?.data || liveAssets.value).length > 0) {
+          setAssets(liveAssets.value?.data || liveAssets.value);
+        }
+        if (liveSpecs.status === "fulfilled" && Array.isArray(liveSpecs.value?.data || liveSpecs.value) && (liveSpecs.value?.data || liveSpecs.value).length > 0) {
+          setQualitySpecs(liveSpecs.value?.data || liveSpecs.value);
         }
       } catch (err) {
         console.warn("MasterData backend sync fallback:", err.message);
@@ -1757,6 +1807,7 @@ export function MasterDataProvider({ children }) {
   const addProductFamily = (familyData) => {
     const newId = `FAM-0${productFamilies.length + 1}`;
     const newRecord = {
+      id: newId,
       familyId: newId,
       code: familyData.code || `FAM-${productFamilies.length + 1}`,
       name: familyData.name,
@@ -1770,23 +1821,33 @@ export function MasterDataProvider({ children }) {
       effectiveTo: familyData.effectiveTo || "2030-12-31"
     };
     setProductFamilies((prev) => [newRecord, ...prev]);
+    masterDataService.createProductFamily(newRecord).catch((err) => console.warn("API createProductFamily:", err.message));
     logAudit({ entityId: newRecord.code, entityType: "Product Family", action: "Created", newValue: `${newRecord.name} (${newRecord.code})` });
     return newRecord;
   };
 
   const updateProductFamily = (familyId, updated) => {
-    setProductFamilies((prev) => prev.map((f) => (f.familyId === familyId ? { ...f, ...updated } : f)));
+    setProductFamilies((prev) => prev.map((f) => (f.familyId === familyId || f.id === familyId ? { ...f, ...updated } : f)));
+    masterDataService.updateProductFamily(familyId, updated).catch((err) => console.warn("API updateProductFamily:", err.message));
     logAudit({ entityId: familyId, entityType: "Product Family", action: "Updated", notes: "Family configuration modified" });
   };
 
   const toggleProductFamilyStatus = (familyId) => {
     setProductFamilies((prev) =>
-      prev.map((f) => (f.familyId === familyId ? { ...f, status: f.status === "Active" ? "Inactive" : "Active" } : f))
+      prev.map((f) => {
+        if (f.familyId === familyId || f.id === familyId) {
+          const next = f.status === "Active" ? "Inactive" : "Active";
+          masterDataService.updateProductFamily(familyId, { status: next }).catch((err) => console.warn("API toggleProductFamilyStatus:", err.message));
+          return { ...f, status: next };
+        }
+        return f;
+      })
     );
   };
 
   const deleteProductFamily = (familyId) => {
-    setProductFamilies((prev) => prev.filter((f) => f.familyId !== familyId));
+    setProductFamilies((prev) => prev.filter((f) => f.familyId !== familyId && f.id !== familyId));
+    masterDataService.deleteProductFamily(familyId).catch((err) => console.warn("API deleteProductFamily:", err.message));
     logAudit({ entityId: familyId, entityType: "Product Family", action: "Deleted" });
   };
 
@@ -1796,8 +1857,10 @@ export function MasterDataProvider({ children }) {
   const addUOM = (uomData) => {
     const newId = `UOM-0${uoms.length + 1}`;
     const newRecord = {
+      id: newId,
       uomId: newId,
       uomCode: (uomData.uomCode || uomData.code || "").toUpperCase(),
+      code: (uomData.uomCode || uomData.code || "").toUpperCase(),
       name: uomData.name,
       type: uomData.type || "Packaging",
       baseUom: uomData.baseUom || "UNITS",
@@ -1807,21 +1870,33 @@ export function MasterDataProvider({ children }) {
       effectiveTo: "2030-12-31"
     };
     setUoms((prev) => [newRecord, ...prev]);
+    masterDataService.createUom(newRecord).catch((err) => console.warn("API createUom:", err.message));
     logAudit({ entityId: newRecord.uomCode, entityType: "UOM Master", action: "Created", newValue: `${newRecord.uomCode} - ${newRecord.name}` });
     return newRecord;
   };
 
   const updateUOM = (uomId, updated) => {
-    setUoms((prev) => prev.map((u) => (u.uomId === uomId ? { ...u, ...updated } : u)));
+    setUoms((prev) => prev.map((u) => (u.uomId === uomId || u.id === uomId ? { ...u, ...updated } : u)));
+    masterDataService.updateUom(uomId, updated).catch((err) => console.warn("API updateUom:", err.message));
     logAudit({ entityId: uomId, entityType: "UOM Master", action: "Updated" });
   };
 
   const toggleUOMStatus = (uomId) => {
-    setUoms((prev) => prev.map((u) => (u.uomId === uomId ? { ...u, status: u.status === "Active" ? "Inactive" : "Active" } : u)));
+    setUoms((prev) =>
+      prev.map((u) => {
+        if (u.uomId === uomId || u.id === uomId) {
+          const next = u.status === "Active" ? "Inactive" : "Active";
+          masterDataService.updateUom(uomId, { status: next }).catch((err) => console.warn("API toggleUOMStatus:", err.message));
+          return { ...u, status: next };
+        }
+        return u;
+      })
+    );
   };
 
   const deleteUOM = (uomId) => {
-    setUoms((prev) => prev.filter((u) => u.uomId !== uomId));
+    setUoms((prev) => prev.filter((u) => u.uomId !== uomId && u.id !== uomId));
+    masterDataService.deleteUom(uomId).catch((err) => console.warn("API deleteUom:", err.message));
     logAudit({ entityId: uomId, entityType: "UOM Master", action: "Deleted" });
   };
 
@@ -1831,6 +1906,7 @@ export function MasterDataProvider({ children }) {
   const addSKU = (skuData) => {
     const newSkuId = `SKU-00${skus.length + 1}`;
     const newRecord = {
+      id: newSkuId,
       skuId: newSkuId,
       skuCode: skuData.skuCode || `SKU-${Math.floor(5000 + Math.random() * 900)}`,
       name: skuData.name,
@@ -1858,22 +1934,25 @@ export function MasterDataProvider({ children }) {
       lastUpdated: new Date().toISOString().substring(0, 10)
     };
     setSkus((prev) => [newRecord, ...prev]);
+    masterDataService.createSku(newRecord).catch((err) => console.warn("API createSku:", err.message));
     logAudit({ entityId: newRecord.skuCode, entityType: "SKU Master", action: "Created", newValue: `${newRecord.skuCode} - ${newRecord.name} (${newRecord.uom})` });
     return newRecord;
   };
 
   const updateSKU = (skuId, updated) => {
     setSkus((prev) =>
-      prev.map((s) => (s.skuId === skuId || s.skuCode === skuId ? { ...s, ...updated, lastUpdated: new Date().toISOString().substring(0, 10) } : s))
+      prev.map((s) => (s.skuId === skuId || s.skuCode === skuId || s.id === skuId ? { ...s, ...updated, lastUpdated: new Date().toISOString().substring(0, 10) } : s))
     );
+    masterDataService.updateSku(skuId, updated).catch((err) => console.warn("API updateSku:", err.message));
     logAudit({ entityId: skuId, entityType: "SKU Master", action: "Updated", notes: "SKU attributes updated" });
   };
 
   const toggleSKUStatus = (skuId) => {
     setSkus((prev) =>
       prev.map((s) => {
-        if (s.skuId === skuId || s.skuCode === skuId) {
+        if (s.skuId === skuId || s.skuCode === skuId || s.id === skuId) {
           const next = s.status === "Active" ? "Inactive" : "Active";
+          masterDataService.updateSku(skuId, { status: next }).catch((err) => console.warn("API toggleSKUStatus:", err.message));
           logAudit({ entityId: s.skuCode, entityType: "SKU Master", action: next === "Active" ? "Activated" : "Deactivated" });
           return { ...s, status: next, lastUpdated: new Date().toISOString().substring(0, 10) };
         }
@@ -1883,7 +1962,8 @@ export function MasterDataProvider({ children }) {
   };
 
   const deleteSKU = (skuId) => {
-    setSkus((prev) => prev.filter((s) => s.skuId !== skuId && s.skuCode !== skuId));
+    setSkus((prev) => prev.filter((s) => s.skuId !== skuId && s.skuCode !== skuId && s.id !== skuId));
+    masterDataService.deleteSku(skuId).catch((err) => console.warn("API deleteSku:", err.message));
     logAudit({ entityId: skuId, entityType: "SKU Master", action: "Deleted" });
   };
 
@@ -1892,6 +1972,7 @@ export function MasterDataProvider({ children }) {
   // ============================================================================
   const addPackConfig = (pckData) => {
     const newRecord = {
+      id: `PCK-0${packConfigs.length + 1}`,
       packConfigId: `PCK-0${packConfigs.length + 1}`,
       packCode: pckData.packCode || `PCK-${pckData.skuCode || "5000"}-${pckData.unitsPerPack || 24}`,
       skuId: pckData.skuId,
@@ -1908,17 +1989,20 @@ export function MasterDataProvider({ children }) {
       effectiveTo: "2030-12-31"
     };
     setPackConfigs((prev) => [newRecord, ...prev]);
+    masterDataService.createPackConfig(newRecord).catch((err) => console.warn("API createPackConfig:", err.message));
     logAudit({ entityId: newRecord.packCode, entityType: "Pack Configuration", action: "Created", newValue: `${newRecord.packCode} for ${newRecord.skuCode}` });
     return newRecord;
   };
 
   const updatePackConfig = (packConfigId, updated) => {
-    setPackConfigs((prev) => prev.map((p) => (p.packConfigId === packConfigId ? { ...p, ...updated } : p)));
+    setPackConfigs((prev) => prev.map((p) => (p.packConfigId === packConfigId || p.id === packConfigId ? { ...p, ...updated } : p)));
+    masterDataService.updatePackConfig(packConfigId, updated).catch((err) => console.warn("API updatePackConfig:", err.message));
     logAudit({ entityId: packConfigId, entityType: "Pack Configuration", action: "Updated" });
   };
 
   const deletePackConfig = (packConfigId) => {
-    setPackConfigs((prev) => prev.filter((p) => p.packConfigId !== packConfigId));
+    setPackConfigs((prev) => prev.filter((p) => p.packConfigId !== packConfigId && p.id !== packConfigId));
+    masterDataService.deletePackConfig(packConfigId).catch((err) => console.warn("API deletePackConfig:", err.message));
     logAudit({ entityId: packConfigId, entityType: "Pack Configuration", action: "Deleted" });
   };
 
@@ -2270,13 +2354,14 @@ export function MasterDataProvider({ children }) {
 
   const addLineTarget = (targetData) => {
     const newRecord = {
+      id: `TGT-0${lineTargets.length + 1}`,
       targetId: `TGT-0${lineTargets.length + 1}`,
       plantId: targetData.plantId || activePlantId,
       lineId: targetData.lineId || "LIN-01",
-      lineName: lines.find((l) => l.lineId === targetData.lineId)?.name || "High-Speed Line 1",
+      lineName: lines.find((l) => l.lineId === targetData.lineId || l.id === targetData.lineId)?.name || "High-Speed Line 1",
       skuId: targetData.skuId || "SKU-001",
-      skuCode: skus.find((s) => s.skuId === targetData.skuId)?.skuCode || "SKU-5001",
-      skuName: skus.find((s) => s.skuId === targetData.skuId)?.name || "Citrus Soda",
+      skuCode: skus.find((s) => s.skuId === targetData.skuId || s.id === targetData.skuId)?.skuCode || "SKU-5001",
+      skuName: skus.find((s) => s.skuId === targetData.skuId || s.id === targetData.skuId)?.name || "Citrus Soda",
       shift: targetData.shift || "Morning Shift",
       targetQuantity: Number(targetData.targetQuantity) || 250000,
       targetHB: targetData.targetHB || "35,000 Units/Hour",
@@ -2286,17 +2371,20 @@ export function MasterDataProvider({ children }) {
       effectiveDate: new Date().toISOString().substring(0, 10)
     };
     setLineTargets((prev) => [newRecord, ...prev]);
+    masterDataService.createLineTarget(newRecord).catch((err) => console.warn("API createLineTarget:", err.message));
     logAudit({ entityId: newRecord.targetId, entityType: "Line Targets", action: "Created", newValue: `${newRecord.lineName} Target: ${newRecord.targetQuantity}` });
     return newRecord;
   };
 
   const updateLineTarget = (targetId, updated) => {
-    setLineTargets((prev) => prev.map((t) => (t.targetId === targetId ? { ...t, ...updated } : t)));
+    setLineTargets((prev) => prev.map((t) => (t.targetId === targetId || t.id === targetId ? { ...t, ...updated } : t)));
+    masterDataService.updateLineTarget(targetId, updated).catch((err) => console.warn("API updateLineTarget:", err.message));
     logAudit({ entityId: targetId, entityType: "Line Targets", action: "Updated" });
   };
 
   const deleteLineTarget = (targetId) => {
-    setLineTargets((prev) => prev.filter((t) => t.targetId !== targetId));
+    setLineTargets((prev) => prev.filter((t) => t.targetId !== targetId && t.id !== targetId));
+    masterDataService.deleteLineTarget(targetId).catch((err) => console.warn("API deleteLineTarget:", err.message));
     logAudit({ entityId: targetId, entityType: "Line Targets", action: "Deleted" });
   };
 
@@ -2305,6 +2393,7 @@ export function MasterDataProvider({ children }) {
   // ============================================================================
   const addChangeoverRule = (ruleData) => {
     const newRecord = {
+      id: `CO-0${changeoverMatrix.length + 1}`,
       matrixId: `CO-0${changeoverMatrix.length + 1}`,
       fromSkuId: ruleData.fromSkuId,
       fromSkuCode: ruleData.fromSkuCode,
@@ -2319,22 +2408,26 @@ export function MasterDataProvider({ children }) {
       status: "Active"
     };
     setChangeoverMatrix((prev) => [newRecord, ...prev]);
+    masterDataService.createChangeoverRule(newRecord).catch((err) => console.warn("API createChangeoverRule:", err.message));
     logAudit({ entityId: newRecord.matrixId, entityType: "Changeover Matrix", action: "Created", newValue: `${newRecord.fromSkuCode} → ${newRecord.toSkuCode} (${newRecord.changeoverDurationMin}m)` });
     return newRecord;
   };
 
   const updateChangeoverRule = (matrixId, updated) => {
-    setChangeoverMatrix((prev) => prev.map((c) => (c.matrixId === matrixId ? { ...c, ...updated } : c)));
+    setChangeoverMatrix((prev) => prev.map((c) => (c.matrixId === matrixId || c.id === matrixId ? { ...c, ...updated } : c)));
+    masterDataService.updateChangeoverRule(matrixId, updated).catch((err) => console.warn("API updateChangeoverRule:", err.message));
     logAudit({ entityId: matrixId, entityType: "Changeover Matrix", action: "Updated" });
   };
 
   const deleteChangeoverRule = (matrixId) => {
-    setChangeoverMatrix((prev) => prev.filter((c) => c.matrixId !== matrixId));
+    setChangeoverMatrix((prev) => prev.filter((c) => c.matrixId !== matrixId && c.id !== matrixId));
+    masterDataService.deleteChangeoverRule(matrixId).catch((err) => console.warn("API deleteChangeoverRule:", err.message));
     logAudit({ entityId: matrixId, entityType: "Changeover Matrix", action: "Deleted" });
   };
 
   const addSanitationClass = (data) => {
     const newRecord = {
+      id: `SAN-0${sanitationClasses.length + 1}`,
       sanitationId: `SAN-0${sanitationClasses.length + 1}`,
       sanitationClass: data.sanitationClass,
       description: data.description,
@@ -2345,16 +2438,19 @@ export function MasterDataProvider({ children }) {
       status: "Active"
     };
     setSanitationClasses((prev) => [newRecord, ...prev]);
+    masterDataService.createSanitationClass(newRecord).catch((err) => console.warn("API createSanitationClass:", err.message));
     logAudit({ entityId: newRecord.sanitationClass, entityType: "Sanitation Master", action: "Created" });
     return newRecord;
   };
 
   const updateSanitationClass = (sanitationId, updated) => {
-    setSanitationClasses((prev) => prev.map((s) => (s.sanitationId === sanitationId ? { ...s, ...updated } : s)));
+    setSanitationClasses((prev) => prev.map((s) => (s.sanitationId === sanitationId || s.id === sanitationId ? { ...s, ...updated } : s)));
+    masterDataService.updateSanitationClass(sanitationId, updated).catch((err) => console.warn("API updateSanitationClass:", err.message));
   };
 
   const addAllergenRule = (data) => {
     const newRecord = {
+      id: `ALG-0${allergenRules.length + 1}`,
       allergenId: `ALG-0${allergenRules.length + 1}`,
       allergenName: data.allergenName,
       skuId: data.skuId,
@@ -2365,12 +2461,14 @@ export function MasterDataProvider({ children }) {
       status: "Active"
     };
     setAllergenRules((prev) => [newRecord, ...prev]);
+    masterDataService.createAllergenRule(newRecord).catch((err) => console.warn("API createAllergenRule:", err.message));
     logAudit({ entityId: newRecord.allergenName, entityType: "Allergen Rules", action: "Created" });
     return newRecord;
   };
 
   const updateAllergenRule = (allergenId, updated) => {
-    setAllergenRules((prev) => prev.map((a) => (a.allergenId === allergenId ? { ...a, ...updated } : a)));
+    setAllergenRules((prev) => prev.map((a) => (a.allergenId === allergenId || a.id === allergenId ? { ...a, ...updated } : a)));
+    masterDataService.updateAllergenRule(allergenId, updated).catch((err) => console.warn("API updateAllergenRule:", err.message));
   };
 
   // ============================================================================
@@ -2378,11 +2476,12 @@ export function MasterDataProvider({ children }) {
   // ============================================================================
   const addAsset = (assetData) => {
     const newRecord = {
+      id: `AST-00${assets.length + 1}`,
       assetId: `AST-00${assets.length + 1}`,
       name: assetData.name,
       type: assetData.type || "Packaging / Filling",
       lineId: assetData.lineId || "LIN-01",
-      lineName: lines.find((l) => l.lineId === assetData.lineId)?.name || "High-Speed Line 1",
+      lineName: lines.find((l) => l.lineId === assetData.lineId || l.id === assetData.lineId)?.name || "High-Speed Line 1",
       plantId: assetData.plantId || activePlantId,
       status: assetData.status || "Operational",
       criticality: assetData.criticality || "Critical (Class A)",
@@ -2398,23 +2497,33 @@ export function MasterDataProvider({ children }) {
       ]
     };
     setAssets((prev) => [newRecord, ...prev]);
+    masterDataService.createAsset(newRecord).catch((err) => console.warn("API createAsset:", err.message));
     logAudit({ entityId: newRecord.assetId, entityType: "Machine Assets", action: "Created", newValue: newRecord.name });
     return newRecord;
   };
 
   const updateAsset = (assetId, updated) => {
-    setAssets((prev) => prev.map((a) => (a.assetId === assetId ? { ...a, ...updated } : a)));
+    setAssets((prev) => prev.map((a) => (a.assetId === assetId || a.id === assetId ? { ...a, ...updated } : a)));
+    masterDataService.updateAsset(assetId, updated).catch((err) => console.warn("API updateAsset:", err.message));
     logAudit({ entityId: assetId, entityType: "Machine Assets", action: "Updated" });
   };
 
   const toggleAssetStatus = (assetId) => {
     setAssets((prev) =>
-      prev.map((a) => (a.assetId === assetId ? { ...a, status: a.status === "Operational" ? "Under Maintenance" : "Operational" } : a))
+      prev.map((a) => {
+        if (a.assetId === assetId || a.id === assetId) {
+          const next = a.status === "Operational" ? "Under Maintenance" : "Operational";
+          masterDataService.updateAsset(assetId, { status: next }).catch((err) => console.warn("API toggleAssetStatus:", err.message));
+          return { ...a, status: next };
+        }
+        return a;
+      })
     );
   };
 
   const deleteAsset = (assetId) => {
-    setAssets((prev) => prev.filter((a) => a.assetId !== assetId));
+    setAssets((prev) => prev.filter((a) => a.assetId !== assetId && a.id !== assetId));
+    masterDataService.deleteAsset(assetId).catch((err) => console.warn("API deleteAsset:", err.message));
     logAudit({ entityId: assetId, entityType: "Machine Assets", action: "Deleted" });
   };
 
@@ -2423,6 +2532,7 @@ export function MasterDataProvider({ children }) {
   // ============================================================================
   const addEmployee = (empData) => {
     const newRecord = {
+      id: `EMP-00${employees.length + 1}`,
       employeeId: `EMP-00${employees.length + 1}`,
       name: empData.name,
       email: empData.email || `${empData.name.toLowerCase().replace(/\s+/g, ".")}@flowstate.io`,
@@ -2438,17 +2548,20 @@ export function MasterDataProvider({ children }) {
       status: "Active"
     };
     setEmployees((prev) => [newRecord, ...prev]);
+    masterDataService.createEmployee(newRecord).catch((err) => console.warn("API createEmployee:", err.message));
     logAudit({ entityId: newRecord.employeeId, entityType: "Employees & Skills", action: "Created", newValue: newRecord.name });
     return newRecord;
   };
 
   const updateEmployee = (empId, updated) => {
-    setEmployees((prev) => prev.map((e) => (e.employeeId === empId ? { ...e, ...updated } : e)));
+    setEmployees((prev) => prev.map((e) => (e.employeeId === empId || e.id === empId ? { ...e, ...updated } : e)));
+    masterDataService.updateEmployee(empId, updated).catch((err) => console.warn("API updateEmployee:", err.message));
     logAudit({ entityId: empId, entityType: "Employees & Skills", action: "Updated" });
   };
 
   const addTrainingRecord = (trnData) => {
     const newRecord = {
+      id: `TRN-0${trainingRecords.length + 1}`,
       trainingId: `TRN-0${trainingRecords.length + 1}`,
       employeeId: trnData.employeeId,
       employeeName: trnData.employeeName || employees.find((e) => e.employeeId === trnData.employeeId)?.name || "Technician",
@@ -2469,6 +2582,7 @@ export function MasterDataProvider({ children }) {
   // ============================================================================
   const addQualitySpec = (specData) => {
     const newRecord = {
+      id: `QSP-00${qualitySpecs.length + 1}`,
       specId: `QSP-00${qualitySpecs.length + 1}`,
       skuId: specData.skuId || "SKU-001",
       skuCode: specData.skuCode || skus.find((s) => s.skuId === specData.skuId)?.skuCode || "SKU-5001",
@@ -2493,20 +2607,23 @@ export function MasterDataProvider({ children }) {
       ]
     };
     setQualitySpecs((prev) => [newRecord, ...prev]);
+    masterDataService.createQualitySpec(newRecord).catch((err) => console.warn("API createQualitySpec:", err.message));
     logAudit({ entityId: newRecord.specId, entityType: "Quality Specs", action: "Created", newValue: `${newRecord.parameter} for ${newRecord.skuCode}` });
     return newRecord;
   };
 
   const updateQualitySpec = (specId, updated) => {
-    setQualitySpecs((prev) => prev.map((q) => (q.specId === specId ? { ...q, ...updated } : q)));
+    setQualitySpecs((prev) => prev.map((q) => (q.specId === specId || q.id === specId ? { ...q, ...updated } : q)));
+    masterDataService.updateQualitySpec(specId, updated).catch((err) => console.warn("API updateQualitySpec:", err.message));
     logAudit({ entityId: specId, entityType: "Quality Specs", action: "Updated" });
   };
 
   const approveQualitySpec = (specId) => {
     setQualitySpecs((prev) =>
       prev.map((q) => {
-        if (q.specId === specId) {
+        if (q.specId === specId || q.id === specId) {
           logAudit({ entityId: q.specId, entityType: "Quality Specs", action: "Approved" });
+          masterDataService.updateQualitySpec(specId, { approvalStatus: "Approved", status: "Active" }).catch((err) => console.warn("API approveQualitySpec:", err.message));
           return { ...q, approvalStatus: "Approved", status: "Active" };
         }
         return q;
@@ -2517,8 +2634,9 @@ export function MasterDataProvider({ children }) {
   const rejectQualitySpec = (specId, reason = "Tolerance out of standard range") => {
     setQualitySpecs((prev) =>
       prev.map((q) => {
-        if (q.specId === specId) {
+        if (q.specId === specId || q.id === specId) {
           logAudit({ entityId: q.specId, entityType: "Quality Specs", action: "Rejected", notes: `Reason: ${reason}` });
+          masterDataService.updateQualitySpec(specId, { approvalStatus: "Draft", rejectionReason: reason }).catch((err) => console.warn("API rejectQualitySpec:", err.message));
           return { ...q, approvalStatus: "Draft", rejectionReason: reason };
         }
         return q;
@@ -2527,7 +2645,8 @@ export function MasterDataProvider({ children }) {
   };
 
   const deleteQualitySpec = (specId) => {
-    setQualitySpecs((prev) => prev.filter((q) => q.specId !== specId));
+    setQualitySpecs((prev) => prev.filter((q) => q.specId !== specId && q.id !== specId));
+    masterDataService.deleteQualitySpec(specId).catch((err) => console.warn("API deleteQualitySpec:", err.message));
     logAudit({ entityId: specId, entityType: "Quality Specs", action: "Deleted" });
   };
 
@@ -2536,6 +2655,7 @@ export function MasterDataProvider({ children }) {
   // ============================================================================
   const addStorageResource = (strData) => {
     const newRecord = {
+      id: `STR-0${storageResources.length + 1}`,
       storageId: `STR-0${storageResources.length + 1}`,
       code: strData.code || `WH-LOC-${storageResources.length + 1}`,
       name: strData.name,
@@ -2551,23 +2671,33 @@ export function MasterDataProvider({ children }) {
       effectiveTo: "2030-12-31"
     };
     setStorageResources((prev) => [newRecord, ...prev]);
+    masterDataService.createStorageResource(newRecord).catch((err) => console.warn("API createStorageResource:", err.message));
     logAudit({ entityId: newRecord.code, entityType: "Storage Resources", action: "Created", newValue: newRecord.name });
     return newRecord;
   };
 
   const updateStorageResource = (storageId, updated) => {
-    setStorageResources((prev) => prev.map((s) => (s.storageId === storageId ? { ...s, ...updated } : s)));
+    setStorageResources((prev) => prev.map((s) => (s.storageId === storageId || s.id === storageId ? { ...s, ...updated } : s)));
+    masterDataService.updateStorageResource(storageId, updated).catch((err) => console.warn("API updateStorageResource:", err.message));
     logAudit({ entityId: storageId, entityType: "Storage Resources", action: "Updated" });
   };
 
   const toggleStorageResourceStatus = (storageId) => {
     setStorageResources((prev) =>
-      prev.map((s) => (s.storageId === storageId ? { ...s, status: s.status === "Active" ? "Inactive" : "Active" } : s))
+      prev.map((s) => {
+        if (s.storageId === storageId || s.id === storageId) {
+          const next = s.status === "Active" ? "Inactive" : "Active";
+          masterDataService.updateStorageResource(storageId, { status: next }).catch((err) => console.warn("API toggleStorageResourceStatus:", err.message));
+          return { ...s, status: next };
+        }
+        return s;
+      })
     );
   };
 
   const deleteStorageResource = (storageId) => {
-    setStorageResources((prev) => prev.filter((s) => s.storageId !== storageId));
+    setStorageResources((prev) => prev.filter((s) => s.storageId !== storageId && s.id !== storageId));
+    masterDataService.deleteStorageResource(storageId).catch((err) => console.warn("API deleteStorageResource:", err.message));
     logAudit({ entityId: storageId, entityType: "Storage Resources", action: "Deleted" });
   };
 

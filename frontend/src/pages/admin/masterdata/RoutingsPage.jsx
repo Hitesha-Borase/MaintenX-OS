@@ -41,17 +41,42 @@ export function RoutingsPage() {
     }).catch((err) => console.warn("Routings load:", err.message));
   }, [setRoutings]);
 
-  const finishedSkus = useMemo(() => skus.filter((s) => s.category === "Finished Goods"), [skus]);
+  const finishedSkus = useMemo(() => {
+    if (!Array.isArray(skus) || skus.length === 0) return [];
+    const filtered = skus.filter((s) => {
+      const cat = (s.category || s.itemType || s.type || "").toLowerCase();
+      return (
+        cat.includes("finish") ||
+        cat.includes("bev") ||
+        cat.includes("good") ||
+        cat.includes("product") ||
+        cat === "finished_goods"
+      );
+    });
+    return filtered.length > 0 ? filtered : skus;
+  }, [skus]);
 
   const [newRouting, setNewRouting] = useState({
     routingCode: "",
-    skuId: finishedSkus[0]?.skuId || "SKU-001",
-    lineId: lines[0]?.lineId || "LIN-01",
+    skuId: finishedSkus[0]?.skuId || finishedSkus[0]?.id || "SKU-001",
+    lineId: lines[0]?.lineId || lines[0]?.id || "LIN-01",
     stdRunRateBPH: 35000,
     setupDurationMin: 30,
     expectedYieldPct: 99.0,
     revision: "R1"
   });
+
+  useEffect(() => {
+    if (finishedSkus.length > 0 && (!newRouting.skuId || !finishedSkus.some(s => (s.skuId || s.id) === newRouting.skuId))) {
+      setNewRouting(prev => ({ ...prev, skuId: finishedSkus[0].skuId || finishedSkus[0].id }));
+    }
+  }, [finishedSkus]);
+
+  useEffect(() => {
+    if (lines.length > 0 && (!newRouting.lineId || !lines.some(l => (l.lineId || l.id) === newRouting.lineId))) {
+      setNewRouting(prev => ({ ...prev, lineId: lines[0].lineId || lines[0].id }));
+    }
+  }, [lines]);
 
   const filteredRoutings = useMemo(() => {
     return routings.filter((r) => {
@@ -382,7 +407,9 @@ export function RoutingsPage() {
                     style={{ backgroundColor: "#FFFFFF" }}
                   >
                     {finishedSkus.map((s) => (
-                      <option key={s.skuId} value={s.skuId}>{s.skuCode} — {s.name}</option>
+                      <option key={s.skuId || s.id || s.code || s.skuCode} value={s.skuId || s.id}>
+                        {s.skuCode || s.code || s.skuId || s.id} — {s.name || s.skuName || "Product"}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -395,7 +422,9 @@ export function RoutingsPage() {
                     style={{ backgroundColor: "#FFFFFF" }}
                   >
                     {lines.map((l) => (
-                      <option key={l.lineId} value={l.lineId}>{l.lineCode} — {l.name}</option>
+                      <option key={l.lineId || l.id || l.code || l.lineCode} value={l.lineId || l.id}>
+                        {l.lineCode || l.code || l.lineId || l.id} — {l.name}
+                      </option>
                     ))}
                   </select>
                 </div>

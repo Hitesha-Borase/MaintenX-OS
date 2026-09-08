@@ -91,7 +91,7 @@ export function LinesPage() {
             <h1 style={{ fontSize: "clamp(18px, 4vw, 24px)", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.3px", lineHeight: 1.2 }}>
               Manufacturing Lines Master
             </h1>
-            <Badge variant="cyan">{allLines.length} LINES CONFIGURED</Badge>
+            <Badge variant="cyan">{lines.length} LINES CONFIGURED</Badge>
           </div>
         </div>
 
@@ -115,7 +115,7 @@ export function LinesPage() {
       >
         <StatCard
           title="Active Production Lines"
-          value={allLines.length.toString()}
+          value={lines.length.toString()}
           unit="Lines"
           icon={Layers}
           colorVariant="emerald"
