@@ -114,12 +114,20 @@ export const masterDataService = {
     return apiClient.get("/master-data/routings");
   },
 
+  async getRoutingById(id) {
+    return apiClient.get(`/master-data/routings/${enc(id)}`);
+  },
+
   async createRouting(rtgData) {
     return apiClient.post("/master-data/routings", rtgData);
   },
 
   async updateRouting(id, rtgData) {
     return apiClient.put(`/master-data/routings/${enc(id)}`, rtgData);
+  },
+
+  async updateRoutingStatus(id, statusData) {
+    return apiClient.patch(`/master-data/routings/${enc(id)}/status`, statusData);
   },
 
   async deleteRouting(id) {

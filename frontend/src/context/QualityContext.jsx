@@ -27,14 +27,17 @@ export function QualityProvider({ children }) {
         qualityService.getHolds(),
       ]);
 
-      if (remoteChecks.status === "fulfilled" && Array.isArray(remoteChecks.value) && remoteChecks.value.length > 0) {
-        setQualityChecks(remoteChecks.value);
+      const checksList = Array.isArray(remoteChecks.value) ? remoteChecks.value : (Array.isArray(remoteChecks.value?.data) ? remoteChecks.value.data : null);
+      if (remoteChecks.status === "fulfilled" && checksList && checksList.length > 0) {
+        setQualityChecks(checksList);
       }
-      if (remoteQueue.status === "fulfilled" && Array.isArray(remoteQueue.value)) {
-        setReleaseQueue(remoteQueue.value);
+      const queueList = Array.isArray(remoteQueue.value) ? remoteQueue.value : (Array.isArray(remoteQueue.value?.data) ? remoteQueue.value.data : null);
+      if (remoteQueue.status === "fulfilled" && queueList) {
+        setReleaseQueue(queueList);
       }
-      if (remoteHolds.status === "fulfilled" && Array.isArray(remoteHolds.value) && remoteHolds.value.length > 0) {
-        setDeviations((prev) => [...remoteHolds.value, ...prev.filter(d => !remoteHolds.value.some(r => r.id === d.id))]);
+      const holdsList = Array.isArray(remoteHolds.value) ? remoteHolds.value : (Array.isArray(remoteHolds.value?.data) ? remoteHolds.value.data : null);
+      if (remoteHolds.status === "fulfilled" && holdsList && holdsList.length > 0) {
+        setDeviations((prev) => [...holdsList, ...prev.filter(d => !holdsList.some(r => r.id === d.id))]);
       }
     } catch (err) {
       console.warn("Quality backend sync fallback:", err.message);
@@ -67,8 +70,8 @@ export function QualityProvider({ children }) {
     // Persist CCP check to PostgreSQL backend
     try {
       await qualityService.submitCCPCheck({
-        lineId: check.lineId || "00000000-0000-0000-0000-000000000001",
-        batchId: check.batchId || "00000000-0000-0000-0000-000000000001",
+        lineId: check.lineId,
+        batchId: check.batchId,
         ccpCode: check.ccpCode || check.checkType || "CCP-1",
         ccpName: check.ccpName || check.parameterName || "Standard Quality Check",
         targetValue: Number(check.targetValue) || 85.0,
@@ -115,7 +118,7 @@ export function QualityProvider({ children }) {
     // Persist 21 CFR Part 11 Electronic QA Release to PostgreSQL
     try {
       await qualityService.authorizeRelease({
-        batchId: batchId || "00000000-0000-0000-0000-000000000001",
+        batchId: batchId,
         disposition: "RELEASED",
         digitalPin: "1234",
         comments: comments || "Approved by QA Director",
@@ -123,6 +126,32 @@ export function QualityProvider({ children }) {
     } catch (err) {
       console.warn("Authorized QA release offline:", err.message);
     }
+  };
+
+  const placeHold = async (holdData) => {
+    const tempId = `HLD-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+    const newHold = {
+      id: tempId,
+      lotNumber: holdData.lotNumber || "LOT-QA-001",
+      reason: holdData.reason || "Quality Out-of-Spec Investigation",
+      severity: holdData.severity || "HIGH",
+      status: "Quarantine",
+      createdAt: new Date().toISOString().substring(0, 10),
+      ...holdData,
+    };
+    setDeviations((prev) => [newHold, ...prev]);
+
+    try {
+      await qualityService.placeHold({
+        lotNumber: newHold.lotNumber,
+        batchId: newHold.batchId,
+        reason: newHold.reason,
+        severity: newHold.severity,
+      });
+    } catch (err) {
+      console.warn("Quality hold offline fallback:", err.message);
+    }
+    return newHold;
   };
 
   return (
@@ -133,6 +162,7 @@ export function QualityProvider({ children }) {
         deviations,
         updateDeviationStatus,
         releaseBatchQA,
+        placeHold,
         releaseQueue,
         isLoading,
         syncWithBackend

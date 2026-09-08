@@ -20,17 +20,43 @@ import { GanttTimeline } from "../../components/charts/GanttTimeline";
 import { DataTable } from "../../components/tables/DataTable";
 import { INITIAL_PLANNING_ORDERS, MRP_ITEMS } from "../../data/mockPlanning";
 import { useApp } from "../../context/AppContext";
+import { usePlanning } from "../../context/PlanningContext";
+import planningService from "../../services/planningService";
 
 export function PlanningDashboard() {
   const { addToast } = useApp();
+  const { demandOrders = [] } = usePlanning();
   const [plans, setPlans] = useState(INITIAL_PLANNING_ORDERS);
   const [mrpList, setMrpList] = useState(MRP_ITEMS);
 
-  const totalDemandUnits = plans.reduce((sum, p) => sum + p.demandQty, 0);
+  const activePlans = demandOrders.length > 0 ? demandOrders.map(d => ({
+    id: d.id,
+    customer: d.customer || d.customerName || "Customer",
+    customerOrderNo: d.orderNumber || d.id,
+    productName: d.productName || "Finished Goods",
+    productCode: d.productCode || d.skuId,
+    demandQty: Number(d.quantity) || 10000,
+    unit: d.uom || "Units",
+    dueDate: d.requestedShipDate || d.requestedDate || "2026-09-15",
+    priority: d.priority || "Normal",
+    assignedLine: "Line 1 — Bottling",
+    status: d.status || "Planned"
+  })) : plans;
+
+  const totalDemandUnits = activePlans.reduce((sum, p) => sum + p.demandQty, 0);
   const shortageCount = mrpList.filter((m) => m.status.includes("Shortage") || m.status.includes("PO Required")).length;
 
   const handlePublishSchedule = () => {
     setPlans((prev) => prev.map((p) => ({ ...p, status: "Published" })));
+    planningService.createApsSchedule({
+      lineId: "LIN-01",
+      skuId: "SKU-001",
+      startTime: new Date().toISOString(),
+      endTime: new Date(Date.now() + 8 * 3600000).toISOString(),
+      quantity: 10000,
+      changeoverMinutes: 30,
+      cipRequired: false,
+    }).catch(err => console.warn("planningService.createApsSchedule:", err.message));
     addToast("Master Production Schedule (MPS) published to MES and Shop Floor Lines!");
   };
 
@@ -226,7 +252,7 @@ export function PlanningDashboard() {
         <DataTable
           title="Customer Demand & Master Production Schedule (MPS)"
           columns={planColumns}
-          data={plans}
+          data={activePlans}
           searchPlaceholder="Search customer, order ID, product SKU..."
           exportFilename="flowstate_production_plan.csv"
         />

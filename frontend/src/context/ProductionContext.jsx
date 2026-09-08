@@ -39,16 +39,14 @@ export function ProductionProvider({ children }) {
         productionService.getBatches(),
       ]);
 
-      if (remoteOrders.status === "fulfilled" && Array.isArray(remoteOrders.value) && remoteOrders.value.length > 0) {
-        setProductionOrders((prev) => {
-          // Merge remote orders with existing
-          const merged = [...remoteOrders.value];
-          return merged;
-        });
+      const ordersList = Array.isArray(remoteOrders.value) ? remoteOrders.value : (Array.isArray(remoteOrders.value?.data) ? remoteOrders.value.data : null);
+      if (remoteOrders.status === "fulfilled" && ordersList && ordersList.length > 0) {
+        setProductionOrders(ordersList);
       }
 
-      if (remoteBatches.status === "fulfilled" && Array.isArray(remoteBatches.value) && remoteBatches.value.length > 0) {
-        setBatches(remoteBatches.value);
+      const batchesList = Array.isArray(remoteBatches.value) ? remoteBatches.value : (Array.isArray(remoteBatches.value?.data) ? remoteBatches.value.data : null);
+      if (remoteBatches.status === "fulfilled" && batchesList && batchesList.length > 0) {
+        setBatches(batchesList);
       }
     } catch (err) {
       console.warn("Production backend sync fallback:", err.message);
