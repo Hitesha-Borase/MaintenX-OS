@@ -16,14 +16,18 @@ import { useAdmin } from "../../../context/AdminContext";
 import { useApp } from "../../../context/AppContext";
 
 export function RoleMappingPage() {
-  const { users = [], setUsers, roles = [] } = useAdmin();
+  const { users = [], updateUserRole, roles = [] } = useAdmin();
   const { addToast } = useApp();
 
-  const handleRoleChange = (userId, newRole) => {
-    setUsers((prev) =>
-      prev.map((u) => (u.id === userId ? { ...u, role: newRole } : u))
-    );
-    addToast(`Role for user ${userId} updated to ${newRole}.`, "success");
+  const handleRoleChange = async (userId, newRole, userName) => {
+    try {
+      if (updateUserRole) {
+        await updateUserRole(userId, newRole);
+      }
+      addToast(`Role for ${userName || userId} updated to ${newRole}.`, "success");
+    } catch (err) {
+      addToast("Failed to update role: " + err.message, "error");
+    }
   };
 
   return (
@@ -119,14 +123,22 @@ export function RoleMappingPage() {
                       className="form-select"
                       style={{ height: "34px", fontSize: "12px", minWidth: "160px", backgroundColor: "#FFFFFF" }}
                       value={u.role}
-                      onChange={(e) => handleRoleChange(u.id, e.target.value)}
+                      onChange={(e) => handleRoleChange(u.id, e.target.value, u.name)}
                     >
-                      <option value="System Administrator">System Administrator</option>
-                      <option value="Plant Manager">Plant Manager</option>
-                      <option value="QA Manager">QA Manager</option>
-                      <option value="Maintenance Lead">Maintenance Lead</option>
-                      <option value="Production Supervisor">Production Supervisor</option>
-                      <option value="Operator / Line Tech">Operator / Line Tech</option>
+                      {roles.length > 0 ? (
+                        roles.map((r) => (
+                          <option key={r.id || r.code || r.name} value={r.name}>{r.name}</option>
+                        ))
+                      ) : (
+                        <>
+                          <option value="System Administrator">System Administrator</option>
+                          <option value="Plant Manager">Plant Manager</option>
+                          <option value="QA Manager">QA Manager</option>
+                          <option value="Maintenance Lead">Maintenance Lead</option>
+                          <option value="Production Supervisor">Production Supervisor</option>
+                          <option value="Operator / Line Tech">Operator / Line Tech</option>
+                        </>
+                      )}
                     </select>
                   </td>
                 </tr>
@@ -138,3 +150,4 @@ export function RoleMappingPage() {
     </div>
   );
 }
+

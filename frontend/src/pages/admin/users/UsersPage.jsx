@@ -22,16 +22,19 @@ import { Card } from "../../../components/common/Card";
 import { Badge } from "../../../components/common/Badge";
 import { Button } from "../../../components/common/Button";
 import { StatCard } from "../../../components/common/StatCard";
+import { useAdmin } from "../../../context/AdminContext";
 import { useMasterData } from "../../../context/MasterDataContext";
 import { useApp } from "../../../context/AppContext";
 
 export function UsersPage() {
-  const { users = [], addUser, updateUserStatus, plants = [], departments = [] } = useMasterData();
+  const { users = [], addUser, updateUserStatus } = useAdmin();
+  const { plants = [], departments = [] } = useMasterData();
   const { addToast } = useApp();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("ALL");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -56,43 +59,58 @@ export function UsersPage() {
     });
   }, [users, roleFilter, searchQuery]);
 
-  const handleToggleStatus = (userId, currentStatus) => {
+  const handleToggleStatus = async (userId, currentStatus, userName) => {
     const newStatus = currentStatus === "Active" ? "Suspended" : "Active";
-    if (updateUserStatus) {
-      updateUserStatus(userId, newStatus);
+    try {
+      if (updateUserStatus) {
+        await updateUserStatus(userId, newStatus);
+      }
+      addToast(`User ${userName || userId} status updated to ${newStatus}.`, "info");
+    } catch (err) {
+      addToast("Failed to update status: " + err.message, "error");
     }
-    addToast(`User ${userId} status updated to ${newStatus}.`, "info");
   };
 
-  const handleAddSubmit = (e) => {
+  const handleAddSubmit = async (e) => {
     e.preventDefault();
     if (!formData.name.trim() || !formData.email.trim()) {
       addToast("Please fill in all required fields.", "warning");
       return;
     }
 
-    if (addUser) {
-      addUser({
-        name: formData.name,
-        email: formData.email,
-        role: formData.role,
-        department: formData.department,
-        plantId: formData.plantId,
+    try {
+      setIsSubmitting(true);
+      const selectedPlant = plants.find((p) => p.id === formData.plantId);
+      const plantName = selectedPlant ? selectedPlant.name.split(" - ")[0] : "Indore Plant";
+
+      if (addUser) {
+        await addUser({
+          name: formData.name,
+          email: formData.email,
+          role: formData.role,
+          department: formData.department,
+          plant: plantName,
+          status: "Active"
+        });
+      }
+
+      addToast(`User ${formData.name} successfully provisioned!`, "success");
+      setIsAddModalOpen(false);
+      setFormData({
+        name: "",
+        email: "",
+        role: "Plant Manager",
+        department: "Operations / Production",
+        plantId: "PLT-01",
         status: "Active"
       });
+    } catch (err) {
+      addToast("Failed to provision user: " + err.message, "error");
+    } finally {
+      setIsSubmitting(false);
     }
-
-    addToast(`User ${formData.name} successfully provisioned!`, "success");
-    setIsAddModalOpen(false);
-    setFormData({
-      name: "",
-      email: "",
-      role: "Plant Manager",
-      department: "Operations / Production",
-      plantId: "PLT-01",
-      status: "Active"
-    });
   };
+
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%", maxWidth: "1200px", margin: "0 auto", minWidth: 0 }}>
@@ -261,7 +279,7 @@ export function UsersPage() {
                     </td>
                     <td style={{ padding: "12px 16px", textAlign: "right" }}>
                       <button
-                        onClick={() => handleToggleStatus(u.id, u.status)}
+                        onClick={() => handleToggleStatus(u.id, u.status, u.name)}
                         title={u.status === "Active" ? "Suspend Account" : "Activate Account"}
                         style={{
                           width: "30px",

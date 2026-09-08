@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Activity,
   Search,
@@ -8,7 +8,8 @@ import {
   CheckCircle2,
   Lock,
   Layers,
-  FileText
+  FileText,
+  RefreshCw
 } from "lucide-react";
 import { Card } from "../../../components/common/Card";
 import { Badge } from "../../../components/common/Badge";
@@ -17,8 +18,26 @@ import { StatCard } from "../../../components/common/StatCard";
 import { useAdmin } from "../../../context/AdminContext";
 
 export function UserActivityPage() {
-  const { activityLogs = [] } = useAdmin();
+  const { activityLogs = [], fetchActivityLogs } = useAdmin();
   const [searchQuery, setSearchQuery] = useState("");
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  useEffect(() => {
+    if (fetchActivityLogs) {
+      fetchActivityLogs(searchQuery);
+    }
+  }, [searchQuery, fetchActivityLogs]);
+
+  const handleRefresh = async () => {
+    try {
+      setIsRefreshing(true);
+      if (fetchActivityLogs) {
+        await fetchActivityLogs(searchQuery);
+      }
+    } finally {
+      setTimeout(() => setIsRefreshing(false), 400);
+    }
+  };
 
   const filteredLogs = activityLogs.filter((l) => {
     if (!searchQuery.trim()) return true;
@@ -45,7 +64,19 @@ export function UserActivityPage() {
             </Badge>
           </div>
         </div>
+
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+          <Button
+            variant="secondary"
+            icon={RefreshCw}
+            onClick={handleRefresh}
+            style={{ fontSize: "12px", padding: "7px 12px" }}
+          >
+            {isRefreshing ? "Refreshing..." : "Refresh Stream"}
+          </Button>
+        </div>
       </div>
+
 
       {/* KPI Tickers - 2x2 on mobile, 4 on desktop */}
       <div

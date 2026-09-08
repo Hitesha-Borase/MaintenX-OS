@@ -24,7 +24,7 @@ import { useExceptions } from "../../context/ExceptionContext";
 export function MobileShopFloorHub() {
   const navigate = useNavigate();
   const { openQrModal, setIsQuickActionOpen, addToast } = useApp();
-  const { assets, pmSchedules } = useCMMS();
+  const { assets, pmSchedules, workOrders = [] } = useCMMS();
   const { productionOrders } = useProduction();
   const { exceptions } = useExceptions();
 
@@ -113,11 +113,25 @@ export function MobileShopFloorHub() {
         <div style={{ marginTop: "16px", paddingTop: "16px", borderTop: "1px solid var(--border-subtle)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
             <ClipboardList size={16} color="#F59E0B" />
-            <h4 style={{ fontSize: "13px", fontWeight: 600, color: "var(--text-primary)" }}>My Tasks</h4>
+            <h4 style={{ fontSize: "13px", fontWeight: 600, color: "var(--text-primary)" }}>Active Line Tasks</h4>
           </div>
-          <div style={{ padding: "12px", borderRadius: "8px", backgroundColor: "rgba(245, 158, 11, 0.1)", border: "1px dashed rgba(245, 158, 11, 0.3)", fontSize: "12px", color: "#F59E0B", textAlign: "center" }}>
-            [UI Placeholder] Task data pending backend integration.
-          </div>
+          {workOrders && workOrders.filter(w => w.status !== "Closed" && w.status !== "Completed").length > 0 ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              {workOrders.filter(w => w.status !== "Closed" && w.status !== "Completed").slice(0, 3).map(wo => (
+                <div key={wo.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px", backgroundColor: "var(--bg-card-subtle)", borderRadius: "6px", border: "1px solid var(--border-subtle)" }}>
+                  <div>
+                    <div style={{ fontSize: "12px", fontWeight: 600, color: "#FFFFFF" }}>{wo.title}</div>
+                    <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>{wo.id} • {wo.priority || "Normal"}</div>
+                  </div>
+                  <Badge variant={wo.status === "In Progress" ? "cyan" : "amber"}>{wo.status}</Badge>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ padding: "10px", borderRadius: "8px", backgroundColor: "rgba(16, 185, 129, 0.1)", border: "1px solid rgba(16, 185, 129, 0.2)", fontSize: "12px", color: "#10B981", textAlign: "center" }}>
+              All line tasks completed for this station.
+            </div>
+          )}
         </div>
       </Card>
 
@@ -221,7 +235,7 @@ export function MobileShopFloorHub() {
           </button>
 
           <button
-            onClick={() => addToast("[UI Placeholder] Quality Defect Form opens here", "info")}
+            onClick={() => navigate("/quality/hold-release")}
             style={{
               padding: "16px",
               borderRadius: "12px",
@@ -243,7 +257,7 @@ export function MobileShopFloorHub() {
           </button>
           
           <button
-            onClick={() => addToast("[UI Placeholder] Start/Stop Line Workflow", "info")}
+            onClick={() => navigate("/production/orders")}
             style={{
               padding: "16px",
               borderRadius: "12px",

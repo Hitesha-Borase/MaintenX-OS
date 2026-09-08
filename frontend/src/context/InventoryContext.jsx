@@ -57,11 +57,13 @@ export function InventoryProvider({ children }) {
         warehouseService.getTransactions(),
       ]);
 
-      if (remoteLots.status === "fulfilled" && Array.isArray(remoteLots.value) && remoteLots.value.length > 0) {
-        setLots(remoteLots.value);
+      const lotsList = Array.isArray(remoteLots.value) ? remoteLots.value : (Array.isArray(remoteLots.value?.data) ? remoteLots.value.data : null);
+      if (remoteLots.status === "fulfilled" && lotsList && lotsList.length > 0) {
+        setLots(lotsList);
       }
-      if (remoteTx.status === "fulfilled" && Array.isArray(remoteTx.value) && remoteTx.value.length > 0) {
-        setPutAwayHistory((prev) => [...remoteTx.value, ...prev]);
+      const txList = Array.isArray(remoteTx.value) ? remoteTx.value : (Array.isArray(remoteTx.value?.data) ? remoteTx.value.data : null);
+      if (remoteTx.status === "fulfilled" && txList && txList.length > 0) {
+        setPutAwayHistory((prev) => [...txList, ...prev]);
       }
     } catch (err) {
       console.warn("Warehouse backend sync fallback:", err.message);
@@ -92,7 +94,7 @@ export function InventoryProvider({ children }) {
     // Persist to PostgreSQL backend
     try {
       await warehouseService.recordStockMovement({
-        lotId: newLot.lotId || "00000000-0000-0000-0000-000000000001",
+        lotId: newLot.lotId || newLot.id,
         transactionType: "RECEIPT",
         quantity: Number(newLot.quantity) || 1000,
         uom: newLot.unit || "kg",

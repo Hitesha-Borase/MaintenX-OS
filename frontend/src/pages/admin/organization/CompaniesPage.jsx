@@ -60,7 +60,7 @@ export function CompaniesPage() {
       return;
     }
 
-    updateCompany(editingComp.companyId, editingComp);
+    updateCompany(editingComp.companyId || editingComp.id, editingComp);
     addToast(`Legal entity "${editingComp.name}" updated!`, "success");
     setEditingComp(null);
   };

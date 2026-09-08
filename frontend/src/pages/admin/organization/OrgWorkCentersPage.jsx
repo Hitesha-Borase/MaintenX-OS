@@ -20,16 +20,8 @@ import { useMasterData } from "../../../context/MasterDataContext";
 import { useApp } from "../../../context/AppContext";
 
 export function OrgWorkCentersPage() {
-  const { lines = [], assets = [], plants = [] } = useMasterData();
+  const { workCenters = [], addWorkCenter, updateWorkCenter, deleteWorkCenter, lines = [], assets = [], plants = [] } = useMasterData();
   const { addToast } = useApp();
-
-  const [workCenters, setWorkCenters] = useState([
-    { id: "WC-101", code: "FILL-01", name: "Rotary Isobaric Filler", lineId: "LIN-01", lineName: "Line 1 — Aseptic Bottling", capacity: "38,000 BPH", status: "Active" },
-    { id: "WC-102", code: "CAPP-01", name: "Induction Cap Sealer", lineId: "LIN-01", lineName: "Line 1 — Aseptic Bottling", capacity: "38,000 BPH", status: "Active" },
-    { id: "WC-103", code: "LABL-01", name: "Sleeve Rotary Labeler", lineId: "LIN-01", lineName: "Line 1 — Aseptic Bottling", capacity: "40,000 BPH", status: "Active" },
-    { id: "WC-201", code: "PAST-02", name: "HTST Flash Pasteurizer", lineId: "LIN-02", lineName: "Line 2 — Formulation & Pasteurizer", capacity: "30,000 L/hr", status: "Active" },
-    { id: "WC-301", code: "SEAM-03", name: "Can Seamer Station", lineId: "LIN-03", lineName: "Line 3 — Canning Line", capacity: "45,000 CPH", status: "Active" }
-  ]);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [lineFilter, setLineFilter] = useState("ALL");
@@ -49,9 +41,9 @@ export function OrgWorkCentersPage() {
       const q = searchQuery.toLowerCase().trim();
       const matchesSearch =
         !q ||
-        w.name.toLowerCase().includes(q) ||
-        w.code.toLowerCase().includes(q) ||
-        w.lineName.toLowerCase().includes(q);
+        (w.name || "").toLowerCase().includes(q) ||
+        (w.code || "").toLowerCase().includes(q) ||
+        (w.lineName || "").toLowerCase().includes(q);
 
       return matchesLine && matchesSearch;
     });
@@ -64,18 +56,7 @@ export function OrgWorkCentersPage() {
       return;
     }
 
-    const selLine = lines.find((l) => l.lineId === newWC.lineId);
-    const created = {
-      id: `WC-${Math.floor(400 + Math.random() * 99)}`,
-      code: newWC.code.toUpperCase(),
-      name: newWC.name,
-      lineId: newWC.lineId,
-      lineName: selLine ? selLine.name : "Production Line",
-      capacity: newWC.capacity || "35,000 BPH",
-      status: "Active"
-    };
-
-    setWorkCenters([...workCenters, created]);
+    const created = addWorkCenter(newWC);
     addToast(`Work Center "${created.name}" created!`, "success");
     setIsModalOpen(false);
     setNewWC({ code: "", name: "", lineId: lines[0]?.lineId || "LIN-01", capacity: "35,000 BPH" });
@@ -88,21 +69,14 @@ export function OrgWorkCentersPage() {
       return;
     }
 
-    const selLine = lines.find((l) => l.lineId === editingWC.lineId);
-    setWorkCenters((prev) =>
-      prev.map((w) =>
-        w.id === editingWC.id
-          ? { ...editingWC, lineName: selLine ? selLine.name : editingWC.lineName }
-          : w
-      )
-    );
+    updateWorkCenter(editingWC.id || editingWC.workCenterId, editingWC);
     addToast(`Work Center "${editingWC.name}" updated!`, "success");
     setEditingWC(null);
   };
 
   const handleDelete = (id, name) => {
     if (window.confirm(`Are you sure you want to delete Work Center "${name}"?`)) {
-      setWorkCenters(workCenters.filter((w) => w.id !== id));
+      deleteWorkCenter(id);
       addToast(`Work Center "${name}" deleted.`, "info");
     }
   };
@@ -246,7 +220,7 @@ export function OrgWorkCentersPage() {
             </thead>
             <tbody>
               {filteredWCs.map((w) => (
-                <tr key={w.id} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+                <tr key={w.id || w.workCenterId || w.code} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
                   <td style={{ padding: "12px 16px", fontFamily: "var(--font-mono)", fontWeight: 800, color: "#8C5B23" }}>
                     {w.code}
                   </td>
@@ -275,7 +249,7 @@ export function OrgWorkCentersPage() {
                         <Edit2 size={13} />
                       </button>
                       <button
-                        onClick={() => handleDelete(w.id, w.name)}
+                        onClick={() => handleDelete(w.id || w.workCenterId, w.name)}
                         title="Delete Work Center"
                         style={{ width: "30px", height: "30px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", color: "#EF4444", border: "1px solid var(--border-subtle)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
                       >

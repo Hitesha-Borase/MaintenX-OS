@@ -374,6 +374,17 @@ export function PlanningProvider({ children }) {
     };
 
     setDemandOrders((prev) => [newOrder, ...prev]);
+
+    planningService.createDemandOrder({
+      orderNumber: newOrder.orderNumber,
+      customerName: newOrder.customer,
+      skuId: newOrder.skuId,
+      quantity: newOrder.quantity,
+      priority: newOrder.priority,
+      requestedDate: newOrder.requestedShipDate,
+      deliveryAddress: "Regional Distribution Dock",
+    }).catch(err => console.warn("planningService.createDemandOrder:", err.message));
+
     if (logAudit) {
       logAudit({
         entityId: newOrder.orderNumber,

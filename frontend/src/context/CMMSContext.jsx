@@ -381,6 +381,16 @@ export function CMMSProvider({ children }) {
         prev.map((a) => (a.id === newWO.assetId ? { ...a, openWorkOrders: (a.openWorkOrders || 0) + 1 } : a))
       );
     }
+
+    maintenanceService.createWorkOrder({
+      assetId: newWO.assetId || "ASSET-101",
+      title: newWO.title,
+      description: newWO.description || newWO.symptom || "",
+      type: newWO.type || "Corrective",
+      priority: newWO.priority || "HIGH",
+      estimatedHours: Number(newWO.estimatedHours) || 2.0,
+    }).catch(err => console.warn("maintenanceService.createWorkOrder:", err.message));
+
     return woWithMeta;
   };
 
@@ -404,6 +414,8 @@ export function CMMSProvider({ children }) {
         return wo;
       })
     );
+
+    maintenanceService.updateWorkOrderStatus(woId, newStatus).catch(err => console.warn("maintenanceService.updateWorkOrderStatus:", err.message));
   };
 
   const startWorkOrder = (woId) => {
@@ -419,6 +431,7 @@ export function CMMSProvider({ children }) {
         return wo;
       })
     );
+    maintenanceService.updateWorkOrderStatus(woId, "IN_PROGRESS").catch(err => console.warn("maintenanceService.startWorkOrder:", err.message));
   };
 
   const completeWorkOrder = (woId, closureDetails = {}) => {
@@ -443,6 +456,7 @@ export function CMMSProvider({ children }) {
         return wo;
       })
     );
+    maintenanceService.updateWorkOrderStatus(woId, "COMPLETED").catch(err => console.warn("maintenanceService.completeWorkOrder:", err.message));
   };
 
   const addWorkOrderComment = (woId, text) => {
