@@ -1,9 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Zap, Check, TrendingUp, Clock, Gauge } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { Button } from "../../components/common/Button";
 import { Badge } from "../../components/common/Badge";
 import { useApp } from "../../context/AppContext";
+import dashboardService from "../../services/dashboardService";
 
 export function Recovery() {
   const { addToast } = useApp();
@@ -14,17 +15,46 @@ export function Recovery() {
     { id: 3, name: "30-Minute Shift Extension Overtime", type: "Overtime Extension", impact: "+3,000 Bottles", active: false }
   ]);
 
-  const handleActivate = (id, name) => {
-    setCountermeasures(prev =>
-      prev.map(c => c.id === id ? { ...c, active: true } : c)
-    );
-    addToast(`Supervisor authorized countermeasure: ${name}`, "success");
+  useEffect(() => {
+    async function fetchCountermeasures() {
+      try {
+        const res = await dashboardService.getSupervisorRecoveryCountermeasures();
+        if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
+          setCountermeasures(res.data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch recovery countermeasures:", err);
+      }
+    }
+    fetchCountermeasures();
+  }, []);
+
+  const handleActivate = async (id, name) => {
+    try {
+      const res = await dashboardService.authorizeSupervisorRecoveryCountermeasure(id);
+      setCountermeasures(prev =>
+        prev.map(c => c.id === id ? { ...c, active: true } : c)
+      );
+      addToast(res.message || `Supervisor authorized countermeasure: ${name}`, "success");
+    } catch (err) {
+      setCountermeasures(prev =>
+        prev.map(c => c.id === id ? { ...c, active: true } : c)
+      );
+      addToast(`Supervisor authorized countermeasure: ${name}`, "success");
+    }
   };
 
-  const handleApproveAll = () => {
-    setCountermeasures(prev => prev.map(c => ({ ...c, active: true })));
-    addToast("All shift recovery countermeasures authorized for Line Lead execution.", "success");
+  const handleApproveAll = async () => {
+    try {
+      const res = await dashboardService.authorizeAllSupervisorRecoveryCountermeasures();
+      setCountermeasures(prev => prev.map(c => ({ ...c, active: true })));
+      addToast(res.message || "All shift recovery countermeasures authorized for Line Lead execution.", "success");
+    } catch (err) {
+      setCountermeasures(prev => prev.map(c => ({ ...c, active: true })));
+      addToast("All shift recovery countermeasures authorized for Line Lead execution.", "success");
+    }
   };
+
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%" }}>

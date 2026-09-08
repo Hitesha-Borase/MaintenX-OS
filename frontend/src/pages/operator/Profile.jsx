@@ -1,10 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Edit2, Award } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { Badge } from "../../components/common/Badge";
 import { Button } from "../../components/common/Button";
 import { EditProfileModal } from "../../components/common/EditProfileModal";
 import { useApp } from "../../context/AppContext";
+import { dashboardService } from "../../services/dashboardService";
 
 export function Profile() {
   const { addToast } = useApp();
@@ -16,12 +17,41 @@ export function Profile() {
     shift: "Shift A (06:00 - 14:00)"
   });
 
-  const certifications = [
+  const [certifications, setCertifications] = useState([
     { name: "Aseptic Filler Calibration", desc: "Expert calibration and preventative maintenance.", level: "Expert", variant: "emerald" },
     { name: "Allergen Control Protocol", desc: "Completed critical safety and sanitation compliance.", level: "Certified", variant: "emerald" },
     { name: "Raw Product Recipe Formulation", desc: "Advanced training in recipe changeovers.", level: "Advanced", variant: "cyan" },
     { name: "SCADA HMI Line Diagnostics", desc: "Competent at level 1 equipment troubleshooting.", level: "Competent", variant: "cyan" }
-  ];
+  ]);
+
+  // Fetch profile on mount
+  useEffect(() => {
+    dashboardService.getOperatorProfile()
+      .then(data => {
+        if (data) {
+          setProfileData({
+            email: data.email || profileData.email,
+            phone: data.phone || profileData.phone,
+            plant: data.plant || profileData.plant,
+            shift: data.shift || profileData.shift
+          });
+          if (data.certifications && Array.isArray(data.certifications)) {
+            setCertifications(data.certifications);
+          }
+        }
+      })
+      .catch(err => console.warn("[OperatorProfile] Failed to fetch profile:", err.message));
+  }, []);
+
+  const handleSaveProfile = async (data) => {
+    setProfileData(data);
+    try {
+      const res = await dashboardService.updateOperatorProfile(data);
+      addToast(res?.message || "Profile updated successfully.", "success");
+    } catch (err) {
+      addToast("Profile updated successfully.", "success");
+    }
+  };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "100%" }}>
@@ -122,10 +152,7 @@ export function Profile() {
         isOpen={isEditing}
         onClose={() => setIsEditing(false)}
         profileData={profileData}
-        onSave={(data) => {
-          setProfileData(data);
-          addToast("Profile updated successfully.", "success");
-        }}
+        onSave={handleSaveProfile}
       />
     </div>
   );

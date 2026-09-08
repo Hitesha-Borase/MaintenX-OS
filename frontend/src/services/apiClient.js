@@ -37,6 +37,10 @@ class ApiClient {
       headers,
     };
 
+    if ((config.method === "DELETE" || config.method === "POST" || config.method === "PUT") && config.body === undefined) {
+      config.body = JSON.stringify({});
+    }
+
     try {
       const response = await fetch(url, config);
       const data = await response.json().catch(() => null);

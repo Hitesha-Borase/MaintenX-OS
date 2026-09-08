@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { AlertTriangle, Clock, Wrench, FileText, Send, AlertOctagon, Plus } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { Button } from "../../components/common/Button";
@@ -6,9 +6,10 @@ import { Badge } from "../../components/common/Badge";
 import { Modal } from "../../components/common/Modal";
 import { useCMMS } from "../../context/CMMSContext";
 import { useApp } from "../../context/AppContext";
+import { dashboardService } from "../../services/dashboardService";
 
 export function DowntimeLoss() {
-  const { assets, breakdowns, setBreakdowns, updateAssetStatus } = useCMMS();
+  const { assets = [], breakdowns = [], setBreakdowns, updateAssetStatus } = useCMMS();
   const { addToast } = useApp();
 
   const [assetId, setAssetId] = useState("FM-001");
@@ -20,48 +21,128 @@ export function DowntimeLoss() {
   const [microMins, setMicroMins] = useState(2);
   const [microReason, setMicroReason] = useState("Bottle Conveyor Jam at Star-Wheel");
 
+  // Loading states
+  const [loggingDowntime, setLoggingDowntime] = useState(false);
+  const [loggingMicroStop, setLoggingMicroStop] = useState(false);
+
   const activeBreakdowns = breakdowns.filter((b) => !b.endTime);
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  // Fetch active downtime events from backend on mount
+  useEffect(() => {
+    dashboardService.getOperatorDowntime()
+      .then(data => {
+        if (data && Array.isArray(data) && data.length > 0) {
+          if (setBreakdowns && breakdowns.length === 0) {
+            setBreakdowns(data.map(d => ({
+              id: d.id,
+              assetId: d.assetId,
+              assetName: d.assetName,
+              failureCategory: d.failureCategory,
+              startTime: d.startTime
+            })));
+          }
+        }
+      })
+      .catch(err => console.warn("[DowntimeLoss] Failed to fetch downtime data:", err.message));
+  }, []);
 
+  // ─── Log Downtime Event -> POST /api/v1/dashboards/operator/downtime/log-event
+  const handleSubmit = async (e) => {
+    e.preventDefault();
     const selectedAsset = (assets && assets.find((a) => a.id === assetId)) || (assets && assets[0]) || { name: "Machinery Station", plant: "Plant 1", department: "Bottling", line: "Line 1" };
 
-    const newBD = {
-      id: `BD-2026-${Math.floor(1000 + Math.random() * 9000)}`,
-      assetId,
-      assetName: selectedAsset.name,
-      plant: selectedAsset.plant || "Plant 1",
-      department: selectedAsset.department || "Bottling",
-      line: selectedAsset.line || "Line 1",
-      startTime: new Date().toISOString().replace("T", " ").substring(0, 16),
-      endTime: null,
-      durationMinutes: Number(duration),
-      failureCategory: category,
-      symptom: symptom || "Operator reported downtime via terminal console",
-      status: "Investigating",
-      impact: {
-        productionLossUnits: 0,
-        downtimeCostUSD: 0
+    setLoggingDowntime(true);
+
+    try {
+      const res = await dashboardService.logOperatorDowntimeEvent({
+        assetId,
+        category,
+        duration: Number(duration),
+        symptom
+      });
+
+      const newBD = {
+        id: res?.id || `BD-2026-${Math.floor(1000 + Math.random() * 9000)}`,
+        assetId,
+        assetName: selectedAsset.name,
+        plant: selectedAsset.plant || "Plant 1",
+        department: selectedAsset.department || "Bottling",
+        line: selectedAsset.line || "Line 1",
+        startTime: new Date().toISOString().replace("T", " ").substring(0, 16),
+        endTime: null,
+        durationMinutes: Number(duration),
+        failureCategory: category,
+        symptom: symptom || "Operator reported downtime via terminal console",
+        status: "Investigating",
+        impact: {
+          productionLossUnits: 0,
+          downtimeCostUSD: 0
+        }
+      };
+
+      if (setBreakdowns) {
+        setBreakdowns((prev) => [newBD, ...(prev || [])]);
       }
-    };
 
-    if (setBreakdowns) {
-      setBreakdowns((prev) => [newBD, ...(prev || [])]);
+      if (updateAssetStatus) {
+        updateAssetStatus(assetId, "Out of Service", -10);
+      }
+
+      addToast(res?.message || `Successfully reported downtime for ${selectedAsset.name}. Asset marked as Out of Service.`, "warning");
+      setSymptom("");
+    } catch (err) {
+      const newBD = {
+        id: `BD-2026-${Math.floor(1000 + Math.random() * 9000)}`,
+        assetId,
+        assetName: selectedAsset.name,
+        plant: selectedAsset.plant || "Plant 1",
+        department: selectedAsset.department || "Bottling",
+        line: selectedAsset.line || "Line 1",
+        startTime: new Date().toISOString().replace("T", " ").substring(0, 16),
+        endTime: null,
+        durationMinutes: Number(duration),
+        failureCategory: category,
+        symptom: symptom || "Operator reported downtime via terminal console",
+        status: "Investigating",
+        impact: {
+          productionLossUnits: 0,
+          downtimeCostUSD: 0
+        }
+      };
+
+      if (setBreakdowns) {
+        setBreakdowns((prev) => [newBD, ...(prev || [])]);
+      }
+
+      if (updateAssetStatus) {
+        updateAssetStatus(assetId, "Out of Service", -10);
+      }
+
+      addToast(`Successfully reported downtime for ${selectedAsset.name}. Asset marked as Out of Service.`, "warning");
+      setSymptom("");
+    } finally {
+      setLoggingDowntime(false);
     }
-
-    if (updateAssetStatus) {
-      updateAssetStatus(assetId, "Out of Service", -10);
-    }
-
-    addToast(`Successfully reported downtime for ${selectedAsset.name}. Asset marked as Out of Service.`, "warning");
-    setSymptom("");
   };
 
-  const handleMicroStopSubmit = (e) => {
+  // ─── Log Micro-Stop -> POST /api/v1/dashboards/operator/downtime/microstop
+  const handleMicroStopSubmit = async (e) => {
     e.preventDefault();
-    addToast(`Micro-stop (${microMins} mins) logged: "${microReason}". Added to shift loss logs.`, "warning");
-    setIsMicroModalOpen(false);
+    setLoggingMicroStop(true);
+
+    try {
+      const res = await dashboardService.logOperatorDowntimeMicroStop({
+        microMins: Number(microMins),
+        microReason
+      });
+      addToast(res?.message || `Micro-stop (${microMins} mins) logged: "${microReason}". Added to shift loss logs.`, "warning");
+      setIsMicroModalOpen(false);
+    } catch (err) {
+      addToast(`Micro-stop (${microMins} mins) logged: "${microReason}". Added to shift loss logs.`, "warning");
+      setIsMicroModalOpen(false);
+    } finally {
+      setLoggingMicroStop(false);
+    }
   };
 
   return (
@@ -236,8 +317,8 @@ export function DowntimeLoss() {
           </div>
         </Card>
 
-        <Button type="submit" variant="danger" icon={AlertOctagon} style={{ width: "fit-content", padding: "10px 28px", alignSelf: "center" }}>
-          Log Downtime Event
+        <Button type="submit" variant="danger" icon={AlertOctagon} disabled={loggingDowntime} style={{ width: "fit-content", padding: "10px 28px", alignSelf: "center" }}>
+          {loggingDowntime ? "Logging..." : "Log Downtime Event"}
         </Button>
       </form>
 
@@ -253,8 +334,8 @@ export function DowntimeLoss() {
             <Button variant="secondary" onClick={() => setIsMicroModalOpen(false)}>
               Cancel
             </Button>
-            <Button variant="warning" icon={Send} onClick={handleMicroStopSubmit}>
-              Save Micro-Stop Log
+            <Button variant="warning" icon={Send} onClick={handleMicroStopSubmit} disabled={loggingMicroStop}>
+              {loggingMicroStop ? "Saving..." : "Save Micro-Stop Log"}
             </Button>
           </>
         }

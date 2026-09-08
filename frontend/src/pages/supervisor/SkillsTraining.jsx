@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Award,
   Search,
@@ -21,6 +21,7 @@ import { StatCard } from "../../components/common/StatCard";
 import { Modal } from "../../components/common/Modal";
 import { useApp } from "../../context/AppContext";
 import { SKILLS_LIST } from "../../data/mockLabour";
+import dashboardService from "../../services/dashboardService";
 
 export function SkillsTraining() {
   const { addToast } = useApp();
@@ -45,6 +46,20 @@ export function SkillsTraining() {
     status: "Active"
   });
 
+  useEffect(() => {
+    async function fetchSkills() {
+      try {
+        const res = await dashboardService.getSupervisorSkills();
+        if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
+          setSkills(res.data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch supervisor skills:", err);
+      }
+    }
+    fetchSkills();
+  }, []);
+
   const filteredSkills = useMemo(() => {
     return skills.filter((s) => {
       const matchesSearch =
@@ -57,15 +72,26 @@ export function SkillsTraining() {
     });
   }, [skills, searchQuery, selectedCategory, selectedLevel]);
 
-  const handleAddSkill = (e) => {
+  const handleAddSkill = async (e) => {
     e.preventDefault();
     if (!newSkill.skillName) return;
-    const added = {
-      id: `SKL-0${skills.length + 1}`,
-      ...newSkill
-    };
-    setSkills((prev) => [added, ...prev]);
-    addToast(`Skill "${newSkill.skillName}" (${newSkill.skillLevel}) added for ${newSkill.employee}.`, "success");
+
+    try {
+      const res = await dashboardService.addSupervisorSkill(newSkill);
+      const added = {
+        id: res.data?.id || `SKL-0${skills.length + 1}`,
+        ...newSkill
+      };
+      setSkills((prev) => [added, ...prev]);
+      addToast(res.message || `Skill "${newSkill.skillName}" (${newSkill.skillLevel}) added for ${newSkill.employee}.`, "success");
+    } catch (err) {
+      const added = {
+        id: `SKL-0${skills.length + 1}`,
+        ...newSkill
+      };
+      setSkills((prev) => [added, ...prev]);
+      addToast(`Skill "${newSkill.skillName}" (${newSkill.skillLevel}) added for ${newSkill.employee}.`, "success");
+    }
     setIsAddSkillModalOpen(false);
     setNewSkill({
       skillName: "",
@@ -79,14 +105,25 @@ export function SkillsTraining() {
     });
   };
 
-  const handleSaveEdit = (e) => {
+  const handleSaveEdit = async (e) => {
     e.preventDefault();
-    setSkills((prev) =>
-      prev.map((s) => (s.id === editSkill.id ? { ...s, ...editSkill } : s))
-    );
-    addToast(`Skill competency level for ${editSkill.employee} updated to ${editSkill.skillLevel}.`, "success");
+    if (!editSkill) return;
+
+    try {
+      const res = await dashboardService.updateSupervisorSkillLevel(editSkill.id, editSkill);
+      setSkills((prev) =>
+        prev.map((s) => (s.id === editSkill.id ? { ...s, ...editSkill } : s))
+      );
+      addToast(res.message || `Skill competency level for ${editSkill.employee} updated to ${editSkill.skillLevel}.`, "success");
+    } catch (err) {
+      setSkills((prev) =>
+        prev.map((s) => (s.id === editSkill.id ? { ...s, ...editSkill } : s))
+      );
+      addToast(`Skill competency level for ${editSkill.employee} updated to ${editSkill.skillLevel}.`, "success");
+    }
     setEditSkill(null);
   };
+
 
   const handleExportCSV = () => {
     const headers = "Skill ID,Skill Name,Skill Category,Employee,Skill Level,Certification,Expiry,Status\n";

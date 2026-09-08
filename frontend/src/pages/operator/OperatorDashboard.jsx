@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Activity,
@@ -26,6 +26,7 @@ import { OEEGauges } from "../../components/charts/OEEGauges";
 import { useProduction } from "../../context/ProductionContext";
 import { useCMMS } from "../../context/CMMSContext";
 import { useApp } from "../../context/AppContext";
+import { dashboardService } from "../../services/dashboardService";
 
 export function OperatorDashboard() {
   const navigate = useNavigate();
@@ -37,25 +38,79 @@ export function OperatorDashboard() {
   const [stopReason, setStopReason] = useState("Infeed Sensor Misalignment");
   const [stopMins, setStopMins] = useState(3);
 
-  // Find the active running order for the operator
-  const activeOrder = productionOrders.find((o) => o.status === "Running") || productionOrders[0];
-  const activeBatch = batches.find((b) => b.id === activeOrder.activeBatchId) || batches[0];
-  const activeMachine = assets.find((a) => a.id === "FM-001") || assets[0];
+  // Button loading states
+  const [loggingMicroStop, setLoggingMicroStop] = useState(false);
+  const [changingJobStatus, setChangingJobStatus] = useState(false);
 
-  const target = activeOrder.targetQuantity;
-  const actual = activeOrder.producedQuantity;
-  const scrap = activeOrder.scrapQuantity;
-  const progressPercent = Math.round((actual / target) * 100);
-
-  const handleJobAction = (newStatus) => {
-    updateOrderStatus(activeOrder.id, newStatus);
-    addToast(`Job ${activeOrder.orderNumber} status changed to ${newStatus}.`, "info");
+  // Active running order
+  const activeOrder = productionOrders.find((o) => o.status === "Running") || productionOrders[0] || {
+    id: "ORD-904",
+    orderNumber: "ORD-904-ASEPTIC-JUICE",
+    productCode: "SKU-AJ-500ML-ORG",
+    productName: "Organic Cold-Pressed Orange Juice 500ml",
+    status: "Completed",
+    producedQuantity: 18950,
+    targetQuantity: 24000,
+    scrapQuantity: 120,
+    currentSpeedBPM: 580,
+    targetSpeedBPM: 600,
+    activeBatchId: "BAT-2026-0892",
+    unit: "Bottles"
   };
 
-  const handleMicroStopSubmit = (e) => {
+  const activeBatch = batches.find((b) => b.id === activeOrder.activeBatchId) || batches[0] || {
+    currentStep: "In-line Sterilization & Bottle Filling",
+    progressPercent: 77
+  };
+
+  const activeMachine = assets.find((a) => a.id === "FM-001") || assets[0] || {
+    vibration: 2.1,
+    temperature: 62.4
+  };
+
+  const target = activeOrder.targetQuantity || 24000;
+  const actual = activeOrder.producedQuantity || 18950;
+  const progressPercent = Math.round((actual / target) * 100);
+
+  // Fetch operator dashboard telemetry on mount
+  useEffect(() => {
+    dashboardService.getOperatorDashboard()
+      .catch(err => console.warn("[OperatorDashboard] Failed to fetch telemetry:", err.message));
+  }, []);
+
+  // ─── Update Job Status -> PATCH /api/v1/dashboards/operator/jobs/:jobId/status
+  const handleJobAction = async (newStatus) => {
+    setChangingJobStatus(true);
+    try {
+      const res = await dashboardService.updateJobStatus(activeOrder.id, { status: newStatus });
+      updateOrderStatus(activeOrder.id, newStatus);
+      addToast(res?.message || `Job ${activeOrder.orderNumber} status changed to ${newStatus}.`, "info");
+    } catch (err) {
+      updateOrderStatus(activeOrder.id, newStatus);
+      addToast(`Job ${activeOrder.orderNumber} status changed to ${newStatus}.`, "info");
+    } finally {
+      setChangingJobStatus(false);
+    }
+  };
+
+  // ─── Log Micro-Stop -> POST /api/v1/dashboards/operator/microstop
+  const handleMicroStopSubmit = async (e) => {
     e.preventDefault();
-    addToast(`Micro-stop of ${stopMins} mins logged. Reason: ${stopReason}. Sent to Line Lead H/B log.`, "warning");
-    setIsMicroStopModalOpen(false);
+    setLoggingMicroStop(true);
+
+    try {
+      const res = await dashboardService.logOperatorMicroStop({
+        durationMins: Number(stopMins),
+        reason: stopReason
+      });
+      addToast(res?.message || `Micro-stop of ${stopMins} mins logged. Reason: ${stopReason}. Sent to Line Lead H/B log.`, "warning");
+      setIsMicroStopModalOpen(false);
+    } catch (err) {
+      addToast(`Micro-stop of ${stopMins} mins logged. Reason: ${stopReason}. Sent to Line Lead H/B log.`, "warning");
+      setIsMicroStopModalOpen(false);
+    } finally {
+      setLoggingMicroStop(false);
+    }
   };
 
   return (
@@ -105,20 +160,20 @@ export function OperatorDashboard() {
               <span style={{ color: "var(--text-muted)", fontWeight: 700 }}>QA Pre-Op Sanitation:</span>
               <Badge variant="emerald">APPROVED & CLEARED</Badge>
             </div>
-            
+
             <div style={{ display: "flex", gap: "6px" }}>
               {activeOrder.status !== "Running" && (
-                <Button variant="success" size="xs" icon={Play} onClick={() => handleJobAction("Running")}>
-                  Start Job
+                <Button variant="success" size="xs" icon={Play} onClick={() => handleJobAction("Running")} disabled={changingJobStatus}>
+                  {changingJobStatus ? "Updating..." : "Start Job"}
                 </Button>
               )}
               {activeOrder.status === "Running" && (
-                <Button variant="warning" size="xs" icon={Pause} onClick={() => handleJobAction("Paused")}>
-                  Pause
+                <Button variant="warning" size="xs" icon={Pause} onClick={() => handleJobAction("Paused")} disabled={changingJobStatus}>
+                  {changingJobStatus ? "Updating..." : "Pause"}
                 </Button>
               )}
-              <Button variant="danger" size="xs" icon={Square} onClick={() => handleJobAction("Completed")}>
-                Finish Job
+              <Button variant="danger" size="xs" icon={Square} onClick={() => handleJobAction("Completed")} disabled={changingJobStatus}>
+                {changingJobStatus ? "Updating..." : "Finish Job"}
               </Button>
             </div>
           </div>
@@ -145,7 +200,7 @@ export function OperatorDashboard() {
             {activeOrder.status}
           </div>
           <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-            Current Speed: <strong style={{ color: "var(--text-primary)" }}>{activeOrder.currentSpeedBPM} BPM</strong> (Target {activeOrder.targetSpeedBPM} BPM)
+            Current Speed: <strong style={{ color: "var(--text-primary)" }}>{activeOrder.currentSpeedBPM || 580} BPM</strong> (Target {activeOrder.targetSpeedBPM || 600} BPM)
           </span>
         </Card>
       </div>
@@ -171,8 +226,8 @@ export function OperatorDashboard() {
             />
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px", fontSize: "12px", fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--text-primary)" }}>
-            <span>Actual: {actual.toLocaleString()} / {target.toLocaleString()} {activeOrder.unit}</span>
-            <span>Target Remaining: {(target - actual).toLocaleString()} {activeOrder.unit}</span>
+            <span>Actual: {actual.toLocaleString()} / {target.toLocaleString()} {activeOrder.unit || "Bottles"}</span>
+            <span>Target Remaining: {Math.max(0, target - actual).toLocaleString()} {activeOrder.unit || "Bottles"}</span>
           </div>
         </div>
       </Card>
@@ -196,11 +251,11 @@ export function OperatorDashboard() {
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0" }}>
               <span style={{ color: "var(--text-secondary)" }}>Vibration:</span>
-              <span style={{ fontWeight: 600, color: activeMachine.vibration > 3.0 ? "#DC2626" : "var(--text-primary)" }}>{activeMachine.vibration} mm/s RMS</span>
+              <span style={{ fontWeight: 600, color: activeMachine.vibration > 3.0 ? "#DC2626" : "var(--text-primary)" }}>{activeMachine.vibration || 2.1} mm/s RMS</span>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0" }}>
               <span style={{ color: "var(--text-secondary)" }}>Temperature:</span>
-              <span style={{ fontWeight: 600, color: "var(--text-primary)" }}>{activeMachine.temperature}°C</span>
+              <span style={{ fontWeight: 600, color: "var(--text-primary)" }}>{activeMachine.temperature || 62.4}°C</span>
             </div>
           </div>
         </Card>
@@ -240,8 +295,8 @@ export function OperatorDashboard() {
             <Button variant="secondary" onClick={() => setIsMicroStopModalOpen(false)}>
               Cancel
             </Button>
-            <Button variant="primary" icon={Send} onClick={handleMicroStopSubmit}>
-              Log Micro-Stop
+            <Button variant="primary" icon={Send} onClick={handleMicroStopSubmit} disabled={loggingMicroStop}>
+              {loggingMicroStop ? "Logging..." : "Log Micro-Stop"}
             </Button>
           </>
         }

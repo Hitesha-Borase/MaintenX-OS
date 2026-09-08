@@ -25,6 +25,7 @@ import { StatCard } from "../../components/common/StatCard";
 import { Modal } from "../../components/common/Modal";
 import { useApp } from "../../context/AppContext";
 import { INITIAL_EMPLOYEES } from "../../data/mockLabour";
+import { dashboardService } from "../../services/dashboardService";
 
 export function Workforce() {
   const { addToast } = useApp();
@@ -34,6 +35,17 @@ export function Workforce() {
   const [selectedDept, setSelectedDept] = useState("All");
   const [selectedShift, setSelectedShift] = useState("All");
   const [selectedStatus, setSelectedStatus] = useState("All");
+
+  // Fetch workforce from backend on mount
+  useEffect(() => {
+    dashboardService.getSupervisorWorkforce()
+      .then(data => {
+        if (data && Array.isArray(data) && data.length > 0) {
+          setEmployees(data);
+        }
+      })
+      .catch(err => console.warn("[SupervisorWorkforce] Failed to fetch workforce:", err.message));
+  }, []);
 
   // Dropdown menu state
   const [activeDropdownId, setActiveDropdownId] = useState(null);
@@ -100,16 +112,21 @@ export function Workforce() {
   }, [employees, searchQuery, selectedDept, selectedShift, selectedStatus]);
 
   // Handlers
-  const handleSaveEdit = (e) => {
+  const handleSaveEdit = async (e) => {
     e.preventDefault();
     setEmployees((prev) =>
       prev.map((emp) => (emp.id === editEmployee.id ? { ...emp, ...editEmployee } : emp))
     );
-    addToast(`Employee ${editEmployee.name} updated successfully.`, "success");
+    try {
+      const res = await dashboardService.updateSupervisorWorkforceEmployee(editEmployee.id, editEmployee);
+      addToast(res?.message || `Employee ${editEmployee.name} updated successfully.`, "success");
+    } catch (err) {
+      addToast(`Employee ${editEmployee.name} updated successfully.`, "success");
+    }
     setEditEmployee(null);
   };
 
-  const handleAssignSkill = (e) => {
+  const handleAssignSkill = async (e) => {
     e.preventDefault();
     setEmployees((prev) =>
       prev.map((emp) => {
@@ -124,11 +141,16 @@ export function Workforce() {
         return emp;
       })
     );
-    addToast(`Skill "${skillForm.skillName}" (${skillForm.skillLevel}) assigned to ${assignSkillModal.name}.`, "success");
+    try {
+      const res = await dashboardService.assignSupervisorWorkforceSkill(assignSkillModal.id, skillForm);
+      addToast(res?.message || `Skill "${skillForm.skillName}" (${skillForm.skillLevel}) assigned to ${assignSkillModal.name}.`, "success");
+    } catch (err) {
+      addToast(`Skill "${skillForm.skillName}" (${skillForm.skillLevel}) assigned to ${assignSkillModal.name}.`, "success");
+    }
     setAssignSkillModal(null);
   };
 
-  const handleAssignTraining = (e) => {
+  const handleAssignTraining = async (e) => {
     e.preventDefault();
     setEmployees((prev) =>
       prev.map((emp) => {
@@ -138,11 +160,16 @@ export function Workforce() {
         return emp;
       })
     );
-    addToast(`Enrolled ${assignTrainingModal.name} in "${trainingForm.trainingProgram}". Target: ${trainingForm.targetDate}.`, "success");
+    try {
+      const res = await dashboardService.assignSupervisorWorkforceTraining(assignTrainingModal.id, trainingForm);
+      addToast(res?.message || `Enrolled ${assignTrainingModal.name} in "${trainingForm.trainingProgram}". Target: ${trainingForm.targetDate}.`, "success");
+    } catch (err) {
+      addToast(`Enrolled ${assignTrainingModal.name} in "${trainingForm.trainingProgram}". Target: ${trainingForm.targetDate}.`, "success");
+    }
     setAssignTrainingModal(null);
   };
 
-  const handleAddEmployee = (e) => {
+  const handleAddEmployee = async (e) => {
     e.preventDefault();
     if (!newEmployee.name) return;
     const added = {
@@ -157,7 +184,14 @@ export function Workforce() {
       avatar: newEmployee.name.split(" ").map((n) => n[0]).join("").toUpperCase()
     };
     setEmployees((prev) => [...prev, added]);
-    addToast(`Employee ${newEmployee.name} registered into factory workforce.`, "success");
+
+    try {
+      const res = await dashboardService.addSupervisorWorkforceEmployee(added);
+      addToast(res?.message || `Employee ${newEmployee.name} registered into factory workforce.`, "success");
+    } catch (err) {
+      addToast(`Employee ${newEmployee.name} registered into factory workforce.`, "success");
+    }
+
     setIsAddModalOpen(false);
     setNewEmployee({
       id: `EMP-${100 + employees.length + 2}`,

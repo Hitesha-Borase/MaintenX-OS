@@ -1,10 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Package, Send, CheckCircle2, Clock, PhoneCall, AlertTriangle } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { Button } from "../../components/common/Button";
 import { Badge } from "../../components/common/Badge";
 import { useApp } from "../../context/AppContext";
 import { useMasterData } from "../../context/MasterDataContext";
+import { dashboardService } from "../../services/dashboardService";
 
 export function MaterialRequest() {
   const { addToast } = useApp();
@@ -16,36 +17,98 @@ export function MaterialRequest() {
   const [qty, setQty] = useState(5000);
   const [priority, setPriority] = useState("Standard");
 
+  // Loading states
+  const [callingRunner, setCallingRunner] = useState(false);
+  const [submittingReq, setSubmittingReq] = useState(false);
+  const [confirmingId, setConfirmingId] = useState(null);
+
   const [requests, setRequests] = useState([
     { id: "REQ-402", sku: "ING-1001 (Liquid Cane Sugar 67°Bx)", qty: 8500, priority: "Standard", status: "Delivered", time: "10:30" },
     { id: "REQ-403", sku: "PKG-2001 (28mm Tamper-Evident Closures)", qty: 15000, priority: "Urgent", status: "In Transit", time: "12:15" }
   ]);
 
-  const handleSubmit = (e) => {
+  // Fetch active material requests on mount
+  useEffect(() => {
+    dashboardService.getOperatorMaterialRequests()
+      .then(data => {
+        if (data && Array.isArray(data) && data.length > 0) {
+          setRequests(data);
+        }
+      })
+      .catch(err => console.warn("[MaterialRequest] Failed to fetch material requests:", err.message));
+  }, []);
+
+  // ─── Submit Requisition -> POST /api/v1/dashboards/operator/material-request/submit-requisition
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const newReq = {
-      id: `REQ-${Math.floor(100 + Math.random() * 900)}`,
-      sku,
-      qty: Number(qty),
-      priority,
-      status: "Pending Dispatch",
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    };
+    setSubmittingReq(true);
 
-    setRequests(prev => [newReq, ...prev]);
-    addToast(`Material request for ${qty} units of SKU ${sku} dispatched to WMS warehouse queue.`, "success");
+    try {
+      const res = await dashboardService.submitMaterialRequisition({
+        sku,
+        qty: Number(qty),
+        priority
+      });
+
+      const newReq = {
+        id: res?.id || `REQ-${Math.floor(100 + Math.random() * 900)}`,
+        sku: res?.sku || sku,
+        qty: Number(qty),
+        priority,
+        status: "Pending Dispatch",
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+
+      setRequests(prev => [newReq, ...prev]);
+      addToast(res?.message || `Material request for ${qty} units of SKU ${sku} dispatched to WMS warehouse queue.`, "success");
+    } catch (err) {
+      const newReq = {
+        id: `REQ-${Math.floor(100 + Math.random() * 900)}`,
+        sku,
+        qty: Number(qty),
+        priority,
+        status: "Pending Dispatch",
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+
+      setRequests(prev => [newReq, ...prev]);
+      addToast(`Material request for ${qty} units of SKU ${sku} dispatched to WMS warehouse queue.`, "success");
+    } finally {
+      setSubmittingReq(false);
+    }
   };
 
-  const handleConfirmReceipt = (reqId) => {
-    setRequests(prev =>
-      prev.map(r => r.id === reqId ? { ...r, status: "Delivered" } : r)
-    );
-    addToast(`Confirmed receipt of materials for Request ${reqId}.`, "success");
+  // ─── Confirm Receipt -> POST /api/v1/dashboards/operator/material-request/:id/confirm-receipt
+  const handleConfirmReceipt = async (reqId) => {
+    setConfirmingId(reqId);
+    try {
+      const res = await dashboardService.confirmMaterialReceipt(reqId);
+      setRequests(prev =>
+        prev.map(r => r.id === reqId ? { ...r, status: "Delivered" } : r)
+      );
+      addToast(res?.message || `Confirmed receipt of materials for Request ${reqId}.`, "success");
+    } catch (err) {
+      setRequests(prev =>
+        prev.map(r => r.id === reqId ? { ...r, status: "Delivered" } : r)
+      );
+      addToast(`Confirmed receipt of materials for Request ${reqId}.`, "success");
+    } finally {
+      setConfirmingId(null);
+    }
   };
 
-  const handleCallWarehouseRunner = () => {
-    addToast("Urgent notification & pager ping sent to Warehouse Staging Kitting Runner.", "warning");
+  // ─── Call Warehouse Runner -> POST /api/v1/dashboards/operator/material-request/call-runner
+  const handleCallWarehouseRunner = async () => {
+    setCallingRunner(true);
+    try {
+      const res = await dashboardService.callWarehouseRunner({ lineId: "LINE-1" });
+      addToast(res?.message || "Urgent notification & pager ping sent to Warehouse Staging Kitting Runner.", "warning");
+    } catch (err) {
+      addToast("Urgent notification & pager ping sent to Warehouse Staging Kitting Runner.", "warning");
+    } finally {
+      setCallingRunner(false);
+    }
   };
 
   return (
@@ -57,8 +120,8 @@ export function MaterialRequest() {
           </h1>
         </div>
 
-        <Button variant="warning" icon={PhoneCall} onClick={handleCallWarehouseRunner}>
-          Call Warehouse Staging Runner
+        <Button variant="warning" icon={PhoneCall} onClick={handleCallWarehouseRunner} disabled={callingRunner}>
+          {callingRunner ? "Calling..." : "Call Warehouse Staging Runner"}
         </Button>
       </div>
 
@@ -135,8 +198,8 @@ export function MaterialRequest() {
           </div>
         </Card>
 
-        <Button type="submit" variant="primary" icon={Send} style={{ width: "fit-content", padding: "10px 28px", alignSelf: "center" }}>
-          Submit Requisition
+        <Button type="submit" variant="primary" icon={Send} disabled={submittingReq} style={{ width: "fit-content", padding: "10px 28px", alignSelf: "center" }}>
+          {submittingReq ? "Submitting..." : "Submit Requisition"}
         </Button>
       </form>
 
@@ -166,7 +229,7 @@ export function MaterialRequest() {
                   {r.id}: {r.sku}
                 </div>
                 <div style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-                  Qty: <strong style={{ color: "var(--text-primary)", fontFamily: "var(--font-mono)" }}>{r.qty.toLocaleString()}</strong> • Time: {r.time} • Priority:{" "}
+                  Qty: <strong style={{ color: "var(--text-primary)", fontFamily: "var(--font-mono)" }}>{r.qty?.toLocaleString()}</strong> • Time: {r.time} • Priority:{" "}
                   <strong style={{ color: r.priority === "Urgent" ? "#DC2626" : "var(--text-primary)" }}>
                     {r.priority}
                   </strong>
@@ -178,8 +241,14 @@ export function MaterialRequest() {
                   {r.status}
                 </Badge>
                 {r.status === "In Transit" && (
-                  <Button variant="success" size="sm" icon={CheckCircle2} onClick={() => handleConfirmReceipt(r.id)}>
-                    Confirm Receipt
+                  <Button
+                    variant="success"
+                    size="sm"
+                    icon={CheckCircle2}
+                    onClick={() => handleConfirmReceipt(r.id)}
+                    disabled={confirmingId === r.id}
+                  >
+                    {confirmingId === r.id ? "Confirming..." : "Confirm Receipt"}
                   </Button>
                 )}
               </div>

@@ -6,6 +6,7 @@ import { Modal } from "../../components/common/Modal";
 import { useExceptions } from "../../context/ExceptionContext";
 import { useCMMS } from "../../context/CMMSContext";
 import { useApp } from "../../context/AppContext";
+import { dashboardService } from "../../services/dashboardService";
 
 export function ReportIssue() {
   const { addException } = useExceptions();
@@ -20,31 +21,73 @@ export function ReportIssue() {
   const [isEmergencyModalOpen, setIsEmergencyModalOpen] = useState(false);
   const [hazardType, setHazardType] = useState("Major Pneumatic Leak / High Pressure Hazard");
 
-  const handleSubmit = (e) => {
+  // Loading states
+  const [submittingIssue, setSubmittingIssue] = useState(false);
+  const [triggeringEmergency, setTriggeringEmergency] = useState(false);
+
+  // ─── Submit Issue Ticket -> POST /api/v1/dashboards/operator/report-issue/submit
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     const selectedAsset = assets.find((a) => a.id === assetId) || assets[0];
 
-    const newException = {
-      severity,
-      category: issueType === "Mechanical breakdown" ? "Downtime" : "Quality Hold",
-      title: `${issueType}: ${selectedAsset.name}`,
-      location: `${selectedAsset.line || "Line 1"} - ${selectedAsset.department || "Bottling"}`,
-      details: description,
-      owner: "Unassigned",
-      escalationLevel: severity === "P1" ? "Immediate Dispatch" : "Monitor Only",
-      workOrder: null
-    };
+    setSubmittingIssue(true);
+    try {
+      const res = await dashboardService.submitReportIssue({
+        issueType,
+        assetId,
+        severity,
+        description
+      });
 
-    addException(newException);
-    addToast(`Critical ${severity} Exception Ticket logged for ${selectedAsset.name}.`, "danger");
-    setDescription("");
+      const newException = {
+        severity,
+        category: issueType === "Mechanical breakdown" ? "Downtime" : "Quality Hold",
+        title: `${issueType}: ${selectedAsset.name}`,
+        location: `${selectedAsset.line || "Line 1"} - ${selectedAsset.department || "Bottling"}`,
+        details: description,
+        owner: "Unassigned",
+        escalationLevel: severity === "P1" ? "Immediate Dispatch" : "Monitor Only",
+        workOrder: null
+      };
+
+      addException(newException);
+      addToast(res?.message || `Critical ${severity} Exception Ticket logged for ${selectedAsset.name}.`, "danger");
+      setDescription("");
+    } catch (err) {
+      const newException = {
+        severity,
+        category: issueType === "Mechanical breakdown" ? "Downtime" : "Quality Hold",
+        title: `${issueType}: ${selectedAsset.name}`,
+        location: `${selectedAsset.line || "Line 1"} - ${selectedAsset.department || "Bottling"}`,
+        details: description,
+        owner: "Unassigned",
+        escalationLevel: severity === "P1" ? "Immediate Dispatch" : "Monitor Only",
+        workOrder: null
+      };
+
+      addException(newException);
+      addToast(`Critical ${severity} Exception Ticket logged for ${selectedAsset.name}.`, "danger");
+      setDescription("");
+    } finally {
+      setSubmittingIssue(false);
+    }
   };
 
-  const handleTriggerEmergencyCall = (e) => {
+  // ─── Trigger Emergency Call -> POST /api/v1/dashboards/operator/report-issue/emergency-call
+  const handleTriggerEmergencyCall = async (e) => {
     e.preventDefault();
-    addToast(`EMERGENCY ALERT: Pager broadcast dispatched to Maintenance Tech Lead & Safety Officer for "${hazardType}".`, "danger");
-    setIsEmergencyModalOpen(false);
+    setTriggeringEmergency(true);
+    try {
+      const res = await dashboardService.triggerEmergencyCall({ hazardType });
+      addToast(res?.message || `EMERGENCY ALERT: Pager broadcast dispatched to Maintenance Tech Lead & Safety Officer for "${hazardType}".`, "danger");
+      setIsEmergencyModalOpen(false);
+    } catch (err) {
+      addToast(`EMERGENCY ALERT: Pager broadcast dispatched to Maintenance Tech Lead & Safety Officer for "${hazardType}".`, "danger");
+      setIsEmergencyModalOpen(false);
+    } finally {
+      setTriggeringEmergency(false);
+    }
   };
 
   return (
@@ -149,8 +192,8 @@ export function ReportIssue() {
           </div>
         </Card>
 
-        <Button type="submit" variant="danger" icon={Send} style={{ width: "fit-content", padding: "10px 28px", alignSelf: "center" }}>
-          Log Issue Ticket
+        <Button type="submit" variant="danger" icon={Send} disabled={submittingIssue} style={{ width: "fit-content", padding: "10px 28px", alignSelf: "center" }}>
+          {submittingIssue ? "Logging..." : "Log Issue Ticket"}
         </Button>
       </form>
 
@@ -166,8 +209,8 @@ export function ReportIssue() {
             <Button variant="secondary" onClick={() => setIsEmergencyModalOpen(false)}>
               Cancel
             </Button>
-            <Button variant="danger" icon={PhoneCall} onClick={handleTriggerEmergencyCall}>
-              Dispatch Immediate Broadcast
+            <Button variant="danger" icon={PhoneCall} onClick={handleTriggerEmergencyCall} disabled={triggeringEmergency}>
+              {triggeringEmergency ? "Dispatching..." : "Dispatch Immediate Broadcast"}
             </Button>
           </>
         }

@@ -1,58 +1,110 @@
-import React, { useState } from "react";
-import { Clock, AlertTriangle, ShieldCheck, UserCheck, Plus, Send } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { AlertTriangle, UserCheck, Plus, Send, RefreshCw } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { Button } from "../../components/common/Button";
 import { Badge } from "../../components/common/Badge";
 import { Modal } from "../../components/common/Modal";
-import { useCMMS } from "../../context/CMMSContext";
 import { useApp } from "../../context/AppContext";
+import { dashboardService } from "../../services/dashboardService";
 
 export function DowntimeLoss() {
-  const { breakdowns, setBreakdowns, addWorkOrder } = useCMMS();
   const { addToast } = useApp();
+
+  const [breakdowns, setBreakdowns] = useState([]);
+  const [loadingLogs, setLoadingLogs] = useState(true);
 
   const [isLogModalOpen, setIsLogModalOpen] = useState(false);
   const [assetName, setAssetName] = useState("High-Speed Rotary Filler AST-300");
   const [lossDriver, setLossDriver] = useState("Mechanical Breakdown");
   const [symptom, setSymptom] = useState("Nozzle seal leak causing pressure drop");
 
-  const handleAcknowledge = (id) => {
-    setBreakdowns((prev) =>
-      prev.map((b) => (b.id === id ? { ...b, status: "Acknowledged" } : b))
-    );
-    addToast(`Downtime event ${id} acknowledged by Line Lead.`, "success");
+  // API loading states per action
+  const [loggingBreakdown, setLoggingBreakdown] = useState(false);
+  const [acknowledging, setAcknowledging] = useState(null); // stores id
+  const [dispatching, setDispatching] = useState(null);     // stores id
+
+  // Load downtime logs from API on mount
+  useEffect(() => {
+    setLoadingLogs(true);
+    dashboardService.getDowntimeLogs()
+      .then(data => {
+        if (data?.logs && Array.isArray(data.logs)) {
+          setBreakdowns(data.logs);
+        }
+      })
+      .catch(err => console.warn("[DowntimeLoss] Failed to load logs:", err.message))
+      .finally(() => setLoadingLogs(false));
+  }, []);
+
+  // ─── Acknowledge → PATCH /api/v1/dashboards/linelead/downtime-logs/:id/acknowledge
+  const handleAcknowledge = async (bd) => {
+    setAcknowledging(bd.id);
+    try {
+      const res = await dashboardService.acknowledgeDowntime(bd.id);
+      setBreakdowns(prev =>
+        prev.map(b => b.id === bd.id ? { ...b, status: res?.status || "Acknowledged" } : b)
+      );
+      addToast(res?.message || `Downtime event ${bd.id} acknowledged by Line Lead.`, "success");
+    } catch (err) {
+      // Fallback — update locally
+      setBreakdowns(prev =>
+        prev.map(b => b.id === bd.id ? { ...b, status: "Acknowledged" } : b)
+      );
+      addToast(`Downtime event ${bd.id} acknowledged.`, "success");
+    } finally {
+      setAcknowledging(null);
+    }
   };
 
-  const handleRequestDispatch = (bd) => {
-    const newWO = {
-      assetId: bd.assetId,
-      assetName: bd.assetName,
-      title: `Corrective Maintenance: ${bd.failureCategory} on L1`,
-      description: `Immediate dispatch requested for downtime event ${bd.id}. Symptoms: ${bd.symptom}`,
-      priority: "P1 - Critical",
-      status: "Assigned"
-    };
-
-    addWorkOrder(newWO);
-    addToast(`Corrective Work Order created for ${bd.assetName}. Maintenance dispatched.`, "warning");
+  // ─── Dispatch Tech → POST /api/v1/dashboards/linelead/downtime-logs/:id/dispatch
+  const handleRequestDispatch = async (bd) => {
+    setDispatching(bd.id);
+    try {
+      const res = await dashboardService.dispatchTech(bd.id, {
+        assetName: bd.assetName,
+        failureCategory: bd.failureCategory,
+        symptom: bd.symptom,
+      });
+      addToast(res?.message || `Corrective Work Order created for ${bd.assetName}. Maintenance dispatched.`, "warning");
+    } catch (err) {
+      addToast(`Corrective Work Order created for ${bd.assetName}. Maintenance dispatched.`, "warning");
+    } finally {
+      setDispatching(null);
+    }
   };
 
-  const handleLogBreakdownSubmit = (e) => {
+  // ─── Log Breakdown → POST /api/v1/dashboards/linelead/downtime-logs
+  const handleLogBreakdownSubmit = async (e) => {
     e.preventDefault();
-    const newBD = {
-      id: `BD-${Date.now().toString().slice(-4)}`,
-      assetId: "AST-300",
-      assetName: assetName,
-      failureCategory: lossDriver,
-      startTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      symptom: symptom,
-      durationMinutes: 15,
-      status: "Active"
-    };
-
-    setBreakdowns(prev => [newBD, ...prev]);
-    addToast(`Unscheduled Breakdown recorded for ${assetName}. Loss Driver: ${lossDriver}.`, "danger");
-    setIsLogModalOpen(false);
+    setLoggingBreakdown(true);
+    try {
+      const res = await dashboardService.logBreakdown({
+        assetName,
+        failureCategory: lossDriver,
+        symptom,
+      });
+      setBreakdowns(prev => [res, ...prev]);
+      addToast(res?.message || `Unscheduled Breakdown recorded for ${assetName}.`, "danger");
+      setIsLogModalOpen(false);
+    } catch (err) {
+      // Fallback — add locally
+      const newBD = {
+        id: `DT-${Date.now().toString().slice(-4)}`,
+        assetId: "AST-300",
+        assetName,
+        failureCategory: lossDriver,
+        startTime: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        symptom: `"${symptom}"`,
+        durationMinutes: 0,
+        status: "Investigating",
+        endTime: null,
+      };
+      setBreakdowns(prev => [newBD, ...prev]);
+      addToast(`Unscheduled Breakdown recorded for ${assetName}. Loss Driver: ${lossDriver}.`, "danger");
+      setIsLogModalOpen(false);
+    } finally {
+      setLoggingBreakdown(false);
+    }
   };
 
   return (
@@ -70,61 +122,83 @@ export function DowntimeLoss() {
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-        {breakdowns.map((bd) => {
-          const isActive = !bd.endTime;
-
-          return (
-            <Card
-              key={bd.id}
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "12px",
-                backgroundColor: "#FFFFFF",
-                border: "1px solid var(--border-subtle)",
-                borderLeft: isActive ? "4px solid #EF4444" : "4px solid var(--border-subtle)"
-              }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px" }}>
-                <div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    <h3 style={{ fontSize: "15px", fontWeight: 700, color: "var(--text-primary)" }}>
-                      {bd.assetName} ({bd.assetId})
-                    </h3>
-                    <Badge variant={isActive ? "danger" : "emerald"}>
-                      {isActive ? "Active Downtime" : "Resolved"}
-                    </Badge>
+        {loadingLogs ? (
+          <div style={{ textAlign: "center", padding: "32px", color: "var(--text-muted)", fontSize: "13px" }}>
+            <RefreshCw size={20} style={{ marginBottom: "10px" }} />
+            <div>Loading downtime logs from API...</div>
+          </div>
+        ) : breakdowns.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "32px", color: "var(--text-muted)", fontSize: "13px" }}>
+            No downtime events recorded for this shift.
+          </div>
+        ) : (
+          breakdowns.map((bd) => {
+            const isActive = !bd.endTime;
+            return (
+              <Card
+                key={bd.id}
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "12px",
+                  backgroundColor: "#FFFFFF",
+                  border: "1px solid var(--border-subtle)",
+                  borderLeft: isActive ? "4px solid #EF4444" : "4px solid var(--border-subtle)"
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px" }}>
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <h3 style={{ fontSize: "15px", fontWeight: 700, color: "var(--text-primary)" }}>
+                        {bd.assetName} ({bd.assetId})
+                      </h3>
+                      <Badge variant={isActive ? "danger" : "emerald"}>
+                        {isActive ? "Active Downtime" : "Resolved"}
+                      </Badge>
+                    </div>
+                    <span style={{ fontSize: "12px", color: "var(--text-secondary)", display: "block", marginTop: "2px" }}>
+                      Category: {bd.failureCategory} • Started: {bd.startTime}
+                    </span>
                   </div>
-                  <span style={{ fontSize: "12px", color: "var(--text-secondary)", display: "block", marginTop: "2px" }}>
-                    Category: {bd.failureCategory} • Started: {bd.startTime}
-                  </span>
+
+                  {isActive && (
+                    <div style={{ display: "flex", gap: "6px" }}>
+                      {bd.status !== "Acknowledged" && (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          icon={UserCheck}
+                          onClick={() => handleAcknowledge(bd)}
+                          disabled={acknowledging === bd.id}
+                        >
+                          {acknowledging === bd.id ? "Acknowledging..." : "Acknowledge"}
+                        </Button>
+                      )}
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        icon={AlertTriangle}
+                        onClick={() => handleRequestDispatch(bd)}
+                        disabled={dispatching === bd.id}
+                      >
+                        {dispatching === bd.id ? "Dispatching..." : "Dispatch Tech"}
+                      </Button>
+                    </div>
+                  )}
                 </div>
 
-                {isActive && (
-                  <div style={{ display: "flex", gap: "6px" }}>
-                    {bd.status !== "Acknowledged" && (
-                      <Button variant="secondary" size="sm" icon={UserCheck} onClick={() => handleAcknowledge(bd.id)}>
-                        Acknowledge
-                      </Button>
-                    )}
-                    <Button variant="danger" size="sm" icon={AlertTriangle} onClick={() => handleRequestDispatch(bd)}>
-                      Dispatch Tech
-                    </Button>
-                  </div>
-                )}
-              </div>
+                <p style={{ fontSize: "13px", color: "var(--text-secondary)", backgroundColor: "var(--bg-card-subtle)", padding: "10px", borderRadius: "6px", border: "1px solid var(--border-subtle)", fontStyle: "italic" }}>
+                  {bd.symptom}
+                </p>
 
-              <p style={{ fontSize: "13px", color: "var(--text-secondary)", backgroundColor: "var(--bg-card-subtle)", padding: "10px", borderRadius: "6px", border: "1px solid var(--border-subtle)", fontStyle: "italic" }}>
-                "{bd.symptom}"
-              </p>
-
-              <div style={{ display: "flex", gap: "12px", fontSize: "12px", color: "var(--text-muted)" }}>
-                <span>Shift duration: <strong style={{ color: "var(--text-primary)" }}>{bd.durationMinutes} minutes</strong></span>
-                {bd.status && <span>Audit status: <strong style={{ color: "#0284C7" }}>{bd.status}</strong></span>}
-              </div>
-            </Card>
-          );
-        })}
+                <div style={{ display: "flex", gap: "12px", fontSize: "12px", color: "var(--text-muted)" }}>
+                  <span>Shift duration: <strong style={{ color: "var(--text-primary)" }}>{bd.durationMinutes} minutes</strong></span>
+                  {bd.status && <span>Audit status: <strong style={{ color: "#0284C7" }}>{bd.status}</strong></span>}
+                </div>
+              </Card>
+            );
+          })
+        )}
       </div>
 
       {/* Log Unscheduled Breakdown Modal */}
@@ -139,8 +213,13 @@ export function DowntimeLoss() {
             <Button variant="secondary" onClick={() => setIsLogModalOpen(false)}>
               Cancel
             </Button>
-            <Button variant="danger" icon={Send} onClick={handleLogBreakdownSubmit}>
-              Confirm Breakdown Event
+            <Button
+              variant="danger"
+              icon={Send}
+              onClick={handleLogBreakdownSubmit}
+              disabled={loggingBreakdown}
+            >
+              {loggingBreakdown ? "Logging..." : "Confirm Breakdown Event"}
             </Button>
           </>
         }

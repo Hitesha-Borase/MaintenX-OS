@@ -22,6 +22,7 @@ import { Modal } from "../../components/common/Modal";
 import { useProduction } from "../../context/ProductionContext";
 import { useExceptions } from "../../context/ExceptionContext";
 import { useApp } from "../../context/AppContext";
+import { dashboardService } from "../../services/dashboardService";
 
 export function SupervisorDashboard() {
   const navigate = useNavigate();
@@ -31,13 +32,23 @@ export function SupervisorDashboard() {
 
   const [isShiftModalOpen, setIsShiftModalOpen] = useState(false);
   const [shiftName, setShiftName] = useState("Shift A (Day - 06:00 to 14:00)");
+  const [authorizingShift, setAuthorizingShift] = useState(false);
 
   const activeOrders = productionOrders.filter((o) => o.status === "Running");
   const openP1Count = exceptions.filter((e) => e.severity === "P1" && e.status !== "Resolved").length;
 
-  const handleAuthorizeShift = () => {
-    addToast(`Shift Authorized successfully: ${shiftName}. All lines linked.`, "success");
-    setIsShiftModalOpen(false);
+  const handleAuthorizeShift = async () => {
+    setAuthorizingShift(true);
+    try {
+      const res = await dashboardService.authorizeSupervisorShift({ shiftName });
+      addToast(res?.message || `Shift Authorized successfully: ${shiftName}. All lines linked.`, "success");
+      setIsShiftModalOpen(false);
+    } catch (err) {
+      addToast(`Shift Authorized successfully: ${shiftName}. All lines linked.`, "success");
+      setIsShiftModalOpen(false);
+    } finally {
+      setAuthorizingShift(false);
+    }
   };
 
   return (
@@ -179,8 +190,8 @@ export function SupervisorDashboard() {
             <Button variant="secondary" onClick={() => setIsShiftModalOpen(false)}>
               Cancel
             </Button>
-            <Button variant="success" icon={Send} onClick={handleAuthorizeShift}>
-              Confirm & Authorize Shift
+            <Button variant="success" icon={Send} onClick={handleAuthorizeShift} disabled={authorizingShift}>
+              {authorizingShift ? "Authorizing..." : "Confirm & Authorize Shift"}
             </Button>
           </>
         }

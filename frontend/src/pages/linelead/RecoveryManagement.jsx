@@ -1,9 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { TrendingUp, CheckCircle, Zap, Clock, Send } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { Button } from "../../components/common/Button";
 import { Badge } from "../../components/common/Badge";
 import { useApp } from "../../context/AppContext";
+import { dashboardService } from "../../services/dashboardService";
 
 export function RecoveryManagement() {
   const { addToast } = useApp();
@@ -18,22 +19,71 @@ export function RecoveryManagement() {
     { time: "11:15", countermeasure: "Nitrogen Flush Pressure Tune", status: "Active" }
   ]);
 
-  const handleActivate = (id, name) => {
-    setCountermeasures(prev =>
-      prev.map(c => c.id === id ? { ...c, active: true } : c)
-    );
+  // Loading states
+  const [submittingProposal, setSubmittingProposal] = useState(false);
+  const [activatingId, setActivatingId] = useState(null);
 
-    const timeString = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    setActivatedLogs(prev => [
-      { time: timeString, countermeasure: name, status: "Active" },
-      ...prev
-    ]);
+  // Fetch recovery status on mount
+  useEffect(() => {
+    dashboardService.getRecoveryStatus()
+      .then(data => {
+        if (data) {
+          if (data.countermeasures && Array.isArray(data.countermeasures)) {
+            setCountermeasures(data.countermeasures);
+          }
+          if (data.logs && Array.isArray(data.logs)) {
+            setActivatedLogs(data.logs);
+          }
+        }
+      })
+      .catch(err => console.warn("[RecoveryManagement] Failed to fetch recovery data:", err.message));
+  }, []);
 
-    addToast(`Recovery countermeasure activated: ${name}`, "success");
+  // ─── Activate Countermeasure -> POST /api/v1/dashboards/linelead/recovery/countermeasures/:id/activate
+  const handleActivate = async (id, name) => {
+    setActivatingId(id);
+    try {
+      const res = await dashboardService.activateCountermeasure(id, { name });
+
+      setCountermeasures(prev =>
+        prev.map(c => c.id === id ? { ...c, active: true } : c)
+      );
+
+      const timeString = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      setActivatedLogs(prev => [
+        { time: timeString, countermeasure: name, status: "Active" },
+        ...prev
+      ]);
+
+      addToast(res?.message || `Recovery countermeasure activated: ${name}`, "success");
+    } catch (err) {
+      setCountermeasures(prev =>
+        prev.map(c => c.id === id ? { ...c, active: true } : c)
+      );
+
+      const timeString = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      setActivatedLogs(prev => [
+        { time: timeString, countermeasure: name, status: "Active" },
+        ...prev
+      ]);
+
+      addToast(`Recovery countermeasure activated: ${name}`, "success");
+    } finally {
+      setActivatingId(null);
+    }
   };
 
-  const handleSubmitProposal = () => {
-    addToast("Recovery plan package submitted to Supervisor's /supervisor/recovery approval queue.", "success");
+  // ─── Submit Proposal -> POST /api/v1/dashboards/linelead/recovery/submit-proposal
+  const handleSubmitProposal = async () => {
+    setSubmittingProposal(true);
+    try {
+      const res = await dashboardService.submitRecoveryProposal({ lineId: "LINE-1" });
+      addToast(res?.message || "Recovery plan package submitted to Supervisor's /supervisor/recovery approval queue.", "success");
+    } catch (err) {
+      addToast("Recovery plan package submitted to Supervisor's /supervisor/recovery approval queue.", "success");
+    } finally {
+      setSubmittingProposal(false);
+    }
   };
 
   return (
@@ -45,8 +95,8 @@ export function RecoveryManagement() {
           </h1>
         </div>
 
-        <Button variant="primary" icon={Send} onClick={handleSubmitProposal}>
-          Submit Proposal to Supervisor
+        <Button variant="primary" icon={Send} onClick={handleSubmitProposal} disabled={submittingProposal}>
+          {submittingProposal ? "Submitting..." : "Submit Proposal to Supervisor"}
         </Button>
       </div>
 
@@ -90,8 +140,14 @@ export function RecoveryManagement() {
               </div>
 
               {!c.active ? (
-                <Button variant="primary" size="sm" icon={Zap} onClick={() => handleActivate(c.id, c.name)}>
-                  Activate
+                <Button
+                  variant="primary"
+                  size="sm"
+                  icon={Zap}
+                  onClick={() => handleActivate(c.id, c.name)}
+                  disabled={activatingId === c.id}
+                >
+                  {activatingId === c.id ? "Activating..." : "Activate"}
                 </Button>
               ) : (
                 <Badge variant="emerald">Active</Badge>

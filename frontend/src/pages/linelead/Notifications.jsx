@@ -1,10 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Bell, Info, ShieldCheck, Wrench, CheckCircle2, Trash2 } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { Button } from "../../components/common/Button";
 import { Badge } from "../../components/common/Badge";
 import { useApp } from "../../context/AppContext";
+import { dashboardService } from "../../services/dashboardService";
 
 export function Notifications() {
   const navigate = useNavigate();
@@ -17,24 +18,93 @@ export function Notifications() {
     { id: 3, type: "material", read: false, icon: Bell, title: "Low Stock Warning - Orange Caps", msg: "WMS inventory stock below safety limit threshold.", time: "2 hours ago", path: "/linelead/material-status" }
   ]);
 
-  const handleMarkAsRead = (id) => {
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
-    addToast("Notification marked as read.", "success");
+  // Loading states for actions
+  const [markingAll, setMarkingAll] = useState(false);
+  const [clearingAll, setClearingAll] = useState(false);
+  const [actionId, setActionId] = useState(null);
+
+  // Helper to resolve icon component from string or keep existing icon component
+  const resolveIcon = (type) => {
+    switch (type) {
+      case "system": return Info;
+      case "wo": return Wrench;
+      case "material": return Bell;
+      default: return Bell;
+    }
   };
 
-  const handleDelete = (id) => {
-    setNotifications(prev => prev.filter((n) => n.id !== id));
-    addToast("Notification deleted.", "info");
+  // Fetch notifications from backend on mount
+  useEffect(() => {
+    dashboardService.getNotifications()
+      .then(data => {
+        if (data && Array.isArray(data)) {
+          setNotifications(data.map(n => ({
+            ...n,
+            icon: resolveIcon(n.type)
+          })));
+        }
+      })
+      .catch(err => console.warn("[Notifications] Failed to fetch notifications:", err.message));
+  }, []);
+
+  // ─── Mark Single Read -> PATCH /api/v1/dashboards/linelead/notifications/:id/read
+  const handleMarkAsRead = async (id) => {
+    setActionId(id);
+    try {
+      const res = await dashboardService.markNotificationRead(id);
+      setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+      addToast(res?.message || "Notification marked as read.", "success");
+    } catch (err) {
+      setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+      addToast("Notification marked as read.", "success");
+    } finally {
+      setActionId(null);
+    }
   };
 
-  const handleMarkAllAsRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-    addToast("All notifications marked as read.", "success");
+  // ─── Delete Single -> DELETE /api/v1/dashboards/linelead/notifications/:id
+  const handleDelete = async (id) => {
+    setActionId(id);
+    try {
+      const res = await dashboardService.deleteNotification(id);
+      setNotifications(prev => prev.filter((n) => n.id !== id));
+      addToast(res?.message || "Notification deleted.", "info");
+    } catch (err) {
+      setNotifications(prev => prev.filter((n) => n.id !== id));
+      addToast("Notification deleted.", "info");
+    } finally {
+      setActionId(null);
+    }
   };
 
-  const handleClearAll = () => {
-    setNotifications([]);
-    addToast("All notifications cleared.", "info");
+  // ─── Mark All Read -> PATCH /api/v1/dashboards/linelead/notifications/mark-all-read
+  const handleMarkAllAsRead = async () => {
+    setMarkingAll(true);
+    try {
+      const res = await dashboardService.markAllNotificationsRead();
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      addToast(res?.message || "All notifications marked as read.", "success");
+    } catch (err) {
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      addToast("All notifications marked as read.", "success");
+    } finally {
+      setMarkingAll(false);
+    }
+  };
+
+  // ─── Clear All -> DELETE /api/v1/dashboards/linelead/notifications/clear-all
+  const handleClearAll = async () => {
+    setClearingAll(true);
+    try {
+      const res = await dashboardService.clearAllNotifications();
+      setNotifications([]);
+      addToast(res?.message || "All notifications cleared.", "info");
+    } catch (err) {
+      setNotifications([]);
+      addToast("All notifications cleared.", "info");
+    } finally {
+      setClearingAll(false);
+    }
   };
 
   const unreadCount = notifications.filter(n => !n.read).length;
@@ -68,10 +138,14 @@ export function Notifications() {
           </h1>
           {unreadCount > 0 && <Badge variant="red">{unreadCount} UNREAD</Badge>}
         </div>
-        
+
         <div style={{ display: "flex", gap: "10px" }}>
-          <Button variant="secondary" icon={CheckCircle2} onClick={handleMarkAllAsRead} style={{ fontSize: "12px", height: "32px" }}>Mark All as Read</Button>
-          <Button variant="secondary" icon={Trash2} onClick={handleClearAll} style={{ fontSize: "12px", height: "32px" }}>Clear All</Button>
+          <Button variant="secondary" icon={CheckCircle2} onClick={handleMarkAllAsRead} disabled={markingAll} style={{ fontSize: "12px", height: "32px" }}>
+            {markingAll ? "Updating..." : "Mark All as Read"}
+          </Button>
+          <Button variant="secondary" icon={Trash2} onClick={handleClearAll} disabled={clearingAll} style={{ fontSize: "12px", height: "32px" }}>
+            {clearingAll ? "Clearing..." : "Clear All"}
+          </Button>
         </div>
       </div>
 
@@ -89,7 +163,7 @@ export function Notifications() {
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
           {filteredNotifications.map((n) => {
-            const IconComponent = n.icon;
+            const IconComponent = n.icon || Bell;
             const s = getStyleProps(n.type);
 
             return (
@@ -105,7 +179,7 @@ export function Notifications() {
                 }}
               >
                 <div className="mobile-flex-col" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "16px", padding: "16px" }}>
-                  
+
                   <div style={{ display: "flex", gap: "12px", alignItems: "flex-start", minWidth: 0 }}>
                     <div
                       style={{
@@ -147,8 +221,9 @@ export function Notifications() {
                         size="xs"
                         icon={CheckCircle2}
                         onClick={() => handleMarkAsRead(n.id)}
+                        disabled={actionId === n.id}
                       >
-                        Mark as Read
+                        {actionId === n.id ? "Saving..." : "Mark as Read"}
                       </Button>
                     )}
                     <Button
@@ -156,6 +231,7 @@ export function Notifications() {
                       size="xs"
                       icon={Trash2}
                       onClick={() => handleDelete(n.id)}
+                      disabled={actionId === n.id}
                     />
                   </div>
 

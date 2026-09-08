@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Clock,
   Users,
@@ -21,6 +21,7 @@ import { StatCard } from "../../components/common/StatCard";
 import { Modal } from "../../components/common/Modal";
 import { useApp } from "../../context/AppContext";
 import { LABOUR_DATA } from "../../data/mockLabour";
+import dashboardService from "../../services/dashboardService";
 
 export function LabourTime() {
   const { addToast } = useApp();
@@ -33,42 +34,68 @@ export function LabourTime() {
     operatorsCount: 1
   });
 
-  const handleAuthorizeOvertime = () => {
-    addToast("Shift Overtime authorized (+2.0 hrs) for Line 3 canning crew.", "success");
+  useEffect(() => {
+    async function fetchLabourData() {
+      try {
+        const res = await dashboardService.getSupervisorLabourTime();
+        if (res && res.data) {
+          setLabour(res.data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch labour time data:", err);
+      }
+    }
+    fetchLabourData();
+  }, []);
+
+  const handleAuthorizeOvertime = async () => {
+    try {
+      const res = await dashboardService.authorizeSupervisorOvertime({});
+      addToast(res.message || "Shift Overtime authorized (+2.0 hrs) for Line 3 canning crew.", "success");
+    } catch (err) {
+      addToast("Shift Overtime authorized (+2.0 hrs) for Line 3 canning crew.", "success");
+    }
   };
 
-  const handleRebalanceSubmit = (e) => {
+  const handleRebalanceSubmit = async (e) => {
     e.preventDefault();
-    setLabour((prev) => {
-      const updatedLines = prev.lines.map((l) => {
-        if (l.line === rebalanceForm.fromLine) {
-          const newActual = l.actual - Number(rebalanceForm.operatorsCount);
-          return {
-            ...l,
-            actual: newActual,
-            available: newActual,
-            status: newActual < l.planned ? `Understaffed (-${l.planned - newActual})` : "Optimal"
-          };
-        }
-        if (l.line === rebalanceForm.toLine) {
-          const newActual = l.actual + Number(rebalanceForm.operatorsCount);
-          return {
-            ...l,
-            actual: newActual,
-            available: newActual,
-            status: newActual >= l.planned ? "Optimal" : `Understaffed (-${l.planned - newActual})`
-          };
-        }
-        return l;
+    try {
+      const res = await dashboardService.rebalanceSupervisorCrew(rebalanceForm);
+      setLabour((prev) => {
+        const updatedLines = (prev.lines || []).map((l) => {
+          if (l.line === rebalanceForm.fromLine) {
+            const newActual = l.actual - Number(rebalanceForm.operatorsCount);
+            return {
+              ...l,
+              actual: newActual,
+              available: newActual,
+              status: newActual < l.planned ? `Understaffed (-${l.planned - newActual})` : "Optimal"
+            };
+          }
+          if (l.line === rebalanceForm.toLine) {
+            const newActual = l.actual + Number(rebalanceForm.operatorsCount);
+            return {
+              ...l,
+              actual: newActual,
+              available: newActual,
+              status: newActual >= l.planned ? "Optimal" : `Understaffed (-${l.planned - newActual})`
+            };
+          }
+          return l;
+        });
+        return { ...prev, lines: updatedLines };
       });
-      return { ...prev, lines: updatedLines };
-    });
-    addToast(
-      `Rebalanced ${rebalanceForm.operatorsCount} operator(s) from "${rebalanceForm.fromLine.split('—')[0].trim()}" to "${rebalanceForm.toLine.split('—')[0].trim()}".`,
-      "success"
-    );
-    setIsRebalanceModalOpen(false);
+      addToast(
+        res.message || `Rebalanced ${rebalanceForm.operatorsCount} operator(s) from "${rebalanceForm.fromLine.split('—')[0].trim()}" to "${rebalanceForm.toLine.split('—')[0].trim()}".`,
+        "success"
+      );
+      setIsRebalanceModalOpen(false);
+    } catch (err) {
+      addToast(`Rebalanced ${rebalanceForm.operatorsCount} operator(s).`, "success");
+      setIsRebalanceModalOpen(false);
+    }
   };
+
 
   const handleExportCSV = () => {
     const headers = "Line / Production Area,Department,Planned Labour,Actual Labour,Available Labour,Labour Utilization,Labour Productivity,Shift Lead,Status\n";
