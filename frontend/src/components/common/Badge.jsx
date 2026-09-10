@@ -41,3 +41,6 @@ export function Badge({ children, variant = "slate", className = "", dot = false
     </span>
   );
 }
+
+export default Badge;
+

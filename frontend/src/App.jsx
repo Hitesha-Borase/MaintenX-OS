@@ -678,7 +678,6 @@ export function AppContent() {
           <Route path="/labour/hours" element={<RoleProtectedRoute><LabourHoursPage /></RoleProtectedRoute>} />
 
           <Route path="/inventory" element={<RoleProtectedRoute><WarehouseInventoryPage /></RoleProtectedRoute>} />
-          <Route path="/warehouse/inventory" element={<RoleProtectedRoute><WarehouseInventoryPage /></RoleProtectedRoute>} />
           <Route path="/warehouse/material-shortage" element={<RoleProtectedRoute><MaterialShortagePage /></RoleProtectedRoute>} />
           <Route path="/warehouse/finished-goods" element={<RoleProtectedRoute><FinishedGoodsPage /></RoleProtectedRoute>} />
 

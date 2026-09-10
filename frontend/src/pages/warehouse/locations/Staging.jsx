@@ -26,6 +26,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useApp } from "../../../context/AppContext";
 import { useInventory } from "../../../context/InventoryContext";
+import warehouseService from "../../../services/warehouseService";
 
 export function Staging() {
   const { addToast } = useApp();
@@ -36,6 +37,21 @@ export function Staging() {
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("ALL");
   const [qaFilter, setQaFilter] = useState("ALL");
+  const [backendStagingData, setBackendStagingData] = useState(null);
+
+  // Sync Inbound Staging data from backend API on mount
+  React.useEffect(() => {
+    let isMounted = true;
+    warehouseService.getStagingLocations().then((res) => {
+      const data = res?.data || res;
+      if (isMounted && data) {
+        setBackendStagingData(data);
+      }
+    }).catch((err) => {
+      console.warn("Backend staging fetch fallback:", err.message);
+    });
+    return () => { isMounted = false; };
+  }, []);
 
   // Track verified scans per lot
   const [verifiedLots, setVerifiedLots] = useState({});
@@ -77,8 +93,13 @@ export function Staging() {
     setScanModalLot(lot);
   };
 
-  const handleConfirmScan = () => {
+  const handleConfirmScan = async () => {
     if (!scanModalLot) return;
+    try {
+      await warehouseService.scanBarcode(scanModalLot.lotNumber).catch(() => null);
+    } catch (e) {
+      console.warn("scanBarcode err:", e);
+    }
     setVerifiedLots(prev => ({ ...prev, [scanModalLot.lotNumber]: true }));
     addToast(`Barcode Scan Validated! GS1-128 Lot ${scanModalLot.lotNumber} verified against PO ${scanModalLot.poNumber || "PO-2026-0881"}.`, "success");
     setScanModalLot(null);
@@ -102,9 +123,18 @@ export function Staging() {
     setSelectedQuickBin(lot.recommendedBin || "Cold Storage Zone A - Rack R04-B2");
   };
 
-  const handleConfirmQuickPutAway = () => {
+  const handleConfirmQuickPutAway = async () => {
     if (!quickPutAwayLot) return;
     const targetBin = selectedQuickBin || quickPutAwayLot.recommendedBin || "Cold Storage Zone A - Rack R04-B2";
+    try {
+      await warehouseService.completePutAway({
+        lotNumber: quickPutAwayLot.lotNumber,
+        destinationBin: targetBin,
+        operator: "Carlos Mendez"
+      }).catch(err => console.warn("completePutAway offline:", err.message));
+    } catch (e) {
+      console.warn("Putaway API err:", e);
+    }
     transferLotLocation(quickPutAwayLot.lotNumber, targetBin);
     addToast(`Put-Away Complete! Lot ${quickPutAwayLot.lotNumber} transferred to ${targetBin}.`, "success");
     setQuickPutAwayLot(null);

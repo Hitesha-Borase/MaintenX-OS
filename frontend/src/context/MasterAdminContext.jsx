@@ -85,11 +85,11 @@ export function MasterAdminProvider({ children }) {
   const [users, setUsers] = useState(() => {
     const saved = localStorage.getItem("master_users");
     return saved ? JSON.parse(saved) : [
-      { id: "U-5001", name: "Alice Smith", role: "Company Admin", company: "Global Foods Inc.", status: "Active", lastLogin: "2026-09-02 08:30" },
-      { id: "U-5002", name: "Bob Johnson", role: "Company Admin", company: "Sunrise Beverages", status: "Active", lastLogin: "2026-09-01 14:15" },
-      { id: "U-5003", name: "Charlie Davis", role: "Company Admin", company: "Valley Dairies", status: "Inactive", lastLogin: "2026-08-15 09:00" },
-      { id: "U-5004", name: "David Miller", role: "Plant Manager", company: "Global Foods Inc.", status: "Active", lastLogin: "2026-09-02 10:45" },
-      { id: "U-5005", name: "Eva Wilson", role: "Quality QA", company: "Sunrise Beverages", status: "Active", lastLogin: "2026-09-02 07:15" }
+      { id: "U-5001", name: "Alice Smith", email: "alice@globalfoods.com", role: "Company Admin", company: "Global Foods Inc.", status: "Active", lastLogin: "2026-09-02 08:30" },
+      { id: "U-5002", name: "Bob Johnson", email: "bob@sunrisebev.com", role: "Company Admin", company: "Sunrise Beverages", status: "Active", lastLogin: "2026-09-01 14:15" },
+      { id: "U-5003", name: "Charlie Davis", email: "charlie@valleydairies.com", role: "Company Admin", company: "Valley Dairies", status: "Inactive", lastLogin: "2026-08-15 09:00" },
+      { id: "U-5004", name: "David Miller", email: "david@globalfoods.com", role: "Plant Manager", company: "Global Foods Inc.", status: "Active", lastLogin: "2026-09-02 10:45" },
+      { id: "U-5005", name: "Eva Wilson", email: "eva@sunrisebev.com", role: "Quality QA", company: "Sunrise Beverages", status: "Active", lastLogin: "2026-09-02 07:15" }
     ];
   });
 
@@ -385,10 +385,20 @@ export function MasterAdminProvider({ children }) {
     addAuditLog("Master Admin", "Change User Status", user?.name);
   };
 
-  const editUser = (id, newName) => {
-    setUsers(prev => prev.map(u => u.id === id ? { ...u, name: newName } : u));
-    addActivity(`User Updated`, `User name updated to ${newName}.`);
-    addAuditLog("Master Admin", "Edit User", newName);
+  const editUser = (id, updatedData) => {
+    setUsers(prev => prev.map(u => {
+      if (u.id === id) {
+        if (typeof updatedData === "object" && updatedData !== null) {
+          return { ...u, ...updatedData };
+        }
+        return { ...u, name: updatedData };
+      }
+      return u;
+    }));
+    const user = users.find(u => u.id === id);
+    const displayName = typeof updatedData === "object" ? (updatedData.name || user?.name) : updatedData;
+    addActivity(`User Updated`, `User details updated for ${displayName}.`);
+    addAuditLog("Master Admin", "Edit User", displayName);
   };
 
   const removeUser = (id) => {

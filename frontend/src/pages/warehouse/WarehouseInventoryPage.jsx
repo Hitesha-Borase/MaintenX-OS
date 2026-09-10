@@ -19,9 +19,10 @@ import { Button } from "../../components/common/Button";
 import { StatCard } from "../../components/common/StatCard";
 import { useInventory } from "../../context/InventoryContext";
 import { useApp } from "../../context/AppContext";
+import warehouseService from "../../services/warehouseService";
 
 export function WarehouseInventoryPage() {
-  const { lots = [], zones = [], addLot } = useInventory();
+  const { lots = [], setLots, zones = [], addLot } = useInventory();
   const { addToast } = useApp();
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -48,23 +49,23 @@ export function WarehouseInventoryPage() {
 
   const [selectedLotForView, setSelectedLotForView] = useState(null);
 
-  const getLotId = (l) => l.lotNumber || l.id || "LOT-REC-001";
-  const getName = (l) => l.materialName || l.item || l.materialCode || "Inventory Item";
-  const getCode = (l) => l.materialCode || l.sku || "RM-STD-01";
-  const getLocation = (l) => l.location || l.zone || "Warehouse Bay";
-  const getStatus = (l) => l.qaStatus || l.status || "Approved / Released";
-  const getTotalQty = (l) => Number(l.quantity || 0);
-  const getReservedQty = (l) => Number(l.reservedQuantity !== undefined ? l.reservedQuantity : Math.round(l.quantity * 0.1));
+  const getLotId = (l) => l?.lotNumber || l?.id || "LOT-REC-001";
+  const getName = (l) => l?.materialName || l?.sku?.name || l?.item || l?.materialCode || "Inventory Item";
+  const getCode = (l) => l?.materialCode || l?.sku?.skuCode || l?.sku || "RM-STD-01";
+  const getLocation = (l) => l?.location || l?.zone || (l?.locationBin ? `${l.locationBin.aisle}-${l.locationBin.rack}` : "Warehouse Bay 2");
+  const getStatus = (l) => l?.qaStatus || l?.status || "Approved / Released";
+  const getTotalQty = (l) => Number(l?.quantity !== undefined ? l.quantity : l?.currentQuantity !== undefined ? l.currentQuantity : 0);
+  const getReservedQty = (l) => Number(l?.reservedQuantity !== undefined ? l.reservedQuantity : Math.round(getTotalQty(l) * 0.1));
   const getAvailableQty = (l) => Math.max(0, getTotalQty(l) - getReservedQty(l));
-  const getUOM = (l) => l.unit || l.uom || "units";
-  const getExpiry = (l) => l.expiryDate || "2027-12-31";
+  const getUOM = (l) => l?.unit || l?.uom || "units";
+  const getExpiry = (l) => l?.expiryDate ? (typeof l.expiryDate === "string" ? l.expiryDate.split("T")[0] : new Date(l.expiryDate).toISOString().split("T")[0]) : "2027-12-31";
 
   const filteredLots = (lots || []).filter((l) => {
     const q = searchQuery.toLowerCase();
-    const id = getLotId(l).toLowerCase();
-    const name = getName(l).toLowerCase();
-    const code = getCode(l).toLowerCase();
-    const loc = getLocation(l).toLowerCase();
+    const id = String(getLotId(l)).toLowerCase();
+    const name = String(getName(l)).toLowerCase();
+    const code = String(getCode(l)).toLowerCase();
+    const loc = String(getLocation(l)).toLowerCase();
 
     const matchesSearch = id.includes(q) || name.includes(q) || code.includes(q) || loc.includes(q);
     const matchesCat = categoryFilter === "ALL" || (l.category || "") === categoryFilter;
@@ -72,7 +73,7 @@ export function WarehouseInventoryPage() {
     return matchesSearch && matchesCat;
   });
 
-  const handleAdjustSubmit = (e) => {
+  const handleAdjustSubmit = async (e) => {
     e.preventDefault();
     if (!selectedLotForAdjust) return;
 
@@ -87,11 +88,25 @@ export function WarehouseInventoryPage() {
       newQty = change;
     }
 
+    try {
+      if (warehouseService.recordStockMovement) {
+        await warehouseService.recordStockMovement({
+          lotId: selectedLotForAdjust.id || "00000000-0000-0000-0000-000000000001",
+          type: "ADJUSTMENT",
+          quantity: Math.abs(newQty - getTotalQty(selectedLotForAdjust)),
+          uom: getUOM(selectedLotForAdjust),
+          notes: adjustData.reason
+        }).catch(() => null);
+      }
+    } catch {
+      // Offline fallback
+    }
+
     if (setLots) {
       setLots((prev) =>
         prev.map((l) =>
           getLotId(l) === getLotId(selectedLotForAdjust)
-            ? { ...l, quantity: newQty }
+            ? { ...l, quantity: newQty, currentQuantity: newQty }
             : l
         )
       );
@@ -102,7 +117,7 @@ export function WarehouseInventoryPage() {
     setSelectedLotForAdjust(null);
   };
 
-  const handleAddSubmit = (e) => {
+  const handleAddSubmit = async (e) => {
     e.preventDefault();
     if (!formData.materialName.trim()) {
       addToast("Please provide item name", "warning");
@@ -116,20 +131,44 @@ export function WarehouseInventoryPage() {
       materialName: formData.materialName,
       category: formData.category,
       quantity: Number(formData.quantity) || 1000,
+      currentQuantity: Number(formData.quantity) || 1000,
       reservedQuantity: 0,
       unit: formData.unit,
+      uom: formData.unit,
       location: formData.location,
       supplier: formData.supplier,
+      supplierName: formData.supplier,
       supplierLot: `SUP-${lotNumber}`,
       receivedDate: new Date().toISOString().substring(0, 10),
       expiryDate: "2027-12-31",
       qaStatus: "Approved / Released",
+      status: "RELEASED",
       costPerUnitUSD: Number(formData.costPerUnitUSD) || 1.0
     };
 
-    if (addLot) {
-      addLot(newLot);
+    try {
+      if (warehouseService.createLot) {
+        await warehouseService.createLot({
+          skuId: "00000000-0000-0000-0000-000000000001",
+          lotNumber,
+          lotType: formData.category === "Packaging" ? "PACKAGING" : "RAW_MATERIAL",
+          supplierName: formData.supplier,
+          supplierLotNumber: `SUP-${lotNumber}`,
+          initialQuantity: Number(formData.quantity) || 1000,
+          uom: formData.unit || "kg",
+          expiryDate: "2027-12-31T00:00:00.000Z"
+        }).catch(() => null);
+      }
+    } catch (apiErr) {
+      console.warn("Backend createLot sync:", apiErr);
     }
+
+    if (addLot) {
+      await addLot(newLot);
+    } else if (setLots) {
+      setLots((prev) => [newLot, ...prev]);
+    }
+
     addToast(`Material Lot ${lotNumber} added to Warehouse Inventory!`, "success");
     setIsAddModalOpen(false);
     setFormData({
@@ -147,7 +186,7 @@ export function WarehouseInventoryPage() {
   const handleExportCSV = () => {
     const headers = "Material Name,Material Code,Category,Total Qty,Available Qty,Reserved Qty,UOM,Storage Location,Expiry Date,Status\n";
     const rows = filteredLots
-      .map((l) => `"${getName(l)}","${getCode(l)}","${l.category || ''}",${getTotalQty(l)},${getAvailableQty(l)},${getReservedQty(l)},"${getUOM(l)}","${getLocation(l)}","${getExpiry(l)}","${getStatus(l)}"`)
+      .map((l) => `"${getName(l)}","${getCode(l)}","${l?.category || ''}",${getTotalQty(l)},${getAvailableQty(l)},${getReservedQty(l)},"${getUOM(l)}","${getLocation(l)}","${getExpiry(l)}","${getStatus(l)}"`)
       .join("\n");
     const blob = new Blob([headers + rows], { type: "text/csv" });
     const url = URL.createObjectURL(blob);

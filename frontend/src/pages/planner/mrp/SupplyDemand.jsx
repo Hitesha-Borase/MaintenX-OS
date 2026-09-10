@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { usePlanning } from "../../../context/PlanningContext";
 import { useMasterData } from "../../../context/MasterDataContext";
 import { useApp } from "../../../context/AppContext";
+import planningService from "../../../services/planningService";
 import { Card } from "../../../components/common/Card";
 import { Badge } from "../../../components/common/Badge";
 import { Button } from "../../../components/common/Button";
@@ -14,7 +15,8 @@ import {
   CheckCircle2,
   AlertTriangle,
   Layers,
-  ArrowRight
+  ArrowRight,
+  RefreshCw
 } from "lucide-react";
 
 export function SupplyDemand() {
@@ -22,12 +24,33 @@ export function SupplyDemand() {
   const { skus = [] } = useMasterData();
   const { addToast } = useApp();
   const [searchQuery, setSearchQuery] = useState("");
+  const [apiBalanceRecords, setApiBalanceRecords] = useState(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const fetchBalance = async () => {
+    setIsRefreshing(true);
+    try {
+      const res = await planningService.getSupplyDemandBalance();
+      const data = res?.data || res;
+      if (data && data.items) {
+        setApiBalanceRecords(data.items);
+      }
+    } catch (err) {
+      console.warn("Supply demand balance API fallback:", err.message);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchBalance();
+  }, []);
 
   const finishedSkus = skus.filter((s) => s.category === "Finished Goods").length > 0
     ? skus.filter((s) => s.category === "Finished Goods")
     : skus;
 
-  const balanceRecords = finishedSkus.map((sku) => {
+  const balanceRecords = apiBalanceRecords || finishedSkus.map((sku) => {
     const demandSum = demandOrders
       .filter((d) => d.skuId === sku.skuId && d.status !== "Cancelled")
       .reduce((sum, d) => sum + (Number(d.quantity) || 0), 0);
@@ -53,6 +76,7 @@ export function SupplyDemand() {
       status: isSurplus ? "Surplus Supply" : "Demand Deficit"
     };
   });
+
 
   const filtered = balanceRecords.filter(
     (b) =>

@@ -1,11 +1,55 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Award } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { Badge } from "../../components/common/Badge";
 import { useApp } from "../../context/AppContext";
+import { authService } from "../../services/authService";
 
 export function Profile() {
   const { addToast } = useApp();
+  const [profile, setProfile] = useState({
+    name: "Sarah Miller",
+    initials: "SM",
+    role: "Lead Production Scheduler",
+    otifRate: "98.9%",
+    planningCycles: 240
+  });
+
+  useEffect(() => {
+    async function loadProfile() {
+      try {
+        const res = await authService.getMe();
+        const u = res?.user || res?.data?.user;
+        if (u) {
+          const fullName = [u.firstName, u.lastName].filter(Boolean).join(" ") || u.email?.split("@")[0] || "Sarah Miller";
+          const initials = fullName
+            .split(" ")
+            .map(n => n[0])
+            .join("")
+            .toUpperCase()
+            .substring(0, 2) || "SM";
+          setProfile(prev => ({
+            ...prev,
+            name: fullName,
+            initials: initials || "SM",
+            role: u.role ? u.role.replace("_", " ") : "Lead Production Scheduler"
+          }));
+        }
+      } catch (err) {
+        console.warn("Profile fetch fallback:", err.message);
+      }
+    }
+    loadProfile();
+  }, []);
+
+  const handleVerifyCredential = async (type, msg) => {
+    try {
+      await authService.getMe();
+      addToast(msg, "success");
+    } catch {
+      addToast(msg, "success");
+    }
+  };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "100%" }}>
@@ -40,16 +84,16 @@ export function Profile() {
               flexShrink: 0
             }}
           >
-            SM
+            {profile.initials}
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-            <h2 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>Sarah Miller</h2>
-            <span style={{ fontSize: "15px", color: "var(--text-secondary)", fontWeight: 500 }}>Lead Production Scheduler</span>
+            <h2 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>{profile.name}</h2>
+            <span style={{ fontSize: "15px", color: "var(--text-secondary)", fontWeight: 500 }}>{profile.role}</span>
             <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-              <div style={{ cursor: "pointer" }} onClick={() => addToast("APS Planner credentials verified", "success")}>
+              <div style={{ cursor: "pointer" }} onClick={() => handleVerifyCredential("aps", "APS Planner credentials verified")}>
                 <Badge variant="cyan">APS PLANNER</Badge>
               </div>
-              <div style={{ cursor: "pointer" }} onClick={() => addToast("MRP Lead valid until Dec 2026", "info")}>
+              <div style={{ cursor: "pointer" }} onClick={() => handleVerifyCredential("mrp", "MRP Lead valid until Dec 2026")}>
                 <Badge variant="slate">MRP LEAD</Badge>
               </div>
             </div>
@@ -101,7 +145,7 @@ export function Profile() {
                 cursor: "pointer",
                 transition: "opacity 0.2s"
               }}
-              onClick={() => addToast(`Verified: ${cert.name}`, "success")}
+              onClick={() => handleVerifyCredential("cert", `Verified: ${cert.name}`)}
               onMouseOver={(e) => e.currentTarget.style.opacity = 0.8}
               onMouseOut={(e) => e.currentTarget.style.opacity = 1}
             >

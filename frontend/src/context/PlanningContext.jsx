@@ -329,19 +329,44 @@ export function PlanningProvider({ children }) {
   }, [materialReservations]);
 
   // Synchronize Planning & Demand with Fastify backend on mount
+  const refreshDemandOrders = useCallback(async () => {
+    try {
+      const res = await planningService.getDemandOrders();
+      const items = res?.data || res;
+      if (Array.isArray(items) && items.length > 0) {
+        setDemandOrders(items);
+      }
+    } catch (err) {
+      console.warn("Planning backend demand sync fallback:", err.message);
+    }
+  }, []);
+
   useEffect(() => {
     async function syncPlanningBackend() {
       try {
-        const [remoteDemand, remoteSchedules] = await Promise.allSettled([
+        const [remoteDemand, remoteForecasts, remoteSchedules] = await Promise.allSettled([
           planningService.getDemandOrders(),
+          planningService.getForecasts(),
           planningService.getAPSSchedules(),
         ]);
 
-        if (remoteDemand.status === "fulfilled" && Array.isArray(remoteDemand.value) && remoteDemand.value.length > 0) {
-          setDemandOrders(remoteDemand.value);
+        if (remoteDemand.status === "fulfilled") {
+          const items = remoteDemand.value?.data || remoteDemand.value;
+          if (Array.isArray(items) && items.length > 0) {
+            setDemandOrders(items);
+          }
         }
-        if (remoteSchedules.status === "fulfilled" && Array.isArray(remoteSchedules.value) && remoteSchedules.value.length > 0) {
-          setSchedules(remoteSchedules.value);
+        if (remoteForecasts.status === "fulfilled") {
+          const items = remoteForecasts.value?.data || remoteForecasts.value;
+          if (Array.isArray(items) && items.length > 0) {
+            setForecasts(items);
+          }
+        }
+        if (remoteSchedules.status === "fulfilled") {
+          const items = remoteSchedules.value?.data || remoteSchedules.value;
+          if (Array.isArray(items) && items.length > 0) {
+            setSchedules(items);
+          }
         }
       } catch (err) {
         console.warn("Planning backend sync fallback:", err.message);
@@ -353,57 +378,61 @@ export function PlanningProvider({ children }) {
   // ==========================================
   // 1. DEMAND ORDERS CRUD
   // ==========================================
-  const addDemandOrder = (orderData) => {
-    const targetSku = skus.find((s) => s.skuId === orderData.skuId) || skus[0];
-    const newId = `DO-2026-${Math.floor(100 + Math.random() * 900)}`;
-    const newOrder = {
-      id: newId,
+  const addDemandOrder = async (orderData) => {
+    const targetSku = skus.find((s) => s.skuId === orderData.skuId || s.id === orderData.skuId) || skus[0];
+    const tempId = `DO-2026-${Math.floor(100 + Math.random() * 900)}`;
+    const payload = {
       orderNumber: orderData.orderNumber || `PO-CUST-${Math.floor(10000 + Math.random() * 90000)}`,
-      customer: orderData.customer || "National Retail Partner",
-      skuId: targetSku?.skuId || "SKU-001",
+      customer: orderData.customer || orderData.customerName || "National Retail Partner",
+      skuId: targetSku?.skuId || targetSku?.id || "SKU-5001",
+      quantity: Number(orderData.quantity) || 10000,
+      priority: orderData.priority || "Normal",
+      requestedShipDate: orderData.requestedShipDate || new Date().toISOString().substring(0, 10),
+      plantId: orderData.plantId || "PLT-01",
+      status: orderData.status || "Open",
+      notes: orderData.notes || "",
+    };
+
+    const optimisticOrder = {
+      id: tempId,
+      ...payload,
       productCode: targetSku?.skuCode || "SKU-5001",
       productName: targetSku?.name || "Finished Beverage",
-      quantity: Number(orderData.quantity) || 10000,
       uom: targetSku?.uom || "Bottles",
-      requestedShipDate: orderData.requestedShipDate || new Date().toISOString().substring(0, 10),
-      priority: orderData.priority || "Normal",
-      plantId: orderData.plantId || "PLT-01",
-      status: "Open",
-      notes: orderData.notes || "",
       createdDate: new Date().toISOString().substring(0, 10)
     };
 
-    setDemandOrders((prev) => [newOrder, ...prev]);
+    setDemandOrders((prev) => [optimisticOrder, ...prev]);
 
-    planningService.createDemandOrder({
-      orderNumber: newOrder.orderNumber,
-      customerName: newOrder.customer,
-      skuId: newOrder.skuId,
-      quantity: newOrder.quantity,
-      priority: newOrder.priority,
-      requestedDate: newOrder.requestedShipDate,
-      deliveryAddress: "Regional Distribution Dock",
-    }).catch(err => console.warn("planningService.createDemandOrder:", err.message));
+    try {
+      const res = await planningService.createDemandOrder(payload);
+      const created = res?.data || res;
+      if (created && created.id) {
+        setDemandOrders((prev) => prev.map((o) => (o.id === tempId ? { ...o, ...created } : o)));
+      }
+    } catch (err) {
+      console.warn("Backend createDemandOrder fallback:", err.message);
+    }
 
     if (logAudit) {
       logAudit({
-        entityId: newOrder.orderNumber,
+        entityId: optimisticOrder.orderNumber,
         entityType: "Demand Order",
         action: "Created",
-        newValue: `${newOrder.customer}: ${newOrder.quantity.toLocaleString()} ${newOrder.uom} of ${newOrder.productName}`,
+        newValue: `${optimisticOrder.customer}: ${optimisticOrder.quantity.toLocaleString()} ${optimisticOrder.uom} of ${optimisticOrder.productName}`,
         notes: "Customer Demand Requisition Created by Planner"
       });
     }
-    return newOrder;
+    return optimisticOrder;
   };
 
-  const updateDemandOrder = (id, updatedFields) => {
+  const updateDemandOrder = async (id, updatedFields) => {
     setDemandOrders((prev) =>
       prev.map((o) => {
-        if (o.id === id) {
+        if (o.id === id || o.orderNumber === id) {
           const updated = { ...o, ...updatedFields };
           if (updatedFields.skuId) {
-            const s = skus.find((item) => item.skuId === updatedFields.skuId);
+            const s = skus.find((item) => item.skuId === updatedFields.skuId || item.id === updatedFields.skuId);
             if (s) {
               updated.productCode = s.skuCode;
               updated.productName = s.name;
@@ -415,12 +444,25 @@ export function PlanningProvider({ children }) {
         return o;
       })
     );
+
+    try {
+      await planningService.updateDemandOrder(id, updatedFields);
+    } catch (err) {
+      console.warn("Backend updateDemandOrder fallback:", err.message);
+    }
   };
 
-  const cancelDemandOrder = (id, reason = "Cancelled by Planner") => {
+  const cancelDemandOrder = async (id, reason = "Cancelled by Planner") => {
     setDemandOrders((prev) =>
-      prev.map((o) => (o.id === id ? { ...o, status: "Cancelled", notes: `${o.notes} [Cancelled: ${reason}]` } : o))
+      prev.map((o) => ((o.id === id || o.orderNumber === id) ? { ...o, status: "Cancelled", notes: `${o.notes || ""} [Cancelled: ${reason}]` } : o))
     );
+
+    try {
+      await planningService.deleteDemandOrder(id);
+    } catch (err) {
+      console.warn("Backend deleteDemandOrder fallback:", err.message);
+    }
+
     if (logAudit) {
       logAudit({
         entityId: id,
@@ -430,6 +472,7 @@ export function PlanningProvider({ children }) {
         notes: reason
       });
     }
+    addToast(`Demand Order ${id} has been CANCELLED.`, "info");
   };
 
   // ==========================================
@@ -494,10 +537,17 @@ export function PlanningProvider({ children }) {
     );
   };
 
-  const approveForecast = (id, approver = "Sarah Jenkins") => {
+  const approveForecast = async (id, approver = "Sarah Jenkins") => {
     setForecasts((prev) =>
       prev.map((f) => (f.id === id ? { ...f, status: "Approved", lastUpdated: new Date().toISOString().substring(0, 10) } : f))
     );
+
+    try {
+      await planningService.updateForecast(id, { status: "Approved" });
+    } catch (err) {
+      console.warn("Backend approveForecast fallback:", err.message);
+    }
+
     if (logAudit) {
       logAudit({
         entityId: id,

@@ -26,8 +26,10 @@ export function CompanyAdmins() {
   }, [allAdmins]);
 
   const filteredAdmins = allAdmins.filter(u => {
+    const adminEmail = u.email || `${u.name.toLowerCase().replace(/\s+/g, ".")}@example.com`;
     const matchesSearch = u.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          u.company.toLowerCase().includes(searchTerm.toLowerCase());
+                          u.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          adminEmail.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCompany = companyFilter === "All" || u.company === companyFilter;
     const matchesStatus = statusFilter === "All" || u.status === statusFilter;
     return matchesSearch && matchesCompany && matchesStatus;
@@ -143,7 +145,7 @@ export function CompanyAdmins() {
                     🏢 {user.company}
                   </div>
                   <div style={{ fontSize: "10.5px", color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {user.name.toLowerCase().replace(" ", ".")}@example.com
+                    {user.email || `${user.name.toLowerCase().replace(/\s+/g, ".")}@example.com`}
                   </div>
                 </div>
               </div>
@@ -186,7 +188,7 @@ export function CompanyAdmins() {
                       </div>
                       <div>
                         <div style={{ fontWeight: 600, color: "var(--text-primary)", whiteSpace: "nowrap" }}>{user.name}</div>
-                        <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "2px", whiteSpace: "nowrap" }}>{user.name.toLowerCase().replace(" ", ".")}@example.com</div>
+                        <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "2px", whiteSpace: "nowrap" }}>{user.email || `${user.name.toLowerCase().replace(/\s+/g, ".")}@example.com`}</div>
                       </div>
                     </div>
                   </td>

@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { usePlanning } from "../../../context/PlanningContext";
 import { useMasterData } from "../../../context/MasterDataContext";
 import { useApp } from "../../../context/AppContext";
+import planningService from "../../../services/planningService";
 import { Card } from "../../../components/common/Card";
 import { Badge } from "../../../components/common/Badge";
 import { Button } from "../../../components/common/Button";
@@ -23,18 +24,37 @@ export function CapacityPlanning() {
   const { lines = [] } = useMasterData();
   const { addToast } = useApp();
   const [searchQuery, setSearchQuery] = useState("");
+  const [apiLines, setApiLines] = useState(null);
 
-  const totalAvailableHrs = capacityCalculations.reduce((sum, c) => sum + c.availableHours, 0);
-  const totalPlannedHrs = capacityCalculations.reduce((sum, c) => sum + c.plannedHours, 0);
+  useEffect(() => {
+    async function loadCapacity() {
+      try {
+        const res = await planningService.getCapacityCalculations();
+        const data = res?.data || res;
+        if (data && data.lines) {
+          setApiLines(data.lines);
+        }
+      } catch (err) {
+        console.warn("Capacity API fallback:", err.message);
+      }
+    }
+    loadCapacity();
+  }, []);
+
+  const activeCalculations = apiLines || capacityCalculations;
+
+  const totalAvailableHrs = activeCalculations.reduce((sum, c) => sum + (c.availableHours || 120), 0);
+  const totalPlannedHrs = activeCalculations.reduce((sum, c) => sum + (c.plannedHours || 0), 0);
   const avgUtilization = Math.round((totalPlannedHrs / (totalAvailableHrs || 1)) * 100);
-  const conflictsCount = capacityCalculations.filter((c) => c.hasConflict).length;
+  const conflictsCount = activeCalculations.filter((c) => c.hasConflict).length;
 
-  const filtered = capacityCalculations.filter(
+  const filtered = activeCalculations.filter(
     (c) =>
       c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       c.lineCode.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.plantName.toLowerCase().includes(searchQuery.toLowerCase())
+      (c.plantName && c.plantName.toLowerCase().includes(searchQuery.toLowerCase()))
   );
+
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%", maxWidth: "1600px", margin: "0 auto", minWidth: 0 }}>

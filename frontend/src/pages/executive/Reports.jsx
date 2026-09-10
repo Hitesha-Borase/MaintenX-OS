@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   FileSpreadsheet,
@@ -8,76 +8,76 @@ import {
   Sparkles,
   CheckCircle2,
   ArrowRight,
-  FileText
+  FileText,
+  Loader2
 } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { Button } from "../../components/common/Button";
 import { Badge } from "../../components/common/Badge";
 import { StatCard } from "../../components/common/StatCard";
 import { useApp } from "../../context/AppContext";
+import executiveService from "../../services/executiveService";
 
 export function Reports() {
   const navigate = useNavigate();
   const { addToast } = useApp();
 
+  const [reports, setReports] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [printingId, setPrintingId] = useState(null);
 
-  const reports = [
-    {
-      id: "EXEC-01",
-      name: "Enterprise Cost & Variance Report (MTD)",
-      category: "Finance & Cost",
-      date: "2026-08-31",
-      cadence: "Monthly",
-      format: "PDF / Ledger"
-    },
-    {
-      id: "EXEC-02",
-      name: "Multi-Plant OEE & Volume Performance Summary",
-      category: "Operations",
-      date: "2026-08-31",
-      cadence: "Weekly (Every Monday)",
-      format: "PDF / CSV"
-    },
-    {
-      id: "EXEC-03",
-      name: "Continuous Improvement Annualized Savings Audit",
-      category: "Continuous Improvement",
-      date: "2026-08-31",
-      cadence: "Quarterly",
-      format: "Executive Ledger"
-    },
-    {
-      id: "EXEC-04",
-      name: "Regional SLA Service Level Scorecard",
-      category: "Customer Service",
-      date: "2026-08-31",
-      cadence: "Weekly",
-      format: "PDF / CSV"
+  const fetchReports = async () => {
+    try {
+      setLoading(true);
+      const res = await executiveService.getReports();
+      const data = res.data || res;
+      if (data && data.reports) {
+        setReports(data.reports);
+      }
+    } catch (err) {
+      console.error("Error loading reports:", err);
+      addToast("Failed to load executive reports", "error");
+    } finally {
+      setLoading(false);
     }
-  ];
-
-  const handlePrint = (rep) => {
-    addToast(`Preparing "${rep.name}" for print / PDF generation...`, "info");
-    setPrintingId(rep.id);
-    setTimeout(() => {
-      window.print();
-      setPrintingId(null);
-    }, 100);
   };
 
-  const handleExportCSV = () => {
-    const headers = "Report ID,Report Title,Category,Last Generated,Cadence,Format\n";
-    const rows = reports
-      .map((r) => `"${r.id}","${r.name}","${r.category}","${r.date}","${r.cadence}","${r.format}"`)
-      .join("\n");
-    const blob = new Blob([headers + rows], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `Executive_Reports_Index_${new Date().toISOString().substring(0, 10)}.csv`;
-    a.click();
-    addToast("Reports register exported to CSV.", "info");
+  useEffect(() => {
+    fetchReports();
+  }, []);
+
+  const handlePrint = async (rep) => {
+    try {
+      addToast(`Preparing "${rep.name}" for print / PDF generation...`, "info");
+      setPrintingId(rep.id);
+      await executiveService.exportReport({ reportId: rep.id });
+      setTimeout(() => {
+        window.print();
+        setPrintingId(null);
+      }, 300);
+    } catch (err) {
+      console.error("Error exporting report:", err);
+      setPrintingId(null);
+    }
+  };
+
+  const handleExportCSV = async () => {
+    try {
+      await executiveService.exportReport({ reportId: "ALL_REPORTS_INDEX" });
+      const headers = "Report ID,Report Title,Category,Last Generated,Cadence,Format\n";
+      const rows = reports
+        .map((r) => `"${r.id}","${r.name}","${r.category}","${r.date}","${r.cadence}","${r.format}"`)
+        .join("\n");
+      const blob = new Blob([headers + rows], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Executive_Reports_Index_${new Date().toISOString().substring(0, 10)}.csv`;
+      a.click();
+      addToast("Reports register exported to CSV.", "info");
+    } catch (err) {
+      console.error("Error exporting CSV:", err);
+    }
   };
 
   return (
@@ -149,67 +149,73 @@ export function Reports() {
       </div>
 
       {/* Reports List */}
-      <div style={{ display: "flex", flexDirection: "column", gap: "12px", width: "100%" }}>
-        {reports.map((rep) => (
-          <Card
-            key={rep.id}
-            className={printingId === rep.id ? "print-only" : ""}
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              flexWrap: "wrap",
-              gap: "14px",
-              padding: "16px",
-              borderLeft: "4px solid #C89547",
-              boxSizing: "border-box",
-              minWidth: 0,
-              width: "100%"
-            }}
-          >
-            <div style={{ minWidth: "220px", flex: 1 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                <FileText size={16} color="#B27E33" />
-                <span style={{ fontSize: "13px", fontWeight: 800, color: "var(--text-primary)", fontFamily: "var(--font-mono)" }}>
-                  {rep.id}
-                </span>
-                <span style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)" }}>
-                  {rep.name}
-                </span>
-                <Badge variant="cyan">{rep.category}</Badge>
+      {loading ? (
+        <div style={{ display: "flex", justifyContent: "center", padding: "30px" }}>
+          <Loader2 className="animate-spin" size={24} style={{ color: "var(--color-primary)" }} />
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: "12px", width: "100%" }}>
+          {reports.map((rep) => (
+            <Card
+              key={rep.id}
+              className={printingId === rep.id ? "print-only" : ""}
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: "14px",
+                padding: "16px",
+                borderLeft: "4px solid #C89547",
+                boxSizing: "border-box",
+                minWidth: 0,
+                width: "100%"
+              }}
+            >
+              <div style={{ minWidth: "220px", flex: 1 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                  <FileText size={16} color="#B27E33" />
+                  <span style={{ fontSize: "13px", fontWeight: 800, color: "var(--text-primary)", fontFamily: "var(--font-mono)" }}>
+                    {rep.id}
+                  </span>
+                  <span style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)" }}>
+                    {rep.name}
+                  </span>
+                  <Badge variant="cyan">{rep.category}</Badge>
+                </div>
+
+                <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "6px", display: "flex", gap: "14px", flexWrap: "wrap" }}>
+                  <span>Cadence: <strong style={{ color: "var(--text-primary)" }}>{rep.cadence}</strong></span>
+                  <span>Format: <strong style={{ color: "#8C5B23" }}>{rep.format}</strong></span>
+                  <span>Date: <strong style={{ color: "var(--text-secondary)" }}>{rep.date}</strong></span>
+                </div>
               </div>
 
-              <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "6px", display: "flex", gap: "14px", flexWrap: "wrap" }}>
-                <span>Cadence: <strong style={{ color: "var(--text-primary)" }}>{rep.cadence}</strong></span>
-                <span>Format: <strong style={{ color: "#8C5B23" }}>{rep.format}</strong></span>
-                <span>Date: <strong style={{ color: "var(--text-secondary)" }}>{rep.date}</strong></span>
+              <div className="no-print" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <button
+                  onClick={() => handlePrint(rep)}
+                  style={{
+                    padding: "6px 14px",
+                    borderRadius: "8px",
+                    fontSize: "12px",
+                    fontWeight: 700,
+                    backgroundColor: "var(--bg-card-subtle)",
+                    color: "var(--text-primary)",
+                    border: "1px solid var(--border-subtle)",
+                    cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    whiteSpace: "nowrap"
+                  }}
+                >
+                  <Printer size={14} /> Print / Export PDF
+                </button>
               </div>
-            </div>
-
-            <div className="no-print" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <button
-                onClick={() => handlePrint(rep)}
-                style={{
-                  padding: "6px 14px",
-                  borderRadius: "8px",
-                  fontSize: "12px",
-                  fontWeight: 700,
-                  backgroundColor: "var(--bg-card-subtle)",
-                  color: "var(--text-primary)",
-                  border: "1px solid var(--border-subtle)",
-                  cursor: "pointer",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  whiteSpace: "nowrap"
-                }}
-              >
-                <Printer size={14} /> Print / Export PDF
-              </button>
-            </div>
-          </Card>
-        ))}
-      </div>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { usePlanning } from "../../../context/PlanningContext";
 import { useMasterData } from "../../../context/MasterDataContext";
 import { useApp } from "../../../context/AppContext";
+import planningService from "../../../services/planningService";
 import { Card } from "../../../components/common/Card";
 import { Badge } from "../../../components/common/Badge";
 import { Button } from "../../../components/common/Button";
@@ -22,12 +23,44 @@ export function WorkCenterCapacity() {
   const { lines = [], assets = [] } = useMasterData();
   const { addToast } = useApp();
   const [searchQuery, setSearchQuery] = useState("");
+  const [apiWorkCenters, setApiWorkCenters] = useState(null);
 
-  const filtered = capacityCalculations.filter(
+  useEffect(() => {
+    async function loadWorkCenters() {
+      try {
+        const res = await planningService.getWorkCenters();
+        const data = res?.data || res;
+        if (Array.isArray(data) && data.length > 0) {
+          setApiWorkCenters(data);
+        }
+      } catch (err) {
+        console.warn("Work centers API fallback:", err.message);
+      }
+    }
+    loadWorkCenters();
+  }, []);
+
+  const activeWorkCenters = apiWorkCenters || capacityCalculations.map((c) => ({
+    lineId: c.lineId,
+    lineCode: c.lineCode,
+    name: c.name,
+    plantFacility: c.plantName || "Indore Plant",
+    ratedCapacity: c.runRateSpec || "42,000 BPH",
+    assignedAssetsCount: 4,
+    assetDescription: "4 Machines (Filler, Capper, CIP)",
+    scheduledLoadHours: c.plannedHours,
+    utilizationPercent: c.utilizationPercent,
+    availableCapacityHours: c.remainingHours,
+    status: c.status?.toUpperCase() || "RUNNING"
+  }));
+
+  const filtered = activeWorkCenters.filter(
     (c) =>
       c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.lineCode.toLowerCase().includes(searchQuery.toLowerCase())
+      c.lineCode.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (c.plantFacility && c.plantFacility.toLowerCase().includes(searchQuery.toLowerCase()))
   );
+
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%", maxWidth: "1600px", margin: "0 auto", minWidth: 0 }}>
@@ -127,28 +160,28 @@ export function WorkCenterCapacity() {
                   </td>
 
                   <td style={{ padding: "12px 14px", whiteSpace: "nowrap" }}>
-                    <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>{c.plantName}</span>
+                    <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>{c.plantFacility || c.plantName}</span>
                   </td>
 
                   <td style={{ padding: "12px 14px", whiteSpace: "nowrap" }}>
                     <span style={{ fontSize: "13px", fontWeight: 700, fontFamily: "var(--font-mono)", color: "var(--text-primary)" }}>
-                      {c.runRateSpec}
+                      {c.ratedCapacity || c.runRateSpec}
                     </span>
                   </td>
 
                   <td style={{ padding: "12px 14px", whiteSpace: "nowrap" }}>
-                    <Badge variant="cyan">4 Machines (Filler, Capper, CIP)</Badge>
+                    <Badge variant="cyan">{c.assetDescription || "4 Machines (Filler, Capper, CIP)"}</Badge>
                   </td>
 
                   <td style={{ padding: "12px 14px", whiteSpace: "nowrap" }}>
                     <span style={{ fontSize: "13px", fontWeight: 800, fontFamily: "var(--font-mono)", color: c.hasConflict ? "#DC2626" : "var(--text-primary)" }}>
-                      {c.plannedHours} hrs ({c.utilizationPercent}%)
+                      {c.scheduledLoadHours ?? c.plannedHours} hrs ({c.utilizationPercent}%)
                     </span>
                   </td>
 
                   <td style={{ padding: "12px 14px", whiteSpace: "nowrap" }}>
                     <span style={{ fontSize: "12px", fontFamily: "var(--font-mono)", color: "#059669", fontWeight: 700 }}>
-                      {c.remainingHours} hrs Remaining
+                      {c.availableCapacityHours ?? c.remainingHours} hrs Remaining
                     </span>
                   </td>
 

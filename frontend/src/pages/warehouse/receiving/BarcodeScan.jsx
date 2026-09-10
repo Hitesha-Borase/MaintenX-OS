@@ -40,6 +40,7 @@ import { StatCard } from "../../../components/common/StatCard";
 import { Modal } from "../../../components/common/Modal";
 import { useApp } from "../../../context/AppContext";
 import { useInventory } from "../../../context/InventoryContext";
+import warehouseService from "../../../services/warehouseService";
 
 export function BarcodeScan() {
   const { addToast } = useApp();
@@ -58,6 +59,10 @@ export function BarcodeScan() {
   const [symbologyFilter, setSymbologyFilter] = useState("ALL");
 
   const inputRef = useRef(null);
+
+  useEffect(() => {
+    warehouseService.getScannerStats().catch(() => null);
+  }, []);
 
   // Audio Beep generator using Web Audio API
   const playScanBeep = () => {
@@ -249,9 +254,15 @@ export function BarcodeScan() {
   }, []);
 
   // Execute a Scan Simulation or Manual Parse
-  const triggerScan = (preset = null) => {
+  const triggerScan = async (preset = null) => {
     const selected = preset || presetSamples[Math.floor(Math.random() * presetSamples.length)];
     setScanning(true);
+
+    try {
+      await warehouseService.scanBarcode(selected.rawBarcode || selected.lotCode);
+    } catch (err) {
+      console.warn("Backend scanBarcode sync:", err);
+    }
 
     setTimeout(() => {
       setScanning(false);
@@ -275,7 +286,7 @@ export function BarcodeScan() {
 
       setScanHistory((prev) => [newScanLog, ...prev]);
       addToast(`Decoded ${selected.symbology}: ${selected.lotCode} (${selected.materialName})`, "success");
-    }, 600);
+    }, 400);
   };
 
   // Handle Manual Barcode Submit (Handheld scanner gun or manual keyboard input)
@@ -322,10 +333,28 @@ export function BarcodeScan() {
   };
 
   // Ingest Lot into live Inventory Context
-  const handleIngestIntoWms = () => {
+  const handleIngestIntoWms = async () => {
     if (!scannedData) return;
 
-    addLot({
+    try {
+      await warehouseService.receiveMaterial({
+        lotNumber: scannedData.lotCode,
+        materialCode: scannedData.gtin || "RM-GEN-01",
+        materialName: scannedData.materialName,
+        category: scannedData.category,
+        quantity: scannedData.qtyNum || 1000,
+        unit: scannedData.unit || "kg",
+        location: scannedData.targetBin,
+        supplier: scannedData.supplier,
+        supplierLot: scannedData.serialNo,
+        qaStatus: "Released",
+        barcode: scannedData.rawBarcode
+      });
+    } catch (err) {
+      console.warn("Backend handleIngestIntoWms sync:", err);
+    }
+
+    addLot && addLot({
       lotNumber: scannedData.lotCode,
       materialCode: scannedData.gtin || "RM-GEN-01",
       materialName: scannedData.materialName,

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   Building2,
   Layers,
@@ -20,6 +20,7 @@ import { Badge } from "../../../components/common/Badge";
 import { Button } from "../../../components/common/Button";
 import { StatCard } from "../../../components/common/StatCard";
 import { useApp } from "../../../context/AppContext";
+import warehouseService from "../../../services/warehouseService";
 
 const INITIAL_WAREHOUSE_LOCATIONS = [
   {
@@ -160,6 +161,20 @@ export function WarehousesList() {
   const [selectedWarehouse, setSelectedWarehouse] = useState("ALL");
   const [selectedZone, setSelectedZone] = useState("ALL");
 
+  // Sync with Fastify Backend on mount
+  useEffect(() => {
+    let isMounted = true;
+    warehouseService.getLocationsList().then((res) => {
+      const data = res?.data || res;
+      if (isMounted && data && Array.isArray(data.locations) && data.locations.length > 0) {
+        setLocations(data.locations);
+      }
+    }).catch((err) => {
+      console.warn("Backend location list fallback:", err.message);
+    });
+    return () => { isMounted = false; };
+  }, []);
+
   // Modals
   const [selectedLocationForView, setSelectedLocationForView] = useState(null);
   const [selectedLocationForTransfer, setSelectedLocationForTransfer] = useState(null);
@@ -182,11 +197,20 @@ export function WarehousesList() {
     });
   }, [locations, searchQuery, selectedWarehouse, selectedZone]);
 
-  const handleTransferStock = (e) => {
+  const handleTransferStock = async (e) => {
     e.preventDefault();
     if (!selectedLocationForTransfer || !transferTarget) {
       addToast("Please select a target bin location", "warning");
       return;
+    }
+
+    try {
+      await warehouseService.relocateStock({
+        sourceLocationId: selectedLocationForTransfer.id,
+        targetLocationId: transferTarget
+      }).catch(() => null);
+    } catch (apiErr) {
+      console.warn("Backend relocate sync:", apiErr);
     }
 
     setLocations((prev) =>
