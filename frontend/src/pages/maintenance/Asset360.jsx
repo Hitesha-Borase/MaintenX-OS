@@ -48,6 +48,8 @@ import { useMasterData } from "../../context/MasterDataContext";
 import { useProduction } from "../../context/ProductionContext";
 import { useRole } from "../../context/RoleContext";
 import { useApp } from "../../context/AppContext";
+import masterDataService from "../../services/masterDataService";
+import maintenanceService from "../../services/maintenanceService";
 
 export function Asset360() {
   const { id } = useParams();
@@ -80,6 +82,22 @@ export function Asset360() {
       setSelectedAssetId(id);
     }
   }, [id]);
+
+  React.useEffect(() => {
+    const fetch360Data = async () => {
+      try {
+        await Promise.all([
+          masterDataService.getAssets(),
+          maintenanceService.getReliabilityMetrics(),
+          maintenanceService.getWorkOrders(),
+          maintenanceService.getPMSchedules()
+        ]);
+      } catch (err) {
+        console.warn("API Asset 360 fetch notice:", err.message || err);
+      }
+    };
+    fetch360Data();
+  }, []);
 
   // Active Tab state - 10 CLIENT SPECIFIED SECTIONS
   const [activeTab, setActiveTab] = useState("OVERVIEW");

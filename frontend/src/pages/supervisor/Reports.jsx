@@ -53,7 +53,7 @@ export function Reports() {
   useEffect(() => {
     async function fetchReports() {
       try {
-        const res = await dashboardService.getSupervisorReportsList();
+        const res = await dashboardService.getSupervisorReports();
         if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
           setReports(res.data);
         }
@@ -65,9 +65,14 @@ export function Reports() {
   }, []);
 
 
-  const handlePrint = (rep) => {
+  const handlePrint = async (rep) => {
     addToast(`Preparing "${rep.name}" for print / PDF generation...`, "info");
     setPrintingId(rep.id);
+    try {
+      await dashboardService.printSupervisorReport(rep.id);
+    } catch (err) {
+      console.warn("[Reports] Failed to log print API:", err);
+    }
     setTimeout(() => {
       window.print();
       setPrintingId(null);

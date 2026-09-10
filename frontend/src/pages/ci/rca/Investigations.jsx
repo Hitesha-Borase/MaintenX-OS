@@ -25,6 +25,7 @@ import { Badge } from "../../../components/common/Badge";
 import { StatCard } from "../../../components/common/StatCard";
 import { useCI } from "../../../context/CIContext";
 import { useApp } from "../../../context/AppContext";
+import { maintenanceService } from "../../../services/maintenanceService";
 
 export function Investigations() {
   const navigate = useNavigate();
@@ -44,13 +45,33 @@ export function Investigations() {
   const [newTitle, setNewTitle] = useState("");
   const [newAssetId, setNewAssetId] = useState("AST-002");
 
+  React.useEffect(() => {
+    const fetchRCA = async () => {
+      try {
+        await maintenanceService.getRCAInvestigations();
+      } catch (err) {
+        console.warn("RCA investigations fetch notice:", err);
+      }
+    };
+    fetchRCA();
+  }, []);
+
   const phases = ["Event", "Evidence", "Hypothesis & Tests", "Occurrence Cause", "Escape Cause", "CAPA", "Verification"];
 
-  const handleCreate = (e) => {
+  const handleCreate = async (e) => {
     e.preventDefault();
     if (!newTitle.trim()) {
       addToast("Please enter an investigation title.", "warning");
       return;
+    }
+
+    try {
+      await maintenanceService.createRCAInvestigation({
+        assetId: newAssetId,
+        title: newTitle.trim()
+      });
+    } catch (err) {
+      console.warn("Create RCA notice:", err);
     }
 
     initiateRCA(newAssetId, null, newTitle.trim());

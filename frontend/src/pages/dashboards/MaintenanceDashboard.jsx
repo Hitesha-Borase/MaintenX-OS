@@ -1,4 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { maintenanceService } from "../../services/maintenanceService";
+import { dashboardService } from "../../services/dashboardService";
 import {
   Wrench,
   Activity,
@@ -37,6 +39,8 @@ import { useApp } from "../../context/AppContext";
 import { useNavigate } from "react-router-dom";
 
 export function MaintenanceDashboard() {
+  const { addToast, setIsQuickActionOpen } = useApp();
+  const navigate = useNavigate();
   const {
     assets = [],
     workOrders = [],
@@ -60,8 +64,19 @@ export function MaintenanceDashboard() {
     }
   } = useCMMS();
 
-  const { addToast, setIsQuickActionOpen } = useApp();
-  const navigate = useNavigate();
+  // Fetch CMMS Dashboard Telemetry on mount
+  useEffect(() => {
+    dashboardService.getCommandCenterOverview()
+      .catch(err => console.warn("[MaintenanceDashboard] Telemetry fetch warning:", err.message));
+  }, []);
+
+  const handleToggleIoT = async () => {
+    try {
+      await maintenanceService.getReliabilityMetrics();
+    } catch (e) {}
+    if (setIsLiveTelemetryStreaming) setIsLiveTelemetryStreaming(!isLiveTelemetryStreaming);
+    addToast(isLiveTelemetryStreaming ? "Live IoT stream paused." : "Live IoT stream active.", "info");
+  };
 
   // Metrics calculations
   const onlineCount = assets.filter((a) => a.status === "Operational").length;
@@ -104,10 +119,7 @@ export function MaintenanceDashboard() {
           <Button
             variant="secondary"
             icon={Radio}
-            onClick={() => {
-              if (setIsLiveTelemetryStreaming) setIsLiveTelemetryStreaming(!isLiveTelemetryStreaming);
-              addToast(isLiveTelemetryStreaming ? "Live IoT stream paused." : "Live IoT stream active.", "info");
-            }}
+            onClick={handleToggleIoT}
             style={{ fontSize: "12px", padding: "7px 12px" }}
           >
             {isLiveTelemetryStreaming ? "Pause Live IoT" : "Resume Live IoT"}

@@ -19,6 +19,7 @@ import { Badge } from "../../components/common/Badge";
 import { Button } from "../../components/common/Button";
 import { useCMMS } from "../../context/CMMSContext";
 import { useApp } from "../../context/AppContext";
+import { maintenanceService } from "../../services/maintenanceService";
 
 export function RepeatFailures() {
   const { repeatFailures = [] } = useCMMS();
@@ -34,7 +35,25 @@ export function RepeatFailures() {
   const totalDowntime = repeatFailures.reduce((sum, r) => sum + getDowntime(r), 0);
   const totalCost = repeatFailures.reduce((sum, r) => sum + getCost(r), 0);
 
-  const handleStartRCA = (assetId, failureCode) => {
+  const handleOpenRCA = async () => {
+    try {
+      await maintenanceService.getRCAInvestigations();
+    } catch (err) {
+      console.warn("RCA Investigations fetch notice:", err);
+    }
+    navigate("/ci/rca/investigations");
+  };
+
+  const handleStartRCA = async (assetId, failureCode) => {
+    try {
+      await maintenanceService.createRCAInvestigation({
+        assetId,
+        failureCode,
+        title: `RCA for ${assetId} - ${failureCode || "Chronic Repeat Failure"}`
+      });
+    } catch (err) {
+      console.warn("Initiate RCA notice:", err);
+    }
     addToast(`Root Cause Analysis (RCA) initiated for repeat failure on ${assetId}!`, "success");
     navigate("/ci/rca/investigations");
   };
@@ -53,7 +72,7 @@ export function RepeatFailures() {
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-          <Button variant="primary" icon={SearchCode} onClick={() => navigate("/ci/rca/investigations")} style={{ fontSize: "12px", padding: "7px 12px" }}>
+          <Button variant="primary" icon={SearchCode} onClick={handleOpenRCA} style={{ fontSize: "12px", padding: "7px 12px" }}>
             Open RCA / 5-Why Portal
           </Button>
         </div>

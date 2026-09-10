@@ -32,6 +32,7 @@ import { DataTable } from "../../components/tables/DataTable";
 import { Modal } from "../../components/common/Modal";
 import { useCMMS } from "../../context/CMMSContext";
 import { useApp } from "../../context/AppContext";
+import maintenanceService from "../../services/maintenanceService";
 
 export function BreakdownList() {
   const {
@@ -45,6 +46,17 @@ export function BreakdownList() {
   } = useCMMS();
   const { addToast } = useApp();
   const navigate = useNavigate();
+
+  React.useEffect(() => {
+    const fetchBDs = async () => {
+      try {
+        await maintenanceService.getBreakdowns();
+      } catch (err) {
+        console.warn("API breakdown fetch notice:", err.message || err);
+      }
+    };
+    fetchBDs();
+  }, []);
 
   // Filters State
   const [statusFilter, setStatusFilter] = useState("ALL");

@@ -30,11 +30,28 @@ import { dashboardService } from "../../services/dashboardService";
 export function Workforce() {
   const { addToast } = useApp();
 
-  const [employees, setEmployees] = useState(INITIAL_EMPLOYEES);
+  const [employees, setEmployees] = useState(() => {
+    try {
+      const saved = localStorage.getItem("maintenx_workforce_employees");
+      return saved ? JSON.parse(saved) : INITIAL_EMPLOYEES;
+    } catch {
+      return INITIAL_EMPLOYEES;
+    }
+  });
+
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDept, setSelectedDept] = useState("All");
   const [selectedShift, setSelectedShift] = useState("All");
   const [selectedStatus, setSelectedStatus] = useState("All");
+
+  // Save employees to localStorage on change
+  useEffect(() => {
+    try {
+      localStorage.setItem("maintenx_workforce_employees", JSON.stringify(employees));
+    } catch (e) {
+      console.warn("[SupervisorWorkforce] Failed to save to localStorage:", e);
+    }
+  }, [employees]);
 
   // Fetch workforce from backend on mount
   useEffect(() => {
@@ -72,7 +89,7 @@ export function Workforce() {
 
   // Form states
   const [newEmployee, setNewEmployee] = useState({
-    id: `EMP-${100 + employees.length + 1}`,
+    id: `EMP-${Math.floor(200 + Math.random() * 800)}`,
     name: "",
     role: "Operator",
     department: "Packaging",
@@ -101,11 +118,11 @@ export function Workforce() {
   const filteredEmployees = useMemo(() => {
     return employees.filter((emp) => {
       const matchesSearch =
-        emp.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        emp.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        emp.role.toLowerCase().includes(searchQuery.toLowerCase());
+        (emp.name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (emp.id || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (emp.role || "").toLowerCase().includes(searchQuery.toLowerCase());
       const matchesDept = selectedDept === "All" || emp.department === selectedDept;
-      const matchesShift = selectedShift === "All" || emp.shift.includes(selectedShift);
+      const matchesShift = selectedShift === "All" || (emp.shift || "").includes(selectedShift);
       const matchesStatus = selectedStatus === "All" || emp.status === selectedStatus;
       return matchesSearch && matchesDept && matchesShift && matchesStatus;
     });
@@ -114,6 +131,7 @@ export function Workforce() {
   // Handlers
   const handleSaveEdit = async (e) => {
     e.preventDefault();
+    if (!editEmployee) return;
     setEmployees((prev) =>
       prev.map((emp) => (emp.id === editEmployee.id ? { ...emp, ...editEmployee } : emp))
     );
@@ -128,10 +146,16 @@ export function Workforce() {
 
   const handleAssignSkill = async (e) => {
     e.preventDefault();
+    if (!assignSkillModal) return;
     setEmployees((prev) =>
       prev.map((emp) => {
         if (emp.id === assignSkillModal.id) {
-          const updatedSkills = [...new Set([...emp.skills, skillForm.skillName])];
+          const currentSkills = Array.isArray(emp.skills)
+            ? emp.skills
+            : typeof emp.skills === "string" && emp.skills
+            ? emp.skills.split(",").map((s) => s.trim()).filter(Boolean)
+            : [];
+          const updatedSkills = [...new Set([...currentSkills, skillForm.skillName])];
           return {
             ...emp,
             skills: updatedSkills,
@@ -152,6 +176,7 @@ export function Workforce() {
 
   const handleAssignTraining = async (e) => {
     e.preventDefault();
+    if (!assignTrainingModal) return;
     setEmployees((prev) =>
       prev.map((emp) => {
         if (emp.id === assignTrainingModal.id) {
@@ -171,30 +196,55 @@ export function Workforce() {
 
   const handleAddEmployee = async (e) => {
     e.preventDefault();
-    if (!newEmployee.name) return;
+    if (!newEmployee.name || !newEmployee.name.trim()) return;
+
+    // Ensure strictly unique ID
+    const existingIds = new Set(employees.map((emp) => emp.id));
+    let uniqueId = newEmployee.id ? newEmployee.id.trim() : `EMP-${Math.floor(200 + Math.random() * 800)}`;
+    if (existingIds.has(uniqueId)) {
+      uniqueId = `${uniqueId}-${Math.floor(10 + Math.random() * 90)}`;
+    }
+
+    const formattedSkills = Array.isArray(newEmployee.skills)
+      ? newEmployee.skills
+      : typeof newEmployee.skills === "string" && newEmployee.skills
+      ? newEmployee.skills.split(",").map((s) => s.trim()).filter(Boolean)
+      : ["HMI Diagnostics"];
+
     const added = {
-      ...newEmployee,
-      skills: typeof newEmployee.skills === "string" ? [newEmployee.skills] : newEmployee.skills,
+      id: uniqueId,
+      name: newEmployee.name.trim(),
+      role: newEmployee.role || "Operator",
+      department: newEmployee.department || "Packaging",
+      shift: newEmployee.shift || "Shift A (Day)",
+      skills: formattedSkills,
+      skillLevel: newEmployee.skillLevel || "Intermediate",
+      trainingStatus: newEmployee.trainingStatus || "Up to Date",
+      qualificationStatus: newEmployee.qualificationStatus || "In Qualification",
+      status: newEmployee.status || "Active",
       productivityScore: 95.0,
       unitsPerHour: 150,
       efficiency: "96.0%",
       hoursWorkedMonth: 160,
-      activeStation: `${newEmployee.department} Station`,
-      shiftTiming: newEmployee.shift.includes("Day") ? "06:00 - 14:30" : "14:30 - 22:30",
-      avatar: newEmployee.name.split(" ").map((n) => n[0]).join("").toUpperCase()
+      plant: "Oakville Facility - Line 1",
+      activeStation: `${newEmployee.department || "Packaging"} Station`,
+      shiftTiming: (newEmployee.shift || "").includes("Day") ? "06:00 - 14:30" : "14:30 - 22:30",
+      certifications: ["HACCP Safety", "OSHA 10"],
+      avatar: newEmployee.name.trim().split(" ").map((n) => n[0]).join("").toUpperCase() || "OP"
     };
+
     setEmployees((prev) => [...prev, added]);
 
     try {
       const res = await dashboardService.addSupervisorWorkforceEmployee(added);
-      addToast(res?.message || `Employee ${newEmployee.name} registered into factory workforce.`, "success");
+      addToast(res?.message || `Employee ${added.name} registered into factory workforce.`, "success");
     } catch (err) {
-      addToast(`Employee ${newEmployee.name} registered into factory workforce.`, "success");
+      addToast(`Employee ${added.name} registered into factory workforce.`, "success");
     }
 
     setIsAddModalOpen(false);
     setNewEmployee({
-      id: `EMP-${100 + employees.length + 2}`,
+      id: `EMP-${Math.floor(200 + Math.random() * 800)}`,
       name: "",
       role: "Operator",
       department: "Packaging",
@@ -364,7 +414,7 @@ export function Workforce() {
       </Card>
 
       {/* Main Employee Table Card */}
-      <Card style={{ padding: "0", backgroundColor: "#FFFFFF", border: "1px solid var(--border-subtle)", overflow: "hidden" }}>
+      <Card style={{ padding: "0", backgroundColor: "#FFFFFF", border: "1px solid var(--border-subtle)", overflow: "visible" }}>
         <div style={{ padding: "14px 18px", borderBottom: "1px solid var(--border-subtle)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
             <h3 style={{ fontSize: "15px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
@@ -376,7 +426,7 @@ export function Workforce() {
           </div>
         </div>
 
-        <div className="data-table-container" style={{ overflowX: "auto", width: "100%" }}>
+        <div className="data-table-container" style={{ overflowX: "auto", width: "100%", minHeight: "450px", paddingBottom: "80px" }}>
           <table className="data-table" style={{ width: "100%", minWidth: "960px", borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ backgroundColor: "var(--bg-card-subtle)", textAlign: "left" }}>
@@ -391,8 +441,8 @@ export function Workforce() {
               </tr>
             </thead>
             <tbody>
-              {filteredEmployees.map((emp) => (
-                <tr key={emp.id} style={{ borderBottom: "1px solid var(--border-subtle)", height: "48px" }}>
+              {filteredEmployees.map((emp, index) => (
+                <tr key={emp.id || index} style={{ borderBottom: "1px solid var(--border-subtle)", height: "48px" }}>
                   {/* Employee Name & ID */}
                   <td style={{ padding: "8px 14px", whiteSpace: "nowrap" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
@@ -411,7 +461,7 @@ export function Workforce() {
                           flexShrink: 0
                         }}
                       >
-                        {emp.avatar || emp.name.substring(0, 2).toUpperCase()}
+                        {emp.avatar || (emp.name ? emp.name.substring(0, 2).toUpperCase() : "OP")}
                       </div>
                       <div>
                         <div style={{ fontWeight: 800, color: "var(--text-primary)", fontSize: "13px", lineHeight: 1.2 }}>{emp.name}</div>
@@ -428,15 +478,15 @@ export function Workforce() {
 
                   {/* Shift */}
                   <td style={{ padding: "8px 14px", whiteSpace: "nowrap" }}>
-                    <Badge variant={emp.shift.includes("Day") ? "cyan" : emp.shift.includes("Evening") ? "amber" : "indigo"}>
-                      {emp.shift}
+                    <Badge variant={(emp.shift || "").includes("Day") ? "cyan" : (emp.shift || "").includes("Evening") ? "amber" : "indigo"}>
+                      {emp.shift || "Shift A (Day)"}
                     </Badge>
                   </td>
 
                   {/* Skills */}
                   <td style={{ padding: "8px 14px", whiteSpace: "nowrap" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                      {(emp.skills || []).slice(0, 1).map((s, i) => (
+                      {(Array.isArray(emp.skills) ? emp.skills : typeof emp.skills === "string" && emp.skills ? [emp.skills] : []).slice(0, 1).map((s, i) => (
                         <span
                           key={i}
                           style={{
@@ -457,9 +507,9 @@ export function Workforce() {
                           {s}
                         </span>
                       ))}
-                      {(emp.skills || []).length > 1 && (
+                      {(Array.isArray(emp.skills) ? emp.skills : typeof emp.skills === "string" && emp.skills ? [emp.skills] : []).length > 1 && (
                         <span style={{ fontSize: "10px", color: "var(--text-muted)", fontWeight: 700, whiteSpace: "nowrap" }}>
-                          +{emp.skills.length - 1} more
+                          +{(Array.isArray(emp.skills) ? emp.skills : [emp.skills]).length - 1} more
                         </span>
                       )}
                     </div>
@@ -477,7 +527,7 @@ export function Workforce() {
                       }
                       dot
                     >
-                      {emp.trainingStatus}
+                      {emp.trainingStatus || "Up to Date"}
                     </Badge>
                   </td>
 
@@ -495,7 +545,7 @@ export function Workforce() {
                             : "#D97706"
                       }}
                     >
-                      {emp.qualificationStatus}
+                      {emp.qualificationStatus || "In Qualification"}
                     </span>
                   </td>
 
@@ -510,7 +560,7 @@ export function Workforce() {
                           : "slate"
                       }
                     >
-                      {emp.status}
+                      {emp.status || "Active"}
                     </Badge>
                   </td>
 
@@ -521,7 +571,11 @@ export function Workforce() {
                         variant="ghost"
                         size="xs"
                         icon={Eye}
-                        onClick={() => setViewEmployee(emp)}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setViewEmployee(emp);
+                        }}
                         title="View Full Profile"
                         style={{ padding: "4px 7px", fontSize: "11px", height: "28px" }}
                       >
@@ -532,7 +586,11 @@ export function Workforce() {
                         variant="ghost"
                         size="xs"
                         icon={Edit2}
-                        onClick={() => setEditEmployee(emp)}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setEditEmployee(emp);
+                        }}
                         title="Edit Employee"
                         style={{ padding: "4px 7px", fontSize: "11px", height: "28px" }}
                       >
@@ -543,7 +601,11 @@ export function Workforce() {
                         variant="secondary"
                         size="xs"
                         icon={ChevronDown}
-                        onClick={() => setActiveDropdownId(activeDropdownId === emp.id ? null : emp.id)}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setActiveDropdownId((prev) => (prev === emp.id ? null : emp.id));
+                        }}
                         title="More Actions (Skill, Training, Productivity, Shift)"
                         style={{ padding: "4px 8px", fontSize: "11px", height: "28px", fontWeight: 700 }}
                       >
@@ -556,12 +618,14 @@ export function Workforce() {
                           style={{
                             position: "absolute",
                             right: 0,
-                            top: "calc(100% + 4px)",
-                            zIndex: 100,
+                            ...(index >= filteredEmployees.length - 3 && filteredEmployees.length > 3
+                              ? { bottom: "calc(100% + 4px)" }
+                              : { top: "calc(100% + 4px)" }),
+                            zIndex: 999,
                             backgroundColor: "#FFFFFF",
                             border: "1px solid var(--border-subtle)",
                             borderRadius: "8px",
-                            boxShadow: "0 8px 24px rgba(0,0,0,0.14)",
+                            boxShadow: "0 8px 24px rgba(0,0,0,0.18)",
                             minWidth: "170px",
                             display: "flex",
                             flexDirection: "column",
@@ -571,7 +635,10 @@ export function Workforce() {
                           }}
                         >
                           <button
-                            onClick={() => {
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
                               setAssignSkillModal(emp);
                               setActiveDropdownId(null);
                             }}
@@ -598,7 +665,10 @@ export function Workforce() {
                           </button>
 
                           <button
-                            onClick={() => {
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
                               setAssignTrainingModal(emp);
                               setActiveDropdownId(null);
                             }}
@@ -625,7 +695,10 @@ export function Workforce() {
                           </button>
 
                           <button
-                            onClick={() => {
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
                               setViewProductivityModal(emp);
                               setActiveDropdownId(null);
                             }}
@@ -652,7 +725,10 @@ export function Workforce() {
                           </button>
 
                           <button
-                            onClick={() => {
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
                               setViewShiftModal(emp);
                               setActiveDropdownId(null);
                             }}
@@ -752,7 +828,7 @@ export function Workforce() {
             <div>
               <h4 style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)", marginBottom: "8px" }}>Assigned Machine Competencies</h4>
               <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
-                {(viewEmployee.skills || []).map((s, i) => (
+                {(Array.isArray(viewEmployee.skills) ? viewEmployee.skills : typeof viewEmployee.skills === "string" && viewEmployee.skills ? [viewEmployee.skills] : ["HMI Diagnostics"]).map((s, i) => (
                   <Badge key={i} variant="slate">{s}</Badge>
                 ))}
               </div>

@@ -19,6 +19,7 @@ import { StatCard } from "../../components/common/StatCard";
 import { useCMMS } from "../../context/CMMSContext";
 import { useApp } from "../../context/AppContext";
 import { useNavigate } from "react-router-dom";
+import { maintenanceService } from "../../services/maintenanceService";
 
 export function NotificationsPage() {
   const {
@@ -32,6 +33,17 @@ export function NotificationsPage() {
   } = useCMMS();
   const { addToast } = useApp();
   const navigate = useNavigate();
+
+  React.useEffect(() => {
+    const fetchNotifications = async () => {
+      try {
+        await maintenanceService.getNotifications();
+      } catch (err) {
+        console.warn("API notifications fetch notice:", err.message || err);
+      }
+    };
+    fetchNotifications();
+  }, []);
 
   const [typeFilter, setTypeFilter] = useState("ALL");
   const [isPrefModalOpen, setIsPrefModalOpen] = useState(false);
@@ -248,7 +260,21 @@ export function NotificationsPage() {
                       icon={ExternalLink}
                       onClick={() => {
                         markNotificationAsRead(n.id);
-                        navigate(n.link);
+                        if (n.actionText === "View Breakdown" || n.category === "Breakdowns" || n.link?.includes("breakdown")) {
+                          navigate("/maintenance/breakdowns");
+                        } else if (n.actionText === "Execute PM" || n.category === "Preventive Maintenance" || n.link?.includes("pm") || n.link?.includes("preventive")) {
+                          navigate("/maintenance/pm-execute");
+                        } else if (n.actionText === "Review Schedule" || n.category === "Calibration" || n.link?.includes("calibration") || n.link?.includes("calendar")) {
+                          navigate("/maintenance/calendar");
+                        } else if (n.actionText === "Inventory" || n.category === "Spare Parts" || n.link?.includes("spare-parts")) {
+                          navigate("/maintenance/spare-parts");
+                        } else if (n.actionText === "Open Work Order" || n.category === "Work Orders" || n.link?.includes("work-order")) {
+                          navigate("/maintenance/work-orders");
+                        } else if (n.link) {
+                          navigate(n.link);
+                        } else {
+                          navigate("/maintenance");
+                        }
                       }}
                     >
                       {n.actionText || "View Detail"}

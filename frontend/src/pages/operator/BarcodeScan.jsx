@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { QrCode, Camera, ShieldCheck, AlertCircle, Scan, Sparkles, Keyboard, CheckCircle2, Link, Send } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { Button } from "../../components/common/Button";
@@ -13,9 +13,21 @@ export function BarcodeScan() {
   const [scanResult, setScanResult] = useState(null);
   const [scanning, setScanning] = useState(false);
   const [attachingLot, setAttachingLot] = useState(false);
+  const [scannerReady, setScannerReady] = useState(true);
+  const [scannerStatus, setScannerStatus] = useState("READY");
 
   const [isAttachModalOpen, setIsAttachModalOpen] = useState(false);
   const [activeBatchId, setActiveBatchId] = useState("BAT-2026-904 (Juice Run A)");
+
+  // Fetch scanner status on mount
+  useEffect(() => {
+    dashboardService.getBarcodeScanStatus()
+      .then((data) => {
+        if (data?.status) setScannerStatus(data.status);
+        if (typeof data?.cameraReady === "boolean") setScannerReady(data.cameraReady);
+      })
+      .catch((err) => console.warn("[BarcodeScan] Failed to fetch scan status:", err.message));
+  }, []);
 
   // ─── Parse Barcode -> POST /api/v1/dashboards/operator/barcode-scan/parse
   const simulateScan = async (code, type) => {
@@ -161,7 +173,7 @@ export function BarcodeScan() {
 
         <div style={{ textAlign: "center" }}>
           <span style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)", display: "block" }}>
-            {scanning ? "Aligning laser scanner optical lens..." : "Camera ready. Position barcode inside frame."}
+            {scanning ? "Aligning laser scanner optical lens..." : scannerReady ? "Camera ready. Position barcode inside frame." : `Scanner status: ${scannerStatus}`}
           </span>
           <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>
             Supports 1D Barcodes, DataMatrix, and GS1-128 QR Standards

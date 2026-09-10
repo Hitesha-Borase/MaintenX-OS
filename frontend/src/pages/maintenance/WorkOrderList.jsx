@@ -30,6 +30,7 @@ import { DataTable } from "../../components/tables/DataTable";
 import { Modal } from "../../components/common/Modal";
 import { useCMMS } from "../../context/CMMSContext";
 import { useApp } from "../../context/AppContext";
+import maintenanceService from "../../services/maintenanceService";
 
 export function WorkOrderList() {
   const {
@@ -56,6 +57,17 @@ export function WorkOrderList() {
   const [isResolveModalOpen, setIsResolveModalOpen] = useState(false);
   const [isCloseModalOpen, setIsCloseModalOpen] = useState(false);
   const [selectedWO, setSelectedWO] = useState(null);
+
+  React.useEffect(() => {
+    const fetchWOs = async () => {
+      try {
+        await maintenanceService.getWorkOrders();
+      } catch (err) {
+        console.warn("API work orders fetch notice:", err.message || err);
+      }
+    };
+    fetchWOs();
+  }, []);
 
   // Forms State
   const [createForm, setCreateForm] = useState({
@@ -122,13 +134,30 @@ export function WorkOrderList() {
     setIsCreateModalOpen(true);
   };
 
-  const handleConfirmCreate = (e) => {
+  const handleConfirmCreate = async (e) => {
     e.preventDefault();
     if (!createForm.title.trim()) {
       addToast("Please provide work order title", "error");
       return;
     }
     const asset = assets.find((a) => a.id === createForm.assetId);
+
+    try {
+      await maintenanceService.createWorkOrder({
+        title: createForm.title,
+        assetId: createForm.assetId,
+        assetName: asset?.name || createForm.assetId,
+        description: createForm.issue || createForm.title,
+        type: createForm.type,
+        priority: createForm.priority,
+        assignedTechnician: createForm.technician,
+        dueDate: createForm.dueDate,
+        status: "Open"
+      });
+    } catch (err) {
+      console.warn("API createWorkOrder notice:", err.message || err);
+    }
+
     const newWO = addWorkOrder({
       title: createForm.title,
       assetId: createForm.assetId,

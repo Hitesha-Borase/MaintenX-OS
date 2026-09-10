@@ -13,8 +13,64 @@ export const maintenanceService = {
     return apiClient.patch(`/maintenance/work-orders/${workOrderId}/status`, { status });
   },
 
+  async getBreakdowns() {
+    return apiClient.get("/maintenance/breakdowns");
+  },
+
+  async updateAsset(assetId, assetData) {
+    return apiClient.patch(`/maintenance/assets/${assetId}`, assetData);
+  },
+
+  async getHistory() {
+    return apiClient.get("/maintenance/history");
+  },
+
+  async exportHistory(id) {
+    return apiClient.post(`/maintenance/history/${id}/export`);
+  },
+
+  async getTroubleshooting() {
+    return apiClient.get("/maintenance/troubleshooting");
+  },
+
+  async saveTroubleshootingStep(stepData) {
+    return apiClient.post("/maintenance/troubleshooting/step", stepData);
+  },
+
+  async saveTroubleshootingDraft(draftData) {
+    return apiClient.post("/maintenance/troubleshooting/draft", draftData);
+  },
+
+  async createTroubleshootingSolution(solutionData) {
+    return apiClient.post("/maintenance/troubleshooting", solutionData);
+  },
+
   async getPMSchedules() {
     return apiClient.get("/maintenance/pm-schedules");
+  },
+
+  async createPMSchedule(scheduleData) {
+    return apiClient.post("/maintenance/pm-schedules", scheduleData);
+  },
+
+  async getPM() {
+    return apiClient.get("/maintenance/pm");
+  },
+
+  async getCalendar() {
+    return apiClient.get("/maintenance/calendar");
+  },
+
+  async getNotifications() {
+    return apiClient.get("/maintenance/notifications");
+  },
+
+  async getProfile() {
+    return apiClient.get("/maintenance/profile");
+  },
+
+  async updateProfile(profileData) {
+    return apiClient.patch("/maintenance/profile", profileData);
   },
 
   async getSpareParts() {
@@ -23,6 +79,42 @@ export const maintenanceService = {
 
   async getReliabilityMetrics() {
     return apiClient.get("/maintenance/reliability");
+  },
+
+  async executePMChecklist(data) {
+    return apiClient.post("/maintenance/pm-checklists/execute", data);
+  },
+
+  async savePMChecklistDraft(data) {
+    return apiClient.post("/maintenance/pm-checklists/draft", data);
+  },
+
+  async getRCAInvestigations() {
+    return apiClient.get("/maintenance/rca/investigations");
+  },
+
+  async createRCAInvestigation(data) {
+    return apiClient.post("/maintenance/rca/investigations", data);
+  },
+
+  async exportReliabilityReport() {
+    return apiClient.post("/maintenance/reliability/export");
+  },
+
+  async saveExecutionRecord(woId, data) {
+    return apiClient.post(`/maintenance/work-orders/${woId}/execution`, data);
+  },
+
+  async issueSparePart(woId, data) {
+    return apiClient.post(`/maintenance/work-orders/${woId}/parts`, data);
+  },
+
+  async signOffWorkOrder(woId, data) {
+    return apiClient.post(`/maintenance/work-orders/${woId}/sign-off`, data);
+  },
+
+  async addWorkOrderComment(woId, data) {
+    return apiClient.post(`/maintenance/work-orders/${woId}/comments`, data);
   },
 };
 

@@ -20,7 +20,7 @@ export function Notifications() {
   useEffect(() => {
     async function fetchNotifications() {
       try {
-        const res = await dashboardService.getSupervisorNotificationsList();
+        const res = await dashboardService.getSupervisorNotifications();
         if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
           const mapped = res.data.map(n => ({
             ...n,

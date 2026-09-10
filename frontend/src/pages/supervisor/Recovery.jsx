@@ -18,7 +18,7 @@ export function Recovery() {
   useEffect(() => {
     async function fetchCountermeasures() {
       try {
-        const res = await dashboardService.getSupervisorRecoveryCountermeasures();
+        const res = await dashboardService.getSupervisorRecovery();
         if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
           setCountermeasures(res.data);
         }

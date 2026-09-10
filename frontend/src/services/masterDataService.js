@@ -254,6 +254,11 @@ export const masterDataService = {
     return apiClient.get(`/master-data/assets${query}`);
   },
 
+  async getAssetDetails(plantId) {
+    const query = plantId && plantId !== "ALL" ? `?plantId=${enc(plantId)}` : "";
+    return apiClient.get(`/master-data/asset-details${query}`);
+  },
+
   async getStaff(plantId) {
     const query = plantId && plantId !== "ALL" ? `?plantId=${enc(plantId)}` : "";
     return apiClient.get(`/master-data/staff${query}`);

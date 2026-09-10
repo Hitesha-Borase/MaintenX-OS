@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { AlertOctagon, Send, FileWarning, ShieldAlert, AlertTriangle, PhoneCall } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { Button } from "../../components/common/Button";
@@ -17,6 +17,14 @@ export function ReportIssue() {
   const [assetId, setAssetId] = useState("FM-001");
   const [severity, setSeverity] = useState("P1");
   const [description, setDescription] = useState("");
+  const [issueCategories, setIssueCategories] = useState([
+    "Mechanical breakdown",
+    "Safety risk / Near miss",
+    "Allergen / Sanitation defect",
+    "Raw material stockout",
+    "Quality CCP Deviation",
+  ]);
+  const [activeHazards, setActiveHazards] = useState(0);
 
   const [isEmergencyModalOpen, setIsEmergencyModalOpen] = useState(false);
   const [hazardType, setHazardType] = useState("Major Pneumatic Leak / High Pressure Hazard");
@@ -24,6 +32,20 @@ export function ReportIssue() {
   // Loading states
   const [submittingIssue, setSubmittingIssue] = useState(false);
   const [triggeringEmergency, setTriggeringEmergency] = useState(false);
+
+  // Fetch issue configuration & active hazard status on mount
+  useEffect(() => {
+    dashboardService.getReportIssueStatus()
+      .then((data) => {
+        if (data?.categories && Array.isArray(data.categories) && data.categories.length > 0) {
+          setIssueCategories(data.categories);
+        }
+        if (typeof data?.activeHazards === "number") {
+          setActiveHazards(data.activeHazards);
+        }
+      })
+      .catch((err) => console.warn("[ReportIssue] Failed to fetch issue status:", err.message));
+  }, []);
 
   // ─── Submit Issue Ticket -> POST /api/v1/dashboards/operator/report-issue/submit
   const handleSubmit = async (e) => {
@@ -132,11 +154,9 @@ export function ReportIssue() {
                 onChange={(e) => setIssueType(e.target.value)}
                 className="input-field"
               >
-                <option value="Mechanical breakdown">Mechanical breakdown</option>
-                <option value="Safety risk / Near miss">Safety risk / Near miss</option>
-                <option value="Allergen / Sanitation defect">Allergen / Sanitation defect</option>
-                <option value="Raw material stockout">Raw material stockout</option>
-                <option value="Quality CCP Deviation">Quality CCP Deviation</option>
+                {issueCategories.map((cat) => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
               </select>
             </div>
 

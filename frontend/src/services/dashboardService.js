@@ -280,6 +280,10 @@ export const dashboardService = {
   },
 
   // ─── Operator Barcode & QR Scan ─────────────────────────────────────────────
+  async getBarcodeScanStatus() {
+    return apiClient.get("/dashboards/operator/barcode-scan");
+  },
+
   async parseBarcode(payload) {
     return apiClient.post("/dashboards/operator/barcode-scan/parse", payload);
   },
@@ -289,6 +293,10 @@ export const dashboardService = {
   },
 
   // ─── Operator Report Issue & Safety Exception ──────────────────────────────
+  async getReportIssueStatus() {
+    return apiClient.get("/dashboards/operator/report-issue");
+  },
+
   async submitReportIssue(payload) {
     return apiClient.post("/dashboards/operator/report-issue/submit", payload);
   },
@@ -337,6 +345,10 @@ export const dashboardService = {
   },
 
   // ─── Operations Supervisor ─────────────────────────────────────────────────
+  async getSupervisorDashboard() {
+    return apiClient.get("/dashboards/supervisor/dashboard");
+  },
+
   async authorizeSupervisorShift(payload) {
     return apiClient.post("/dashboards/supervisor/authorize-shift", payload);
   },
@@ -485,6 +497,10 @@ export const dashboardService = {
     return apiClient.delete(`/dashboards/supervisor/quality/holds/${id}/scrap`);
   },
 
+  async getSupervisorRecovery() {
+    return apiClient.get("/dashboards/supervisor/recovery");
+  },
+
   async getSupervisorRecoveryCountermeasures() {
     return apiClient.get("/dashboards/supervisor/recovery/countermeasures");
   },
@@ -517,8 +533,20 @@ export const dashboardService = {
     return apiClient.post("/dashboards/supervisor/approvals/bulk-approve", {});
   },
 
+  async getSupervisorReports() {
+    return apiClient.get("/dashboards/supervisor/reports");
+  },
+
   async getSupervisorReportsList() {
     return apiClient.get("/dashboards/supervisor/reports/list");
+  },
+
+  async printSupervisorReport(id) {
+    return apiClient.post(`/dashboards/supervisor/reports/${id}/print`, {});
+  },
+
+  async getSupervisorNotifications() {
+    return apiClient.get("/dashboards/supervisor/notifications");
   },
 
   async getSupervisorNotificationsList() {

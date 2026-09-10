@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useProduction } from "../../context/ProductionContext";
 import { useApp } from "../../context/AppContext";
 import { Card } from "../../components/common/Card";
@@ -6,6 +6,7 @@ import { Button } from "../../components/common/Button";
 import { Badge } from "../../components/common/Badge";
 import { Modal } from "../../components/common/Modal";
 import { Users, Send, ShieldCheck, Lock } from "lucide-react";
+import { dashboardService } from "../../services/dashboardService";
 
 export function ShiftHandoff() {
   const { shiftHandoffs, addShiftHandoff } = useProduction();
@@ -18,6 +19,22 @@ export function ShiftHandoff() {
 
   const [isSignModalOpen, setIsSignModalOpen] = useState(false);
   const [supervisorPin, setSupervisorPin] = useState("****");
+  const [logs, setLogs] = useState([]);
+
+  useEffect(() => {
+    dashboardService.getShiftHandoffs()
+      .then((data) => {
+        if (data && Array.isArray(data) && data.length > 0) {
+          setLogs(data);
+        } else {
+          setLogs(shiftHandoffs);
+        }
+      })
+      .catch((err) => {
+        console.warn("[Supervisor ShiftHandoff] Fetch failed, using local context:", err.message);
+        setLogs(shiftHandoffs);
+      });
+  }, [shiftHandoffs]);
 
   const handleOpenSignModal = (e) => {
     e.preventDefault();
@@ -28,16 +45,33 @@ export function ShiftHandoff() {
     setIsSignModalOpen(true);
   };
 
-  const handleConfirmSignature = (e) => {
+  const handleConfirmSignature = async (e) => {
     e.preventDefault();
 
-    addShiftHandoff({
+    const handoffData = {
       shiftFrom,
       shiftTo,
       handedOverBy: "Alexander Vance (Operations Supervisor)",
       receivedBy: incomingSuper,
       notes
-    });
+    };
+
+    try {
+      await dashboardService.submitShiftHandoff(handoffData);
+    } catch (err) {
+      console.warn("[ShiftHandoff Submit] API warning:", err.message);
+    }
+
+    addShiftHandoff(handoffData);
+    setLogs((prev) => [
+      {
+        id: `HO-${Math.floor(100 + Math.random() * 900)}`,
+        ...handoffData,
+        status: "SIGNED OFF",
+        timestamp: new Date().toISOString().replace("T", " ").substring(0, 16)
+      },
+      ...prev
+    ]);
 
     addToast(`Supervisor shift handoff signed and locked electronically with PIN verification.`, "success");
     setNotes("");
@@ -126,7 +160,7 @@ export function ShiftHandoff() {
           Shift Handoff History & Audit Trail
         </h3>
         <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-          {shiftHandoffs.map((ho) => (
+          {(logs || []).map((ho) => (
             <div
               key={ho.id}
               style={{

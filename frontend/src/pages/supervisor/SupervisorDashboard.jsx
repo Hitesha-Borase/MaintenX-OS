@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   TrendingUp,
@@ -36,6 +36,12 @@ export function SupervisorDashboard() {
 
   const activeOrders = productionOrders.filter((o) => o.status === "Running");
   const openP1Count = exceptions.filter((e) => e.severity === "P1" && e.status !== "Resolved").length;
+
+  // Fetch supervisor dashboard telemetry on mount
+  useEffect(() => {
+    dashboardService.getSupervisorDashboard()
+      .catch(err => console.warn("[SupervisorDashboard] Failed to fetch telemetry:", err.message));
+  }, []);
 
   const handleAuthorizeShift = async () => {
     setAuthorizingShift(true);

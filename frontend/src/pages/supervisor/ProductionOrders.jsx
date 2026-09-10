@@ -17,9 +17,13 @@ export function ProductionOrders() {
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-        {productionOrders.map((order) => {
-          const isRunning = order.status === "Running";
-          const isCompleted = order.status === "Completed";
+        {(Array.isArray(productionOrders) ? productionOrders : []).map((order) => {
+          const isRunning = order.status === "Running" || order.status === "RUNNING";
+          const isCompleted = order.status === "Completed" || order.status === "COMPLETED";
+          const prodQty = Number(order.producedQuantity) || 0;
+          const targetQty = Number(order.targetQuantity) || 0;
+          const prodUnit = typeof order.unit === "string" ? order.unit : (order.sku?.uom || "Bottles");
+          const prodName = order.productName || order.sku?.name || "Production SKU";
 
           return (
             <Card
@@ -40,16 +44,16 @@ export function ProductionOrders() {
                 <div style={{ display: "flex", alignItems: "center", gap: "8px", flex: "1 1 200px", minWidth: 0, flexWrap: "wrap" }}>
                   <Factory size={16} color="#0284C7" style={{ flexShrink: 0 }} />
                   <span style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)", wordBreak: "break-word" }}>
-                    {order.orderNumber}
+                    {order.orderNumber || order.id}
                   </span>
                 </div>
                 <Badge variant={isRunning ? "emerald" : isCompleted ? "slate" : "amber"}>
-                  {order.status}
+                  {order.status || "Planned"}
                 </Badge>
               </div>
 
               <div style={{ fontSize: "12px", color: "var(--text-secondary)", wordBreak: "break-word", lineHeight: 1.5 }}>
-                Product: <strong style={{ color: "var(--text-primary)" }}>{order.productName}</strong> • Target: <strong style={{ color: "var(--text-primary)", fontFamily: "var(--font-mono)" }}>{order.targetQuantity.toLocaleString()} {order.unit}</strong> • Produced: <strong style={{ color: isRunning ? "#059669" : "var(--text-primary)", fontFamily: "var(--font-mono)" }}>{order.producedQuantity.toLocaleString()}</strong>
+                Product: <strong style={{ color: "var(--text-primary)" }}>{prodName}</strong> • Target: <strong style={{ color: "var(--text-primary)", fontFamily: "var(--font-mono)" }}>{targetQty.toLocaleString()} {prodUnit}</strong> • Produced: <strong style={{ color: isRunning ? "#059669" : "var(--text-primary)", fontFamily: "var(--font-mono)" }}>{prodQty.toLocaleString()}</strong>
               </div>
             </Card>
           );

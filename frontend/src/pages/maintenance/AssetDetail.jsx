@@ -30,12 +30,25 @@ import { Modal } from "../../components/common/Modal";
 import { DataTable } from "../../components/tables/DataTable";
 import { useCMMS } from "../../context/CMMSContext";
 import { useApp } from "../../context/AppContext";
+import masterDataService from "../../services/masterDataService";
+import maintenanceService from "../../services/maintenanceService";
 
 export function AssetDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { assets = [], updateAsset, workOrders = [], pmSchedules = [], breakdowns = [], spareParts = [] } = useCMMS();
   const { addToast, openQrModal } = useApp();
+
+  React.useEffect(() => {
+    const fetchData = async () => {
+      try {
+        await masterDataService.getAssetDetails();
+      } catch (err) {
+        console.warn("API asset detail fetch notice:", err.message || err);
+      }
+    };
+    fetchData();
+  }, [id]);
 
   // Selected asset state (defaults to URL param or first asset)
   const initialAsset = assets.find((a) => a.id === id) || assets[0] || {

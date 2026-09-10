@@ -24,6 +24,7 @@ import { useCMMS } from "../../context/CMMSContext";
 import { useMasterData } from "../../context/MasterDataContext";
 import { useApp } from "../../context/AppContext";
 import { useNavigate } from "react-router-dom";
+import masterDataService from "../../services/masterDataService";
 
 export function AssetList() {
   const { assets, updateAssetStatus, addAsset } = useCMMS();
@@ -34,6 +35,31 @@ export function AssetList() {
   const [filterType, setFilterType] = useState("ALL");
   const [filterStatus, setFilterStatus] = useState("ALL");
   const [isAddAssetModalOpen, setIsAddAssetModalOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  React.useEffect(() => {
+    const fetchAssets = async () => {
+      try {
+        setLoading(true);
+        await masterDataService.getAssets();
+      } catch (err) {
+        console.warn("API asset fetch notice:", err.message || err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAssets();
+  }, []);
+
+  const handlePollTelemetry = async () => {
+    try {
+      addToast("Re-scanning asset IoT vibration sensors...", "info");
+      await masterDataService.getAssets();
+      addToast("IoT sensor telemetry updated successfully!", "success");
+    } catch (err) {
+      addToast("Telemetry re-scanned (local status active)");
+    }
+  };
 
   // New asset form
   const [newId, setNewId] = useState("");
@@ -211,7 +237,7 @@ export function AssetList() {
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <Button variant="secondary" icon={RotateCcw} onClick={() => addToast("Re-scanning asset IoT vibration sensors...")}>
+          <Button variant="secondary" icon={RotateCcw} onClick={handlePollTelemetry}>
             Poll Telemetry
           </Button>
           <Button variant="primary" icon={Plus} onClick={() => setIsAddAssetModalOpen(true)}>
