@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   Package,
   Plus,
@@ -19,10 +19,15 @@ import { Button } from "../../../components/common/Button";
 import { StatCard } from "../../../components/common/StatCard";
 import { useMasterData } from "../../../context/MasterDataContext";
 import { useApp } from "../../../context/AppContext";
+import masterDataService from "../../../services/masterDataService";
 
 export function PackagingMasterPage() {
   const { packConfigs = [], addPackConfig, updatePackConfig, deletePackConfig, skus = [] } = useMasterData();
   const { addToast } = useApp();
+
+  useEffect(() => {
+    masterDataService.getPackConfigs().catch((err) => console.warn("Pack configs load:", err.message));
+  }, []);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [skuFilter, setSkuFilter] = useState("ALL");

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   SearchCode,
@@ -17,7 +17,8 @@ import {
   Eye,
   FileText,
   X,
-  Wrench
+  Wrench,
+  RefreshCw
 } from "lucide-react";
 import { Card } from "../../../components/common/Card";
 import { Button } from "../../../components/common/Button";
@@ -25,6 +26,7 @@ import { Badge } from "../../../components/common/Badge";
 import { StatCard } from "../../../components/common/StatCard";
 import { useCI } from "../../../context/CIContext";
 import { useApp } from "../../../context/AppContext";
+import { ciService } from "../../../services/ciService";
 import { maintenanceService } from "../../../services/maintenanceService";
 
 export function Investigations() {
@@ -34,29 +36,50 @@ export function Investigations() {
     investigations = [],
     openRcaCount,
     advanceRcaPhase,
-    initiateRCA
+    initiateRCA,
+    refreshInvestigations
   } = useCI();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [severityFilter, setSeverityFilter] = useState("ALL");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedRcaDetail, setSelectedRcaDetail] = useState(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [summaryData, setSummaryData] = useState(null);
 
   const [newTitle, setNewTitle] = useState("");
   const [newAssetId, setNewAssetId] = useState("AST-002");
 
-  React.useEffect(() => {
-    const fetchRCA = async () => {
-      try {
-        await maintenanceService.getRCAInvestigations();
-      } catch (err) {
-        console.warn("RCA investigations fetch notice:", err);
-      }
-    };
-    fetchRCA();
+  const phases = ["Event", "Evidence", "Hypothesis & Tests", "Occurrence Cause", "Escape Cause", "CAPA", "Verification", "Closed"];
+
+  const loadData = async () => {
+    try {
+      if (refreshInvestigations) await refreshInvestigations();
+      ciService.getInvestigations().catch(() => {});
+      maintenanceService.getRCAInvestigations().catch(() => {});
+      const res = await ciService.getRCASummary();
+      const summary = res?.data || res;
+      if (summary) setSummaryData(summary);
+    } catch (err) {
+      console.warn("RCA data sync warning:", err.message);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
   }, []);
 
-  const phases = ["Event", "Evidence", "Hypothesis & Tests", "Occurrence Cause", "Escape Cause", "CAPA", "Verification"];
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await loadData();
+      addToast("RCA Investigations synchronized with backend REST API.", "success");
+    } catch (err) {
+      addToast("Failed to synchronize with backend.", "error");
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   const handleCreate = async (e) => {
     e.preventDefault();
@@ -69,14 +92,24 @@ export function Investigations() {
       await maintenanceService.createRCAInvestigation({
         assetId: newAssetId,
         title: newTitle.trim()
-      });
-    } catch (err) {
-      console.warn("Create RCA notice:", err);
-    }
+      }).catch(() => {});
 
-    initiateRCA(newAssetId, null, newTitle.trim());
-    setNewTitle("");
-    setIsCreateModalOpen(false);
+      await initiateRCA(newAssetId, null, newTitle.trim());
+      setNewTitle("");
+      setIsCreateModalOpen(false);
+      await loadData();
+    } catch (err) {
+      addToast("Failed to initiate RCA investigation.", "error");
+    }
+  };
+
+  const handleAdvancePhase = async (id, nextPhase) => {
+    try {
+      await advanceRcaPhase(id, nextPhase);
+      await loadData();
+    } catch (err) {
+      addToast("Failed to advance RCA phase.", "error");
+    }
   };
 
   const handleExportCSV = () => {
@@ -105,6 +138,8 @@ export function Investigations() {
         return "/ci/rca/escape";
       case "CAPA":
         return "/ci/capa/corrective";
+      case "Verification":
+        return "/ci/capa/verification";
       default:
         return "/ci/rca/investigations";
     }
@@ -139,6 +174,9 @@ export function Investigations() {
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+          <Button variant="secondary" icon={RefreshCw} onClick={handleManualRefresh} style={{ fontSize: "12px", padding: "7px 12px" }}>
+            {isRefreshing ? "Syncing..." : "Sync API"}
+          </Button>
           <Button variant="secondary" icon={Download} onClick={handleExportCSV} style={{ fontSize: "12px", padding: "7px 12px" }}>
             Export CSV
           </Button>
@@ -164,28 +202,28 @@ export function Investigations() {
       >
         <StatCard
           title="Active Investigations"
-          value={openRcaCount.toString()}
+          value={(summaryData?.activeCount !== undefined ? summaryData.activeCount : openRcaCount).toString()}
           unit="In Flight"
           icon={SearchCode}
           colorVariant="rose"
         />
         <StatCard
           title="Root Causes Validated"
-          value={investigations.filter((i) => i.status.includes("Validated")).length.toString()}
+          value={(summaryData?.validatedCount !== undefined ? summaryData.validatedCount : investigations.filter((i) => i.status.includes("Validated")).length).toString()}
           unit="Confirmed"
           icon={CheckCircle2}
           colorVariant="emerald"
         />
         <StatCard
           title="Methodology"
-          value="5-Why + 8D"
+          value={summaryData?.methodology || "5-Why + 8D"}
           unit="Framework"
           icon={Layers}
           colorVariant="cyan"
         />
         <StatCard
           title="Mean Time To Contain"
-          value="3.2 hrs"
+          value={summaryData?.meanTimeToContain || "3.2 hrs"}
           unit="D3 Speed"
           icon={Clock}
           colorVariant="emerald"
@@ -286,7 +324,14 @@ export function Investigations() {
                   </td>
                   <td style={{ padding: "12px 16px" }}>
                     <div
-                      onClick={() => navigate(getPhaseRoute(inv.currentPhase))}
+                      onClick={() => {
+                        if (inv.currentPhase === "Event" || inv.currentPhase === "Closed") {
+                          setSelectedRcaDetail(inv);
+                        } else {
+                          navigate(getPhaseRoute(inv.currentPhase));
+                        }
+                      }}
+                      title={`Open ${inv.currentPhase} details`}
                       style={{
                         display: "inline-flex",
                         alignItems: "center",
@@ -306,7 +351,7 @@ export function Investigations() {
                     </div>
                   </td>
                   <td style={{ padding: "12px 16px" }}>
-                    <Badge variant={inv.status.includes("Validated") ? "emerald" : inv.severity === "Critical" ? "rose" : "amber"}>
+                    <Badge variant={inv.status.includes("Validated") || inv.status === "Closed" ? "emerald" : inv.severity === "Critical" ? "rose" : "amber"}>
                       {inv.status}
                     </Badge>
                   </td>
@@ -331,26 +376,42 @@ export function Investigations() {
                         <Eye size={13} />
                       </button>
                       <button
-                        onClick={() => {
+                        onClick={async () => {
+                          if (inv.currentPhase === "Closed" || inv.status?.includes("Closed")) {
+                            addToast(`Investigation ${inv.id} is already completed & verified.`, "info");
+                            return;
+                          }
                           const currIdx = phases.indexOf(inv.currentPhase);
-                          const nextPhase = phases[Math.min(currIdx + 1, phases.length - 1)];
-                          advanceRcaPhase(inv.id, nextPhase);
+                          const nextPhase = currIdx !== -1 && currIdx < phases.length - 1
+                            ? phases[currIdx + 1]
+                            : "Closed";
+                          await handleAdvancePhase(inv.id, nextPhase);
                         }}
-                        title="Advance Investigation Phase"
+                        title={
+                          inv.currentPhase === "Closed"
+                            ? "Investigation Closed & Completed"
+                            : inv.currentPhase === "Verification"
+                            ? "Complete & Close Investigation"
+                            : "Advance Investigation Phase"
+                        }
                         style={{
                           width: "30px",
                           height: "30px",
                           borderRadius: "6px",
                           backgroundColor: "var(--bg-card-subtle)",
-                          color: "#059669",
+                          color: inv.currentPhase === "Closed" ? "#10B981" : "#059669",
                           border: "1px solid var(--border-subtle)",
-                          cursor: "pointer",
+                          cursor: inv.currentPhase === "Closed" ? "default" : "pointer",
                           display: "inline-flex",
                           alignItems: "center",
                           justifyContent: "center"
                         }}
                       >
-                        <ChevronRight size={14} />
+                        {inv.currentPhase === "Closed" ? (
+                          <CheckCircle2 size={14} color="#10B981" />
+                        ) : (
+                          <ChevronRight size={14} />
+                        )}
                       </button>
                     </div>
                   </td>
@@ -483,6 +544,18 @@ export function Investigations() {
                 <Button variant="secondary" onClick={() => setSelectedRcaDetail(null)}>
                   Close Dossier
                 </Button>
+                {selectedRcaDetail.currentPhase && selectedRcaDetail.currentPhase !== "Event" && selectedRcaDetail.currentPhase !== "Closed" && (
+                  <Button
+                    variant="secondary"
+                    onClick={() => {
+                      const r = getPhaseRoute(selectedRcaDetail.currentPhase);
+                      setSelectedRcaDetail(null);
+                      navigate(r);
+                    }}
+                  >
+                    Go to {selectedRcaDetail.currentPhase}
+                  </Button>
+                )}
                 <Button variant="primary" onClick={() => { setSelectedRcaDetail(null); navigate("/ci/capa/corrective"); }}>
                   View CAPA Actions
                 </Button>

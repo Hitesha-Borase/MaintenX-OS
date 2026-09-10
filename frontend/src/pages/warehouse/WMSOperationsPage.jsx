@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Truck,
   ArrowDownToLine,
@@ -23,6 +23,7 @@ import { Button } from "../../components/common/Button";
 import { StatCard } from "../../components/common/StatCard";
 import { Modal } from "../../components/common/Modal";
 import { useApp } from "../../context/AppContext";
+import warehouseService from "../../services/warehouseService";
 
 export function WMSOperationsPage() {
   const { addToast } = useApp();
@@ -111,8 +112,28 @@ export function WMSOperationsPage() {
     { id: "dispatch", label: "7. Dispatch", icon: Send, count: dispatchOrders.length }
   ];
 
+  // Sync with Fastify WMS Backend on mount
+  useEffect(() => {
+    let isMounted = true;
+    warehouseService.getWmsOperations().then((res) => {
+      const data = res?.data || res;
+      if (isMounted && data) {
+        if (Array.isArray(data.receivingTasks)) setReceivingTasks(data.receivingTasks);
+        if (Array.isArray(data.putAwayTasks)) setPutAwayTasks(data.putAwayTasks);
+        if (Array.isArray(data.movementLogs)) setMovementLogs(data.movementLogs);
+        if (Array.isArray(data.transfers)) setTransfers(data.transfers);
+        if (Array.isArray(data.pickOrders)) setPickOrders(data.pickOrders);
+        if (Array.isArray(data.stagingBays)) setStagingBays(data.stagingBays);
+        if (Array.isArray(data.dispatchOrders)) setDispatchOrders(data.dispatchOrders);
+      }
+    }).catch((err) => {
+      console.warn("Backend WMS sync fallback:", err.message);
+    });
+    return () => { isMounted = false; };
+  }, []);
+
   // Actions
-  const handleSaveDockCheckIn = (e) => {
+  const handleSaveDockCheckIn = async (e) => {
     e.preventDefault();
     if (!dockForm.poNumber || !dockForm.supplier || !dockForm.item) {
       addToast("Please fill in required fields", "warning");
@@ -131,7 +152,15 @@ export function WMSOperationsPage() {
       tempCheck: dockForm.tempCheck || "Ambient"
     };
 
-    setReceivingTasks((prev) => [newTask, ...prev]);
+    try {
+      const res = await warehouseService.dockCheckIn(newTask);
+      const savedTask = res?.data || newTask;
+      setReceivingTasks((prev) => [savedTask, ...prev.filter(t => t.id !== savedTask.id)]);
+    } catch (apiErr) {
+      console.warn("Backend dockCheckIn sync:", apiErr);
+      setReceivingTasks((prev) => [newTask, ...prev]);
+    }
+
     setIsDockCheckInModalOpen(false);
     addToast(`Inbound shipment ${newId} (PO ${dockForm.poNumber}) checked into ${dockForm.dock}!`, "success");
 
@@ -151,7 +180,13 @@ export function WMSOperationsPage() {
     });
   };
 
-  const handleInspectAndAccept = (task) => {
+  const handleInspectAndAccept = async (task) => {
+    try {
+      await warehouseService.inspectAndAccept({ taskId: task.id, ...task }).catch(() => null);
+    } catch (apiErr) {
+      console.warn("Backend inspectAndAccept sync:", apiErr);
+    }
+
     setReceivingTasks((prev) =>
       prev.map((t) => (t.id === task.id ? { ...t, status: "Inspected" } : t))
     );
@@ -172,12 +207,24 @@ export function WMSOperationsPage() {
     addToast(`Shipment ${task.id} inspected & accepted! Put-away task ${newPutAway.id} generated.`, "success");
   };
 
-  const handleCompletePutAway = (task) => {
+  const handleCompletePutAway = async (task) => {
+    try {
+      await warehouseService.completePutAway({ putAwayId: task.id, ...task }).catch(() => null);
+    } catch (apiErr) {
+      console.warn("Backend completePutAway sync:", apiErr);
+    }
+
     setPutAwayTasks((prev) => prev.filter((p) => p.id !== task.id));
     addToast(`Lot ${task.lot} successfully put away into ${task.targetBin}!`, "success");
   };
 
-  const handleConfirmPick = (order) => {
+  const handleConfirmPick = async (order) => {
+    try {
+      await warehouseService.confirmPick({ orderId: order.id, ...order }).catch(() => null);
+    } catch (apiErr) {
+      console.warn("Backend confirmPick sync:", apiErr);
+    }
+
     setPickOrders((prev) =>
       prev.map((p) =>
         p.id === order.id ? { ...p, pickedItems: p.itemsCount, status: "Pick Complete" } : p
@@ -186,7 +233,13 @@ export function WMSOperationsPage() {
     addToast(`Pick order ${order.id} verified and completed. Ready for production issue.`, "success");
   };
 
-  const handleReleaseStaging = (bay) => {
+  const handleReleaseStaging = async (bay) => {
+    try {
+      await warehouseService.releaseStaging({ bay: bay.bay, ...bay }).catch(() => null);
+    } catch (apiErr) {
+      console.warn("Backend releaseStaging sync:", apiErr);
+    }
+
     setStagingBays((prev) =>
       prev.map((b) =>
         b.bay === bay.bay ? { ...b, status: "Released to Line" } : b
@@ -195,7 +248,13 @@ export function WMSOperationsPage() {
     addToast(`${bay.stagedItem} released directly to ${bay.destination}.`, "success");
   };
 
-  const handleDispatchShipment = (dsp) => {
+  const handleDispatchShipment = async (dsp) => {
+    try {
+      await warehouseService.dispatchShipment({ dispatchId: dsp.id, ...dsp }).catch(() => null);
+    } catch (apiErr) {
+      console.warn("Backend dispatchShipment sync:", apiErr);
+    }
+
     setDispatchOrders((prev) =>
       prev.map((d) =>
         d.id === dsp.id ? { ...d, status: "Dispatched" } : d

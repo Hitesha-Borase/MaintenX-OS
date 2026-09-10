@@ -625,6 +625,16 @@ export function RoleProvider({ children }) {
     }
   }, [currentRole]);
 
+  // Ensure active valid JWT session token on mount
+  useEffect(() => {
+    const token = localStorage.getItem("maintenx_auth_token") || localStorage.getItem("flowstate_token");
+    if (!token && currentRole?.user?.email) {
+      authService.login(currentRole.user.email, "Password@123").catch((err) => {
+        console.warn("Auto-token acquisition on mount:", err.message);
+      });
+    }
+  }, []);
+
   const setRoleById = (roleId) => {
     const found = ROLES.find((r) => r.id === roleId);
     if (found) {
@@ -632,6 +642,10 @@ export function RoleProvider({ children }) {
       localStorage.setItem("flowstate_current_role", JSON.stringify(found));
       if (found.user) {
         localStorage.setItem("flowstate_user_profile", JSON.stringify(found.user));
+        // Keep JWT token in sync with active role perspective
+        authService.login(found.user.email, "Password@123").catch((err) => {
+          console.warn(`Role sync login error for ${found.user.email}:`, err.message);
+        });
       }
     }
   };

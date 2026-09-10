@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   Cpu,
   Plus,
@@ -22,10 +22,15 @@ import { Button } from "../../../components/common/Button";
 import { StatCard } from "../../../components/common/StatCard";
 import { useMasterData } from "../../../context/MasterDataContext";
 import { useApp } from "../../../context/AppContext";
+import masterDataService from "../../../services/masterDataService";
 
 export function MachineCapabilityPage() {
   const { assets = [], addAsset, updateAsset, toggleAssetStatus, lines = [], plants = [], auditLogs = [] } = useMasterData();
   const { addToast } = useApp();
+
+  useEffect(() => {
+    masterDataService.getAssets().catch((err) => console.warn("Assets load:", err.message));
+  }, []);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [criticalityFilter, setCriticalityFilter] = useState("ALL");

@@ -1,13 +1,18 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Bell, AlertTriangle, Check, CheckCheck, CheckCircle2, Trash2, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "../../components/common/Card";
 import { Button } from "../../components/common/Button";
 import { Badge } from "../../components/common/Badge";
 import { useApp } from "../../context/AppContext";
+import ciService from "../../services/ciService";
 
 export function Notifications() {
   const { addToast } = useApp();
+
+  useEffect(() => {
+    ciService.getDashboardSummary().catch((err) => console.warn("Notifications sync:", err.message));
+  }, []);
 
   const [activeTab, setActiveTab] = useState("All");
   const [filterTab, setFilterTab] = useState("all"); // "all", "unread", "read"

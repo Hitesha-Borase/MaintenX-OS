@@ -4,35 +4,54 @@ import { Card } from "../../../components/common/Card";
 import { StatCard } from "../../../components/common/StatCard";
 import { Button } from "../../../components/common/Button";
 import { useApp } from "../../../context/AppContext";
+import { executiveService } from "../../../services/executiveService";
 
 export function ManufacturingCost() {
   const { addToast } = useApp();
   const [selectedBatch, setSelectedBatch] = useState("BAT-2026-0890");
+  const [batchOptions, setBatchOptions] = useState([
+    { id: "BAT-2026-0890", name: "BAT-2026-0890 (Organic Apple Juice 1L)" },
+    { id: "BAT-2026-0891", name: "BAT-2026-0891 (Organic Apple Juice 500ML)" },
+    { id: "BAT-2026-0888", name: "BAT-2026-0888 (Organic Orange Juice 1L)" }
+  ]);
 
-  const costBreakdown = {
-    "BAT-2026-0890": {
-      material: "$18,500",
-      packaging: "$4,200",
-      labour: "$6,800",
-      machineTime: "$3,400",
-      overhead: "$2,100",
-      total: "$35,000",
-      standard: "$33,500",
-      variance: "+$1,500"
-    },
-    "BAT-2026-0891": {
-      material: "$17,200",
-      packaging: "$3,900",
-      labour: "$6,200",
-      machineTime: "$3,100",
-      overhead: "$1,900",
-      total: "$32,300",
-      standard: "$33,500",
-      variance: "-$1,200"
-    }
-  };
+  const [current, setCurrent] = useState({
+    material: "$18,500",
+    packaging: "$4,200",
+    labour: "$6,800",
+    machineTime: "$3,400",
+    overhead: "$2,100",
+    total: "$35,000",
+    standard: "$33,500",
+    variance: "+$1,500"
+  });
+  const [breakdown, setBreakdown] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const current = costBreakdown[selectedBatch];
+  React.useEffect(() => {
+    const fetchCosts = async () => {
+      setLoading(true);
+      try {
+        const res = await executiveService.getManufacturingCosts(selectedBatch);
+        if (res && res.data) {
+          if (res.data.batches && res.data.batches.length > 0) {
+            setBatchOptions(res.data.batches);
+          }
+          if (res.data.current) {
+            setCurrent(res.data.current);
+          }
+          if (res.data.breakdown) {
+            setBreakdown(res.data.breakdown);
+          }
+        }
+      } catch (err) {
+        console.warn("Failed to load manufacturing costs:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchCosts();
+  }, [selectedBatch]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%" }}>
@@ -59,8 +78,9 @@ export function ManufacturingCost() {
               cursor: "pointer"
             }}
           >
-            <option value="BAT-2026-0890">BAT-2026-0890 (Apple Juice 1L)</option>
-            <option value="BAT-2026-0891">BAT-2026-0891 (Apple Juice 500ML)</option>
+            {batchOptions.map(b => (
+              <option key={b.id} value={b.id}>{b.name || b.id}</option>
+            ))}
           </select>
         </div>
       </div>

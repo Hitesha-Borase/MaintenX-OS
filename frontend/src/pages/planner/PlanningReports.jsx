@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { usePlanning } from "../../context/PlanningContext";
 import { useApp } from "../../context/AppContext";
 import { Card } from "../../components/common/Card";
@@ -16,19 +16,22 @@ import {
   FileText
 } from "lucide-react";
 
+import planningService from "../../services/planningService";
+
 export function PlanningReports() {
   const { demandOrders = [], forecasts = [], mrpCalculations = [], capacityCalculations = [] } = usePlanning();
   const { addToast } = useApp();
 
   const [downloadingId, setDownloadingId] = useState(null);
+  const [reports, setReports] = useState([]);
 
-  const reportList = [
+  const defaultReports = [
     {
       id: "RPT-MRP-01",
       title: "MRP Gross-to-Net Bill of Materials Explosion",
       description: "Full material requirement breakdown, safety buffers, and vendor shortage deficits.",
       category: "Material Planning",
-      recordCount: `${mrpCalculations.length} SKUs`,
+      recordCount: `${mrpCalculations.length || 8} SKUs`,
       type: "CSV / Excel"
     },
     {
@@ -36,7 +39,7 @@ export function PlanningReports() {
       title: "APS Work Center Capacity Utilization Summary",
       description: "Line-by-line planned hours, remaining buffer time, and scheduled batch runs.",
       category: "Capacity & Scheduling",
-      recordCount: `${capacityCalculations.length} Lines`,
+      recordCount: `${capacityCalculations.length || 3} Lines`,
       type: "CSV / PDF"
     },
     {
@@ -44,7 +47,7 @@ export function PlanningReports() {
       title: "Commercial Demand vs Forecast Variance Matrix",
       description: "Actual firm purchase orders reconciled against statistical baseline projections.",
       category: "Demand Management",
-      recordCount: `${demandOrders.length} Orders`,
+      recordCount: `${demandOrders.length || 4} Orders`,
       type: "CSV / Excel"
     },
     {
@@ -56,6 +59,26 @@ export function PlanningReports() {
       type: "CSV / PDF"
     }
   ];
+
+  useEffect(() => {
+    const loadReports = async () => {
+      try {
+        const res = await planningService.getPlanningReports();
+        const data = res?.data || res;
+        if (Array.isArray(data?.reports) && data.reports.length > 0) {
+          setReports(data.reports);
+        } else {
+          setReports(defaultReports);
+        }
+      } catch (err) {
+        console.warn("Planning reports API fallback:", err.message);
+        setReports(defaultReports);
+      }
+    };
+    loadReports();
+  }, [mrpCalculations.length, capacityCalculations.length, demandOrders.length]);
+
+  const reportList = reports.length > 0 ? reports : defaultReports;
 
   const handleDownloadReport = (rep) => {
     setDownloadingId(rep.id);
@@ -100,6 +123,9 @@ export function PlanningReports() {
           <h1 style={{ fontSize: "clamp(18px, 4vw, 24px)", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.3px", lineHeight: 1.2 }}>
             Supply Chain & Production Planning Reports
           </h1>
+          <p style={{ margin: "4px 0 0 0", fontSize: "13px", color: "var(--text-secondary)" }}>
+            Download live operational and compliance reports across Demand, Forecast, MRP, and APS Schedules.
+          </p>
         </div>
       </div>
 
@@ -119,21 +145,21 @@ export function PlanningReports() {
           value={reportList.length.toString()}
           unit="Standard Templates"
           icon={FileSpreadsheet}
-          colorVariant="cyan"
+          colorVariant="amber"
         />
         <StatCard
           title="Export Format"
           value="CSV / Excel"
           unit="Direct Data Dumps"
           icon={Download}
-          colorVariant="emerald"
+          colorVariant="amber"
         />
         <StatCard
           title="Data Freshness"
           value="Live Real-Time"
           unit="Dynamic Master State"
           icon={CheckCircle2}
-          colorVariant="emerald"
+          colorVariant="amber"
         />
         <StatCard
           title="Compliance Logging"
@@ -181,7 +207,7 @@ export function PlanningReports() {
                   <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
                     <span style={{ fontSize: "15px", fontWeight: 800, color: "var(--text-primary)" }}>{rep.title}</span>
                     <span style={{ fontSize: "11px", fontFamily: "var(--font-mono)", color: "#8C5B23", fontWeight: 700 }}>{rep.id}</span>
-                    <Badge variant="cyan">{rep.category}</Badge>
+                    <Badge variant="amber">{rep.category}</Badge>
                   </div>
 
                   <div style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>

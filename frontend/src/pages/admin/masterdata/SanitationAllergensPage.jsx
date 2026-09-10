@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   ShieldAlert,
   Plus,
@@ -19,10 +19,26 @@ import { Button } from "../../../components/common/Button";
 import { StatCard } from "../../../components/common/StatCard";
 import { useMasterData } from "../../../context/MasterDataContext";
 import { useApp } from "../../../context/AppContext";
+import masterDataService from "../../../services/masterDataService";
 
 export function SanitationAllergensPage() {
-  const { sanitationClasses = [], addSanitationClass, updateSanitationClass, allergenRules = [], addAllergenRule, updateAllergenRule, skus = [] } = useMasterData();
+  const {
+    sanitationClasses = [],
+    addSanitationClass,
+    updateSanitationClass,
+    deleteSanitationClass,
+    allergenRules = [],
+    addAllergenRule,
+    updateAllergenRule,
+    deleteAllergenRule,
+    skus = []
+  } = useMasterData();
   const { addToast } = useApp();
+
+  useEffect(() => {
+    masterDataService.getSanitationClasses().catch((err) => console.warn("Sanitation load:", err.message));
+    masterDataService.getAllergenRules().catch((err) => console.warn("Allergen rules load:", err.message));
+  }, []);
 
   const [activeTab, setActiveTab] = useState("sanitation"); // "sanitation" | "allergens"
   const [searchQuery, setSearchQuery] = useState("");
@@ -102,6 +118,33 @@ export function SanitationAllergensPage() {
     });
     addToast(`Allergen rule "${created.allergenName}" registered!`, "success");
     setIsModalOpen(false);
+  };
+
+  const handleEditSanitationSubmit = (e) => {
+    e.preventDefault();
+    if (!editingSanitation?.sanitationClass?.trim()) {
+      addToast("Please provide sanitation class name.", "warning");
+      return;
+    }
+    updateSanitationClass(editingSanitation.sanitationId || editingSanitation.id, editingSanitation);
+    addToast(`Sanitation Class "${editingSanitation.sanitationClass}" updated!`, "success");
+    setEditingSanitation(null);
+  };
+
+  const handleEditAllergenSubmit = (e) => {
+    e.preventDefault();
+    if (!editingAllergen?.allergenName?.trim()) {
+      addToast("Please provide allergen name.", "warning");
+      return;
+    }
+    const selSku = skus.find((s) => s.skuId === editingAllergen.skuId);
+    const updated = {
+      ...editingAllergen,
+      skuCode: selSku ? selSku.skuCode : editingAllergen.skuCode || "SKU-5001"
+    };
+    updateAllergenRule(editingAllergen.allergenId || editingAllergen.id, updated);
+    addToast(`Allergen rule "${editingAllergen.allergenName}" updated!`, "success");
+    setEditingAllergen(null);
   };
 
   return (
@@ -268,13 +311,27 @@ export function SanitationAllergensPage() {
                       <Badge variant="emerald">{s.status}</Badge>
                     </td>
                     <td style={{ padding: "12px 16px", textAlign: "right" }}>
-                      <button
-                        onClick={() => setEditingSanitation({ ...s })}
-                        title="Edit Sanitation Class"
-                        style={{ width: "30px", height: "30px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", color: "var(--text-primary)", border: "1px solid var(--border-subtle)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
-                      >
-                        <Edit2 size={13} />
-                      </button>
+                      <div style={{ display: "inline-flex", gap: "6px" }}>
+                        <button
+                          onClick={() => setEditingSanitation({ ...s })}
+                          title="Edit Sanitation Class"
+                          style={{ width: "30px", height: "30px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", color: "var(--text-primary)", border: "1px solid var(--border-subtle)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+                        >
+                          <Edit2 size={13} />
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (window.confirm(`Are you sure you want to delete sanitation class "${s.sanitationClass}"?`)) {
+                              deleteSanitationClass(s.sanitationId || s.id);
+                              addToast(`Sanitation class "${s.sanitationClass}" deleted`, "info");
+                            }
+                          }}
+                          title="Delete Sanitation Class"
+                          style={{ width: "30px", height: "30px", borderRadius: "6px", backgroundColor: "rgba(239, 68, 68, 0.08)", color: "#EF4444", border: "1px solid rgba(239, 68, 68, 0.2)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -320,13 +377,27 @@ export function SanitationAllergensPage() {
                       <Badge variant="emerald">{a.status}</Badge>
                     </td>
                     <td style={{ padding: "12px 16px", textAlign: "right" }}>
-                      <button
-                        onClick={() => setEditingAllergen({ ...a })}
-                        title="Edit Allergen Rule"
-                        style={{ width: "30px", height: "30px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", color: "var(--text-primary)", border: "1px solid var(--border-subtle)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
-                      >
-                        <Edit2 size={13} />
-                      </button>
+                      <div style={{ display: "inline-flex", gap: "6px" }}>
+                        <button
+                          onClick={() => setEditingAllergen({ ...a })}
+                          title="Edit Allergen Rule"
+                          style={{ width: "30px", height: "30px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", color: "var(--text-primary)", border: "1px solid var(--border-subtle)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+                        >
+                          <Edit2 size={13} />
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (window.confirm(`Are you sure you want to delete allergen rule "${a.allergenName}"?`)) {
+                              deleteAllergenRule(a.allergenId || a.id);
+                              addToast(`Allergen rule "${a.allergenName}" deleted`, "info");
+                            }
+                          }}
+                          title="Delete Allergen Rule"
+                          style={{ width: "30px", height: "30px", borderRadius: "6px", backgroundColor: "rgba(239, 68, 68, 0.08)", color: "#EF4444", border: "1px solid rgba(239, 68, 68, 0.2)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -503,6 +574,196 @@ export function SanitationAllergensPage() {
                 </Button>
                 <Button variant="primary" type="submit">
                   Save Allergen Rule
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT SANITATION MODAL */}
+      {editingSanitation && (
+        <div className="modal-backdrop" onClick={() => setEditingSanitation(null)}>
+          <div className="modal-content" style={{ maxWidth: "520px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Edit2 size={18} color="#C89547" />
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                  Edit Sanitation Class Program
+                </h2>
+              </div>
+              <button onClick={() => setEditingSanitation(null)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditSanitationSubmit} style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div>
+                <label className="form-label">Sanitation Class Title *</label>
+                <input
+                  type="text"
+                  required
+                  value={editingSanitation.sanitationClass || ""}
+                  onChange={(e) => setEditingSanitation({ ...editingSanitation, sanitationClass: e.target.value })}
+                  className="form-input"
+                  style={{ backgroundColor: "#FFFFFF" }}
+                />
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div>
+                  <label className="form-label">Required Duration (min) *</label>
+                  <input
+                    type="number"
+                    min="1"
+                    required
+                    value={editingSanitation.durationMin || ""}
+                    onChange={(e) => setEditingSanitation({ ...editingSanitation, durationMin: Number(e.target.value) })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+                <div>
+                  <label className="form-label">Risk Level Classification</label>
+                  <input
+                    type="text"
+                    value={editingSanitation.riskLevel || ""}
+                    onChange={(e) => setEditingSanitation({ ...editingSanitation, riskLevel: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="form-label">Cleaning Method Protocol</label>
+                <input
+                  type="text"
+                  value={editingSanitation.cleaningMethod || ""}
+                  onChange={(e) => setEditingSanitation({ ...editingSanitation, cleaningMethod: e.target.value })}
+                  className="form-input"
+                  style={{ backgroundColor: "#FFFFFF" }}
+                />
+              </div>
+
+              <div>
+                <label className="form-label">Applicable Products</label>
+                <input
+                  type="text"
+                  value={editingSanitation.applicableProducts || ""}
+                  onChange={(e) => setEditingSanitation({ ...editingSanitation, applicableProducts: e.target.value })}
+                  className="form-input"
+                  style={{ backgroundColor: "#FFFFFF" }}
+                />
+              </div>
+
+              <div>
+                <label className="form-label">Protocol Detailed Description</label>
+                <textarea
+                  rows={2}
+                  value={editingSanitation.description || ""}
+                  onChange={(e) => setEditingSanitation({ ...editingSanitation, description: e.target.value })}
+                  className="form-input"
+                  style={{ backgroundColor: "#FFFFFF" }}
+                />
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "8px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
+                <Button variant="secondary" onClick={() => setEditingSanitation(null)}>
+                  Cancel
+                </Button>
+                <Button variant="primary" type="submit">
+                  Save Changes
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT ALLERGEN MODAL */}
+      {editingAllergen && (
+        <div className="modal-backdrop" onClick={() => setEditingAllergen(null)}>
+          <div className="modal-content" style={{ maxWidth: "520px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <ShieldAlert size={18} color="#EF4444" />
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                  Edit Allergen Governance Rule
+                </h2>
+              </div>
+              <button onClick={() => setEditingAllergen(null)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditAllergenSubmit} style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div>
+                  <label className="form-label">Allergen Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingAllergen.allergenName || ""}
+                    onChange={(e) => setEditingAllergen({ ...editingAllergen, allergenName: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+                <div>
+                  <label className="form-label">Associated Material SKU *</label>
+                  <select
+                    value={editingAllergen.skuId || ""}
+                    onChange={(e) => setEditingAllergen({ ...editingAllergen, skuId: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  >
+                    {skus.map((s) => (
+                      <option key={s.skuId} value={s.skuId}>{s.skuCode} — {s.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="form-label">Risk Level Classification</label>
+                <input
+                  type="text"
+                  value={editingAllergen.riskLevel || ""}
+                  onChange={(e) => setEditingAllergen({ ...editingAllergen, riskLevel: e.target.value })}
+                  className="form-input"
+                  style={{ backgroundColor: "#FFFFFF" }}
+                />
+              </div>
+
+              <div>
+                <label className="form-label">Cleaning & Validation Protocol</label>
+                <input
+                  type="text"
+                  value={editingAllergen.cleaningProtocol || ""}
+                  onChange={(e) => setEditingAllergen({ ...editingAllergen, cleaningProtocol: e.target.value })}
+                  className="form-input"
+                  style={{ backgroundColor: "#FFFFFF" }}
+                />
+              </div>
+
+              <div>
+                <label className="form-label">Changeover Restriction</label>
+                <textarea
+                  rows={2}
+                  value={editingAllergen.changeoverRestriction || ""}
+                  onChange={(e) => setEditingAllergen({ ...editingAllergen, changeoverRestriction: e.target.value })}
+                  className="form-input"
+                  style={{ backgroundColor: "#FFFFFF" }}
+                />
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "8px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
+                <Button variant="secondary" onClick={() => setEditingAllergen(null)}>
+                  Cancel
+                </Button>
+                <Button variant="primary" type="submit">
+                  Save Changes
                 </Button>
               </div>
             </form>

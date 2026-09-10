@@ -402,20 +402,20 @@ function RoleProtectedRoute({ children }) {
   const { currentRole, canAccessPath } = useRole();
   const location = useLocation();
 
-  if (currentRole.id === "admin") {
+  if (!currentRole || currentRole?.id === "admin" || currentRole?.id === "master_admin") {
     return children;
   }
 
-  if (!canAccessPath(location.pathname)) {
+  if (typeof canAccessPath === "function" && !canAccessPath(location.pathname)) {
     return (
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "60vh", padding: "40px", textAlign: "center", gap: "20px" }}>
         <div style={{ padding: "16px", borderRadius: "50%", backgroundColor: "rgba(239, 68, 68, 0.15)", color: "#EF4444" }}>
           <AlertOctagon size={48} />
         </div>
         <div>
-          <h2 style={{ fontSize: "20px", fontWeight: 800, color: "#FFFFFF" }}>Access Restricted</h2>
+          <h2 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary, #FFFFFF)" }}>Access Restricted</h2>
           <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginTop: "8px", maxWidth: "480px", lineHeight: 1.5 }}>
-            Your simulated role perspective (<strong>{currentRole.label}</strong>) does not hold security clearance for this screen or module.
+            Your simulated role perspective (<strong>{currentRole?.label || "Current Role"}</strong>) does not hold security clearance for this screen or module.
           </p>
         </div>
         <div style={{ padding: "14px 18px", borderRadius: "8px", backgroundColor: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)", fontSize: "12px", color: "var(--text-muted)", maxWidth: "440px" }}>
@@ -687,7 +687,6 @@ export function AppContent() {
           <Route path="/labour/hours" element={<RoleProtectedRoute><LabourHoursPage /></RoleProtectedRoute>} />
 
           <Route path="/inventory" element={<RoleProtectedRoute><WarehouseInventoryPage /></RoleProtectedRoute>} />
-          <Route path="/warehouse/inventory" element={<RoleProtectedRoute><WarehouseInventoryPage /></RoleProtectedRoute>} />
           <Route path="/warehouse/material-shortage" element={<RoleProtectedRoute><MaterialShortagePage /></RoleProtectedRoute>} />
           <Route path="/warehouse/finished-goods" element={<RoleProtectedRoute><FinishedGoodsPage /></RoleProtectedRoute>} />
 
@@ -973,14 +972,8 @@ export function AppContent() {
           <Route path="/admin/profile" element={<RoleProtectedRoute><ProfilePage /></RoleProtectedRoute>} />
 
           {/* ========================================================= */}
-          {/* MASTER DATA, GOVERNANCE & MIGRATION DIRECT ROUTES         */}
+          {/* GOVERNANCE & MIGRATION DIRECT ROUTES                      */}
           {/* ========================================================= */}
-          <Route path="/master-data/items" element={<RoleProtectedRoute><ItemMasterPage /></RoleProtectedRoute>} />
-          <Route path="/master-data/bom" element={<RoleProtectedRoute><BOMRecipesPage /></RoleProtectedRoute>} />
-          <Route path="/master-data/work-centers" element={<RoleProtectedRoute><WorkCentersMasterPage /></RoleProtectedRoute>} />
-          <Route path="/master-data/machine-capability" element={<RoleProtectedRoute><MachineCapabilityPage /></RoleProtectedRoute>} />
-          <Route path="/master-data/skills" element={<RoleProtectedRoute><SkillsMasterPage /></RoleProtectedRoute>} />
-          <Route path="/master-data/quality-specs" element={<RoleProtectedRoute><QualitySpecsPage /></RoleProtectedRoute>} />
           <Route path="/governance/permissions" element={<RoleProtectedRoute><PermissionsMatrixPage /></RoleProtectedRoute>} />
           <Route path="/governance/audit" element={<RoleProtectedRoute><AuditLogsPage /></RoleProtectedRoute>} />
           <Route path="/migration" element={<RoleProtectedRoute><MigrationPage /></RoleProtectedRoute>} />

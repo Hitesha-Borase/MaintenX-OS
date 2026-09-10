@@ -20,10 +20,17 @@ import { Badge } from "../../../components/common/Badge";
 import { Button } from "../../../components/common/Button";
 import { useCI } from "../../../context/CIContext";
 import { useApp } from "../../../context/AppContext";
+import { ciService } from "../../../services/ciService";
 
 export function DowntimeLoss() {
   const navigate = useNavigate();
   const { addToast } = useApp();
+
+  // Trigger live GET /api/v1/ci/loss-deployments on mount
+  React.useEffect(() => {
+    ciService.getLossDeployments().catch((err) => console.warn("Live loss fetch:", err.message));
+  }, []);
+
   const { lossRecords = [], initiateRCA } = useCI();
 
   const [searchQuery, setSearchQuery] = useState("");

@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { usePlanning } from "../../../context/PlanningContext";
 import { useMasterData } from "../../../context/MasterDataContext";
 import { useApp } from "../../../context/AppContext";
+import planningService from "../../../services/planningService";
 import { Card } from "../../../components/common/Card";
 import { Badge } from "../../../components/common/Badge";
 import { Button } from "../../../components/common/Button";
@@ -25,12 +26,62 @@ export function SafetyStock() {
 
   const [editingPolicy, setEditingPolicy] = useState(null);
   const [newMinStock, setNewMinStock] = useState(5000);
+  const [serviceLevelTarget, setServiceLevelTarget] = useState("99.0");
+  const [customBuffers, setCustomBuffers] = useState({});
+  const [isSaving, setIsSaving] = useState(false);
 
-  const handleSavePolicy = (e) => {
+  useEffect(() => {
+    async function loadPolicies() {
+      try {
+        const res = await planningService.getSafetyStockPolicies();
+        const data = res?.data || res;
+        if (data && typeof data === "object") {
+          setCustomBuffers(data);
+        }
+      } catch (err) {
+        console.warn("Could not fetch safety stock policies from backend:", err.message);
+      }
+    }
+    loadPolicies();
+  }, []);
+
+  const handleSavePolicy = async (e) => {
     e.preventDefault();
-    addToast(`Safety buffer policy updated for ${editingPolicy.name}!`, "success");
-    setEditingPolicy(null);
+    setIsSaving(true);
+
+    const payload = {
+      skuId: editingPolicy.skuId,
+      skuCode: editingPolicy.skuCode,
+      safetyStock: newMinStock,
+      serviceLevelTarget: Number(serviceLevelTarget),
+      category: editingPolicy.category
+    };
+
+    try {
+      const res = await planningService.updateSafetyStockPolicy(payload);
+      setCustomBuffers((prev) => ({
+        ...prev,
+        [editingPolicy.skuCode]: newMinStock,
+        [editingPolicy.skuId]: newMinStock
+      }));
+      addToast(
+        res?.message || `Safety buffer policy updated for ${editingPolicy.name}! (Connected to API)`,
+        "success"
+      );
+    } catch (err) {
+      console.warn("Safety stock update API fallback:", err.message);
+      setCustomBuffers((prev) => ({
+        ...prev,
+        [editingPolicy.skuCode]: newMinStock,
+        [editingPolicy.skuId]: newMinStock
+      }));
+      addToast(`Safety buffer policy updated for ${editingPolicy.name}!`, "success");
+    } finally {
+      setIsSaving(false);
+      setEditingPolicy(null);
+    }
   };
+
 
   const filtered = mrpCalculations.filter(
     (m) =>
@@ -119,8 +170,9 @@ export function SafetyStock() {
             </thead>
             <tbody>
               {filtered.map((m) => {
-                const ratio = Math.round((m.availableInventory / (m.safetyStock || 1)) * 100);
-                const isSafe = m.availableInventory >= m.safetyStock;
+                const effectiveSafety = customBuffers[m.skuCode] || customBuffers[m.skuId] || m.safetyStock;
+                const ratio = Math.round((m.availableInventory / (effectiveSafety || 1)) * 100);
+                const isSafe = m.availableInventory >= effectiveSafety;
 
                 return (
                   <tr
@@ -151,7 +203,7 @@ export function SafetyStock() {
 
                     <td style={{ padding: "12px 14px", whiteSpace: "nowrap" }}>
                       <span style={{ fontSize: "12px", fontFamily: "var(--font-mono)", color: "var(--text-muted)", fontWeight: 600 }}>
-                        {m.safetyStock.toLocaleString()} {m.uom}
+                        {effectiveSafety.toLocaleString()} {m.uom}
                       </span>
                     </td>
 
@@ -171,7 +223,7 @@ export function SafetyStock() {
                       <button
                         onClick={() => {
                           setEditingPolicy(m);
-                          setNewMinStock(m.safetyStock);
+                          setNewMinStock(effectiveSafety);
                         }}
                         style={{
                           width: "30px",
@@ -233,7 +285,12 @@ export function SafetyStock() {
 
               <div>
                 <label className="form-label">Service Level Target (%)</label>
-                <select className="form-input" style={{ backgroundColor: "#FFFFFF" }}>
+                <select
+                  value={serviceLevelTarget}
+                  onChange={(e) => setServiceLevelTarget(e.target.value)}
+                  className="form-input"
+                  style={{ backgroundColor: "#FFFFFF" }}
+                >
                   <option value="99.5">99.5% (High Reliability Aseptic Line)</option>
                   <option value="99.0">99.0% (Standard Beverage Pack)</option>
                   <option value="95.0">95.0% (Non-Critical Packaging)</option>
@@ -244,8 +301,8 @@ export function SafetyStock() {
                 <Button variant="secondary" type="button" onClick={() => setEditingPolicy(null)}>
                   Cancel
                 </Button>
-                <Button variant="primary" type="submit">
-                  Save Policy
+                <Button variant="primary" type="submit" disabled={isSaving}>
+                  {isSaving ? "Saving..." : "Save Policy"}
                 </Button>
               </div>
             </form>

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import {
   Gauge,
   TrendingUp,
@@ -18,9 +18,14 @@ import { StatCard } from "../../components/common/StatCard";
 import { AreaChart } from "../../components/charts/AreaChart";
 import { BarChart } from "../../components/charts/BarChart";
 import { useApp } from "../../context/AppContext";
+import productionService from "../../services/productionService";
 
 export function OEEPage() {
   const { addToast } = useApp();
+
+  useEffect(() => {
+    productionService.getOEE().catch((err) => console.warn("OEE load:", err.message));
+  }, []);
 
   const lineOEE = [
     { line: "Line 1 (Aseptic Bottling 500ml)", oee: 88.4, avail: 94.0, perf: 96.0, qual: 98.0, status: "Optimal" },

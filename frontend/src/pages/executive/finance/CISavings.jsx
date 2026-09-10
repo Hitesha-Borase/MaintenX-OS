@@ -1,37 +1,71 @@
-import React, { useState } from "react";
-import { TrendingUp, Award, CheckCircle2 } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { TrendingUp, Award, CheckCircle2, Loader2 } from "lucide-react";
 import { Card } from "../../../components/common/Card";
 import { StatCard } from "../../../components/common/StatCard";
 import { Button } from "../../../components/common/Button";
 import { Badge } from "../../../components/common/Badge";
 import { Modal } from "../../../components/common/Modal";
 import { useApp } from "../../../context/AppContext";
+import executiveService from "../../../services/executiveService";
 
 export function CISavings() {
   const { addToast } = useApp();
 
-  const [savingProjects, setSavingProjects] = useState([
-    { id: "CI-001", title: "OEE Improvement — Line 1 Filler", projected: "$42,000", actual: "$38,200", status: "Verified" },
-    { id: "CI-002", title: "CIP Cycle Time Reduction", projected: "$18,000", actual: "$14,800", status: "Pending Verification" }
-  ]);
+  const [savingProjects, setSavingProjects] = useState([]);
+  const [totalYtdSavings, setTotalYtdSavings] = useState("$53,000");
+  const [projectedCiSavings, setProjectedCiSavings] = useState("$60,000");
+  const [benefitsVerified, setBenefitsVerified] = useState("84.2%");
+  const [loading, setLoading] = useState(true);
+  const [verifying, setVerifying] = useState(false);
 
   const [selectedProject, setSelectedProject] = useState(null);
   const [isVerifyModalOpen, setIsVerifyModalOpen] = useState(false);
+
+  const fetchCiData = async () => {
+    try {
+      setLoading(true);
+      const res = await executiveService.getCiSavings();
+      const data = res.data || res;
+      if (data) {
+        if (data.projects) setSavingProjects(data.projects);
+        if (data.totalYtdSavings) setTotalYtdSavings(data.totalYtdSavings);
+        if (data.projectedCiSavings) setProjectedCiSavings(data.projectedCiSavings);
+        if (data.benefitsVerified) setBenefitsVerified(data.benefitsVerified);
+      }
+    } catch (err) {
+      console.error("Error loading CI savings:", err);
+      addToast("Failed to load CI savings portfolio", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCiData();
+  }, []);
 
   const handleOpenVerifyModal = (project) => {
     setSelectedProject(project);
     setIsVerifyModalOpen(true);
   };
 
-  const handleConfirmVerification = () => {
+  const handleConfirmVerification = async () => {
     if (!selectedProject) return;
-
-    setSavingProjects(prev =>
-      prev.map(p => p.id === selectedProject.id ? { ...p, status: "Verified", actual: p.projected } : p)
-    );
-
-    addToast(`Signed off and verified YTD savings for project ${selectedProject.id}`, "success");
-    setIsVerifyModalOpen(false);
+    try {
+      setVerifying(true);
+      const res = await executiveService.verifyCiProjectSavings({ projectId: selectedProject.id });
+      const data = res.data || res;
+      if (data && data.projects) {
+        setSavingProjects(data.projects);
+      }
+      addToast(data?.message || `Signed off and verified YTD savings for project ${selectedProject.id}`, "success");
+      setIsVerifyModalOpen(false);
+    } catch (err) {
+      console.error("Error verifying CI project:", err);
+      addToast("Failed to sign off project savings", "error");
+    } finally {
+      setVerifying(false);
+    }
   };
 
   return (
@@ -43,9 +77,9 @@ export function CISavings() {
       </div>
 
       <div className="grid-3">
-        <StatCard title="Total YTD Savings" value="$53,000" description="Sustainment phase active" icon={TrendingUp} color="#059669" />
-        <StatCard title="Projected CI Savings" value="$60,000" description="YTD targets" icon={TrendingUp} color="#0284C7" />
-        <StatCard title="Benefits Verified" value="84.2%" description="Audit verified" icon={TrendingUp} color="#7C3AED" />
+        <StatCard title="Total YTD Savings" value={totalYtdSavings} description="Sustainment phase active" icon={TrendingUp} color="#059669" />
+        <StatCard title="Projected CI Savings" value={projectedCiSavings} description="YTD targets" icon={TrendingUp} color="#0284C7" />
+        <StatCard title="Benefits Verified" value={benefitsVerified} description="Audit verified" icon={TrendingUp} color="#7C3AED" />
       </div>
 
       <Card style={{ backgroundColor: "#FFFFFF", border: "1px solid var(--border-subtle)", padding: "16px 18px", boxSizing: "border-box", minWidth: 0 }}>
@@ -53,46 +87,52 @@ export function CISavings() {
           CI Savings Portfolio
         </h3>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: "12px", width: "100%" }}>
-          {savingProjects.map((p, idx) => (
-            <div
-              key={idx}
-              style={{
-                padding: "14px 16px",
-                borderRadius: "10px",
-                backgroundColor: "var(--bg-card-subtle)",
-                border: "1px solid var(--border-subtle)",
-                display: "flex",
-                flexDirection: "column",
-                gap: "10px",
-                boxSizing: "border-box",
-                minWidth: 0
-              }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "8px" }}>
-                <span style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)", wordBreak: "break-word", flex: "1 1 200px" }}>
-                  {p.id}: {p.title}
-                </span>
-                <Badge variant={p.status === "Verified" ? "emerald" : "warning"}>
-                  {p.status}
-                </Badge>
-              </div>
-
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px", paddingTop: "4px", borderTop: "1px dashed var(--border-subtle)" }}>
-                <div style={{ display: "flex", gap: "14px", fontSize: "12px", color: "var(--text-secondary)", flexWrap: "wrap" }}>
-                  <span>Projected: <strong style={{ color: "var(--text-primary)", fontFamily: "var(--font-mono)" }}>{p.projected}</strong></span>
-                  <span>Actual Realized: <strong style={{ color: "#059669", fontFamily: "var(--font-mono)" }}>{p.actual}</strong></span>
+        {loading ? (
+          <div style={{ display: "flex", justifyContent: "center", padding: "30px" }}>
+            <Loader2 className="animate-spin" size={24} style={{ color: "var(--color-primary)" }} />
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: "12px", width: "100%" }}>
+            {savingProjects.map((p, idx) => (
+              <div
+                key={idx}
+                style={{
+                  padding: "14px 16px",
+                  borderRadius: "10px",
+                  backgroundColor: "var(--bg-card-subtle)",
+                  border: "1px solid var(--border-subtle)",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "10px",
+                  boxSizing: "border-box",
+                  minWidth: 0
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "8px" }}>
+                  <span style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)", wordBreak: "break-word", flex: "1 1 200px" }}>
+                    {p.id}: {p.title}
+                  </span>
+                  <Badge variant={p.status === "Verified" ? "emerald" : "warning"}>
+                    {p.status}
+                  </Badge>
                 </div>
 
-                {p.status === "Pending Verification" && (
-                  <Button variant="success" size="xs" icon={Award} onClick={() => handleOpenVerifyModal(p)} style={{ fontSize: "12px", height: "30px", padding: "4px 12px", fontWeight: 700 }}>
-                    Verify Benefits
-                  </Button>
-                )}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px", paddingTop: "4px", borderTop: "1px dashed var(--border-subtle)" }}>
+                  <div style={{ display: "flex", gap: "14px", fontSize: "12px", color: "var(--text-secondary)", flexWrap: "wrap" }}>
+                    <span>Projected: <strong style={{ color: "var(--text-primary)", fontFamily: "var(--font-mono)" }}>{p.projected}</strong></span>
+                    <span>Actual Realized: <strong style={{ color: "#059669", fontFamily: "var(--font-mono)" }}>{p.actual}</strong></span>
+                  </div>
+
+                  {p.status === "Pending Verification" && (
+                    <Button variant="success" size="xs" icon={Award} onClick={() => handleOpenVerifyModal(p)} style={{ fontSize: "12px", height: "30px", padding: "4px 12px", fontWeight: 700 }}>
+                      Verify Benefits
+                    </Button>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </Card>
 
       {/* Benefits Verification Modal */}
@@ -107,8 +147,8 @@ export function CISavings() {
             <Button variant="secondary" onClick={() => setIsVerifyModalOpen(false)}>
               Cancel
             </Button>
-            <Button variant="primary" icon={CheckCircle2} onClick={handleConfirmVerification}>
-              Sign Off & Confirm Savings
+            <Button variant="primary" icon={CheckCircle2} onClick={handleConfirmVerification} disabled={verifying}>
+              {verifying ? "Signing Off..." : "Sign Off & Confirm Savings"}
             </Button>
           </>
         }

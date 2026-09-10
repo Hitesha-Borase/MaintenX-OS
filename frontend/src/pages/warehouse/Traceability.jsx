@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { 
   Search, 
   Layers, 
@@ -31,6 +32,7 @@ import {
 } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import qualityService from "../../services/qualityService";
+import warehouseService from "../../services/warehouseService";
 
 
 // Comprehensive Mock Data for Batch 360° Traceability
@@ -232,6 +234,7 @@ const TRACE_DATABASE = {
 
 export function Traceability() {
   const { addToast } = useApp();
+  const location = useLocation();
 
   const [lotInput, setLotInput] = useState("LOT-RM-ORG-4402");
   const [activeTab, setActiveTab] = useState("FORWARD"); // FORWARD, BACKWARD, RECALL
@@ -248,9 +251,38 @@ export function Traceability() {
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const [isShipmentModalOpen, setIsShipmentModalOpen] = useState(false);
 
-  const handleSearch = (e) => {
+  const fetchTraceabilityData = async (targetLot) => {
+    try {
+      const res = await warehouseService.getTraceability(targetLot);
+      const data = res?.data || res;
+      if (data && data.lotNumber) {
+        setCurrentTrace(data);
+        setLotInput(data.lotNumber);
+        return data;
+      }
+    } catch (err) {
+      console.warn("Traceability API fallback:", err);
+    }
+    return null;
+  };
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const lotParam = params.get("lot") || "LOT-RM-ORG-4402";
+    setLotInput(lotParam);
+    fetchTraceabilityData(lotParam);
+  }, [location.search]);
+
+  const handleSearch = async (e) => {
     e && e.preventDefault();
     const cleanKey = lotInput.trim().toUpperCase();
+
+    const apiData = await fetchTraceabilityData(cleanKey);
+    if (apiData) {
+      setIsLockEnforced(false);
+      addToast(`Batch 360° Traceability record loaded for ${apiData.lotNumber}.`, "success");
+      return;
+    }
 
     // 1. Direct or partial match on Lot Number
     let found = TRACE_DATABASE[cleanKey];
@@ -336,9 +368,12 @@ export function Traceability() {
     }
   };
 
-  const handleSelectPredefined = (lotCode) => {
+  const handleSelectPredefined = async (lotCode) => {
     setLotInput(lotCode);
-    setCurrentTrace(TRACE_DATABASE[lotCode] || TRACE_DATABASE["LOT-RM-ORG-4402"]);
+    const apiData = await fetchTraceabilityData(lotCode);
+    if (!apiData) {
+      setCurrentTrace(TRACE_DATABASE[lotCode] || TRACE_DATABASE["LOT-RM-ORG-4402"]);
+    }
     setIsLockEnforced(false);
     addToast(`Loaded trace record for ${lotCode}.`, "success");
   };
@@ -348,9 +383,17 @@ export function Traceability() {
     setIsQuarantineModalOpen(true);
   };
 
-  const handleEnforceQuarantineLock = () => {
+  const handleEnforceQuarantineLock = async () => {
     setIsLockEnforced(true);
     setIsQuarantineModalOpen(false);
+    try {
+      await warehouseService.simulateRecall({
+        lotNumber: currentTrace.lotNumber,
+        reason: quarantineReason || "CRITICAL HOLD: Automated WMS Lock"
+      });
+    } catch (err) {
+      console.warn("Backend recall sync fallback:", err);
+    }
     qualityService.placeHold({
       lotNumber: currentTrace.lotNumber,
       reason: quarantineReason || "CRITICAL HOLD: Automated WMS Lock",

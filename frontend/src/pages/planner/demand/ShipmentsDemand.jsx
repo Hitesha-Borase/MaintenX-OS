@@ -1,10 +1,11 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { usePlanning } from "../../../context/PlanningContext";
 import { useApp } from "../../../context/AppContext";
 import { Card } from "../../../components/common/Card";
 import { Badge } from "../../../components/common/Badge";
 import { Button } from "../../../components/common/Button";
 import { StatCard } from "../../../components/common/StatCard";
+import planningService from "../../../services/planningService";
 import {
   Truck,
   Plus,
@@ -15,17 +16,37 @@ import {
   CheckCircle2,
   Clock,
   Download,
-  AlertCircle
+  AlertCircle,
+  RefreshCw,
+  X,
+  ArrowRight
 } from "lucide-react";
 
 export function ShipmentsDemand() {
   const { demandOrders = [], updateDemandOrder } = usePlanning();
   const { addToast } = useApp();
   const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [loading, setLoading] = useState(false);
   const [updatingId, setUpdatingId] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [manualShipments, setManualShipments] = useState([]);
+
+  const [newShipment, setNewShipment] = useState({
+    destination: "",
+    orderRef: "PO-CUST-98214",
+    carrier: "Swift Dedicated Logistics",
+    mode: "Reefer FTL (53ft)",
+    pallets: 24,
+    units: "24,000 Bottles",
+    scheduledDate: new Date(Date.now() + 3 * 86400000).toISOString().substring(0, 10),
+    dockDoor: "Door 01 (Outbound Bay)",
+    status: "Booked"
+  });
 
   // Derive real shipments directly from active Customer Demand Orders in DB
-  const shipments = useMemo(() => {
+  const orderShipments = useMemo(() => {
     return demandOrders.map((o, idx) => {
       const qty = Number(o.quantity) || 1000;
       const pallets = Math.max(1, Math.ceil(qty / 1000));
@@ -52,7 +73,7 @@ export function ShipmentsDemand() {
       return {
         id: `SH-${o.orderNumber?.replace(/[^a-zA-Z0-9]/g, "") || (9000 + idx)}`,
         orderId: o.id,
-        orderRef: o.orderNumber,
+        orderRef: o.orderNumber || `ORD-${o.id}`,
         customer: o.customer,
         destination: o.notes ? `${o.customer} (${o.notes})` : `${o.customer} - Regional Distribution Hub`,
         carrier,
@@ -69,49 +90,204 @@ export function ShipmentsDemand() {
     });
   }, [demandOrders]);
 
-  const handleToggleShipmentStatus = async (shipment) => {
-    const nextOrderStatus = 
-      shipment.status === "Dispatched" 
-        ? "Allocated" 
-        : shipment.status === "Staged" 
-        ? "Fulfilled" 
-        : "Scheduled";
-
-    setUpdatingId(shipment.orderId);
+  const fetchShipments = async () => {
     try {
-      await updateDemandOrder(shipment.orderId, { status: nextOrderStatus });
-      addToast(`Shipment for Order ${shipment.orderRef} updated in Database!`, "success");
+      setLoading(true);
+      const res = await planningService.getShipments();
+      const data = res?.data || res;
+      if (Array.isArray(data) && data.length > 0) {
+        // Filter out records that are already mirrored in demandOrders to avoid duplicates
+        const nonOrderShipments = data.filter(d => !demandOrders.some(o => o.orderNumber === d.orderRef));
+        setManualShipments(nonOrderShipments);
+      }
     } catch (err) {
-      console.error("Failed to update shipment status:", err);
-      addToast(`Failed to update shipment in DB: ${err.message}`, "error");
+      console.warn("Outbound shipments backend fetch fallback:", err.message);
     } finally {
-      setUpdatingId(null);
+      setLoading(false);
     }
   };
 
-  const filtered = shipments.filter(
-    (s) =>
-      s.destination.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.carrier.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.orderRef.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (s.productName && s.productName.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  useEffect(() => {
+    fetchShipments();
+  }, []);
 
-  const totalPallets = shipments.reduce((sum, s) => sum + s.pallets, 0);
+  const shipments = useMemo(() => {
+    return [...orderShipments, ...manualShipments];
+  }, [orderShipments, manualShipments]);
+
+  const handleToggleShipmentStatus = async (shipment) => {
+    if (shipment.orderId) {
+      const nextOrderStatus = 
+        shipment.status === "Dispatched" 
+          ? "Allocated" 
+          : shipment.status === "Staged" 
+          ? "Fulfilled" 
+          : "Scheduled";
+
+      setUpdatingId(shipment.orderId);
+      try {
+        await updateDemandOrder(shipment.orderId, { status: nextOrderStatus });
+        addToast(`Shipment for Order ${shipment.orderRef} updated in Database!`, "success");
+      } catch (err) {
+        console.error("Failed to update shipment status:", err);
+        addToast(`Failed to update shipment in DB: ${err.message}`, "error");
+      } finally {
+        setUpdatingId(null);
+      }
+    } else {
+      const nextSt = shipment.status === "Booked" ? "Staged" : shipment.status === "Staged" ? "Dispatched" : "Booked";
+      setManualShipments((prev) =>
+        prev.map((s) => (s.id === shipment.id ? { ...s, status: nextSt } : s))
+      );
+      addToast(`Shipment ${shipment.id} status updated to ${nextSt}!`, "success");
+      try {
+        await planningService.updateShipmentStatus(shipment.id, nextSt);
+      } catch (err) {
+        console.warn("Backend updateShipmentStatus fallback:", err.message);
+      }
+    }
+  };
+
+  const handleCreateShipment = async (e) => {
+    e.preventDefault();
+    if (!newShipment.destination.trim()) {
+      addToast("Please provide shipment destination.", "warning");
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      const res = await planningService.createShipment(newShipment);
+      const created = res?.data || res;
+      const optimistic = {
+        id: created?.id || `SH-${Math.floor(1000 + Math.random() * 9000)}`,
+        ...newShipment,
+        pallets: Number(newShipment.pallets)
+      };
+
+      setManualShipments((prev) => [optimistic, ...prev]);
+      addToast(`Outbound freight trailer booked for ${optimistic.destination}!`, "success");
+      setIsModalOpen(false);
+      setNewShipment({
+        destination: "",
+        orderRef: `PO-CUST-${Math.floor(10000 + Math.random() * 90000)}`,
+        carrier: "Swift Dedicated Logistics",
+        mode: "Reefer FTL (53ft)",
+        pallets: 24,
+        units: "24,000 Bottles",
+        scheduledDate: new Date(Date.now() + 3 * 86400000).toISOString().substring(0, 10),
+        dockDoor: "Door 01 (Outbound Bay)",
+        status: "Booked"
+      });
+    } catch (err) {
+      console.error("Create shipment failed:", err);
+      addToast("Failed to book shipment in backend.", "error");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleExportCSV = () => {
+    const headers = "Shipment ID,Order Ref,Destination,Carrier,Mode,Pallets,Units,Scheduled Date,Dock Door,Status\n";
+    const rows = filtered
+      .map((s) => `"${s.id}","${s.orderRef}","${s.destination}","${s.carrier}","${s.mode}",${s.pallets},"${s.units}","${s.scheduledDate}","${s.dockDoor}","${s.status}"`)
+      .join("\n");
+    const blob = new Blob([headers + rows], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `Outbound_Shipments_${new Date().toISOString().substring(0, 10)}.csv`;
+    a.click();
+    addToast("Outbound shipments exported to CSV.", "success");
+  };
+
+  const filtered = shipments.filter((s) => {
+    const matchesStatus = statusFilter === "ALL" || s.status?.toLowerCase() === statusFilter?.toLowerCase();
+    const q = searchQuery.toLowerCase().trim();
+    const matchesSearch =
+      !q ||
+      s.destination?.toLowerCase().includes(q) ||
+      s.carrier?.toLowerCase().includes(q) ||
+      s.orderRef?.toLowerCase().includes(q) ||
+      s.id?.toLowerCase().includes(q) ||
+      (s.productName && s.productName.toLowerCase().includes(q));
+    return matchesStatus && matchesSearch;
+  });
+
+  const totalPallets = shipments.reduce((sum, s) => sum + (Number(s.pallets) || 0), 0);
   const stagedCount = shipments.filter((s) => s.status === "Staged").length;
   const activeDoorsCount = Math.min(4, shipments.length);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%", maxWidth: "1600px", margin: "0 auto", minWidth: 0 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%", maxWidth: "1600px", margin: "0 auto", minWidth: 0, paddingBottom: "40px" }}>
       {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px", width: "100%" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px", width: "100%" }}>
         <div>
-          <h1 style={{ fontSize: "clamp(18px, 4vw, 24px)", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.3px", lineHeight: 1.2 }}>
-            Outbound Shipping & Freight Allocation
-          </h1>
-          <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>
-            Real-time outbound freight dispatching connected to Customer Demand Orders.
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+            <h1 style={{ fontSize: "clamp(18px, 4vw, 24px)", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.3px", lineHeight: 1.2, margin: 0 }}>
+              Outbound Shipping & Freight Allocation
+            </h1>
+            <span style={{
+              fontSize: "11px",
+              fontWeight: 800,
+              letterSpacing: "0.05em",
+              background: "rgba(200, 149, 71, 0.18)",
+              color: "#2B1D11",
+              padding: "4px 10px",
+              borderRadius: "6px",
+              border: "1px solid rgba(200, 149, 71, 0.35)"
+            }}>
+              LOGISTICS DOCK COMMAND
+            </span>
+          </div>
+          <p style={{ margin: "4px 0 0 0", fontSize: "14px", color: "var(--text-secondary)" }}>
+            Coordinate outbound carrier freight bookings, pallet payloads, and cold chain dock allocation connected to Customer Orders.
           </p>
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+          <Button 
+            variant="outline" 
+            icon={RefreshCw} 
+            onClick={() => {
+              fetchShipments();
+              addToast("Outbound shipments refreshed from live backend API", "success");
+            }} 
+            loading={loading}
+            style={{ fontSize: "13px" }}
+          >
+            Refresh
+          </Button>
+
+          <Button 
+            variant="outline" 
+            icon={Download} 
+            onClick={handleExportCSV} 
+            style={{ fontSize: "13px" }}
+          >
+            Export CSV
+          </Button>
+
+          <button
+            onClick={() => setIsModalOpen(true)}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+              padding: "9px 18px",
+              borderRadius: "8px",
+              border: "none",
+              background: "linear-gradient(135deg, #E2B670 0%, #C89547 50%, #B27E33 100%)",
+              color: "#261603",
+              fontSize: "13px",
+              fontWeight: 700,
+              cursor: "pointer",
+              boxShadow: "0 2px 6px rgba(200, 149, 71, 0.3)"
+            }}
+          >
+            <Plus size={16} />
+            + Book Freight Trailer
+          </button>
         </div>
       </div>
 
@@ -145,41 +321,65 @@ export function ShipmentsDemand() {
           value={totalPallets.toString()}
           unit="Standard GMA Pallets"
           icon={MapPin}
-          colorVariant="emerald"
+          colorVariant="amber"
         />
         <StatCard
           title="Dock Utilization"
           value={shipments.length === 0 ? "0%" : `${Math.round((activeDoorsCount / 4) * 100)}%`}
           unit={`${activeDoorsCount} of 4 Doors Active`}
           icon={Clock}
-          colorVariant="emerald"
+          colorVariant="amber"
         />
       </div>
 
       {/* Shipment Cards Container */}
-      <Card style={{ padding: "18px", minWidth: 0, width: "100%", boxSizing: "border-box" }}>
-        <div style={{ position: "relative", marginBottom: "16px" }}>
-          <Search size={15} color="var(--text-muted)" style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)" }} />
-          <input
-            type="text"
-            placeholder="Search shipments by customer, destination, carrier, or order ref..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="form-input"
-            style={{ paddingLeft: "32px", height: "36px", fontSize: "12px" }}
-          />
+      <Card style={{ padding: "20px", minWidth: 0, width: "100%", boxSizing: "border-box", background: "white", border: "1px solid #E8DDCF", borderRadius: "16px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px", marginBottom: "16px" }}>
+          <div style={{ position: "relative", minWidth: "260px", flex: "1 1 280px" }}>
+            <Search size={15} color="var(--text-muted)" style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)" }} />
+            <input
+              type="text"
+              placeholder="Search shipments by destination, carrier, or PO ref..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="form-input"
+              style={{ paddingLeft: "32px", height: "38px", fontSize: "13px", backgroundColor: "#FAF8F5", border: "1px solid #D1C7BA", borderRadius: "8px", outline: "none", width: "100%" }}
+            />
+          </div>
+
+          <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", alignItems: "center" }}>
+            {["ALL", "Booked", "Staged", "Dispatched"].map((st) => (
+              <button
+                key={st}
+                onClick={() => setStatusFilter(st)}
+                style={{
+                  padding: "7px 14px",
+                  borderRadius: "8px",
+                  fontSize: "12px",
+                  fontWeight: 700,
+                  backgroundColor: statusFilter === st ? "#E2B670" : "#FAF8F5",
+                  color: statusFilter === st ? "#261603" : "var(--text-secondary)",
+                  border: statusFilter === st ? "1px solid #C89547" : "1px solid #E8DDCF",
+                  cursor: "pointer",
+                  transition: "all 0.15s ease"
+                }}
+              >
+                {st}
+              </button>
+            ))}
+          </div>
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
           {filtered.length > 0 ? (
             filtered.map((s) => (
               <div
                 key={s.id}
                 style={{
                   padding: "16px 20px",
-                  borderRadius: "10px",
-                  backgroundColor: "var(--bg-card-subtle)",
-                  border: "1px solid var(--border-subtle)",
+                  borderRadius: "12px",
+                  backgroundColor: "#FAF8F5",
+                  border: "1px solid #E8DDCF",
                   display: "flex",
                   justifyContent: "space-between",
                   alignItems: "center",
@@ -190,8 +390,8 @@ export function ShipmentsDemand() {
                 }}
               >
                 <div style={{ display: "flex", alignItems: "center", gap: "14px", flex: "1 1 300px" }}>
-                  <div style={{ width: "42px", height: "42px", borderRadius: "8px", backgroundColor: "rgba(200, 149, 71, 0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                    <Truck size={22} color="#B27E33" />
+                  <div style={{ width: "42px", height: "42px", borderRadius: "8px", backgroundColor: "rgba(200, 149, 71, 0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <Truck size={22} color="#8B6914" />
                   </div>
                   <div>
                     <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
@@ -205,23 +405,35 @@ export function ShipmentsDemand() {
                   </div>
                 </div>
 
-                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
                   <div style={{ textAlign: "right" }}>
                     <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>Target Departure</div>
-                    <div style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "4px" }}>
+                    <div style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "4px", justifyContent: "flex-end" }}>
                       <Calendar size={12} color="var(--text-muted)" /> {s.scheduledDate}
                     </div>
                   </div>
 
-                  <div
+                  <button
                     onClick={() => handleToggleShipmentStatus(s)}
-                    style={{ cursor: updatingId === s.orderId ? "wait" : "pointer" }}
-                    title="Click to advance shipment status in Database"
+                    disabled={updatingId === s.orderId}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      padding: "6px 12px",
+                      borderRadius: "8px",
+                      border: "1px solid #C89547",
+                      backgroundColor: s.status === "Dispatched" ? "rgba(200, 149, 71, 0.25)" : "rgba(200, 149, 71, 0.12)",
+                      color: "#2B1D11",
+                      fontSize: "12px",
+                      fontWeight: 700,
+                      cursor: updatingId === s.orderId ? "wait" : "pointer"
+                    }}
+                    title="Click to advance status in Database"
                   >
-                    <Badge variant={s.status === "Dispatched" ? "emerald" : s.status === "Staged" ? "cyan" : "amber"}>
-                      {updatingId === s.orderId ? "UPDATING..." : s.status.toUpperCase()}
-                    </Badge>
-                  </div>
+                    <span>{updatingId === s.orderId ? "UPDATING..." : s.status?.toUpperCase()}</span>
+                    <ArrowRight size={12} />
+                  </button>
                 </div>
               </div>
             ))
@@ -232,12 +444,138 @@ export function ShipmentsDemand() {
                 No Outbound Shipments Found
               </div>
               <div style={{ fontSize: "12px", maxWidth: "400px" }}>
-                Create customer orders in the <strong>Customer Orders</strong> menu to automatically generate real outbound freight shipments.
+                Create customer orders in the <strong>Customer Orders</strong> menu to automatically generate real outbound freight shipments, or click <strong>+ Book Freight Trailer</strong>.
               </div>
             </div>
           )}
         </div>
       </Card>
+
+      {/* BOOK FREIGHT MODAL */}
+      {isModalOpen && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: "rgba(0,0,0,0.5)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 1000,
+          padding: "20px"
+        }} onClick={() => setIsModalOpen(false)}>
+          <div style={{
+            background: "white",
+            borderRadius: "16px",
+            width: "100%",
+            maxWidth: "520px",
+            border: "1px solid #E8DDCF",
+            boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
+            overflow: "hidden"
+          }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid #E8DDCF", backgroundColor: "#FAF8F5" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Truck size={18} color="#8B6914" />
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                  Book Outbound Freight Trailer
+                </h2>
+              </div>
+              <button onClick={() => setIsModalOpen(false)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateShipment} style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div>
+                <label className="form-label" style={{ fontSize: "12px", fontWeight: 600, display: "block", marginBottom: "4px" }}>Destination Hub / Distribution Center *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Whole Foods Market - Chicago Distribution Hub"
+                  value={newShipment.destination}
+                  onChange={(e) => setNewShipment({ ...newShipment, destination: e.target.value })}
+                  className="form-input"
+                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #D1C7BA", outline: "none", backgroundColor: "#FAF8F5" }}
+                />
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div>
+                  <label className="form-label" style={{ fontSize: "12px", fontWeight: 600, display: "block", marginBottom: "4px" }}>Order Ref / PO #</label>
+                  <input
+                    type="text"
+                    value={newShipment.orderRef}
+                    onChange={(e) => setNewShipment({ ...newShipment, orderRef: e.target.value })}
+                    className="form-input"
+                    style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #D1C7BA", outline: "none", backgroundColor: "#FAF8F5" }}
+                  />
+                </div>
+                <div>
+                  <label className="form-label" style={{ fontSize: "12px", fontWeight: 600, display: "block", marginBottom: "4px" }}>Carrier Service</label>
+                  <input
+                    type="text"
+                    value={newShipment.carrier}
+                    onChange={(e) => setNewShipment({ ...newShipment, carrier: e.target.value })}
+                    className="form-input"
+                    style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #D1C7BA", outline: "none", backgroundColor: "#FAF8F5" }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div>
+                  <label className="form-label" style={{ fontSize: "12px", fontWeight: 600, display: "block", marginBottom: "4px" }}>Pallet Count</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={newShipment.pallets}
+                    onChange={(e) => setNewShipment({ ...newShipment, pallets: e.target.value })}
+                    className="form-input"
+                    style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #D1C7BA", outline: "none", backgroundColor: "#FAF8F5" }}
+                  />
+                </div>
+                <div>
+                  <label className="form-label" style={{ fontSize: "12px", fontWeight: 600, display: "block", marginBottom: "4px" }}>Scheduled Date</label>
+                  <input
+                    type="date"
+                    value={newShipment.scheduledDate}
+                    onChange={(e) => setNewShipment({ ...newShipment, scheduledDate: e.target.value })}
+                    className="form-input"
+                    style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #D1C7BA", outline: "none", backgroundColor: "#FAF8F5" }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px" }}>
+                <Button variant="secondary" onClick={() => setIsModalOpen(false)}>
+                  Cancel
+                </Button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  style={{
+                    padding: "8px 18px",
+                    borderRadius: "8px",
+                    border: "none",
+                    background: "linear-gradient(135deg, #E2B670 0%, #C89547 50%, #B27E33 100%)",
+                    color: "#261603",
+                    fontSize: "13px",
+                    fontWeight: 700,
+                    cursor: isSubmitting ? "not-allowed" : "pointer",
+                    boxShadow: "0 2px 6px rgba(200, 149, 71, 0.3)"
+                  }}
+                >
+                  {isSubmitting ? "Booking..." : "Confirm Freight Booking"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
+export default ShipmentsDemand;

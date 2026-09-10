@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   FileCheck,
@@ -15,7 +15,8 @@ import {
   Wrench,
   Layers,
   Sparkles,
-  BookOpen
+  BookOpen,
+  Trash2
 } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { Button } from "../../components/common/Button";
@@ -23,6 +24,7 @@ import { Badge } from "../../components/common/Badge";
 import { StatCard } from "../../components/common/StatCard";
 import { useCI } from "../../context/CIContext";
 import { useApp } from "../../context/AppContext";
+import ciService from "../../services/ciService";
 
 export function VerifiedSolutions() {
   const navigate = useNavigate();
@@ -30,8 +32,13 @@ export function VerifiedSolutions() {
   const {
     verifiedSolutions = [],
     createVerifiedSolution,
+    deleteVerifiedSolution,
     investigations = []
   } = useCI();
+
+  useEffect(() => {
+    ciService.getSolutions().catch((err) => console.warn("Verified solutions load:", err.message));
+  }, []);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -47,14 +54,14 @@ export function VerifiedSolutions() {
     sourceRcaId: investigations[0]?.id || ""
   });
 
-  const handleAddSubmit = (e) => {
+  const handleAddSubmit = async (e) => {
     e.preventDefault();
     if (!newSolution.failureMode.trim() || !newSolution.solutionSteps.trim()) {
       addToast("Please provide failure mode and solution steps.", "warning");
       return;
     }
 
-    createVerifiedSolution(newSolution);
+    await createVerifiedSolution(newSolution);
     setNewSolution({
       assetId: "AST-002",
       assetName: "HTST Flash Pasteurizer",
@@ -224,6 +231,7 @@ export function VerifiedSolutions() {
                 <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Spare Parts Required</th>
                 <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Verified By</th>
                 <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Status</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", textAlign: "right" }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -251,6 +259,26 @@ export function VerifiedSolutions() {
                   </td>
                   <td style={{ padding: "12px 16px" }}>
                     <Badge variant="emerald">PUBLISHED</Badge>
+                  </td>
+                  <td style={{ padding: "12px 16px", textAlign: "right" }}>
+                    <button
+                      onClick={() => deleteVerifiedSolution(s.id)}
+                      title="Remove Solution"
+                      style={{
+                        width: "30px",
+                        height: "30px",
+                        borderRadius: "6px",
+                        backgroundColor: "var(--bg-card-subtle)",
+                        color: "var(--text-muted)",
+                        border: "1px solid var(--border-subtle)",
+                        cursor: "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center"
+                      }}
+                    >
+                      <Trash2 size={13} />
+                    </button>
                   </td>
                 </tr>
               ))}

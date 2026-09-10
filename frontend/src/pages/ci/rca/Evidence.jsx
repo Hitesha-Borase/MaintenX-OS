@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   FileText,
@@ -23,16 +23,20 @@ import { Badge } from "../../../components/common/Badge";
 import { StatCard } from "../../../components/common/StatCard";
 import { useCI } from "../../../context/CIContext";
 import { useApp } from "../../../context/AppContext";
+import ciService from "../../../services/ciService";
 
 export function Evidence() {
   const navigate = useNavigate();
   const { addToast } = useApp();
-  const { evidenceList = [], investigations = [] } = useCI();
+  const { evidenceList = [], investigations = [], addEvidence, deleteEvidence } = useCI();
 
-  const [items, setItems] = useState(evidenceList);
   const [selectedRcaFilter, setSelectedRcaFilter] = useState("ALL");
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  useEffect(() => {
+    ciService.getEvidence(selectedRcaFilter).catch((err) => console.warn("Evidence load:", err.message));
+  }, [selectedRcaFilter]);
 
   const [newEvidence, setNewEvidence] = useState({
     rcaId: investigations[0]?.id || "RCA-2026-001",
@@ -42,25 +46,22 @@ export function Evidence() {
     uploadedBy: "David Kim"
   });
 
-  const handleAdd = (e) => {
+  const handleAdd = async (e) => {
     e.preventDefault();
     if (!newEvidence.title.trim() || !newEvidence.details.trim()) {
       addToast("Please provide both title and details.", "warning");
       return;
     }
 
-    const created = {
-      id: `EVD-${Math.floor(100 + Math.random() * 900)}`,
+    await addEvidence({
       rcaId: newEvidence.rcaId,
       type: newEvidence.type,
       title: newEvidence.title.trim(),
       details: newEvidence.details.trim(),
       uploadedBy: newEvidence.uploadedBy,
       date: new Date().toISOString().substring(0, 10)
-    };
+    });
 
-    setItems([created, ...items]);
-    addToast(`Evidence artifact ${created.id} logged for ${created.rcaId}!`, "success");
     setIsModalOpen(false);
     setNewEvidence({
       rcaId: investigations[0]?.id || "RCA-2026-001",
@@ -71,9 +72,8 @@ export function Evidence() {
     });
   };
 
-  const handleDelete = (id) => {
-    setItems(items.filter((i) => i.id !== id));
-    addToast(`Evidence ${id} removed.`, "info");
+  const handleDelete = async (id) => {
+    await deleteEvidence(id);
   };
 
   const handleExportCSV = () => {
@@ -91,7 +91,7 @@ export function Evidence() {
   };
 
   const filteredItems = useMemo(() => {
-    return items.filter((ev) => {
+    return evidenceList.filter((ev) => {
       const matchesRca = selectedRcaFilter === "ALL" || ev.rcaId === selectedRcaFilter;
       const q = searchQuery.toLowerCase().trim();
       const matchesSearch =
@@ -103,7 +103,7 @@ export function Evidence() {
 
       return matchesRca && matchesSearch;
     });
-  }, [items, selectedRcaFilter, searchQuery]);
+  }, [evidenceList, selectedRcaFilter, searchQuery]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%", maxWidth: "1600px", margin: "0 auto", minWidth: 0 }}>
@@ -114,7 +114,7 @@ export function Evidence() {
             <h1 style={{ fontSize: "clamp(18px, 4vw, 24px)", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.3px", lineHeight: 1.2 }}>
               RCA 2.0 — Evidence Locker
             </h1>
-            <Badge variant="cyan">{items.length} ARTIFACTS ARCHIVED</Badge>
+            <Badge variant="cyan">{evidenceList.length} ARTIFACTS ARCHIVED</Badge>
           </div>
         </div>
 
@@ -144,21 +144,21 @@ export function Evidence() {
       >
         <StatCard
           title="Total Evidence Artifacts"
-          value={items.length.toString()}
+          value={evidenceList.length.toString()}
           unit="Records"
           icon={FileText}
           colorVariant="cyan"
         />
         <StatCard
           title="SCADA & Telemetry"
-          value={items.filter((i) => i.type.includes("SCADA")).length.toString()}
+          value={evidenceList.filter((i) => i.type?.includes("SCADA")).length.toString()}
           unit="Traces"
           icon={Activity}
           colorVariant="emerald"
         />
         <StatCard
           title="Lab & Physical QC"
-          value={items.filter((i) => i.type.includes("Lab") || i.type.includes("Photo")).length.toString()}
+          value={evidenceList.filter((i) => i.type?.includes("Lab") || i.type?.includes("Photo")).length.toString()}
           unit="Inspections"
           icon={ShieldCheck}
           colorVariant="amber"
@@ -249,45 +249,53 @@ export function Evidence() {
               </tr>
             </thead>
             <tbody>
-              {filteredItems.map((ev) => (
-                <tr key={ev.id} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
-                  <td style={{ padding: "12px 16px", fontFamily: "var(--font-mono)", fontWeight: 800, color: "#8C5B23" }}>
-                    {ev.rcaId}
-                  </td>
-                  <td style={{ padding: "12px 16px", fontWeight: 800, color: "var(--text-primary)", fontSize: "13px" }}>
-                    {ev.title}
-                  </td>
-                  <td style={{ padding: "12px 16px" }}>
-                    <Badge variant="cyan">{ev.type}</Badge>
-                  </td>
-                  <td style={{ padding: "12px 16px", fontSize: "12px", color: "var(--text-secondary)" }}>
-                    {ev.details}
-                  </td>
-                  <td style={{ padding: "12px 16px", fontSize: "12px", color: "var(--text-muted)" }}>
-                    {ev.uploadedBy} • {ev.date}
-                  </td>
-                  <td style={{ padding: "12px 16px", textAlign: "right" }}>
-                    <button
-                      onClick={() => handleDelete(ev.id)}
-                      title="Archive Evidence"
-                      style={{
-                        width: "30px",
-                        height: "30px",
-                        borderRadius: "6px",
-                        backgroundColor: "var(--bg-card-subtle)",
-                        color: "#EF4444",
-                        border: "1px solid var(--border-subtle)",
-                        cursor: "pointer",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        justifyContent: "center"
-                      }}
-                    >
-                      <Trash2 size={13} />
-                    </button>
+              {filteredItems.length === 0 ? (
+                <tr>
+                  <td colSpan={6} style={{ textAlign: "center", padding: "40px 20px", color: "var(--text-muted)", fontSize: "13px" }}>
+                    No evidence records found for the selected criteria. Click &quot;Log Evidence&quot; to archive empirical artifacts.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                filteredItems.map((ev) => (
+                  <tr key={ev.id} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+                    <td style={{ padding: "12px 16px", fontFamily: "var(--font-mono)", fontWeight: 800, color: "#8C5B23" }}>
+                      {ev.rcaId}
+                    </td>
+                    <td style={{ padding: "12px 16px", fontWeight: 800, color: "var(--text-primary)", fontSize: "13px" }}>
+                      {ev.title}
+                    </td>
+                    <td style={{ padding: "12px 16px" }}>
+                      <Badge variant="cyan">{ev.type}</Badge>
+                    </td>
+                    <td style={{ padding: "12px 16px", fontSize: "12px", color: "var(--text-secondary)" }}>
+                      {ev.details}
+                    </td>
+                    <td style={{ padding: "12px 16px", fontSize: "12px", color: "var(--text-muted)" }}>
+                      {ev.uploadedBy} • {ev.date}
+                    </td>
+                    <td style={{ padding: "12px 16px", textAlign: "right" }}>
+                      <button
+                        onClick={() => handleDelete(ev.id)}
+                        title="Archive Evidence"
+                        style={{
+                          width: "30px",
+                          height: "30px",
+                          borderRadius: "6px",
+                          backgroundColor: "var(--bg-card-subtle)",
+                          color: "#EF4444",
+                          border: "1px solid var(--border-subtle)",
+                          cursor: "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center"
+                        }}
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

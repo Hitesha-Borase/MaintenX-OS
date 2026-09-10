@@ -5,6 +5,7 @@ import { Header } from "./Header";
 import { GlobalSearchModal } from "../common/GlobalSearchModal";
 import { QRModal } from "../common/QRModal";
 import { QuickActionDrawer } from "../common/QuickActionDrawer";
+import { ErrorBoundary } from "../common/ErrorBoundary";
 import { useApp } from "../../context/AppContext";
 import { CheckCircle2, AlertTriangle, AlertOctagon, Info, X } from "lucide-react";
 
@@ -22,7 +23,9 @@ export function AppLayout() {
 
         {/* Dynamic Page Content wrapper */}
         <main className="page-content-wrapper" style={{ flex: 1, minWidth: 0, width: "100%", height: "100%", overflowY: "auto", overflowX: "hidden" }}>
-          <Outlet />
+          <ErrorBoundary>
+            <Outlet />
+          </ErrorBoundary>
         </main>
       </div>
 

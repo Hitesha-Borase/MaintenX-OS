@@ -1,6 +1,8 @@
-import React, { useState } from "react";
-import { Layers, AlertCircle } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Layers, AlertCircle, ShieldCheck } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
+import qualityService from "../../../services/qualityService";
+import warehouseService from "../../../services/warehouseService";
 
 export function Lots() {
   const { addToast } = useApp();
@@ -10,7 +12,34 @@ export function Lots() {
     { code: "LOT-SW-0812", name: "Liquid Cane Sugar Sugar", status: "Approved" }
   ]);
 
-  const handleQuarantine = (code) => {
+  useEffect(() => {
+    let isMounted = true;
+    warehouseService.getLots().then((res) => {
+      const data = res?.data || res;
+      if (isMounted && Array.isArray(data) && data.length > 0) {
+        setLots(data.map((l, idx) => ({
+          code: l.lotNumber || l.lotCode || `LOT-${idx + 1}`,
+          name: l.materialName || l.material || "Stored Material Item",
+          status: l.status || "Approved"
+        })));
+      }
+    }).catch((err) => {
+      console.warn("Backend lots fetch fallback:", err.message);
+    });
+    return () => { isMounted = false; };
+  }, []);
+
+  const handleQuarantine = async (code, name) => {
+    try {
+      await qualityService.placeHold({
+        lotNumber: code,
+        reason: `Quarantine triggered for ${name} via Inventory Lot Controls`,
+        severity: "HIGH"
+      }).catch(err => console.warn("qualityService.placeHold sync:", err.message));
+    } catch (e) {
+      console.warn("Quarantine API err:", e);
+    }
+
     setLots(prev =>
       prev.map(l => l.code === code ? { ...l, status: "Quarantined" } : l)
     );
@@ -63,7 +92,7 @@ export function Lots() {
             </div>
 
             <button 
-              onClick={() => l.status === "Approved" && handleQuarantine(l.code)}
+              onClick={() => l.status === "Approved" && handleQuarantine(l.code, l.name)}
               disabled={l.status !== "Approved"}
               style={{
                 display: "flex",

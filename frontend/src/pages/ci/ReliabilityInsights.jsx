@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Activity,
@@ -22,6 +22,7 @@ import { Badge } from "../../components/common/Badge";
 import { Button } from "../../components/common/Button";
 import { useCI } from "../../context/CIContext";
 import { useApp } from "../../context/AppContext";
+import ciService from "../../services/ciService";
 
 export function ReliabilityInsights() {
   const navigate = useNavigate();
@@ -33,6 +34,10 @@ export function ReliabilityInsights() {
     badActorsCount,
     initiateRCA
   } = useCI();
+
+  useEffect(() => {
+    ciService.getReliabilityRecords().catch((err) => console.warn("Reliability records load:", err.message));
+  }, []);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [criticalityFilter, setCriticalityFilter] = useState("ALL");
@@ -52,8 +57,8 @@ export function ReliabilityInsights() {
     addToast("Reliability & Bad Actors analytics exported to CSV.", "info");
   };
 
-  const handleInitiateRCA = (asset) => {
-    const newId = initiateRCA(asset.assetId, null, `Investigation — ${asset.assetName} Repeat Failures`);
+  const handleInitiateRCA = async (asset) => {
+    await initiateRCA(asset.assetId, null, `Investigation — ${asset.assetName} Repeat Failures`);
     navigate(`/ci/rca/investigations`);
   };
 

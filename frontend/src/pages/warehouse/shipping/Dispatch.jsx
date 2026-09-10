@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Send, FileText } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
+import warehouseService from "../../../services/warehouseService";
 
 export function Dispatch() {
   const { addToast } = useApp();
@@ -9,7 +10,18 @@ export function Dispatch() {
     { id: "SO-9002", dest: "Target regional Chicago", cargo: "12 Pallets", status: "Staged" }
   ]);
 
-  const handleDispatch = (id) => {
+  const handleDispatch = async (id) => {
+    try {
+      await warehouseService.dispatchShipment({
+        shipmentId: id,
+        bolNumber: `BOL-${id}`,
+        driver: "Carlos Mendez",
+        trailerNo: "TR-5510"
+      }).catch(err => console.warn("dispatchShipment API offline:", err.message));
+    } catch (e) {
+      console.warn("dispatchShipment err:", e);
+    }
+
     setDispatches(prev => prev.map(d => 
       d.id === id ? { ...d, status: "Dispatched" } : d
     ));

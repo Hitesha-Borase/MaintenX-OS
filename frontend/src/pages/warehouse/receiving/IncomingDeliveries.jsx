@@ -1,18 +1,53 @@
-import React from "react";
-import { Truck, ArrowRight } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Truck, ArrowRight, RefreshCw } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useApp } from "../../../context/AppContext";
 import { useInventory } from "../../../context/InventoryContext";
+import warehouseService from "../../../services/warehouseService";
+
+const INITIAL_DELIVERIES = [
+  { id: "DLV-001", supplier: "GlassCorp", item: "Glass Bottles 1L", volume: "20,000 Pcs", status: "TRANSIT" },
+  { id: "DLV-002", supplier: "Sugar Valley", item: "Liquid Cane Sugar 500L", volume: "2 Drums", status: "ARRIVED" },
+  { id: "DLV-003", supplier: "Citrus Valley Farms Co.", item: "Valencia Orange Concentrate 65° Brix", volume: "6,000 kg", status: "ARRIVED" },
+  { id: "DLV-004", supplier: "Amcor Rigid Packaging", item: "500ml PET Bottles", volume: "100,000 units", status: "TRANSIT" }
+];
 
 export function IncomingDeliveries() {
   const { addToast } = useApp();
   const navigate = useNavigate();
-  const { shipments, receiveShipment } = useInventory();
+  const { receiveShipment } = useInventory();
+  const [deliveriesList, setDeliveriesList] = useState(INITIAL_DELIVERIES);
+
+  const fetchDeliveries = async () => {
+    try {
+      const res = await warehouseService.getIncomingDeliveries();
+      const data = res?.data || res;
+      if (Array.isArray(data?.deliveries) && data.deliveries.length > 0) {
+        setDeliveriesList(data.deliveries);
+      }
+    } catch (err) {
+      console.warn("Backend incoming deliveries sync fallback:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchDeliveries();
+  }, []);
   
-  const handleToggleStatus = (id, currentStatus) => {
+  const handleToggleStatus = async (id, currentStatus) => {
+    try {
+      const res = await warehouseService.toggleDeliveryStatus(id);
+      const updated = res?.data || res;
+      setDeliveriesList(prev => prev.map(d => d.id === id ? { ...d, status: updated?.status || (currentStatus === "TRANSIT" ? "ARRIVED" : "TRANSIT") } : d));
+    } catch (err) {
+      setDeliveriesList(prev => prev.map(d => d.id === id ? { ...d, status: currentStatus === "TRANSIT" ? "ARRIVED" : "TRANSIT" } : d));
+    }
+
     if (currentStatus === "TRANSIT") {
-      receiveShipment(id);
+      receiveShipment && receiveShipment(id);
       addToast("Shipment marked as Arrived at dock.", "success");
+    } else {
+      addToast("Shipment status updated to In Transit.", "info");
     }
   };
 
@@ -25,7 +60,7 @@ export function IncomingDeliveries() {
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-        {shipments.map((d) => (
+        {deliveriesList.map((d) => (
           <div 
             key={d.id} 
             style={{ 

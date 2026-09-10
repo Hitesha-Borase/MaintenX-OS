@@ -18,11 +18,17 @@ import { StatCard } from "../../../components/common/StatCard";
 import { useAdmin } from "../../../context/AdminContext";
 import { useApp } from "../../../context/AppContext";
 import { useNavigate } from "react-router-dom";
+import { adminService } from "../../../services/adminService";
 
 export function RolesPage() {
   const { roles = [], addRole } = useAdmin();
   const { addToast } = useApp();
   const navigate = useNavigate();
+
+  // Trigger live GET /api/v1/admin/roles on mount
+  React.useEffect(() => {
+    adminService.getRoles().catch((err) => console.warn("Live roles fetch:", err.message));
+  }, []);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);

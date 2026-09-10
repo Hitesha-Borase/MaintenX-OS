@@ -815,6 +815,12 @@ export const INITIAL_ALLERGEN_RULES = [
   }
 ];
 
+export const INITIAL_LABOUR_STANDARDS = [
+  { id: "LBR-01", lineId: "LIN-01", lineName: "Line 1 — Aseptic Bottling", standardCrew: 10, stdLaborHoursPer1kUnits: 2.38, directCostPerHour: "$24.50", status: "Active" },
+  { id: "LBR-02", lineId: "LIN-02", lineName: "Line 2 — Formulation & Pasteurizer", standardCrew: 6, stdLaborHoursPer1kUnits: 1.85, directCostPerHour: "$28.00", status: "Active" },
+  { id: "LBR-03", lineId: "LIN-03", lineName: "Line 3 — Canning Line", standardCrew: 8, stdLaborHoursPer1kUnits: 2.15, directCostPerHour: "$24.50", status: "Active" }
+];
+
 export const INITIAL_ASSETS = [
   {
     assetId: "AST-001",
@@ -1481,12 +1487,39 @@ export function MasterDataProvider({ children }) {
 
   const [sanitationClasses, setSanitationClasses] = useState(() => {
     const saved = localStorage.getItem("mx_master_sanitation");
-    return saved ? JSON.parse(saved) : INITIAL_SANITATION_CLASSES;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].sanitationClass) {
+          return parsed;
+        }
+      } catch (_) {}
+    }
+    return INITIAL_SANITATION_CLASSES;
   });
 
   const [allergenRules, setAllergenRules] = useState(() => {
     const saved = localStorage.getItem("mx_master_allergens");
-    return saved ? JSON.parse(saved) : INITIAL_ALLERGEN_RULES;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].allergenName) {
+          return parsed;
+        }
+      } catch (_) {}
+    }
+    return INITIAL_ALLERGEN_RULES;
+  });
+
+  const [labourStandards, setLabourStandards] = useState(() => {
+    const saved = localStorage.getItem("mx_master_labour_standards");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (_) {}
+    }
+    return INITIAL_LABOUR_STANDARDS;
   });
 
   const [assets, setAssets] = useState(() => {
@@ -1550,6 +1583,7 @@ export function MasterDataProvider({ children }) {
   useEffect(() => { localStorage.setItem("mx_master_changeovers", JSON.stringify(changeoverMatrix)); }, [changeoverMatrix]);
   useEffect(() => { localStorage.setItem("mx_master_sanitation", JSON.stringify(sanitationClasses)); }, [sanitationClasses]);
   useEffect(() => { localStorage.setItem("mx_master_allergens", JSON.stringify(allergenRules)); }, [allergenRules]);
+  useEffect(() => { localStorage.setItem("mx_master_labour_standards", JSON.stringify(labourStandards)); }, [labourStandards]);
   useEffect(() => { localStorage.setItem("mx_master_assets", JSON.stringify(assets)); }, [assets]);
   useEffect(() => { localStorage.setItem("mx_master_employees", JSON.stringify(employees)); }, [employees]);
   useEffect(() => { localStorage.setItem("mx_master_training", JSON.stringify(trainingRecords)); }, [trainingRecords]);
@@ -1597,6 +1631,7 @@ export function MasterDataProvider({ children }) {
           masterDataService.getChangeoverRules(),
           masterDataService.getSanitationClasses(),
           masterDataService.getAllergenRules(),
+          masterDataService.getLabourStandards(),
           masterDataService.getSkus(),
           masterDataService.getBoms(),
           masterDataService.getAssets(activePlantId),
@@ -1631,8 +1666,23 @@ export function MasterDataProvider({ children }) {
           setUoms(liveUoms.value?.data || liveUoms.value);
         }
         if (livePackConfigs.status === "fulfilled" && Array.isArray(livePackConfigs.value?.data || livePackConfigs.value) && (livePackConfigs.value?.data || livePackConfigs.value).length > 0) {
-          setPackConfigs(livePackConfigs.value?.data || livePackConfigs.value);
+          const raw = livePackConfigs.value?.data || livePackConfigs.value;
+          // Normalize backend field names to frontend's expected field names
+          const normalized = raw.map((p) => ({
+            ...p,
+            packConfigId: p.packConfigId || p.configId || p.id,
+            packCode: p.packCode || p.code || p.packConfigCode || p.id,
+            skuName: p.skuName || p.name || "",
+            skuCode: p.skuCode || p.sku_code || "",
+            unitsPerPack: p.unitsPerPack || p.primaryUnitCount || p.units_per_pack || 0,
+            packType: p.packType || p.packagingType || p.packaging_type || "",
+            caseConfiguration: p.caseConfiguration || p.case_configuration || "",
+            palletConfiguration: p.palletConfiguration || p.pallet_configuration || (p.palletCount ? `${p.palletCount} Cases per Pallet` : ""),
+            status: p.status || "Active",
+          }));
+          setPackConfigs(normalized);
         }
+
         if (liveLineTargets.status === "fulfilled" && Array.isArray(liveLineTargets.value?.data || liveLineTargets.value) && (liveLineTargets.value?.data || liveLineTargets.value).length > 0) {
           setLineTargets(liveLineTargets.value?.data || liveLineTargets.value);
         }
@@ -1640,10 +1690,38 @@ export function MasterDataProvider({ children }) {
           setChangeoverMatrix(liveChangeovers.value?.data || liveChangeovers.value);
         }
         if (liveSanitations.status === "fulfilled" && Array.isArray(liveSanitations.value?.data || liveSanitations.value) && (liveSanitations.value?.data || liveSanitations.value).length > 0) {
-          setSanitationClasses(liveSanitations.value?.data || liveSanitations.value);
+          const raw = liveSanitations.value?.data || liveSanitations.value;
+          const normalized = raw.map((s) => ({
+            ...s,
+            id: s.id || s.sanitationId || s.classId,
+            sanitationId: s.sanitationId || s.id || s.classId,
+            sanitationClass: s.sanitationClass || s.name || s.code || "Standard Sanitation Program",
+            description: s.description || (s.chemicalAgent ? `${s.chemicalAgent}. ${s.validationMethod || ''}`.trim() : "Automated clean-in-place sequence"),
+            durationMin: Number(s.durationMin ?? s.washDurationMin ?? 45),
+            cleaningMethod: s.cleaningMethod || s.cleaningLevel || "Automated Central CIP Skid",
+            riskLevel: s.riskLevel || "Standard",
+            applicableProducts: s.applicableProducts || "All Formulations",
+            status: s.status || "Active",
+          }));
+          setSanitationClasses(normalized);
         }
         if (liveAllergens.status === "fulfilled" && Array.isArray(liveAllergens.value?.data || liveAllergens.value) && (liveAllergens.value?.data || liveAllergens.value).length > 0) {
-          setAllergenRules(liveAllergens.value?.data || liveAllergens.value);
+          const raw = liveAllergens.value?.data || liveAllergens.value;
+          const normalized = raw.map((a) => ({
+            ...a,
+            id: a.id || a.allergenId || a.ruleId,
+            allergenId: a.allergenId || a.id || a.ruleId,
+            allergenName: a.allergenName || a.allergenType || "Active Allergen Control",
+            skuCode: a.skuCode || "SKU-5001",
+            riskLevel: a.riskLevel || "High",
+            cleaningProtocol: a.cleaningProtocol || a.protocol || "Class A Full CIP + Sensory Swab Verification",
+            changeoverRestriction: a.changeoverRestriction || a.verificationTest || "Mandatory QA clearance sign-off",
+            status: a.status || "Active",
+          }));
+          setAllergenRules(normalized);
+        }
+        if (liveLabourStandards.status === "fulfilled" && Array.isArray(liveLabourStandards.value?.data || liveLabourStandards.value) && (liveLabourStandards.value?.data || liveLabourStandards.value).length > 0) {
+          setLabourStandards(liveLabourStandards.value?.data || liveLabourStandards.value);
         }
         if (liveSkus.status === "fulfilled" && Array.isArray(liveSkus.value?.data || liveSkus.value) && (liveSkus.value?.data || liveSkus.value).length > 0) {
           setSkus(liveSkus.value?.data || liveSkus.value);
@@ -2446,6 +2524,13 @@ export function MasterDataProvider({ children }) {
   const updateSanitationClass = (sanitationId, updated) => {
     setSanitationClasses((prev) => prev.map((s) => (s.sanitationId === sanitationId || s.id === sanitationId ? { ...s, ...updated } : s)));
     masterDataService.updateSanitationClass(sanitationId, updated).catch((err) => console.warn("API updateSanitationClass:", err.message));
+    logAudit({ entityId: sanitationId, entityType: "Sanitation Master", action: "Updated" });
+  };
+
+  const deleteSanitationClass = (sanitationId) => {
+    setSanitationClasses((prev) => prev.filter((s) => s.sanitationId !== sanitationId && s.id !== sanitationId));
+    masterDataService.deleteSanitationClass(sanitationId).catch((err) => console.warn("API deleteSanitationClass:", err.message));
+    logAudit({ entityId: sanitationId, entityType: "Sanitation Master", action: "Deleted" });
   };
 
   const addAllergenRule = (data) => {
@@ -2469,6 +2554,43 @@ export function MasterDataProvider({ children }) {
   const updateAllergenRule = (allergenId, updated) => {
     setAllergenRules((prev) => prev.map((a) => (a.allergenId === allergenId || a.id === allergenId ? { ...a, ...updated } : a)));
     masterDataService.updateAllergenRule(allergenId, updated).catch((err) => console.warn("API updateAllergenRule:", err.message));
+    logAudit({ entityId: allergenId, entityType: "Allergen Rules", action: "Updated" });
+  };
+
+  const deleteAllergenRule = (allergenId) => {
+    setAllergenRules((prev) => prev.filter((a) => a.allergenId !== allergenId && a.id !== allergenId));
+    masterDataService.deleteAllergenRule(allergenId).catch((err) => console.warn("API deleteAllergenRule:", err.message));
+    logAudit({ entityId: allergenId, entityType: "Allergen Rules", action: "Deleted" });
+  };
+
+  const addLabourStandard = (data) => {
+    const newRecord = {
+      id: `LBR-0${labourStandards.length + 1}`,
+      lineId: data.lineId || "LIN-01",
+      lineName: data.lineName || "Production Line",
+      standardCrew: Number(data.standardCrew) || 8,
+      stdLaborHoursPer1kUnits: Number(data.stdLaborHoursPer1kUnits) || 2.0,
+      directCostPerHour: data.directCostPerHour?.toString().startsWith("$")
+        ? data.directCostPerHour
+        : `$${Number(data.directCostPerHour || 25).toFixed(2)}`,
+      status: data.status || "Active"
+    };
+    setLabourStandards((prev) => [newRecord, ...prev]);
+    masterDataService.createLabourStandard(newRecord).catch((err) => console.warn("API createLabourStandard:", err.message));
+    logAudit({ entityId: newRecord.lineName, entityType: "Labour Standard", action: "Created" });
+    return newRecord;
+  };
+
+  const updateLabourStandard = (id, updated) => {
+    setLabourStandards((prev) => prev.map((s) => (s.id === id ? { ...s, ...updated } : s)));
+    masterDataService.updateLabourStandard(id, updated).catch((err) => console.warn("API updateLabourStandard:", err.message));
+    logAudit({ entityId: id, entityType: "Labour Standard", action: "Updated" });
+  };
+
+  const deleteLabourStandard = (id) => {
+    setLabourStandards((prev) => prev.filter((s) => s.id !== id));
+    masterDataService.deleteLabourStandard(id).catch((err) => console.warn("API deleteLabourStandard:", err.message));
+    logAudit({ entityId: id, entityType: "Labour Standard", action: "Deleted" });
   };
 
   // ============================================================================
@@ -2654,40 +2776,56 @@ export function MasterDataProvider({ children }) {
   // 14. STORAGE RESOURCES MUTATIONS
   // ============================================================================
   const addStorageResource = (strData) => {
+    const code = strData.resourceCode || strData.code || `STR-${(storageResources.length + 1).toString().padStart(2, "0")}`;
+    const id = `STR-0${storageResources.length + 1}`;
     const newRecord = {
-      id: `STR-0${storageResources.length + 1}`,
-      storageId: `STR-0${storageResources.length + 1}`,
-      code: strData.code || `WH-LOC-${storageResources.length + 1}`,
+      id,
+      storageId: id,
+      resourceId: id,
+      resourceCode: code,
+      code,
       name: strData.name,
-      type: strData.type || "Warehouse Room",
+      type: strData.resourceType || strData.type || "Selective Pallet Rack",
+      resourceType: strData.resourceType || strData.type || "Selective Pallet Rack",
       plantId: strData.plantId || activePlantId,
       plantName: plants.find((p) => p.id === (strData.plantId || activePlantId))?.name || "Indore Plant",
       zone: strData.zone || "General Staging",
-      capacity: strData.capacity || "500 Pallets",
+      capacityUnit: strData.capacityUnit || "Pallet Positions",
+      totalCapacity: Number(strData.totalCapacity) || 500,
+      capacity: strData.capacity || `${strData.totalCapacity || 500} ${strData.capacityUnit || "Pallet Positions"}`,
       currentOccupancy: strData.currentOccupancy || "0 Pallets (0%)",
-      temperatureRange: strData.temperatureRange || "Ambient (18°C - 24°C)",
+      temperatureZone: strData.temperatureZone || strData.temperatureRange || "Ambient (18°C - 24°C)",
+      temperatureRange: strData.temperatureZone || strData.temperatureRange || "Ambient (18°C - 24°C)",
       status: "Active",
       effectiveFrom: strData.effectiveFrom || new Date().toISOString().substring(0, 10),
       effectiveTo: "2030-12-31"
     };
     setStorageResources((prev) => [newRecord, ...prev]);
-    masterDataService.createStorageResource(newRecord).catch((err) => console.warn("API createStorageResource:", err.message));
+    if (typeof masterDataService.createStorageResource === "function") {
+      masterDataService.createStorageResource(newRecord).catch((err) => console.warn("API createStorageResource:", err.message));
+    }
     logAudit({ entityId: newRecord.code, entityType: "Storage Resources", action: "Created", newValue: newRecord.name });
     return newRecord;
   };
 
   const updateStorageResource = (storageId, updated) => {
-    setStorageResources((prev) => prev.map((s) => (s.storageId === storageId || s.id === storageId ? { ...s, ...updated } : s)));
-    masterDataService.updateStorageResource(storageId, updated).catch((err) => console.warn("API updateStorageResource:", err.message));
+    setStorageResources((prev) =>
+      prev.map((s) => (s.storageId === storageId || s.id === storageId || s.resourceId === storageId ? { ...s, ...updated } : s))
+    );
+    if (typeof masterDataService.updateStorageResource === "function") {
+      masterDataService.updateStorageResource(storageId, updated).catch((err) => console.warn("API updateStorageResource:", err.message));
+    }
     logAudit({ entityId: storageId, entityType: "Storage Resources", action: "Updated" });
   };
 
   const toggleStorageResourceStatus = (storageId) => {
     setStorageResources((prev) =>
       prev.map((s) => {
-        if (s.storageId === storageId || s.id === storageId) {
+        if (s.storageId === storageId || s.id === storageId || s.resourceId === storageId) {
           const next = s.status === "Active" ? "Inactive" : "Active";
-          masterDataService.updateStorageResource(storageId, { status: next }).catch((err) => console.warn("API toggleStorageResourceStatus:", err.message));
+          if (typeof masterDataService.updateStorageResource === "function") {
+            masterDataService.updateStorageResource(storageId, { status: next }).catch((err) => console.warn("API toggleStorageResourceStatus:", err.message));
+          }
           return { ...s, status: next };
         }
         return s;
@@ -2696,8 +2834,10 @@ export function MasterDataProvider({ children }) {
   };
 
   const deleteStorageResource = (storageId) => {
-    setStorageResources((prev) => prev.filter((s) => s.storageId !== storageId && s.id !== storageId));
-    masterDataService.deleteStorageResource(storageId).catch((err) => console.warn("API deleteStorageResource:", err.message));
+    setStorageResources((prev) => prev.filter((s) => s.storageId !== storageId && s.id !== storageId && s.resourceId !== storageId));
+    if (typeof masterDataService.deleteStorageResource === "function") {
+      masterDataService.deleteStorageResource(storageId).catch((err) => console.warn("API deleteStorageResource:", err.message));
+    }
     logAudit({ entityId: storageId, entityType: "Storage Resources", action: "Deleted" });
   };
 
@@ -2982,9 +3122,15 @@ export function MasterDataProvider({ children }) {
         sanitationClasses,
         addSanitationClass,
         updateSanitationClass,
+        deleteSanitationClass,
         allergenRules,
         addAllergenRule,
         updateAllergenRule,
+        deleteAllergenRule,
+        labourStandards,
+        addLabourStandard,
+        updateLabourStandard,
+        deleteLabourStandard,
 
         // 11. Assets
         assets,

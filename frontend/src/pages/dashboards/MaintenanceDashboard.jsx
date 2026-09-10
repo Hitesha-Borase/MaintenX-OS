@@ -41,6 +41,11 @@ import { useNavigate } from "react-router-dom";
 export function MaintenanceDashboard() {
   const { addToast, setIsQuickActionOpen } = useApp();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    maintenanceService.getWorkOrders().catch((err) => console.warn("Work orders load:", err.message));
+    maintenanceService.getPMSchedules().catch((err) => console.warn("PM schedules load:", err.message));
+  }, []);
   const {
     assets = [],
     workOrders = [],

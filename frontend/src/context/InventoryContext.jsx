@@ -94,7 +94,8 @@ export function InventoryProvider({ children }) {
     // Persist to PostgreSQL backend
     try {
       await warehouseService.recordStockMovement({
-        lotId: newLot.lotId || newLot.id,
+        lotId: newLot.lotId || newLot.id || lotNumber,
+        type: "RECEIPT",
         transactionType: "RECEIPT",
         quantity: Number(newLot.quantity) || 1000,
         uom: newLot.unit || "kg",

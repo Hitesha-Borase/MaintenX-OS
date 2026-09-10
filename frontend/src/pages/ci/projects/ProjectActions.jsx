@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   CheckSquare,
@@ -24,6 +24,7 @@ import { Badge } from "../../../components/common/Badge";
 import { Button } from "../../../components/common/Button";
 import { useCI } from "../../../context/CIContext";
 import { useApp } from "../../../context/AppContext";
+import ciService from "../../../services/ciService";
 
 export function ProjectActions() {
   const navigate = useNavigate();
@@ -35,6 +36,13 @@ export function ProjectActions() {
     updateCapaStatus,
     overdueCapaCount
   } = useCI();
+
+  useEffect(() => {
+    Promise.allSettled([
+      ciService.getProjects(),
+      ciService.getCapaActions()
+    ]).catch((err) => console.warn("Project actions load:", err.message));
+  }, []);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");

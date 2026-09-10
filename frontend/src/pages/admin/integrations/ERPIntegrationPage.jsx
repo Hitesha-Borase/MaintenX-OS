@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Server,
   RotateCcw,
@@ -13,18 +13,41 @@ import { Badge } from "../../../components/common/Badge";
 import { Button } from "../../../components/common/Button";
 import { StatCard } from "../../../components/common/StatCard";
 import { useApp } from "../../../context/AppContext";
+import adminService from "../../../services/adminService";
 
 export function ERPIntegrationPage() {
   const { addToast } = useApp();
 
+  const [erpInfo, setErpInfo] = useState({
+    connectorHealth: "100%",
+    status: "Connected",
+    syncStatus: "Synchronized (Last: 2 mins ago)",
+    syncFrequency: "15 Mins",
+    errorQueue: "0 Errors"
+  });
   const [syncStatus, setSyncStatus] = useState("Synchronized (Last: 2 mins ago)");
 
-  const handleSyncNow = () => {
+  useEffect(() => {
+    adminService.getERPStatus()
+      .then((data) => {
+        if (data) {
+          setErpInfo(data);
+          if (data.syncStatus) setSyncStatus(data.syncStatus);
+        }
+      })
+      .catch((err) => console.warn("ERP status load error:", err.message));
+  }, []);
+
+  const handleSyncNow = async () => {
     setSyncStatus("Synchronizing with SAP S/4HANA...");
-    setTimeout(() => {
-      setSyncStatus("Synchronized (Just now)");
-      addToast("SAP S/4HANA ERP Connector: 142 Purchase Orders & Inventory Lots synchronized!", "success");
-    }, 800);
+    try {
+      const res = await adminService.syncERP();
+      setSyncStatus(res.syncStatus || "Synchronized (Just now)");
+      addToast(res.message || "SAP S/4HANA ERP Connector: 142 Purchase Orders & Inventory Lots synchronized!", "success");
+    } catch (err) {
+      setSyncStatus("Sync failed");
+      addToast("ERP Sync failed: " + err.message, "danger");
+    }
   };
 
   return (

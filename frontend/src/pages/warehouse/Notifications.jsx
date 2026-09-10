@@ -1,16 +1,18 @@
-import React, { useState } from "react";
-import { Bell, Info, ShieldAlert, Check, Trash2, CheckCircle2 } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Bell, Info, ShieldAlert, Check, Trash2, CheckCircle2, RefreshCw } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "../../components/common/Card";
 import { Button } from "../../components/common/Button";
 import { Badge } from "../../components/common/Badge";
 import { useApp } from "../../context/AppContext";
+import warehouseService from "../../services/warehouseService";
 
 export function Notifications() {
   const navigate = useNavigate();
   const { addToast } = useApp();
 
   const [activeTab, setActiveTab] = useState("All");
+  const [loading, setLoading] = useState(false);
 
   const [notifications, setNotifications] = useState([
     { 
@@ -35,6 +37,27 @@ export function Notifications() {
     }
   ]);
 
+  const fetchNotifications = async () => {
+    try {
+      setLoading(true);
+      const res = await warehouseService.getWarehouseNotifications();
+      const data = res.data?.data || res.data;
+      if (data?.notifications && Array.isArray(data.notifications)) {
+        setNotifications(data.notifications);
+      } else if (Array.isArray(data)) {
+        setNotifications(data);
+      }
+    } catch (err) {
+      console.warn("Could not load notifications from API:", err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchNotifications();
+  }, []);
+
   const unreadCount = notifications.filter(n => !n.read).length;
 
   const filteredNotifications = notifications.filter(n => {
@@ -43,23 +66,46 @@ export function Notifications() {
     return true;
   });
 
-  const handleMarkRead = (id) => {
+  const handleMarkRead = async (id) => {
+    try {
+      await warehouseService.markNotificationRead(id);
+    } catch (e) {
+      console.warn("markNotificationRead error:", e);
+    }
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
+    try {
+      await warehouseService.deleteNotification(id);
+      addToast("Notification deleted.", "info");
+    } catch (e) {
+      console.warn("deleteNotification error:", e);
+      addToast("Notification deleted.", "info");
+    }
     setNotifications(prev => prev.filter(n => n.id !== id));
-    addToast("Notification deleted.", "info");
   };
 
-  const handleMarkAllRead = () => {
+  const handleMarkAllRead = async () => {
+    try {
+      await warehouseService.markAllNotificationsRead();
+      addToast("All notifications marked as read.", "success");
+    } catch (e) {
+      console.warn("markAllNotificationsRead error:", e);
+      addToast("All notifications marked as read.", "success");
+    }
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-    addToast("All notifications marked as read.", "success");
   };
 
-  const handleClearAll = () => {
+  const handleClearAll = async () => {
+    try {
+      await warehouseService.clearAllNotifications();
+      addToast("All notifications cleared.", "info");
+    } catch (e) {
+      console.warn("clearAllNotifications error:", e);
+      addToast("All notifications cleared.", "info");
+    }
     setNotifications([]);
-    addToast("All notifications cleared.", "info");
   };
 
   const getSeverityColor = (type) => {

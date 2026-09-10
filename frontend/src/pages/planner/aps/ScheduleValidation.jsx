@@ -16,26 +16,52 @@ import {
   ArrowRight
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import planningService from "../../../services/planningService";
 
 export function ScheduleValidation() {
-  const { validateActiveSchedule, schedules = [] } = usePlanning();
+  const { validateActiveSchedule: defaultValidation, schedules = [] } = usePlanning();
   const { addToast } = useApp();
   const navigate = useNavigate();
 
+  const [validationState, setValidationState] = useState(defaultValidation);
   const [isValidating, setIsValidating] = useState(false);
 
-  const handleRunValidation = () => {
-    setIsValidating(true);
-    addToast("Executing multi-point APS feasibility validation engine...", "info");
+  React.useEffect(() => {
+    async function initValidation() {
+      try {
+        const res = await planningService.validateSchedule();
+        if (res && res.checks) {
+          setValidationState(res);
+        }
+      } catch (err) {
+        console.warn("Init validation API fallback:", err.message);
+      }
+    }
+    initValidation();
+  }, []);
 
-    setTimeout(() => {
-      setIsValidating(false);
-      if (validateActiveSchedule.isPublishable) {
+  const validateActiveSchedule = validationState;
+
+  const handleRunValidation = async () => {
+    setIsValidating(true);
+    addToast("Executing multi-point APS feasibility validation engine via backend API...", "info");
+
+    try {
+      const res = await planningService.validateSchedule({ horizon: "Week 36" });
+      if (res && res.checks) {
+        setValidationState(res);
+      }
+      if (res?.isPublishable) {
         addToast("All critical feasibility gates passed! Schedule is eligible for publication.", "success");
       } else {
-        addToast(`Validation completed with ${validateActiveSchedule.errorCount} blocking errors.`, "error");
+        addToast(`Validation completed with ${res?.errorCount || 1} blocking errors. (Connected to API)`, "error");
       }
-    }, 1000);
+    } catch (err) {
+      console.warn("Validation API fallback:", err.message);
+      addToast(`Validation completed with ${validateActiveSchedule.errorCount} blocking errors.`, "error");
+    } finally {
+      setIsValidating(false);
+    }
   };
 
   return (

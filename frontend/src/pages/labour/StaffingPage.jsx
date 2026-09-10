@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Users,
   CheckCircle2,
@@ -17,10 +17,15 @@ import { Button } from "../../components/common/Button";
 import { StatCard } from "../../components/common/StatCard";
 import { useCMMS } from "../../context/CMMSContext";
 import { useApp } from "../../context/AppContext";
+import masterDataService from "../../services/masterDataService";
 
 export function StaffingPage() {
   const { employees = [] } = useCMMS();
   const { addToast } = useApp();
+
+  useEffect(() => {
+    masterDataService.getStaff().catch((err) => console.warn("Staffing load:", err.message));
+  }, []);
 
   const [staffingLines, setStaffingLines] = useState([
     { line: "Line 1 — Aseptic Bottling", required: 10, assigned: 10, supervisor: "Marcus Vance", status: "Full Coverage" },

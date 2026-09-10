@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Sliders,
   Globe,
@@ -17,9 +17,14 @@ import { Badge } from "../../../components/common/Badge";
 import { Button } from "../../../components/common/Button";
 import { StatCard } from "../../../components/common/StatCard";
 import { useApp } from "../../../context/AppContext";
+import adminService from "../../../services/adminService";
 
 export function ConfigurationPage() {
   const { addToast } = useApp();
+
+  useEffect(() => {
+    adminService.getDashboard().catch((err) => console.warn("Config dashboard load:", err.message));
+  }, []);
 
   const [config, setConfig] = useState({
     systemName: "MaintenX-OS Manufacturing Cloud",

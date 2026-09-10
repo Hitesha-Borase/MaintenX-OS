@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Zap,
@@ -18,7 +18,8 @@ import {
   Search,
   Filter,
   CheckCircle,
-  X
+  X,
+  Trash2
 } from "lucide-react";
 import { Card } from "../../../components/common/Card";
 import { Button } from "../../../components/common/Button";
@@ -26,15 +27,20 @@ import { Badge } from "../../../components/common/Badge";
 import { StatCard } from "../../../components/common/StatCard";
 import { useCI } from "../../../context/CIContext";
 import { useApp } from "../../../context/AppContext";
+import ciService from "../../../services/ciService";
 
 export function HypothesisTests() {
   const navigate = useNavigate();
   const { addToast } = useApp();
-  const { hypotheses = [], investigations = [], validateRootCause } = useCI();
+  const { hypotheses = [], investigations = [], validateRootCause, addHypothesis, deleteHypothesis } = useCI();
 
   const [selectedRcaFilter, setSelectedRcaFilter] = useState("ALL");
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+
+  useEffect(() => {
+    ciService.getHypotheses(selectedRcaFilter).catch((err) => console.warn("Hypotheses load:", err.message));
+  }, [selectedRcaFilter]);
 
   const [newHyp, setNewHyp] = useState({
     rcaId: investigations[0]?.id || "RCA-2026-001",
@@ -42,8 +48,31 @@ export function HypothesisTests() {
     testMethod: ""
   });
 
-  const handleValidate = (rcaId, hypId, isConfirmed) => {
-    validateRootCause(rcaId, hypId, isConfirmed);
+  const handleValidate = async (rcaId, hypId, isConfirmed) => {
+    await validateRootCause(rcaId, hypId, isConfirmed);
+  };
+
+  const handleDelete = async (id) => {
+    await deleteHypothesis(id);
+  };
+
+  const handleCreateHypothesis = async (e) => {
+    e.preventDefault();
+    if (!newHyp.statement.trim() || !newHyp.testMethod.trim()) {
+      addToast("Please provide both statement and test method.", "warning");
+      return;
+    }
+    await addHypothesis({
+      rcaId: newHyp.rcaId,
+      statement: newHyp.statement.trim(),
+      testMethod: newHyp.testMethod.trim()
+    });
+    setIsAddModalOpen(false);
+    setNewHyp({
+      rcaId: investigations[0]?.id || "RCA-2026-001",
+      statement: "",
+      testMethod: ""
+    });
   };
 
   const handleExportCSV = () => {
@@ -88,13 +117,16 @@ export function HypothesisTests() {
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+          <Button variant="primary" icon={Plus} onClick={() => setIsAddModalOpen(true)} style={{ fontSize: "12px", padding: "7px 12px" }}>
+            Formulate Hypothesis
+          </Button>
           <Button variant="secondary" icon={Download} onClick={handleExportCSV} style={{ fontSize: "12px", padding: "7px 12px" }}>
             Export Test Results
           </Button>
           <Button variant="secondary" onClick={() => navigate("/ci/rca/evidence")} style={{ fontSize: "12px", padding: "7px 12px" }}>
             View Evidence
           </Button>
-          <Button variant="primary" onClick={() => navigate("/ci/capa/corrective")} style={{ fontSize: "12px", padding: "7px 12px" }}>
+          <Button variant="secondary" onClick={() => navigate("/ci/capa/corrective")} style={{ fontSize: "12px", padding: "7px 12px" }}>
             Proceed to CAPA Actions
           </Button>
         </div>
@@ -275,6 +307,24 @@ export function HypothesisTests() {
                       >
                         <XCircle size={14} />
                       </button>
+                      <button
+                        onClick={() => handleDelete(h.id)}
+                        title="Delete Hypothesis"
+                        style={{
+                          width: "30px",
+                          height: "30px",
+                          borderRadius: "6px",
+                          backgroundColor: "var(--bg-card-subtle)",
+                          color: "var(--text-muted)",
+                          border: "1px solid var(--border-subtle)",
+                          cursor: "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center"
+                        }}
+                      >
+                        <Trash2 size={14} />
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -283,6 +333,84 @@ export function HypothesisTests() {
           </table>
         </div>
       </Card>
+
+      {/* Formulate Hypothesis Modal */}
+      {isAddModalOpen && (
+        <div style={{
+          position: "fixed",
+          inset: 0,
+          backgroundColor: "rgba(0,0,0,0.6)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 9999,
+          padding: "16px"
+        }}>
+          <div style={{
+            backgroundColor: "var(--bg-card)",
+            border: "1px solid var(--border-subtle)",
+            borderRadius: "12px",
+            width: "100%",
+            maxWidth: "540px",
+            padding: "24px",
+            boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.3)"
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <FlaskConical size={18} color="#8C5B23" />
+                <h3 style={{ fontSize: "16px", fontWeight: 700, margin: 0 }}>Formulate Root Cause Hypothesis</h3>
+              </div>
+              <button onClick={() => setIsAddModalOpen(false)} style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateHypothesis} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div>
+                <label style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "4px" }}>Linked RCA Investigation</label>
+                <select
+                  value={newHyp.rcaId}
+                  onChange={(e) => setNewHyp({ ...newHyp, rcaId: e.target.value })}
+                  style={{ width: "100%", padding: "8px 12px", borderRadius: "6px", border: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)", color: "var(--text-primary)" }}
+                >
+                  {investigations.map((inv) => (
+                    <option key={inv.id} value={inv.id}>{inv.id} — {inv.title.substring(0, 36)}...</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "4px" }}>Hypothesis Statement</label>
+                <textarea
+                  required
+                  rows={2}
+                  placeholder="e.g., Pneumatic actuator air supply starvation caused slow divert response."
+                  value={newHyp.statement}
+                  onChange={(e) => setNewHyp({ ...newHyp, statement: e.target.value })}
+                  style={{ width: "100%", padding: "8px 12px", borderRadius: "6px", border: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)", color: "var(--text-primary)", resize: "vertical" }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "4px" }}>Test Method / Protocol</label>
+                <textarea
+                  required
+                  rows={2}
+                  placeholder="e.g., Measure line pressure drop at regulator input during 100% steam call with calibrated digital gauge."
+                  value={newHyp.testMethod}
+                  onChange={(e) => setNewHyp({ ...newHyp, testMethod: e.target.value })}
+                  style={{ width: "100%", padding: "8px 12px", borderRadius: "6px", border: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)", color: "var(--text-primary)", resize: "vertical" }}
+                />
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "8px" }}>
+                <Button variant="secondary" onClick={() => setIsAddModalOpen(false)}>Cancel</Button>
+                <Button variant="primary" type="submit" icon={Save}>Save Hypothesis</Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -11,3 +11,6 @@ export function Card({ children, className = "", interactive = false, onClick, s
     </div>
   );
 }
+
+export default Card;
+
