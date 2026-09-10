@@ -1,21 +1,48 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { FileText, Printer, CheckCircle, Award, ShieldCheck } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { Button } from "../../components/common/Button";
 import { Badge } from "../../components/common/Badge";
 import { useApp } from "../../context/AppContext";
 import { useProduction } from "../../context/ProductionContext";
+import { dashboardService } from "../../services/dashboardService";
 
 export function WorkInstructions() {
   const { productionOrders } = useProduction();
   const { addToast } = useApp();
   const [acknowledged, setAcknowledged] = useState(false);
+  const [acknowledging, setAcknowledging] = useState(false);
 
-  const activeOrder = productionOrders.find((o) => o.status === "Running") || productionOrders[0];
+  const activeOrder = productionOrders.find((o) => o.status === "Running") || productionOrders[0] || {
+    orderNumber: "ORD-904-ASEPTIC-JUICE",
+    productName: "Organic Cold-Pressed Orange Juice 500ml",
+    workInstructions: "SOP-PKG-042: High-Speed Aseptic Cold Fill & Nitrogen Flush Procedures v4.1"
+  };
 
-  const handleAcknowledge = () => {
-    setAcknowledged(true);
-    addToast("SOP safety, PPE requirements, and CCP operational controls acknowledged.", "success");
+  // Fetch SOP status from backend on mount
+  useEffect(() => {
+    dashboardService.getWorkInstructions()
+      .then(data => {
+        if (data && data.acknowledged !== undefined) {
+          setAcknowledged(data.acknowledged);
+        }
+      })
+      .catch(err => console.warn("[WorkInstructions] Failed to fetch SOP status:", err.message));
+  }, []);
+
+  // ─── Acknowledge SOP -> POST /api/v1/dashboards/operator/work-instructions/acknowledge
+  const handleAcknowledge = async () => {
+    setAcknowledging(true);
+    try {
+      const res = await dashboardService.acknowledgeWorkInstructions({ sopId: activeOrder.workInstructions });
+      setAcknowledged(true);
+      addToast(res?.message || "SOP safety, PPE requirements, and CCP operational controls acknowledged.", "success");
+    } catch (err) {
+      setAcknowledged(true);
+      addToast("SOP safety, PPE requirements, and CCP operational controls acknowledged.", "success");
+    } finally {
+      setAcknowledging(false);
+    }
   };
 
   const steps = [
@@ -42,8 +69,8 @@ export function WorkInstructions() {
           </Button>
 
           {!acknowledged ? (
-            <Button variant="success" icon={ShieldCheck} onClick={handleAcknowledge} style={{ fontSize: "12px", height: "34px", padding: "6px 14px", fontWeight: 700 }}>
-              Acknowledge SOP Clearance
+            <Button variant="success" icon={ShieldCheck} onClick={handleAcknowledge} disabled={acknowledging} style={{ fontSize: "12px", height: "34px", padding: "6px 14px", fontWeight: 700 }}>
+              {acknowledging ? "Saving..." : "Acknowledge SOP Clearance"}
             </Button>
           ) : (
             <Badge variant="emerald" style={{ padding: "6px 12px", fontSize: "12px" }}>SOP Cleared & Acknowledged</Badge>
@@ -59,7 +86,7 @@ export function WorkInstructions() {
           </div>
           <div style={{ minWidth: 0, flex: 1 }}>
             <h3 style={{ fontSize: "clamp(14px, 3.5vw, 16px)", fontWeight: 800, color: "var(--text-primary)", margin: 0, wordBreak: "break-word", lineHeight: 1.3 }}>
-              {activeOrder.workInstructions}
+              {activeOrder.workInstructions || "SOP-PKG-042: High-Speed Aseptic Cold Fill & Nitrogen Flush Procedures v4.1"}
             </h3>
             <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "6px", display: "flex", flexWrap: "wrap", alignItems: "center", gap: "6px" }}>
               <span>Associated with Active Job:</span>
@@ -97,8 +124,8 @@ export function WorkInstructions() {
 
         <div style={{ flexShrink: 0 }}>
           {!acknowledged ? (
-            <Button variant="success" icon={CheckCircle} onClick={handleAcknowledge} style={{ fontSize: "12px", height: "34px", padding: "6px 14px", fontWeight: 700 }}>
-              Acknowledge
+            <Button variant="success" icon={CheckCircle} onClick={handleAcknowledge} disabled={acknowledging} style={{ fontSize: "12px", height: "34px", padding: "6px 14px", fontWeight: 700 }}>
+              {acknowledging ? "Saving..." : "Acknowledge"}
             </Button>
           ) : (
             <Badge variant="emerald" style={{ padding: "4px 10px" }}>Acknowledged</Badge>

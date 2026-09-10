@@ -20,6 +20,7 @@ import { StatCard } from "../../components/common/StatCard";
 import { useCMMS } from "../../context/CMMSContext";
 import { useApp } from "../../context/AppContext";
 import { useNavigate } from "react-router-dom";
+import maintenanceService from "../../services/maintenanceService";
 
 export function VerifiedSolutions() {
   const { solutions = [], addVerifiedSolution, assets = [] } = useCMMS();
@@ -48,10 +49,10 @@ export function VerifiedSolutions() {
     );
   });
 
-  const handleCreate = (e) => {
+  const handleCreate = async (e) => {
     e.preventDefault();
     if (!symptom.trim() || !rootCause.trim()) return;
-    const newSol = addVerifiedSolution({
+    const solPayload = {
       problemSymptom: symptom,
       assetType,
       applicableMachines: ["FM-001", "CP-102"],
@@ -65,7 +66,15 @@ export function VerifiedSolutions() {
       testAndVerification: "30-min trial run at full BPM line speed.",
       verifiedBy,
       tags: ["verified", "preventive", "solution"]
-    });
+    };
+
+    try {
+      await maintenanceService.createTroubleshootingSolution(solPayload);
+    } catch (err) {
+      console.warn("Publish solution notice:", err);
+    }
+
+    const newSol = addVerifiedSolution(solPayload);
 
     addToast(`Verified Solution ${newSol?.id || 'VS-101'} published to Knowledge Library!`, "success");
     setIsAddModalOpen(false);

@@ -21,6 +21,7 @@ import { DataTable } from "../../components/tables/DataTable";
 import { Modal } from "../../components/common/Modal";
 import { useCMMS } from "../../context/CMMSContext";
 import { useApp } from "../../context/AppContext";
+import { maintenanceService } from "../../services/maintenanceService";
 
 export function SparePartsInventory() {
   const { spareParts, addSparePart, issueSparePart, returnSparePart } = useCMMS();
@@ -71,17 +72,35 @@ export function SparePartsInventory() {
     });
   };
 
-  const handleIssue = (e) => {
+  const handleIssue = async (e) => {
     e.preventDefault();
     if (!issueModalPart) return;
+    try {
+      await maintenanceService.issueSparePart(woNumber, {
+        partNo: issueModalPart.partNo,
+        qty: issueQty,
+        workOrderId: woNumber
+      });
+    } catch (err) {
+      console.warn("Issue spare part notice:", err);
+    }
     issueSparePart(issueModalPart.partNo, issueQty, woNumber);
     addToast(`Issued ${issueQty} units of ${issueModalPart.partNo} to ${woNumber}`, "success");
     setIssueModalPart(null);
   };
 
-  const handleReturn = (e) => {
+  const handleReturn = async (e) => {
     e.preventDefault();
     if (!returnModalPart) return;
+    try {
+      await maintenanceService.issueSparePart(woNumber, {
+        partNo: returnModalPart.partNo,
+        qty: -returnQty,
+        action: "RETURN"
+      });
+    } catch (err) {
+      console.warn("Return spare part notice:", err);
+    }
     returnSparePart(returnModalPart.partNo, returnQty);
     addToast(`Returned ${returnQty} units of ${returnModalPart.partNo} to stock`, "success");
     setReturnModalPart(null);

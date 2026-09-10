@@ -27,6 +27,7 @@ import { StatCard } from "../../../components/common/StatCard";
 import { useCI } from "../../../context/CIContext";
 import { useApp } from "../../../context/AppContext";
 import { ciService } from "../../../services/ciService";
+import { maintenanceService } from "../../../services/maintenanceService";
 
 export function Investigations() {
   const navigate = useNavigate();
@@ -55,6 +56,7 @@ export function Investigations() {
     try {
       if (refreshInvestigations) await refreshInvestigations();
       ciService.getInvestigations().catch(() => {});
+      maintenanceService.getRCAInvestigations().catch(() => {});
       const res = await ciService.getRCASummary();
       const summary = res?.data || res;
       if (summary) setSummaryData(summary);
@@ -87,6 +89,11 @@ export function Investigations() {
     }
 
     try {
+      await maintenanceService.createRCAInvestigation({
+        assetId: newAssetId,
+        title: newTitle.trim()
+      }).catch(() => {});
+
       await initiateRCA(newAssetId, null, newTitle.trim());
       setNewTitle("");
       setIsCreateModalOpen(false);

@@ -5,6 +5,7 @@ import { PlusCircle, Wrench, AlertOctagon, CheckCircle2, Play, FilePlus2 } from 
 import { useNavigate } from "react-router-dom";
 import { useApp } from "../../context/AppContext";
 import { useCMMS } from "../../context/CMMSContext";
+import maintenanceService from "../../services/maintenanceService";
 
 export function QuickActionDrawer() {
   const { isQuickActionOpen, setIsQuickActionOpen, addToast } = useApp();
@@ -22,13 +23,29 @@ export function QuickActionDrawer() {
   const [bdAssetId, setBdAssetId] = useState("FM-001");
   const [bdSymptom, setBdSymptom] = useState("");
 
-  const handleCreateWO = (e) => {
+  const handleCreateWO = async (e) => {
     e.preventDefault();
     if (!woTitle.trim()) {
       addToast("Please enter a Work Order title", "warning");
       return;
     }
     const asset = assets.find((a) => a.id === woAssetId);
+
+    try {
+      await maintenanceService.createWorkOrder({
+        title: woTitle,
+        assetId: woAssetId,
+        assetName: asset?.name || woAssetId,
+        type: "Corrective",
+        priority: woPriority,
+        department: asset?.department || "Packaging",
+        assignedTechnician: "Marcus Vance (Senior Tech)",
+        description: woDescription || "Quick maintenance dispatch generated from global action hub."
+      });
+    } catch (err) {
+      console.warn("API createWorkOrder notice:", err.message || err);
+    }
+
     const newWO = addWorkOrder({
       title: woTitle,
       assetId: woAssetId,
@@ -40,12 +57,11 @@ export function QuickActionDrawer() {
       description: woDescription || "Quick maintenance dispatch generated from global action hub."
     });
 
-    addToast(`Work Order ${newWO.id} created successfully!`);
+    addToast(`Work Order ${newWO.id} created successfully!`, "success");
     setIsQuickActionOpen(false);
     setActiveForm(null);
     setWoTitle("");
     setWoDescription("");
-    navigate(`/work-orders/open?view=${newWO.id}`);
   };
 
   const handleReportBD = (e) => {

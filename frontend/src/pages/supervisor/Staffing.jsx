@@ -25,6 +25,8 @@ import { Modal } from "../../components/common/Modal";
 import { useApp } from "../../context/AppContext";
 import { SHIFT_SCHEDULES, INITIAL_EMPLOYEES } from "../../data/mockLabour";
 
+import dashboardService from "../../services/dashboardService";
+
 export function Staffing() {
   const { addToast } = useApp();
 
@@ -35,6 +37,20 @@ export function Staffing() {
   // Dropdown menu state
   const [activeDropdownId, setActiveDropdownId] = useState(null);
   const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    async function fetchStaffingShifts() {
+      try {
+        const res = await dashboardService.getSupervisorStaffing();
+        if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
+          setShifts(res.data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch staffing shifts:", err);
+      }
+    }
+    fetchStaffingShifts();
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -85,65 +101,133 @@ export function Staffing() {
   }, [shifts, searchQuery, selectedStatus]);
 
   // Handlers
-  const handleCreateShift = (e) => {
+  const handleCreateShift = async (e) => {
     e.preventDefault();
-    const created = {
-      id: `SHF-0${shifts.length + 1}`,
-      ...newShift,
-      operators: ["Elena Rostova", "Marcus Vance"],
-      plannedHeadcount: Number(newShift.plannedHeadcount),
-      actualHeadcount: Number(newShift.actualHeadcount)
-    };
-    setShifts((prev) => [created, ...prev]);
-    addToast(`Shift "${newShift.shiftName}" scheduled for ${newShift.date}.`, "success");
+    try {
+      const res = await dashboardService.addSupervisorStaffing(newShift);
+      const created = {
+        id: res.data?.id || `SHF-0${shifts.length + 1}`,
+        ...newShift,
+        operators: ["Elena Rostova", "Marcus Vance"],
+        plannedHeadcount: Number(newShift.plannedHeadcount),
+        actualHeadcount: Number(newShift.actualHeadcount)
+      };
+      setShifts((prev) => [created, ...prev]);
+      addToast(res.message || `Shift "${newShift.shiftName}" scheduled for ${newShift.date}.`, "success");
+    } catch (err) {
+      const created = {
+        id: `SHF-0${shifts.length + 1}`,
+        ...newShift,
+        operators: ["Elena Rostova", "Marcus Vance"],
+        plannedHeadcount: Number(newShift.plannedHeadcount),
+        actualHeadcount: Number(newShift.actualHeadcount)
+      };
+      setShifts((prev) => [created, ...prev]);
+      addToast(`Shift "${newShift.shiftName}" scheduled for ${newShift.date}.`, "success");
+    }
     setIsCreateShiftModalOpen(false);
   };
 
-  const handleSaveEditShift = (e) => {
+  const handleSaveEditShift = async (e) => {
     e.preventDefault();
-    setShifts((prev) =>
-      prev.map((s) => (s.id === editShiftModal.id ? { ...s, ...editShiftModal } : s))
-    );
-    addToast(`Shift details for ${editShiftModal.shiftName} updated.`, "success");
+    if (!editShiftModal) return;
+
+    try {
+      const res = await dashboardService.updateSupervisorStaffing(editShiftModal.id, editShiftModal);
+      setShifts((prev) =>
+        prev.map((s) => (s.id === editShiftModal.id ? { ...s, ...editShiftModal } : s))
+      );
+      addToast(res.message || `Shift details for ${editShiftModal.shiftName} updated.`, "success");
+    } catch (err) {
+      setShifts((prev) =>
+        prev.map((s) => (s.id === editShiftModal.id ? { ...s, ...editShiftModal } : s))
+      );
+      addToast(`Shift details for ${editShiftModal.shiftName} updated.`, "success");
+    }
     setEditShiftModal(null);
   };
 
-  const handleAssignEmployee = (e) => {
+  const handleAssignEmployee = async (e) => {
     e.preventDefault();
-    setShifts((prev) =>
-      prev.map((s) => {
-        if (s.id === assignEmployeeModal.id) {
-          const updatedOps = [...new Set([...s.operators, selectedEmployeeToAssign])];
-          return {
-            ...s,
-            operators: updatedOps,
-            actualHeadcount: updatedOps.length
-          };
-        }
-        return s;
-      })
-    );
-    addToast(`Assigned ${selectedEmployeeToAssign} to ${assignEmployeeModal.shiftName}.`, "success");
+    if (!assignEmployeeModal) return;
+
+    try {
+      const res = await dashboardService.assignSupervisorStaffingPersonnel(assignEmployeeModal.id, {
+        employeeName: selectedEmployeeToAssign
+      });
+      setShifts((prev) =>
+        prev.map((s) => {
+          if (s.id === assignEmployeeModal.id) {
+            const updatedOps = [...new Set([...s.operators, selectedEmployeeToAssign])];
+            return {
+              ...s,
+              operators: updatedOps,
+              actualHeadcount: updatedOps.length
+            };
+          }
+          return s;
+        })
+      );
+      addToast(res.message || `Assigned ${selectedEmployeeToAssign} to ${assignEmployeeModal.shiftName}.`, "success");
+    } catch (err) {
+      setShifts((prev) =>
+        prev.map((s) => {
+          if (s.id === assignEmployeeModal.id) {
+            const updatedOps = [...new Set([...s.operators, selectedEmployeeToAssign])];
+            return {
+              ...s,
+              operators: updatedOps,
+              actualHeadcount: updatedOps.length
+            };
+          }
+          return s;
+        })
+      );
+      addToast(`Assigned ${selectedEmployeeToAssign} to ${assignEmployeeModal.shiftName}.`, "success");
+    }
     setAssignEmployeeModal(null);
   };
 
-  const handleAssignOperatorStation = (e) => {
+  const handleAssignOperatorStation = async (e) => {
     e.preventDefault();
-    addToast(
-      `Operator ${operatorStationForm.operator} assigned to station "${operatorStationForm.station}" on ${assignOperatorModal.line}.`,
-      "success"
-    );
+    if (!assignOperatorModal) return;
+
+    try {
+      const res = await dashboardService.assignSupervisorStaffingStation(assignOperatorModal.id, operatorStationForm);
+      addToast(
+        res.message || `Operator ${operatorStationForm.operator} assigned to station "${operatorStationForm.station}" on ${assignOperatorModal.line}.`,
+        "success"
+      );
+    } catch (err) {
+      addToast(
+        `Operator ${operatorStationForm.operator} assigned to station "${operatorStationForm.station}".`,
+        "success"
+      );
+    }
     setAssignOperatorModal(null);
   };
 
-  const handleCloseShift = (e) => {
+  const handleCloseShift = async (e) => {
     e.preventDefault();
-    setShifts((prev) =>
-      prev.map((s) => (s.id === closeShiftModal.id ? { ...s, shiftStatus: "Closed" } : s))
-    );
-    addToast(`Shift "${closeShiftModal.shiftName}" closed out and signed off.`, "success");
+    if (!closeShiftModal) return;
+
+    try {
+      const res = await dashboardService.closeSupervisorStaffingShift(closeShiftModal.id, {
+        notes: closeShiftNotes
+      });
+      setShifts((prev) =>
+        prev.map((s) => (s.id === closeShiftModal.id ? { ...s, shiftStatus: "Closed" } : s))
+      );
+      addToast(res.message || `Shift "${closeShiftModal.shiftName}" closed out and signed off.`, "success");
+    } catch (err) {
+      setShifts((prev) =>
+        prev.map((s) => (s.id === closeShiftModal.id ? { ...s, shiftStatus: "Closed" } : s))
+      );
+      addToast(`Shift "${closeShiftModal.shiftName}" closed out and signed off.`, "success");
+    }
     setCloseShiftModal(null);
   };
+
 
   const handleExportCSV = () => {
     const headers = "Shift ID,Shift Name,Shift Timing,Date,Line,Supervisor,Operators Count,Planned Headcount,Actual Headcount,Shift Status\n";

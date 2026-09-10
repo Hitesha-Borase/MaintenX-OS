@@ -585,7 +585,12 @@ export function AppContent() {
           <Route path="/maintenance/pm" element={<RoleProtectedRoute><PMScheduleList initialViewMode="list" /></RoleProtectedRoute>} />
           <Route path="/maintenance/pm-schedules" element={<RoleProtectedRoute><PMScheduleList initialViewMode="list" /></RoleProtectedRoute>} />
           <Route path="/maintenance/pm-checklists" element={<RoleProtectedRoute><PMChecklistList /></RoleProtectedRoute>} />
+          <Route path="/maintenance/pm-checklists/execute/:id" element={<RoleProtectedRoute><PMChecklistExecute /></RoleProtectedRoute>} />
+          <Route path="/maintenance/pm-checklists/execute" element={<RoleProtectedRoute><PMChecklistExecute /></RoleProtectedRoute>} />
           <Route path="/maintenance/pm-execute" element={<RoleProtectedRoute><PMChecklistExecute /></RoleProtectedRoute>} />
+          <Route path="/maintenance/pm-execute/:id" element={<RoleProtectedRoute><PMChecklistExecute /></RoleProtectedRoute>} />
+          <Route path="/maintenance/pm/execute/:id" element={<RoleProtectedRoute><PMChecklistExecute /></RoleProtectedRoute>} />
+          <Route path="/maintenance/pm/execute" element={<RoleProtectedRoute><PMChecklistExecute /></RoleProtectedRoute>} />
 
           {/* 6. Work Orders */}
           <Route path="/maintenance/work-orders" element={<RoleProtectedRoute><WorkOrderList /></RoleProtectedRoute>} />
@@ -621,6 +626,10 @@ export function AppContent() {
           <Route path="/assets/register" element={<Navigate to="/maintenance/assets" replace />} />
           <Route path="/assets/360" element={<Navigate to="/maintenance/asset-360" replace />} />
           <Route path="/breakdowns/analysis" element={<Navigate to="/maintenance/breakdowns" replace />} />
+          <Route path="/breakdowns/log" element={<Navigate to="/maintenance/breakdowns" replace />} />
+          <Route path="/preventive-maintenance/execution" element={<Navigate to="/maintenance/pm-execute" replace />} />
+          <Route path="/calibration/schedule" element={<Navigate to="/maintenance/calendar" replace />} />
+          <Route path="/spare-parts/inventory" element={<Navigate to="/maintenance/spare-parts" replace />} />
 
           {/* Maintenance Notifications & Technician Profile */}
           <Route path="/maintenance/notifications" element={<RoleProtectedRoute><NotificationsPage /></RoleProtectedRoute>} />

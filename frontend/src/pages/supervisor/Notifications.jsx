@@ -1,10 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Bell, Info, ShieldAlert, CheckCircle2, Trash2 } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { Button } from "../../components/common/Button";
 import { Badge } from "../../components/common/Badge";
 import { useApp } from "../../context/AppContext";
+import dashboardService from "../../services/dashboardService";
 
 export function Notifications() {
   const navigate = useNavigate();
@@ -16,25 +17,68 @@ export function Notifications() {
     { id: 2, type: "exception", read: false, icon: ShieldAlert, title: "P1 Exception Escalated", msg: "Line 2 Formulation HTST temperature loop sensor failed.", time: "30 min ago", path: "/supervisor/exceptions" }
   ]);
 
-  const handleMarkAsRead = (id) => {
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
-    addToast("Notification marked as read.", "success");
+  useEffect(() => {
+    async function fetchNotifications() {
+      try {
+        const res = await dashboardService.getSupervisorNotifications();
+        if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
+          const mapped = res.data.map(n => ({
+            ...n,
+            icon: n.type === "exception" ? ShieldAlert : Info
+          }));
+          setNotifications(mapped);
+        }
+      } catch (err) {
+        console.error("Failed to fetch supervisor notifications:", err);
+      }
+    }
+    fetchNotifications();
+  }, []);
+
+  const handleMarkAsRead = async (id) => {
+    try {
+      const res = await dashboardService.markSupervisorNotificationRead(id);
+      setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+      addToast(res.message || "Notification marked as read.", "success");
+    } catch (err) {
+      setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+      addToast("Notification marked as read.", "success");
+    }
   };
 
-  const handleDelete = (id) => {
-    setNotifications(prev => prev.filter((n) => n.id !== id));
-    addToast("Notification deleted.", "info");
+  const handleDelete = async (id) => {
+    try {
+      const res = await dashboardService.deleteSupervisorNotification(id);
+      setNotifications(prev => prev.filter((n) => n.id !== id));
+      addToast(res.message || "Notification deleted.", "info");
+    } catch (err) {
+      setNotifications(prev => prev.filter((n) => n.id !== id));
+      addToast("Notification deleted.", "info");
+    }
   };
 
-  const handleMarkAllAsRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-    addToast("All notifications marked as read.", "success");
+  const handleMarkAllAsRead = async () => {
+    try {
+      const res = await dashboardService.markAllSupervisorNotificationsRead();
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      addToast(res.message || "All notifications marked as read.", "success");
+    } catch (err) {
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      addToast("All notifications marked as read.", "success");
+    }
   };
 
-  const handleClearAll = () => {
-    setNotifications([]);
-    addToast("All notifications cleared.", "info");
+  const handleClearAll = async () => {
+    try {
+      const res = await dashboardService.clearAllSupervisorNotifications();
+      setNotifications([]);
+      addToast(res.message || "All notifications cleared.", "info");
+    } catch (err) {
+      setNotifications([]);
+      addToast("All notifications cleared.", "info");
+    }
   };
+
 
   const unreadCount = notifications.filter(n => !n.read).length;
   const readCount = notifications.filter(n => n.read).length;

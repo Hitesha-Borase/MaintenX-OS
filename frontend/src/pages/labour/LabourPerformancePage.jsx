@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   TrendingUp,
   Award,
@@ -20,6 +20,7 @@ import { StatCard } from "../../components/common/StatCard";
 import { BarChart } from "../../components/charts/BarChart";
 import { useApp } from "../../context/AppContext";
 import { PRODUCTIVITY_METRICS, INITIAL_EMPLOYEES } from "../../data/mockLabour";
+import dashboardService from "../../services/dashboardService";
 
 export function LabourPerformancePage() {
   const { addToast } = useApp();
@@ -28,15 +29,30 @@ export function LabourPerformancePage() {
   const [employees, setEmployees] = useState(INITIAL_EMPLOYEES);
   const [selectedShift, setSelectedShift] = useState("All");
 
+  useEffect(() => {
+    async function fetchProductivityData() {
+      try {
+        const res = await dashboardService.getSupervisorProductivity();
+        if (res && res.data) {
+          setMetrics((prev) => ({ ...prev, ...res.data }));
+        }
+      } catch (err) {
+        console.error("Failed to fetch productivity data:", err);
+      }
+    }
+    fetchProductivityData();
+  }, []);
+
   const filteredEmployees = employees.filter((e) => {
     if (selectedShift === "All") return true;
     return e.shift.includes(selectedShift);
   });
 
-  const chartData = metrics.byLine.map((l) => ({
+  const chartData = (metrics.byLine || []).map((l) => ({
     label: l.line.split("—")[0].trim(),
     value: l.unitsPerHr
   }));
+
 
   const handleExportCSV = () => {
     const headers = "Employee,Role,Department,Shift,Productivity Score,Units Per Hour,Hours Worked,Monthly Output\n";

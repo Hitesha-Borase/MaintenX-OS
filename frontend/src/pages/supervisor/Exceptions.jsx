@@ -1,17 +1,42 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useExceptions } from "../../context/ExceptionContext";
 import { useApp } from "../../context/AppContext";
 import { Card } from "../../components/common/Card";
 import { Button } from "../../components/common/Button";
 import { Badge } from "../../components/common/Badge";
 import { AlertOctagon, Check } from "lucide-react";
+import { dashboardService } from "../../services/dashboardService";
 
 export function Exceptions() {
   const { exceptions, updateExceptionStatus } = useExceptions();
   const { addToast } = useApp();
+  const [list, setList] = useState([]);
 
-  const handleResolveException = (id) => {
+  useEffect(() => {
+    dashboardService.getEscalations()
+      .then((data) => {
+        if (data && Array.isArray(data) && data.length > 0) {
+          setList(data);
+        } else {
+          setList(exceptions);
+        }
+      })
+      .catch((err) => {
+        console.warn("[Supervisor Exceptions] API fetch warning:", err.message);
+        setList(exceptions);
+      });
+  }, [exceptions]);
+
+  const handleResolveException = async (id) => {
+    try {
+      await dashboardService.dispatchEscalation({ id, action: "resolve" });
+    } catch (err) {
+      console.warn("[Supervisor Exceptions] Resolve API warning:", err.message);
+    }
     updateExceptionStatus(id, "Resolved", "Supervisor signed off resolution.");
+    setList((prev) =>
+      prev.map((e) => (e.id === id ? { ...e, status: "Resolved" } : e))
+    );
     addToast(`Exception ${id} marked as Resolved.`, "success");
   };
 
@@ -25,7 +50,7 @@ export function Exceptions() {
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-        {exceptions.map((ex) => (
+        {(list || []).map((ex) => (
           <Card key={ex.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px", borderLeft: ex.status !== "Resolved" ? "4px solid #EF4444" : "4px solid var(--border-subtle)" }}>
             <div>
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>

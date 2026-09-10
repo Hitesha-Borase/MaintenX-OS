@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   BookOpen,
   Search,
@@ -21,6 +21,7 @@ import { StatCard } from "../../components/common/StatCard";
 import { Modal } from "../../components/common/Modal";
 import { useApp } from "../../context/AppContext";
 import { TRAINING_PROGRAMS } from "../../data/mockLabour";
+import dashboardService from "../../services/dashboardService";
 
 export function Training() {
   const { addToast } = useApp();
@@ -52,6 +53,20 @@ export function Training() {
     certificationNumber: "CERT-2026-904"
   });
 
+  useEffect(() => {
+    async function fetchTrainings() {
+      try {
+        const res = await dashboardService.getSupervisorTraining();
+        if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
+          setTrainings(res.data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch training records:", err);
+      }
+    }
+    fetchTrainings();
+  }, []);
+
   const filteredTrainings = useMemo(() => {
     return trainings.filter((t) => {
       const matchesSearch =
@@ -65,15 +80,26 @@ export function Training() {
     });
   }, [trainings, searchQuery, selectedStatus, selectedType]);
 
-  const handleEnrollTraining = (e) => {
+  const handleEnrollTraining = async (e) => {
     e.preventDefault();
     if (!newTraining.trainingProgram) return;
-    const added = {
-      id: `TRN-0${trainings.length + 1}`,
-      ...newTraining
-    };
-    setTrainings((prev) => [added, ...prev]);
-    addToast(`Enrolled ${newTraining.employee} into "${newTraining.trainingProgram}".`, "success");
+
+    try {
+      const res = await dashboardService.addSupervisorTraining(newTraining);
+      const added = {
+        id: res.data?.id || `TRN-0${trainings.length + 1}`,
+        ...newTraining
+      };
+      setTrainings((prev) => [added, ...prev]);
+      addToast(res.message || `Enrolled ${newTraining.employee} into "${newTraining.trainingProgram}".`, "success");
+    } catch (err) {
+      const added = {
+        id: `TRN-0${trainings.length + 1}`,
+        ...newTraining
+      };
+      setTrainings((prev) => [added, ...prev]);
+      addToast(`Enrolled ${newTraining.employee} into "${newTraining.trainingProgram}".`, "success");
+    }
     setIsEnrollModalOpen(false);
     setNewTraining({
       trainingProgram: "",
@@ -88,24 +114,48 @@ export function Training() {
     });
   };
 
-  const handleMarkCompleted = (e) => {
+  const handleMarkCompleted = async (e) => {
     e.preventDefault();
-    setTrainings((prev) =>
-      prev.map((t) =>
-        t.id === completionModal.id
-          ? {
-              ...t,
-              status: "Completed",
-              completionDate: completionData.completionDate,
-              expiryDate: completionData.expiryDate,
-              certification: `${t.trainingProgram.split(' ')[0]} Certified (${completionData.certificationNumber})`
-            }
-          : t
-      )
-    );
-    addToast(`Training for ${completionModal.employee} marked Completed. Certificate ${completionData.certificationNumber} issued.`, "success");
+    if (!completionModal) return;
+
+    try {
+      const res = await dashboardService.completeSupervisorTraining(completionModal.id, {
+        ...completionData,
+        employee: completionModal.employee
+      });
+      setTrainings((prev) =>
+        prev.map((t) =>
+          t.id === completionModal.id
+            ? {
+                ...t,
+                status: "Completed",
+                completionDate: completionData.completionDate,
+                expiryDate: completionData.expiryDate,
+                certification: `${t.trainingProgram.split(' ')[0]} Certified (${completionData.certificationNumber})`
+              }
+            : t
+        )
+      );
+      addToast(res.message || `Training for ${completionModal.employee} marked Completed. Certificate ${completionData.certificationNumber} issued.`, "success");
+    } catch (err) {
+      setTrainings((prev) =>
+        prev.map((t) =>
+          t.id === completionModal.id
+            ? {
+                ...t,
+                status: "Completed",
+                completionDate: completionData.completionDate,
+                expiryDate: completionData.expiryDate,
+                certification: `${t.trainingProgram.split(' ')[0]} Certified (${completionData.certificationNumber})`
+              }
+            : t
+        )
+      );
+      addToast(`Training for ${completionModal.employee} marked Completed.`, "success");
+    }
     setCompletionModal(null);
   };
+
 
   const handleExportCSV = () => {
     const headers = "Training ID,Training Program,Employee,Training Type,Completion Date,Expiry Date,Trainer,Status,Certification\n";

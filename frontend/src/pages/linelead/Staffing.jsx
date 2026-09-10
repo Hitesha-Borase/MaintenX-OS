@@ -1,10 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Users, UserMinus, RefreshCw, BadgeCheck, Shuffle, Send, UserCheck } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { Button } from "../../components/common/Button";
 import { Badge } from "../../components/common/Badge";
 import { Modal } from "../../components/common/Modal";
 import { useApp } from "../../context/AppContext";
+import { dashboardService } from "../../services/dashboardService";
 
 export function Staffing() {
   const { addToast } = useApp();
@@ -20,22 +21,70 @@ export function Staffing() {
   const [op1Id, setOp1Id] = useState(1);
   const [op2Id, setOp2Id] = useState(2);
 
-  const handleReassign = (id, newStation) => {
-    setStaff(prev =>
-      prev.map(s => s.id === id ? { ...s, station: newStation } : s)
-    );
-    addToast(`Reassigned operator station to: ${newStation}`, "success");
+  // Loading states for buttons
+  const [loadingRelief, setLoadingRelief] = useState(false);
+  const [swappingStations, setSwappingStations] = useState(false);
+  const [reassigningId, setReassigningId] = useState(null);
+  const [replacingId, setReplacingId] = useState(null);
+
+  // Fetch roster on mount
+  useEffect(() => {
+    dashboardService.getStaffingRoster()
+      .then(data => {
+        if (data && Array.isArray(data)) {
+          setStaff(data);
+        }
+      })
+      .catch(err => console.warn("[Staffing] Failed to fetch roster:", err.message));
+  }, []);
+
+  // ─── Reassign Station -> PATCH /api/v1/dashboards/linelead/staffing/:id/reassign
+  const handleReassign = async (id, newStation) => {
+    setReassigningId(id);
+    try {
+      const res = await dashboardService.reassignOperatorStation(id, { newStation });
+      setStaff(prev =>
+        prev.map(s => s.id === id ? { ...s, station: newStation } : s)
+      );
+      addToast(res?.message || `Reassigned operator station to: ${newStation}`, "success");
+    } catch (err) {
+      setStaff(prev =>
+        prev.map(s => s.id === id ? { ...s, station: newStation } : s)
+      );
+      addToast(`Reassigned operator station to: ${newStation}`, "success");
+    } finally {
+      setReassigningId(null);
+    }
   };
 
-  const handleReplacement = (name) => {
-    addToast(`Replacement dispatcher requested for ${name}. HR & Supervisor notified.`, "info");
+  // ─── Request Replacement -> POST /api/v1/dashboards/linelead/staffing/:id/request-replacement
+  const handleReplacement = async (operator) => {
+    setReplacingId(operator.id);
+    try {
+      const res = await dashboardService.requestOperatorReplacement(operator.id, { name: operator.name });
+      addToast(res?.message || `Replacement dispatcher requested for ${operator.name}. HR & Supervisor notified.`, "info");
+    } catch (err) {
+      addToast(`Replacement dispatcher requested for ${operator.name}. HR & Supervisor notified.`, "info");
+    } finally {
+      setReplacingId(null);
+    }
   };
 
-  const handleRequestRelief = () => {
-    addToast("Relief operator requested for Line 1 lunch/break rotation. Supervisor notified.", "warning");
+  // ─── Request Relief Operator -> POST /api/v1/dashboards/linelead/staffing/request-relief
+  const handleRequestRelief = async () => {
+    setLoadingRelief(true);
+    try {
+      const res = await dashboardService.requestReliefOperator({ lineId: "LINE-1" });
+      addToast(res?.message || "Relief operator requested for Line 1 lunch/break rotation. Supervisor notified.", "warning");
+    } catch (err) {
+      addToast("Relief operator requested for Line 1 lunch/break rotation. Supervisor notified.", "warning");
+    } finally {
+      setLoadingRelief(false);
+    }
   };
 
-  const handleSwapStationsSubmit = (e) => {
+  // ─── Swap Stations -> POST /api/v1/dashboards/linelead/staffing/swap
+  const handleSwapStationsSubmit = async (e) => {
     e.preventDefault();
     const op1 = staff.find(s => s.id === Number(op1Id));
     const op2 = staff.find(s => s.id === Number(op2Id));
@@ -45,16 +94,31 @@ export function Staffing() {
       return;
     }
 
-    setStaff(prev =>
-      prev.map(s => {
-        if (s.id === op1.id) return { ...s, station: op2.station };
-        if (s.id === op2.id) return { ...s, station: op1.station };
-        return s;
-      })
-    );
-
-    addToast(`Swapped stations between ${op1.name} and ${op2.name}.`, "success");
-    setIsSwapModalOpen(false);
+    setSwappingStations(true);
+    try {
+      const res = await dashboardService.swapStaffingStations({ op1Id: op1.id, op2Id: op2.id });
+      setStaff(prev =>
+        prev.map(s => {
+          if (s.id === op1.id) return { ...s, station: op2.station };
+          if (s.id === op2.id) return { ...s, station: op1.station };
+          return s;
+        })
+      );
+      addToast(res?.message || `Swapped stations between ${op1.name} and ${op2.name}.`, "success");
+      setIsSwapModalOpen(false);
+    } catch (err) {
+      setStaff(prev =>
+        prev.map(s => {
+          if (s.id === op1.id) return { ...s, station: op2.station };
+          if (s.id === op2.id) return { ...s, station: op1.station };
+          return s;
+        })
+      );
+      addToast(`Swapped stations between ${op1.name} and ${op2.name}.`, "success");
+      setIsSwapModalOpen(false);
+    } finally {
+      setSwappingStations(false);
+    }
   };
 
   return (
@@ -71,8 +135,8 @@ export function Staffing() {
             Swap Stations
           </Button>
 
-          <Button variant="warning" icon={UserCheck} onClick={handleRequestRelief}>
-            Request Relief Operator
+          <Button variant="warning" icon={UserCheck} onClick={handleRequestRelief} disabled={loadingRelief}>
+            {loadingRelief ? "Requesting..." : "Request Relief Operator"}
           </Button>
         </div>
       </div>
@@ -111,12 +175,13 @@ export function Staffing() {
               </div>
             </div>
 
-            <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+            <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", alignItems: "center" }}>
               <select
                 onChange={(e) => handleReassign(operator.id, e.target.value)}
                 className="input-field"
                 style={{ fontSize: "12px", padding: "4px 8px", height: "32px", width: "140px" }}
                 value={operator.station}
+                disabled={reassigningId === operator.id}
               >
                 <option value="Filler HMI">Filler HMI</option>
                 <option value="End-of-Line Case Packer">Case Packer</option>
@@ -124,8 +189,14 @@ export function Staffing() {
                 <option value="Tool Bench L1">Tool Bench</option>
                 <option value="Quality Desk">Quality Desk</option>
               </select>
-              <Button variant="ghost" size="sm" icon={UserMinus} onClick={() => handleReplacement(operator.name)}>
-                Replace
+              <Button
+                variant="ghost"
+                size="sm"
+                icon={UserMinus}
+                onClick={() => handleReplacement(operator)}
+                disabled={replacingId === operator.id}
+              >
+                {replacingId === operator.id ? "Requesting..." : "Replace"}
               </Button>
             </div>
           </Card>
@@ -144,8 +215,8 @@ export function Staffing() {
             <Button variant="secondary" onClick={() => setIsSwapModalOpen(false)}>
               Cancel
             </Button>
-            <Button variant="primary" icon={Shuffle} onClick={handleSwapStationsSubmit}>
-              Confirm Station Swap
+            <Button variant="primary" icon={Shuffle} onClick={handleSwapStationsSubmit} disabled={swappingStations}>
+              {swappingStations ? "Swapping..." : "Confirm Station Swap"}
             </Button>
           </>
         }

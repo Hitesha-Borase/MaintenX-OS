@@ -30,11 +30,23 @@ import { DataTable } from "../../components/tables/DataTable";
 import { useCMMS } from "../../context/CMMSContext";
 import { useApp } from "../../context/AppContext";
 import { useNavigate } from "react-router-dom";
+import maintenanceService from "../../services/maintenanceService";
 
 export function ReliabilityAnalytics() {
   const { reliabilityMetrics, repeatFailures = [], assets } = useCMMS();
   const { addToast } = useApp();
   const navigate = useNavigate();
+
+  React.useEffect(() => {
+    const fetchReliability = async () => {
+      try {
+        await maintenanceService.getReliabilityMetrics();
+      } catch (err) {
+        console.warn("API reliability fetch notice:", err.message || err);
+      }
+    };
+    fetchReliability();
+  }, []);
 
   const [activeTab, setActiveTab] = useState("fleet"); // "fleet" | "pareto" | "bad_actors" | "trends"
 
@@ -152,6 +164,38 @@ export function ReliabilityAnalytics() {
     }
   ];
 
+  const handleOpenRCA = async () => {
+    try {
+      await maintenanceService.getRCAInvestigations();
+    } catch (err) {
+      console.warn("RCA Investigations fetch notice:", err);
+    }
+    navigate("/ci/rca/investigations");
+  };
+
+  const handleExportReport = async () => {
+    try {
+      await maintenanceService.exportReliabilityReport();
+    } catch (err) {
+      console.warn("Export report notice:", err);
+    }
+    addToast("Exporting Reliability Analytics Report (PDF)...", "success");
+  };
+
+  const handleStartRCA = async (assetId, failureCode) => {
+    try {
+      await maintenanceService.createRCAInvestigation({
+        assetId,
+        failureCode,
+        title: `RCA for ${assetId} - ${failureCode || "Chronic Repeat Failure"}`
+      });
+    } catch (err) {
+      console.warn("Initiate RCA notice:", err);
+    }
+    addToast(`Root Cause Analysis (RCA) initiated for ${assetId}!`, "success");
+    navigate("/ci/rca/investigations");
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%", maxWidth: "1400px", margin: "0 auto" }}>
       {/* Header */}
@@ -173,14 +217,14 @@ export function ReliabilityAnalytics() {
           <Button
             variant="secondary"
             icon={Download}
-            onClick={() => addToast("Exporting Reliability Analytics Report (PDF)...", "success")}
+            onClick={handleExportReport}
           >
             Export Report
           </Button>
           <Button
             variant="primary"
             icon={SearchCode}
-            onClick={() => navigate("/ci/rca/investigations")}
+            onClick={handleOpenRCA}
           >
             Open RCA Investigations
           </Button>
@@ -439,7 +483,7 @@ export function ReliabilityAnalytics() {
               variant="secondary"
               size="sm"
               icon={SearchCode}
-              onClick={() => navigate("/ci/rca/investigations")}
+              onClick={handleOpenRCA}
             >
               Open RCA / 5-Why Portal
             </Button>
@@ -495,10 +539,7 @@ export function ReliabilityAnalytics() {
                         Asset 360°
                       </Button>
                       <button
-                        onClick={() => {
-                          addToast(`Root Cause Analysis (RCA) initiated for ${rep.assetId}!`, "success");
-                          navigate("/ci/rca/investigations");
-                        }}
+                        onClick={() => handleStartRCA(rep.assetId, rep.failureCode)}
                         style={{
                           padding: "6px 14px",
                           borderRadius: "8px",

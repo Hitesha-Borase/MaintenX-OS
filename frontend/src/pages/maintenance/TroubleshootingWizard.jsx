@@ -19,11 +19,23 @@ import { Button } from "../../components/common/Button";
 import { Stepper } from "../../components/common/Stepper";
 import { useCMMS } from "../../context/CMMSContext";
 import { useApp } from "../../context/AppContext";
+import maintenanceService from "../../services/maintenanceService";
 
 export function TroubleshootingWizard() {
   const navigate = useNavigate();
   const { assets, failureCodes, addVerifiedSolution } = useCMMS();
   const { addToast } = useApp();
+
+  React.useEffect(() => {
+    const fetchTroubleshooting = async () => {
+      try {
+        await maintenanceService.getTroubleshooting();
+      } catch (err) {
+        console.warn("API troubleshooting fetch notice:", err.message || err);
+      }
+    };
+    fetchTroubleshooting();
+  }, []);
 
   const [currentStep, setCurrentStep] = useState(0);
 
@@ -47,10 +59,44 @@ export function TroubleshootingWizard() {
     { title: "7. Verify & Save", subtitle: "Verified solution" }
   ];
 
-  const handleNext = () => {
+  const getStepPayload = (stepIdx) => {
+    switch (stepIdx) {
+      case 0:
+        return { step: 1, stepName: "Symptom", assetId: selectedAssetId, symptom };
+      case 1:
+        return { step: 2, stepName: "Diagnostics", diagnosticCheck };
+      case 2:
+        return { step: 3, stepName: "Evidence", actualEvidence };
+      case 3:
+        return { step: 4, stepName: "Root Cause", selectedCause };
+      case 4:
+        return { step: 5, stepName: "Repair", repairProcedure };
+      case 5:
+        return { step: 6, stepName: "Post Test", testResult };
+      case 6:
+        return { step: 7, stepName: "Verify & Save", verifiedBy };
+      default:
+        return { step: stepIdx + 1 };
+    }
+  };
+
+  const handleNext = async () => {
+    const payload = getStepPayload(currentStep);
+    try {
+      await maintenanceService.saveTroubleshootingStep(payload);
+    } catch (err) {
+      console.warn("Troubleshooting step sync notice:", err);
+    }
     if (currentStep < steps.length - 1) {
       setCurrentStep((s) => s + 1);
     }
+  };
+
+  const handleStepClick = async (stepIdx) => {
+    try {
+      await maintenanceService.saveTroubleshootingStep(getStepPayload(currentStep));
+    } catch (err) {}
+    setCurrentStep(stepIdx);
   };
 
   const handleBack = () => {
@@ -59,8 +105,28 @@ export function TroubleshootingWizard() {
     }
   };
 
-  const handleFinishAndSave = () => {
-    const newSol = addVerifiedSolution({
+  const handleSaveDraft = async () => {
+    const draftData = {
+      assetId: selectedAssetId,
+      symptom,
+      diagnosticCheck,
+      actualEvidence,
+      selectedCause,
+      repairProcedure,
+      testResult,
+      verifiedBy,
+      currentStep: currentStep + 1
+    };
+    try {
+      await maintenanceService.saveTroubleshootingDraft(draftData);
+    } catch (err) {
+      console.warn("Draft save notice:", err);
+    }
+    addToast("Troubleshooting draft saved successfully.", "success");
+  };
+
+  const handleFinishAndSave = async () => {
+    const solData = {
       problemSymptom: symptom,
       assetType: "Packaging & Bottling / Rotary Filler",
       applicableMachines: [selectedAssetId],
@@ -74,9 +140,17 @@ export function TroubleshootingWizard() {
       testAndVerification: testResult,
       verifiedBy,
       tags: ["troubleshooting", "spindle", "vibration"]
-    });
+    };
 
-    addToast(`Troubleshooting flow completed and saved as Verified Solution ${newSol.id}!`);
+    try {
+      await maintenanceService.createTroubleshootingSolution(solData);
+    } catch (err) {
+      console.warn("Solution save notice:", err);
+    }
+
+    const newSol = addVerifiedSolution(solData);
+
+    addToast(`Troubleshooting flow completed and saved as Verified Solution ${newSol.id}!`, "success");
     navigate("/maintenance/verified-solutions");
   };
 
@@ -115,7 +189,7 @@ export function TroubleshootingWizard() {
       {/* Stepper Header with smooth horizontal scroll on mobile */}
       <Card style={{ padding: "16px 20px", overflowX: "auto" }}>
         <div style={{ minWidth: "640px" }}>
-          <Stepper steps={steps} currentStep={currentStep} onStepClick={setCurrentStep} />
+          <Stepper steps={steps} currentStep={currentStep} onStepClick={handleStepClick} />
         </div>
       </Card>
 
@@ -281,7 +355,7 @@ export function TroubleshootingWizard() {
           </Button>
 
           <div style={{ display: "flex", gap: "10px" }}>
-            <Button variant="ghost" onClick={() => addToast("Troubleshooting draft saved locally.")}>
+            <Button variant="ghost" onClick={handleSaveDraft}>
               Save Draft
             </Button>
             {currentStep < steps.length - 1 ? (

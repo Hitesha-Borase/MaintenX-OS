@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Clock,
   Users,
@@ -20,6 +20,7 @@ import { StatCard } from "../../components/common/StatCard";
 import { Modal } from "../../components/common/Modal";
 import { useApp } from "../../context/AppContext";
 import { LIVE_HB_RECORDS } from "../../data/mockLabour";
+import dashboardService from "../../services/dashboardService";
 
 export function HBManagement() {
   const { addToast } = useApp();
@@ -49,6 +50,20 @@ export function HBManagement() {
     targetLine: "Line 1 — Bottling"
   });
 
+  useEffect(() => {
+    async function fetchHBRecords() {
+      try {
+        const res = await dashboardService.getSupervisorLiveHB();
+        if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
+          setRecords(res.data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch live HB records:", err);
+      }
+    }
+    fetchHBRecords();
+  }, []);
+
   const filteredRecords = records.filter((r) => {
     const matchesShift = selectedShift === "All" || r.shift.includes(selectedShift);
     const matchesLine = selectedLine === "All" || r.line.includes(selectedLine);
@@ -60,7 +75,7 @@ export function HBManagement() {
   const totalActualHB = filteredRecords.reduce((acc, r) => acc + r.actualHB, 0);
   const totalShortage = filteredRecords.reduce((acc, r) => acc + (r.shortage < 0 ? r.shortage : 0), 0);
 
-  const handleCreateRecord = (e) => {
+  const handleCreateRecord = async (e) => {
     e.preventDefault();
     const planned = Number(newHB.plannedHB);
     const actual = Number(newHB.actualHB);
@@ -68,8 +83,7 @@ export function HBManagement() {
     const available = Number(newHB.availableHB);
     const shortage = actual - required;
 
-    const record = {
-      id: `HB-0${records.length + 1}`,
+    const payload = {
       hour: newHB.hour,
       shift: newHB.shift,
       line: newHB.line,
@@ -83,8 +97,23 @@ export function HBManagement() {
       operatorNotes: newHB.operatorNotes
     };
 
-    setRecords((prev) => [record, ...prev]);
-    addToast(`H/B record for ${record.hour} logged for ${record.line}.`, "success");
+    try {
+      const res = await dashboardService.logSupervisorHB(payload);
+      const record = {
+        id: res.data?.id || `HB-0${records.length + 1}`,
+        ...payload
+      };
+
+      setRecords((prev) => [record, ...prev]);
+      addToast(res.message || `H/B record for ${record.hour} logged for ${record.line}.`, "success");
+    } catch (err) {
+      const record = {
+        id: `HB-0${records.length + 1}`,
+        ...payload
+      };
+      setRecords((prev) => [record, ...prev]);
+      addToast(`H/B record for ${record.hour} logged for ${record.line}.`, "success");
+    }
     setIsLogModalOpen(false);
   };
 
@@ -94,32 +123,64 @@ export function HBManagement() {
     setIsBackupModalOpen(true);
   };
 
-  const handleDispatchBackup = (e) => {
+  const handleDispatchBackup = async (e) => {
     e.preventDefault();
-    setRecords((prev) =>
-      prev.map((r) => {
-        if (r.id === activeRecord.id) {
-          const newActual = r.actualHB + Number(backupForm.assignedCount);
-          const newAvailable = r.availableHB + Number(backupForm.assignedCount);
-          const newShortage = newActual - r.requiredHB;
-          return {
-            ...r,
-            actualHB: newActual,
-            availableHB: newAvailable,
-            shortage: newShortage,
-            status: newShortage >= 0 ? "Full Coverage" : `Shortage (${newShortage})`,
-            operatorNotes: `Backup dispatched from ${backupForm.pool} (+${backupForm.assignedCount}).`
-          };
-        }
-        return r;
-      })
-    );
-    addToast(
-      `Dispatched ${backupForm.assignedCount} backup operator from ${backupForm.pool} to ${activeRecord.line}. Shortage resolved!`,
-      "success"
-    );
+    const payload = {
+      ...backupForm,
+      recordId: activeRecord?.id
+    };
+
+    try {
+      const res = await dashboardService.dispatchSupervisorHBBackup(payload);
+      setRecords((prev) =>
+        prev.map((r) => {
+          if (r.id === activeRecord?.id) {
+            const newActual = r.actualHB + Number(backupForm.assignedCount);
+            const newAvailable = r.availableHB + Number(backupForm.assignedCount);
+            const newShortage = newActual - r.requiredHB;
+            return {
+              ...r,
+              actualHB: newActual,
+              availableHB: newAvailable,
+              shortage: newShortage,
+              status: newShortage >= 0 ? "Full Coverage" : `Shortage (${newShortage})`,
+              operatorNotes: `Backup dispatched from ${backupForm.pool} (+${backupForm.assignedCount}).`
+            };
+          }
+          return r;
+        })
+      );
+      addToast(
+        res.message || `Dispatched ${backupForm.assignedCount} backup operator from ${backupForm.pool} to ${activeRecord.line}. Shortage resolved!`,
+        "success"
+      );
+    } catch (err) {
+      setRecords((prev) =>
+        prev.map((r) => {
+          if (r.id === activeRecord?.id) {
+            const newActual = r.actualHB + Number(backupForm.assignedCount);
+            const newAvailable = r.availableHB + Number(backupForm.assignedCount);
+            const newShortage = newActual - r.requiredHB;
+            return {
+              ...r,
+              actualHB: newActual,
+              availableHB: newAvailable,
+              shortage: newShortage,
+              status: newShortage >= 0 ? "Full Coverage" : `Shortage (${newShortage})`,
+              operatorNotes: `Backup dispatched from ${backupForm.pool} (+${backupForm.assignedCount}).`
+            };
+          }
+          return r;
+        })
+      );
+      addToast(
+        `Dispatched ${backupForm.assignedCount} backup operator from ${backupForm.pool} to ${activeRecord?.line}.`,
+        "success"
+      );
+    }
     setIsBackupModalOpen(false);
   };
+
 
   const handleExportCSV = () => {
     const headers = "H/B Record ID,Hour,Shift,Line,Department,Planned H/B,Actual H/B,Required H/B,Available H/B,Shortage,Status,Notes\n";

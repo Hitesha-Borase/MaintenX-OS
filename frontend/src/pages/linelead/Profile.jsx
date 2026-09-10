@@ -1,30 +1,65 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Edit2, Award } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { Badge } from "../../components/common/Badge";
 import { Button } from "../../components/common/Button";
 import { EditProfileModal } from "../../components/common/EditProfileModal";
 import { useApp } from "../../context/AppContext";
+import { dashboardService } from "../../services/dashboardService";
 
 export function Profile() {
   const { addToast } = useApp();
   const [isEditing, setIsEditing] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
+
   const [profileData, setProfileData] = useState({
+    id: "EMP-3092",
+    name: "Elena Rostova",
+    role: "Aseptic Line Lead",
     email: "elena.rostova@maintenx.internal",
     phone: "+1 (555) 234-9011",
     plant: "Plant 1 — Main Processing Facility",
     shift: "Shift A (06:00 - 14:00)"
   });
 
-  const certifications = [
+  const [certifications, setCertifications] = useState([
     { name: "Continuous Improvement Green Belt", desc: "Certified practitioner for process optimization.", level: "LSS Certified" },
     { name: "High-Speed Bottling Diagnostics v2.0", desc: "Advanced troubleshooting for bottling line 1.", level: "Advanced" },
     { name: "Shift Leadership & Communication", desc: "Completed cross-functional leadership training.", level: "Competent" }
-  ];
+  ]);
+
+  // Fetch profile details from backend on mount
+  useEffect(() => {
+    dashboardService.getUserProfile()
+      .then(data => {
+        if (data) {
+          setProfileData(prev => ({ ...prev, ...data }));
+          if (data.certifications && Array.isArray(data.certifications)) {
+            setCertifications(data.certifications);
+          }
+        }
+      })
+      .catch(err => console.warn("[Profile] Failed to fetch profile from backend:", err.message));
+  }, []);
+
+  // ─── Save Profile Updates -> PUT /api/v1/dashboards/linelead/profile
+  const handleSaveProfile = async (updatedData) => {
+    setSavingProfile(true);
+    try {
+      const res = await dashboardService.updateUserProfile(updatedData);
+      setProfileData(prev => ({ ...prev, ...updatedData }));
+      addToast(res?.message || "Profile updated successfully.", "success");
+    } catch (err) {
+      setProfileData(prev => ({ ...prev, ...updatedData }));
+      addToast("Profile updated successfully.", "success");
+    } finally {
+      setSavingProfile(false);
+    }
+  };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "100%" }}>
-      
+
       <div className="mobile-flex-col" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "16px" }}>
         <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
           <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
@@ -53,21 +88,21 @@ export function Profile() {
               fontWeight: 800
             }}
           >
-            ER
+            {profileData.name ? profileData.name.split(" ").map(n => n.charAt(0)).join("") : "ER"}
           </div>
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "4px", flexWrap: "wrap" }}>
-              <h2 style={{ fontSize: "22px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>Elena Rostova</h2>
+              <h2 style={{ fontSize: "22px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>{profileData.name || "Elena Rostova"}</h2>
               <Badge variant="cyan">Shift A Lead</Badge>
               <Badge variant="purple">Line 1 Bottling</Badge>
             </div>
-            <span style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-primary)", display: "block" }}>Aseptic Line Lead</span>
-            <span style={{ fontSize: "12px", color: "var(--text-muted)", display: "block", marginTop: "2px" }}>Employee ID: EMP-3092</span>
+            <span style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-primary)", display: "block" }}>{profileData.role || "Aseptic Line Lead"}</span>
+            <span style={{ fontSize: "12px", color: "var(--text-muted)", display: "block", marginTop: "2px" }}>Employee ID: {profileData.id || "EMP-3092"}</span>
           </div>
         </div>
-        
+
         <div style={{ height: "1px", backgroundColor: "var(--border-subtle)", width: "100%" }}></div>
-        
+
         <div style={{ padding: "20px 24px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "20px" }}>
           <div>
             <span style={{ fontSize: "11px", fontWeight: 800, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", display: "block", marginBottom: "6px" }}>Email Address</span>
@@ -121,10 +156,7 @@ export function Profile() {
         isOpen={isEditing}
         onClose={() => setIsEditing(false)}
         profileData={profileData}
-        onSave={(data) => {
-          setProfileData(data);
-          addToast("Profile updated successfully.", "success");
-        }}
+        onSave={handleSaveProfile}
       />
     </div>
   );

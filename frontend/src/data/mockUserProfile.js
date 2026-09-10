@@ -1,14 +1,14 @@
 // Default Maintenance User Profile
 export const DEFAULT_USER_PROFILE = {
   id: "EMP-102",
-  name: "Alexander Vance",
-  email: "a.vance@maintenx.ind",
+  name: "Marcus Vance",
+  email: "m.vance@flowstate.ind",
   phone: "+1 (555) 392-8819",
-  role: "Senior Reliability Technician & Maintenance Lead",
+  role: "SENIOR RELIABILITY TECHNICIAN & MAINTENANCE LEAD",
   department: "Plant Maintenance & Engineering",
   plant: "Plant 1 - North Facility",
   shift: "Shift A (06:00 - 14:30)",
-  avatar: "AV",
+  avatar: "MV",
   bio: "Senior Maintenance Specialist with 12+ years experience in rotary packaging machinery, condition monitoring, hydraulic loops, and predictive maintenance.",
   joinedDate: "March 2018",
   certifications: [
@@ -18,12 +18,12 @@ export const DEFAULT_USER_PROFILE = {
     { title: "Level 4 Lockout / Tagout (LOTO) Master", issuer: "FlowState Safety", year: "2025", badge: "Green" }
   ],
   skills: [
-    { name: "Vibration Spectral Analysis", level: "Expert (95%)" },
-    { name: "Laser Shaft Alignment", level: "Expert (92%)" },
-    { name: "Hydraulic System Diagnostics", level: "Advanced (88%)" },
-    { name: "PLC Diagnostics (Siemens/Rockwell)", level: "Advanced (85%)" },
-    { name: "Rotary Packaging Machinery", level: "Master (98%)" },
-    { name: "Root Cause Failure Analysis (RCFA)", level: "Advanced (90%)" }
+    { name: "Vibration Spectral Analysis", level: "EXPERT (95%)" },
+    { name: "Laser Shaft Alignment", level: "EXPERT (92%)" },
+    { name: "Hydraulic System Diagnostics", level: "ADVANCED (88%)" },
+    { name: "PLC Diagnostics (Siemens/Rockwell)", level: "ADVANCED (85%)" },
+    { name: "Rotary Packaging Machinery", level: "MASTER (98%)" },
+    { name: "Root Cause Failure Analysis (RCFA)", level: "ADVANCED (90%)" }
   ],
   assignedAssets: ["FM-001 (Rotary Filler)", "AC-505 (Air Compressor)", "PK-401 (Fanuc Palletizer)"],
   activeWorkOrdersCount: 2,

@@ -20,11 +20,23 @@ import { AreaChart } from "../../components/charts/AreaChart";
 import { useCMMS } from "../../context/CMMSContext";
 import { useApp } from "../../context/AppContext";
 import { useNavigate } from "react-router-dom";
+import maintenanceService from "../../services/maintenanceService";
 
 export function ReliabilityPage() {
   const { reliabilityMetrics, assets } = useCMMS();
   const { addToast } = useApp();
   const navigate = useNavigate();
+
+  React.useEffect(() => {
+    const fetchReliability = async () => {
+      try {
+        await maintenanceService.getReliabilityMetrics();
+      } catch (err) {
+        console.warn("API reliability fetch notice:", err.message || err);
+      }
+    };
+    fetchReliability();
+  }, []);
 
   const badActors = [
     { id: "HT-105", name: "Plate Heat Exchanger & Pasteurizer", mtbf: 180, mttr: 3.2, availability: "88.2%", failuresCount: 5, status: "Critical" },

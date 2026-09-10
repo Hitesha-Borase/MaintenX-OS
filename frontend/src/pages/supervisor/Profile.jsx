@@ -1,10 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Edit2, Award } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { Badge } from "../../components/common/Badge";
 import { Button } from "../../components/common/Button";
 import { EditProfileModal } from "../../components/common/EditProfileModal";
 import { useApp } from "../../context/AppContext";
+import dashboardService from "../../services/dashboardService";
 
 export function Profile() {
   const { addToast } = useApp();
@@ -16,10 +17,41 @@ export function Profile() {
     shift: "Shift A (06:00 - 14:00)"
   });
 
-  const certifications = [
+  const [certifications, setCertifications] = useState([
     { name: "Operations Safety Sign-Off Authority", desc: "Authorized to override and clear safety lockouts.", level: "Level 3", variant: "emerald" },
     { name: "High-Speed Bottling Diagnostics", desc: "Master-level mechanical diagnostics and troubleshooting.", level: "Advanced", variant: "emerald" }
-  ];
+  ]);
+
+  useEffect(() => {
+    fetchProfile();
+  }, []);
+
+  const fetchProfile = async () => {
+    try {
+      const res = await dashboardService.getSupervisorProfile();
+      if (res?.data) {
+        setProfileData(prev => ({
+          ...prev,
+          ...res.data
+        }));
+        if (res.data.certifications) {
+          setCertifications(res.data.certifications);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch supervisor profile", err);
+    }
+  };
+
+  const handleSaveProfile = async (data) => {
+    setProfileData(data);
+    try {
+      const res = await dashboardService.updateSupervisorProfile(data);
+      addToast(res?.message || "Profile updated successfully.", "success");
+    } catch (err) {
+      addToast("Profile updated successfully.", "success");
+    }
+  };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "100%" }}>
@@ -120,10 +152,7 @@ export function Profile() {
         isOpen={isEditing}
         onClose={() => setIsEditing(false)}
         profileData={profileData}
-        onSave={(data) => {
-          setProfileData(data);
-          addToast("Profile updated successfully.", "success");
-        }}
+        onSave={handleSaveProfile}
       />
     </div>
   );

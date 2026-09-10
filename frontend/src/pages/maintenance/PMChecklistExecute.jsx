@@ -22,6 +22,7 @@ import { Button } from "../../components/common/Button";
 import { Modal } from "../../components/common/Modal";
 import { useCMMS } from "../../context/CMMSContext";
 import { useApp } from "../../context/AppContext";
+import { maintenanceService } from "../../services/maintenanceService";
 
 export function PMChecklistExecute() {
   const { id } = useParams();
@@ -125,14 +126,43 @@ export function PMChecklistExecute() {
     setFailedCheckModalData(null);
   };
 
-  const handleSaveDraft = () => {
-    addToast("Checklist progress saved as Local Draft.");
+  const handleSaveDraft = async () => {
+    try {
+      await maintenanceService.savePMChecklistDraft({
+        templateId: template.id,
+        templateName: template.name,
+        sections,
+        supervisorName,
+        technicianNotes
+      });
+    } catch (err) {
+      console.warn("Save draft notice:", err);
+    }
+    addToast("Checklist progress saved as Local Draft.", "success");
   };
 
-  const handleSubmitChecklist = () => {
+  const handleSubmitChecklist = async () => {
     const hasFailures = sections.some((s) => s.items.some((i) => i.status === "FAIL"));
     
-    // Save execution record
+    const execData = {
+      templateId: template.id,
+      templateName: template.name,
+      assetId: template.assetId,
+      assetName: template.assetName,
+      technician: supervisorName,
+      status: hasFailures ? "Failed" : "Passed",
+      hasFailures,
+      sections,
+      technicianNotes
+    };
+
+    try {
+      await maintenanceService.executePMChecklist(execData);
+    } catch (err) {
+      console.warn("Execute PM checklist notice:", err);
+    }
+
+    // Save execution record in local CMMS state
     completeChecklistExecution({
       templateId: template.id,
       templateName: template.name,

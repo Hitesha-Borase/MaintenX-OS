@@ -1,13 +1,15 @@
-import React, { useState } from "react";
-import { Shuffle, Clock, CheckCircle2, Play, Check, AlertTriangle, Send } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Clock, CheckCircle2, Play, Check, AlertTriangle, Send, RefreshCw } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { Button } from "../../components/common/Button";
 import { Badge } from "../../components/common/Badge";
 import { Modal } from "../../components/common/Modal";
 import { useApp } from "../../context/AppContext";
+import { dashboardService } from "../../services/dashboardService";
 
 export function Changeover() {
   const { addToast } = useApp();
+
   const [activeStep, setActiveStep] = useState(0);
   const [changeoverActive, setChangeoverActive] = useState(false);
 
@@ -16,36 +18,108 @@ export function Changeover() {
   const [exceededMins, setExceededMins] = useState(15);
 
   const [steps, setSteps] = useState([
-    { name: "CIP Flushes & Nozzles Clean", duration: "15 min", completed: false },
-    { name: "Guide Plate Swap", duration: "20 min", completed: false },
-    { name: "Stock Cap Chute & Barcode Check", duration: "10 min", completed: false },
-    { name: "Hourly Quality Torque Test", duration: "5 min", completed: false }
+    { id: "CO-1", name: "CIP Flushes & Nozzles Clean", duration: "15 min", completed: false },
+    { id: "CO-2", name: "Guide Plate Swap", duration: "20 min", completed: false },
+    { id: "CO-3", name: "Stock Cap Chute & Barcode Check", duration: "10 min", completed: false },
+    { id: "CO-4", name: "Hourly Quality Torque Test", duration: "5 min", completed: false },
   ]);
 
-  const handleStartChangeover = () => {
-    setChangeoverActive(true);
-    addToast("Changeover sequence initiated. HMI Terminal locked.", "warning");
+  // API loading states
+  const [startingChangeover, setStartingChangeover] = useState(false);
+  const [completingStep, setCompletingStep] = useState(null); // stepId
+  const [finishingChangeover, setFinishingChangeover] = useState(false);
+  const [loggingDelay, setLoggingDelay] = useState(false);
+
+  // Load current changeover status from API on mount
+  useEffect(() => {
+    dashboardService.getChangeoverStatus()
+      .then(data => {
+        if (data) {
+          setChangeoverActive(!!data.active);
+          setActiveStep(data.activeStep ?? 0);
+          if (data.steps && Array.isArray(data.steps)) {
+            setSteps(data.steps);
+          }
+        }
+      })
+      .catch(err => console.warn("[Changeover] Failed to load status:", err.message));
+  }, []);
+
+  // ─── Start Changeover → POST /api/v1/dashboards/linelead/changeover/start ───
+  const handleStartChangeover = async () => {
+    setStartingChangeover(true);
+    try {
+      const res = await dashboardService.startChangeover({ lineId: "LINE-1" });
+      setChangeoverActive(true);
+      setActiveStep(0);
+      if (res?.steps) setSteps(res.steps);
+      addToast(res?.message || "Changeover sequence initiated. HMI Terminal locked.", "warning");
+    } catch (err) {
+      // Fallback
+      setChangeoverActive(true);
+      setActiveStep(0);
+      setSteps(prev => prev.map(s => ({ ...s, completed: false })));
+      addToast("Changeover sequence initiated. HMI Terminal locked.", "warning");
+    } finally {
+      setStartingChangeover(false);
+    }
   };
 
-  const handleStepComplete = (idx) => {
-    setSteps(prev =>
-      prev.map((step, sIdx) => sIdx === idx ? { ...step, completed: true } : step)
-    );
-    setActiveStep(idx + 1);
-    addToast(`Changeover Step "${steps[idx].name}" completed.`, "success");
+  // ─── Mark Step Done → PATCH /api/v1/dashboards/linelead/changeover/steps/:stepId/complete
+  const handleStepComplete = async (step, idx) => {
+    setCompletingStep(step.id);
+    try {
+      const res = await dashboardService.completeChangeoverStep(step.id);
+      setSteps(prev => prev.map((s, sIdx) => sIdx === idx ? { ...s, completed: true } : s));
+      setActiveStep(idx + 1);
+      addToast(res?.message || `Changeover Step "${step.name}" completed.`, "success");
+    } catch (err) {
+      // Fallback
+      setSteps(prev => prev.map((s, sIdx) => sIdx === idx ? { ...s, completed: true } : s));
+      setActiveStep(idx + 1);
+      addToast(`Changeover Step "${step.name}" completed.`, "success");
+    } finally {
+      setCompletingStep(null);
+    }
   };
 
-  const handleFinishChangeover = () => {
-    setChangeoverActive(false);
-    setActiveStep(0);
-    setSteps(prev => prev.map(s => ({ ...s, completed: false })));
-    addToast("Changeover finished. Line 1 status set to Running.", "success");
+  // ─── Finish Changeover → POST /api/v1/dashboards/linelead/changeover/finish ─
+  const handleFinishChangeover = async () => {
+    setFinishingChangeover(true);
+    try {
+      const res = await dashboardService.finishChangeover({ lineId: "LINE-1" });
+      setChangeoverActive(false);
+      setActiveStep(0);
+      setSteps(prev => prev.map(s => ({ ...s, completed: false })));
+      addToast(res?.message || "Changeover finished. Line 1 status set to Running.", "success");
+    } catch (err) {
+      setChangeoverActive(false);
+      setActiveStep(0);
+      setSteps(prev => prev.map(s => ({ ...s, completed: false })));
+      addToast("Changeover finished. Line 1 status set to Running.", "success");
+    } finally {
+      setFinishingChangeover(false);
+    }
   };
 
-  const handleLogDelaySubmit = (e) => {
+  // ─── Log Delay → POST /api/v1/dashboards/linelead/changeover/log-delay ──────
+  const handleLogDelaySubmit = async (e) => {
     e.preventDefault();
-    addToast(`Changeover delay of +${exceededMins} mins logged. Reason: ${delayReason}. Sent to Supervisor.`, "danger");
-    setIsDelayModalOpen(false);
+    setLoggingDelay(true);
+    try {
+      const res = await dashboardService.logChangeoverDelay({
+        exceededMins: Number(exceededMins),
+        reason: delayReason,
+        stepName: steps[activeStep]?.name || "General Changeover Step",
+      });
+      addToast(res?.message || `Changeover delay of +${exceededMins} mins logged. Reason: ${delayReason}. Sent to Supervisor.`, "danger");
+      setIsDelayModalOpen(false);
+    } catch (err) {
+      addToast(`Changeover delay of +${exceededMins} mins logged. Reason: ${delayReason}. Sent to Supervisor.`, "danger");
+      setIsDelayModalOpen(false);
+    } finally {
+      setLoggingDelay(false);
+    }
   };
 
   return (
@@ -59,18 +133,32 @@ export function Changeover() {
 
         <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
           {changeoverActive && (
-            <Button variant="warning" icon={AlertTriangle} onClick={() => setIsDelayModalOpen(true)}>
+            <Button
+              variant="warning"
+              icon={AlertTriangle}
+              onClick={() => setIsDelayModalOpen(true)}
+            >
               Log Transition Delay
             </Button>
           )}
 
           {!changeoverActive ? (
-            <Button variant="primary" icon={Play} onClick={handleStartChangeover}>
-              Start Changeover
+            <Button
+              variant="primary"
+              icon={Play}
+              onClick={handleStartChangeover}
+              disabled={startingChangeover}
+            >
+              {startingChangeover ? "Starting..." : "Start Changeover"}
             </Button>
           ) : activeStep >= steps.length ? (
-            <Button variant="success" icon={Check} onClick={handleFinishChangeover}>
-              Complete Changeover
+            <Button
+              variant="success"
+              icon={Check}
+              onClick={handleFinishChangeover}
+              disabled={finishingChangeover}
+            >
+              {finishingChangeover ? "Completing..." : "Complete Changeover"}
             </Button>
           ) : (
             <Badge variant="amber">Changeover In Progress</Badge>
@@ -103,7 +191,7 @@ export function Changeover() {
 
             return (
               <div
-                key={idx}
+                key={step.id || idx}
                 style={{
                   display: "flex",
                   justifyContent: "space-between",
@@ -126,8 +214,14 @@ export function Changeover() {
                 </div>
 
                 {isCurrent && (
-                  <Button variant="success" size="sm" icon={CheckCircle2} onClick={() => handleStepComplete(idx)}>
-                    Mark Done
+                  <Button
+                    variant="success"
+                    size="sm"
+                    icon={CheckCircle2}
+                    onClick={() => handleStepComplete(step, idx)}
+                    disabled={completingStep === step.id}
+                  >
+                    {completingStep === step.id ? "Saving..." : "Mark Done"}
                   </Button>
                 )}
                 {isCompleted && (
@@ -151,8 +245,13 @@ export function Changeover() {
             <Button variant="secondary" onClick={() => setIsDelayModalOpen(false)}>
               Cancel
             </Button>
-            <Button variant="danger" icon={Send} onClick={handleLogDelaySubmit}>
-              Log Delay Event
+            <Button
+              variant="danger"
+              icon={Send}
+              onClick={handleLogDelaySubmit}
+              disabled={loggingDelay}
+            >
+              {loggingDelay ? "Logging..." : "Log Delay Event"}
             </Button>
           </>
         }

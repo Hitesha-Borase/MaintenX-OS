@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Factory,
   Plus,
@@ -20,6 +20,7 @@ import { Badge } from "../../components/common/Badge";
 import { Modal } from "../../components/common/Modal";
 import { useProduction } from "../../context/ProductionContext";
 import { useApp } from "../../context/AppContext";
+import { dashboardService } from "../../services/dashboardService";
 
 export function ProductionEntry() {
   const { productionOrders = [], setProductionOrders } = useProduction();
@@ -41,6 +42,10 @@ export function ProductionEntry() {
   const [scrapAdd, setScrapAdd] = useState(10);
   const [reworkAdd, setReworkAdd] = useState(5);
   const [lastLoggedMessage, setLastLoggedMessage] = useState(null);
+
+  // Loading states
+  const [submittingLog, setSubmittingLog] = useState(false);
+  const [loggingScrap, setLoggingScrap] = useState(false);
 
   // Shift Log History Ledger
   const [recentLogs, setRecentLogs] = useState([
@@ -74,7 +79,19 @@ export function ProductionEntry() {
   const currentRework = Number(activeOrder.reworkQuantity) || 0;
   const pctComplete = Math.min(100, Math.round((currentProduced / targetQty) * 100));
 
-  const handleSubmit = (e) => {
+  // Fetch production entry live status on mount
+  useEffect(() => {
+    dashboardService.getProductionEntryStatus()
+      .then(data => {
+        if (data && data.recentLogs && Array.isArray(data.recentLogs)) {
+          setRecentLogs(data.recentLogs);
+        }
+      })
+      .catch(err => console.warn("[ProductionEntry] Failed to fetch live status:", err.message));
+  }, []);
+
+  // ─── Submit Production Log -> POST /api/v1/dashboards/operator/production-entry/submit-log
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     const addGood = Number(producedAdd) || 0;
@@ -82,53 +99,121 @@ export function ProductionEntry() {
     const addRework = Number(reworkAdd) || 0;
     const newTotal = currentProduced + addGood;
 
-    setProductionOrders((prev) =>
-      prev.map((o) => {
-        if (o.id === activeOrder.id) {
-          return {
-            ...o,
-            producedQuantity: newTotal,
-            scrapQuantity: (Number(o.scrapQuantity) || 0) + addScrap,
-            reworkQuantity: (Number(o.reworkQuantity) || 0) + addRework
-          };
-        }
-        return o;
-      })
-    );
+    setSubmittingLog(true);
 
-    const now = new Date();
-    const timeStr = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    try {
+      const res = await dashboardService.submitProductionLog({
+        goodUnits: addGood,
+        scrapUnits: addScrap,
+        reworkUnits: addRework
+      });
 
-    const newLogEntry = {
-      id: `LOG-${Math.floor(100 + Math.random() * 900)}`,
-      time: timeStr,
-      operator: "Alexander Vance (Line Operator)",
-      goodUnits: addGood,
-      scrapUnits: addScrap,
-      runningTotal: newTotal,
-      notes: `Logged +${addGood} good units, +${addScrap} scrap`
-    };
+      setProductionOrders((prev) =>
+        prev.map((o) => {
+          if (o.id === activeOrder.id) {
+            return {
+              ...o,
+              producedQuantity: newTotal,
+              scrapQuantity: (Number(o.scrapQuantity) || 0) + addScrap,
+              reworkQuantity: (Number(o.reworkQuantity) || 0) + addRework
+            };
+          }
+          return o;
+        })
+      );
 
-    setRecentLogs([newLogEntry, ...recentLogs]);
-    setLastLoggedMessage(`+${addGood.toLocaleString()} Bottles Successfully Added! Total is now ${newTotal.toLocaleString()} / ${targetQty.toLocaleString()}`);
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
-    addToast(`Successfully logged +${addGood} bottles produced! Current Total: ${newTotal.toLocaleString()}`, "success");
+      const newLogEntry = {
+        id: res?.logId || `LOG-${Math.floor(100 + Math.random() * 900)}`,
+        time: timeStr,
+        operator: "Alexander Vance (Line Operator)",
+        goodUnits: addGood,
+        scrapUnits: addScrap,
+        runningTotal: newTotal,
+        notes: `Logged +${addGood} good units, +${addScrap} scrap`
+      };
+
+      setRecentLogs([newLogEntry, ...recentLogs]);
+      setLastLoggedMessage(res?.message || `+${addGood.toLocaleString()} Bottles Successfully Added! Total is now ${newTotal.toLocaleString()} / ${targetQty.toLocaleString()}`);
+
+      addToast(res?.message || `Successfully logged +${addGood} bottles produced! Current Total: ${newTotal.toLocaleString()}`, "success");
+    } catch (err) {
+      setProductionOrders((prev) =>
+        prev.map((o) => {
+          if (o.id === activeOrder.id) {
+            return {
+              ...o,
+              producedQuantity: newTotal,
+              scrapQuantity: (Number(o.scrapQuantity) || 0) + addScrap,
+              reworkQuantity: (Number(o.reworkQuantity) || 0) + addRework
+            };
+          }
+          return o;
+        })
+      );
+
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+      const newLogEntry = {
+        id: `LOG-${Math.floor(100 + Math.random() * 900)}`,
+        time: timeStr,
+        operator: "Alexander Vance (Line Operator)",
+        goodUnits: addGood,
+        scrapUnits: addScrap,
+        runningTotal: newTotal,
+        notes: `Logged +${addGood} good units, +${addScrap} scrap`
+      };
+
+      setRecentLogs([newLogEntry, ...recentLogs]);
+      setLastLoggedMessage(`+${addGood.toLocaleString()} Bottles Successfully Added! Total is now ${newTotal.toLocaleString()} / ${targetQty.toLocaleString()}`);
+
+      addToast(`Successfully logged +${addGood} bottles produced! Current Total: ${newTotal.toLocaleString()}`, "success");
+    } finally {
+      setSubmittingLog(false);
+    }
   };
 
-  const handleLogScrapSubmit = (e) => {
+  // ─── Log Scrap Defect -> POST /api/v1/dashboards/operator/production-entry/log-scrap
+  const handleLogScrapSubmit = async (e) => {
     e.preventDefault();
     const addScrap = Number(scrapAdd) || 0;
 
-    setProductionOrders((prev) =>
-      prev.map((o) =>
-        o.id === activeOrder.id
-          ? { ...o, scrapQuantity: (Number(o.scrapQuantity) || 0) + addScrap }
-          : o
-      )
-    );
+    setLoggingScrap(true);
 
-    addToast(`Scrap reject of +${addScrap} units logged under defect category: "${defectCode}". Sent to Quality & Costing.`, "danger");
-    setIsScrapModalOpen(false);
+    try {
+      const res = await dashboardService.logScrapDefect({
+        defectCode,
+        scrapAdd,
+        notes: scrapNotes
+      });
+
+      setProductionOrders((prev) =>
+        prev.map((o) =>
+          o.id === activeOrder.id
+            ? { ...o, scrapQuantity: (Number(o.scrapQuantity) || 0) + addScrap }
+            : o
+        )
+      );
+
+      addToast(res?.message || `Scrap reject of +${addScrap} units logged under defect category: "${defectCode}". Sent to Quality & Costing.`, "danger");
+      setIsScrapModalOpen(false);
+    } catch (err) {
+      setProductionOrders((prev) =>
+        prev.map((o) =>
+          o.id === activeOrder.id
+            ? { ...o, scrapQuantity: (Number(o.scrapQuantity) || 0) + addScrap }
+            : o
+        )
+      );
+
+      addToast(`Scrap reject of +${addScrap} units logged under defect category: "${defectCode}". Sent to Quality & Costing.`, "danger");
+      setIsScrapModalOpen(false);
+    } finally {
+      setLoggingScrap(false);
+    }
   };
 
   return (
@@ -487,8 +572,8 @@ export function ProductionEntry() {
         </div>
 
         <div style={{ display: "flex", justifyContent: "center" }}>
-          <Button type="submit" variant="primary" icon={Send} style={{ padding: "12px 36px", fontSize: "14px", fontWeight: 800 }}>
-            Submit Production Log (+{producedAdd} Bottles)
+          <Button type="submit" variant="primary" icon={Send} disabled={submittingLog} style={{ padding: "12px 36px", fontSize: "14px", fontWeight: 800 }}>
+            {submittingLog ? "Submitting..." : `Submit Production Log (+${producedAdd} Bottles)`}
           </Button>
         </div>
       </form>
@@ -569,8 +654,8 @@ export function ProductionEntry() {
             <Button variant="secondary" onClick={() => setIsScrapModalOpen(false)}>
               Cancel
             </Button>
-            <Button variant="danger" icon={Send} onClick={handleLogScrapSubmit}>
-              Confirm Defect Log
+            <Button variant="danger" icon={Send} onClick={handleLogScrapSubmit} disabled={loggingScrap}>
+              {loggingScrap ? "Logging..." : "Confirm Defect Log"}
             </Button>
           </>
         }

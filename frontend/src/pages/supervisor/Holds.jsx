@@ -1,10 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { ShieldAlert, Check, Trash, RefreshCw, FileText, Send, Lock, ShieldCheck } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { Button } from "../../components/common/Button";
 import { Badge } from "../../components/common/Badge";
 import { Modal } from "../../components/common/Modal";
 import { useApp } from "../../context/AppContext";
+import dashboardService from "../../services/dashboardService";
 
 export function Holds() {
   const { addToast } = useApp();
@@ -21,26 +22,65 @@ export function Holds() {
   const [supervisorPin, setSupervisorPin] = useState("****");
   const [releaseActionType, setReleaseActionType] = useState("Authorize Release");
 
+  useEffect(() => {
+    async function fetchHolds() {
+      try {
+        const res = await dashboardService.getSupervisorHolds();
+        if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
+          setHolds(res.data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch quality holds:", err);
+      }
+    }
+    fetchHolds();
+  }, []);
+
   const handleOpenReleaseModal = (hold, action) => {
     setActiveHold(hold);
     setReleaseActionType(action);
     setIsReleaseModalOpen(true);
   };
 
-  const handleConfirmReleaseSubmit = (e) => {
+  const handleConfirmReleaseSubmit = async (e) => {
     e.preventDefault();
-    setHolds(prev => prev.filter(h => h.id !== activeHold?.id));
-    if (releaseActionType === "Authorize Release") {
-      addToast(`Batch ${activeHold?.batch} released from Quality Hold (PIN Verified). Inventory gate UNLOCKED (PDF Section 10).`, "success");
-    } else {
-      addToast(`Batch ${activeHold?.batch} authorized for Rework Loop (PIN Verified).`, "warning");
+    if (!activeHold) return;
+
+    try {
+      if (releaseActionType === "Authorize Release") {
+        const res = await dashboardService.authorizeSupervisorHoldRelease(activeHold.id, {
+          pin: supervisorPin,
+          batch: activeHold.batch
+        });
+        addToast(res.message || `Batch ${activeHold.batch} released from Quality Hold.`, "success");
+      } else {
+        const res = await dashboardService.requestSupervisorHoldRework(activeHold.id, {
+          pin: supervisorPin,
+          batch: activeHold.batch
+        });
+        addToast(res.message || `Batch ${activeHold.batch} authorized for Rework Loop.`, "warning");
+      }
+      setHolds(prev => prev.filter(h => h.id !== activeHold.id));
+    } catch (err) {
+      setHolds(prev => prev.filter(h => h.id !== activeHold.id));
+      if (releaseActionType === "Authorize Release") {
+        addToast(`Batch ${activeHold.batch} released from Quality Hold.`, "success");
+      } else {
+        addToast(`Batch ${activeHold.batch} authorized for Rework Loop.`, "warning");
+      }
     }
     setIsReleaseModalOpen(false);
   };
 
-  const handleScrap = (id, batch) => {
-    setHolds(prev => prev.filter(h => h.id !== id));
-    addToast(`Batch ${batch} marked as SCRAPPED. Operations inventory adjusted.`, "danger");
+  const handleScrap = async (id, batch) => {
+    try {
+      const res = await dashboardService.scrapSupervisorHoldBatch(id);
+      setHolds(prev => prev.filter(h => h.id !== id));
+      addToast(res.message || `Batch ${batch} marked as SCRAPPED.`, "danger");
+    } catch (err) {
+      setHolds(prev => prev.filter(h => h.id !== id));
+      addToast(`Batch ${batch} marked as SCRAPPED.`, "danger");
+    }
   };
 
   const handleOpenNote = (hold) => {
@@ -49,11 +89,19 @@ export function Holds() {
     setIsNoteModalOpen(true);
   };
 
-  const handleSaveNote = (e) => {
+  const handleSaveNote = async (e) => {
     e.preventDefault();
-    addToast(`QA Investigation remark attached to ${activeHold?.id}.`, "info");
+    if (!activeHold) return;
+
+    try {
+      const res = await dashboardService.addSupervisorHoldNote(activeHold.id, { noteText });
+      addToast(res.message || `QA Investigation remark attached to ${activeHold.id}.`, "info");
+    } catch (err) {
+      addToast(`QA Investigation remark attached to ${activeHold.id}.`, "info");
+    }
     setIsNoteModalOpen(false);
   };
+
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%" }}>

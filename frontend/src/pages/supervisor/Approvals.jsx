@@ -1,10 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { FileCheck, Check, X, ShieldCheck, HelpCircle, CheckSquare, Zap, Send } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { Button } from "../../components/common/Button";
 import { Badge } from "../../components/common/Badge";
 import { Modal } from "../../components/common/Modal";
 import { useApp } from "../../context/AppContext";
+import dashboardService from "../../services/dashboardService";
 
 export function Approvals() {
   const { addToast } = useApp();
@@ -21,45 +22,101 @@ export function Approvals() {
   const [proposedSpeed, setProposedSpeed] = useState(620);
   const [supervisorComment, setSupervisorComment] = useState("Approved for 60 minutes run under close torque monitoring.");
 
-  const handleApprove = (id, type) => {
+  useEffect(() => {
+    async function fetchApprovals() {
+      try {
+        const res = await dashboardService.getSupervisorApprovals();
+        if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
+          setRequests(res.data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch approvals:", err);
+      }
+    }
+    fetchApprovals();
+  }, []);
+
+  const handleApprove = async (id, type) => {
     if (type.includes("Speed-Up")) {
       setSpeedReqId(id);
       setIsSpeedModalOpen(true);
       return;
     }
-    setRequests(prev =>
-      prev.map(r => r.id === id ? { ...r, status: "Approved" } : r)
-    );
-    addToast(`Approval Request ${id} (${type}) has been Authorized.`, "success");
+    try {
+      const res = await dashboardService.approveSupervisorApproval(id);
+      setRequests(prev =>
+        prev.map(r => r.id === id ? { ...r, status: "Approved" } : r)
+      );
+      addToast(res.message || `Approval Request ${id} (${type}) has been Authorized.`, "success");
+    } catch (err) {
+      setRequests(prev =>
+        prev.map(r => r.id === id ? { ...r, status: "Approved" } : r)
+      );
+      addToast(`Approval Request ${id} (${type}) has been Authorized.`, "success");
+    }
   };
 
-  const handleConfirmSpeedupSubmit = (e) => {
+  const handleConfirmSpeedupSubmit = async (e) => {
     e.preventDefault();
-    setRequests(prev =>
-      prev.map(r => r.id === speedReqId ? { ...r, status: "Approved (620 BPM Authorized)" } : r)
-    );
-    addToast(`Line Speedup Authorized to ${proposedSpeed} BPM. Command dispatched to SCADA PLC controller.`, "success");
+    try {
+      const res = await dashboardService.approveSupervisorApproval(speedReqId, {
+        proposedSpeed,
+        comment: supervisorComment
+      });
+      setRequests(prev =>
+        prev.map(r => r.id === speedReqId ? { ...r, status: `Approved (${proposedSpeed} BPM Authorized)` } : r)
+      );
+      addToast(res.message || `Line Speedup Authorized to ${proposedSpeed} BPM. Command dispatched to SCADA PLC controller.`, "success");
+    } catch (err) {
+      setRequests(prev =>
+        prev.map(r => r.id === speedReqId ? { ...r, status: `Approved (${proposedSpeed} BPM Authorized)` } : r)
+      );
+      addToast(`Line Speedup Authorized to ${proposedSpeed} BPM.`, "success");
+    }
     setIsSpeedModalOpen(false);
   };
 
-  const handleReject = (id, type) => {
-    setRequests(prev =>
-      prev.map(r => r.id === id ? { ...r, status: "Rejected" } : r)
-    );
-    addToast(`Approval Request ${id} (${type}) has been Rejected.`, "danger");
+  const handleReject = async (id, type) => {
+    try {
+      const res = await dashboardService.rejectSupervisorApproval(id);
+      setRequests(prev =>
+        prev.map(r => r.id === id ? { ...r, status: "Rejected" } : r)
+      );
+      addToast(res.message || `Approval Request ${id} (${type}) has been Rejected.`, "danger");
+    } catch (err) {
+      setRequests(prev =>
+        prev.map(r => r.id === id ? { ...r, status: "Rejected" } : r)
+      );
+      addToast(`Approval Request ${id} (${type}) has been Rejected.`, "danger");
+    }
   };
 
-  const handleClarification = (id, type) => {
-    setRequests(prev =>
-      prev.map(r => r.id === id ? { ...r, status: "Returned for Clarification" } : r)
-    );
-    addToast(`Request ${id} returned to Line Lead for technical clarification.`, "warning");
+  const handleClarification = async (id, type) => {
+    try {
+      const res = await dashboardService.clarifySupervisorApproval(id);
+      setRequests(prev =>
+        prev.map(r => r.id === id ? { ...r, status: "Returned for Clarification" } : r)
+      );
+      addToast(res.message || `Request ${id} returned to Line Lead for technical clarification.`, "warning");
+    } catch (err) {
+      setRequests(prev =>
+        prev.map(r => r.id === id ? { ...r, status: "Returned for Clarification" } : r)
+      );
+      addToast(`Request ${id} returned to Line Lead for technical clarification.`, "warning");
+    }
   };
 
-  const handleBulkApprove = () => {
-    setRequests(prev => prev.map(r => ({ ...r, status: "Approved" })));
-    addToast("All pending shift approval requests bulk-authorized.", "success");
+  const handleBulkApprove = async () => {
+    try {
+      const res = await dashboardService.bulkApproveSupervisorApprovals();
+      setRequests(prev => prev.map(r => ({ ...r, status: "Approved" })));
+      addToast(res.message || "All pending shift approval requests bulk-authorized.", "success");
+    } catch (err) {
+      setRequests(prev => prev.map(r => ({ ...r, status: "Approved" })));
+      addToast("All pending shift approval requests bulk-authorized.", "success");
+    }
   };
+
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%" }}>

@@ -19,6 +19,7 @@ import { Badge } from "../../components/common/Badge";
 import { Button } from "../../components/common/Button";
 import { useCMMS } from "../../context/CMMSContext";
 import { useApp } from "../../context/AppContext";
+import { maintenanceService } from "../../services/maintenanceService";
 
 export function PMExecutionPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -91,13 +92,30 @@ export function PMExecutionPage() {
     return Math.round((passed / total) * 100);
   };
 
-  const handleCompleteChecklist = (e) => {
+  const handleCompleteChecklist = async (e) => {
     e.preventDefault();
 
     const failedItems = activeTemplate.items.filter((item) => {
       const state = itemsState[item.id];
       return state && state.status === "Fail";
     });
+
+    const execData = {
+      templateId: activeTemplate.id,
+      templateName: activeTemplate.name,
+      assetId: targetAsset.id,
+      assetName: targetAsset.name,
+      technician: technicianName,
+      hasFailures: failedItems.length > 0,
+      score: `${calculateScore()}%`,
+      findings: notes || (failedItems.length > 0 ? "Corrective action triggered on failed parameters." : "All parameters within OEM tolerance.")
+    };
+
+    try {
+      await maintenanceService.executePMChecklist(execData);
+    } catch (err) {
+      console.warn("PM execution notice:", err);
+    }
 
     // If failed checks exist, automatically create corrective work orders
     if (failedItems.length > 0) {
@@ -119,16 +137,7 @@ export function PMExecutionPage() {
       addToast("PM Checklist completed with 100% compliance score!", "success");
     }
 
-    completeChecklistExecution({
-      templateId: activeTemplate.id,
-      templateName: activeTemplate.name,
-      assetId: targetAsset.id,
-      assetName: targetAsset.name,
-      technician: technicianName,
-      hasFailures: failedItems.length > 0,
-      score: `${calculateScore()}%`,
-      findings: notes || (failedItems.length > 0 ? "Corrective action triggered on failed parameters." : "All parameters within OEM tolerance.")
-    });
+    completeChecklistExecution(execData);
 
     navigate("/preventive-maintenance/schedule");
   };
