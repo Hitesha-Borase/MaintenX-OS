@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 
 export function CustomerOrders() {
-  const { demandOrders = [], addDemandOrder, updateDemandOrder, cancelDemandOrder } = usePlanning();
+  const { demandOrders = [], addDemandOrder, updateDemandOrder, cancelDemandOrder, deleteDemandOrder } = usePlanning();
   const { skus = [], plants = [] } = useMasterData();
   const { addToast } = useApp();
 
@@ -95,7 +95,7 @@ export function CustomerOrders() {
     });
   }, [demandOrders, statusFilter, priorityFilter, searchQuery]);
 
-  const handleAddSubmit = (e) => {
+  const handleAddSubmit = async (e) => {
     e.preventDefault();
     if (!newOrder.customer.trim()) {
       addToast("Please provide customer name.", "warning");
@@ -106,32 +106,36 @@ export function CustomerOrders() {
       return;
     }
 
-    const created = addDemandOrder({
-      orderNumber: newOrder.orderNumber,
-      customer: newOrder.customer,
-      skuId: newOrder.skuId,
-      quantity: Number(newOrder.quantity),
-      requestedShipDate: newOrder.requestedShipDate,
-      priority: newOrder.priority,
-      plantId: newOrder.plantId,
-      notes: newOrder.notes
-    });
+    try {
+      const created = await addDemandOrder({
+        orderNumber: newOrder.orderNumber,
+        customer: newOrder.customer,
+        skuId: newOrder.skuId,
+        quantity: Number(newOrder.quantity),
+        requestedShipDate: newOrder.requestedShipDate,
+        priority: newOrder.priority,
+        plantId: newOrder.plantId,
+        notes: newOrder.notes
+      });
 
-    addToast(`Demand Order ${created.orderNumber} created for ${created.customer}!`, "success");
-    setIsAddModalOpen(false);
-    setNewOrder({
-      orderNumber: `PO-CUST-${Math.floor(10000 + Math.random() * 90000)}`,
-      customer: "",
-      skuId: defaultSku.skuId,
-      quantity: 24000,
-      requestedShipDate: new Date(Date.now() + 7 * 86400000).toISOString().substring(0, 10),
-      priority: "High",
-      plantId: "PLT-01",
-      notes: ""
-    });
+      addToast(`Demand Order ${created.orderNumber} created for ${created.customer}!`, "success");
+      setIsAddModalOpen(false);
+      setNewOrder({
+        orderNumber: `PO-CUST-${Math.floor(10000 + Math.random() * 90000)}`,
+        customer: "",
+        skuId: defaultSku.skuId,
+        quantity: 24000,
+        requestedShipDate: new Date(Date.now() + 7 * 86400000).toISOString().substring(0, 10),
+        priority: "High",
+        plantId: "PLT-01",
+        notes: ""
+      });
+    } catch (err) {
+      addToast(`Failed to create order in DB: ${err.message}`, "error");
+    }
   };
 
-  const handleEditSubmit = (e) => {
+  const handleEditSubmit = async (e) => {
     e.preventDefault();
     if (!editingOrder) return;
     if (!editingOrder.customer.trim()) {
@@ -143,18 +147,31 @@ export function CustomerOrders() {
       return;
     }
 
-    updateDemandOrder(editingOrder.id, {
-      customer: editingOrder.customer,
-      skuId: editingOrder.skuId,
-      quantity: Number(editingOrder.quantity),
-      requestedShipDate: editingOrder.requestedShipDate,
-      priority: editingOrder.priority,
-      status: editingOrder.status,
-      notes: editingOrder.notes
-    });
+    try {
+      await updateDemandOrder(editingOrder.id, {
+        customer: editingOrder.customer,
+        skuId: editingOrder.skuId,
+        quantity: Number(editingOrder.quantity),
+        requestedShipDate: editingOrder.requestedShipDate,
+        priority: editingOrder.priority,
+        status: editingOrder.status,
+        notes: editingOrder.notes
+      });
 
-    addToast(`Demand Order ${editingOrder.orderNumber} updated successfully!`, "success");
-    setEditingOrder(null);
+      addToast(`Demand Order ${editingOrder.orderNumber} updated successfully!`, "success");
+      setEditingOrder(null);
+    } catch (err) {
+      addToast(`Failed to update order in DB: ${err.message}`, "error");
+    }
+  };
+
+  const handleDeleteOrder = async (order) => {
+    try {
+      await deleteDemandOrder(order.id);
+      addToast(`Customer Demand Order ${order.orderNumber || order.id} deleted successfully!`, "success");
+    } catch (err) {
+      addToast(`Failed to delete order from DB: ${err.message}`, "error");
+    }
   };
 
   const handleExportCSV = () => {
@@ -377,26 +394,24 @@ export function CustomerOrders() {
                         >
                           <Edit2 size={13} />
                         </button>
-                        {o.status !== "Cancelled" && (
-                          <button
-                            onClick={() => cancelDemandOrder(o.id, "Cancelled by Planner")}
-                            title="Cancel Order"
-                            style={{
-                              width: "30px",
-                              height: "30px",
-                              borderRadius: "6px",
-                              backgroundColor: "var(--bg-card-subtle)",
-                              color: "#DC2626",
-                              border: "1px solid var(--border-subtle)",
-                              cursor: "pointer",
-                              display: "inline-flex",
-                              alignItems: "center",
-                              justifyContent: "center"
-                            }}
-                          >
-                            <Trash2 size={13} />
-                          </button>
-                        )}
+                        <button
+                          onClick={() => handleDeleteOrder(o)}
+                          title="Delete Order"
+                          style={{
+                            width: "30px",
+                            height: "30px",
+                            borderRadius: "6px",
+                            backgroundColor: "var(--bg-card-subtle)",
+                            color: "#DC2626",
+                            border: "1px solid var(--border-subtle)",
+                            cursor: "pointer",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center"
+                          }}
+                        >
+                          <Trash2 size={13} />
+                        </button>
                       </div>
                     </td>
                   </tr>

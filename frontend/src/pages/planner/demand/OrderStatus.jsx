@@ -23,13 +23,28 @@ export function OrderStatus() {
   const { addToast } = useApp();
   const [searchQuery, setSearchQuery] = useState("");
 
+  const [updatingId, setUpdatingId] = useState(null);
   const stages = ["Open", "Allocated", "Scheduled", "Fulfilled"];
 
-  const handleAdvanceStatus = (order) => {
-    const currentIndex = stages.indexOf(order.status);
-    const nextStatus = stages[currentIndex + 1] || "Fulfilled";
-    updateDemandOrder(order.id, { status: nextStatus });
-    addToast(`Order ${order.orderNumber} advanced to "${nextStatus}" status!`, "success");
+  const handleAdvanceStatus = async (order) => {
+    const currentIndex = stages.findIndex(
+      (s) => s.toLowerCase() === (order.status || "").toLowerCase()
+    );
+    const nextStatus =
+      currentIndex >= 0 && currentIndex < stages.length - 1
+        ? stages[currentIndex + 1]
+        : "Fulfilled";
+
+    setUpdatingId(order.id);
+    try {
+      await updateDemandOrder(order.id, { status: nextStatus });
+      addToast(`Order ${order.orderNumber} advanced to "${nextStatus}" status!`, "success");
+    } catch (err) {
+      console.error("Failed to advance status:", err);
+      addToast(`Failed to update status in DB: ${err.message}`, "error");
+    } finally {
+      setUpdatingId(null);
+    }
   };
 
   const filtered = demandOrders.filter((o) => {
@@ -161,10 +176,11 @@ export function OrderStatus() {
                           variant="secondary"
                           size="sm"
                           icon={ArrowRight}
+                          disabled={updatingId === o.id}
                           onClick={() => handleAdvanceStatus(o)}
-                          style={{ fontSize: "11px", padding: "4px 10px" }}
+                          style={{ fontSize: "11px", padding: "4px 10px", opacity: updatingId === o.id ? 0.6 : 1 }}
                         >
-                          Advance Stage
+                          {updatingId === o.id ? "Updating..." : "Advance Stage"}
                         </Button>
                       )}
                     </div>

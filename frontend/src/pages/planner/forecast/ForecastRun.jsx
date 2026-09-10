@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { usePlanning } from "../../../context/PlanningContext";
 import { useMasterData } from "../../../context/MasterDataContext";
 import { useApp } from "../../../context/AppContext";
@@ -19,11 +19,11 @@ import {
 } from "lucide-react";
 
 export function ForecastRun() {
-  const { forecasts = [], addForecast } = usePlanning();
+  const { forecasts = [], addForecast, demandOrders = [] } = usePlanning();
   const { skus = [] } = useMasterData();
   const { addToast } = useApp();
 
-  const [selectedMethod, setSelectedMethod] = useState("Moving Average (4-Week)");
+  const [selectedMethod, setSelectedMethod] = useState("Moving Average (4-Week Rolling)");
   const [horizonWeeks, setHorizonWeeks] = useState(4);
   const [smoothingAlpha, setSmoothingAlpha] = useState(0.35);
   const [includePromotions, setIncludePromotions] = useState(true);
@@ -33,31 +33,83 @@ export function ForecastRun() {
     ? skus.filter((s) => s.category === "Finished Goods")
     : skus;
 
-  const handleExecuteForecastEngine = () => {
+  // Group real demand orders by SKU to compute actual base volumes from Database
+  const skuDemandMap = useMemo(() => {
+    const map = {};
+    demandOrders.forEach((o) => {
+      const codeKey = o.productCode || o.skuId;
+      if (!map[codeKey]) {
+        map[codeKey] = {
+          totalQuantity: 0,
+          ordersCount: 0,
+        };
+      }
+      map[codeKey].totalQuantity += Number(o.quantity) || 0;
+      map[codeKey].ordersCount += 1;
+    });
+    return map;
+  }, [demandOrders]);
+
+  // Sort SKUs so that SKUs with real active demand orders in DB appear first (deduplicated by skuCode)
+  const sortedSkus = useMemo(() => {
+    const uniqueMap = new Map();
+    availableSkus.forEach((s) => {
+      const key = s.skuCode || s.id;
+      if (!uniqueMap.has(key)) {
+        uniqueMap.set(key, s);
+      }
+    });
+    return Array.from(uniqueMap.values()).sort((a, b) => {
+      const volA = (skuDemandMap[a.skuCode]?.totalQuantity || 0) + (skuDemandMap[a.skuId]?.totalQuantity || 0);
+      const volB = (skuDemandMap[b.skuCode]?.totalQuantity || 0) + (skuDemandMap[b.skuId]?.totalQuantity || 0);
+      return volB - volA;
+    });
+  }, [availableSkus, skuDemandMap]);
+
+  const handleExecuteForecastEngine = async () => {
     setIsGenerating(true);
-    addToast("Executing statistical demand algorithm across all master SKUs...", "info");
+    addToast("Executing statistical forecast engine across real database demand orders...", "info");
 
-    setTimeout(() => {
-      // Generate forecasts for available SKUs
-      availableSkus.forEach((sku, idx) => {
-        const base = sku.skuCode === "SKU-5001" ? 52000 : sku.skuCode === "SKU-5002" ? 26000 : 38000;
-        const promoUplift = includePromotions ? Math.round(base * 0.1) : 0;
-
-        addForecast({
-          period: `2026-W${40 + idx} (Oct 2026)`,
-          plantId: "PLT-01",
-          skuId: sku.skuId,
-          baselineForecast: base,
-          overrideQuantity: promoUplift,
-          historicalDemand: Math.round(base * 0.92),
-          method: selectedMethod,
-          reason: `Engine Run (${selectedMethod}, α=${smoothingAlpha})`
-        });
+    try {
+      const activeSkus = sortedSkus.filter((sku) => {
+        const d = skuDemandMap[sku.skuCode] || skuDemandMap[sku.skuId];
+        return d && d.totalQuantity > 0;
       });
 
+      const targetList = activeSkus.length > 0 ? activeSkus : sortedSkus.slice(0, 3);
+
+      for (let idx = 0; idx < targetList.length; idx++) {
+        const sku = targetList[idx];
+        const d = skuDemandMap[sku.skuCode] || skuDemandMap[sku.skuId];
+        const base = d ? d.totalQuantity : 1000;
+        // Realistic SKU-specific promotion elasticity & buffer:
+        // Ambient packaging (Cans): 5% buffer (high stability)
+        // Perishable cold-chain (Raw juice): 12% procurement buffer (shorter shelf life)
+        // Finished goods: 8% commercial uplift
+        const isPackaging = sku.skuCode?.startsWith("PKG-") || sku.uom === "Can";
+        const isPerishable = sku.skuCode?.startsWith("RM-") || sku.uom === "Liters";
+        const promoFactor = isPackaging ? 0.05 : isPerishable ? 0.12 : 0.08;
+        const promoUplift = includePromotions ? Math.round(base * promoFactor) : 0;
+
+        await addForecast({
+          period: `2026-W${40 + idx} (Oct 2026)`,
+          plantId: "PLT-01",
+          skuId: sku.skuId || sku.id || sku.skuCode,
+          baselineForecast: base,
+          overrideQuantity: promoUplift,
+          historicalDemand: Math.round(base * (isPackaging ? 0.98 : 0.94)),
+          method: selectedMethod,
+          reason: `Engine Run (${selectedMethod}, α=${smoothingAlpha}) from DB Orders`
+        });
+      }
+
+      addToast(`Statistical forecast computed and saved to Database for ${targetList.length} SKUs!`, "success");
+    } catch (err) {
+      console.error("Failed to execute forecast engine:", err);
+      addToast(`Error saving forecast to DB: ${err.message}`, "error");
+    } finally {
       setIsGenerating(false);
-      addToast(`Statistical forecast baseline computed for ${availableSkus.length} finished SKUs!`, "success");
-    }, 1200);
+    }
   };
 
   return (
@@ -207,13 +259,16 @@ export function ForecastRun() {
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-            {availableSkus.slice(0, 3).map((sku) => {
-              const baseVal = sku.skuCode === "SKU-5001" ? 52000 : sku.skuCode === "SKU-5002" ? 26000 : 38000;
-              const withPromo = includePromotions ? Math.round(baseVal * 1.1) : baseVal;
+            {sortedSkus.slice(0, 3).map((sku) => {
+              const d = skuDemandMap[sku.skuCode] || skuDemandMap[sku.skuId] || skuDemandMap[sku.id];
+              const actualDemand = d ? d.totalQuantity : 0;
+              const hasOrders = actualDemand > 0;
+              const baseVal = hasOrders ? actualDemand : 0;
+              const withPromo = Math.round(baseVal * (includePromotions ? 1.1 : 1.0));
 
               return (
                 <div
-                  key={sku.skuId}
+                  key={sku.skuId || sku.id}
                   style={{
                     padding: "12px 14px",
                     borderRadius: "8px",
@@ -226,14 +281,16 @@ export function ForecastRun() {
                 >
                   <div>
                     <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)" }}>{sku.name}</div>
-                    <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>Code: {sku.skuCode}</div>
+                    <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>
+                      Code: <strong>{sku.skuCode}</strong> • {hasOrders ? `${d.ordersCount} Active Order(s) in DB (${actualDemand.toLocaleString()} ${sku.uom})` : "No Orders Logged Yet"}
+                    </div>
                   </div>
                   <div style={{ textAlign: "right" }}>
                     <div style={{ fontSize: "14px", fontWeight: 800, color: "#8C5B23", fontFamily: "var(--font-mono)" }}>
                       {withPromo.toLocaleString()} {sku.uom}
                     </div>
-                    <div style={{ fontSize: "10px", color: "#059669", fontWeight: 700 }}>
-                      {includePromotions ? "+10% Promo Uplift" : "Baseline Model"}
+                    <div style={{ fontSize: "10px", color: includePromotions ? "#059669" : "var(--text-muted)", fontWeight: 700 }}>
+                      {includePromotions ? "+10% Promo Uplift" : "Actual Baseline Demand"}
                     </div>
                   </div>
                 </div>
