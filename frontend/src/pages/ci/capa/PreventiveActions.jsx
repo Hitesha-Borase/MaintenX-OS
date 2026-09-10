@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ShieldCheck,
@@ -22,6 +22,7 @@ import { Badge } from "../../../components/common/Badge";
 import { StatCard } from "../../../components/common/StatCard";
 import { useCI } from "../../../context/CIContext";
 import { useApp } from "../../../context/AppContext";
+import ciService from "../../../services/ciService";
 
 export function PreventiveActions() {
   const navigate = useNavigate();
@@ -33,6 +34,10 @@ export function PreventiveActions() {
     investigations = [],
     overdueCapaCount
   } = useCI();
+
+  useEffect(() => {
+    ciService.getCapaActions({ actionType: "Preventive" }).catch((err) => console.warn("Preventive CAPA load:", err.message));
+  }, []);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");

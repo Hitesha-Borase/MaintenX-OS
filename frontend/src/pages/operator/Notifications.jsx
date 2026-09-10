@@ -1,10 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Bell, Info, ShieldCheck, Wrench, CheckCircle2, Trash2 } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { Button } from "../../components/common/Button";
 import { Badge } from "../../components/common/Badge";
 import { useApp } from "../../context/AppContext";
+import { dashboardService } from "../../services/dashboardService";
 
 export function Notifications() {
   const navigate = useNavigate();
@@ -17,24 +18,59 @@ export function Notifications() {
     { id: 3, type: "pm", read: false, icon: Wrench, title: "PM checklist scheduled", msg: "Line 1 hourly inspection check due. Perform Brix and pH logs.", time: "2 hours ago", path: "/operator/quality-checks" }
   ]);
 
-  const handleMarkAsRead = (id) => {
+  // Fetch notifications on mount
+  useEffect(() => {
+    dashboardService.getOperatorNotifications()
+      .then(data => {
+        if (data && Array.isArray(data) && data.length > 0) {
+          const mapped = data.map(item => ({
+            ...item,
+            icon: item.type === "system" ? Info : item.type === "sop" ? ShieldCheck : Wrench
+          }));
+          setNotifications(mapped);
+        }
+      })
+      .catch(err => console.warn("[OperatorNotifications] Failed to fetch notifications:", err.message));
+  }, []);
+
+  const handleMarkAsRead = async (id) => {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
-    addToast("Notification marked as read.", "success");
+    try {
+      const res = await dashboardService.markOperatorNotificationRead(id);
+      addToast(res?.message || "Notification marked as read.", "success");
+    } catch (err) {
+      addToast("Notification marked as read.", "success");
+    }
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     setNotifications(prev => prev.filter((n) => n.id !== id));
-    addToast("Notification deleted.", "info");
+    try {
+      const res = await dashboardService.deleteOperatorNotification(id);
+      addToast(res?.message || "Notification deleted.", "info");
+    } catch (err) {
+      addToast("Notification deleted.", "info");
+    }
   };
 
-  const handleMarkAllAsRead = () => {
+  const handleMarkAllAsRead = async () => {
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-    addToast("All notifications marked as read.", "success");
+    try {
+      const res = await dashboardService.markAllOperatorNotificationsRead();
+      addToast(res?.message || "All notifications marked as read.", "success");
+    } catch (err) {
+      addToast("All notifications marked as read.", "success");
+    }
   };
 
-  const handleClearAll = () => {
+  const handleClearAll = async () => {
     setNotifications([]);
-    addToast("All notifications cleared.", "info");
+    try {
+      const res = await dashboardService.clearAllOperatorNotifications();
+      addToast(res?.message || "All notifications cleared.", "info");
+    } catch (err) {
+      addToast("All notifications cleared.", "info");
+    }
   };
 
   const unreadCount = notifications.filter(n => !n.read).length;

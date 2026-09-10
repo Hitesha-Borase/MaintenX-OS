@@ -305,6 +305,49 @@ export const planningService = {
   async getPlanningReports() {
     const response = await apiClient.get('/planner/planning-reports');
     return response?.data !== undefined ? response.data : response;
+  },
+
+  // --- Plant Manager Master Production Schedule (MPS) ---
+  async getSchedules(plantId) {
+    return apiClient.get(`/planning/schedule${plantId ? `?plantId=${plantId}` : ""}`);
+  },
+
+  async createSchedule(scheduleData) {
+    return apiClient.post("/planning/schedule", scheduleData);
+  },
+
+  async toggleScheduleLock(id, locked) {
+    return apiClient.patch(`/planning/schedule/${id}/lock`, { locked });
+  },
+
+  async deleteSchedule(id) {
+    return apiClient.delete(`/planning/schedule/${id}`);
+  },
+
+  // --- Capacity & Constraints ---
+  async getCapacity(plantId) {
+    return apiClient.get(`/planning/capacity${plantId ? `?plantId=${plantId}` : ""}`);
+  },
+
+  async getConstraints(plantId) {
+    return apiClient.get(`/planning/constraints${plantId ? `?plantId=${plantId}` : ""}`);
+  },
+
+  async createConstraint(constraintData) {
+    return apiClient.post("/planning/constraints", constraintData);
+  },
+
+  async resolveConstraint(id) {
+    return apiClient.patch(`/planning/constraints/${id}/resolve`);
+  },
+
+  async deleteConstraint(id) {
+    return apiClient.delete(`/planning/constraints/${id}`);
+  },
+
+  // --- Recovery Simulator ---
+  async applyRecovery(params) {
+    return apiClient.post("/planning/recovery/apply", params);
   }
 };
 

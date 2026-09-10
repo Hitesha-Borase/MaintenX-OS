@@ -18,10 +18,21 @@ import { Button } from "../../../components/common/Button";
 import { StatCard } from "../../../components/common/StatCard";
 import { useMasterData } from "../../../context/MasterDataContext";
 import { useApp } from "../../../context/AppContext";
+import masterDataService from "../../../services/masterDataService";
 
 export function LinesPage() {
-  const { lines = [], addLine, updateLine, deleteLine, plants = [], assets = [] } = useMasterData();
+  const { lines = [], setLines, addLine, updateLine, deleteLine, plants = [], assets = [] } = useMasterData();
   const { addToast } = useApp();
+
+  // Trigger live GET /api/v1/master-data/lines on mount
+  React.useEffect(() => {
+    masterDataService.getLines().then((res) => {
+      const data = res?.data || res;
+      if (Array.isArray(data) && data.length > 0 && typeof setLines === "function") {
+        setLines(data);
+      }
+    }).catch((err) => console.warn("Live lines fetch:", err.message));
+  }, []);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [plantFilter, setPlantFilter] = useState("ALL");

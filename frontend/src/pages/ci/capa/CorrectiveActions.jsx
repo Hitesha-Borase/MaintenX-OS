@@ -23,10 +23,16 @@ import { Badge } from "../../../components/common/Badge";
 import { StatCard } from "../../../components/common/StatCard";
 import { useCI } from "../../../context/CIContext";
 import { useApp } from "../../../context/AppContext";
+import { ciService } from "../../../services/ciService";
 
 export function CorrectiveActions() {
   const navigate = useNavigate();
   const { addToast } = useApp();
+
+  // Trigger live GET /api/v1/ci/capa/actions on mount
+  React.useEffect(() => {
+    ciService.getCapaActions().catch((err) => console.warn("Live CAPA fetch:", err.message));
+  }, []);
   const {
     capaActions = [],
     createCapaAction,

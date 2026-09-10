@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   AlertOctagon,
   Clock,
@@ -18,10 +18,15 @@ import { Button } from "../../components/common/Button";
 import { StatCard } from "../../components/common/StatCard";
 import { useApp } from "../../context/AppContext";
 import { useNavigate } from "react-router-dom";
+import productionService from "../../services/productionService";
 
 export function DowntimeLossPage() {
   const { addToast } = useApp();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    productionService.getDowntime().catch((err) => console.warn("Downtime load:", err.message));
+  }, []);
 
   const [downtimeEvents, setDowntimeEvents] = useState([
     { id: "DT-101", line: "Line 2 (Pasteurizer)", reason: "Thermal seal degradation & CIP re-flush", durationMins: 45, costUSD: 2625, status: "Resolved" },

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Cpu,
   Radio,
@@ -12,13 +12,16 @@ import {
   X,
   Edit2,
   Wifi,
-  ShieldCheck
+  ShieldCheck,
+  Server,
+  Trash2
 } from "lucide-react";
 import { Card } from "../../../components/common/Card";
 import { Badge } from "../../../components/common/Badge";
 import { Button } from "../../../components/common/Button";
 import { StatCard } from "../../../components/common/StatCard";
 import { useApp } from "../../../context/AppContext";
+import adminService from "../../../services/adminService";
 
 export function IoTIntegrationPage() {
   const { addToast } = useApp();
@@ -28,6 +31,16 @@ export function IoTIntegrationPage() {
     { id: "IOT-02", name: "Plant 1 MQTT Sensor Broker", protocol: "MQTT (TLS:8883)", connectedNodes: 86, telemetryRate: "10 Hz", status: "Connected" },
     { id: "IOT-03", name: "Plant 2 Modbus-TCP Gateway", protocol: "Modbus TCP (Port 502)", connectedNodes: 64, telemetryRate: "1 Hz", status: "Connected" }
   ]);
+
+  useEffect(() => {
+    adminService.getIoTGateways()
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setBrokers(data);
+        }
+      })
+      .catch((err) => console.warn("IoT gateways load error:", err.message));
+  }, []);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -51,38 +64,61 @@ export function IoTIntegrationPage() {
     );
   });
 
-  const handleAddSubmit = (e) => {
+  const handleAddSubmit = async (e) => {
     e.preventDefault();
     if (!newBroker.name.trim()) {
       addToast("Please provide gateway server description.", "warning");
       return;
     }
 
-    const created = {
-      id: `IOT-0${brokers.length + 1}`,
-      name: newBroker.name,
-      protocol: newBroker.protocol,
-      connectedNodes: Number(newBroker.connectedNodes) || 30,
-      telemetryRate: newBroker.telemetryRate || "10 Hz",
-      status: "Connected"
-    };
+    try {
+      const created = await adminService.createIoTGateway({
+        name: newBroker.name,
+        protocol: newBroker.protocol,
+        connectedNodes: Number(newBroker.connectedNodes) || 30,
+        telemetryRate: newBroker.telemetryRate || "10 Hz",
+        status: "Connected"
+      });
 
-    setBrokers([...brokers, created]);
-    addToast(`IoT Gateway "${created.id}" connected!`, "success");
-    setIsModalOpen(false);
-    setNewBroker({ name: "", protocol: "OPC-UA (TCP:4840)", connectedNodes: 50, telemetryRate: "50 Hz" });
+      setBrokers((prev) => {
+        const exists = prev.some((b) => b.id === created.id);
+        return exists ? prev.map((b) => (b.id === created.id ? created : b)) : [...prev, created];
+      });
+      addToast(`IoT Gateway "${created.id}" connected!`, "success");
+      setIsModalOpen(false);
+      setNewBroker({ name: "", protocol: "OPC-UA (TCP:4840)", connectedNodes: 50, telemetryRate: "50 Hz" });
+    } catch (err) {
+      addToast("Failed to connect IoT gateway: " + err.message, "danger");
+    }
   };
 
-  const handleEditSubmit = (e) => {
+  const handleEditSubmit = async (e) => {
     e.preventDefault();
     if (!editingBroker.name.trim()) {
       addToast("Please provide gateway server description.", "warning");
       return;
     }
 
-    setBrokers(brokers.map((b) => (b.id === editingBroker.id ? { ...editingBroker, connectedNodes: Number(editingBroker.connectedNodes) || 10 } : b)));
-    addToast(`IoT Gateway ${editingBroker.id} updated successfully!`, "success");
-    setEditingBroker(null);
+    try {
+      const updated = await adminService.updateIoTGateway(editingBroker.id, {
+        ...editingBroker,
+        connectedNodes: Number(editingBroker.connectedNodes) || 10
+      });
+      setBrokers((prev) => prev.map((b) => (b.id === editingBroker.id ? (updated || editingBroker) : b)));
+      addToast(`IoT Gateway ${editingBroker.id} updated successfully!`, "success");
+      setEditingBroker(null);
+    } catch (err) {
+      addToast("Failed to update gateway: " + err.message, "danger");
+    }
+  };
+
+  const handlePing = async () => {
+    try {
+      const res = await adminService.pingIoTGateways();
+      addToast(res.message || "Polled all industrial edge brokers: 0 packet loss (Latency 1.2ms).", "info");
+    } catch (err) {
+      addToast("Ping failed: " + err.message, "warning");
+    }
   };
 
   return (
@@ -102,7 +138,7 @@ export function IoTIntegrationPage() {
           <Button
             variant="secondary"
             icon={RotateCcw}
-            onClick={() => addToast("Polled all industrial edge brokers: 0 packet loss (Latency 1.2ms).", "info")}
+            onClick={handlePing}
             style={{ fontSize: "12px", padding: "7px 12px" }}
           >
             Ping Gateways
@@ -214,24 +250,50 @@ export function IoTIntegrationPage() {
                     </Badge>
                   </td>
                   <td>
-                    <button
-                      onClick={() => setEditingBroker({ ...b })}
-                      title="Edit Gateway"
-                      style={{
-                        width: "30px",
-                        height: "30px",
-                        borderRadius: "6px",
-                        backgroundColor: "var(--bg-card-subtle)",
-                        color: "var(--text-primary)",
-                        border: "1px solid var(--border-subtle)",
-                        cursor: "pointer",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        justifyContent: "center"
-                      }}
-                    >
-                      <Edit2 size={13} />
-                    </button>
+                    <div style={{ display: "flex", gap: "6px" }}>
+                      <button
+                        onClick={() => setEditingBroker({ ...b })}
+                        title="Edit Gateway"
+                        style={{
+                          width: "30px",
+                          height: "30px",
+                          borderRadius: "6px",
+                          backgroundColor: "var(--bg-card-subtle)",
+                          color: "var(--text-primary)",
+                          border: "1px solid var(--border-subtle)",
+                          cursor: "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center"
+                        }}
+                      >
+                        <Edit2 size={13} />
+                      </button>
+                      <button
+                        onClick={async () => {
+                          if (window.confirm(`Are you sure you want to disconnect & delete gateway "${b.id}"?`)) {
+                            await adminService.deleteIoTGateway(b.id);
+                            setBrokers((prev) => prev.filter((item) => item.id !== b.id));
+                            addToast(`IoT Gateway "${b.id}" deleted.`, "info");
+                          }
+                        }}
+                        title="Delete Gateway"
+                        style={{
+                          width: "30px",
+                          height: "30px",
+                          borderRadius: "6px",
+                          backgroundColor: "var(--bg-card-subtle)",
+                          color: "#EF4444",
+                          border: "1px solid var(--border-subtle)",
+                          cursor: "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center"
+                        }}
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

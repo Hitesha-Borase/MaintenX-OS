@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   Clock,
   Plus,
@@ -19,10 +19,15 @@ import { Button } from "../../../components/common/Button";
 import { StatCard } from "../../../components/common/StatCard";
 import { useMasterData } from "../../../context/MasterDataContext";
 import { useApp } from "../../../context/AppContext";
+import masterDataService from "../../../services/masterDataService";
 
 export function ChangeoverMatrixPage() {
   const { changeoverMatrix = [], addChangeoverRule, updateChangeoverRule, deleteChangeoverRule, skus = [], productFamilies = [] } = useMasterData();
   const { addToast } = useApp();
+
+  useEffect(() => {
+    masterDataService.getChangeoverRules().catch((err) => console.warn("Changeover load:", err.message));
+  }, []);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);

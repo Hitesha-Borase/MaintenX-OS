@@ -26,10 +26,21 @@ import { RevisionHistoryModal } from "../../../components/common/RevisionHistory
 import { ApprovalWorkflowModal } from "../../../components/common/ApprovalWorkflowModal";
 import { useMasterData } from "../../../context/MasterDataContext";
 import { useApp } from "../../../context/AppContext";
+import masterDataService from "../../../services/masterDataService";
 
 export function BOMRecipesPage() {
-  const { boms = [], addBOM, updateBOM, submitBOMForApproval, approveBOM, rejectBOM, skus = [] } = useMasterData();
+  const { boms = [], setBoms, addBOM, updateBOM, submitBOMForApproval, approveBOM, rejectBOM, skus = [] } = useMasterData();
   const { addToast } = useApp();
+
+  // Trigger live GET /api/v1/master-data/boms on page mount
+  React.useEffect(() => {
+    masterDataService.getBoms().then((res) => {
+      const data = res?.data || res;
+      if (Array.isArray(data) && data.length > 0 && typeof setBoms === "function") {
+        setBoms(data);
+      }
+    }).catch((err) => console.warn("Live BOM fetch:", err.message));
+  }, []);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");

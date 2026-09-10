@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   HeartPulse,
   Search,
@@ -17,6 +17,7 @@ import { Button } from "../../../components/common/Button";
 import { StatCard } from "../../../components/common/StatCard";
 import { useMasterData } from "../../../context/MasterDataContext";
 import { useApp } from "../../../context/AppContext";
+import adminService from "../../../services/adminService";
 
 export function MissingDataPage() {
   const { dataHealthStats = {} } = useMasterData();
@@ -27,8 +28,22 @@ export function MissingDataPage() {
     { id: "MD-02", table: "Work Centers", recordKey: "WC-103 (Labeler)", field: "Operator Manning Standard", suggestion: "Assign standard crew = 2", status: "Open" },
     { id: "MD-03", table: "Allergen Matrix", recordKey: "FAM-02 (Tonics)", field: "CIP Protocol Linkage", suggestion: "Link to CIP-01 (Hot Caustic)", status: "Open" }
   ]);
-
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+
+  useEffect(() => {
+    setLoading(true);
+    adminService.getDataHealthScan()
+      .then((res) => {
+        const data = res?.data?.missingData || res?.missingData;
+        if (Array.isArray(data) && data.length >= 0) {
+          // Merge DB results on top of defaults — DB data takes precedence
+          setMissingRecords(data.length > 0 ? data : missingRecords);
+        }
+      })
+      .catch((err) => console.warn("Data health scan:", err.message))
+      .finally(() => setLoading(false));
+  }, []);
 
   const openCount = missingRecords.filter((m) => m.status === "Open").length;
 
@@ -56,6 +71,7 @@ export function MissingDataPage() {
       );
     });
   }, [missingRecords, searchQuery]);
+
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%", maxWidth: "1200px", margin: "0 auto", minWidth: 0 }}>

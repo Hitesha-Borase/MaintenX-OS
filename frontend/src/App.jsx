@@ -402,20 +402,20 @@ function RoleProtectedRoute({ children }) {
   const { currentRole, canAccessPath } = useRole();
   const location = useLocation();
 
-  if (currentRole.id === "admin") {
+  if (!currentRole || currentRole?.id === "admin" || currentRole?.id === "master_admin") {
     return children;
   }
 
-  if (!canAccessPath(location.pathname)) {
+  if (typeof canAccessPath === "function" && !canAccessPath(location.pathname)) {
     return (
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "60vh", padding: "40px", textAlign: "center", gap: "20px" }}>
         <div style={{ padding: "16px", borderRadius: "50%", backgroundColor: "rgba(239, 68, 68, 0.15)", color: "#EF4444" }}>
           <AlertOctagon size={48} />
         </div>
         <div>
-          <h2 style={{ fontSize: "20px", fontWeight: 800, color: "#FFFFFF" }}>Access Restricted</h2>
+          <h2 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary, #FFFFFF)" }}>Access Restricted</h2>
           <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginTop: "8px", maxWidth: "480px", lineHeight: 1.5 }}>
-            Your simulated role perspective (<strong>{currentRole.label}</strong>) does not hold security clearance for this screen or module.
+            Your simulated role perspective (<strong>{currentRole?.label || "Current Role"}</strong>) does not hold security clearance for this screen or module.
           </p>
         </div>
         <div style={{ padding: "14px 18px", borderRadius: "8px", backgroundColor: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)", fontSize: "12px", color: "var(--text-muted)", maxWidth: "440px" }}>
@@ -585,7 +585,12 @@ export function AppContent() {
           <Route path="/maintenance/pm" element={<RoleProtectedRoute><PMScheduleList initialViewMode="list" /></RoleProtectedRoute>} />
           <Route path="/maintenance/pm-schedules" element={<RoleProtectedRoute><PMScheduleList initialViewMode="list" /></RoleProtectedRoute>} />
           <Route path="/maintenance/pm-checklists" element={<RoleProtectedRoute><PMChecklistList /></RoleProtectedRoute>} />
+          <Route path="/maintenance/pm-checklists/execute/:id" element={<RoleProtectedRoute><PMChecklistExecute /></RoleProtectedRoute>} />
+          <Route path="/maintenance/pm-checklists/execute" element={<RoleProtectedRoute><PMChecklistExecute /></RoleProtectedRoute>} />
           <Route path="/maintenance/pm-execute" element={<RoleProtectedRoute><PMChecklistExecute /></RoleProtectedRoute>} />
+          <Route path="/maintenance/pm-execute/:id" element={<RoleProtectedRoute><PMChecklistExecute /></RoleProtectedRoute>} />
+          <Route path="/maintenance/pm/execute/:id" element={<RoleProtectedRoute><PMChecklistExecute /></RoleProtectedRoute>} />
+          <Route path="/maintenance/pm/execute" element={<RoleProtectedRoute><PMChecklistExecute /></RoleProtectedRoute>} />
 
           {/* 6. Work Orders */}
           <Route path="/maintenance/work-orders" element={<RoleProtectedRoute><WorkOrderList /></RoleProtectedRoute>} />
@@ -621,6 +626,10 @@ export function AppContent() {
           <Route path="/assets/register" element={<Navigate to="/maintenance/assets" replace />} />
           <Route path="/assets/360" element={<Navigate to="/maintenance/asset-360" replace />} />
           <Route path="/breakdowns/analysis" element={<Navigate to="/maintenance/breakdowns" replace />} />
+          <Route path="/breakdowns/log" element={<Navigate to="/maintenance/breakdowns" replace />} />
+          <Route path="/preventive-maintenance/execution" element={<Navigate to="/maintenance/pm-execute" replace />} />
+          <Route path="/calibration/schedule" element={<Navigate to="/maintenance/calendar" replace />} />
+          <Route path="/spare-parts/inventory" element={<Navigate to="/maintenance/spare-parts" replace />} />
 
           {/* Maintenance Notifications & Technician Profile */}
           <Route path="/maintenance/notifications" element={<RoleProtectedRoute><NotificationsPage /></RoleProtectedRoute>} />
@@ -963,14 +972,8 @@ export function AppContent() {
           <Route path="/admin/profile" element={<RoleProtectedRoute><ProfilePage /></RoleProtectedRoute>} />
 
           {/* ========================================================= */}
-          {/* MASTER DATA, GOVERNANCE & MIGRATION DIRECT ROUTES         */}
+          {/* GOVERNANCE & MIGRATION DIRECT ROUTES                      */}
           {/* ========================================================= */}
-          <Route path="/master-data/items" element={<RoleProtectedRoute><ItemMasterPage /></RoleProtectedRoute>} />
-          <Route path="/master-data/bom" element={<RoleProtectedRoute><BOMRecipesPage /></RoleProtectedRoute>} />
-          <Route path="/master-data/work-centers" element={<RoleProtectedRoute><WorkCentersMasterPage /></RoleProtectedRoute>} />
-          <Route path="/master-data/machine-capability" element={<RoleProtectedRoute><MachineCapabilityPage /></RoleProtectedRoute>} />
-          <Route path="/master-data/skills" element={<RoleProtectedRoute><SkillsMasterPage /></RoleProtectedRoute>} />
-          <Route path="/master-data/quality-specs" element={<RoleProtectedRoute><QualitySpecsPage /></RoleProtectedRoute>} />
           <Route path="/governance/permissions" element={<RoleProtectedRoute><PermissionsMatrixPage /></RoleProtectedRoute>} />
           <Route path="/governance/audit" element={<RoleProtectedRoute><AuditLogsPage /></RoleProtectedRoute>} />
           <Route path="/migration" element={<RoleProtectedRoute><MigrationPage /></RoleProtectedRoute>} />

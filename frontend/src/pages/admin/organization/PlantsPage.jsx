@@ -17,10 +17,21 @@ import { Button } from "../../../components/common/Button";
 import { StatCard } from "../../../components/common/StatCard";
 import { useMasterData } from "../../../context/MasterDataContext";
 import { useApp } from "../../../context/AppContext";
+import masterDataService from "../../../services/masterDataService";
 
 export function PlantsPage() {
-  const { plants = [], addPlant, updatePlant, deletePlant, lines = [], activePlantId, setActivePlantId } = useMasterData();
+  const { plants = [], setPlants, addPlant, updatePlant, deletePlant, lines = [], activePlantId, setActivePlantId } = useMasterData();
   const { addToast } = useApp();
+
+  // Trigger live GET /api/v1/master-data/plants on mount
+  React.useEffect(() => {
+    masterDataService.getPlants().then((res) => {
+      const data = res?.data || res;
+      if (Array.isArray(data) && data.length > 0 && typeof setPlants === "function") {
+        setPlants(data);
+      }
+    }).catch((err) => console.warn("Live plant fetch:", err.message));
+  }, []);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPlant, setEditingPlant] = useState(null);

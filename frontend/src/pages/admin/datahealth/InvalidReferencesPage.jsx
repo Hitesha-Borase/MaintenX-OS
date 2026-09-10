@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   AlertOctagon,
   CheckCircle2,
@@ -16,6 +16,7 @@ import { Button } from "../../../components/common/Button";
 import { StatCard } from "../../../components/common/StatCard";
 import { useMasterData } from "../../../context/MasterDataContext";
 import { useApp } from "../../../context/AppContext";
+import adminService from "../../../services/adminService";
 
 export function InvalidReferencesPage() {
   const { dataHealthStats = {} } = useMasterData();
@@ -26,6 +27,15 @@ export function InvalidReferencesPage() {
   ]);
 
   const [searchQuery, setSearchQuery] = useState("");
+
+  useEffect(() => {
+    adminService.getDataHealthScan()
+      .then((res) => {
+        const data = res?.data?.invalidReferences || res?.invalidReferences;
+        if (Array.isArray(data) && data.length > 0) setInvalidRefs(data);
+      })
+      .catch((err) => console.warn("Data health scan (invalid):", err.message));
+  }, []);
 
   const brokenCount = invalidRefs.filter((r) => r.status.includes("Broken")).length;
 

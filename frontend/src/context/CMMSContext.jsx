@@ -341,6 +341,7 @@ export function CMMSProvider({ children }) {
         return asset;
       })
     );
+    maintenanceService.updateAsset(assetId, { status: newStatus, healthChange }).catch(() => {});
   };
 
   const updateAsset = (assetId, updatedFields) => {
@@ -357,6 +358,7 @@ export function CMMSProvider({ children }) {
         return asset;
       })
     );
+    maintenanceService.updateAsset(assetId, updatedFields).catch(() => {});
   };
 
   // Work Order Actions
@@ -640,12 +642,16 @@ export function CMMSProvider({ children }) {
         return bd;
       })
     );
+    maintenanceService.updateWorkOrderStatus(breakdownId, "Resolved").catch(err => console.warn("maintenanceService.updateWorkOrderStatus:", err.message));
   };
 
   const updateBreakdown = (breakdownId, updatedFields) => {
     setBreakdowns((prev) =>
       prev.map((bd) => (bd.id === breakdownId ? { ...bd, ...updatedFields } : bd))
     );
+    if (updatedFields.status) {
+      maintenanceService.updateWorkOrderStatus(breakdownId, updatedFields.status).catch(err => console.warn("maintenanceService.updateWorkOrderStatus:", err.message));
+    }
   };
 
   const updateBreakdownStatus = (breakdownId, newStatus, notes = "") => {
@@ -669,6 +675,7 @@ export function CMMSProvider({ children }) {
         return bd;
       })
     );
+    maintenanceService.updateWorkOrderStatus(breakdownId, newStatus).catch(err => console.warn("maintenanceService.updateWorkOrderStatus:", err.message));
   };
 
   // Spare Parts Actions
@@ -827,6 +834,7 @@ export function CMMSProvider({ children }) {
       verifiedBy: userProfile?.name || "Senior Reliability Specialist"
     };
     setSolutions((prev) => [newSol, ...prev]);
+    maintenanceService.createTroubleshootingSolution(newSol).catch(() => {});
     return newSol;
   };
 

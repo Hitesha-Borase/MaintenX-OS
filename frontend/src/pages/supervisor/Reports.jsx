@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   FileSpreadsheet,
@@ -15,6 +15,7 @@ import { Button } from "../../components/common/Button";
 import { Badge } from "../../components/common/Badge";
 import { StatCard } from "../../components/common/StatCard";
 import { useApp } from "../../context/AppContext";
+import dashboardService from "../../services/dashboardService";
 
 export function Reports() {
   const navigate = useNavigate();
@@ -22,7 +23,7 @@ export function Reports() {
 
   const [printingId, setPrintingId] = useState(null);
 
-  const reports = [
+  const [reports, setReports] = useState([
     {
       id: "SUP-01",
       name: "Shift A Production OEE Summary",
@@ -47,11 +48,31 @@ export function Reports() {
       cadence: "Weekly",
       format: "PDF / Compliance Form"
     }
-  ];
+  ]);
 
-  const handlePrint = (rep) => {
+  useEffect(() => {
+    async function fetchReports() {
+      try {
+        const res = await dashboardService.getSupervisorReports();
+        if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
+          setReports(res.data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch supervisor reports:", err);
+      }
+    }
+    fetchReports();
+  }, []);
+
+
+  const handlePrint = async (rep) => {
     addToast(`Preparing "${rep.name}" for print / PDF generation...`, "info");
     setPrintingId(rep.id);
+    try {
+      await dashboardService.printSupervisorReport(rep.id);
+    } catch (err) {
+      console.warn("[Reports] Failed to log print API:", err);
+    }
     setTimeout(() => {
       window.print();
       setPrintingId(null);

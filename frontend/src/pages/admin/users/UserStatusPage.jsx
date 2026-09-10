@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Users,
   ShieldAlert,
@@ -16,10 +16,15 @@ import { Button } from "../../../components/common/Button";
 import { StatCard } from "../../../components/common/StatCard";
 import { useAdmin } from "../../../context/AdminContext";
 import { useApp } from "../../../context/AppContext";
+import adminService from "../../../services/adminService";
 
 export function UserStatusPage() {
   const { users = [], updateUserStatus, bulkUpdateStatus } = useAdmin();
   const { addToast } = useApp();
+
+  useEffect(() => {
+    adminService.getUsers().catch((err) => console.warn("Users load:", err.message));
+  }, []);
 
   const [filterState, setFilterState] = useState("ALL");
   const [isProcessing, setIsProcessing] = useState(false);

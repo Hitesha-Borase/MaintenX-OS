@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   FileSpreadsheet,
@@ -23,6 +23,7 @@ import { Badge } from "../../components/common/Badge";
 import { StatCard } from "../../components/common/StatCard";
 import { useCI } from "../../context/CIContext";
 import { useApp } from "../../context/AppContext";
+import ciService from "../../services/ciService";
 
 export function Reports() {
   const navigate = useNavigate();
@@ -39,6 +40,13 @@ export function Reports() {
     realizedSavingsTotal,
     projectedSavingsTotal
   } = useCI();
+
+  useEffect(() => {
+    Promise.allSettled([
+      ciService.getDashboardSummary(),
+      ciService.getProjects()
+    ]).catch((err) => console.warn("Reports data load:", err.message));
+  }, []);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedReportCategory, setSelectedReportCategory] = useState("ALL");

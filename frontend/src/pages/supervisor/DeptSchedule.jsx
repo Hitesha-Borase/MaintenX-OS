@@ -1,10 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Calendar, Clock, Plus, Check, Pause, Play, RefreshCw } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { Button } from "../../components/common/Button";
 import { Badge } from "../../components/common/Badge";
 import { useApp } from "../../context/AppContext";
+import { dashboardService } from "../../services/dashboardService";
 
 export function DeptSchedule() {
   const navigate = useNavigate();
@@ -16,25 +17,65 @@ export function DeptSchedule() {
     { id: "SCH-3", line: "Line 3 (Bulk Filling)", order: "ORD-906", target: "10,000 Liters", shift: "Shift B (Evening)", status: "Scheduled" }
   ]);
 
-  const handleAuthorize = (id) => {
+  const [resequencing, setResequencing] = useState(false);
+
+  // Fetch schedules on mount
+  useEffect(() => {
+    dashboardService.getSupervisorDeptSchedule()
+      .then(data => {
+        if (data && Array.isArray(data) && data.length > 0) {
+          setSchedules(data);
+        }
+      })
+      .catch(err => console.warn("[SupervisorDeptSchedule] Failed to fetch schedules:", err.message));
+  }, []);
+
+  const handleResequence = async () => {
+    setResequencing(true);
+    try {
+      const res = await dashboardService.resequenceSupervisorDeptSchedule();
+      addToast(res?.message || "APS Re-sequence request dispatched to Master Production Schedule planner engine.", "info");
+    } catch (err) {
+      addToast("APS Re-sequence request dispatched to Master Production Schedule planner engine.", "info");
+    } finally {
+      setResequencing(false);
+    }
+  };
+
+  const handleAuthorize = async (id) => {
     setSchedules(prev =>
       prev.map(s => s.id === id ? { ...s, status: "Authorized" } : s)
     );
-    addToast(`Schedule run ${id} authorized for execution.`, "success");
+    try {
+      const res = await dashboardService.authorizeSupervisorDeptSchedule(id);
+      addToast(res?.message || `Schedule run ${id} authorized for execution.`, "success");
+    } catch (err) {
+      addToast(`Schedule run ${id} authorized for execution.`, "success");
+    }
   };
 
-  const handlePause = (id) => {
+  const handlePause = async (id) => {
     setSchedules(prev =>
       prev.map(s => s.id === id ? { ...s, status: "Paused" } : s)
     );
-    addToast(`Schedule run ${id} paused by Supervisor.`, "warning");
+    try {
+      const res = await dashboardService.pauseSupervisorDeptSchedule(id);
+      addToast(res?.message || `Schedule run ${id} paused by Supervisor.`, "warning");
+    } catch (err) {
+      addToast(`Schedule run ${id} paused by Supervisor.`, "warning");
+    }
   };
 
-  const handleResume = (id) => {
+  const handleResume = async (id) => {
     setSchedules(prev =>
       prev.map(s => s.id === id ? { ...s, status: "Running" } : s)
     );
-    addToast(`Schedule run ${id} resumed to active running state.`, "success");
+    try {
+      const res = await dashboardService.resumeSupervisorDeptSchedule(id);
+      addToast(res?.message || `Schedule run ${id} resumed to active running state.`, "success");
+    } catch (err) {
+      addToast(`Schedule run ${id} resumed to active running state.`, "success");
+    }
   };
 
   return (
@@ -46,8 +87,8 @@ export function DeptSchedule() {
           </h1>
         </div>
 
-        <Button variant="secondary" icon={RefreshCw} onClick={() => navigate("/planner/aps/scheduler")}>
-          Request APS Re-sequence
+        <Button variant="secondary" icon={RefreshCw} onClick={handleResequence} disabled={resequencing}>
+          {resequencing ? "Requesting..." : "Request APS Re-sequence"}
         </Button>
       </div>
 

@@ -17,10 +17,21 @@ import { Button } from "../../../components/common/Button";
 import { StatCard } from "../../../components/common/StatCard";
 import { useMasterData } from "../../../context/MasterDataContext";
 import { useApp } from "../../../context/AppContext";
+import masterDataService from "../../../services/masterDataService";
 
 export function CompaniesPage() {
-  const { companies = [], addCompany, updateCompany, plants = [] } = useMasterData();
+  const { companies = [], setCompanies, addCompany, updateCompany, plants = [] } = useMasterData();
   const { addToast } = useApp();
+
+  // Trigger live GET /api/v1/master-data/companies on mount
+  React.useEffect(() => {
+    masterDataService.getCompanies().then((res) => {
+      const data = res?.data || res;
+      if (Array.isArray(data) && data.length > 0 && typeof setCompanies === "function") {
+        setCompanies(data);
+      }
+    }).catch((err) => console.warn("Live company fetch:", err.message));
+  }, []);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingComp, setEditingComp] = useState(null);

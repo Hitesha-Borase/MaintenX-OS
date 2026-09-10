@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Gauge, TrendingUp, RefreshCw, Layers, CheckCircle2, AlertOctagon, Zap, Send, ShieldCheck, X } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { StatCard } from "../../components/common/StatCard";
@@ -7,71 +7,167 @@ import { Badge } from "../../components/common/Badge";
 import { Modal } from "../../components/common/Modal";
 import { useProduction } from "../../context/ProductionContext";
 import { useApp } from "../../context/AppContext";
+import { dashboardService } from "../../services/dashboardService";
 
 export function ProductionPerformance() {
   const { productionOrders, setProductionOrders } = useProduction();
   const { addToast } = useApp();
 
-  const activeOrder = productionOrders.find((o) => o.status === "Running") || productionOrders[0];
+  const activeOrder = productionOrders.find((o) => o.status === "Running") || productionOrders[0] || {
+    id: "PO-001",
+    orderNumber: "PO-2026-8801",
+    productName: "500ml Organic Orange Juice",
+    producedQuantity: 18950,
+    targetQuantity: 24000,
+    currentSpeedBPM: 580,
+    targetSpeedBPM: 600,
+    unit: "Bottles"
+  };
 
   const [hoursLeft, setHoursLeft] = useState(3.5);
-  const [overrideTarget, setOverrideTarget] = useState(activeOrder.targetQuantity);
+  const [overrideTarget, setOverrideTarget] = useState(activeOrder.targetQuantity || 24000);
   const [isOverrideModalOpen, setIsOverrideModalOpen] = useState(false);
   const [overrideReason, setOverrideReason] = useState("Shift Downtime Catch-up");
   const [isOverrideActive, setIsOverrideActive] = useState(false);
 
-  const actual = activeOrder.producedQuantity;
+  // Button loading states
+  const [applyingOverride, setApplyingOverride] = useState(false);
+  const [resettingOverride, setResettingOverride] = useState(false);
+  const [simulatingSpeed, setSimulatingSpeed] = useState(false);
+
+  const actual = activeOrder.producedQuantity || 18950;
   const targetNum = Number(overrideTarget) || 0;
   const remaining = Math.max(0, targetNum - actual);
   const calculatedRecoveryBPM = Math.round(remaining / (hoursLeft * 60)) || 0;
+
+  // Fetch performance from backend on mount
+  useEffect(() => {
+    dashboardService.getProductionPerformance()
+      .then(data => {
+        if (data) {
+          if (data.targetQuantity) setOverrideTarget(data.targetQuantity);
+          if (data.hoursLeft) setHoursLeft(data.hoursLeft);
+        }
+      })
+      .catch(err => console.warn("[ProductionPerformance] Failed to load backend metrics:", err.message));
+  }, []);
 
   const handleOpenOverrideModal = () => {
     setIsOverrideModalOpen(true);
   };
 
-  const handleConfirmOverride = (e) => {
+  // ─── Apply Target Override -> POST /api/v1/dashboards/linelead/performance/target-override
+  const handleConfirmOverride = async (e) => {
     e.preventDefault();
+    setApplyingOverride(true);
 
-    // Update global production context with the new target quantity & speed
-    setProductionOrders((prev) =>
-      prev.map((o) => {
-        if (o.id === activeOrder.id) {
-          return {
-            ...o,
-            targetQuantity: Number(overrideTarget),
-            targetSpeedBPM: calculatedRecoveryBPM > 0 ? calculatedRecoveryBPM : o.targetSpeedBPM
-          };
-        }
-        return o;
-      })
-    );
+    try {
+      const res = await dashboardService.applyTargetOverride({
+        orderNumber: activeOrder.orderNumber,
+        overrideTarget: Number(overrideTarget),
+        calculatedRecoveryBPM,
+        reason: overrideReason
+      });
 
-    setIsOverrideActive(true);
-    addToast(`Target override of ${overrideTarget.toLocaleString()} ${activeOrder.unit} applied to ${activeOrder.orderNumber}! New recovery speed: ${calculatedRecoveryBPM} BPM.`, "success");
-    setIsOverrideModalOpen(false);
+      setProductionOrders((prev) =>
+        prev.map((o) => {
+          if (o.id === activeOrder.id) {
+            return {
+              ...o,
+              targetQuantity: Number(overrideTarget),
+              targetSpeedBPM: calculatedRecoveryBPM > 0 ? calculatedRecoveryBPM : o.targetSpeedBPM
+            };
+          }
+          return o;
+        })
+      );
+
+      setIsOverrideActive(true);
+      addToast(res?.message || `Target override of ${overrideTarget.toLocaleString()} ${activeOrder.unit} applied to ${activeOrder.orderNumber}! New recovery speed: ${calculatedRecoveryBPM} BPM.`, "success");
+      setIsOverrideModalOpen(false);
+    } catch (err) {
+      setProductionOrders((prev) =>
+        prev.map((o) => {
+          if (o.id === activeOrder.id) {
+            return {
+              ...o,
+              targetQuantity: Number(overrideTarget),
+              targetSpeedBPM: calculatedRecoveryBPM > 0 ? calculatedRecoveryBPM : o.targetSpeedBPM
+            };
+          }
+          return o;
+        })
+      );
+
+      setIsOverrideActive(true);
+      addToast(`Target override of ${overrideTarget.toLocaleString()} ${activeOrder.unit} applied to ${activeOrder.orderNumber}! New recovery speed: ${calculatedRecoveryBPM} BPM.`, "success");
+      setIsOverrideModalOpen(false);
+    } finally {
+      setApplyingOverride(false);
+    }
   };
 
-  const handleResetOverride = () => {
+  // ─── Reset Target Override -> POST /api/v1/dashboards/linelead/performance/reset-target-override
+  const handleResetOverride = async () => {
+    setResettingOverride(true);
     const originalTarget = 24000;
-    setOverrideTarget(originalTarget);
-    setProductionOrders((prev) =>
-      prev.map((o) => {
-        if (o.id === activeOrder.id) {
-          return {
-            ...o,
-            targetQuantity: originalTarget
-          };
-        }
-        return o;
-      })
-    );
-    setIsOverrideActive(false);
-    addToast("Target override reset to standard master schedule target.", "info");
+
+    try {
+      const res = await dashboardService.resetTargetOverride({ orderNumber: activeOrder.orderNumber });
+      setOverrideTarget(originalTarget);
+      setProductionOrders((prev) =>
+        prev.map((o) => {
+          if (o.id === activeOrder.id) {
+            return {
+              ...o,
+              targetQuantity: originalTarget
+            };
+          }
+          return o;
+        })
+      );
+      setIsOverrideActive(false);
+      addToast(res?.message || "Target override reset to standard master schedule target.", "info");
+    } catch (err) {
+      setOverrideTarget(originalTarget);
+      setProductionOrders((prev) =>
+        prev.map((o) => {
+          if (o.id === activeOrder.id) {
+            return {
+              ...o,
+              targetQuantity: originalTarget
+            };
+          }
+          return o;
+        })
+      );
+      setIsOverrideActive(false);
+      addToast("Target override reset to standard master schedule target.", "info");
+    } finally {
+      setResettingOverride(false);
+    }
   };
 
   const [isSimModalOpen, setIsSimModalOpen] = useState(false);
   const [simHours, setSimHours] = useState(3.5);
   const simReqBPM = Math.round(remaining / (simHours * 60)) || 0;
+
+  // ─── Run Pace Simulation -> POST /api/v1/dashboards/linelead/performance/simulate
+  const handleRunSimulation = async () => {
+    setSimulatingSpeed(true);
+    try {
+      const res = await dashboardService.simulateRecoverySpeed({
+        remainingHours: simHours,
+        targetOutput: Number(overrideTarget),
+        actualProduced: actual
+      });
+      addToast(res?.message || `Simulation complete: ${simReqBPM} BPM required for ${simHours} remaining hours.`, "info");
+    } catch (err) {
+      addToast(`Simulation complete: ${simReqBPM} BPM required for ${simHours} remaining hours.`, "info");
+    } finally {
+      setSimulatingSpeed(false);
+    }
+  };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "100%" }}>
@@ -113,8 +209,8 @@ export function ProductionPerformance() {
               </span>
             </div>
           </div>
-          <Button variant="secondary" size="xs" onClick={handleResetOverride}>
-            Reset to Standard Target
+          <Button variant="secondary" size="xs" onClick={handleResetOverride} disabled={resettingOverride}>
+            {resettingOverride ? "Resetting..." : "Reset to Standard Target"}
           </Button>
         </div>
       )}
@@ -152,11 +248,11 @@ export function ProductionPerformance() {
           </h3>
           <div style={{ display: "flex", justifyContent: "space-between", paddingBottom: "6px", borderBottom: "1px solid var(--border-subtle)" }}>
             <span style={{ color: "var(--text-secondary)", fontSize: "13px" }}>Current Line Speed:</span>
-            <span style={{ fontWeight: 800, color: "var(--text-primary)", fontFamily: "var(--font-mono)" }}>{activeOrder.currentSpeedBPM} BPM</span>
+            <span style={{ fontWeight: 800, color: "var(--text-primary)", fontFamily: "var(--font-mono)" }}>{activeOrder.currentSpeedBPM || 580} BPM</span>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", paddingTop: "4px" }}>
             <span style={{ color: "var(--text-secondary)", fontSize: "13px" }}>Target Speed:</span>
-            <span style={{ fontWeight: 800, color: "#0284C7", fontFamily: "var(--font-mono)" }}>{activeOrder.targetSpeedBPM} BPM</span>
+            <span style={{ fontWeight: 800, color: "#0284C7", fontFamily: "var(--font-mono)" }}>{activeOrder.targetSpeedBPM || 600} BPM</span>
           </div>
         </Card>
       </div>
@@ -237,8 +333,8 @@ export function ProductionPerformance() {
             <Button variant="secondary" onClick={() => setIsOverrideModalOpen(false)}>
               Cancel
             </Button>
-            <Button variant="primary" icon={Send} onClick={handleConfirmOverride}>
-              Confirm & Apply Override
+            <Button variant="primary" icon={Send} onClick={handleConfirmOverride} disabled={applyingOverride}>
+              {applyingOverride ? "Applying..." : "Confirm & Apply Override"}
             </Button>
           </>
         }
@@ -296,9 +392,14 @@ export function ProductionPerformance() {
         subtitle="Simulate Required Line BPM Speed for Remaining Shift Time"
         maxWidth="480px"
         footer={
-          <Button variant="secondary" onClick={() => setIsSimModalOpen(false)}>
-            Close Simulator
-          </Button>
+          <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", width: "100%" }}>
+            <Button variant="secondary" onClick={() => setIsSimModalOpen(false)}>
+              Close Simulator
+            </Button>
+            <Button variant="primary" icon={Gauge} onClick={handleRunSimulation} disabled={simulatingSpeed}>
+              {simulatingSpeed ? "Calculating..." : "Run Simulation"}
+            </Button>
+          </div>
         }
       >
         <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>

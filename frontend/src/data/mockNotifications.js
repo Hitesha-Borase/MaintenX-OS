@@ -8,7 +8,7 @@ export const INITIAL_NOTIFICATIONS = [
     category: "Breakdowns",
     timestamp: "10 mins ago",
     read: false,
-    link: "/breakdowns/log",
+    link: "/maintenance/breakdowns",
     actionText: "View Breakdown"
   },
   {
@@ -19,7 +19,7 @@ export const INITIAL_NOTIFICATIONS = [
     category: "Preventive Maintenance",
     timestamp: "45 mins ago",
     read: false,
-    link: "/preventive-maintenance/execution",
+    link: "/maintenance/pm-execute",
     actionText: "Execute PM"
   },
   {
@@ -30,7 +30,7 @@ export const INITIAL_NOTIFICATIONS = [
     category: "Calibration",
     timestamp: "2 hours ago",
     read: false,
-    link: "/calibration/schedule",
+    link: "/maintenance/calendar",
     actionText: "Review Schedule"
   },
   {
@@ -41,7 +41,7 @@ export const INITIAL_NOTIFICATIONS = [
     category: "Spare Parts",
     timestamp: "4 hours ago",
     read: true,
-    link: "/spare-parts/inventory",
+    link: "/maintenance/spare-parts",
     actionText: "Inventory"
   },
   {
@@ -52,7 +52,7 @@ export const INITIAL_NOTIFICATIONS = [
     category: "Work Orders",
     timestamp: "Yesterday",
     read: true,
-    link: "/work-orders/open",
+    link: "/maintenance/work-orders",
     actionText: "Open Work Order"
   },
   {

@@ -23,12 +23,30 @@ import { BarChart } from "../../components/charts/BarChart";
 import { AreaChart } from "../../components/charts/AreaChart";
 import { ParetoChart } from "../../components/charts/ParetoChart";
 import { useApp } from "../../context/AppContext";
+import productionService from "../../services/productionService";
 
 export function OEEPerformance() {
-  const { addToast } = useApp();
+  const { addToast, selectedPlant } = useApp();
   const [selectedLine, setSelectedLine] = useState("all");
   const [selectedPeriod, setSelectedPeriod] = useState("daily"); // daily, weekly, monthly
   const [selectedShiftFilter, setSelectedShiftFilter] = useState("all");
+  const [liveOeeData, setLiveOeeData] = useState(null);
+
+  React.useEffect(() => {
+    let isMounted = true;
+    async function loadOee() {
+      try {
+        const res = await productionService.getOEE(selectedPlant?.id || "PLT-01", selectedPeriod);
+        if (res?.data && isMounted) {
+          setLiveOeeData(res.data);
+        }
+      } catch (err) {
+        console.warn("Using default OEE mock data:", err.message);
+      }
+    }
+    loadOee();
+    return () => { isMounted = false; };
+  }, [selectedPlant, selectedPeriod]);
 
   const trendData =
     selectedPeriod === "daily"

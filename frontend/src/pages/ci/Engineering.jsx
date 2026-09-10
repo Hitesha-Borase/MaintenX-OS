@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Settings,
@@ -17,7 +17,8 @@ import {
   Zap,
   Layers,
   FileCheck,
-  ShieldCheck
+  ShieldCheck,
+  Trash2
 } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { StatCard } from "../../components/common/StatCard";
@@ -25,6 +26,7 @@ import { Badge } from "../../components/common/Badge";
 import { Button } from "../../components/common/Button";
 import { useCI } from "../../context/CIContext";
 import { useApp } from "../../context/AppContext";
+import ciService from "../../services/ciService";
 
 export function Engineering() {
   const navigate = useNavigate();
@@ -32,10 +34,15 @@ export function Engineering() {
   const {
     capexProjects = [],
     createCapexProject,
+    deleteCapexProject,
     investigations = [],
     ciProjects = [],
     openCapexCount
   } = useCI();
+
+  useEffect(() => {
+    ciService.getCapex().catch((err) => console.warn("Capex load:", err.message));
+  }, []);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
@@ -59,14 +66,14 @@ export function Engineering() {
     return capexProjects.reduce((acc, c) => acc + (Number(c.actualCost) || 0), 0);
   }, [capexProjects]);
 
-  const handleAdd = (e) => {
+  const handleAdd = async (e) => {
     e.preventDefault();
     if (!newProject.name.trim()) {
       addToast("Please provide an engineering project name.", "warning");
       return;
     }
 
-    createCapexProject(newProject);
+    await createCapexProject(newProject);
     setNewProject({
       name: "",
       budget: "50000",
@@ -249,6 +256,7 @@ export function Engineering() {
                 <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Engineering Lead</th>
                 <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Dossier Ref</th>
                 <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Status</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", textAlign: "right" }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -282,6 +290,26 @@ export function Engineering() {
                     <Badge variant={p.status === "Budget Approved" ? "emerald" : "amber"}>
                       {p.status}
                     </Badge>
+                  </td>
+                  <td style={{ padding: "12px 16px", textAlign: "right" }}>
+                    <button
+                      onClick={() => deleteCapexProject(p.id)}
+                      title="Remove Capex Project"
+                      style={{
+                        width: "30px",
+                        height: "30px",
+                        borderRadius: "6px",
+                        backgroundColor: "var(--bg-card-subtle)",
+                        color: "var(--text-muted)",
+                        border: "1px solid var(--border-subtle)",
+                        cursor: "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center"
+                      }}
+                    >
+                      <Trash2 size={13} />
+                    </button>
                   </td>
                 </tr>
               ))}

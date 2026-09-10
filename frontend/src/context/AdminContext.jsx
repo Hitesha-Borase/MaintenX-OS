@@ -103,21 +103,11 @@ export function AdminProvider({ children }) {
 
   // User Actions (Wired directly to backend)
   const addUser = async (userData) => {
-    try {
-      const created = await adminService.provisionUser(userData);
-      setUsers((prev) => [created, ...prev]);
-      // refresh activity
-      adminService.getActivityLogs().then((logs) => Array.isArray(logs) && setActivityLogs(logs));
-      return created;
-    } catch (err) {
-      const fallback = {
-        id: `USR-00${users.length + 1}`,
-        ...userData,
-        lastLogin: "Never",
-      };
-      setUsers((prev) => [fallback, ...prev]);
-      return fallback;
-    }
+    const created = await adminService.provisionUser(userData);
+    setUsers((prev) => [created, ...prev]);
+    // refresh activity
+    adminService.getActivityLogs().then((logs) => Array.isArray(logs) && setActivityLogs(logs));
+    return created;
   };
 
   const updateUserStatus = async (userId, status) => {

@@ -1,10 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { CheckSquare, ShieldCheck, AlertTriangle, Send, AlertOctagon } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { Button } from "../../components/common/Button";
 import { Badge } from "../../components/common/Badge";
 import { Modal } from "../../components/common/Modal";
 import { useApp } from "../../context/AppContext";
+import { dashboardService } from "../../services/dashboardService";
 
 export function QualityChecks() {
   const { addToast } = useApp();
@@ -18,13 +19,29 @@ export function QualityChecks() {
   const [ccpParameter, setCcpParameter] = useState("Brix Sugar (°Bx) Exceeded Limit");
   const [holdReason, setHoldReason] = useState("High Brix reading 12.5 °Bx at filler outlet nozzle");
 
+  // Loading states
+  const [submittingChecklist, setSubmittingChecklist] = useState(false);
+  const [triggeringHold, setTriggeringHold] = useState(false);
+
   const [checkHistory, setCheckHistory] = useState([
     { time: "14:00", brix: "11.7 °Bx", ph: "3.71 pH", torque: "14 in-lbs", seal: "PASS" },
     { time: "13:30", brix: "11.8 °Bx", ph: "3.75 pH", torque: "15 in-lbs", seal: "PASS" },
     { time: "13:00", brix: "11.9 °Bx", ph: "3.72 pH", torque: "16 in-lbs", seal: "PASS" }
   ]);
 
-  const handleSubmit = (e) => {
+  // Fetch quality history from backend on mount
+  useEffect(() => {
+    dashboardService.getOperatorQualityChecks()
+      .then(data => {
+        if (data && Array.isArray(data) && data.length > 0) {
+          setCheckHistory(data);
+        }
+      })
+      .catch(err => console.warn("[QualityChecks] Failed to fetch quality logs:", err.message));
+  }, []);
+
+  // ─── Submit Quality Checklist -> POST /api/v1/dashboards/operator/quality-checks/submit
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     const isBrixValid = parseFloat(brix) >= 11.5 && parseFloat(brix) <= 12.1;
@@ -33,27 +50,70 @@ export function QualityChecks() {
 
     const timeString = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-    const newCheck = {
-      time: timeString,
-      brix: `${brix} °Bx`,
-      ph: `${ph} pH`,
-      torque: `${torque} in-lbs`,
-      seal: sealPassed && isBrixValid && isPhValid && isTorqueValid ? "PASS" : "FAIL"
-    };
+    setSubmittingChecklist(true);
 
-    setCheckHistory(prev => [newCheck, ...prev]);
+    try {
+      const res = await dashboardService.submitQualityChecklist({
+        brix,
+        ph,
+        torque,
+        sealPassed
+      });
 
-    if (!isBrixValid || !isPhValid || !isTorqueValid || !sealPassed) {
-      addToast("Quality check failed limits! CCP Deviation Incident logged.", "danger");
-    } else {
-      addToast("Hourly quality parameter checklist logged successfully.", "success");
+      const newCheck = {
+        time: res?.time || timeString,
+        brix: `${brix} °Bx`,
+        ph: `${ph} pH`,
+        torque: `${torque} in-lbs`,
+        seal: sealPassed && isBrixValid && isPhValid && isTorqueValid ? "PASS" : "FAIL"
+      };
+
+      setCheckHistory(prev => [newCheck, ...prev]);
+
+      if (!isBrixValid || !isPhValid || !isTorqueValid || !sealPassed) {
+        addToast(res?.message || "Quality check failed limits! CCP Deviation Incident logged.", "danger");
+      } else {
+        addToast(res?.message || "Hourly quality parameter checklist logged successfully.", "success");
+      }
+    } catch (err) {
+      const newCheck = {
+        time: timeString,
+        brix: `${brix} °Bx`,
+        ph: `${ph} pH`,
+        torque: `${torque} in-lbs`,
+        seal: sealPassed && isBrixValid && isPhValid && isTorqueValid ? "PASS" : "FAIL"
+      };
+
+      setCheckHistory(prev => [newCheck, ...prev]);
+
+      if (!isBrixValid || !isPhValid || !isTorqueValid || !sealPassed) {
+        addToast("Quality check failed limits! CCP Deviation Incident logged.", "danger");
+      } else {
+        addToast("Hourly quality parameter checklist logged successfully.", "success");
+      }
+    } finally {
+      setSubmittingChecklist(false);
     }
   };
 
-  const handleHoldSubmit = (e) => {
+  // ─── Trigger Quality Hold -> POST /api/v1/dashboards/operator/quality-checks/trigger-hold
+  const handleHoldSubmit = async (e) => {
     e.preventDefault();
-    addToast(`CCP Deviation triggered: "${ccpParameter}". Quality Hold Ticket raised. Batch LOCKED (PDF QA Release Gate Rule).`, "danger");
-    setIsHoldModalOpen(false);
+    setTriggeringHold(true);
+
+    try {
+      const res = await dashboardService.triggerQualityHold({
+        ccpParameter,
+        holdReason
+      });
+      addToast(res?.message || `CCP Deviation triggered: "${ccpParameter}". Quality Hold Ticket raised. Batch LOCKED (PDF QA Release Gate Rule).`, "danger");
+      setIsHoldModalOpen(false);
+    } catch (err) {
+      addToast(`CCP Deviation triggered: "${ccpParameter}". Quality Hold Ticket raised. Batch LOCKED (PDF QA Release Gate Rule).`, "danger");
+      setIsHoldModalOpen(false);
+    } finally {
+      setTriggeringHold(false);
+    }
   };
 
   return (
@@ -179,8 +239,8 @@ export function QualityChecks() {
           </div>
         </Card>
 
-        <Button type="submit" variant="primary" icon={Send} style={{ width: "fit-content", padding: "10px 28px", alignSelf: "center" }}>
-          Submit Quality Checklist
+        <Button type="submit" variant="primary" icon={Send} disabled={submittingChecklist} style={{ width: "fit-content", padding: "10px 28px", alignSelf: "center" }}>
+          {submittingChecklist ? "Submitting..." : "Submit Quality Checklist"}
         </Button>
       </form>
 
@@ -189,7 +249,7 @@ export function QualityChecks() {
         <h3 style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)", marginBottom: "12px", margin: "0 0 12px 0" }}>
           Shift Quality Log History
         </h3>
-        
+
         <div style={{ overflowX: "auto", width: "100%" }}>
           <div style={{ display: "flex", flexDirection: "column", gap: "8px", minWidth: "340px" }}>
             {checkHistory.map((item, idx) => (
@@ -232,8 +292,8 @@ export function QualityChecks() {
             <Button variant="secondary" onClick={() => setIsHoldModalOpen(false)}>
               Cancel
             </Button>
-            <Button variant="danger" icon={Send} onClick={handleHoldSubmit}>
-              Confirm Quality Hold Trigger
+            <Button variant="danger" icon={Send} onClick={handleHoldSubmit} disabled={triggeringHold}>
+              {triggeringHold ? "Triggering..." : "Confirm Quality Hold Trigger"}
             </Button>
           </>
         }

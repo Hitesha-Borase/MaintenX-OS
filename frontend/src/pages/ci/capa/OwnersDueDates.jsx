@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Users,
@@ -23,11 +23,16 @@ import { Badge } from "../../../components/common/Badge";
 import { StatCard } from "../../../components/common/StatCard";
 import { useCI } from "../../../context/CIContext";
 import { useApp } from "../../../context/AppContext";
+import ciService from "../../../services/ciService";
 
 export function OwnersDueDates() {
   const navigate = useNavigate();
   const { addToast } = useApp();
   const { capaActions = [], overdueCapaCount } = useCI();
+
+  useEffect(() => {
+    ciService.getCapaActions().catch((err) => console.warn("CAPA actions load:", err.message));
+  }, []);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedOwnerFilter, setSelectedOwnerFilter] = useState("ALL");

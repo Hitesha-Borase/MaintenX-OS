@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   ShieldCheck,
   Search,
@@ -18,10 +18,15 @@ import { Button } from "../../components/common/Button";
 import { StatCard } from "../../components/common/StatCard";
 import { useQuality } from "../../context/QualityContext";
 import { useApp } from "../../context/AppContext";
+import qualityService from "../../services/qualityService";
 
 export function QualityStatusPage() {
   const { qualityChecks = [], addQualityCheck } = useQuality();
   const { addToast } = useApp();
+
+  useEffect(() => {
+    qualityService.getCCPChecks().catch((err) => console.warn("Quality CCP load:", err.message));
+  }, []);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");

@@ -22,6 +22,7 @@ import { Button } from "../../components/common/Button";
 import { Modal } from "../../components/common/Modal";
 import { useCMMS } from "../../context/CMMSContext";
 import { useApp } from "../../context/AppContext";
+import { maintenanceService } from "../../services/maintenanceService";
 
 export function WorkOrderDetail() {
   const { id } = useParams();
@@ -51,7 +52,13 @@ export function WorkOrderDetail() {
     "Closed"
   ];
 
-  const handleStatusTransition = (newStatus) => {
+  const handleStatusTransition = async (newStatus) => {
+    try {
+      await maintenanceService.updateWorkOrderStatus(wo.id, newStatus);
+    } catch (err) {
+      console.warn("Update status notice:", err);
+    }
+
     if (newStatus === "In Progress") {
         startWorkOrder(wo.id);
         addToast(`Work Order ${wo.id} started. Timer active.`);
@@ -64,32 +71,65 @@ export function WorkOrderDetail() {
     }
   };
 
-  const handleAddComment = (e) => {
+  const handleAddComment = async (e) => {
     e.preventDefault();
     if (!commentText.trim()) return;
+    try {
+      await maintenanceService.addWorkOrderComment(wo.id, {
+        text: commentText,
+        user: "Dave Miller"
+      });
+    } catch (err) {
+      console.warn("Add comment notice:", err);
+    }
     updateWorkOrderStatus(wo.id, wo.status, commentText);
     setCommentText("");
     addToast("Comment logged to Work Order activity trail.");
   };
 
-  const handleSaveRepairNotes = () => {
+  const handleSaveRepairNotes = async () => {
+    try {
+      await maintenanceService.saveExecutionRecord(wo.id, {
+        repairAction: repairActionText,
+        testResult: testResultText
+      });
+    } catch (err) {
+      console.warn("Save execution record notice:", err);
+    }
+    completeWorkOrder(wo.id, { repairAction: repairActionText, testResult: testResultText });
     addToast("Repair actions and verification test results saved!");
   };
 
   const [actualHoursLog, setActualHoursLog] = useState(wo.actualHours || "");
 
-  const handleSupervisorSignOff = (e) => {
+  const handleSupervisorSignOff = async (e) => {
     e.preventDefault();
+    try {
+      await maintenanceService.signOffWorkOrder(wo.id, {
+        supervisorName,
+        actualHours: parseFloat(actualHoursLog)
+      });
+    } catch (err) {
+      console.warn("Sign off notice:", err);
+    }
     updateWorkOrderStatus(wo.id, "Verified", `Supervisor sign-off completed by ${supervisorName}. Labour: ${actualHoursLog} hrs.`);
-    // Since updateWorkOrderStatus just updates status/comments, we will call completeWorkOrder if we want to save actualHours directly, but let's just pass it in the details
     completeWorkOrder(wo.id, { actualHours: parseFloat(actualHoursLog) });
     setIsSignOffModalOpen(false);
     addToast(`Work order ${wo.id} verified and signed off!`);
   };
 
-  const handleIssuePart = (e) => {
+  const handleIssuePart = async (e) => {
     e.preventDefault();
     if (!selectedPartNo) return;
+    try {
+      await maintenanceService.issueSparePart(wo.id, {
+        partNo: selectedPartNo,
+        qty: parseInt(issueQty),
+        workOrderId: wo.id
+      });
+    } catch (err) {
+      console.warn("Issue spare part notice:", err);
+    }
     issueSparePart(selectedPartNo, parseInt(issueQty), wo.id);
     addToast(`Issued ${issueQty} unit(s) of ${selectedPartNo} to Work Order ${wo.id}.`);
     setIsIssuePartModalOpen(false);

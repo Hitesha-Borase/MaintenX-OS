@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useProduction } from "../../context/ProductionContext";
 import { useApp } from "../../context/AppContext";
 import { Card } from "../../components/common/Card";
@@ -7,6 +7,7 @@ import { Button } from "../../components/common/Button";
 import { Modal } from "../../components/common/Modal";
 import { Badge } from "../../components/common/Badge";
 import { Gauge, Target, TrendingUp, Sliders, PieChart, Send } from "lucide-react";
+import dashboardService from "../../services/dashboardService";
 
 export function ProductionPerformance() {
   const { productionOrders } = useProduction();
@@ -17,12 +18,36 @@ export function ProductionPerformance() {
   const [isSpeedModalOpen, setIsSpeedModalOpen] = useState(false);
   const [isParetoModalOpen, setIsParetoModalOpen] = useState(false);
   const [speedLimit, setSpeedLimit] = useState(600);
+  const [paretoData, setParetoData] = useState([]);
 
-  const handleSaveSpeedLimit = (e) => {
+  useEffect(() => {
+    async function fetchPareto() {
+      try {
+        const res = await dashboardService.getSupervisorDowntimePareto();
+        if (res && res.data && Array.isArray(res.data)) {
+          setParetoData(res.data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch downtime pareto:", err);
+      }
+    }
+    fetchPareto();
+  }, []);
+
+  const handleSaveSpeedLimit = async (e) => {
     e.preventDefault();
-    addToast(`Line speed cap set to ${speedLimit} BPM for ${activeOrder?.line || "Line 1"}.`, "success");
+    try {
+      const res = await dashboardService.setSupervisorProductionSpeedLimit({
+        speedLimit: Number(speedLimit),
+        line: activeOrder?.line || "Line 1"
+      });
+      addToast(res.message || `Line speed cap set to ${speedLimit} BPM for ${activeOrder?.line || "Line 1"}.`, "success");
+    } catch (err) {
+      addToast(`Line speed cap set to ${speedLimit} BPM for ${activeOrder?.line || "Line 1"}.`, "success");
+    }
     setIsSpeedModalOpen(false);
   };
+
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%" }}>

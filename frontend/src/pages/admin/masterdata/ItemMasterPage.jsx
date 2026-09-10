@@ -22,10 +22,21 @@ import { Button } from "../../../components/common/Button";
 import { StatCard } from "../../../components/common/StatCard";
 import { useMasterData } from "../../../context/MasterDataContext";
 import { useApp } from "../../../context/AppContext";
+import masterDataService from "../../../services/masterDataService";
 
 export function ItemMasterPage() {
-  const { skus = [], addSKU, updateSKU, toggleSKUStatus, plants = [], boms = [], qualitySpecs = [], auditLogs = [] } = useMasterData();
+  const { skus = [], setSkus, addSKU, updateSKU, toggleSKUStatus, plants = [], boms = [], qualitySpecs = [], auditLogs = [] } = useMasterData();
   const { addToast } = useApp();
+
+  // Trigger live GET /api/v1/master-data/skus on mount
+  React.useEffect(() => {
+    masterDataService.getSkus().then((res) => {
+      const data = res?.data || res;
+      if (Array.isArray(data) && data.length > 0 && typeof setSkus === "function") {
+        setSkus(data);
+      }
+    }).catch((err) => console.warn("Live SKU fetch:", err.message));
+  }, []);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("ALL");

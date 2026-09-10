@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   Boxes,
   Plus,
@@ -20,10 +20,15 @@ import { Button } from "../../../components/common/Button";
 import { StatCard } from "../../../components/common/StatCard";
 import { useMasterData } from "../../../context/MasterDataContext";
 import { useApp } from "../../../context/AppContext";
+import masterDataService from "../../../services/masterDataService";
 
 export function ProductFamiliesPage() {
   const { productFamilies = [], addProductFamily, updateProductFamily, deleteProductFamily, toggleProductFamilyStatus, skus = [], plants = [], activePlantId } = useMasterData();
   const { addToast } = useApp();
+
+  useEffect(() => {
+    masterDataService.getProductFamilies().catch((err) => console.warn("Product families load:", err.message));
+  }, []);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [plantFilter, setPlantFilter] = useState("ALL");

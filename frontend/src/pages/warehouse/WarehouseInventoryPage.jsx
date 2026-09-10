@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Package,
   Search,
@@ -25,6 +25,10 @@ export function WarehouseInventoryPage() {
   const { lots = [], setLots, zones = [], addLot } = useInventory();
   const { addToast } = useApp();
 
+  useEffect(() => {
+    warehouseService.getLots().catch((err) => console.warn("Warehouse lots load:", err.message));
+  }, []);
+
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("ALL");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -49,23 +53,47 @@ export function WarehouseInventoryPage() {
 
   const [selectedLotForView, setSelectedLotForView] = useState(null);
 
-  const getLotId = (l) => l?.lotNumber || l?.id || "LOT-REC-001";
-  const getName = (l) => l?.materialName || l?.sku?.name || l?.item || l?.materialCode || "Inventory Item";
-  const getCode = (l) => l?.materialCode || l?.sku?.skuCode || l?.sku || "RM-STD-01";
-  const getLocation = (l) => l?.location || l?.zone || (l?.locationBin ? `${l.locationBin.aisle}-${l.locationBin.rack}` : "Warehouse Bay 2");
-  const getStatus = (l) => l?.qaStatus || l?.status || "Approved / Released";
+  const getLotId = (l) => {
+    if (!l) return "";
+    const val = l.lotNumber ?? l.lot_number ?? l.id ?? "LOT-REC-001";
+    return typeof val === "string" ? val : String(val || "");
+  };
+  const getName = (l) => {
+    if (!l) return "";
+    const val = l.materialName ?? l.material_name ?? l.item ?? l.name ?? l.materialCode ?? "Inventory Item";
+    if (typeof val === "object" && val !== null) return val.name || val.code || "Inventory Item";
+    return typeof val === "string" ? val : String(val || "");
+  };
+  const getCode = (l) => {
+    if (!l) return "";
+    const val = l.materialCode ?? l.material_code ?? l.sku ?? l.skuCode ?? l.code ?? "RM-STD-01";
+    if (typeof val === "object" && val !== null) return val.code || val.sku || val.name || "RM-STD-01";
+    return typeof val === "string" ? val : String(val || "");
+  };
+  const getLocation = (l) => {
+    if (!l) return "";
+    const val = l.location ?? l.zone ?? (l.locationBin ? `${l.locationBin.aisle}-${l.locationBin.rack}` : "Warehouse Bay");
+    if (typeof val === "object" && val !== null) return val.name || val.code || "Warehouse Bay";
+    return typeof val === "string" ? val : String(val || "");
+  };
+  const getStatus = (l) => {
+    if (!l) return "Approved / Released";
+    const val = l.qaStatus ?? l.status ?? "Approved / Released";
+    return typeof val === "string" ? val : String(val || "");
+  };
   const getTotalQty = (l) => Number(l?.quantity !== undefined ? l.quantity : l?.currentQuantity !== undefined ? l.currentQuantity : 0);
   const getReservedQty = (l) => Number(l?.reservedQuantity !== undefined ? l.reservedQuantity : Math.round(getTotalQty(l) * 0.1));
   const getAvailableQty = (l) => Math.max(0, getTotalQty(l) - getReservedQty(l));
-  const getUOM = (l) => l?.unit || l?.uom || "units";
+  const getUOM = (l) => (typeof l?.unit === "string" ? l.unit : (typeof l?.uom === "string" ? l.uom : "units"));
   const getExpiry = (l) => l?.expiryDate ? (typeof l.expiryDate === "string" ? l.expiryDate.split("T")[0] : new Date(l.expiryDate).toISOString().split("T")[0]) : "2027-12-31";
 
   const filteredLots = (lots || []).filter((l) => {
-    const q = searchQuery.toLowerCase();
-    const id = String(getLotId(l)).toLowerCase();
-    const name = String(getName(l)).toLowerCase();
-    const code = String(getCode(l)).toLowerCase();
-    const loc = String(getLocation(l)).toLowerCase();
+    if (!l) return false;
+    const q = (searchQuery || "").toLowerCase();
+    const id = String(getLotId(l) || "").toLowerCase();
+    const name = String(getName(l) || "").toLowerCase();
+    const code = String(getCode(l) || "").toLowerCase();
+    const loc = String(getLocation(l) || "").toLowerCase();
 
     const matchesSearch = id.includes(q) || name.includes(q) || code.includes(q) || loc.includes(q);
     const matchesCat = categoryFilter === "ALL" || (l.category || "") === categoryFilter;

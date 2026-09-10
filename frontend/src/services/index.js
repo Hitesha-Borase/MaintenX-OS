@@ -11,4 +11,5 @@ export { dashboardService } from "./dashboardService";
 export { adminService } from "./adminService";
 export { notificationsService } from "./notificationsService";
 export { executiveService } from "./executiveService";
+export { ciService } from "./ciService";
 

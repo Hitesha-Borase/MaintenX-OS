@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   FileSpreadsheet,
   Download,
@@ -21,10 +21,15 @@ import { Button } from "../../components/common/Button";
 import { StatCard } from "../../components/common/StatCard";
 import { useCMMS } from "../../context/CMMSContext";
 import { useApp } from "../../context/AppContext";
+import maintenanceService from "../../services/maintenanceService";
 
 export function ReportsPage() {
   const { assets, workOrders, breakdowns, pmSchedules, spareParts, calibrations } = useCMMS();
   const { addToast } = useApp();
+
+  useEffect(() => {
+    maintenanceService.getWorkOrders().catch((err) => console.warn("Reports source load:", err.message));
+  }, []);
 
   const [selectedDateRange, setSelectedDateRange] = useState("Month");
   const [selectedFormat, setSelectedFormat] = useState("CSV");

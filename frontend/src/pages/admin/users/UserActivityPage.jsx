@@ -16,6 +16,7 @@ import { Badge } from "../../../components/common/Badge";
 import { Button } from "../../../components/common/Button";
 import { StatCard } from "../../../components/common/StatCard";
 import { useAdmin } from "../../../context/AdminContext";
+import adminService from "../../../services/adminService";
 
 export function UserActivityPage() {
   const { activityLogs = [], fetchActivityLogs } = useAdmin();
@@ -23,6 +24,7 @@ export function UserActivityPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
+    adminService.getActivityLogs(searchQuery).catch((err) => console.warn("Activity logs load:", err.message));
     if (fetchActivityLogs) {
       fetchActivityLogs(searchQuery);
     }

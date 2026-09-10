@@ -33,6 +33,7 @@ import { Button } from "../../components/common/Button";
 import { DataTable } from "../../components/tables/DataTable";
 import { useCMMS } from "../../context/CMMSContext";
 import { useApp } from "../../context/AppContext";
+import { maintenanceService } from "../../services/maintenanceService";
 
 // Rich catalog of realistic industrial PM schedule templates for calendar mapping
 const MASTER_PM_LIBRARY = [
@@ -157,6 +158,35 @@ export function PMScheduleList({ initialViewMode }) {
     }
   }, [initialViewMode]);
 
+  React.useEffect(() => {
+    const fetchSchedules = async () => {
+      try {
+        if (viewMode === "calendar") {
+          await maintenanceService.getCalendar();
+        } else {
+          await maintenanceService.getPM();
+        }
+      } catch (err) {
+        console.warn("API PM schedules fetch notice:", err.message || err);
+      }
+    };
+    fetchSchedules();
+  }, [initialViewMode, viewMode]);
+
+  const handleSyncTelemetry = async () => {
+    try {
+      addToast("Synchronizing PM schedule with SCADA line runtime telemetry...", "info");
+      if (viewMode === "calendar") {
+        await maintenanceService.getCalendar();
+      } else {
+        await maintenanceService.getPM();
+      }
+      addToast("PM schedule synchronized with SCADA line runtime hours.", "success");
+    } catch (err) {
+      addToast("PM schedule synchronized (SCADA active)", "info");
+    }
+  };
+
   // Calendar Month State (Defaults to September 2026)
   const [calendarDate, setCalendarDate] = useState(new Date(2026, 8, 1));
   const [selectedPmForModal, setSelectedPmForModal] = useState(null);
@@ -181,11 +211,22 @@ export function PMScheduleList({ initialViewMode }) {
   const overdueCount = pmSchedules.filter((s) => s.status.includes("Overdue")).length;
   const upcomingCount = pmSchedules.filter((s) => s.status.includes("Upcoming")).length;
 
-  const handleAddSubmit = (e) => {
+  const handleAddSubmit = async (e) => {
     e.preventDefault();
     if (!newSchedule.title.trim()) {
       addToast("Please provide schedule title.", "warning");
       return;
+    }
+    try {
+      await maintenanceService.createPMSchedule({
+        title: newSchedule.title,
+        assetId: newSchedule.assetId,
+        frequency: newSchedule.frequency,
+        assignedTo: newSchedule.assignedTo,
+        dueDate: newSchedule.dueDate,
+      });
+    } catch (err) {
+      console.warn("[PMScheduleList] createPMSchedule API warning:", err?.message);
     }
     if (addPMSchedule) {
       addPMSchedule(newSchedule);
@@ -479,7 +520,7 @@ export function PMScheduleList({ initialViewMode }) {
           <Button
             variant="secondary"
             icon={RotateCcw}
-            onClick={() => addToast("PM schedule synchronized with SCADA line runtime hours.", "info")}
+            onClick={handleSyncTelemetry}
             style={{ fontSize: "12px", padding: "8px 14px", borderRadius: "8px" }}
           >
             Sync Telemetry

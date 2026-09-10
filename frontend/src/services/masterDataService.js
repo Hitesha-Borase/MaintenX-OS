@@ -228,12 +228,28 @@ export const masterDataService = {
     return apiClient.post("/master-data/sanitation-classes", sanData);
   },
 
+  async updateSanitationClass(id, sanData) {
+    return apiClient.put(`/master-data/sanitation-classes/${enc(id)}`, sanData);
+  },
+
+  async deleteSanitationClass(id) {
+    return apiClient.delete(`/master-data/sanitation-classes/${enc(id)}`);
+  },
+
   async getAllergenRules() {
     return apiClient.get("/master-data/allergen-rules");
   },
 
   async createAllergenRule(allergenData) {
     return apiClient.post("/master-data/allergen-rules", allergenData);
+  },
+
+  async updateAllergenRule(id, allergenData) {
+    return apiClient.put(`/master-data/allergen-rules/${enc(id)}`, allergenData);
+  },
+
+  async deleteAllergenRule(id) {
+    return apiClient.delete(`/master-data/allergen-rules/${enc(id)}`);
   },
 
   // 14. SKUs, BOMs, Assets, Staff, Specs
@@ -245,13 +261,40 @@ export const masterDataService = {
     return apiClient.post("/master-data/skus", skuData);
   },
 
+  async updateSku(id, skuData) {
+    return apiClient.put(`/master-data/skus/${enc(id)}`, skuData);
+  },
+
+  async deleteSku(id) {
+    return apiClient.delete(`/master-data/skus/${enc(id)}`);
+  },
+
+
   async getBoms() {
     return apiClient.get("/master-data/boms");
   },
 
+  async createBom(bomData) {
+    return apiClient.post("/master-data/boms", bomData);
+  },
+
+  async updateBom(id, bomData) {
+    return apiClient.put(`/master-data/boms/${enc(id)}`, bomData);
+  },
+
+  async deleteBom(id) {
+    return apiClient.delete(`/master-data/boms/${enc(id)}`);
+  },
+
+
   async getAssets(plantId) {
     const query = plantId && plantId !== "ALL" ? `?plantId=${enc(plantId)}` : "";
     return apiClient.get(`/master-data/assets${query}`);
+  },
+
+  async getAssetDetails(plantId) {
+    const query = plantId && plantId !== "ALL" ? `?plantId=${enc(plantId)}` : "";
+    return apiClient.get(`/master-data/asset-details${query}`);
   },
 
   async getStaff(plantId) {
@@ -261,6 +304,41 @@ export const masterDataService = {
 
   async getQualitySpecs() {
     return apiClient.get("/master-data/quality-specs");
+  },
+
+  // 15. Labour Standards
+  async getLabourStandards() {
+    return apiClient.get("/master-data/labour-standards");
+  },
+
+  async createLabourStandard(data) {
+    return apiClient.post("/master-data/labour-standards", data);
+  },
+
+  async updateLabourStandard(id, data) {
+    return apiClient.put(`/master-data/labour-standards/${enc(id)}`, data);
+  },
+
+  async deleteLabourStandard(id) {
+    return apiClient.delete(`/master-data/labour-standards/${enc(id)}`);
+  },
+
+  // 16. Storage Resources & Warehouse Locations
+  async getStorageResources(plantId) {
+    const query = plantId && plantId !== "ALL" ? `?plantId=${enc(plantId)}` : "";
+    return apiClient.get(`/master-data/work-centers${query}`);
+  },
+
+  async createStorageResource(data) {
+    return apiClient.post("/master-data/work-centers", data);
+  },
+
+  async updateStorageResource(id, data) {
+    return apiClient.put(`/master-data/work-centers/${enc(id)}`, data);
+  },
+
+  async deleteStorageResource(id) {
+    return apiClient.delete(`/master-data/work-centers/${enc(id)}`);
   },
 };
 

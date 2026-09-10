@@ -28,11 +28,19 @@ import { Button } from "../../components/common/Button";
 import { useCI } from "../../context/CIContext";
 import { useMasterData } from "../../context/MasterDataContext";
 import { useApp } from "../../context/AppContext";
+import { ciService } from "../../services/ciService";
 
 export function CIDashboard() {
   const navigate = useNavigate();
   const { addToast } = useApp();
   const { currentPlant } = useMasterData();
+
+  // Trigger live GET /api/v1/ci/dashboard/summary and GET /api/v1/ci/projects on mount
+  React.useEffect(() => {
+    const plantId = currentPlant?.id || "PLT-01";
+    ciService.getDashboardSummary(plantId).catch((err) => console.warn("Live CI summary fetch:", err.message));
+    ciService.getProjects(plantId).catch((err) => console.warn("Live CI projects fetch:", err.message));
+  }, [currentPlant]);
   const {
     fleetMTBF,
     fleetMTTR,
@@ -60,14 +68,14 @@ export function CIDashboard() {
     description: ""
   });
 
-  const handleCreateRca = (e) => {
+  const handleCreateRca = async (e) => {
     e.preventDefault();
     if (!rcaForm.title.trim()) {
       addToast("Please provide an investigation title.", "warning");
       return;
     }
 
-    const newId = initiateRCA("AST-002", null, rcaForm.title);
+    const newId = await initiateRCA("AST-002", null, rcaForm.title);
     setIsCreateRcaOpen(false);
     setRcaForm({
       title: "",
