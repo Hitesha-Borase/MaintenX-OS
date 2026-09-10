@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Wrench,
   Activity,
@@ -35,8 +35,13 @@ import { ParetoChart } from "../../components/charts/ParetoChart";
 import { useCMMS } from "../../context/CMMSContext";
 import { useApp } from "../../context/AppContext";
 import { useNavigate } from "react-router-dom";
+import maintenanceService from "../../services/maintenanceService";
 
 export function MaintenanceDashboard() {
+  useEffect(() => {
+    maintenanceService.getWorkOrders().catch((err) => console.warn("Work orders load:", err.message));
+    maintenanceService.getPMSchedules().catch((err) => console.warn("PM schedules load:", err.message));
+  }, []);
   const {
     assets = [],
     workOrders = [],

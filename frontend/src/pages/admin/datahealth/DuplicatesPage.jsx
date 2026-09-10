@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   Copy,
   CheckCircle2,
@@ -17,6 +17,7 @@ import { Button } from "../../../components/common/Button";
 import { StatCard } from "../../../components/common/StatCard";
 import { useMasterData } from "../../../context/MasterDataContext";
 import { useApp } from "../../../context/AppContext";
+import adminService from "../../../services/adminService";
 
 export function DuplicatesPage() {
   const { dataHealthStats = {} } = useMasterData();
@@ -28,6 +29,15 @@ export function DuplicatesPage() {
   ]);
 
   const [searchQuery, setSearchQuery] = useState("");
+
+  useEffect(() => {
+    adminService.getDataHealthScan()
+      .then((res) => {
+        const data = res?.data?.duplicates || res?.duplicates;
+        if (Array.isArray(data) && data.length > 0) setDuplicates(data);
+      })
+      .catch((err) => console.warn("Data health scan (duplicates):", err.message));
+  }, []);
 
   const pendingCount = duplicates.filter((d) => d.status.includes("Duplicate")).length;
 
@@ -55,6 +65,7 @@ export function DuplicatesPage() {
       );
     });
   }, [duplicates, searchQuery]);
+
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%", maxWidth: "1200px", margin: "0 auto", minWidth: 0 }}>

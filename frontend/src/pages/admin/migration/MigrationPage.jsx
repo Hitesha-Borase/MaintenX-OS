@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   UploadCloud,
   FileSpreadsheet,
@@ -27,10 +27,15 @@ import { Button } from "../../../components/common/Button";
 import { StatCard } from "../../../components/common/StatCard";
 import { useMasterData } from "../../../context/MasterDataContext";
 import { useApp } from "../../../context/AppContext";
+import masterDataService from "../../../services/masterDataService";
 
 export function MigrationPage() {
   const { migrationStats = {}, executeMigration, auditLogs = [], skus = [] } = useMasterData();
   const { addToast } = useApp();
+
+  useEffect(() => {
+    masterDataService.getSkus().catch((err) => console.warn("Migration SKUs load:", err.message));
+  }, []);
 
   // Wizard active state: 0 = Dashboard, 1 = Source, 2 = Mapping, 3 = Validation, 4 = Duplicate Review, 5 = Summary
   const [wizardStep, setWizardStep] = useState(0);

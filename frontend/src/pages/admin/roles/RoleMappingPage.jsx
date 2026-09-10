@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Users,
   ShieldCheck,
@@ -14,10 +14,16 @@ import { Button } from "../../../components/common/Button";
 import { StatCard } from "../../../components/common/StatCard";
 import { useAdmin } from "../../../context/AdminContext";
 import { useApp } from "../../../context/AppContext";
+import adminService from "../../../services/adminService";
 
 export function RoleMappingPage() {
   const { users = [], updateUserRole, roles = [] } = useAdmin();
   const { addToast } = useApp();
+
+  useEffect(() => {
+    adminService.getRoles().catch((err) => console.warn("Roles load:", err.message));
+    adminService.getUsers().catch((err) => console.warn("Users load:", err.message));
+  }, []);
 
   const handleRoleChange = async (userId, newRole, userName) => {
     try {

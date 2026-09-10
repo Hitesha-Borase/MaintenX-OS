@@ -25,11 +25,17 @@ import { StatCard } from "../../../components/common/StatCard";
 import { useAdmin } from "../../../context/AdminContext";
 import { useMasterData } from "../../../context/MasterDataContext";
 import { useApp } from "../../../context/AppContext";
+import { adminService } from "../../../services/adminService";
 
 export function UsersPage() {
   const { users = [], addUser, updateUserStatus } = useAdmin();
   const { plants = [], departments = [] } = useMasterData();
   const { addToast } = useApp();
+
+  // Trigger live GET /api/v1/admin/users on mount
+  React.useEffect(() => {
+    adminService.getUsers().catch((err) => console.warn("Live users fetch:", err.message));
+  }, []);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("ALL");

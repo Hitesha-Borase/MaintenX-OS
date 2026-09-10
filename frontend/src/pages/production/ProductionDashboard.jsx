@@ -28,12 +28,18 @@ import { Button } from "../../components/common/Button";
 import { useProduction } from "../../context/ProductionContext";
 import { useMasterData } from "../../context/MasterDataContext";
 import { useApp } from "../../context/AppContext";
+import productionService from "../../services/productionService";
 
 export function ProductionDashboard() {
   const { productionOrders = [], updateOrderStatus, batches = [], shiftHandoffs = [], addShiftHandoff, setProductionOrders } = useProduction();
   const { lines = [] } = useMasterData();
   const { addToast } = useApp();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    productionService.getOrders().catch((err) => console.warn("Production orders load:", err.message));
+    productionService.getMachines().catch((err) => console.warn("Production machines load:", err.message));
+  }, []);
 
   const [isHandoffModalOpen, setIsHandoffModalOpen] = useState(false);
   const [handoffNotes, setHandoffNotes] = useState("");

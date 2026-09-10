@@ -25,10 +25,16 @@ import { Badge } from "../../../components/common/Badge";
 import { Button } from "../../../components/common/Button";
 import { useCI } from "../../../context/CIContext";
 import { useApp } from "../../../context/AppContext";
+import { ciService } from "../../../services/ciService";
 
 export function CIProjects() {
   const navigate = useNavigate();
   const { addToast } = useApp();
+
+  // Trigger live GET /api/v1/ci/projects on mount
+  React.useEffect(() => {
+    ciService.getProjects().catch((err) => console.warn("Live projects fetch:", err.message));
+  }, []);
   const {
     ciProjects = [],
     createProject,

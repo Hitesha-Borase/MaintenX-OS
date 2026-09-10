@@ -16,18 +16,34 @@ import { Button } from "../../components/common/Button";
 import { StatCard } from "../../components/common/StatCard";
 import { AreaChart } from "../../components/charts/AreaChart";
 import { useApp } from "../../context/AppContext";
+import dashboardService from "../../services/dashboardService";
 
 export function KPIAnalyticsPage() {
-  const { addToast } = useApp();
-
-  const kpis = [
+  const { addToast, selectedPlant } = useApp();
+  const [kpis, setKpis] = React.useState([
     { title: "OTIF Customer Delivery", category: "Supply Chain", current: "98.6%", target: "98.0%", variance: "+0.6%", status: "Achieved" },
     { title: "Plant Conversion Cost", category: "Financial", current: "$0.082/unit", target: "$0.085/unit", variance: "-$0.003", status: "Achieved" },
     { title: "First-Pass Quality Yield", category: "Quality", current: "99.2%", target: "99.0%", variance: "+0.2%", status: "Achieved" },
     { title: "Overall Equipment Effectiveness (OEE)", category: "Manufacturing", current: "86.4%", target: "85.0%", variance: "+1.4%", status: "Achieved" },
     { title: "Energy Intensity (kWh/kL)", category: "Sustainability", current: "14.2 kWh", target: "15.0 kWh", variance: "-0.8 kWh", status: "Achieved" },
     { title: "Lost Time Injury Frequency (LTIFR)", category: "Safety", current: "0.00", target: "0.00", variance: "0.00", status: "Achieved" }
-  ];
+  ]);
+
+  React.useEffect(() => {
+    let isMounted = true;
+    async function loadKPIs() {
+      try {
+        const res = await dashboardService.getKPIs(selectedPlant?.id || "PLT-01");
+        if (res?.data && Array.isArray(res.data) && isMounted) {
+          setKpis(res.data);
+        }
+      } catch (err) {
+        console.warn("Using default KPIs:", err.message);
+      }
+    }
+    loadKPIs();
+    return () => { isMounted = false; };
+  }, [selectedPlant]);
 
   const handleExportCSV = () => {
     const headers = "KPI Metric,Category,Current Value,Target Benchmark,Variance,Status\n";

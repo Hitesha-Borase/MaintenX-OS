@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Layers,
   Search,
@@ -24,11 +24,21 @@ import { StatCard } from "../../components/common/StatCard";
 import { useProduction } from "../../context/ProductionContext";
 import { useMasterData } from "../../context/MasterDataContext";
 import { useApp } from "../../context/AppContext";
+import productionService from "../../services/productionService";
 
 export function ProductionOrdersPage() {
   const { productionOrders = [], updateOrderStatus, setProductionOrders } = useProduction();
   const { skus = [], lines = [] } = useMasterData();
   const { addToast } = useApp();
+
+  useEffect(() => {
+    productionService.getOrders().then((res) => {
+      const data = res?.data?.data || res?.data || res;
+      if (Array.isArray(data) && data.length > 0 && typeof setProductionOrders === "function") {
+        setProductionOrders(data);
+      }
+    }).catch((err) => console.warn("Orders load:", err.message));
+  }, [setProductionOrders]);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
@@ -50,24 +60,32 @@ export function ProductionOrdersPage() {
     activeShift: "Shift A (06:00 - 14:30)"
   });
 
-  const getProduced = (o) => o.producedQuantity ?? o.producedQty ?? 0;
-  const getTarget = (o) => o.targetQuantity ?? o.targetQty ?? 1;
-  const getName = (o) => o.productName ?? o.skuName ?? o.orderNumber ?? "Production Order";
-  const getCode = (o) => o.productCode ?? o.orderNumber ?? o.id;
+  const getProduced = (o) => o?.producedQuantity ?? o?.producedQty ?? 0;
+  const getTarget = (o) => o?.targetQuantity ?? o?.targetQty ?? 1;
+  const getName = (o) => o?.productName ?? o?.skuName ?? o?.orderNumber ?? "Production Order";
+  const getCode = (o) => o?.productCode ?? o?.orderNumber ?? o?.id;
+  const getLineName = (o) => {
+    if (!o) return "";
+    if (typeof o.line === "string") return o.line;
+    if (o.line && typeof o.line === "object") return o.line.name || o.line.lineCode || o.line.code || o.line.id || "";
+    if (typeof o.lineName === "string") return o.lineName;
+    return String(o.line || "");
+  };
 
   const filteredOrders = productionOrders.filter((order) => {
-    const name = getName(order).toLowerCase();
-    const id = (order.id || "").toLowerCase();
-    const line = (order.line || "").toLowerCase();
-    const q = searchQuery.toLowerCase();
+    if (!order) return false;
+    const name = String(getName(order) || "").toLowerCase();
+    const id = String(order.id || "").toLowerCase();
+    const line = String(getLineName(order) || "").toLowerCase();
+    const q = (searchQuery || "").toLowerCase();
 
     const matchesSearch = id.includes(q) || name.includes(q) || line.includes(q);
     const matchesStatus =
       statusFilter === "ALL" ||
       order.status === statusFilter ||
-      (statusFilter === "Running" && (order.status || "").toLowerCase().includes("run")) ||
-      (statusFilter === "Completed" && (order.status || "").toLowerCase().includes("comp")) ||
-      (statusFilter === "Paused" && (order.status || "").toLowerCase().includes("pause"));
+      (statusFilter === "Running" && String(order.status || "").toLowerCase().includes("run")) ||
+      (statusFilter === "Completed" && String(order.status || "").toLowerCase().includes("comp")) ||
+      (statusFilter === "Paused" && String(order.status || "").toLowerCase().includes("pause"));
 
     return matchesSearch && matchesStatus;
   });
@@ -278,7 +296,7 @@ export function ProductionOrdersPage() {
                         </span>
                       </td>
                       <td>
-                        <span style={{ fontSize: "12px", color: "var(--text-secondary)", fontWeight: 600 }}>{o.line}</span>
+                        <span style={{ fontSize: "12px", color: "var(--text-secondary)", fontWeight: 600 }}>{getLineName(o) || "Line 1"}</span>
                       </td>
                       <td>
                         <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--text-primary)" }}>
@@ -382,7 +400,7 @@ export function ProductionOrdersPage() {
                             <button
                               onClick={() => {
                                 updateOrderStatus(o.id, "Running");
-                                addToast(`Order ${o.id} is now Running on ${o.line}!`, "success");
+                                addToast(`Order ${o.id} is now Running on ${getLineName(o) || "Line"}!`, "success");
                               }}
                               style={{
                                 padding: "4px 8px",
@@ -579,7 +597,7 @@ export function ProductionOrdersPage() {
                 </div>
                 <div>
                   <span style={{ color: "var(--text-muted)", fontSize: "11px", display: "block" }}>Target Production Line</span>
-                  <strong style={{ color: "var(--text-primary)" }}>{selectedOrderDetails.line}</strong>
+                  <strong style={{ color: "var(--text-primary)" }}>{getLineName(selectedOrderDetails) || "Line 1"}</strong>
                   <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>{selectedOrderDetails.plant || "Indore Facility"}</div>
                 </div>
                 <div>

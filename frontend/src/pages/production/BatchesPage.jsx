@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Layers,
   Search,
@@ -29,12 +29,17 @@ import { useProduction } from "../../context/ProductionContext";
 import { useQuality } from "../../context/QualityContext";
 import { useApp } from "../../context/AppContext";
 import { useNavigate } from "react-router-dom";
+import productionService from "../../services/productionService";
 
 export function BatchesPage() {
   const { batches = [], releaseBatchQA, advanceBatchStep } = useProduction();
   const { releaseBatchQA: qualityReleaseBatch } = useQuality() || {};
   const { addToast } = useApp();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    productionService.getBatches().catch((err) => console.warn("Batches load:", err.message));
+  }, []);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedBatchForExecution, setSelectedBatchForExecution] = useState(null);

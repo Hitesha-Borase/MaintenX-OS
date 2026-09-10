@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   Clock,
   Archive,
@@ -17,6 +17,7 @@ import { Button } from "../../../components/common/Button";
 import { StatCard } from "../../../components/common/StatCard";
 import { useMasterData } from "../../../context/MasterDataContext";
 import { useApp } from "../../../context/AppContext";
+import adminService from "../../../services/adminService";
 
 export function StaleRecordsPage() {
   const { dataHealthStats = {} } = useMasterData();
@@ -29,6 +30,15 @@ export function StaleRecordsPage() {
   ]);
 
   const [searchQuery, setSearchQuery] = useState("");
+
+  useEffect(() => {
+    adminService.getDataHealthScan()
+      .then((res) => {
+        const data = res?.data?.staleRecords || res?.staleRecords;
+        if (Array.isArray(data) && data.length > 0) setStaleRecords(data);
+      })
+      .catch((err) => console.warn("Data health scan (stale):", err.message));
+  }, []);
 
   const staleCount = staleRecords.filter((s) => !s.status.includes("Archived")).length;
 

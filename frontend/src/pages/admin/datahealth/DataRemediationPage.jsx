@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   HeartPulse,
   Wrench,
@@ -18,10 +18,15 @@ import { Button } from "../../../components/common/Button";
 import { StatCard } from "../../../components/common/StatCard";
 import { useMasterData } from "../../../context/MasterDataContext";
 import { useApp } from "../../../context/AppContext";
+import adminService from "../../../services/adminService";
 
 export function DataRemediationPage() {
   const { dataHealthStats = {} } = useMasterData();
   const { addToast } = useApp();
+
+  useEffect(() => {
+    adminService.getDataHealthScan().catch((err) => console.warn("Data health scan (remediation):", err.message));
+  }, []);
 
   const [isFixing, setIsFixing] = useState(false);
   const [remediationLog, setRemediationLog] = useState([

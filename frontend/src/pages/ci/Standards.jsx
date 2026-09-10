@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   FileText,
@@ -16,7 +16,8 @@ import {
   Layers,
   Sparkles,
   Eye,
-  Check
+  Check,
+  Trash2
 } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { Button } from "../../components/common/Button";
@@ -24,6 +25,7 @@ import { Badge } from "../../components/common/Badge";
 import { StatCard } from "../../components/common/StatCard";
 import { useCI } from "../../context/CIContext";
 import { useApp } from "../../context/AppContext";
+import ciService from "../../services/ciService";
 
 export function Standards() {
   const navigate = useNavigate();
@@ -31,9 +33,14 @@ export function Standards() {
   const {
     standards = [],
     createStandard,
+    deleteStandard,
     ciProjects = [],
     investigations = []
   } = useCI();
+
+  useEffect(() => {
+    ciService.getStandards().catch((err) => console.warn("Standards load:", err.message));
+  }, []);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTypeFilter, setSelectedTypeFilter] = useState("ALL");
@@ -59,14 +66,14 @@ export function Standards() {
     }, 100);
   };
 
-  const handleAddSOP = (e) => {
+  const handleAddSOP = async (e) => {
     e.preventDefault();
     if (!newSOP.title.trim()) {
       addToast("Please provide document title.", "warning");
       return;
     }
 
-    createStandard(newSOP);
+    await createStandard(newSOP);
     setNewSOP({
       title: "",
       type: "Controlled SOP",
@@ -327,6 +334,24 @@ export function Standards() {
                         }}
                       >
                         <Printer size={13} />
+                      </button>
+                      <button
+                        onClick={() => deleteStandard(d.id)}
+                        title="Delete / Archive Standard"
+                        style={{
+                          width: "30px",
+                          height: "30px",
+                          borderRadius: "6px",
+                          backgroundColor: "var(--bg-card-subtle)",
+                          color: "var(--text-muted)",
+                          border: "1px solid var(--border-subtle)",
+                          cursor: "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center"
+                        }}
+                      >
+                        <Trash2 size={13} />
                       </button>
                     </div>
                   </td>

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   ScanBarcode,
   CheckCircle2,
@@ -10,13 +10,18 @@ import {
   QrCode,
   Layers,
   ShieldCheck,
-  Zap
+  Zap,
+  Trash2,
+  AlertTriangle,
+  Smartphone,
+  Printer
 } from "lucide-react";
 import { Card } from "../../../components/common/Card";
 import { Badge } from "../../../components/common/Badge";
 import { Button } from "../../../components/common/Button";
 import { StatCard } from "../../../components/common/StatCard";
 import { useApp } from "../../../context/AppContext";
+import adminService from "../../../services/adminService";
 
 export function BarcodeIntegrationPage() {
   const { addToast } = useApp();
@@ -26,6 +31,16 @@ export function BarcodeIntegrationPage() {
     { id: "BC-02", standard: "2D DataMatrix (ISO/IEC 16022)", useCase: "Primary Direct Bottle Serialization", aiAppPrefix: "High-density micro barcode", status: "Active" },
     { id: "BC-03", standard: "QR Code (ISO/IEC 18004)", useCase: "Maintenance Asset Tagging & SOP Links", aiAppPrefix: "URL Deep Linking", status: "Active" }
   ]);
+
+  useEffect(() => {
+    adminService.getBarcodeFormats()
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setFormats(data);
+        }
+      })
+      .catch((err) => console.warn("Barcode formats load error:", err.message));
+  }, []);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -47,37 +62,45 @@ export function BarcodeIntegrationPage() {
     );
   });
 
-  const handleAddSubmit = (e) => {
+  const handleAddSubmit = async (e) => {
     e.preventDefault();
     if (!newFormat.standard.trim() || !newFormat.useCase.trim()) {
       addToast("Please provide symbology standard and application use case.", "warning");
       return;
     }
 
-    const created = {
-      id: `BC-0${formats.length + 1}`,
-      standard: newFormat.standard,
-      useCase: newFormat.useCase,
-      aiAppPrefix: newFormat.aiAppPrefix || "Custom String Payload",
-      status: "Active"
-    };
+    try {
+      const created = await adminService.createBarcodeFormat({
+        standard: newFormat.standard,
+        useCase: newFormat.useCase,
+        aiAppPrefix: newFormat.aiAppPrefix || "Custom String Payload",
+        status: "Active"
+      });
 
-    setFormats([...formats, created]);
-    addToast(`Symbology "${created.id}" configured successfully!`, "success");
-    setIsModalOpen(false);
-    setNewFormat({ standard: "", useCase: "", aiAppPrefix: "GS1 AI Format" });
+      setFormats((prev) => [...prev, created]);
+      addToast(`Symbology "${created.id}" configured successfully!`, "success");
+      setIsModalOpen(false);
+      setNewFormat({ standard: "", useCase: "", aiAppPrefix: "GS1 AI Format" });
+    } catch (err) {
+      addToast("Failed to create barcode symbology: " + err.message, "danger");
+    }
   };
 
-  const handleEditSubmit = (e) => {
+  const handleEditSubmit = async (e) => {
     e.preventDefault();
     if (!editingFormat.standard.trim() || !editingFormat.useCase.trim()) {
       addToast("Please provide symbology standard and application use case.", "warning");
       return;
     }
 
-    setFormats(formats.map((f) => (f.id === editingFormat.id ? editingFormat : f)));
-    addToast(`Symbology ${editingFormat.id} updated successfully!`, "success");
-    setEditingFormat(null);
+    try {
+      const updated = await adminService.updateBarcodeFormat(editingFormat.id, editingFormat);
+      setFormats((prev) => prev.map((f) => (f.id === editingFormat.id ? (updated || editingFormat) : f)));
+      addToast(`Symbology ${editingFormat.id} updated successfully!`, "success");
+      setEditingFormat(null);
+    } catch (err) {
+      addToast("Failed to update symbology: " + err.message, "danger");
+    }
   };
 
   return (

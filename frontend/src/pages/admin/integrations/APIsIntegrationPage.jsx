@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   KeyRound,
   Plus,
@@ -18,6 +18,7 @@ import { Badge } from "../../../components/common/Badge";
 import { Button } from "../../../components/common/Button";
 import { StatCard } from "../../../components/common/StatCard";
 import { useApp } from "../../../context/AppContext";
+import adminService from "../../../services/adminService";
 
 export function APIsIntegrationPage() {
   const { addToast } = useApp();
@@ -26,6 +27,16 @@ export function APIsIntegrationPage() {
     { id: "KEY-01", name: "SCADA Production Telemetry Ingest", keyMasked: "mfg_live_9482••••••••••••••••", rateLimit: "1,000 req/min", created: "2026-08-15", status: "Active" },
     { id: "KEY-02", name: "Warehouse WMS Pallet Sync", keyMasked: "wms_live_7104••••••••••••••••", rateLimit: "250 req/min", created: "2026-08-20", status: "Active" }
   ]);
+
+  useEffect(() => {
+    adminService.getApiKeys()
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setApiKeys(data);
+        }
+      })
+      .catch((err) => console.warn("API keys load error:", err.message));
+  }, []);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -42,32 +53,37 @@ export function APIsIntegrationPage() {
     );
   });
 
-  const handleCreateKey = (e) => {
+  const handleCreateKey = async (e) => {
     e.preventDefault();
     if (!newKeyName.trim()) {
       addToast("Please provide application name.", "warning");
       return;
     }
-    const created = {
-      id: `KEY-0${apiKeys.length + 1}`,
-      name: newKeyName,
-      keyMasked: `key_live_${Math.floor(1000 + Math.random() * 9000)}••••••••••••••••`,
-      rateLimit: newKeyRate || "500 req/min",
-      created: new Date().toISOString().substring(0, 10),
-      status: "Active"
-    };
-    setApiKeys([...apiKeys, created]);
-    addToast(`API Key "${created.name}" generated!`, "success");
-    setIsModalOpen(false);
-    setNewKeyName("");
-    setNewKeyRate("500 req/min");
+    try {
+      const created = await adminService.createApiKey({
+        name: newKeyName,
+        rateLimit: newKeyRate || "500 req/min"
+      });
+      setApiKeys((prev) => [...prev, created]);
+      addToast(`API Key "${created.name}" generated!`, "success");
+      setIsModalOpen(false);
+      setNewKeyName("");
+      setNewKeyRate("500 req/min");
+    } catch (err) {
+      addToast("Failed to create API key: " + err.message, "danger");
+    }
   };
 
-  const handleConfirmRevoke = () => {
+  const handleConfirmRevoke = async () => {
     if (!deletingKey) return;
-    setApiKeys(apiKeys.filter((k) => k.id !== deletingKey.id));
-    addToast(`API Key ${deletingKey.id} (${deletingKey.name}) revoked and deleted.`, "warning");
-    setDeletingKey(null);
+    try {
+      await adminService.revokeApiKey(deletingKey.id);
+      setApiKeys((prev) => prev.filter((k) => k.id !== deletingKey.id));
+      addToast(`API Key ${deletingKey.id} (${deletingKey.name}) revoked and deleted.`, "warning");
+      setDeletingKey(null);
+    } catch (err) {
+      addToast("Failed to revoke API key: " + err.message, "danger");
+    }
   };
 
   return (

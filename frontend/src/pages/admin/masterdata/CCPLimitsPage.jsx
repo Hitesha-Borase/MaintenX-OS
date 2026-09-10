@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   ShieldAlert,
   Plus,
@@ -18,10 +18,15 @@ import { Button } from "../../../components/common/Button";
 import { StatCard } from "../../../components/common/StatCard";
 import { useMasterData } from "../../../context/MasterDataContext";
 import { useApp } from "../../../context/AppContext";
+import masterDataService from "../../../services/masterDataService";
 
 export function CCPLimitsPage() {
   const { qualitySpecs = [], operations = [], plants = [], activePlantId } = useMasterData();
   const { addToast } = useApp();
+
+  useEffect(() => {
+    masterDataService.getQualitySpecs().catch((err) => console.warn("Quality specs load:", err.message));
+  }, []);
 
   const [ccps, setCcps] = useState([
     { ccpNumber: "CCP-1", processStep: "Thermal Pasteurization Hold", hazard: "Pathogen Survival (Microbial)", criticalLimit: "≥ 72.0°C for ≥ 15.0 seconds", autoDivertAction: "Automatic Flow Divert Valve to Balance Tank", status: "Critical Mandatory" },

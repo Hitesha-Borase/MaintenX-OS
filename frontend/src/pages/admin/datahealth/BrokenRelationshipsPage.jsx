@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   HeartPulse,
   CheckCircle2,
@@ -18,6 +18,7 @@ import { Button } from "../../../components/common/Button";
 import { StatCard } from "../../../components/common/StatCard";
 import { useMasterData } from "../../../context/MasterDataContext";
 import { useApp } from "../../../context/AppContext";
+import adminService from "../../../services/adminService";
 
 export function BrokenRelationshipsPage() {
   const { dataHealthStats = {} } = useMasterData();
@@ -29,6 +30,15 @@ export function BrokenRelationshipsPage() {
   ]);
 
   const [searchQuery, setSearchQuery] = useState("");
+
+  useEffect(() => {
+    adminService.getDataHealthScan()
+      .then((res) => {
+        const data = res?.data?.brokenRelationships || res?.brokenRelationships;
+        if (Array.isArray(data) && data.length > 0) setBrokenRels(data);
+      })
+      .catch((err) => console.warn("Data health scan (broken rels):", err.message));
+  }, []);
 
   const unlinkedCount = brokenRels.filter((b) => b.status === "Unlinked").length;
 

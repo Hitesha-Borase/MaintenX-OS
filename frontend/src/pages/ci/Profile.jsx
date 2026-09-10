@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   User,
@@ -19,10 +19,15 @@ import { Card } from "../../components/common/Card";
 import { Badge } from "../../components/common/Badge";
 import { Button } from "../../components/common/Button";
 import { useApp } from "../../context/AppContext";
+import ciService from "../../services/ciService";
 
 export function Profile() {
   const navigate = useNavigate();
   const { addToast } = useApp();
+
+  useEffect(() => {
+    ciService.getDashboardSummary().catch((err) => console.warn("Profile sync:", err.message));
+  }, []);
 
   const [profile, setProfile] = useState({
     name: "Alexander Vance",

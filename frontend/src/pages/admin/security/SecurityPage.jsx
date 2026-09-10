@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Lock,
   ShieldCheck,
@@ -16,9 +16,14 @@ import { Badge } from "../../../components/common/Badge";
 import { Button } from "../../../components/common/Button";
 import { StatCard } from "../../../components/common/StatCard";
 import { useApp } from "../../../context/AppContext";
+import adminService from "../../../services/adminService";
 
 export function SecurityPage() {
   const { addToast } = useApp();
+
+  useEffect(() => {
+    adminService.getRoles().catch((err) => console.warn("Security roles load:", err.message));
+  }, []);
 
   const [securityConfig, setSecurityConfig] = useState({
     enforceMFA: true,

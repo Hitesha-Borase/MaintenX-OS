@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   FileCheck,
@@ -15,7 +15,8 @@ import {
   Plus,
   BarChart3,
   Search,
-  Filter
+  Filter,
+  Calendar
 } from "lucide-react";
 import { Card } from "../../../components/common/Card";
 import { Button } from "../../../components/common/Button";
@@ -23,18 +24,22 @@ import { Badge } from "../../../components/common/Badge";
 import { StatCard } from "../../../components/common/StatCard";
 import { useCI } from "../../../context/CIContext";
 import { useApp } from "../../../context/AppContext";
+import ciService from "../../../services/ciService";
 
 export function EffectivenessVerification() {
   const navigate = useNavigate();
   const { addToast } = useApp();
-  const { capaActions = [], updateCapaStatus } = useCI();
+  const { capaActions = [], verifyCapaEffectiveness, updateCapaStatus } = useCI();
+
+  useEffect(() => {
+    ciService.getCapaActions().catch((err) => console.warn("CAPA actions load:", err.message));
+  }, []);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
 
-  const handleVerify = (id) => {
-    updateCapaStatus(id, "Verified", "Effectiveness verified under 30-day production run");
-    addToast(`CAPA ${id} formally verified as Effective and Certified!`, "success");
+  const handleVerify = async (id) => {
+    await verifyCapaEffectiveness(id, "Effectiveness verified under 30-day production run: zero recurrence observed");
   };
 
   const handleExportCSV = () => {

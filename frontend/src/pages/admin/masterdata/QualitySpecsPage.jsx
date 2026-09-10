@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   ShieldCheck,
   Plus,
@@ -23,10 +23,15 @@ import { RevisionHistoryModal } from "../../../components/common/RevisionHistory
 import { ApprovalWorkflowModal } from "../../../components/common/ApprovalWorkflowModal";
 import { useMasterData } from "../../../context/MasterDataContext";
 import { useApp } from "../../../context/AppContext";
+import masterDataService from "../../../services/masterDataService";
 
 export function QualitySpecsPage() {
   const { qualitySpecs = [], addQualitySpec, updateQualitySpec, approveQualitySpec, rejectQualitySpec, skus = [] } = useMasterData();
   const { addToast } = useApp();
+
+  useEffect(() => {
+    masterDataService.getQualitySpecs().catch((err) => console.warn("Quality specs load:", err.message));
+  }, []);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [skuFilter, setSkuFilter] = useState("ALL");

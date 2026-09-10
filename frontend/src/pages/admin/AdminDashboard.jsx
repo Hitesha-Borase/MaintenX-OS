@@ -104,18 +104,8 @@ export function AdminDashboard() {
 
     setIsProvisioning(true);
     try {
-      const res = await adminService.provisionUser(formData);
-      if (addUser) {
-        addUser({
-          id: res.id,
-          name: res.name || formData.name,
-          email: res.email || formData.email,
-          role: res.role || formData.role,
-          department: res.department || formData.department,
-          plant: res.plant || formData.plant,
-          status: res.status || formData.status
-        });
-      }
+      // addUser from AdminContext handles the API call — do NOT call adminService.provisionUser separately
+      const res = await addUser(formData);
       addToast(`New user ${formData.name} (${formData.role}) successfully provisioned into PostgreSQL Database!`, "success");
       setIsProvisionModalOpen(false);
       setFormData({

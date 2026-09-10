@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   FileText,
   Search,
@@ -19,10 +19,15 @@ import { Button } from "../../../components/common/Button";
 import { StatCard } from "../../../components/common/StatCard";
 import { useMasterData } from "../../../context/MasterDataContext";
 import { useApp } from "../../../context/AppContext";
+import adminService from "../../../services/adminService";
 
 export function AuditLogsPage() {
   const { auditLogs = [] } = useMasterData();
   const { addToast } = useApp();
+
+  useEffect(() => {
+    adminService.getActivityLogs().catch((err) => console.warn("Audit logs load:", err.message));
+  }, []);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [actionFilter, setActionFilter] = useState("ALL");

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   Users,
   Plus,
@@ -19,16 +19,26 @@ import { Button } from "../../../components/common/Button";
 import { StatCard } from "../../../components/common/StatCard";
 import { useMasterData } from "../../../context/MasterDataContext";
 import { useApp } from "../../../context/AppContext";
+import masterDataService from "../../../services/masterDataService";
 
 export function LabourStandardsPage() {
-  const { lines = [], employees = [], plants = [], activePlantId } = useMasterData();
+  const {
+    labourStandards = [],
+    addLabourStandard,
+    updateLabourStandard,
+    deleteLabourStandard,
+    lines = [],
+    employees = [],
+    plants = [],
+    activePlantId
+  } = useMasterData();
   const { addToast } = useApp();
 
-  const [standards, setStandards] = useState([
-    { id: "LBR-01", lineId: "LIN-01", lineName: "Line 1 — Aseptic Bottling", standardCrew: 10, stdLaborHoursPer1kUnits: 2.38, directCostPerHour: "$24.50", status: "Active" },
-    { id: "LBR-02", lineId: "LIN-02", lineName: "Line 2 — Formulation & Pasteurizer", standardCrew: 6, stdLaborHoursPer1kUnits: 1.85, directCostPerHour: "$28.00", status: "Active" },
-    { id: "LBR-03", lineId: "LIN-03", lineName: "Line 3 — Canning Line", standardCrew: 8, stdLaborHoursPer1kUnits: 2.15, directCostPerHour: "$24.50", status: "Active" }
-  ]);
+  useEffect(() => {
+    masterDataService.getLabourStandards().catch((err) => console.warn("Labour standards load:", err.message));
+  }, []);
+
+  const standards = labourStandards;
 
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -39,6 +49,15 @@ export function LabourStandardsPage() {
     stdLaborHoursPer1kUnits: 2.0,
     directCostPerHour: "$25.00"
   });
+
+  const avgManningCost = useMemo(() => {
+    if (!standards.length) return "$0.00";
+    const sum = standards.reduce((acc, s) => {
+      const num = parseFloat((s.directCostPerHour || "").replace(/[^0-9.]/g, "")) || 0;
+      return acc + num;
+    }, 0);
+    return `$${(sum / standards.length).toFixed(2)}`;
+  }, [standards]);
 
   const totalCrew = useMemo(() => standards.reduce((sum, s) => sum + (s.standardCrew || 0), 0), [standards]);
 
@@ -56,9 +75,8 @@ export function LabourStandardsPage() {
 
   const handleAddSubmit = (e) => {
     e.preventDefault();
-    const selLine = lines.find((l) => l.lineId === newStandard.lineId);
+    const selLine = lines.find((l) => l.lineId === newStandard.lineId || l.id === newStandard.lineId);
     const created = {
-      id: `LBR-0${standards.length + 1}`,
       lineId: newStandard.lineId,
       lineName: selLine ? selLine.name : "Production Line",
       standardCrew: Number(newStandard.standardCrew) || 8,
@@ -67,7 +85,7 @@ export function LabourStandardsPage() {
       status: "Active"
     };
 
-    setStandards([...standards, created]);
+    addLabourStandard(created);
     addToast(`Labour standard created for ${created.lineName}!`, "success");
     setIsModalOpen(false);
     setNewStandard({
@@ -80,27 +98,23 @@ export function LabourStandardsPage() {
 
   const handleEditSubmit = (e) => {
     e.preventDefault();
-    const selLine = lines.find((l) => l.lineId === editingStandard.lineId);
-    setStandards(
-      standards.map((s) =>
-        s.id === editingStandard.id
-          ? {
-              ...editingStandard,
-              lineName: selLine ? selLine.name : editingStandard.lineName,
-              standardCrew: Number(editingStandard.standardCrew) || 8,
-              stdLaborHoursPer1kUnits: Number(editingStandard.stdLaborHoursPer1kUnits) || 2.0
-            }
-          : s
-      )
-    );
-    addToast(`Labour standard for ${editingStandard.lineName} updated!`, "success");
+    const selLine = lines.find((l) => l.lineId === editingStandard.lineId || l.id === editingStandard.lineId);
+    const updated = {
+      ...editingStandard,
+      lineName: selLine ? selLine.name : editingStandard.lineName,
+      standardCrew: Number(editingStandard.standardCrew) || 8,
+      stdLaborHoursPer1kUnits: Number(editingStandard.stdLaborHoursPer1kUnits) || 2.0,
+      directCostPerHour: editingStandard.directCostPerHour || "$25.00"
+    };
+    updateLabourStandard(editingStandard.id, updated);
+    addToast(`Labour standard for ${updated.lineName} updated!`, "success");
     setEditingStandard(null);
   };
 
   const handleDelete = (id, lineName) => {
     if (window.confirm(`Are you sure you want to delete labour standard for ${lineName}?`)) {
-      setStandards(standards.filter((s) => s.id !== id));
-      addToast("Labour standard removed.", "info");
+      deleteLabourStandard(id);
+      addToast(`Labour standard removed for ${lineName}`, "info");
     }
   };
 
@@ -151,7 +165,7 @@ export function LabourStandardsPage() {
         />
         <StatCard
           title="Avg Manning Cost"
-          value="$25.66"
+          value={avgManningCost}
           unit="PerHour"
           icon={DollarSign}
           colorVariant="amber"

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ShieldAlert,
@@ -15,10 +15,15 @@ import { StatCard } from "../../../components/common/StatCard";
 import { Badge } from "../../../components/common/Badge";
 import { Button } from "../../../components/common/Button";
 import { useApp } from "../../../context/AppContext";
+import ciService from "../../../services/ciService";
 
 export function QualityLoss() {
   const navigate = useNavigate();
   const { addToast } = useApp();
+
+  useEffect(() => {
+    ciService.getLosses("ALL", "Quality").catch((err) => console.warn("Quality loss load:", err.message));
+  }, []);
 
   const qualityCauses = [
     { cause: "CCP Pasteurizer Temperature Excursion Reject", pct: "2.1%", batch: "BAT-2026-0890", cost: "$4,200", status: "Quarantined" },

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   ShieldCheck,
   Save,
@@ -43,12 +43,16 @@ const MODULES_LIST = [
   "Maintenance & CMMS",
   "Data Migration",
   "Audit Trail",
-  "Executive Reports"
+  "Reports & Exports"
 ];
 
 export function PermissionsMatrixPage() {
   const { rolePermissions = {}, updatePermissionMatrix } = useMasterData();
   const { addToast } = useApp();
+
+  useEffect(() => {
+    adminService.getPermissionMatrix().catch((err) => console.warn("Matrix load:", err.message));
+  }, []);
 
   const [selectedRoleKey, setSelectedRoleKey] = useState("plant_manager");
   const [testModule, setTestModule] = useState("BOM / Recipe");

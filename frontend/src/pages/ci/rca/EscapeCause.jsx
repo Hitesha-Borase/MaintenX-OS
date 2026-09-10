@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   AlertOctagon,
@@ -19,94 +19,104 @@ import { Card } from "../../../components/common/Card";
 import { Button } from "../../../components/common/Button";
 import { Badge } from "../../../components/common/Badge";
 import { StatCard } from "../../../components/common/StatCard";
+import { useCI } from "../../../context/CIContext";
 import { useApp } from "../../../context/AppContext";
+import ciService from "../../../services/ciService";
 
 export function EscapeCause() {
   const navigate = useNavigate();
   const { addToast } = useApp();
+  const { investigations = [], updateRCA, advanceRcaPhase } = useCI();
 
-  const [activeCase, setActiveCase] = useState("INV-802");
+  const [activeCase, setActiveCase] = useState(() => investigations[0]?.id || "RCA-2026-001");
 
-  const [casesData, setCasesData] = useState({
-    "INV-802": {
-      title: "HTST Pasteurizer CCP Temp Excursion",
-      escapeStatement: "Steam modulating valve lacked continuous pneumatic position feedback sensors, and pre-shift calibration cross-checks were not codified in SOP, allowing actuator degradation to remain undetected across 3 shifts prior to event.",
-      barriers: [
-        {
-          id: "B1",
-          name: "Automation SCADA Interlocks",
-          type: "System Control",
-          status: "Failed",
-          description: "PLC monitored only temperature PV without predictive steam actuator valve travel feedback alarm."
-        },
-        {
-          id: "B2",
-          name: "Autonomous Operator Inspection",
-          type: "Visual Check",
-          status: "Failed",
-          description: "Analog pilot air pressure gauge on steam manifold was positioned behind thermal lagging hood, preventing visual spot-checks."
-        },
-        {
-          id: "B3",
-          name: "Routine PM & Metrology Audit",
-          type: "SOP Audit",
-          status: "Root Escape Cause",
-          description: "Start-of-shift SOP checklist did not require secondary temperature probe validation before feeding product into holding tube."
-        }
-      ],
-      preventiveAction: "PA-102 (Codify 3-Point Pre-Shift Metrology Audit & Smart Valve Positioner)",
-      owner: "Engineering & Metrology Lead",
-      due: "2026-09-15",
-      confirmed: true
-    },
-    "INV-803": {
-      title: "Orange Cap Thread Dimension Out-of-Spec",
-      escapeStatement: "Online vision inspection system photo-eye was calibrated for bottle cap presence rather than thread seating depth, letting under-torqued bottles escape to downstream packing.",
-      barriers: [
-        {
-          id: "B1",
-          name: "In-Line Vision System",
-          type: "Vision QC",
-          status: "Failed",
-          description: "Cognex camera checked only cap color and gross presence, not micrometer thread pitch engagement."
-        },
-        {
-          id: "B2",
-          name: "QA Hourly Pull-Check",
-          type: "Manual QC",
-          status: "Failed",
-          description: "Manual torque sampling was performed on only 1 bottle per lane every 2 hours, missing transient spindle #4 slip."
-        },
-        {
-          id: "B3",
-          name: "Dynamic Torque Feedback",
-          type: "Telemetry Interlock",
-          status: "Root Escape Cause",
-          description: "No real-time electronic slip torque sensing was installed on individual rotary capping heads."
-        }
-      ],
-      preventiveAction: "PA-103 (Install 100% In-Line Torque Sensing Transducers on All 12 Capping Spindles)",
-      owner: "Automation & Controls Lead",
-      due: "2026-09-20",
-      confirmed: false
+  useEffect(() => {
+    ciService.getInvestigations().catch((err) => console.warn("Escape investigations load:", err.message));
+  }, []);
+
+  useEffect(() => {
+    if (investigations.length > 0 && !investigations.some((i) => i.id === activeCase)) {
+      setActiveCase(investigations[0].id);
     }
-  });
+  }, [investigations, activeCase]);
 
-  const currentCase = casesData[activeCase];
+  const currentInv = useMemo(() => {
+    return investigations.find((i) => i.id === activeCase) || investigations[0] || {
+      id: "RCA-2026-001",
+      title: "Active Investigation",
+      eightD: {}
+    };
+  }, [investigations, activeCase]);
 
-  const handleConfirm = (e) => {
+  const [escapeStatement, setEscapeStatement] = useState("");
+  const [preventiveAction, setPreventiveAction] = useState("");
+
+  useEffect(() => {
+    if (currentInv) {
+      setEscapeStatement(
+        currentInv.eightD?.d7Prevention ||
+        "Pre-shift calibration checks were not codified in SOP, allowing actuator degradation to remain undetected prior to critical event."
+      );
+      setPreventiveAction(
+        currentInv.eightD?.d5CorrectiveAction ||
+        "Codify mandatory 3-point metrology audit and install redundant smart valve positioner"
+      );
+    }
+  }, [currentInv]);
+
+  const barriers = useMemo(() => {
+    return [
+      {
+        id: "B1",
+        name: "Automation SCADA Interlocks",
+        type: "System Control",
+        status: "Failed",
+        description: `PLC monitored temperature without predictive sensor feedback for ${currentInv.assetName || "the equipment"}.`
+      },
+      {
+        id: "B2",
+        name: "Autonomous Operator Inspection",
+        type: "Visual Spot-Check",
+        status: "Failed",
+        description: "Pressure gauge was obstructed behind thermal lagging hood, preventing operator detection."
+      },
+      {
+        id: "B3",
+        name: "Routine PM & Metrology Standard",
+        type: "SOP Quality Gate",
+        status: "Root Escape Cause",
+        description: "Pre-shift checklist lacked mandatory differential calibration procedure prior to batch feed."
+      }
+    ];
+  }, [currentInv]);
+
+  const handleConfirm = async (e) => {
     e.preventDefault();
-    setCasesData((prev) => ({
-      ...prev,
-      [activeCase]: { ...prev[activeCase], confirmed: true }
-    }));
-    addToast(`Escape Point Cause for ${activeCase} confirmed and linked to Preventive CAPA!`, "success");
+    if (!escapeStatement.trim()) {
+      addToast("Please specify the escape cause statement.", "warning");
+      return;
+    }
+
+    await updateRCA(activeCase, {
+      eightD: {
+        ...(currentInv.eightD || {}),
+        d7Prevention: escapeStatement.trim(),
+        d5CorrectiveAction: preventiveAction.trim()
+      }
+    });
+
+    addToast(`Escape point analysis for ${activeCase} confirmed and saved!`, "success");
+  };
+
+  const handleTriggerCapa = async () => {
+    await advanceRcaPhase(activeCase, "CAPA");
+    navigate("/ci/capa/preventive");
   };
 
   const handleExportCSV = () => {
     const headers = "Investigation,Case Title,Barrier ID,Barrier Name,Category,Status,Failure Mode Description\n";
-    const rows = currentCase.barriers
-      .map((b) => `"${activeCase}","${currentCase.title}","${b.id}","${b.name}","${b.type}","${b.status}","${b.description}"`)
+    const rows = barriers
+      .map((b) => `"${activeCase}","${currentInv.title}","${b.id}","${b.name}","${b.type}","${b.status}","${b.description}"`)
       .join("\n");
     const blob = new Blob([headers + rows], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
@@ -137,13 +147,13 @@ export function EscapeCause() {
           <Button variant="secondary" onClick={() => navigate("/ci/rca/occurrence")} style={{ fontSize: "12px", padding: "7px 12px" }}>
             Occurrence Cause (D4)
           </Button>
-          <Button variant="primary" icon={ArrowRight} onClick={() => navigate("/ci/capa/corrective")} style={{ fontSize: "12px", padding: "7px 12px" }}>
+          <Button variant="primary" icon={ArrowRight} onClick={handleTriggerCapa} style={{ fontSize: "12px", padding: "7px 12px" }}>
             Trigger CAPA (D6)
           </Button>
         </div>
       </div>
 
-      {/* KPI Tickers - 2x2 on mobile, 4 on desktop */}
+      {/* KPI Tickers */}
       <div
         className="kpi-grid-responsive grid-4"
         style={{
@@ -158,187 +168,174 @@ export function EscapeCause() {
           title="Escape Point Barrier"
           value="Inspection Gap"
           unit="Systemic"
-          icon={EyeOff}
+          trend={{ value: "Failed detection gate identified", isPositive: false, text: "" }}
+          icon={AlertOctagon}
           colorVariant="rose"
         />
         <StatCard
-          title="Detection Latency"
-          value="3 Shifts"
-          unit="Lag Time"
-          icon={AlertOctagon}
+          title="Defensive Barriers"
+          value="3 Audited"
+          unit="SCADA + QA"
+          trend={{ value: "2 bypassed, 1 uncodified", isPositive: false, text: "" }}
+          icon={EyeOff}
           colorVariant="amber"
         />
         <StatCard
-          title="Preventive CAPA Action"
-          value="PA-102"
-          unit="Generated"
-          icon={Sparkles}
-          colorVariant="cyan"
+          title="Systemic Vulnerability"
+          value="SOP Metrology"
+          unit="Unverified"
+          trend={{ value: "No secondary cross-check in place", isPositive: false, text: "" }}
+          icon={ShieldAlert}
+          colorVariant="rose"
         />
         <StatCard
-          title="Zero-Escape Safeguard"
-          value="100%"
-          unit="Poka-Yoke"
+          title="Preventive CAPA"
+          value="Required"
+          unit="Triggered"
+          trend={{ value: "Mandatory mistake-proofing", isPositive: true, text: "" }}
           icon={ShieldCheck}
           colorVariant="emerald"
         />
       </div>
 
-      {/* Active Case Selector Toolbar */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "12px", flexWrap: "wrap", gap: "10px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-          <span style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)" }}>Case:</span>
-          {["INV-802", "INV-803"].map((caseId) => {
-            const isActive = activeCase === caseId;
-            return (
+      {/* Case Switcher Tab Bar */}
+      <Card style={{ padding: "14px", minWidth: 0, width: "100%", boxSizing: "border-box" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+            <span style={{ fontSize: "11px", fontWeight: 800, color: "var(--text-muted)", textTransform: "uppercase" }}>Select Investigation Case:</span>
+            {investigations.map((inv) => (
               <button
-                key={caseId}
-                onClick={() => setActiveCase(caseId)}
+                key={inv.id}
+                onClick={() => setActiveCase(inv.id)}
                 style={{
-                  padding: "6px 14px",
-                  borderRadius: "6px",
+                  padding: "5px 12px",
+                  borderRadius: "8px",
                   fontSize: "12px",
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  border: "none",
-                  backgroundColor: isActive ? "var(--color-primary)" : "var(--bg-card-subtle)",
-                  color: isActive ? "#FFFFFF" : "var(--text-secondary)"
+                  fontWeight: activeCase === inv.id ? 800 : 600,
+                  backgroundColor: activeCase === inv.id ? "#C89547" : "var(--bg-card-subtle)",
+                  color: activeCase === inv.id ? "#261603" : "var(--text-secondary)",
+                  border: activeCase === inv.id ? "1px solid #E8C182" : "1px solid var(--border-subtle)",
+                  cursor: "pointer"
                 }}
               >
-                {caseId}: {casesData[caseId].title}
+                {inv.id}: {inv.title.substring(0, 24)}...
               </button>
-            );
-          })}
+            ))}
+          </div>
+
+          <Badge variant="cyan">ESCAPE BARRIER AUDIT</Badge>
         </div>
+      </Card>
 
-        <Badge variant={currentCase.confirmed ? "emerald" : "amber"}>
-          {currentCase.confirmed ? "ESCAPE CONFIRMED" : "IN REVIEW"}
-        </Badge>
-      </div>
-
-      {/* Main Analysis Section: Quality & Process Barriers Table */}
+      {/* Escape Barriers Breakdown */}
       <Card style={{ padding: "18px", minWidth: 0, width: "100%", boxSizing: "border-box" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px", flexWrap: "wrap", gap: "8px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <ShieldAlert size={17} color="#DC2626" />
-            <h3 style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)" }}>
-              Why Did Quality & Process Barriers Fail to Detect the Defect? ({activeCase})
+            <AlertOctagon size={18} color="#EF4444" />
+            <h3 style={{ fontSize: "15px", fontWeight: 800, color: "var(--text-primary)" }}>
+              Quality & Control Escape Barrier Breakdown ({activeCase})
             </h3>
           </div>
-          <Badge variant="rose">BARRIER ANALYSIS</Badge>
+          <Badge variant="rose">3 Barriers Evaluated</Badge>
         </div>
 
-        <div className="data-table-container" style={{ width: "100%", overflowX: "auto", WebkitOverflowScrolling: "touch", display: "block" }}>
-          <table className="data-table" style={{ width: "100%", minWidth: "680px" }}>
-            <thead>
-              <tr>
-                <th>Barrier Node</th>
-                <th>Category</th>
-                <th>Failure Mode & Detection Mechanism</th>
-                <th>Barrier Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {currentCase.barriers.map((b) => {
-                const isRoot = b.status === "Root Escape Cause";
-                return (
-                  <tr
-                    key={b.id}
-                    style={{
-                      backgroundColor: isRoot ? "rgba(200, 149, 71, 0.08)" : undefined
-                    }}
-                  >
-                    <td>
-                      <strong style={{ color: "var(--text-primary)", fontSize: "13px" }}>
-                        {b.name}
-                      </strong>
-                    </td>
-                    <td>
-                      <Badge variant="cyan">{b.type}</Badge>
-                    </td>
-                    <td style={{ maxWidth: "400px" }}>
-                      <span style={{ fontSize: "12px", color: isRoot ? "#8C5B23" : "var(--text-secondary)", fontWeight: isRoot ? 700 : 500, lineHeight: 1.4 }}>
-                        {b.description}
-                      </span>
-                    </td>
-                    <td>
-                      <Badge variant={isRoot ? "amber" : "rose"}>
-                        {b.status}
-                      </Badge>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+          {barriers.map((b) => (
+            <div
+              key={b.id}
+              style={{
+                padding: "12px 14px",
+                borderRadius: "10px",
+                backgroundColor: b.status === "Root Escape Cause" ? "rgba(239, 68, 68, 0.08)" : "var(--bg-card-subtle)",
+                border: b.status === "Root Escape Cause" ? "1px solid #EF4444" : "1px solid var(--border-subtle)",
+                display: "flex",
+                flexDirection: "column",
+                gap: "4px"
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <Badge variant="secondary">{b.type}</Badge>
+                  <span style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)" }}>
+                    {b.id}: {b.name}
+                  </span>
+                </div>
+                <Badge variant={b.status === "Root Escape Cause" ? "rose" : "amber"}>
+                  {b.status}
+                </Badge>
+              </div>
+              <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "4px", lineHeight: 1.4 }}>
+                {b.description}
+              </div>
+            </div>
+          ))}
         </div>
       </Card>
 
       {/* Validated Escape Cause Statement Card */}
       <Card style={{ padding: "18px", minWidth: 0, width: "100%", boxSizing: "border-box" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
-          <FileText size={17} color="#8C5B23" />
-          <h3 style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)" }}>
-            Validated Escape Point Statement & Poka-Yoke Safeguards ({activeCase})
-          </h3>
+        <div style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)", marginBottom: "12px" }}>
+          Confirmed Escape Point Cause & Required Preventive Poka-Yoke ({activeCase})
         </div>
 
         <form onSubmit={handleConfirm} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
           <div>
-            <label className="form-label">Systemic Escape Cause Formulation *</label>
+            <label className="form-label" style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "4px" }}>
+              Escape Point Statement (Why Was Fault Undetected Prior to Downstream Escape?) *
+            </label>
             <textarea
-              value={currentCase.escapeStatement}
-              onChange={(e) =>
-                setCasesData((prev) => ({
-                  ...prev,
-                  [activeCase]: { ...prev[activeCase], escapeStatement: e.target.value }
-                }))
-              }
+              value={escapeStatement}
+              onChange={(e) => setEscapeStatement(e.target.value)}
               className="form-textarea"
               rows={3}
-              style={{ backgroundColor: "#FFFFFF", fontSize: "13px", lineHeight: 1.5 }}
+              style={{
+                width: "100%",
+                padding: "10px 12px",
+                borderRadius: "8px",
+                border: "1px solid var(--border-subtle)",
+                backgroundColor: "var(--bg-card-subtle)",
+                color: "var(--text-primary)",
+                fontSize: "13px",
+                lineHeight: 1.5,
+                resize: "vertical"
+              }}
               required
             />
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "12px", backgroundColor: "var(--bg-card-subtle)", padding: "12px", borderRadius: "8px", border: "1px solid var(--border-subtle)" }}>
-            <div>
-              <span style={{ fontSize: "11px", color: "var(--text-muted)", fontWeight: 800, textTransform: "uppercase" }}>Triggered Preventive CAPA:</span>
-              <div style={{ fontWeight: 700, color: "#059669", fontSize: "12px", marginTop: "2px" }}>{currentCase.preventiveAction}</div>
-            </div>
-            <div>
-              <span style={{ fontSize: "11px", color: "var(--text-muted)", fontWeight: 800, textTransform: "uppercase" }}>Verification Due Date:</span>
-              <div style={{ fontWeight: 700, color: "var(--text-primary)", fontSize: "12px", marginTop: "2px" }}>{currentCase.due}</div>
-            </div>
-            <div>
-              <span style={{ fontSize: "11px", color: "var(--text-muted)", fontWeight: 800, textTransform: "uppercase" }}>Assigned Owner:</span>
-              <div style={{ fontWeight: 700, color: "#8C5B23", fontSize: "12px", marginTop: "2px" }}>{currentCase.owner}</div>
-            </div>
+          <div>
+            <label className="form-label" style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "4px" }}>
+              Mandatory Mistake-Proofing / Preventive Action *
+            </label>
+            <input
+              type="text"
+              value={preventiveAction}
+              onChange={(e) => setPreventiveAction(e.target.value)}
+              className="form-input"
+              style={{
+                width: "100%",
+                padding: "10px 12px",
+                borderRadius: "8px",
+                border: "1px solid var(--border-subtle)",
+                backgroundColor: "var(--bg-card-subtle)",
+                color: "var(--text-primary)",
+                fontSize: "13px"
+              }}
+              required
+            />
           </div>
 
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px", flexWrap: "wrap", gap: "10px" }}>
-            <button
+            <Button
+              variant="primary"
               type="submit"
-              style={{
-                padding: "8px 18px",
-                borderRadius: "8px",
-                fontSize: "12px",
-                fontWeight: 700,
-                background: "linear-gradient(180deg, #E2B670 0%, #C89547 100%)",
-                color: "#261603",
-                border: "1px solid #E8C182",
-                boxShadow: "0 2px 6px rgba(178, 126, 51, 0.25)",
-                cursor: "pointer",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px"
-              }}
+              icon={CheckCircle2}
             >
-              <CheckCircle2 size={14} /> Confirm & Lock Escape Cause
-            </button>
+              Confirm & Save Escape Cause
+            </Button>
 
-            <Button variant="secondary" icon={ArrowRight} onClick={() => navigate("/ci/capa/corrective")}>
-              Trigger CAPA Corrective Actions (D6)
+            <Button variant="secondary" icon={ArrowRight} onClick={handleTriggerCapa}>
+              Trigger Preventive CAPA (D6)
             </Button>
           </div>
         </form>

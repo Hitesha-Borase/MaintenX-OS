@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   FileCheck,
@@ -14,7 +14,8 @@ import {
   Lock,
   Unlock,
   DollarSign,
-  X
+  X,
+  RefreshCw
 } from "lucide-react";
 import { Card } from "../../../components/common/Card";
 import { StatCard } from "../../../components/common/StatCard";
@@ -22,6 +23,7 @@ import { Badge } from "../../../components/common/Badge";
 import { Button } from "../../../components/common/Button";
 import { useCI } from "../../../context/CIContext";
 import { useApp } from "../../../context/AppContext";
+import { ciService } from "../../../services/ciService";
 
 export function BenefitsVerification() {
   const navigate = useNavigate();
@@ -31,27 +33,67 @@ export function BenefitsVerification() {
     verifyAndLockBenefit,
     unlockBenefit,
     pendingBenefitsCount,
-    realizedSavingsTotal
+    realizedSavingsTotal,
+    refreshProjects
   } = useCI();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [unlockingProjectId, setUnlockingProjectId] = useState(null);
   const [unlockReason, setUnlockReason] = useState("");
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [summaryData, setSummaryData] = useState(null);
 
-  const handleVerify = (id) => {
-    verifyAndLockBenefit(id);
+  const loadData = async () => {
+    try {
+      if (refreshProjects) await refreshProjects();
+      const res = await ciService.getBenefitsSummary();
+      const summary = res?.data || res;
+      if (summary) setSummaryData(summary);
+    } catch (err) {
+      console.warn("Benefits data sync warning:", err.message);
+    }
   };
 
-  const handleConfirmUnlock = (e) => {
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await loadData();
+      addToast("Benefits Ledger synchronized with backend REST API.", "success");
+    } catch (err) {
+      addToast("Failed to synchronize with backend.", "error");
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  const handleVerify = async (id) => {
+    try {
+      await verifyAndLockBenefit(id);
+      await loadData();
+    } catch (err) {
+      addToast("Failed to verify & lock benefit.", "error");
+    }
+  };
+
+  const handleConfirmUnlock = async (e) => {
     e.preventDefault();
     if (!unlockReason.trim()) {
       addToast("Please provide an engineering justification reason.", "warning");
       return;
     }
-    unlockBenefit(unlockingProjectId, unlockReason);
-    setUnlockingProjectId(null);
-    setUnlockReason("");
+    try {
+      await unlockBenefit(unlockingProjectId, unlockReason);
+      setUnlockingProjectId(null);
+      setUnlockReason("");
+      await loadData();
+    } catch (err) {
+      addToast("Failed to unlock benefit.", "error");
+    }
   };
 
   const handleExportCSV = () => {
@@ -85,7 +127,17 @@ export function BenefitsVerification() {
     });
   }, [ciProjects, statusFilter, searchQuery]);
 
-  const verifiedCount = ciProjects.filter((p) => p.benefitStatus === "Verified & Locked").length;
+  const verifiedCount = summaryData?.verifiedCount !== undefined
+    ? summaryData.verifiedCount
+    : ciProjects.filter((p) => p.benefitStatus === "Verified & Locked").length;
+
+  const pendingCount = summaryData?.pendingCount !== undefined
+    ? summaryData.pendingCount
+    : pendingBenefitsCount;
+
+  const realizedSavings = summaryData?.realizedSavingsTotal !== undefined
+    ? summaryData.realizedSavingsTotal
+    : realizedSavingsTotal;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%", maxWidth: "1600px", margin: "0 auto", minWidth: 0 }}>
@@ -101,6 +153,9 @@ export function BenefitsVerification() {
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+          <Button variant="secondary" icon={RefreshCw} onClick={handleManualRefresh} style={{ fontSize: "12px", padding: "7px 12px" }}>
+            {isRefreshing ? "Syncing..." : "Sync API"}
+          </Button>
           <Button variant="secondary" icon={Download} onClick={handleExportCSV} style={{ fontSize: "12px", padding: "7px 12px" }}>
             Export Audit CSV
           </Button>
@@ -133,22 +188,22 @@ export function BenefitsVerification() {
         />
         <StatCard
           title="Pending GM Review"
-          value={pendingBenefitsCount.toString()}
+          value={pendingCount.toString()}
           unit="Awaiting Lock"
           icon={Clock}
-          colorVariant={pendingBenefitsCount > 0 ? "amber" : "emerald"}
+          colorVariant={pendingCount > 0 ? "amber" : "emerald"}
         />
         <StatCard
           title="Locked Realized Benefit"
-          value={`$${realizedSavingsTotal.toLocaleString()}`}
+          value={`$${realizedSavings.toLocaleString()}`}
           unit="Verified YTD"
           icon={DollarSign}
           colorVariant="emerald"
         />
         <StatCard
           title="Audit Trail Status"
-          value="Certified"
-          unit="Immutable"
+          value={summaryData?.auditTrailStatus?.split(" ")[0] || "Certified"}
+          unit={summaryData?.complianceStandard || "Immutable"}
           icon={ShieldCheck}
           colorVariant="emerald"
         />

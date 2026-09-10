@@ -18,10 +18,21 @@ import { Button } from "../../../components/common/Button";
 import { StatCard } from "../../../components/common/StatCard";
 import { useMasterData } from "../../../context/MasterDataContext";
 import { useApp } from "../../../context/AppContext";
+import masterDataService from "../../../services/masterDataService";
 
 export function OrgWorkCentersPage() {
-  const { workCenters = [], addWorkCenter, updateWorkCenter, deleteWorkCenter, lines = [], assets = [], plants = [] } = useMasterData();
+  const { workCenters = [], setWorkCenters, addWorkCenter, updateWorkCenter, deleteWorkCenter, lines = [], assets = [], plants = [] } = useMasterData();
   const { addToast } = useApp();
+
+  // Trigger live GET /api/v1/master-data/work-centers on mount
+  React.useEffect(() => {
+    masterDataService.getWorkCenters().then((res) => {
+      const data = res?.data || res;
+      if (Array.isArray(data) && data.length > 0 && typeof setWorkCenters === "function") {
+        setWorkCenters(data);
+      }
+    }).catch((err) => console.warn("Live work centers fetch:", err.message));
+  }, []);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [lineFilter, setLineFilter] = useState("ALL");

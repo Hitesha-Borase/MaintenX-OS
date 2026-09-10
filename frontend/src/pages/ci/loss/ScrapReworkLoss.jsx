@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Trash2,
@@ -15,10 +15,15 @@ import { StatCard } from "../../../components/common/StatCard";
 import { Badge } from "../../../components/common/Badge";
 import { Button } from "../../../components/common/Button";
 import { useApp } from "../../../context/AppContext";
+import ciService from "../../../services/ciService";
 
 export function ScrapReworkLoss() {
   const navigate = useNavigate();
   const { addToast } = useApp();
+
+  useEffect(() => {
+    ciService.getLosses("ALL", "Scrap").catch((err) => console.warn("Scrap loss load:", err.message));
+  }, []);
 
   const scrapEvents = [
     {

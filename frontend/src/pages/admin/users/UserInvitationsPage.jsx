@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   UserPlus,
   Send,
@@ -19,10 +19,15 @@ import { Button } from "../../../components/common/Button";
 import { StatCard } from "../../../components/common/StatCard";
 import { useAdmin } from "../../../context/AdminContext";
 import { useApp } from "../../../context/AppContext";
+import adminService from "../../../services/adminService";
 
 export function UserInvitationsPage() {
   const { invitations = [], addInvitation, resendInvitation, deleteInvitation } = useAdmin();
   const { addToast } = useApp();
+
+  useEffect(() => {
+    adminService.getInvitations().catch((err) => console.warn("Invitations load:", err.message));
+  }, []);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [deletingInvite, setDeletingInvite] = useState(null);
