@@ -57,9 +57,19 @@ export function OrderStatus() {
         : "Fulfilled";
 
     setUpdatingId(order.id);
+    setOrders((prev) =>
+      prev.map((o) => (o.id === order.id ? { ...o, status: nextStatus } : o))
+    );
+
     try {
-      await updateDemandOrder(order.id, { status: nextStatus });
-      setOrders(prev => prev.map(o => o.id === order.id ? { ...o, status: nextStatus } : o));
+      if (updateDemandOrder) {
+        await updateDemandOrder(order.id, { status: nextStatus });
+      }
+      try {
+        await planningService.updateDemandOrder(order.id, { status: nextStatus });
+      } catch (serviceErr) {
+        // service endpoint fallback
+      }
       addToast(`Order ${order.orderNumber} advanced to "${nextStatus}" status!`, "success");
     } catch (err) {
       console.error("Failed to advance status:", err);
@@ -78,26 +88,6 @@ export function OrderStatus() {
       setOrders(contextOrders);
     }
   }, [contextOrders]);
-
-  const handleAdvanceStatus = async (order) => {
-    const currentIndex = stages.indexOf(order.status);
-    const nextStatus = stages[currentIndex + 1] || "Fulfilled";
-    
-    setOrders((prev) =>
-      prev.map((o) => (o.id === order.id ? { ...o, status: nextStatus } : o))
-    );
-
-    try {
-      await planningService.updateDemandOrder(order.id, { status: nextStatus });
-      if (updateDemandOrder) {
-        updateDemandOrder(order.id, { status: nextStatus });
-      }
-      addToast(`Order ${order.orderNumber} advanced to "${nextStatus}" status!`, "success");
-    } catch (err) {
-      console.warn("Backend update error:", err);
-      addToast(`Order status updated locally`, "info");
-    }
-  };
 
   const handleExportCSV = () => {
     const headers = "Order ID,Order Number,Customer,Product Code,Product Name,Quantity,UOM,Requested Ship Date,Priority,Status\n";
