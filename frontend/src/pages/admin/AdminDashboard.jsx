@@ -55,6 +55,7 @@ export function AdminDashboard() {
     { label: "Now", value: 22 }
   ]);
   const [currentAvgLatency, setCurrentAvgLatency] = useState(22);
+  const [showModalPassword, setShowModalPassword] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
