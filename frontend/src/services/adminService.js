@@ -222,6 +222,14 @@ export class AdminService {
     return await apiClient.get("/admin/data-health/scan");
   }
 
+  async remediateDataHealth(data) {
+    return await apiClient.post("/admin/data-health/remediate", data);
+  }
+
+  async deleteDataHealth(data) {
+    return await apiClient.post("/admin/data-health/delete", data);
+  }
+
   // ── INTEGRATIONS: IOT GATEWAYS ─────────────────────────────────────
   async getIoTGateways() {
     try {

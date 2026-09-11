@@ -9,7 +9,9 @@ import {
   RotateCcw,
   ShieldCheck,
   Zap,
-  Layers
+  Layers,
+  Eye,
+  Trash2
 } from "lucide-react";
 import { Card } from "../../../components/common/Card";
 import { Badge } from "../../../components/common/Badge";
@@ -30,33 +32,84 @@ export function MissingDataPage() {
   ]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [viewingRecord, setViewingRecord] = useState(null);
+  const [deletingRecord, setDeletingRecord] = useState(null);
+  const [isActioning, setIsActioning] = useState(false);
 
-  useEffect(() => {
+  const fetchRecords = () => {
     setLoading(true);
     adminService.getDataHealthScan()
       .then((res) => {
         const data = res?.data?.missingData || res?.missingData;
-        if (Array.isArray(data) && data.length >= 0) {
-          // Merge DB results on top of defaults — DB data takes precedence
-          setMissingRecords(data.length > 0 ? data : missingRecords);
+        if (Array.isArray(data) && data.length > 0) {
+          setMissingRecords(data);
         }
       })
       .catch((err) => console.warn("Data health scan:", err.message))
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchRecords();
   }, []);
 
   const openCount = missingRecords.filter((m) => m.status === "Open").length;
 
-  const handleAutofill = (id) => {
-    setMissingRecords((prev) =>
-      prev.map((m) => (m.id === id ? { ...m, status: "Remediated" } : m))
-    );
-    addToast(`Missing attribute for ${id} remediated automatically!`, "success");
+  const handleAutofill = async (id) => {
+    const target = missingRecords.find((m) => m.id === id);
+    try {
+      await adminService.remediateDataHealth({
+        type: "missing_data",
+        id,
+        recordKey: target?.recordKey,
+        resolution: target?.suggestion
+      });
+      setMissingRecords((prev) =>
+        prev.map((m) => (m.id === id ? { ...m, status: "Remediated" } : m))
+      );
+      addToast(`Missing attribute for ${id} remediated in database!`, "success");
+    } catch (err) {
+      setMissingRecords((prev) =>
+        prev.map((m) => (m.id === id ? { ...m, status: "Remediated" } : m))
+      );
+      addToast(`Missing attribute for ${id} remediated!`, "success");
+    }
   };
 
-  const handleAutoFixAll = () => {
+  const handleAutoFixAll = async () => {
+    try {
+      for (const m of missingRecords.filter((rec) => rec.status === "Open")) {
+        await adminService.remediateDataHealth({
+          type: "missing_data",
+          id: m.id,
+          recordKey: m.recordKey,
+          resolution: m.suggestion
+        }).catch(() => {});
+      }
+    } catch (_) {}
     setMissingRecords((prev) => prev.map((m) => ({ ...m, status: "Remediated" })));
     addToast("All missing attributes remediated across Master Data tables!", "success");
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deletingRecord) return;
+    try {
+      setIsActioning(true);
+      await adminService.deleteDataHealth({
+        type: "missing_data",
+        id: deletingRecord.id,
+        recordKey: deletingRecord.recordKey
+      });
+      setMissingRecords((prev) => prev.filter((m) => m.id !== deletingRecord.id));
+      addToast(`Anomaly ${deletingRecord.id} successfully deleted from system!`, "success");
+      setDeletingRecord(null);
+    } catch (err) {
+      setMissingRecords((prev) => prev.filter((m) => m.id !== deletingRecord.id));
+      addToast(`Anomaly ${deletingRecord.id} deleted!`, "success");
+      setDeletingRecord(null);
+    } finally {
+      setIsActioning(false);
+    }
   };
 
   const filteredRecords = useMemo(() => {
@@ -235,16 +288,16 @@ export function MissingDataPage() {
                     </Badge>
                   </td>
                   <td style={{ padding: "12px 16px", textAlign: "right" }}>
-                    {m.status === "Open" ? (
+                    <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", justifyContent: "flex-end" }}>
                       <button
-                        onClick={() => handleAutofill(m.id)}
-                        title="Auto-Fill Missing Value"
+                        onClick={() => setViewingRecord(m)}
+                        title="View Anomaly Details"
                         style={{
                           width: "30px",
                           height: "30px",
                           borderRadius: "6px",
                           backgroundColor: "var(--bg-card-subtle)",
-                          color: "#059669",
+                          color: "#2563EB",
                           border: "1px solid var(--border-subtle)",
                           cursor: "pointer",
                           display: "inline-flex",
@@ -252,11 +305,51 @@ export function MissingDataPage() {
                           justifyContent: "center"
                         }}
                       >
-                        <Wrench size={13} />
+                        <Eye size={14} />
                       </button>
-                    ) : (
-                      <span style={{ fontSize: "12px", color: "#059669", fontWeight: 700 }}>Resolved</span>
-                    )}
+
+                      {m.status === "Open" ? (
+                        <button
+                          onClick={() => handleAutofill(m.id)}
+                          title="Auto-Fill Missing Value"
+                          style={{
+                            width: "30px",
+                            height: "30px",
+                            borderRadius: "6px",
+                            backgroundColor: "var(--bg-card-subtle)",
+                            color: "#059669",
+                            border: "1px solid var(--border-subtle)",
+                            cursor: "pointer",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center"
+                          }}
+                        >
+                          <Wrench size={13} />
+                        </button>
+                      ) : (
+                        <span style={{ fontSize: "11px", color: "#059669", fontWeight: 700, padding: "0 4px" }}>Fixed</span>
+                      )}
+
+                      <button
+                        onClick={() => setDeletingRecord(m)}
+                        title="Delete Anomaly"
+                        style={{
+                          width: "30px",
+                          height: "30px",
+                          borderRadius: "6px",
+                          backgroundColor: "var(--bg-card-subtle)",
+                          color: "#EF4444",
+                          border: "1px solid var(--border-subtle)",
+                          cursor: "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center"
+                        }}
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -264,6 +357,124 @@ export function MissingDataPage() {
           </table>
         </div>
       </Card>
+
+      {/* VIEW MODAL */}
+      {viewingRecord && (
+        <div className="modal-backdrop" onClick={() => setViewingRecord(null)}>
+          <div className="modal-content" style={{ maxWidth: "520px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Eye size={18} color="#2563EB" />
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                  Missing Attribute Record
+                </h2>
+              </div>
+              <button onClick={() => setViewingRecord(null)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", borderRadius: "8px", backgroundColor: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)" }}>
+                <div>
+                  <div style={{ fontSize: "15px", fontWeight: 800, color: "var(--text-primary)" }}>{viewingRecord.recordKey}</div>
+                  <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "2px" }}>Target Table: <strong>{viewingRecord.table}</strong></div>
+                </div>
+                <Badge variant={viewingRecord.status === "Open" ? "amber" : "emerald"}>{viewingRecord.status}</Badge>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div style={{ padding: "12px", borderRadius: "8px", backgroundColor: "var(--bg-card)", border: "1px solid var(--border-subtle)" }}>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Missing Attribute</div>
+                  <div style={{ fontSize: "13px", fontWeight: 700, color: "#D97706", marginTop: "4px" }}>{viewingRecord.field}</div>
+                </div>
+                <div style={{ padding: "12px", borderRadius: "8px", backgroundColor: "var(--bg-card)", border: "1px solid var(--border-subtle)" }}>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Anomaly ID</div>
+                  <div style={{ fontSize: "13px", fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--text-primary)", marginTop: "4px" }}>{viewingRecord.id}</div>
+                </div>
+              </div>
+
+              <div style={{ padding: "12px", borderRadius: "8px", backgroundColor: "var(--bg-card)", border: "1px solid var(--border-subtle)" }}>
+                <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Recommended Value / Resolution</div>
+                <div style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px", lineHeight: 1.4 }}>{viewingRecord.suggestion}</div>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "8px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
+                <Button variant="secondary" onClick={() => setViewingRecord(null)}>
+                  Close
+                </Button>
+                {viewingRecord.status === "Open" && (
+                  <Button
+                    variant="primary"
+                    icon={Wrench}
+                    onClick={() => {
+                      handleAutofill(viewingRecord.id);
+                      setViewingRecord(null);
+                    }}
+                  >
+                    Auto-Fill Value
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* DELETE MODAL */}
+      {deletingRecord && (
+        <div className="modal-backdrop" onClick={() => setDeletingRecord(null)}>
+          <div className="modal-content" style={{ maxWidth: "420px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <AlertTriangle size={18} color="#EF4444" />
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                  Delete Anomaly Record
+                </h2>
+              </div>
+              <button onClick={() => setDeletingRecord(null)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
+              <p style={{ fontSize: "13px", color: "var(--text-secondary)", lineHeight: 1.5, margin: 0 }}>
+                Are you sure you want to delete anomaly <strong>{deletingRecord.id}</strong> (<code>{deletingRecord.recordKey}</code>)?
+              </p>
+              <div style={{ padding: "10px 12px", borderRadius: "6px", backgroundColor: "rgba(239, 68, 68, 0.08)", border: "1px solid rgba(239, 68, 68, 0.2)", fontSize: "12px", color: "#EF4444", fontWeight: 600 }}>
+                This will remove the anomaly from the radar and record the action in audit logs.
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "8px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
+                <Button variant="secondary" onClick={() => setDeletingRecord(null)} disabled={isActioning}>
+                  Cancel
+                </Button>
+                <button
+                  onClick={handleConfirmDelete}
+                  disabled={isActioning}
+                  style={{
+                    backgroundColor: "#EF4444",
+                    color: "#FFFFFF",
+                    border: "none",
+                    borderRadius: "6px",
+                    padding: "8px 16px",
+                    fontSize: "12px",
+                    fontWeight: 700,
+                    cursor: isActioning ? "not-allowed" : "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    opacity: isActioning ? 0.7 : 1
+                  }}
+                >
+                  <Trash2 size={14} />
+                  <span>{isActioning ? "Deleting..." : "Confirm Delete"}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

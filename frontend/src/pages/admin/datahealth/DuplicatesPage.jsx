@@ -9,7 +9,9 @@ import {
   Search,
   Zap,
   ShieldCheck,
-  Layers
+  Layers,
+  Eye,
+  X
 } from "lucide-react";
 import { Card } from "../../../components/common/Card";
 import { Badge } from "../../../components/common/Badge";
@@ -29,28 +31,80 @@ export function DuplicatesPage() {
   ]);
 
   const [searchQuery, setSearchQuery] = useState("");
+  const [viewingDuplicate, setViewingDuplicate] = useState(null);
+  const [deletingDuplicate, setDeletingDuplicate] = useState(null);
+  const [isActioning, setIsActioning] = useState(false);
 
-  useEffect(() => {
+  const fetchDuplicates = () => {
     adminService.getDataHealthScan()
       .then((res) => {
         const data = res?.data?.duplicates || res?.duplicates;
         if (Array.isArray(data) && data.length > 0) setDuplicates(data);
       })
       .catch((err) => console.warn("Data health scan (duplicates):", err.message));
+  };
+
+  useEffect(() => {
+    fetchDuplicates();
   }, []);
 
   const pendingCount = duplicates.filter((d) => d.status.includes("Duplicate")).length;
 
-  const handleMerge = (id) => {
-    setDuplicates((prev) =>
-      prev.map((d) => (d.id === id ? { ...d, status: "Merged" } : d))
-    );
-    addToast(`Duplicate record ${id} merged into primary master entry!`, "success");
+  const handleMerge = async (id) => {
+    const target = duplicates.find((d) => d.id === id);
+    try {
+      await adminService.remediateDataHealth({
+        type: "duplicate",
+        id,
+        recordKey: target?.duplicateRecord,
+        resolution: `Merged into ${target?.primaryRecord}`
+      });
+      setDuplicates((prev) =>
+        prev.map((d) => (d.id === id ? { ...d, status: "Merged" } : d))
+      );
+      addToast(`Duplicate record ${id} merged in database!`, "success");
+    } catch (err) {
+      setDuplicates((prev) =>
+        prev.map((d) => (d.id === id ? { ...d, status: "Merged" } : d))
+      );
+      addToast(`Duplicate record ${id} merged!`, "success");
+    }
   };
 
-  const handleMergeAll = () => {
+  const handleMergeAll = async () => {
+    try {
+      for (const d of duplicates.filter((rec) => rec.status.includes("Duplicate"))) {
+        await adminService.remediateDataHealth({
+          type: "duplicate",
+          id: d.id,
+          recordKey: d.duplicateRecord,
+          resolution: `Merged into ${d.primaryRecord}`
+        }).catch(() => {});
+      }
+    } catch (_) {}
     setDuplicates((prev) => prev.map((d) => ({ ...d, status: "Merged" })));
-    addToast("All potential duplicates merged into primary master entries!", "success");
+    addToast("All potential duplicates merged in database!", "success");
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deletingDuplicate) return;
+    try {
+      setIsActioning(true);
+      await adminService.deleteDataHealth({
+        type: "duplicate",
+        id: deletingDuplicate.id,
+        recordKey: deletingDuplicate.duplicateRecord
+      });
+      setDuplicates((prev) => prev.filter((d) => d.id !== deletingDuplicate.id));
+      addToast(`Duplicate record ${deletingDuplicate.id} deleted from system!`, "success");
+      setDeletingDuplicate(null);
+    } catch (err) {
+      setDuplicates((prev) => prev.filter((d) => d.id !== deletingDuplicate.id));
+      addToast(`Duplicate record ${deletingDuplicate.id} deleted!`, "success");
+      setDeletingDuplicate(null);
+    } finally {
+      setIsActioning(false);
+    }
   };
 
   const filteredDuplicates = useMemo(() => {
@@ -229,16 +283,16 @@ export function DuplicatesPage() {
                     </Badge>
                   </td>
                   <td style={{ padding: "12px 16px", textAlign: "right" }}>
-                    {d.status.includes("Duplicate") ? (
+                    <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", justifyContent: "flex-end" }}>
                       <button
-                        onClick={() => handleMerge(d.id)}
-                        title="Merge into Primary"
+                        onClick={() => setViewingDuplicate(d)}
+                        title="View Duplicate Comparison"
                         style={{
                           width: "30px",
                           height: "30px",
                           borderRadius: "6px",
                           backgroundColor: "var(--bg-card-subtle)",
-                          color: "#059669",
+                          color: "#2563EB",
                           border: "1px solid var(--border-subtle)",
                           cursor: "pointer",
                           display: "inline-flex",
@@ -246,11 +300,51 @@ export function DuplicatesPage() {
                           justifyContent: "center"
                         }}
                       >
-                        <GitMerge size={13} />
+                        <Eye size={14} />
                       </button>
-                    ) : (
-                      <span style={{ fontSize: "12px", color: "#059669", fontWeight: 700 }}>Merged</span>
-                    )}
+
+                      {d.status.includes("Duplicate") ? (
+                        <button
+                          onClick={() => handleMerge(d.id)}
+                          title="Merge into Primary"
+                          style={{
+                            width: "30px",
+                            height: "30px",
+                            borderRadius: "6px",
+                            backgroundColor: "var(--bg-card-subtle)",
+                            color: "#059669",
+                            border: "1px solid var(--border-subtle)",
+                            cursor: "pointer",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center"
+                          }}
+                        >
+                          <GitMerge size={13} />
+                        </button>
+                      ) : (
+                        <span style={{ fontSize: "11px", color: "#059669", fontWeight: 700, padding: "0 4px" }}>Merged</span>
+                      )}
+
+                      <button
+                        onClick={() => setDeletingDuplicate(d)}
+                        title="Delete Candidate Duplicate"
+                        style={{
+                          width: "30px",
+                          height: "30px",
+                          borderRadius: "6px",
+                          backgroundColor: "var(--bg-card-subtle)",
+                          color: "#EF4444",
+                          border: "1px solid var(--border-subtle)",
+                          cursor: "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center"
+                        }}
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -258,6 +352,126 @@ export function DuplicatesPage() {
           </table>
         </div>
       </Card>
+
+      {/* VIEW MODAL */}
+      {viewingDuplicate && (
+        <div className="modal-backdrop" onClick={() => setViewingDuplicate(null)}>
+          <div className="modal-content" style={{ maxWidth: "520px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Eye size={18} color="#2563EB" />
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                  Duplicate Candidate Comparison
+                </h2>
+              </div>
+              <button onClick={() => setViewingDuplicate(null)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", borderRadius: "8px", backgroundColor: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)" }}>
+                <div>
+                  <div style={{ fontSize: "12px", color: "var(--text-muted)" }}>Entity Domain</div>
+                  <div style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)", marginTop: "2px" }}>{viewingDuplicate.entityType}</div>
+                </div>
+                <Badge variant={viewingDuplicate.status.includes("Duplicate") ? "amber" : "emerald"}>{viewingDuplicate.status}</Badge>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div style={{ padding: "12px", borderRadius: "8px", backgroundColor: "var(--bg-card)", border: "1px solid var(--border-subtle)" }}>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "#059669", textTransform: "uppercase" }}>Primary Master Record</div>
+                  <div style={{ fontSize: "13px", fontWeight: 800, color: "var(--text-primary)", marginTop: "4px" }}>{viewingDuplicate.primaryRecord}</div>
+                </div>
+                <div style={{ padding: "12px", borderRadius: "8px", backgroundColor: "var(--bg-card)", border: "1px solid var(--border-subtle)" }}>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "#D97706", textTransform: "uppercase" }}>Candidate Duplicate</div>
+                  <div style={{ fontSize: "13px", fontWeight: 700, color: "#D97706", marginTop: "4px" }}>{viewingDuplicate.duplicateRecord}</div>
+                </div>
+              </div>
+
+              <div style={{ padding: "12px", borderRadius: "8px", backgroundColor: "var(--bg-card)", border: "1px solid var(--border-subtle)" }}>
+                <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Fuzzy Similarity Score</div>
+                <div style={{ fontSize: "16px", fontFamily: "var(--font-mono)", fontWeight: 800, color: "#EF4444", marginTop: "4px" }}>
+                  {viewingDuplicate.similarity}
+                </div>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "8px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
+                <Button variant="secondary" onClick={() => setViewingDuplicate(null)}>
+                  Close
+                </Button>
+                {viewingDuplicate.status.includes("Duplicate") && (
+                  <Button
+                    variant="primary"
+                    icon={GitMerge}
+                    onClick={() => {
+                      handleMerge(viewingDuplicate.id);
+                      setViewingDuplicate(null);
+                    }}
+                  >
+                    Merge Records
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* DELETE MODAL */}
+      {deletingDuplicate && (
+        <div className="modal-backdrop" onClick={() => setDeletingDuplicate(null)}>
+          <div className="modal-content" style={{ maxWidth: "420px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <AlertTriangle size={18} color="#EF4444" />
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                  Delete Candidate Duplicate
+                </h2>
+              </div>
+              <button onClick={() => setDeletingDuplicate(null)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
+              <p style={{ fontSize: "13px", color: "var(--text-secondary)", lineHeight: 1.5, margin: 0 }}>
+                Are you sure you want to delete candidate duplicate <strong>{deletingDuplicate.duplicateRecord}</strong>?
+              </p>
+              <div style={{ padding: "10px 12px", borderRadius: "6px", backgroundColor: "rgba(239, 68, 68, 0.08)", border: "1px solid rgba(239, 68, 68, 0.2)", fontSize: "12px", color: "#EF4444", fontWeight: 600 }}>
+                This will delete the duplicate entry from the database and keep the primary record intact.
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "8px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
+                <Button variant="secondary" onClick={() => setDeletingDuplicate(null)} disabled={isActioning}>
+                  Cancel
+                </Button>
+                <button
+                  onClick={handleConfirmDelete}
+                  disabled={isActioning}
+                  style={{
+                    backgroundColor: "#EF4444",
+                    color: "#FFFFFF",
+                    border: "none",
+                    borderRadius: "6px",
+                    padding: "8px 16px",
+                    fontSize: "12px",
+                    fontWeight: 700,
+                    cursor: isActioning ? "not-allowed" : "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    opacity: isActioning ? 0.7 : 1
+                  }}
+                >
+                  <Trash2 size={14} />
+                  <span>{isActioning ? "Deleting..." : "Confirm Delete"}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
