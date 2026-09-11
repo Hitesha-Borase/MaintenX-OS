@@ -3,14 +3,14 @@ import { useMasterAdmin } from "../../../context/MasterAdminContext";
 import { Card } from "../../../components/common/Card";
 import { Badge } from "../../../components/common/Badge";
 import { Button } from "../../../components/common/Button";
-import { Search, Plus, Filter, Eye, Play, Pause, Trash2 } from "lucide-react";
+import { Search, Plus, Filter, Eye, Play, Pause, Trash2, Phone } from "lucide-react";
 import { AddCompanyModal } from "./AddCompanyModal";
 import { CompanyDetailsModal } from "./CompanyDetailsModal";
 
 import { useApp } from "../../../context/AppContext";
 
 export function CompaniesList() {
-  const { companies, updateCompanyStatus, removeCompany } = useMasterAdmin();
+  const { companies, updateCompanyStatus, removeCompany, fetchCompanies } = useMasterAdmin();
   const { addToast } = useApp();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
@@ -18,12 +18,30 @@ export function CompaniesList() {
   const [selectedCompany, setSelectedCompany] = useState(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
+  React.useEffect(() => {
+    fetchCompanies?.();
+  }, [fetchCompanies]);
+
   const handleViewDetails = (company) => {
     setSelectedCompany(company);
     setIsDetailsModalOpen(true);
   };
 
+  const handleDeleteCompany = async (company) => {
+    if (window.confirm(`Are you sure you want to remove "${company.name}"?`)) {
+      try {
+        await removeCompany(company.id);
+        addToast('Company removed successfully', 'destructive');
+      } catch (err) {
+        addToast(err?.message || 'Failed to remove company', 'destructive');
+      }
+    }
+  };
+
   const filtered = companies.filter(c => {
+    if (statusFilter !== "Deactivated" && c.status?.toLowerCase() === "deactivated") {
+      return false;
+    }
     const matchesSearch = c.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           c.admin.toLowerCase().includes(searchTerm.toLowerCase());
     
@@ -38,6 +56,17 @@ export function CompaniesList() {
     
     return matchesSearch && matchesStatus;
   });
+
+  const formatPlanName = (planStr) => {
+    if (!planStr) return "—";
+    let clean = planStr.replace(/\(.*\)/g, "").trim();
+    const lower = clean.toLowerCase();
+    if (lower.includes("complete")) return "MaintenX OS Complete";
+    if (lower.includes("bundle")) return "Bundles";
+    if (lower.includes("pilot")) return "Plant Pilot";
+    if (lower.includes("individual")) return "Individual Modules";
+    return clean.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+  };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "100%" }}>
@@ -58,28 +87,27 @@ export function CompaniesList() {
 
       <Card style={{ padding: "0", overflow: "hidden", borderRadius: "14px" }}>
         {/* Search & Filter Bar */}
-        <div style={{ padding: "14px 16px", borderBottom: "1px solid var(--border-subtle)", display: "flex", gap: "10px", flexWrap: "wrap", backgroundColor: "#FFFFFF" }}>
-          <div style={{ flex: "1 1 100%", minWidth: "180px", position: "relative" }}>
-            <Search size={15} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
+        <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--border-subtle)", display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap", backgroundColor: "#FFFFFF" }}>
+          <div style={{ width: "260px", minWidth: "180px", position: "relative" }}>
+            <Search size={14} style={{ position: "absolute", left: "11px", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
             <input 
               type="text" 
               placeholder="Search companies or admins..." 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ width: "100%", padding: "8px 12px 8px 34px", borderRadius: "8px", border: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)", fontSize: "13px", boxSizing: "border-box" }}
+              style={{ width: "100%", padding: "7px 12px 7px 32px", borderRadius: "8px", border: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)", fontSize: "12px", boxSizing: "border-box", outline: "none" }}
             />
           </div>
-          <div style={{ display: "flex", gap: "8px", alignItems: "center", width: "100%" }}>
+          <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
             <Filter size={14} color="var(--text-secondary)" style={{ flexShrink: 0 }} />
             <select 
               value={statusFilter} 
               onChange={(e) => setStatusFilter(e.target.value)}
-              style={{ flex: 1, minWidth: 0, padding: "7px 10px", borderRadius: "8px", border: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)", color: "var(--text-primary)", fontSize: "12px", fontWeight: 600 }}
+              style={{ width: "160px", padding: "7px 10px", borderRadius: "8px", border: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)", color: "var(--text-primary)", fontSize: "12px", fontWeight: 600, outline: "none", cursor: "pointer" }}
             >
               <option value="All">All Statuses</option>
               <option value="Active">Active</option>
               <option value="Suspended">Suspended</option>
-              <option value="Inactive">Inactive</option>
               <option value="Trial">Trial / Pilot</option>
               <option value="Expired">Expired Subscription</option>
             </select>
@@ -111,14 +139,19 @@ export function CompaniesList() {
 
                 <div style={{ marginTop: "6px", display: "flex", flexDirection: "column", gap: "3px" }}>
                   <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-                    <Badge variant={company.subscription === "MaintenX OS Complete" ? "primary" : company.subscription === "Bundles" ? "emerald" : company.subscription === "Plant Pilot" ? "warning" : "secondary"} style={{ fontSize: "10px", padding: "1px 5px" }}>
-                      {company.subscription}
+                    <Badge variant={company.subscription?.toLowerCase().includes("complete") ? "indigo" : company.subscription?.toLowerCase().includes("bundle") ? "amber" : company.subscription?.toLowerCase().includes("pilot") ? "cyan" : "slate"} style={{ fontSize: "10px", padding: "1px 5px", textTransform: "none", letterSpacing: "normal" }}>
+                      {formatPlanName(company.subscription)}
                     </Badge>
                     <span style={{ fontSize: "11px", color: "var(--text-secondary)", fontWeight: 600 }}>{company.usersCount} Users</span>
                   </div>
                   <div style={{ fontSize: "11px", color: "var(--text-secondary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginTop: "2px" }}>
                     👤 {company.admin}
                   </div>
+                  {company.adminPhone && (
+                    <div style={{ fontSize: "11px", color: "var(--text-muted)", display: "flex", alignItems: "center", gap: "4px" }}>
+                      <Phone size={10} /> {company.adminPhone}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -127,7 +160,7 @@ export function CompaniesList() {
                 <Button variant="ghost" size="sm" onClick={() => updateCompanyStatus(company.id, company.status === "Active" ? "Suspended" : "Active")} title={company.status === "Active" ? "Suspend" : "Activate"} style={{ padding: "4px" }}>
                   {company.status === "Active" ? <Pause size={13} color="#EF4444" /> : <Play size={13} color="#10B981" />}
                 </Button>
-                <Button variant="ghost" size="sm" onClick={() => { if(window.confirm('Are you sure you want to remove this company?')) { removeCompany(company.id); addToast('Company removed successfully', 'destructive'); } }} title="Remove Company" style={{ padding: "4px" }}><Trash2 size={13} color="#EF4444" /></Button>
+                <Button variant="ghost" size="sm" onClick={() => handleDeleteCompany(company)} title="Remove Company" style={{ padding: "4px" }}><Trash2 size={13} color="#EF4444" /></Button>
               </div>
             </div>
           ))}
@@ -143,46 +176,90 @@ export function CompaniesList() {
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ backgroundColor: "var(--bg-card-subtle)", borderBottom: "1px solid var(--border-color)", textAlign: "left" }}>
-                <th style={{ padding: "16px 20px", fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase" }}>Company Name</th>
-                <th style={{ padding: "16px 20px", fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase" }}>Admin & Email</th>
-                <th style={{ padding: "16px 20px", fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase" }}>Plan & Users</th>
-                <th style={{ padding: "16px 20px", fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase" }}>Status</th>
-                <th style={{ padding: "16px 20px", fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase", whiteSpace: "nowrap" }}>Dates</th>
-                <th style={{ padding: "16px 20px", fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase", textAlign: "right", whiteSpace: "nowrap" }}>Actions</th>
+                <th style={{ padding: "13px 18px", fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.05em", whiteSpace: "nowrap" }}>Company Name</th>
+                <th style={{ padding: "13px 18px", fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.05em", whiteSpace: "nowrap" }}>Admin Name</th>
+                <th style={{ padding: "13px 18px", fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.05em", whiteSpace: "nowrap" }}>Email</th>
+                <th style={{ padding: "13px 18px", fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.05em", whiteSpace: "nowrap" }}>Mobile Number</th>
+                <th style={{ padding: "13px 18px", fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.05em", whiteSpace: "nowrap" }}>Plan</th>
+                <th style={{ padding: "13px 18px", fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.05em", whiteSpace: "nowrap" }}>Status</th>
+                <th style={{ padding: "13px 18px", fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.05em", whiteSpace: "nowrap" }}>Dates</th>
+                <th style={{ padding: "13px 18px", fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.05em", textAlign: "right", whiteSpace: "nowrap" }}>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {filtered.map(company => (
-                <tr key={company.id} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
-                  <td style={{ padding: "16px 20px" }}>
+              {filtered.map((company) => (
+                <tr
+                  key={company.id}
+                  style={{ borderBottom: "1px solid var(--border-subtle)", transition: "background 0.15s" }}
+                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "var(--bg-card-subtle)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
+                >
+                  {/* Company Name */}
+                  <td style={{ padding: "14px 18px", whiteSpace: "nowrap" }}>
                     <div style={{ fontWeight: 700, color: "var(--text-primary)", fontSize: "14px" }}>{company.name}</div>
-                    <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "2px" }}>ID: {company.id}</div>
+                    <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>
+                      {company.usersCount ?? 1} user{(company.usersCount ?? 1) !== 1 ? "s" : ""} · {company.plants ?? 1} plant{(company.plants ?? 1) !== 1 ? "s" : ""}
+                    </div>
                   </td>
-                  <td style={{ padding: "16px 20px" }}>
-                    <div style={{ fontWeight: 600, color: "var(--text-primary)", fontSize: "13px" }}>{company.admin}</div>
-                    <div style={{ fontSize: "12px", color: "var(--text-secondary)" }}>{company.adminEmail}</div>
+
+                  {/* Admin Name */}
+                  <td style={{ padding: "14px 18px", whiteSpace: "nowrap" }}>
+                    <div style={{ fontWeight: 600, color: "var(--text-primary)", fontSize: "13px" }}>{company.admin || "—"}</div>
+                    <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "1px" }}>Company Admin</div>
                   </td>
-                  <td style={{ padding: "16px 20px" }}>
-                    <Badge variant={company.subscription === "MaintenX OS Complete" ? "primary" : company.subscription === "Bundles" ? "emerald" : company.subscription === "Plant Pilot" ? "warning" : "secondary"}>
-                      {company.subscription}
+
+                  {/* Email */}
+                  <td style={{ padding: "14px 18px", whiteSpace: "nowrap" }}>
+                    {company.adminEmail
+                      ? <a href={`mailto:${company.adminEmail}`} style={{ fontSize: "13px", color: "#2563EB", textDecoration: "none", fontWeight: 500 }}>{company.adminEmail}</a>
+                      : <span style={{ color: "var(--text-muted)", fontSize: "13px" }}>—</span>
+                    }
+                  </td>
+
+                  {/* Mobile Number */}
+                  <td style={{ padding: "14px 18px", whiteSpace: "nowrap" }}>
+                    {company.adminPhone
+                      ? <div style={{ display: "flex", alignItems: "center", gap: "5px", fontSize: "13px", color: "var(--text-primary)", fontWeight: 500 }}>
+                          <Phone size={13} color="var(--text-muted)" />{company.adminPhone}
+                        </div>
+                      : <span style={{ color: "var(--text-muted)", fontSize: "13px" }}>—</span>
+                    }
+                  </td>
+
+                  {/* Plan */}
+                  <td style={{ padding: "14px 18px", whiteSpace: "nowrap" }}>
+                    <Badge 
+                      variant={
+                        company.subscription?.toLowerCase().includes("complete") ? "indigo"
+                        : company.subscription?.toLowerCase().includes("bundle") ? "amber"
+                        : company.subscription?.toLowerCase().includes("pilot") ? "cyan"
+                        : "slate"
+                      }
+                      style={{ textTransform: "none", letterSpacing: "normal", fontSize: "12px", padding: "4px 8px" }}
+                    >
+                      {formatPlanName(company.subscription)}
                     </Badge>
-                    <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "4px", fontWeight: 600 }}>{company.usersCount} Users</div>
                   </td>
-                  <td style={{ padding: "16px 20px" }}>
-                    <Badge variant={company.status === "Active" ? "emerald" : "destructive"}>{company.status}</Badge>
+
+                  {/* Status */}
+                  <td style={{ padding: "14px 18px", whiteSpace: "nowrap" }}>
+                    <Badge variant={company.status === "Active" ? "emerald" : "destructive"}>{company.status || "—"}</Badge>
                   </td>
-                  <td style={{ padding: "16px 20px", whiteSpace: "nowrap" }}>
-                    <div style={{ fontSize: "12px", color: "var(--text-secondary)" }}>Created: <span style={{color: "var(--text-primary)", fontWeight: 500}}>{company.createdAt}</span></div>
-                    <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>Expiry: <span style={{color: "var(--text-primary)", fontWeight: 500}}>{company.expiryDate || "N/A"}</span></div>
-                    <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>Active: <span style={{color: "var(--text-primary)", fontWeight: 500}}>{company.lastActivity || "N/A"}</span></div>
+
+                  {/* Dates */}
+                  <td style={{ padding: "14px 18px", whiteSpace: "nowrap" }}>
+                    <div style={{ fontSize: "12px", color: "var(--text-secondary)" }}>Created: <span style={{ color: "var(--text-primary)", fontWeight: 500 }}>{company.createdAt}</span></div>
+                    <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>Expiry: <span style={{ color: new Date(company.expiryDate) < new Date() ? "#EF4444" : "var(--text-primary)", fontWeight: 500 }}>{company.expiryDate || "N/A"}</span></div>
                   </td>
-                  <td style={{ padding: "16px 20px", textAlign: "right" }}>
-                    <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
-                      <Button variant="ghost" size="sm" onClick={() => handleViewDetails(company)} title="View Details"><Eye size={16} /></Button>
+
+                  {/* Actions */}
+                  <td style={{ padding: "14px 18px", textAlign: "right", whiteSpace: "nowrap" }}>
+                    <div style={{ display: "flex", gap: "6px", justifyContent: "flex-end" }}>
+                      <Button variant="ghost" size="sm" onClick={() => handleViewDetails(company)} title="View Details"><Eye size={15} /></Button>
                       <Button variant="ghost" size="sm" onClick={() => updateCompanyStatus(company.id, company.status === "Active" ? "Suspended" : "Active")} title={company.status === "Active" ? "Suspend Company" : "Activate Company"}>
-                        {company.status === "Active" ? <Pause size={16} color="#EF4444" /> : <Play size={16} color="#10B981" />}
+                        {company.status === "Active" ? <Pause size={15} color="#EF4444" /> : <Play size={15} color="#10B981" />}
                       </Button>
-                      <Button variant="ghost" size="sm" onClick={() => { if(window.confirm('Are you sure you want to remove this company?')) { removeCompany(company.id); addToast('Company removed successfully', 'destructive'); } }} title="Remove Company"><Trash2 size={16} color="#EF4444" /></Button>
+                      <Button variant="ghost" size="sm" onClick={() => handleDeleteCompany(company)} title="Remove Company"><Trash2 size={15} color="#EF4444" /></Button>
                     </div>
                   </td>
                 </tr>

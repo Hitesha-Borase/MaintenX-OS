@@ -43,7 +43,7 @@ export function PlanModal({ isOpen, onClose, planToEdit = null }) {
     }
   }, [planToEdit, isOpen]);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!formData.name) {
       addToast("Please enter a plan name", "warning");
       return;
@@ -74,19 +74,23 @@ export function PlanModal({ isOpen, onClose, planToEdit = null }) {
       features: featuresList
     };
 
-    if (planToEdit) {
-      editPlan(planToEdit.id, planPayload);
-      addToast(`${formData.name} plan updated successfully`, "success");
-    } else {
-      addPlan({
-        ...planPayload,
-        userLimit: 25,
-        accessLevel: "Standard",
-        modules: ["produce"]
-      });
-      addToast(`${formData.name} plan created successfully`, "success");
+    try {
+      if (planToEdit) {
+        await editPlan(planToEdit.id, planPayload);
+        addToast(`${formData.name} plan updated successfully`, "success");
+      } else {
+        await addPlan({
+          ...planPayload,
+          userLimit: 25,
+          accessLevel: "Standard",
+          modules: ["produce"]
+        });
+        addToast(`${formData.name} plan created successfully`, "success");
+      }
+      onClose();
+    } catch (err) {
+      addToast(err.message || "Failed to save plan", "error");
     }
-    onClose();
   };
 
   return (

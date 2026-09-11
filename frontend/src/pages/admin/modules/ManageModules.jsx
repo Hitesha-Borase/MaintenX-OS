@@ -6,9 +6,13 @@ import { Button } from "../../../components/common/Button";
 import { Layers, Check, X, Search, Filter } from "lucide-react";
 
 export function ManageModules() {
-  const { companies, toggleCompanyModule } = useMasterAdmin();
+  const { companies, toggleCompanyModule, fetchCompanies } = useMasterAdmin();
   const [searchTerm, setSearchTerm] = useState("");
   const [planFilter, setPlanFilter] = useState("All");
+
+  React.useEffect(() => {
+    fetchCompanies?.();
+  }, [fetchCompanies]);
 
   const moduleKeys = [
     { key: "plan",         label: "Plan",          color: "#6366F1" },
@@ -23,7 +27,7 @@ export function ManageModules() {
 
   const filteredCompanies = companies.filter(c => {
     const matchesSearch = c.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesPlan = planFilter === "All" || c.subscription === planFilter;
+    const matchesPlan = planFilter === "All" || c.subscription === planFilter || (c.subscription && c.subscription.toLowerCase().includes(planFilter.toLowerCase()));
     return matchesSearch && matchesPlan;
   });
 
@@ -34,23 +38,23 @@ export function ManageModules() {
       </div>
 
       <Card style={{ padding: "0" }}>
-        <div style={{ padding: "16px", borderBottom: "1px solid var(--border-color)", display: "flex", gap: "10px", flexWrap: "wrap" }}>
-          <div style={{ flex: "1 1 100%", minWidth: "200px", position: "relative" }}>
-            <Search size={16} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
+        <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--border-color)", display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap", backgroundColor: "#FFFFFF" }}>
+          <div style={{ width: "260px", minWidth: "180px", position: "relative" }}>
+            <Search size={14} style={{ position: "absolute", left: "11px", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
             <input 
               type="text" 
               placeholder="Search companies..." 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ width: "100%", padding: "8px 10px 8px 36px", borderRadius: "8px", border: "1px solid var(--border-color)", backgroundColor: "var(--bg-body)", fontSize: "13px" }}
+              style={{ width: "100%", padding: "7px 10px 7px 32px", borderRadius: "8px", border: "1px solid var(--border-color)", backgroundColor: "var(--bg-body)", fontSize: "12px", outline: "none" }}
             />
           </div>
-          <div style={{ display: "flex", gap: "8px", alignItems: "center", width: "100%" }}>
-            <Filter size={15} color="var(--text-secondary)" style={{ flexShrink: 0 }} />
+          <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+            <Filter size={14} color="var(--text-secondary)" style={{ flexShrink: 0 }} />
             <select 
               value={planFilter} 
               onChange={(e) => setPlanFilter(e.target.value)}
-              style={{ flex: 1, minWidth: 0, padding: "8px 10px", borderRadius: "8px", border: "1px solid var(--border-color)", backgroundColor: "var(--bg-body)", color: "var(--text-primary)", fontSize: "12px" }}
+              style={{ width: "180px", padding: "7px 10px", borderRadius: "8px", border: "1px solid var(--border-color)", backgroundColor: "var(--bg-body)", color: "var(--text-primary)", fontSize: "12px", outline: "none", cursor: "pointer" }}
             >
               <option value="All">All Plans</option>
               <option value="MaintenX OS Complete">MaintenX OS Complete</option>

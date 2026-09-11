@@ -16,7 +16,9 @@ import {
   AlertTriangle,
   Layers,
   Edit2,
-  Trash2
+  Trash2,
+  Eye,
+  EyeOff
 } from "lucide-react";
 import { Card } from "../../../components/common/Card";
 import { Badge } from "../../../components/common/Badge";
@@ -41,10 +43,12 @@ export function UsersPage() {
   const [roleFilter, setRoleFilter] = useState("ALL");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showModalPassword, setShowModalPassword] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
     email: "",
+    password: "",
     role: "Plant Manager",
     department: "Operations / Production",
     plantId: "PLT-01",
@@ -93,6 +97,7 @@ export function UsersPage() {
         await addUser({
           name: formData.name,
           email: formData.email,
+          password: formData.password && formData.password.trim() ? formData.password.trim() : "Password@123",
           role: formData.role,
           department: formData.department,
           plant: plantName,
@@ -105,6 +110,7 @@ export function UsersPage() {
       setFormData({
         name: "",
         email: "",
+        password: "",
         role: "Plant Manager",
         department: "Operations / Production",
         plantId: "PLT-01",
@@ -399,6 +405,42 @@ export function UsersPage() {
                   <option value="Quality Assurance & Lab">Quality Assurance & Lab</option>
                   <option value="Warehouse & Logistics">Warehouse & Logistics</option>
                 </select>
+              </div>
+
+              <div>
+                <label className="form-label" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span>Security Password</span>
+                  <span style={{ fontSize: "11px", color: "var(--text-muted)", fontWeight: 400 }}>Default: Password@123</span>
+                </label>
+                <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                  <input
+                    type={showModalPassword ? "text" : "password"}
+                    placeholder="Enter custom login password (min. 6 characters)"
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF", paddingRight: "40px" }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowModalPassword(!showModalPassword)}
+                    style={{
+                      position: "absolute",
+                      right: "12px",
+                      background: "transparent",
+                      border: "none",
+                      color: "var(--text-muted)",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      padding: "4px"
+                    }}
+                    title={showModalPassword ? "Hide password" : "Show password"}
+                  >
+                    {showModalPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
               </div>
 
               <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "8px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
