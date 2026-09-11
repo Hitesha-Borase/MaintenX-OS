@@ -66,6 +66,14 @@ export class AdminService {
     return await apiClient.post("/admin/users/provision", userData);
   }
 
+  async editUser(userId, userData) {
+    return await apiClient.put(`/admin/users/${userId}`, userData);
+  }
+
+  async deleteUser(userId) {
+    return await apiClient.delete(`/admin/users/${userId}`);
+  }
+
   async updateUserStatus(userId, status) {
     try {
       return await apiClient.put(`/admin/users/${userId}/status`, { status });

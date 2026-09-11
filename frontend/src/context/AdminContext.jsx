@@ -120,6 +120,23 @@ export function AdminProvider({ children }) {
     return created;
   };
 
+  const editUser = async (userId, userData) => {
+    const updated = await adminService.editUser(userId, userData);
+    setUsers((prev) =>
+      prev.map((u) => (u.id === userId || u.email?.toLowerCase() === updated.email?.toLowerCase() ? { ...u, ...updated } : u))
+    );
+    // refresh activity
+    adminService.getActivityLogs().then((logs) => Array.isArray(logs) && setActivityLogs(logs));
+    return updated;
+  };
+
+  const deleteUser = async (userId) => {
+    await adminService.deleteUser(userId);
+    setUsers((prev) => prev.filter((u) => u.id !== userId));
+    // refresh activity
+    adminService.getActivityLogs().then((logs) => Array.isArray(logs) && setActivityLogs(logs));
+  };
+
   const updateUserStatus = async (userId, status) => {
     try {
       await adminService.updateUserStatus(userId, status);
@@ -262,6 +279,8 @@ export function AdminProvider({ children }) {
         setUsers,
         loading,
         addUser,
+        editUser,
+        deleteUser,
         updateUserStatus,
         bulkUpdateStatus,
         updateUserRole,
