@@ -29,6 +29,7 @@ export function OrderStatus() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStage, setSelectedStage] = useState("ALL");
 
+  const [updatingId, setUpdatingId] = useState(null);
   const stages = ["Open", "Allocated", "Scheduled", "Fulfilled"];
 
   const fetchOrders = async () => {
@@ -46,6 +47,38 @@ export function OrderStatus() {
     }
   };
 
+  const handleAdvanceStatus = async (order) => {
+    const currentIndex = stages.findIndex(
+      (s) => s.toLowerCase() === (order.status || "").toLowerCase()
+    );
+    const nextStatus =
+      currentIndex >= 0 && currentIndex < stages.length - 1
+        ? stages[currentIndex + 1]
+        : "Fulfilled";
+
+    setUpdatingId(order.id);
+    setOrders((prev) =>
+      prev.map((o) => (o.id === order.id ? { ...o, status: nextStatus } : o))
+    );
+
+    try {
+      if (updateDemandOrder) {
+        await updateDemandOrder(order.id, { status: nextStatus });
+      }
+      try {
+        await planningService.updateDemandOrder(order.id, { status: nextStatus });
+      } catch (serviceErr) {
+        // service endpoint fallback
+      }
+      addToast(`Order ${order.orderNumber} advanced to "${nextStatus}" status!`, "success");
+    } catch (err) {
+      console.error("Failed to advance status:", err);
+      addToast(`Failed to update status in DB: ${err.message}`, "error");
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
   useEffect(() => {
     fetchOrders();
   }, []);
@@ -55,26 +88,6 @@ export function OrderStatus() {
       setOrders(contextOrders);
     }
   }, [contextOrders]);
-
-  const handleAdvanceStatus = async (order) => {
-    const currentIndex = stages.indexOf(order.status);
-    const nextStatus = stages[currentIndex + 1] || "Fulfilled";
-    
-    setOrders((prev) =>
-      prev.map((o) => (o.id === order.id ? { ...o, status: nextStatus } : o))
-    );
-
-    try {
-      await planningService.updateDemandOrder(order.id, { status: nextStatus });
-      if (updateDemandOrder) {
-        updateDemandOrder(order.id, { status: nextStatus });
-      }
-      addToast(`Order ${order.orderNumber} advanced to "${nextStatus}" status!`, "success");
-    } catch (err) {
-      console.warn("Backend update error:", err);
-      addToast(`Order status updated locally`, "info");
-    }
-  };
 
   const handleExportCSV = () => {
     const headers = "Order ID,Order Number,Customer,Product Code,Product Name,Quantity,UOM,Requested Ship Date,Priority,Status\n";
@@ -287,6 +300,7 @@ export function OrderStatus() {
                       {o.status !== "Fulfilled" && (
                         <button
                           onClick={() => handleAdvanceStatus(o)}
+                          disabled={updatingId === o.id}
                           style={{
                             display: "inline-flex",
                             alignItems: "center",
@@ -298,12 +312,13 @@ export function OrderStatus() {
                             color: "#261603",
                             fontSize: "12px",
                             fontWeight: 700,
-                            cursor: "pointer",
+                            cursor: updatingId === o.id ? "not-allowed" : "pointer",
+                            opacity: updatingId === o.id ? 0.7 : 1,
                             boxShadow: "0 2px 4px rgba(200, 149, 71, 0.25)"
                           }}
                         >
                           <ArrowRight size={13} />
-                          Advance Stage
+                          {updatingId === o.id ? "Updating..." : "Advance Stage"}
                         </button>
                       )}
                     </div>

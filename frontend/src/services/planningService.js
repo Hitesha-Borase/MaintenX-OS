@@ -101,6 +101,11 @@ export const planningService = {
     return response.data?.data || response.data;
   },
 
+  async deletePromotion(id) {
+    const response = await apiClient.delete(`/promotions/${id}`);
+    return response.data?.data || response.data;
+  },
+
   // Statistical Forecast Engine Run
   async runForecast(data) {
     const response = await apiClient.post('/forecast/run', data);

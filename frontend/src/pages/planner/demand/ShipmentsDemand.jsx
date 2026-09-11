@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { usePlanning } from "../../../context/PlanningContext";
 import { useApp } from "../../../context/AppContext";
 import { Card } from "../../../components/common/Card";
@@ -16,58 +16,22 @@ import {
   CheckCircle2,
   Clock,
   Download,
+  AlertCircle,
   RefreshCw,
   X,
   ArrowRight
 } from "lucide-react";
 
 export function ShipmentsDemand() {
-  const { demandOrders = [] } = usePlanning();
+  const { demandOrders = [], updateDemandOrder } = usePlanning();
   const { addToast } = useApp();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [loading, setLoading] = useState(false);
+  const [updatingId, setUpdatingId] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const [shipments, setShipments] = useState([
-    {
-      id: "SH-9002",
-      orderRef: "PO-WF-88901",
-      destination: "Whole Foods Market - Chicago Distribution Hub",
-      carrier: "Swift Dedicated Logistics",
-      mode: "Reefer FTL (53ft)",
-      pallets: 26,
-      units: "48,000 Bottles",
-      scheduledDate: "2026-09-08",
-      dockDoor: "Door 04 (Cold Chain)",
-      status: "Booked"
-    },
-    {
-      id: "SH-9003",
-      orderRef: "PO-TJ-55412",
-      destination: "Trader Joe's - Dallas Cross-Dock",
-      carrier: "C.H. Robinson Cold Fleet",
-      mode: "Reefer FTL",
-      pallets: 20,
-      units: "36,000 Cans",
-      scheduledDate: "2026-09-12",
-      dockDoor: "Door 02",
-      status: "Pending Dispatch"
-    },
-    {
-      id: "SH-9004",
-      orderRef: "PO-KR-99321",
-      destination: "Kroger Distribution - Atlanta",
-      carrier: "Schneider Express",
-      mode: "FTL Carrier",
-      pallets: 14,
-      units: "24,000 Bottles",
-      scheduledDate: "2026-09-15",
-      dockDoor: "Door 06",
-      status: "Staged"
-    }
-  ]);
+  const [manualShipments, setManualShipments] = useState([]);
 
   const [newShipment, setNewShipment] = useState({
     destination: "",
@@ -81,13 +45,60 @@ export function ShipmentsDemand() {
     status: "Booked"
   });
 
+  // Derive real shipments directly from active Customer Demand Orders in DB
+  const orderShipments = useMemo(() => {
+    return demandOrders.map((o, idx) => {
+      const qty = Number(o.quantity) || 1000;
+      const pallets = Math.max(1, Math.ceil(qty / 1000));
+      
+      const carrier = o.priority === "Urgent" 
+        ? "Swift Dedicated Logistics (Priority FTL)" 
+        : o.priority === "High"
+        ? "C.H. Robinson Cold Fleet"
+        : "Schneider National Express";
+
+      const mode = (o.uom === "Bottles" || o.uom === "Liters") ? "Reefer FTL (53ft)" : "Standard Dry Van (53ft)";
+      const dockDoor = `Door 0${(idx % 4) + 1}${idx % 2 === 0 ? " (Cold Chain)" : ""}`;
+
+      // Synchronize shipment status with order lifecycle
+      let shippingStatus = "Booked";
+      if (o.status === "Fulfilled" || o.status === "Dispatched") {
+        shippingStatus = "Dispatched";
+      } else if (o.status === "Scheduled" || o.status === "Staged") {
+        shippingStatus = "Staged";
+      } else if (o.status === "Open") {
+        shippingStatus = "Pending Dispatch";
+      }
+
+      return {
+        id: `SH-${o.orderNumber?.replace(/[^a-zA-Z0-9]/g, "") || (9000 + idx)}`,
+        orderId: o.id,
+        orderRef: o.orderNumber || `ORD-${o.id}`,
+        customer: o.customer,
+        destination: o.notes ? `${o.customer} (${o.notes})` : `${o.customer} - Regional Distribution Hub`,
+        carrier,
+        mode,
+        pallets,
+        units: `${qty.toLocaleString()} ${o.uom || "Units"}`,
+        productName: o.productName,
+        productCode: o.productCode,
+        scheduledDate: o.requestedShipDate || new Date().toISOString().substring(0, 10),
+        dockDoor,
+        status: shippingStatus,
+        orderStatus: o.status
+      };
+    });
+  }, [demandOrders]);
+
   const fetchShipments = async () => {
     try {
       setLoading(true);
       const res = await planningService.getShipments();
       const data = res?.data || res;
       if (Array.isArray(data) && data.length > 0) {
-        setShipments(data);
+        // Filter out records that are already mirrored in demandOrders to avoid duplicates
+        const nonOrderShipments = data.filter(d => !demandOrders.some(o => o.orderNumber === d.orderRef));
+        setManualShipments(nonOrderShipments);
       }
     } catch (err) {
       console.warn("Outbound shipments backend fetch fallback:", err.message);
@@ -100,20 +111,40 @@ export function ShipmentsDemand() {
     fetchShipments();
   }, []);
 
-  const handleToggleShipmentStatus = async (id) => {
-    const current = shipments.find((s) => s.id === id);
-    if (!current) return;
-    const nextSt = current.status === "Booked" ? "Staged" : current.status === "Staged" ? "Dispatched" : "Booked";
-    
-    setShipments((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, status: nextSt } : s))
-    );
-    addToast(`Shipment ${id} status updated to ${nextSt}!`, "success");
+  const shipments = useMemo(() => {
+    return [...orderShipments, ...manualShipments];
+  }, [orderShipments, manualShipments]);
 
-    try {
-      await planningService.updateShipmentStatus(id, nextSt);
-    } catch (err) {
-      console.warn("Backend updateShipmentStatus fallback:", err.message);
+  const handleToggleShipmentStatus = async (shipment) => {
+    if (shipment.orderId) {
+      const nextOrderStatus = 
+        shipment.status === "Dispatched" 
+          ? "Allocated" 
+          : shipment.status === "Staged" 
+          ? "Fulfilled" 
+          : "Scheduled";
+
+      setUpdatingId(shipment.orderId);
+      try {
+        await updateDemandOrder(shipment.orderId, { status: nextOrderStatus });
+        addToast(`Shipment for Order ${shipment.orderRef} updated in Database!`, "success");
+      } catch (err) {
+        console.error("Failed to update shipment status:", err);
+        addToast(`Failed to update shipment in DB: ${err.message}`, "error");
+      } finally {
+        setUpdatingId(null);
+      }
+    } else {
+      const nextSt = shipment.status === "Booked" ? "Staged" : shipment.status === "Staged" ? "Dispatched" : "Booked";
+      setManualShipments((prev) =>
+        prev.map((s) => (s.id === shipment.id ? { ...s, status: nextSt } : s))
+      );
+      addToast(`Shipment ${shipment.id} status updated to ${nextSt}!`, "success");
+      try {
+        await planningService.updateShipmentStatus(shipment.id, nextSt);
+      } catch (err) {
+        console.warn("Backend updateShipmentStatus fallback:", err.message);
+      }
     }
   };
 
@@ -134,7 +165,7 @@ export function ShipmentsDemand() {
         pallets: Number(newShipment.pallets)
       };
 
-      setShipments((prev) => [optimistic, ...prev]);
+      setManualShipments((prev) => [optimistic, ...prev]);
       addToast(`Outbound freight trailer booked for ${optimistic.destination}!`, "success");
       setIsModalOpen(false);
       setNewShipment({
@@ -175,12 +206,17 @@ export function ShipmentsDemand() {
     const q = searchQuery.toLowerCase().trim();
     const matchesSearch =
       !q ||
-      s.destination.toLowerCase().includes(q) ||
-      s.carrier.toLowerCase().includes(q) ||
-      s.orderRef.toLowerCase().includes(q) ||
-      s.id.toLowerCase().includes(q);
+      s.destination?.toLowerCase().includes(q) ||
+      s.carrier?.toLowerCase().includes(q) ||
+      s.orderRef?.toLowerCase().includes(q) ||
+      s.id?.toLowerCase().includes(q) ||
+      (s.productName && s.productName.toLowerCase().includes(q));
     return matchesStatus && matchesSearch;
   });
+
+  const totalPallets = shipments.reduce((sum, s) => sum + (Number(s.pallets) || 0), 0);
+  const stagedCount = shipments.filter((s) => s.status === "Staged").length;
+  const activeDoorsCount = Math.min(4, shipments.length);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%", maxWidth: "1600px", margin: "0 auto", minWidth: 0, paddingBottom: "40px" }}>
@@ -205,7 +241,7 @@ export function ShipmentsDemand() {
             </span>
           </div>
           <p style={{ margin: "4px 0 0 0", fontSize: "14px", color: "var(--text-secondary)" }}>
-            Coordinate outbound carrier freight bookings, pallet payloads, and cold chain dock allocation.
+            Coordinate outbound carrier freight bookings, pallet payloads, and cold chain dock allocation connected to Customer Orders.
           </p>
         </div>
 
@@ -269,28 +305,28 @@ export function ShipmentsDemand() {
         <StatCard
           title="Active Freight Bookings"
           value={shipments.length.toString()}
-          unit="Trailers Booked"
+          unit="Trailers Required"
           icon={Truck}
           colorVariant="cyan"
         />
         <StatCard
           title="Staged at Dock"
-          value={shipments.filter((s) => s.status === "Staged").length.toString()}
+          value={stagedCount.toString()}
           unit="Ready for Loading"
           icon={Package}
           colorVariant="amber"
         />
         <StatCard
           title="Total Pallet Payload"
-          value={shipments.reduce((sum, s) => sum + (Number(s.pallets) || 0), 0).toString()}
+          value={totalPallets.toString()}
           unit="Standard GMA Pallets"
           icon={MapPin}
           colorVariant="amber"
         />
         <StatCard
           title="Dock Utilization"
-          value="75%"
-          unit="3 of 4 Doors Active"
+          value={shipments.length === 0 ? "0%" : `${Math.round((activeDoorsCount / 4) * 100)}%`}
+          unit={`${activeDoorsCount} of 4 Doors Active`}
           icon={Clock}
           colorVariant="amber"
         />
@@ -348,7 +384,9 @@ export function ShipmentsDemand() {
                   justifyContent: "space-between",
                   alignItems: "center",
                   flexWrap: "wrap",
-                  gap: "14px"
+                  gap: "14px",
+                  opacity: updatingId === s.orderId ? 0.6 : 1,
+                  transition: "opacity 0.2s ease"
                 }}
               >
                 <div style={{ display: "flex", alignItems: "center", gap: "14px", flex: "1 1 300px" }}>
@@ -376,7 +414,8 @@ export function ShipmentsDemand() {
                   </div>
 
                   <button
-                    onClick={() => handleToggleShipmentStatus(s.id)}
+                    onClick={() => handleToggleShipmentStatus(s)}
+                    disabled={updatingId === s.orderId}
                     style={{
                       display: "inline-flex",
                       alignItems: "center",
@@ -388,19 +427,25 @@ export function ShipmentsDemand() {
                       color: "#2B1D11",
                       fontSize: "12px",
                       fontWeight: 700,
-                      cursor: "pointer"
+                      cursor: updatingId === s.orderId ? "wait" : "pointer"
                     }}
-                    title="Click to advance status"
+                    title="Click to advance status in Database"
                   >
-                    <span>{s.status?.toUpperCase()}</span>
+                    <span>{updatingId === s.orderId ? "UPDATING..." : s.status?.toUpperCase()}</span>
                     <ArrowRight size={12} />
                   </button>
                 </div>
               </div>
             ))
           ) : (
-            <div style={{ textAlign: "center", padding: "32px", color: "var(--text-muted)", fontSize: "13px" }}>
-              No shipments match your criteria.
+            <div style={{ textAlign: "center", padding: "40px 20px", color: "var(--text-muted)", display: "flex", flexDirection: "column", alignItems: "center", gap: "10px" }}>
+              <AlertCircle size={28} color="var(--text-muted)" />
+              <div style={{ fontSize: "14px", fontWeight: 700, color: "var(--text-primary)" }}>
+                No Outbound Shipments Found
+              </div>
+              <div style={{ fontSize: "12px", maxWidth: "400px" }}>
+                Create customer orders in the <strong>Customer Orders</strong> menu to automatically generate real outbound freight shipments, or click <strong>+ Book Freight Trailer</strong>.
+              </div>
             </div>
           )}
         </div>

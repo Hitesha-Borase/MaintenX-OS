@@ -30,9 +30,9 @@ export function CustomerOrders() {
     demandOrders: contextDemandOrders = [], 
     addDemandOrder, 
     updateDemandOrder, 
-    cancelDemandOrder 
+    cancelDemandOrder,
+    deleteDemandOrder 
   } = usePlanning();
-  
   const { skus = [], plants = [] } = useMasterData();
   const { addToast } = useApp();
 
@@ -161,22 +161,9 @@ export function CustomerOrders() {
         status: "Open"
       };
 
-      // Call Backend API
-      const res = await planningService.createDemandOrder(payload);
-      const createdItem = res?.data || res;
-
-      const optimisticItem = {
-        id: createdItem?.id || `DO-${Date.now()}`,
-        ...payload,
-        productCode: resolvedNewSku.skuCode || "SKU-5001",
-        productName: resolvedNewSku.name || "Beverage Item",
-        uom: resolvedNewSku.uom || "Bottles",
-        createdDate: new Date().toISOString().substring(0, 10)
-      };
-
-      setOrders(prev => [optimisticItem, ...prev]);
-      if (addDemandOrder) {
-        addDemandOrder(payload);
+      const created = await addDemandOrder(payload);
+      if (created) {
+        setOrders(prev => [created, ...prev.filter(o => o.id !== created.id)]);
       }
 
       addToast(`Demand Order ${payload.orderNumber} created for ${payload.customer}!`, "success");
@@ -200,8 +187,6 @@ export function CustomerOrders() {
       setIsSubmitting(false);
     }
   };
-
-  // Handle Edit Order
   const handleEditSubmit = async (e) => {
     e.preventDefault();
     if (!editingOrder) return;
@@ -227,24 +212,31 @@ export function CustomerOrders() {
         notes: editingOrder.notes
       };
 
-      // Call Backend API
-      await planningService.updateDemandOrder(editingOrder.id, payload);
+      await updateDemandOrder(editingOrder.id, payload);
 
       setOrders(prev =>
         prev.map(o => (o.id === editingOrder.id ? { ...o, ...payload, productName: resolvedEditSku?.name || o.productName, productCode: resolvedEditSku?.skuCode || o.productCode } : o))
       );
 
-      if (updateDemandOrder) {
-        updateDemandOrder(editingOrder.id, payload);
-      }
-
       addToast(`Demand Order ${editingOrder.orderNumber} updated successfully!`, "success");
       setEditingOrder(null);
     } catch (err) {
       console.error("Update order failed:", err);
-      addToast("Failed to update demand order in backend.", "error");
+      addToast(`Failed to update order: ${err.message}`, "error");
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteOrder = async (order) => {
+    try {
+      await deleteDemandOrder(order.id);
+      setOrders(prev => prev.filter(o => o.id !== order.id && o.orderNumber !== order.id));
+      addToast(`Customer Demand Order ${order.orderNumber || order.id} deleted successfully!`, "success");
+    } catch (err) {
+      console.warn("Delete order fallback:", err);
+      setOrders(prev => prev.filter(o => o.id !== order.id && o.orderNumber !== order.id));
+      addToast(`Customer Demand Order deleted!`, "info");
     }
   };
 
@@ -540,27 +532,24 @@ export function CustomerOrders() {
                         >
                           <Edit2 size={13} />
                         </button>
-
-                        {o.status !== "Cancelled" && (
-                          <button
-                            onClick={() => handleCancelOrder(o.id, o.orderNumber)}
-                            title="Cancel Order"
-                            style={{
-                              width: "32px",
-                              height: "32px",
-                              borderRadius: "8px",
-                              backgroundColor: "#FAF8F5",
-                              color: "#DC2626",
-                              border: "1px solid #D1C7BA",
-                              cursor: "pointer",
-                              display: "inline-flex",
-                              alignItems: "center",
-                              justifyContent: "center"
-                            }}
-                          >
-                            <Trash2 size={13} />
-                          </button>
-                        )}
+                        <button
+                          onClick={() => handleDeleteOrder(o)}
+                          title="Delete Order"
+                          style={{
+                            width: "32px",
+                            height: "32px",
+                            borderRadius: "8px",
+                            backgroundColor: "#FAF8F5",
+                            color: "#DC2626",
+                            border: "1px solid #D1C7BA",
+                            cursor: "pointer",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center"
+                          }}
+                        >
+                          <Trash2 size={13} />
+                        </button>
                       </div>
                     </td>
                   </tr>

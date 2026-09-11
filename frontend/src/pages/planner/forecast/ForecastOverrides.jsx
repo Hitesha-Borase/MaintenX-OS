@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Plus, Check, X, Edit3, Search, TrendingUp, AlertTriangle, Layers, Database, RefreshCw, Download, Calendar } from "lucide-react";
 import { Card } from "../../../components/common/Card";
 import { Badge } from "../../../components/common/Badge";
@@ -58,23 +58,26 @@ export function ForecastOverrides() {
   }, []);
 
   useEffect(() => {
-    if (contextForecasts.length > 0) {
+    if (contextForecasts && contextForecasts.length > 0) {
       setForecastsList(contextForecasts);
     }
   }, [contextForecasts]);
 
-  const filteredForecasts = forecastsList.filter((f) => {
-    const matchesFilter = filterStatus === "ALL" || f.status === filterStatus;
-    const q = searchQuery.toLowerCase().trim();
-    const matchesSearch =
-      !q ||
-      f.period?.toLowerCase().includes(q) ||
-      f.productName?.toLowerCase().includes(q) ||
-      f.productCode?.toLowerCase().includes(q) ||
-      f.skuCode?.toLowerCase().includes(q) ||
-      (f.owner && f.owner.toLowerCase().includes(q));
-    return matchesFilter && matchesSearch;
-  });
+  const filteredForecasts = useMemo(() => {
+    return (forecastsList || []).filter((f) => {
+      if (!f) return false;
+      const matchesFilter = filterStatus === "ALL" || f.status === filterStatus;
+      const q = searchQuery.toLowerCase().trim();
+      const matchesSearch =
+        !q ||
+        f.period?.toLowerCase().includes(q) ||
+        f.productName?.toLowerCase().includes(q) ||
+        f.productCode?.toLowerCase().includes(q) ||
+        f.skuCode?.toLowerCase().includes(q) ||
+        (f.owner && f.owner.toLowerCase().includes(q));
+      return matchesFilter && matchesSearch;
+    });
+  }, [forecastsList, filterStatus, searchQuery]);
 
   const pendingCount = forecastsList.filter((f) => f.status === "Submitted").length;
   const approvedCount = forecastsList.filter((f) => f.status === "Approved").length;
@@ -122,6 +125,9 @@ export function ForecastOverrides() {
       setShowOverrideModal(false);
     } catch (err) {
       console.warn("Backend override fallback:", err);
+      if (applyForecastOverride) {
+        applyForecastOverride(selectedForecast.id, val, justification);
+      }
       addToast("Override saved locally.", "success");
       setShowOverrideModal(false);
     }
@@ -140,6 +146,9 @@ export function ForecastOverrides() {
       addToast("Forecast approved & released to MRP Master Production Schedule.", "success");
     } catch (err) {
       console.warn("Backend approve fallback:", err);
+      if (approveForecast) {
+        approveForecast(id);
+      }
       addToast("Forecast marked Approved.", "success");
     }
   };
@@ -157,6 +166,9 @@ export function ForecastOverrides() {
       addToast("Forecast override rejected.", "info");
     } catch (err) {
       console.warn("Backend reject fallback:", err);
+      if (rejectForecast) {
+        rejectForecast(id);
+      }
       addToast("Forecast marked Rejected.", "info");
     }
   };
@@ -201,6 +213,9 @@ export function ForecastOverrides() {
       setShowCreateModal(false);
     } catch (err) {
       console.warn("Backend create forecast fallback:", err);
+      if (addForecast) {
+        addForecast(payload);
+      }
       addToast("Forecast record created locally.", "success");
       setShowCreateModal(false);
     }
@@ -394,7 +409,7 @@ export function ForecastOverrides() {
             <tbody>
               {filteredForecasts.length > 0 ? (
                 filteredForecasts.map((f) => {
-                  const base = Number(f.baselineForecast || f.baselineQty) || 0;
+                  const base = Number(f.baselineForecast || f.baselineQty || f.baselineDemand) || 0;
                   const over = Number(f.overrideQuantity || f.overrideQty) || 0;
                   const final = Number(f.finalForecast || f.finalQty) || base + over;
 
@@ -416,9 +431,9 @@ export function ForecastOverrides() {
                       </td>
 
                       <td style={{ padding: "12px 14px" }}>
-                        <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)" }}>{f.productName}</div>
+                        <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)" }}>{f.productName || "Master Product SKU"}</div>
                         <div style={{ fontSize: "11px", color: "#8C5B23", fontFamily: "var(--font-mono)", fontWeight: 700, marginTop: "2px" }}>
-                          {f.productCode || f.skuCode}
+                          {f.productCode || f.skuCode || f.skuId}
                         </div>
                       </td>
 
@@ -448,7 +463,7 @@ export function ForecastOverrides() {
                       </td>
 
                       <td style={{ padding: "12px 14px" }}>
-                        <div style={{ fontSize: "12px", fontWeight: 600, color: "var(--text-primary)" }}>{f.method || "Historical Moving Avg"}</div>
+                        <div style={{ fontSize: "12px", fontWeight: 600, color: "var(--text-primary)" }}>{f.method || f.modelType || "Historical Moving Avg"}</div>
                         <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>
                           Historical: {base.toLocaleString()}
                         </div>
@@ -579,7 +594,7 @@ export function ForecastOverrides() {
                 <input
                   type="text"
                   disabled
-                  value={`${selectedForecast.productName} (${selectedForecast.productCode || selectedForecast.skuCode})`}
+                  value={`${selectedForecast.productName || 'Product'} (${selectedForecast.productCode || selectedForecast.skuCode || selectedForecast.skuId})`}
                   className="form-input"
                   style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #D1C7BA", backgroundColor: "#F5EFE6" }}
                 />
@@ -591,7 +606,7 @@ export function ForecastOverrides() {
                   <input
                     type="text"
                     disabled
-                    value={`${Number(selectedForecast.baselineForecast || selectedForecast.baselineQty).toLocaleString()} ${selectedForecast.uom || "Bottles"}`}
+                    value={`${Number(selectedForecast.baselineForecast || selectedForecast.baselineQty || selectedForecast.baselineDemand || 0).toLocaleString()} ${selectedForecast.uom || "Bottles"}`}
                     className="form-input"
                     style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #D1C7BA", backgroundColor: "#F5EFE6" }}
                   />
