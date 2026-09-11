@@ -9,6 +9,7 @@ import {
   X,
   Edit2,
   Trash2,
+  Eye,
   Gauge,
   Zap
 } from "lucide-react";
@@ -38,6 +39,7 @@ export function OrgWorkCentersPage() {
   const [lineFilter, setLineFilter] = useState("ALL");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingWC, setEditingWC] = useState(null);
+  const [viewingWC, setViewingWC] = useState(null);
 
   const [newWC, setNewWC] = useState({
     code: "",
@@ -89,6 +91,12 @@ export function OrgWorkCentersPage() {
     if (window.confirm(`Are you sure you want to delete Work Center "${name}"?`)) {
       deleteWorkCenter(id);
       addToast(`Work Center "${name}" deleted.`, "info");
+      if (viewingWC && (viewingWC.id === id || viewingWC.workCenterId === id || viewingWC.code === id)) {
+        setViewingWC(null);
+      }
+      if (editingWC && (editingWC.id === id || editingWC.workCenterId === id || editingWC.code === id)) {
+        setEditingWC(null);
+      }
     }
   };
 
@@ -252,6 +260,13 @@ export function OrgWorkCentersPage() {
                   </td>
                   <td style={{ padding: "12px 16px", textAlign: "right" }}>
                     <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                      <button
+                        onClick={() => setViewingWC({ ...w })}
+                        title="View Work Center Details"
+                        style={{ width: "30px", height: "30px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", color: "var(--text-primary)", border: "1px solid var(--border-subtle)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+                      >
+                        <Eye size={13} />
+                      </button>
                       <button
                         onClick={() => setEditingWC({ ...w })}
                         title="Edit Work Center"
@@ -422,6 +437,106 @@ export function OrgWorkCentersPage() {
                 </Button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* VIEW WORK CENTER DETAILS MODAL */}
+      {viewingWC && (
+        <div className="modal-backdrop" onClick={() => setViewingWC(null)}>
+          <div className="modal-content" style={{ maxWidth: "520px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Eye size={18} color="#C89547" />
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                  Work Center Cell Details
+                </h2>
+              </div>
+              <button onClick={() => setViewingWC(null)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: "12px", borderBottom: "1px solid var(--border-subtle)" }}>
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>WC Code</div>
+                  <div style={{ fontSize: "16px", fontWeight: 800, color: "#8C5B23", fontFamily: "var(--font-mono)", marginTop: "4px" }}>
+                    {viewingWC.code || viewingWC.id}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Status</div>
+                  <div style={{ marginTop: "4px" }}>
+                    <Badge variant="emerald">{viewingWC.status || "Active"}</Badge>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Work Center Cell Name</div>
+                <div style={{ fontSize: "15px", fontWeight: 800, color: "var(--text-primary)", marginTop: "4px" }}>
+                  {viewingWC.name}
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Parent Production Line</div>
+                  <div style={{ fontSize: "13px", fontWeight: 600, color: "var(--text-secondary)", marginTop: "4px", display: "flex", alignItems: "center", gap: "4px" }}>
+                    <Layers size={13} color="#C89547" />
+                    <span>{viewingWC.lineName || lines.find((l) => l.lineId === viewingWC.lineId || l.id === viewingWC.lineId)?.name || "Line 1 — Aseptic Bottling"}</span>
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Rated Speed / Capacity</div>
+                  <div style={{ fontSize: "14px", fontWeight: 800, color: "#D97706", fontFamily: "var(--font-mono)", marginTop: "4px" }}>
+                    {viewingWC.capacity || "35,000 BPH"}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Category</div>
+                  <div style={{ marginTop: "4px" }}>
+                    <Badge variant="cyan">{viewingWC.category || "PACKAGING"}</Badge>
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Cell Reliability</div>
+                  <div style={{ fontSize: "13px", fontWeight: 700, color: "#059669", marginTop: "4px" }}>
+                    99.4% Audited
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "10px", marginTop: "8px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
+                <Button
+                  type="button"
+                  variant="danger"
+                  onClick={() => handleDelete(viewingWC.id || viewingWC.workCenterId, viewingWC.name)}
+                  style={{ fontSize: "12px", padding: "6px 12px", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                >
+                  <Trash2 size={13} /> Delete
+                </Button>
+                <div style={{ display: "flex", gap: "8px" }}>
+                  <Button
+                    variant="primary"
+                    onClick={() => {
+                      setEditingWC({ ...viewingWC });
+                      setViewingWC(null);
+                    }}
+                    style={{ fontSize: "12px", padding: "6px 12px", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                  >
+                    <Edit2 size={13} /> Edit
+                  </Button>
+                  <Button variant="secondary" onClick={() => setViewingWC(null)} style={{ fontSize: "12px", padding: "6px 12px" }}>
+                    Close
+                  </Button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}

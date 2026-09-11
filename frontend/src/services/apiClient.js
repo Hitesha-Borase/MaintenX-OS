@@ -8,6 +8,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:4000/api/
 class ApiClient {
   constructor(baseUrl) {
     this.baseUrl = baseUrl;
+    this.inflightGetRequests = new Map();
   }
 
   getToken() {
@@ -25,7 +26,24 @@ class ApiClient {
   }
 
   async request(endpoint, options = {}) {
+    const method = (options.method || "GET").toUpperCase();
+    if (method === "GET") {
+      const cacheKey = `${endpoint}::${JSON.stringify(options.params || {})}`;
+      if (this.inflightGetRequests.has(cacheKey)) {
+        return this.inflightGetRequests.get(cacheKey);
+      }
+      const promise = this._executeRequest(endpoint, options).finally(() => {
+        this.inflightGetRequests.delete(cacheKey);
+      });
+      this.inflightGetRequests.set(cacheKey, promise);
+      return promise;
+    }
+    return this._executeRequest(endpoint, options);
+  }
+
+  async _executeRequest(endpoint, options = {}) {
     let rawEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+
 
     // Extract query params if passed in options or headers
     let queryParams = options.params;
@@ -85,8 +103,8 @@ class ApiClient {
       fetchConfig.body = options.body;
     }
 
-    if ((config.method === "DELETE" || config.method === "POST" || config.method === "PUT") && config.body === undefined) {
-      config.body = JSON.stringify({});
+    if ((fetchConfig.method === "DELETE" || fetchConfig.method === "POST" || fetchConfig.method === "PUT") && fetchConfig.body === undefined) {
+      fetchConfig.body = JSON.stringify({});
     }
 
     try {

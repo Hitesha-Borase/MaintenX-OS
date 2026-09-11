@@ -6,6 +6,7 @@ import {
   X,
   Edit2,
   Trash2,
+  Eye,
   Layers,
   Truck,
   DollarSign,
@@ -22,17 +23,23 @@ import { useApp } from "../../../context/AppContext";
 import masterDataService from "../../../services/masterDataService";
 
 export function PackagingMasterPage() {
-  const { packConfigs = [], addPackConfig, updatePackConfig, deletePackConfig, skus = [] } = useMasterData();
+  const { packConfigs = [], setPackConfigs, addPackConfig, updatePackConfig, deletePackConfig, skus = [] } = useMasterData();
   const { addToast } = useApp();
 
   useEffect(() => {
-    masterDataService.getPackConfigs().catch((err) => console.warn("Pack configs load:", err.message));
+    masterDataService.getPackConfigs().then((res) => {
+      const data = res?.data || res;
+      if (Array.isArray(data) && data.length > 0 && typeof setPackConfigs === "function") {
+        setPackConfigs(data);
+      }
+    }).catch((err) => console.warn("Pack configs load:", err.message));
   }, []);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [skuFilter, setSkuFilter] = useState("ALL");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPkg, setEditingPkg] = useState(null);
+  const [viewingPkg, setViewingPkg] = useState(null);
 
   const finishedSkus = useMemo(() => {
     if (!Array.isArray(skus) || skus.length === 0) return [];
@@ -127,6 +134,9 @@ export function PackagingMasterPage() {
   const handleDelete = (packConfigId, code) => {
     if (window.confirm(`Are you sure you want to delete Pack Configuration "${code}"?`)) {
       deletePackConfig(packConfigId);
+      if (viewingPkg && (viewingPkg.packConfigId === packConfigId || viewingPkg.id === packConfigId || viewingPkg.packCode === code || viewingPkg.code === code)) {
+        setViewingPkg(null);
+      }
       addToast(`Pack Configuration "${code}" deleted.`, "info");
     }
   };
@@ -301,6 +311,24 @@ export function PackagingMasterPage() {
                     </td>
                     <td style={{ padding: "12px 16px", textAlign: "right" }}>
                       <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                        <button
+                          onClick={() => setViewingPkg({ ...p })}
+                          title="View Pack Configuration Details"
+                          style={{
+                            width: "30px",
+                            height: "30px",
+                            borderRadius: "6px",
+                            backgroundColor: "var(--bg-card-subtle)",
+                            color: "var(--text-primary)",
+                            border: "1px solid var(--border-subtle)",
+                            cursor: "pointer",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center"
+                          }}
+                        >
+                          <Eye size={13} />
+                        </button>
                         <button
                           onClick={() => setEditingPkg({ ...p })}
                           title="Edit Pack Configuration"
@@ -531,6 +559,237 @@ export function PackagingMasterPage() {
                 </Button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {viewingPkg && (
+        <div className="modal-backdrop" onClick={() => setViewingPkg(null)}>
+          <div
+            className="modal-content"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: "560px", padding: 0, overflow: "hidden", borderRadius: "12px" }}
+          >
+            <div
+              style={{
+                padding: "16px 20px",
+                borderBottom: "1px solid var(--border-subtle)",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                backgroundColor: "var(--bg-card-subtle)"
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <div
+                  style={{
+                    width: "32px",
+                    height: "32px",
+                    borderRadius: "8px",
+                    backgroundColor: "rgba(200, 149, 71, 0.12)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#C89547"
+                  }}
+                >
+                  <Eye size={16} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: "16px", fontWeight: 700, color: "var(--text-primary)" }}>
+                    Pack Configuration Details
+                  </h3>
+                  <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+                    Packaging Specification & Pallet Multipliers
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => setViewingPkg(null)}
+                style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  paddingBottom: "12px",
+                  borderBottom: "1px solid var(--border-subtle)"
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
+                    Pack Code
+                  </div>
+                  <div
+                    style={{
+                      fontSize: "18px",
+                      fontWeight: 800,
+                      color: "#8C5B23",
+                      fontFamily: "var(--font-mono)",
+                      marginTop: "4px"
+                    }}
+                  >
+                    {viewingPkg.packCode || viewingPkg.code}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
+                    Status
+                  </div>
+                  <div style={{ marginTop: "4px" }}>
+                    <Badge variant={viewingPkg.status === "Active" ? "emerald" : "gray"}>
+                      {viewingPkg.status || "Active"}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
+                  Associated Master SKU
+                </div>
+                <div style={{ fontSize: "15px", fontWeight: 700, color: "var(--text-primary)", marginTop: "4px" }}>
+                  {viewingPkg.skuName || "Finished Good SKU"}
+                </div>
+                <div style={{ fontSize: "12px", color: "var(--text-muted)", fontFamily: "var(--font-mono)", marginTop: "2px" }}>
+                  SKU Code: {viewingPkg.skuCode || "SKU-5001"}
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
+                    Units / Pack
+                  </div>
+                  <div
+                    style={{
+                      fontSize: "15px",
+                      fontWeight: 800,
+                      color: "var(--text-primary)",
+                      fontFamily: "var(--font-mono)",
+                      marginTop: "4px"
+                    }}
+                  >
+                    {viewingPkg.unitsPerPack || 24} Units
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
+                    Packaging UOM
+                  </div>
+                  <div style={{ marginTop: "4px" }}>
+                    <Badge variant="cyan">{viewingPkg.packagingUom || "CASE-24"}</Badge>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
+                    Pack Format Type
+                  </div>
+                  <div style={{ fontSize: "13px", fontWeight: 600, color: "var(--text-primary)", marginTop: "4px" }}>
+                    {viewingPkg.packType || "Corrugated Tray & Shrink Wrap"}
+                  </div>
+                  {viewingPkg.caseConfiguration && (
+                    <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>
+                      {viewingPkg.caseConfiguration}
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
+                    Tare Weight
+                  </div>
+                  <div style={{ fontSize: "13px", fontWeight: 700, color: "#D97706", fontFamily: "var(--font-mono)", marginTop: "4px" }}>
+                    {viewingPkg.tareWeightKg || 12.5} kg
+                  </div>
+                </div>
+              </div>
+
+              <div
+                style={{
+                  backgroundColor: "var(--bg-card-subtle)",
+                  padding: "12px 14px",
+                  borderRadius: "8px",
+                  border: "1px solid var(--border-subtle)"
+                }}
+              >
+                <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
+                  Pallet Configuration & Multipliers
+                </div>
+                <div
+                  style={{
+                    fontSize: "13px",
+                    fontWeight: 700,
+                    color: "var(--text-primary)",
+                    marginTop: "4px"
+                  }}
+                >
+                  {viewingPkg.palletConfiguration || "60 Cases / 1,440 Units per Pallet"}
+                </div>
+                {viewingPkg.palletCount && (
+                  <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>
+                    Pallet Layer Count: {viewingPkg.palletCount} Cases per Pallet
+                  </div>
+                )}
+              </div>
+
+              {viewingPkg.id && (
+                <div style={{ fontSize: "11px", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>
+                  PostgreSQL Record ID: {viewingPkg.id}
+                </div>
+              )}
+
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  gap: "10px",
+                  marginTop: "6px",
+                  borderTop: "1px solid var(--border-subtle)",
+                  paddingTop: "14px"
+                }}
+              >
+                <Button
+                  type="button"
+                  variant="danger"
+                  onClick={() => {
+                    handleDelete(viewingPkg.packConfigId || viewingPkg.id, viewingPkg.packCode || viewingPkg.code);
+                    setViewingPkg(null);
+                  }}
+                  style={{ fontSize: "12px", padding: "6px 12px", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                >
+                  <Trash2 size={13} /> Delete
+                </Button>
+                <div style={{ display: "flex", gap: "8px" }}>
+                  <Button
+                    variant="primary"
+                    onClick={() => {
+                      setEditingPkg({ ...viewingPkg });
+                      setViewingPkg(null);
+                    }}
+                    style={{ fontSize: "12px", padding: "6px 12px", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                  >
+                    <Edit2 size={13} /> Edit
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() => setViewingPkg(null)}
+                    style={{ fontSize: "12px", padding: "6px 12px" }}
+                  >
+                    Close
+                  </Button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}

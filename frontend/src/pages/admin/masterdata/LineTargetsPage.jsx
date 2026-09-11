@@ -6,6 +6,7 @@ import {
   X,
   Edit2,
   Trash2,
+  Eye,
   Activity,
   Percent,
   TrendingUp,
@@ -30,6 +31,7 @@ export function LineTargetsPage() {
   const [lineFilter, setLineFilter] = useState("ALL");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTarget, setEditingTarget] = useState(null);
+  const [viewingTarget, setViewingTarget] = useState(null);
 
   // Live fetch from backend API on mount
   useEffect(() => {
@@ -148,6 +150,9 @@ export function LineTargetsPage() {
   const handleDelete = (targetId, lineName) => {
     if (window.confirm(`Are you sure you want to delete target standard for "${lineName}"?`)) {
       deleteLineTarget(targetId);
+      if (viewingTarget && (viewingTarget.targetId === targetId || viewingTarget.id === targetId)) {
+        setViewingTarget(null);
+      }
       addToast(`Target standard deleted.`, "info");
     }
   };
@@ -338,6 +343,24 @@ export function LineTargetsPage() {
                     </td>
                     <td style={{ padding: "12px 16px", textAlign: "right" }}>
                       <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                        <button
+                          onClick={() => setViewingTarget({ ...t })}
+                          title="View Target Details"
+                          style={{
+                            width: "30px",
+                            height: "30px",
+                            borderRadius: "6px",
+                            backgroundColor: "var(--bg-card-subtle)",
+                            color: "var(--text-primary)",
+                            border: "1px solid var(--border-subtle)",
+                            cursor: "pointer",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center"
+                          }}
+                        >
+                          <Eye size={13} />
+                        </button>
                         <button
                           onClick={() => setEditingTarget({ ...t })}
                           title="Edit Target"
@@ -600,6 +623,242 @@ export function LineTargetsPage() {
                 </Button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* VIEW TARGET DETAILS MODAL */}
+      {viewingTarget && (
+        <div className="modal-backdrop" onClick={() => setViewingTarget(null)}>
+          <div
+            className="modal-content"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: "540px", padding: 0, overflow: "hidden", borderRadius: "12px" }}
+          >
+            <div
+              style={{
+                padding: "16px 20px",
+                borderBottom: "1px solid var(--border-subtle)",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                backgroundColor: "var(--bg-card-subtle)"
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <div
+                  style={{
+                    width: "32px",
+                    height: "32px",
+                    borderRadius: "8px",
+                    backgroundColor: "rgba(200, 149, 71, 0.12)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#C89547"
+                  }}
+                >
+                  <Eye size={16} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: "16px", fontWeight: 700, color: "var(--text-primary)" }}>
+                    Line Target Benchmark Specification
+                  </h3>
+                  <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+                    Operational Standard & Performance Baseline
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => setViewingTarget(null)}
+                style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  paddingBottom: "12px",
+                  borderBottom: "1px solid var(--border-subtle)"
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
+                    Work Center / Line
+                  </div>
+                  <div style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", marginTop: "2px" }}>
+                    {viewingTarget.lineName}
+                  </div>
+                  <div style={{ fontSize: "11px", fontFamily: "var(--font-mono)", color: "#8C5B23" }}>
+                    {viewingTarget.lineId}
+                  </div>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
+                    Status
+                  </div>
+                  <div style={{ marginTop: "4px" }}>
+                    <Badge variant={viewingTarget.status === "Active" ? "emerald" : "gray"}>
+                      {viewingTarget.status || "Active"}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
+                    Master SKU
+                  </div>
+                  <div style={{ fontSize: "14px", fontWeight: 700, color: "var(--text-primary)", marginTop: "2px" }}>
+                    {viewingTarget.skuName}
+                  </div>
+                  <div style={{ fontSize: "11px", fontFamily: "var(--font-mono)", color: "var(--text-muted)" }}>
+                    {viewingTarget.skuCode}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
+                    Operating Shift
+                  </div>
+                  <div style={{ fontSize: "14px", fontWeight: 700, color: "var(--text-primary)", marginTop: "2px" }}>
+                    {viewingTarget.shift}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "12px" }}>
+                <div
+                  style={{
+                    backgroundColor: "var(--bg-card-subtle)",
+                    padding: "12px",
+                    borderRadius: "8px",
+                    border: "1px solid var(--border-subtle)"
+                  }}
+                >
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
+                    Target Volume
+                  </div>
+                  <div style={{ fontSize: "15px", fontWeight: 800, fontFamily: "var(--font-mono)", color: "#8C5B23", marginTop: "4px" }}>
+                    {(Number(viewingTarget.targetQuantity) || 0).toLocaleString()} Units
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    backgroundColor: "var(--bg-card-subtle)",
+                    padding: "12px",
+                    borderRadius: "8px",
+                    border: "1px solid var(--border-subtle)"
+                  }}
+                >
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
+                    OEE Target
+                  </div>
+                  <div style={{ fontSize: "15px", fontWeight: 800, fontFamily: "var(--font-mono)", color: "#059669", marginTop: "4px" }}>
+                    {viewingTarget.oeeTargetPct || viewingTarget.plannedOEE || 88.5}%
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    backgroundColor: "var(--bg-card-subtle)",
+                    padding: "12px",
+                    borderRadius: "8px",
+                    border: "1px solid var(--border-subtle)"
+                  }}
+                >
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
+                    Planned Yield
+                  </div>
+                  <div style={{ fontSize: "15px", fontWeight: 800, fontFamily: "var(--font-mono)", color: "#2563EB", marginTop: "4px" }}>
+                    {viewingTarget.plannedYieldPct || 99.0}%
+                  </div>
+                </div>
+              </div>
+
+              <div
+                style={{
+                  backgroundColor: "var(--bg-card-subtle)",
+                  padding: "12px 14px",
+                  borderRadius: "8px",
+                  border: "1px solid var(--border-subtle)",
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: "10px"
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
+                    H/B Run Rate
+                  </div>
+                  <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)", marginTop: "2px" }}>
+                    {viewingTarget.targetHB || "Standard Speed"}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
+                    Rated Std Speed
+                  </div>
+                  <div style={{ fontSize: "13px", fontWeight: 700, fontFamily: "var(--font-mono)", color: "var(--text-primary)", marginTop: "2px" }}>
+                    {(Number(viewingTarget.stdRunRate) || 38000).toLocaleString()} BPH
+                  </div>
+                </div>
+              </div>
+
+              {viewingTarget.id && (
+                <div style={{ fontSize: "11px", color: "var(--text-muted)", fontFamily: "var(--font-mono)", wordBreak: "break-all" }}>
+                  PostgreSQL Record ID: {viewingTarget.id}
+                </div>
+              )}
+
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  gap: "10px",
+                  marginTop: "6px",
+                  borderTop: "1px solid var(--border-subtle)",
+                  paddingTop: "14px"
+                }}
+              >
+                <Button
+                  type="button"
+                  variant="danger"
+                  onClick={() => {
+                    handleDelete(viewingTarget.targetId || viewingTarget.id, viewingTarget.lineName);
+                    setViewingTarget(null);
+                  }}
+                  style={{ fontSize: "12px", padding: "6px 12px", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                >
+                  <Trash2 size={13} /> Delete
+                </Button>
+                <div style={{ display: "flex", gap: "8px" }}>
+                  <Button
+                    variant="primary"
+                    onClick={() => {
+                      setEditingTarget({ ...viewingTarget });
+                      setViewingTarget(null);
+                    }}
+                    style={{ fontSize: "12px", padding: "6px 12px", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                  >
+                    <Edit2 size={13} /> Edit
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() => setViewingTarget(null)}
+                    style={{ fontSize: "12px", padding: "6px 12px" }}
+                  >
+                    Close
+                  </Button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}

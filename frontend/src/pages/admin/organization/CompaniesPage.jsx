@@ -7,6 +7,7 @@ import {
   X,
   Edit2,
   Trash2,
+  Eye,
   ShieldCheck,
   Layers,
   CheckCircle2
@@ -20,7 +21,7 @@ import { useApp } from "../../../context/AppContext";
 import masterDataService from "../../../services/masterDataService";
 
 export function CompaniesPage() {
-  const { companies = [], setCompanies, addCompany, updateCompany, plants = [] } = useMasterData();
+  const { companies = [], setCompanies, addCompany, updateCompany, deleteCompany, plants = [] } = useMasterData();
   const { addToast } = useApp();
 
   // Trigger live GET /api/v1/master-data/companies on mount
@@ -35,6 +36,22 @@ export function CompaniesPage() {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingComp, setEditingComp] = useState(null);
+  const [viewingComp, setViewingComp] = useState(null);
+
+  const handleDelete = (companyId, name) => {
+    if (window.confirm(`Are you sure you want to delete Legal Entity "${name}"?`)) {
+      if (deleteCompany) {
+        deleteCompany(companyId);
+      }
+      addToast(`Legal entity "${name}" deleted.`, "info");
+      if (editingComp && (editingComp.companyId === companyId || editingComp.id === companyId)) {
+        setEditingComp(null);
+      }
+      if (viewingComp && (viewingComp.companyId === companyId || viewingComp.id === companyId)) {
+        setViewingComp(null);
+      }
+    }
+  };
   const [newComp, setNewComp] = useState({
     code: "",
     name: "",
@@ -181,13 +198,29 @@ export function CompaniesPage() {
                     <Badge variant="emerald">{c.status || "Active Primary"}</Badge>
                   </td>
                   <td style={{ padding: "12px 16px", textAlign: "right" }}>
-                    <button
-                      onClick={() => setEditingComp({ ...c })}
-                      title="Edit Company"
-                      style={{ width: "30px", height: "30px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", color: "var(--text-primary)", border: "1px solid var(--border-subtle)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
-                    >
-                      <Edit2 size={13} />
-                    </button>
+                    <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                      <button
+                        onClick={() => setViewingComp({ ...c })}
+                        title="View Company Details"
+                        style={{ width: "30px", height: "30px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", color: "var(--text-primary)", border: "1px solid var(--border-subtle)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+                      >
+                        <Eye size={13} />
+                      </button>
+                      <button
+                        onClick={() => setEditingComp({ ...c })}
+                        title="Edit Company"
+                        style={{ width: "30px", height: "30px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", color: "var(--text-primary)", border: "1px solid var(--border-subtle)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+                      >
+                        <Edit2 size={13} />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(c.companyId || c.id || c.code, c.name)}
+                        title="Delete Company"
+                        style={{ width: "30px", height: "30px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", color: "#EF4444", border: "1px solid var(--border-subtle)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -351,15 +384,124 @@ export function CompaniesPage() {
                 />
               </div>
 
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "8px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
-                <Button variant="secondary" onClick={() => setEditingComp(null)}>
-                  Cancel
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "10px", marginTop: "8px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
+                <Button
+                  type="button"
+                  variant="danger"
+                  onClick={() => handleDelete(editingComp.companyId || editingComp.id || editingComp.code, editingComp.name)}
+                  style={{ fontSize: "12px", padding: "6px 12px", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                >
+                  <Trash2 size={13} /> Delete
                 </Button>
-                <Button variant="primary" type="submit">
-                  Update Entity
-                </Button>
+                <div style={{ display: "flex", gap: "10px" }}>
+                  <Button variant="secondary" onClick={() => setEditingComp(null)}>
+                    Cancel
+                  </Button>
+                  <Button variant="primary" type="submit">
+                    Update Entity
+                  </Button>
+                </div>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* VIEW COMPANY MODAL */}
+      {viewingComp && (
+        <div className="modal-backdrop" onClick={() => setViewingComp(null)}>
+          <div className="modal-content" style={{ maxWidth: "520px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Building2 size={18} color="#C89547" />
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                  Company Legal Entity Details
+                </h2>
+              </div>
+              <button onClick={() => setViewingComp(null)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", backgroundColor: "var(--bg-card-subtle)", padding: "16px", borderRadius: "10px", border: "1px solid var(--border-subtle)" }}>
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Entity Code</div>
+                  <div style={{ fontSize: "15px", fontWeight: 800, color: "#8C5B23", fontFamily: "var(--font-mono)", marginTop: "4px" }}>
+                    {viewingComp.code}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Status</div>
+                  <div style={{ marginTop: "4px" }}>
+                    <Badge variant="emerald">{viewingComp.status || "Active Primary"}</Badge>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Company Legal Name</div>
+                <div style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", marginTop: "4px" }}>
+                  {viewingComp.name}
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Tax ID / EIN</div>
+                  <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-secondary)", fontFamily: "var(--font-mono)", marginTop: "4px" }}>
+                    {viewingComp.taxId || "—"}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Functional Currency</div>
+                  <div style={{ fontSize: "13px", fontWeight: 800, color: "#059669", fontFamily: "var(--font-mono)", marginTop: "4px" }}>
+                    {viewingComp.currency || "USD ($)"}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Headquarters</div>
+                  <div style={{ fontSize: "13px", fontWeight: 600, color: "var(--text-secondary)", marginTop: "4px" }}>
+                    {viewingComp.hqLocation || "—"}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Fiscal Year Start</div>
+                  <div style={{ fontSize: "13px", fontWeight: 600, color: "var(--text-secondary)", marginTop: "4px" }}>
+                    {viewingComp.fiscalYearStart || "January"}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "10px", marginTop: "8px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
+                <Button
+                  type="button"
+                  variant="danger"
+                  onClick={() => handleDelete(viewingComp.companyId || viewingComp.id || viewingComp.code, viewingComp.name)}
+                  style={{ fontSize: "12px", padding: "6px 12px", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                >
+                  <Trash2 size={13} /> Delete
+                </Button>
+                <div style={{ display: "flex", gap: "8px" }}>
+                  <Button
+                    variant="primary"
+                    onClick={() => {
+                      setEditingComp({ ...viewingComp });
+                      setViewingComp(null);
+                    }}
+                    style={{ fontSize: "12px", padding: "6px 12px", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                  >
+                    <Edit2 size={13} /> Edit
+                  </Button>
+                  <Button variant="secondary" onClick={() => setViewingComp(null)} style={{ fontSize: "12px", padding: "6px 12px" }}>
+                    Close
+                  </Button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}
