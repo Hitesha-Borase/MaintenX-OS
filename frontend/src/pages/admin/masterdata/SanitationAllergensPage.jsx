@@ -6,6 +6,7 @@ import {
   X,
   Edit2,
   Trash2,
+  Eye,
   Clock,
   Thermometer,
   FlaskConical,
@@ -24,10 +25,12 @@ import masterDataService from "../../../services/masterDataService";
 export function SanitationAllergensPage() {
   const {
     sanitationClasses = [],
+    setSanitationClasses,
     addSanitationClass,
     updateSanitationClass,
     deleteSanitationClass,
     allergenRules = [],
+    setAllergenRules,
     addAllergenRule,
     updateAllergenRule,
     deleteAllergenRule,
@@ -36,15 +39,28 @@ export function SanitationAllergensPage() {
   const { addToast } = useApp();
 
   useEffect(() => {
-    masterDataService.getSanitationClasses().catch((err) => console.warn("Sanitation load:", err.message));
-    masterDataService.getAllergenRules().catch((err) => console.warn("Allergen rules load:", err.message));
-  }, []);
+    masterDataService.getSanitationClasses().then((res) => {
+      const data = res?.data?.data || res?.data || res;
+      if (Array.isArray(data) && data.length > 0 && typeof setSanitationClasses === "function") {
+        setSanitationClasses(data);
+      }
+    }).catch((err) => console.warn("Sanitation load:", err.message));
+
+    masterDataService.getAllergenRules().then((res) => {
+      const data = res?.data?.data || res?.data || res;
+      if (Array.isArray(data) && data.length > 0 && typeof setAllergenRules === "function") {
+        setAllergenRules(data);
+      }
+    }).catch((err) => console.warn("Allergen rules load:", err.message));
+  }, [setSanitationClasses, setAllergenRules]);
 
   const [activeTab, setActiveTab] = useState("sanitation"); // "sanitation" | "allergens"
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSanitation, setEditingSanitation] = useState(null);
   const [editingAllergen, setEditingAllergen] = useState(null);
+  const [viewingSanitation, setViewingSanitation] = useState(null);
+  const [viewingAllergen, setViewingAllergen] = useState(null);
 
   const [newSanitation, setNewSanitation] = useState({
     sanitationClass: "",
@@ -313,6 +329,13 @@ export function SanitationAllergensPage() {
                     <td style={{ padding: "12px 16px", textAlign: "right" }}>
                       <div style={{ display: "inline-flex", gap: "6px" }}>
                         <button
+                          onClick={() => setViewingSanitation({ ...s })}
+                          title="View Sanitation Class Details"
+                          style={{ width: "30px", height: "30px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", color: "var(--text-primary)", border: "1px solid var(--border-subtle)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+                        >
+                          <Eye size={13} />
+                        </button>
+                        <button
                           onClick={() => setEditingSanitation({ ...s })}
                           title="Edit Sanitation Class"
                           style={{ width: "30px", height: "30px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", color: "var(--text-primary)", border: "1px solid var(--border-subtle)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
@@ -323,6 +346,9 @@ export function SanitationAllergensPage() {
                           onClick={() => {
                             if (window.confirm(`Are you sure you want to delete sanitation class "${s.sanitationClass}"?`)) {
                               deleteSanitationClass(s.sanitationId || s.id);
+                              if (viewingSanitation && (viewingSanitation.sanitationId === s.sanitationId || viewingSanitation.id === s.id)) {
+                                setViewingSanitation(null);
+                              }
                               addToast(`Sanitation class "${s.sanitationClass}" deleted`, "info");
                             }
                           }}
@@ -379,6 +405,13 @@ export function SanitationAllergensPage() {
                     <td style={{ padding: "12px 16px", textAlign: "right" }}>
                       <div style={{ display: "inline-flex", gap: "6px" }}>
                         <button
+                          onClick={() => setViewingAllergen({ ...a })}
+                          title="View Allergen Rule Details"
+                          style={{ width: "30px", height: "30px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", color: "var(--text-primary)", border: "1px solid var(--border-subtle)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+                        >
+                          <Eye size={13} />
+                        </button>
+                        <button
                           onClick={() => setEditingAllergen({ ...a })}
                           title="Edit Allergen Rule"
                           style={{ width: "30px", height: "30px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", color: "var(--text-primary)", border: "1px solid var(--border-subtle)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
@@ -389,6 +422,9 @@ export function SanitationAllergensPage() {
                           onClick={() => {
                             if (window.confirm(`Are you sure you want to delete allergen rule "${a.allergenName}"?`)) {
                               deleteAllergenRule(a.allergenId || a.id);
+                              if (viewingAllergen && (viewingAllergen.allergenId === a.allergenId || viewingAllergen.id === a.id)) {
+                                setViewingAllergen(null);
+                              }
                               addToast(`Allergen rule "${a.allergenName}" deleted`, "info");
                             }
                           }}
@@ -767,6 +803,443 @@ export function SanitationAllergensPage() {
                 </Button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* VIEW SANITATION CLASS MODAL */}
+      {viewingSanitation && (
+        <div className="modal-backdrop" onClick={() => setViewingSanitation(null)}>
+          <div
+            className="modal-content"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: "540px", padding: 0, overflow: "hidden", borderRadius: "12px" }}
+          >
+            <div
+              style={{
+                padding: "16px 20px",
+                borderBottom: "1px solid var(--border-subtle)",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                backgroundColor: "var(--bg-card-subtle)"
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <div
+                  style={{
+                    width: "32px",
+                    height: "32px",
+                    borderRadius: "8px",
+                    backgroundColor: "rgba(200, 149, 71, 0.12)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#C89547"
+                  }}
+                >
+                  <Eye size={16} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: "16px", fontWeight: 700, color: "var(--text-primary)" }}>
+                    Sanitation Class Specification
+                  </h3>
+                  <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+                    Clean-in-Place (CIP) Wash Protocol Standard
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => setViewingSanitation(null)}
+                style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  paddingBottom: "12px",
+                  borderBottom: "1px solid var(--border-subtle)"
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
+                    Sanitation Class
+                  </div>
+                  <div style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", marginTop: "2px" }}>
+                    {viewingSanitation.sanitationClass || viewingSanitation.name}
+                  </div>
+                  {viewingSanitation.code && (
+                    <div style={{ fontSize: "11px", fontFamily: "var(--font-mono)", color: "#8C5B23" }}>
+                      {viewingSanitation.code}
+                    </div>
+                  )}
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
+                    Status
+                  </div>
+                  <div style={{ marginTop: "4px" }}>
+                    <Badge variant={viewingSanitation.status === "Active" ? "emerald" : "gray"}>
+                      {viewingSanitation.status || "Active"}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+
+              {viewingSanitation.description && (
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
+                    Protocol Description
+                  </div>
+                  <div style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px", lineHeight: 1.5 }}>
+                    {viewingSanitation.description}
+                  </div>
+                </div>
+              )}
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "12px" }}>
+                <div
+                  style={{
+                    backgroundColor: "var(--bg-card-subtle)",
+                    padding: "12px",
+                    borderRadius: "8px",
+                    border: "1px solid var(--border-subtle)"
+                  }}
+                >
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
+                    Wash Duration
+                  </div>
+                  <div style={{ fontSize: "16px", fontWeight: 800, fontFamily: "var(--font-mono)", color: "#D97706", marginTop: "4px" }}>
+                    {viewingSanitation.durationMin || viewingSanitation.washDurationMin || 45} mins
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    backgroundColor: "var(--bg-card-subtle)",
+                    padding: "12px",
+                    borderRadius: "8px",
+                    border: "1px solid var(--border-subtle)"
+                  }}
+                >
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
+                    Risk Level
+                  </div>
+                  <div style={{ marginTop: "4px" }}>
+                    <Badge variant={viewingSanitation.riskLevel?.includes("Critical") ? "rose" : "emerald"}>
+                      {viewingSanitation.riskLevel || "Standard"}
+                    </Badge>
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    backgroundColor: "var(--bg-card-subtle)",
+                    padding: "12px",
+                    borderRadius: "8px",
+                    border: "1px solid var(--border-subtle)"
+                  }}
+                >
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
+                    Cleaning Level
+                  </div>
+                  <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)", marginTop: "4px" }}>
+                    {viewingSanitation.cleaningLevel || "Intermediate"}
+                  </div>
+                </div>
+              </div>
+
+              <div
+                style={{
+                  backgroundColor: "var(--bg-card-subtle)",
+                  padding: "12px 14px",
+                  borderRadius: "8px",
+                  border: "1px solid var(--border-subtle)",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "8px"
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
+                    Cleaning Method & Skid
+                  </div>
+                  <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)", marginTop: "2px" }}>
+                    {viewingSanitation.cleaningMethod || "Automated 5-Step Central CIP Skid"}
+                  </div>
+                </div>
+                {viewingSanitation.chemicalAgent && (
+                  <div>
+                    <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
+                      Chemical Agent & Temperature
+                    </div>
+                    <div style={{ fontSize: "13px", fontWeight: 600, color: "var(--text-secondary)", marginTop: "2px" }}>
+                      {viewingSanitation.chemicalAgent}
+                    </div>
+                  </div>
+                )}
+                {viewingSanitation.applicableProducts && (
+                  <div>
+                    <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
+                      Applicable Products & Formulas
+                    </div>
+                    <div style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "2px" }}>
+                      {viewingSanitation.applicableProducts}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {viewingSanitation.id && (
+                <div style={{ fontSize: "11px", color: "var(--text-muted)", fontFamily: "var(--font-mono)", wordBreak: "break-all" }}>
+                  PostgreSQL Record ID: {viewingSanitation.id}
+                </div>
+              )}
+
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  gap: "10px",
+                  marginTop: "6px",
+                  borderTop: "1px solid var(--border-subtle)",
+                  paddingTop: "14px"
+                }}
+              >
+                <Button
+                  type="button"
+                  variant="danger"
+                  onClick={() => {
+                    deleteSanitationClass(viewingSanitation.sanitationId || viewingSanitation.id);
+                    setViewingSanitation(null);
+                    addToast(`Sanitation class "${viewingSanitation.sanitationClass || viewingSanitation.name}" deleted`, "info");
+                  }}
+                  style={{ fontSize: "12px", padding: "6px 12px", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                >
+                  <Trash2 size={13} /> Delete
+                </Button>
+                <div style={{ display: "flex", gap: "8px" }}>
+                  <Button
+                    variant="primary"
+                    onClick={() => {
+                      setEditingSanitation({ ...viewingSanitation });
+                      setViewingSanitation(null);
+                    }}
+                    style={{ fontSize: "12px", padding: "6px 12px", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                  >
+                    <Edit2 size={13} /> Edit
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() => setViewingSanitation(null)}
+                    style={{ fontSize: "12px", padding: "6px 12px" }}
+                  >
+                    Close
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* VIEW ALLERGEN RULE MODAL */}
+      {viewingAllergen && (
+        <div className="modal-backdrop" onClick={() => setViewingAllergen(null)}>
+          <div
+            className="modal-content"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: "540px", padding: 0, overflow: "hidden", borderRadius: "12px" }}
+          >
+            <div
+              style={{
+                padding: "16px 20px",
+                borderBottom: "1px solid var(--border-subtle)",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                backgroundColor: "var(--bg-card-subtle)"
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <div
+                  style={{
+                    width: "32px",
+                    height: "32px",
+                    borderRadius: "8px",
+                    backgroundColor: "rgba(239, 68, 68, 0.12)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#EF4444"
+                  }}
+                >
+                  <ShieldAlert size={16} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: "16px", fontWeight: 700, color: "var(--text-primary)" }}>
+                    Allergen Control Specification
+                  </h3>
+                  <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+                    HACCP & GMP Cross-Contamination Protocol
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => setViewingAllergen(null)}
+                style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  paddingBottom: "12px",
+                  borderBottom: "1px solid var(--border-subtle)"
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
+                    Allergen Identifier
+                  </div>
+                  <div style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", marginTop: "2px" }}>
+                    {viewingAllergen.allergenName}
+                  </div>
+                  <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+                    Type: {viewingAllergen.allergenType || "Botanical Extracts"}
+                  </div>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
+                    Status
+                  </div>
+                  <div style={{ marginTop: "4px" }}>
+                    <Badge variant={viewingAllergen.status === "Active" ? "emerald" : "gray"}>
+                      {viewingAllergen.status || "Active"}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
+                    Associated SKU
+                  </div>
+                  <div style={{ fontSize: "15px", fontWeight: 800, fontFamily: "var(--font-mono)", color: "#8C5B23", marginTop: "2px" }}>
+                    {viewingAllergen.skuCode || "All SKUs"}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
+                    Risk Level
+                  </div>
+                  <div style={{ marginTop: "4px" }}>
+                    <Badge variant="rose">{viewingAllergen.riskLevel}</Badge>
+                  </div>
+                </div>
+              </div>
+
+              <div
+                style={{
+                  backgroundColor: "var(--bg-card-subtle)",
+                  padding: "12px 14px",
+                  borderRadius: "8px",
+                  border: "1px solid var(--border-subtle)",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "10px"
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
+                    Mandatory Cleaning Protocol
+                  </div>
+                  <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)", marginTop: "2px" }}>
+                    {viewingAllergen.cleaningProtocol || viewingAllergen.protocol}
+                  </div>
+                </div>
+
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
+                    Changeover Restriction
+                  </div>
+                  <div style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "2px", lineHeight: 1.4 }}>
+                    {viewingAllergen.changeoverRestriction}
+                  </div>
+                </div>
+
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
+                    Validation Test Standard
+                  </div>
+                  <div style={{ fontSize: "13px", fontWeight: 700, color: "#059669", marginTop: "2px" }}>
+                    {viewingAllergen.verificationTest || "ATP Swab < 10 RLU"}
+                  </div>
+                </div>
+              </div>
+
+              {viewingAllergen.id && (
+                <div style={{ fontSize: "11px", color: "var(--text-muted)", fontFamily: "var(--font-mono)", wordBreak: "break-all" }}>
+                  PostgreSQL Record ID: {viewingAllergen.id}
+                </div>
+              )}
+
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  gap: "10px",
+                  marginTop: "6px",
+                  borderTop: "1px solid var(--border-subtle)",
+                  paddingTop: "14px"
+                }}
+              >
+                <Button
+                  type="button"
+                  variant="danger"
+                  onClick={() => {
+                    deleteAllergenRule(viewingAllergen.allergenId || viewingAllergen.id);
+                    setViewingAllergen(null);
+                    addToast(`Allergen rule "${viewingAllergen.allergenName}" deleted`, "info");
+                  }}
+                  style={{ fontSize: "12px", padding: "6px 12px", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                >
+                  <Trash2 size={13} /> Delete
+                </Button>
+                <div style={{ display: "flex", gap: "8px" }}>
+                  <Button
+                    variant="primary"
+                    onClick={() => {
+                      setEditingAllergen({ ...viewingAllergen });
+                      setViewingAllergen(null);
+                    }}
+                    style={{ fontSize: "12px", padding: "6px 12px", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                  >
+                    <Edit2 size={13} /> Edit
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() => setViewingAllergen(null)}
+                    style={{ fontSize: "12px", padding: "6px 12px" }}
+                  >
+                    Close
+                  </Button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}

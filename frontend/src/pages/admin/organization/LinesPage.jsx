@@ -6,6 +6,7 @@ import {
   X,
   Edit2,
   Trash2,
+  Eye,
   Gauge,
   Activity,
   Zap,
@@ -38,6 +39,7 @@ export function LinesPage() {
   const [plantFilter, setPlantFilter] = useState("ALL");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingLine, setEditingLine] = useState(null);
+  const [viewingLine, setViewingLine] = useState(null);
 
   const filteredLines = useMemo(() => {
     return lines.filter((l) => {
@@ -90,6 +92,12 @@ export function LinesPage() {
     if (window.confirm(`Are you sure you want to delete Line "${name}"?`)) {
       deleteLine(lineId);
       addToast(`Line "${name}" deleted.`, "info");
+      if (viewingLine && (viewingLine.lineId === lineId || viewingLine.id === lineId || viewingLine.lineCode === lineId)) {
+        setViewingLine(null);
+      }
+      if (editingLine && (editingLine.lineId === lineId || editingLine.id === lineId || editingLine.lineCode === lineId)) {
+        setEditingLine(null);
+      }
     }
   };
 
@@ -260,6 +268,13 @@ export function LinesPage() {
                     <td style={{ padding: "12px 16px", textAlign: "right" }}>
                       <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
                         <button
+                          onClick={() => setViewingLine({ ...l })}
+                          title="View Line Details"
+                          style={{ width: "30px", height: "30px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", color: "var(--text-primary)", border: "1px solid var(--border-subtle)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+                        >
+                          <Eye size={13} />
+                        </button>
+                        <button
                           onClick={() => setEditingLine({ ...l })}
                           title="Edit Line"
                           style={{ width: "30px", height: "30px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", color: "var(--text-primary)", border: "1px solid var(--border-subtle)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
@@ -267,7 +282,7 @@ export function LinesPage() {
                           <Edit2 size={13} />
                         </button>
                         <button
-                          onClick={() => handleDelete(l.lineId || l.id, l.name)}
+                          onClick={() => handleDelete(l.lineId || l.id || l.lineCode, l.name)}
                           title="Delete Line"
                           style={{ width: "30px", height: "30px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", color: "#EF4444", border: "1px solid var(--border-subtle)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
                         >
@@ -440,6 +455,106 @@ export function LinesPage() {
                 </Button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* VIEW LINE DETAILS MODAL */}
+      {viewingLine && (
+        <div className="modal-backdrop" onClick={() => setViewingLine(null)}>
+          <div className="modal-content" style={{ maxWidth: "520px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Eye size={18} color="#C89547" />
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                  Manufacturing Line Details
+                </h2>
+              </div>
+              <button onClick={() => setViewingLine(null)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: "12px", borderBottom: "1px solid var(--border-subtle)" }}>
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Line Code</div>
+                  <div style={{ fontSize: "16px", fontWeight: 800, color: "#8C5B23", fontFamily: "var(--font-mono)", marginTop: "4px" }}>
+                    {viewingLine.lineCode || viewingLine.code || viewingLine.lineId || viewingLine.id}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Status</div>
+                  <div style={{ marginTop: "4px" }}>
+                    <Badge variant="emerald">{viewingLine.status || "Active"}</Badge>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Line Cell Name</div>
+                <div style={{ fontSize: "15px", fontWeight: 800, color: "var(--text-primary)", marginTop: "4px" }}>
+                  {viewingLine.name}
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Plant Facility</div>
+                  <div style={{ fontSize: "13px", fontWeight: 600, color: "var(--text-secondary)", marginTop: "4px", display: "flex", alignItems: "center", gap: "4px" }}>
+                    <Building2 size={13} color="#C89547" />
+                    <span>{plants.find((p) => p.id === viewingLine.plantId || p.plantId === viewingLine.plantId)?.name?.split(" - ")[0] || "Indore Plant 1"}</span>
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Packaging Format</div>
+                  <div style={{ marginTop: "4px" }}>
+                    <Badge variant="cyan">{viewingLine.type || viewingLine.lineType || "Continuous Flow"}</Badge>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Nameplate Speed</div>
+                  <div style={{ fontSize: "14px", fontWeight: 800, color: "#D97706", fontFamily: "var(--font-mono)", marginTop: "4px" }}>
+                    {viewingLine.ratedSpeed || `${viewingLine.ratedSpeedBPH ? viewingLine.ratedSpeedBPH.toLocaleString() : "38,000"} BPH`}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>OEE Target / Health</div>
+                  <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-secondary)", marginTop: "4px" }}>
+                    {viewingLine.ratedOEE || "88.0% Standard"} ({viewingLine.healthScore || 95}% Health)
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "10px", marginTop: "8px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
+                <Button
+                  type="button"
+                  variant="danger"
+                  onClick={() => handleDelete(viewingLine.lineId || viewingLine.id || viewingLine.lineCode, viewingLine.name)}
+                  style={{ fontSize: "12px", padding: "6px 12px", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                >
+                  <Trash2 size={13} /> Delete
+                </Button>
+                <div style={{ display: "flex", gap: "8px" }}>
+                  <Button
+                    variant="primary"
+                    onClick={() => {
+                      setEditingLine({ ...viewingLine });
+                      setViewingLine(null);
+                    }}
+                    style={{ fontSize: "12px", padding: "6px 12px", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                  >
+                    <Edit2 size={13} /> Edit
+                  </Button>
+                  <Button variant="secondary" onClick={() => setViewingLine(null)} style={{ fontSize: "12px", padding: "6px 12px" }}>
+                    Close
+                  </Button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}

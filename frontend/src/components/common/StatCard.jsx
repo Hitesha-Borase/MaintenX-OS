@@ -125,3 +125,6 @@ export function StatCard({
     </Card>
   );
 }
+
+export default StatCard;
+

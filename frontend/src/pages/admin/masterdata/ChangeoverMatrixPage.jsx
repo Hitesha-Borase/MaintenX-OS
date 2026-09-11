@@ -22,12 +22,24 @@ import { useApp } from "../../../context/AppContext";
 import masterDataService from "../../../services/masterDataService";
 
 export function ChangeoverMatrixPage() {
-  const { changeoverMatrix = [], addChangeoverRule, updateChangeoverRule, deleteChangeoverRule, skus = [], productFamilies = [] } = useMasterData();
+  const { changeoverMatrix = [], setChangeoverMatrix, addChangeoverRule, updateChangeoverRule, deleteChangeoverRule, skus = [], productFamilies = [] } = useMasterData();
   const { addToast } = useApp();
 
+  const [loading, setLoading] = useState(false);
+
+  // Live fetch from PostgreSQL database on mount
   useEffect(() => {
-    masterDataService.getChangeoverRules().catch((err) => console.warn("Changeover load:", err.message));
-  }, []);
+    setLoading(true);
+    masterDataService.getChangeoverRules()
+      .then((res) => {
+        const data = res?.data?.data || res?.data || res;
+        if (Array.isArray(data) && typeof setChangeoverMatrix === "function") {
+          setChangeoverMatrix(data);
+        }
+      })
+      .catch((err) => console.warn("Changeover database live load:", err.message))
+      .finally(() => setLoading(false));
+  }, [setChangeoverMatrix]);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -83,54 +95,67 @@ export function ChangeoverMatrixPage() {
     });
   }, [changeoverMatrix, searchQuery]);
 
-  const handleAddSubmit = (e) => {
+  const handleAddSubmit = async (e) => {
     e.preventDefault();
-    const fromSku = skus.find((s) => s.skuId === newRule.fromSkuId);
-    const toSku = skus.find((s) => s.skuId === newRule.toSkuId);
+    const fromSku = skus.find((s) => (s.skuId || s.id) === newRule.fromSkuId);
+    const toSku = skus.find((s) => (s.skuId || s.id) === newRule.toSkuId);
 
-    const created = addChangeoverRule({
+    const rulePayload = {
       ...newRule,
-      fromSkuCode: fromSku ? fromSku.skuCode : "SKU-5001",
-      fromFamily: fromSku ? fromSku.family : "Sparkling Flavors",
-      toSkuCode: toSku ? toSku.skuCode : "SKU-5002",
-      toFamily: toSku ? toSku.family : "Tonics & Mixers",
-      changeoverDurationMin: Number(newRule.changeoverDurationMin) || 30
-    });
+      fromSkuCode: fromSku ? (fromSku.skuCode || fromSku.code) : "SKU-5001",
+      fromFamily: fromSku ? (fromSku.family || fromSku.productFamily || fromSku.category) : "Sparkling Flavors",
+      toSkuCode: toSku ? (toSku.skuCode || toSku.code) : "SKU-5002",
+      toFamily: toSku ? (toSku.family || toSku.productFamily || toSku.category) : "Tonics & Mixers",
+      changeoverDurationMin: Number(newRule.changeoverDurationMin) || 0
+    };
 
-    addToast(`Changeover rule added (${created.fromSkuCode} → ${created.toSkuCode})!`, "success");
-    setIsModalOpen(false);
-    setNewRule({
-      fromSkuId: finishedSkus[0]?.skuId || "SKU-001",
-      toSkuId: finishedSkus[1]?.skuId || "SKU-002",
-      changeoverDurationMin: 35,
-      sanitationClass: "Class B - Warm Water Flush & Sanitizer Rinse",
-      allergenCleaningRequired: false,
-      notes: ""
-    });
+    try {
+      const created = await addChangeoverRule(rulePayload);
+      addToast(`Changeover rule successfully saved to database (${created.fromSkuCode || "Rule"} → ${created.toSkuCode || ""})!`, "success");
+      setIsModalOpen(false);
+      setNewRule({
+        fromSkuId: finishedSkus[0]?.skuId || finishedSkus[0]?.id || "SKU-001",
+        toSkuId: finishedSkus[1]?.skuId || finishedSkus[1]?.id || "SKU-002",
+        changeoverDurationMin: 35,
+        sanitationClass: "Class B - Warm Water Flush & Sanitizer Rinse",
+        allergenCleaningRequired: false,
+        notes: ""
+      });
+    } catch (err) {
+      addToast(`Failed to save changeover rule: ${err.message}`, "error");
+    }
   };
 
-  const handleEditSubmit = (e) => {
+  const handleEditSubmit = async (e) => {
     e.preventDefault();
-    const fromSku = skus.find((s) => s.skuId === editingRule.fromSkuId);
-    const toSku = skus.find((s) => s.skuId === editingRule.toSkuId);
+    const fromSku = skus.find((s) => (s.skuId || s.id) === editingRule.fromSkuId);
+    const toSku = skus.find((s) => (s.skuId || s.id) === editingRule.toSkuId);
 
-    updateChangeoverRule(editingRule.matrixId, {
-      ...editingRule,
-      fromSkuCode: fromSku ? fromSku.skuCode : editingRule.fromSkuCode,
-      fromFamily: fromSku ? fromSku.family : editingRule.fromFamily,
-      toSkuCode: toSku ? toSku.skuCode : editingRule.toSkuCode,
-      toFamily: toSku ? toSku.family : editingRule.toFamily,
-      changeoverDurationMin: Number(editingRule.changeoverDurationMin) || 30
-    });
+    try {
+      await updateChangeoverRule(editingRule.matrixId || editingRule.id, {
+        ...editingRule,
+        fromSkuCode: fromSku ? (fromSku.skuCode || fromSku.code) : editingRule.fromSkuCode,
+        fromFamily: fromSku ? (fromSku.family || fromSku.productFamily || fromSku.category) : editingRule.fromFamily,
+        toSkuCode: toSku ? (toSku.skuCode || toSku.code) : editingRule.toSkuCode,
+        toFamily: toSku ? (toSku.family || toSku.productFamily || toSku.category) : editingRule.toFamily,
+        changeoverDurationMin: Number(editingRule.changeoverDurationMin) || 0
+      });
 
-    addToast(`Changeover rule updated!`, "success");
-    setEditingRule(null);
+      addToast("Changeover rule successfully updated in database!", "success");
+      setEditingRule(null);
+    } catch (err) {
+      addToast(`Failed to update changeover rule: ${err.message}`, "error");
+    }
   };
 
-  const handleDelete = (matrixId) => {
-    if (window.confirm("Are you sure you want to delete this changeover rule?")) {
-      deleteChangeoverRule(matrixId);
-      addToast("Changeover rule deleted.", "info");
+  const handleDelete = async (matrixId) => {
+    if (window.confirm("Are you sure you want to delete this changeover rule from the database?")) {
+      try {
+        await deleteChangeoverRule(matrixId);
+        addToast("Changeover rule deleted from database.", "info");
+      } catch (err) {
+        addToast(`Failed to delete changeover rule: ${err.message}`, "error");
+      }
     }
   };
 
@@ -267,7 +292,7 @@ export function ChangeoverMatrixPage() {
                 </tr>
               ) : (
                 filteredMatrix.map((m) => (
-                  <tr key={m.matrixId} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+                  <tr key={m.matrixId || m.id} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
                     <td style={{ padding: "12px 16px" }}>
                       <div style={{ fontWeight: 800, color: "var(--text-primary)", fontSize: "13px" }}>{m.fromSkuCode}</div>
                       <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>{m.fromFamily}</div>
@@ -318,7 +343,7 @@ export function ChangeoverMatrixPage() {
                           <Edit2 size={13} />
                         </button>
                         <button
-                          onClick={() => handleDelete(m.matrixId)}
+                          onClick={() => handleDelete(m.matrixId || m.id)}
                           title="Delete Rule"
                           style={{
                             width: "30px",

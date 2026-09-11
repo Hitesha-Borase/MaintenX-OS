@@ -7,6 +7,7 @@ import {
   Layers,
   Edit2,
   Trash2,
+  Eye,
   X,
   ShieldCheck,
   Percent,
@@ -23,11 +24,16 @@ import { useApp } from "../../../context/AppContext";
 import masterDataService from "../../../services/masterDataService";
 
 export function ProductFamiliesPage() {
-  const { productFamilies = [], addProductFamily, updateProductFamily, deleteProductFamily, toggleProductFamilyStatus, skus = [], plants = [], activePlantId } = useMasterData();
+  const { productFamilies = [], setProductFamilies, addProductFamily, updateProductFamily, deleteProductFamily, toggleProductFamilyStatus, skus = [], plants = [], activePlantId } = useMasterData();
   const { addToast } = useApp();
 
   useEffect(() => {
-    masterDataService.getProductFamilies().catch((err) => console.warn("Product families load:", err.message));
+    masterDataService.getProductFamilies().then((res) => {
+      const data = res?.data || res;
+      if (Array.isArray(data) && data.length > 0 && typeof setProductFamilies === "function") {
+        setProductFamilies(data);
+      }
+    }).catch((err) => console.warn("Product families load:", err.message));
   }, []);
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -35,6 +41,7 @@ export function ProductFamiliesPage() {
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingFamily, setEditingFamily] = useState(null);
+  const [viewingFamily, setViewingFamily] = useState(null);
 
   const [newFamily, setNewFamily] = useState({
     code: "",
@@ -115,6 +122,12 @@ export function ProductFamiliesPage() {
     if (window.confirm(`Are you sure you want to delete Product Family "${name}"?`)) {
       deleteProductFamily(familyId);
       addToast(`Product family "${name}" deleted.`, "info");
+      if (viewingFamily && (viewingFamily.familyId === familyId || viewingFamily.id === familyId || viewingFamily.code === familyId)) {
+        setViewingFamily(null);
+      }
+      if (editingFamily && (editingFamily.familyId === familyId || editingFamily.id === familyId || editingFamily.code === familyId)) {
+        setEditingFamily(null);
+      }
     }
   };
 
@@ -318,6 +331,24 @@ export function ProductFamiliesPage() {
                       </td>
                       <td style={{ padding: "12px 16px", textAlign: "right" }}>
                         <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                          <button
+                            onClick={() => setViewingFamily({ ...f })}
+                            title="View Product Family Details"
+                            style={{
+                              width: "30px",
+                              height: "30px",
+                              borderRadius: "6px",
+                              backgroundColor: "var(--bg-card-subtle)",
+                              color: "var(--text-primary)",
+                              border: "1px solid var(--border-subtle)",
+                              cursor: "pointer",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center"
+                            }}
+                          >
+                            <Eye size={13} />
+                          </button>
                           <button
                             onClick={() => setEditingFamily({ ...f })}
                             title="Edit Product Family"
@@ -595,6 +626,115 @@ export function ProductFamiliesPage() {
                 </Button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* VIEW PRODUCT FAMILY DETAILS MODAL */}
+      {viewingFamily && (
+        <div className="modal-backdrop" onClick={() => setViewingFamily(null)}>
+          <div className="modal-content" style={{ maxWidth: "520px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Eye size={18} color="#C89547" />
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                  Product Family Details
+                </h2>
+              </div>
+              <button onClick={() => setViewingFamily(null)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: "12px", borderBottom: "1px solid var(--border-subtle)" }}>
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Family Code</div>
+                  <div style={{ fontSize: "16px", fontWeight: 800, color: "#8C5B23", fontFamily: "var(--font-mono)", marginTop: "4px" }}>
+                    {viewingFamily.code || viewingFamily.familyId}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Status</div>
+                  <div style={{ marginTop: "4px" }}>
+                    <Badge variant={viewingFamily.status === "Active" ? "emerald" : "gray"}>{viewingFamily.status || "Active"}</Badge>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Family Name</div>
+                <div style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", marginTop: "4px" }}>
+                  {viewingFamily.name}
+                </div>
+                {viewingFamily.description && (
+                  <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "4px", lineHeight: 1.4 }}>
+                    {viewingFamily.description}
+                  </div>
+                )}
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Plant Facility</div>
+                  <div style={{ fontSize: "13px", fontWeight: 600, color: "var(--text-secondary)", marginTop: "4px", display: "flex", alignItems: "center", gap: "4px" }}>
+                    <Building2 size={13} color="#C89547" />
+                    <span>{plants.find((p) => p.id === viewingFamily.plantId)?.name?.split(" - ")[0] || "Global / Enterprise"}</span>
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Linked SKUs</div>
+                  <div style={{ marginTop: "4px" }}>
+                    <Badge variant="cyan">{skus.filter((s) => s.familyId === viewingFamily.familyId || s.family === viewingFamily.name).length} Master SKUs</Badge>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Allergen Risk Profile</div>
+                  <div style={{ marginTop: "4px" }}>
+                    {viewingFamily.allergenRisk && viewingFamily.allergenRisk !== "None" ? (
+                      <Badge variant="amber">{viewingFamily.allergenRisk}</Badge>
+                    ) : (
+                      <Badge variant="emerald">None (Safe)</Badge>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Target Gross Margin</div>
+                  <div style={{ fontSize: "14px", fontWeight: 800, color: "#D97706", fontFamily: "var(--font-mono)", marginTop: "4px" }}>
+                    {viewingFamily.standardMargin || "55.0%"}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "10px", marginTop: "8px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
+                <Button
+                  type="button"
+                  variant="danger"
+                  onClick={() => handleDelete(viewingFamily.familyId, viewingFamily.name)}
+                  style={{ fontSize: "12px", padding: "6px 12px", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                >
+                  <Trash2 size={13} /> Delete
+                </Button>
+                <div style={{ display: "flex", gap: "8px" }}>
+                  <Button
+                    variant="primary"
+                    onClick={() => {
+                      setEditingFamily({ ...viewingFamily });
+                      setViewingFamily(null);
+                    }}
+                    style={{ fontSize: "12px", padding: "6px 12px", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                  >
+                    <Edit2 size={13} /> Edit
+                  </Button>
+                  <Button variant="secondary" onClick={() => setViewingFamily(null)} style={{ fontSize: "12px", padding: "6px 12px" }}>
+                    Close
+                  </Button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}

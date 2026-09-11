@@ -1,26 +1,74 @@
-import React from "react";
-import { FileSpreadsheet, Printer } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { FileSpreadsheet, Printer, RefreshCw } from "lucide-react";
 import { useApp } from "../../context/AppContext";
+import warehouseService from "../../services/warehouseService";
 
 export function Reports() {
   const { addToast } = useApp();
 
-  const reports = [
+  const [reports, setReports] = useState([
     { name: "Inbound Deliveries Logs", date: "2026-08-31" },
     { name: "Cycle Stock Variance Audit", date: "2026-08-31" }
-  ];
+  ]);
+  const [loading, setLoading] = useState(false);
 
-  const handlePrint = (name) => {
-    addToast(`Preparing ${name} for printing...`, "info");
-    setTimeout(() => window.print(), 500);
+  const fetchReports = async () => {
+    try {
+      setLoading(true);
+      const res = await warehouseService.getWarehouseReports();
+      const data = res.data?.data || res.data;
+      if (data?.reports && Array.isArray(data.reports)) {
+        setReports(data.reports);
+      } else if (Array.isArray(data)) {
+        setReports(data);
+      }
+    } catch (err) {
+      console.warn("Could not load warehouse reports from API:", err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchReports();
+  }, []);
+
+  const handlePrint = async (name) => {
+    try {
+      await warehouseService.printWarehouseReport({ name, timestamp: new Date().toISOString() });
+      addToast(`Preparing ${name} for printing...`, "info");
+      setTimeout(() => window.print(), 500);
+    } catch (e) {
+      console.warn("printReport error:", e);
+      addToast(`Preparing ${name} for printing...`, "info");
+      setTimeout(() => window.print(), 500);
+    }
   };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "24px", maxWidth: "100%", fontFamily: "system-ui, -apple-system, sans-serif" }}>
-      <div>
-        <h1 style={{ fontSize: "24px", fontWeight: 800, color: "#2d2825", margin: "0 0 8px 0" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
+        <h1 style={{ fontSize: "24px", fontWeight: 800, color: "#2d2825", margin: 0 }}>
           Warehouse Inventory Reports
         </h1>
+        <button
+          onClick={fetchReports}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "6px",
+            padding: "8px 14px",
+            backgroundColor: "#f4f4f5",
+            border: "1px solid #e4e4e7",
+            borderRadius: "8px",
+            fontSize: "13px",
+            fontWeight: 600,
+            color: "#52525b",
+            cursor: "pointer"
+          }}
+        >
+          <RefreshCw size={14} className={loading ? "animate-spin" : ""} /> Refresh
+        </button>
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
@@ -28,14 +76,14 @@ export function Reports() {
           <div 
             key={idx} 
             style={{ 
-              display: "flex", 
-              justifyContent: "space-between", 
-              alignItems: "center",
-              backgroundColor: "#ffffff",
-              padding: "24px",
-              borderRadius: "16px",
-              border: "1px solid #e8e6e1",
-              boxShadow: "0 2px 8px rgba(0,0,0,0.02)"
+                display: "flex", 
+                justifyContent: "space-between", 
+                alignItems: "center",
+                backgroundColor: "#ffffff",
+                padding: "24px",
+                borderRadius: "16px",
+                border: "1px solid #e8e6e1",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.02)"
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>

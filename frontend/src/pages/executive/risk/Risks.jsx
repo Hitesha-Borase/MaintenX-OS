@@ -1,19 +1,21 @@
-import React, { useState } from "react";
-import { AlertTriangle, Plus, ShieldCheck, FileText, Send, CheckCircle2 } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { AlertTriangle, Plus, ShieldCheck, FileText, Send, CheckCircle2, Loader2 } from "lucide-react";
 import { Card } from "../../../components/common/Card";
 import { StatCard } from "../../../components/common/StatCard";
 import { Button } from "../../../components/common/Button";
 import { Badge } from "../../../components/common/Badge";
 import { Modal } from "../../../components/common/Modal";
 import { useApp } from "../../../context/AppContext";
+import executiveService from "../../../services/executiveService";
 
 export function Risks() {
   const { addToast } = useApp();
 
-  const [risks, setRisks] = useState([
-    { id: "RSK-01", title: "Raw milk supplier delay (Chicago)", prob: "High", impact: "Critical", owner: "Supply Chain Team", status: "Mitigating" },
-    { id: "RSK-02", title: "Austin Line 2 pasteurizer wear", prob: "Medium", impact: "High", owner: "Maintenance Team", status: "Open" }
-  ]);
+  const [risks, setRisks] = useState([]);
+  const [criticalCount, setCriticalCount] = useState(1);
+  const [mitigationRate, setMitigationRate] = useState("50%");
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
 
   const [newTitle, setNewTitle] = useState("");
   const [newProb, setNewProb] = useState("Medium");
@@ -24,31 +26,89 @@ export function Risks() {
   const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
   const [auditNotes, setAuditNotes] = useState("");
 
+  const fetchRisksData = async () => {
+    try {
+      setLoading(true);
+      const res = await executiveService.getRisks();
+      const data = res.data || res;
+      if (data) {
+        if (data.risks) setRisks(data.risks);
+        if (data.criticalCount !== undefined) setCriticalCount(data.criticalCount);
+        if (data.mitigationRate) setMitigationRate(data.mitigationRate);
+      }
+    } catch (err) {
+      console.error("Error loading risks:", err);
+      addToast("Failed to load risk registry", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchRisksData();
+  }, []);
+
   const handleOpenAudit = (riskObj) => {
     setSelectedRisk(riskObj);
     setAuditNotes("");
     setIsAuditModalOpen(true);
   };
 
-  const handleConfirmRiskAudit = (e) => {
+  const handleConfirmRiskAudit = async (e) => {
     e.preventDefault();
     if (!selectedRisk) return;
 
-    setRisks(prev =>
-      prev.map(r => r.id === selectedRisk.id ? { ...r, status: "Mitigating" } : r)
-    );
+    try {
+      setSubmitting(true);
+      const res = await executiveService.mitigateRisk({
+        riskId: selectedRisk.id,
+        action: auditNotes || "Mitigation audit executed."
+      });
+      const data = res.data || res;
 
-    addToast(`Audit initiated for risk ${selectedRisk.id}. Mitigation log updated.`, "success");
-    setIsAuditModalOpen(false);
+      setRisks(prev =>
+        prev.map(r => r.id === selectedRisk.id ? { ...r, status: "Mitigating" } : r)
+      );
+
+      addToast(data?.message || `Audit initiated for risk ${selectedRisk.id}. Mitigation log updated.`, "success");
+      setIsAuditModalOpen(false);
+    } catch (err) {
+      console.error("Error mitigating risk:", err);
+      addToast("Failed to record mitigation audit", "error");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const handleAdd = (e) => {
+  const handleAdd = async (e) => {
     e.preventDefault();
     if (!newTitle) return;
-    const id = `RSK-0${risks.length + 1}`;
-    setRisks(prev => [...prev, { id, title: newTitle, prob: newProb, impact: newImpact, owner: "Executive Committee", status: "Open" }]);
-    addToast(`New risk ${id} logged and added to tracking ledger.`, "success");
-    setNewTitle("");
+
+    try {
+      setSubmitting(true);
+      const res = await executiveService.addRisk({
+        title: newTitle,
+        prob: newProb,
+        impact: newImpact,
+        owner: "Executive Committee"
+      });
+      const data = res.data || res;
+
+      if (data && data.risk) {
+        setRisks(prev => [...prev, data.risk]);
+      } else {
+        const id = `RSK-0${risks.length + 1}`;
+        setRisks(prev => [...prev, { id, title: newTitle, prob: newProb, impact: newImpact, owner: "Executive Committee", status: "Open" }]);
+      }
+
+      addToast(data?.message || "New risk logged and added to tracking ledger.", "success");
+      setNewTitle("");
+    } catch (err) {
+      console.error("Error adding risk:", err);
+      addToast("Failed to log new enterprise risk", "error");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -60,50 +120,56 @@ export function Risks() {
       </div>
 
       <div className="grid-3">
-        <StatCard title="Critical Risks Logged" value="1 Critical" description="Supply Chain supplier delays" icon={AlertTriangle} color="#DC2626" />
+        <StatCard title="Critical Risks Logged" value={`${criticalCount} Critical`} description="Supply Chain supplier delays" icon={AlertTriangle} color="#DC2626" />
         <StatCard title="Open Risks Registry" value={String(risks.length)} description="Across all active facilities" icon={AlertTriangle} color="#D97706" />
-        <StatCard title="Mitigation Rate" value="50%" description="Active mitigation plans" icon={CheckCircle2} color="#059669" />
+        <StatCard title="Mitigation Rate" value={mitigationRate} description="Active mitigation plans" icon={CheckCircle2} color="#059669" />
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-        {risks.map((r, idx) => (
-          <Card
-            key={idx}
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              flexWrap: "wrap",
-              gap: "14px",
-              padding: "16px 20px",
-              backgroundColor: "#FFFFFF",
-              border: "1px solid var(--border-subtle)",
-              borderLeft: r.impact === "Critical" ? "4px solid #DC2626" : "4px solid #D97706"
-            }}
-          >
-            <div style={{ flex: 1, minWidth: "220px" }}>
-              <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
-                <AlertTriangle size={16} color={r.impact === "Critical" ? "#DC2626" : "#D97706"} style={{ flexShrink: 0 }} />
-                <span style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)" }}>{r.id}: {r.title}</span>
-                <Badge variant={r.status === "Mitigating" ? "emerald" : "warning"}>{r.status}</Badge>
-              </div>
-              <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "4px" }}>
-                Owner: <strong>{r.owner}</strong> | Probability: <strong>{r.prob}</strong> | Impact: <strong>{r.impact}</strong>
-              </p>
-            </div>
-
-            <Button
-              variant="secondary"
-              size="xs"
-              icon={ShieldCheck}
-              onClick={() => handleOpenAudit(r)}
-              style={{ flexShrink: 0 }}
+      {loading ? (
+        <div style={{ display: "flex", justifyContent: "center", padding: "30px" }}>
+          <Loader2 className="animate-spin" size={24} style={{ color: "var(--color-primary)" }} />
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+          {risks.map((r, idx) => (
+            <Card
+              key={idx}
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: "14px",
+                padding: "16px 20px",
+                backgroundColor: "#FFFFFF",
+                border: "1px solid var(--border-subtle)",
+                borderLeft: r.impact === "Critical" ? "4px solid #DC2626" : "4px solid #D97706"
+              }}
             >
-              Run Audit
-            </Button>
-          </Card>
-        ))}
-      </div>
+              <div style={{ flex: 1, minWidth: "220px" }}>
+                <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
+                  <AlertTriangle size={16} color={r.impact === "Critical" ? "#DC2626" : "#D97706"} style={{ flexShrink: 0 }} />
+                  <span style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)" }}>{r.id}: {r.title}</span>
+                  <Badge variant={r.status === "Mitigating" ? "emerald" : "warning"}>{r.status}</Badge>
+                </div>
+                <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "4px" }}>
+                  Owner: <strong>{r.owner}</strong> | Probability: <strong>{r.prob}</strong> | Impact: <strong>{r.impact}</strong>
+                </p>
+              </div>
+
+              <Button
+                variant="secondary"
+                size="xs"
+                icon={ShieldCheck}
+                onClick={() => handleOpenAudit(r)}
+                style={{ flexShrink: 0 }}
+              >
+                Run Audit
+              </Button>
+            </Card>
+          ))}
+        </div>
+      )}
 
       {/* Log New Risk Form */}
       <form onSubmit={handleAdd}>
@@ -133,8 +199,8 @@ export function Risks() {
             </select>
           </div>
 
-          <Button type="submit" variant="primary" icon={Plus} style={{ width: "fit-content", alignSelf: "flex-start", padding: "8px 20px" }}>
-            Add Risk
+          <Button type="submit" variant="primary" icon={Plus} disabled={submitting} style={{ width: "fit-content", alignSelf: "flex-start", padding: "8px 20px" }}>
+            {submitting ? "Adding..." : "Add Risk"}
           </Button>
         </Card>
       </form>
@@ -151,8 +217,8 @@ export function Risks() {
             <Button variant="secondary" onClick={() => setIsAuditModalOpen(false)}>
               Cancel
             </Button>
-            <Button variant="primary" icon={Send} onClick={handleConfirmRiskAudit}>
-              Confirm Audit & Mitigate
+            <Button variant="primary" icon={Send} onClick={handleConfirmRiskAudit} disabled={submitting}>
+              {submitting ? "Mitigating..." : "Confirm Audit & Mitigate"}
             </Button>
           </>
         }

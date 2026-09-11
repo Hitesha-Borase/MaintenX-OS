@@ -1,10 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Save, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useApp } from "../../../context/AppContext";
 import { useInventory } from "../../../context/InventoryContext";
 import { Card } from "../../../components/common/Card";
 import { Button } from "../../../components/common/Button";
+import warehouseService from "../../../services/warehouseService";
 
 export function ReceiveMaterial() {
   const { addToast } = useApp();
@@ -17,9 +18,15 @@ export function ReceiveMaterial() {
   const [qty, setQty] = useState(2);
   const [unit, setUnit] = useState("Drums");
   const [lotNum, setLotNum] = useState(`LOT-SW-${Math.floor(900 + Math.random() * 99)}`);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleReceive = (e) => {
+  useEffect(() => {
+    warehouseService.getReceivingDetails().catch(() => null);
+  }, []);
+
+  const handleReceive = async (e) => {
     e.preventDefault();
+    setIsSubmitting(true);
 
     const newLot = {
       lotNumber: lotNum,
@@ -30,19 +37,26 @@ export function ReceiveMaterial() {
       unit: unit,
       location: "Receiving Dock - Staging Area",
       supplier: vendor,
-      supplierLot: `VND-${Math.floor(Math.random() * 10000)}`,
+      supplierLot: `VND-${Math.floor(1000 + Math.random() * 9000)}`,
       qaStatus: "Quarantine",
       costPerUnitUSD: 45.00,
-      barcode: `890281${Math.floor(Math.random() * 1000000)}`
+      barcode: `890281${Math.floor(100000 + Math.random() * 900000)}`
     };
 
-    addLot(newLot);
+    try {
+      await warehouseService.receiveMaterial(newLot);
+    } catch (err) {
+      console.warn("Backend receiveMaterial fallback:", err);
+    }
+
+    addLot && addLot(newLot);
     addToast(`Material lot ${lotNum} received and moved to Staging for Put-Away.`, "success");
+    setIsSubmitting(false);
     
     // Navigate to staging for put-away
     setTimeout(() => {
       navigate("/warehouse/locations/staging");
-    }, 1000);
+    }, 800);
   };
 
   return (

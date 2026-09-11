@@ -1,39 +1,78 @@
-import React, { useState } from "react";
-import { Bell, AlertTriangle, X, Eye, Info, ShieldCheck, Wrench, CheckCircle2, Trash2 } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Bell, AlertTriangle, X, Eye, Info, ShieldCheck, Wrench, CheckCircle2, Trash2, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "../../components/common/Card";
 import { Button } from "../../components/common/Button";
 import { Badge } from "../../components/common/Badge";
 import { useApp } from "../../context/AppContext";
+import executiveService from "../../services/executiveService";
 
 export function Notifications() {
   const navigate = useNavigate();
   const { addToast } = useApp();
 
   const [activeTab, setActiveTab] = useState("all");
-  const [notifications, setNotifications] = useState([
-    { id: 1, type: "system", read: false, icon: AlertTriangle, title: "SLA Warning — Walmart Order Backlog", msg: "Order cycle time nearing SLA limit. Action required to prevent penalty exposure.", time: "1 hr ago", path: "/executive/business/service-level" },
-    { id: 2, type: "finance", read: false, icon: AlertTriangle, title: "Cost Variance Excursion — Raw Materials", msg: "Raw materials price variance up +$5,200 due to concentrate drift.", time: "3 hrs ago", path: "/executive/finance/variance" }
-  ]);
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const handleMarkAsRead = (id) => {
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
-    addToast("Notification marked as read.", "success");
+  const fetchNotifications = async () => {
+    try {
+      setLoading(true);
+      const res = await executiveService.getNotifications();
+      const data = res.data || res;
+      if (data && data.notifications) {
+        setNotifications(data.notifications);
+      }
+    } catch (err) {
+      console.error("Error loading notifications:", err);
+      addToast("Failed to load notifications", "error");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleDelete = (id) => {
-    setNotifications(prev => prev.filter((n) => n.id !== id));
-    addToast("Notification deleted.", "info");
+  useEffect(() => {
+    fetchNotifications();
+  }, []);
+
+  const handleMarkAsRead = async (id) => {
+    try {
+      await executiveService.markNotificationRead({ id });
+      setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+      addToast("Notification marked as read.", "success");
+    } catch (err) {
+      console.error("Error marking read:", err);
+    }
   };
 
-  const handleMarkAllAsRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-    addToast("All notifications marked as read.", "success");
+  const handleDelete = async (id) => {
+    try {
+      await executiveService.deleteNotification({ id });
+      setNotifications(prev => prev.filter((n) => n.id !== id));
+      addToast("Notification deleted.", "info");
+    } catch (err) {
+      console.error("Error deleting notification:", err);
+    }
   };
 
-  const handleClearAll = () => {
-    setNotifications([]);
-    addToast("All notifications cleared.", "info");
+  const handleMarkAllAsRead = async () => {
+    try {
+      await executiveService.markAllNotificationsRead();
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      addToast("All notifications marked as read.", "success");
+    } catch (err) {
+      console.error("Error marking all read:", err);
+    }
+  };
+
+  const handleClearAll = async () => {
+    try {
+      await executiveService.clearAllNotifications();
+      setNotifications([]);
+      addToast("All notifications cleared.", "info");
+    } catch (err) {
+      console.error("Error clearing notifications:", err);
+    }
   };
 
   const unreadCount = notifications.filter(n => !n.read).length;
@@ -78,7 +117,11 @@ export function Notifications() {
         <span onClick={() => setActiveTab("read")} style={{ fontSize: "13px", fontWeight: activeTab === "read" ? 700 : 600, color: activeTab === "read" ? "var(--text-primary)" : "var(--text-muted)", borderBottom: activeTab === "read" ? "2px solid var(--text-primary)" : "none", paddingBottom: "12px", marginBottom: "-13px", cursor: "pointer", whiteSpace: "nowrap" }}>Read ({readCount})</span>
       </div>
 
-      {filteredNotifications.length === 0 ? (
+      {loading ? (
+        <div style={{ display: "flex", justifyContent: "center", padding: "40px" }}>
+          <Loader2 className="animate-spin" size={28} style={{ color: "var(--color-primary)" }} />
+        </div>
+      ) : filteredNotifications.length === 0 ? (
         <Card style={{ padding: "40px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: "10px", backgroundColor: "#FFFFFF", border: "1px solid var(--border-subtle)" }}>
           <Bell size={32} color="var(--text-muted)" />
           <span style={{ fontSize: "14px", color: "var(--text-secondary)" }}>No active notifications to display.</span>
@@ -86,7 +129,7 @@ export function Notifications() {
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
           {filteredNotifications.map((n) => {
-            const IconComponent = n.icon;
+            const IconComponent = AlertTriangle;
             const s = getStyleProps(n.type);
 
             return (

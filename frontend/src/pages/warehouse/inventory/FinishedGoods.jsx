@@ -21,6 +21,7 @@ import { Badge } from "../../../components/common/Badge";
 import { Button } from "../../../components/common/Button";
 import { StatCard } from "../../../components/common/StatCard";
 import { useApp } from "../../../context/AppContext";
+import warehouseService from "../../../services/warehouseService";
 
 export const INITIAL_FINISHED_GOODS = [
   {
@@ -97,6 +98,19 @@ export function FinishedGoods() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [selectedGoodForView, setSelectedGoodForView] = useState(null);
+
+  React.useEffect(() => {
+    let isMounted = true;
+    warehouseService.getFinishedGoods().then((res) => {
+      const data = res?.data || res;
+      if (isMounted && Array.isArray(data?.finishedGoods) && data.finishedGoods.length > 0) {
+        setFinishedGoodsList(data.finishedGoods);
+      }
+    }).catch((err) => {
+      console.warn("Backend finished goods fetch fallback:", err.message);
+    });
+    return () => { isMounted = false; };
+  }, []);
 
   const filteredGoods = useMemo(() => {
     return finishedGoodsList.filter((g) => {

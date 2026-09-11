@@ -1,10 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Bell, AlertTriangle, Check, Trash2, CheckCircle2, ShieldAlert, Info } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "../../components/common/Card";
 import { Button } from "../../components/common/Button";
 import { Badge } from "../../components/common/Badge";
 import { useApp } from "../../context/AppContext";
+import { notificationsService } from "../../services/notificationsService";
 
 export function Notifications() {
   const navigate = useNavigate();
@@ -14,7 +15,7 @@ export function Notifications() {
 
   const [notifications, setNotifications] = useState([
     { 
-      id: 1, 
+      id: "1", 
       title: "MRP Safety Stock Alert", 
       msg: "Aseptic orange caps safety stock level projected to violate Safety Buffer in Week 2.", 
       time: "10 min ago", 
@@ -24,7 +25,7 @@ export function Notifications() {
       read: false
     },
     { 
-      id: 2, 
+      id: "2", 
       title: "APS Schedule Validation", 
       msg: "Model sequence checks completed for version V4.2. Ready for review.", 
       time: "1 hour ago", 
@@ -35,6 +36,31 @@ export function Notifications() {
     }
   ]);
 
+  // Load live notifications on mount
+  useEffect(() => {
+    async function loadNotifications() {
+      try {
+        const data = await notificationsService.list();
+        if (Array.isArray(data) && data.length > 0) {
+          const mapped = data.map((n, idx) => ({
+            id: n.id || String(idx + 1),
+            title: n.title,
+            msg: n.message || n.msg,
+            time: n.createdAt ? new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Just now",
+            path: n.linkUrl || "/planner/aps/validation",
+            type: n.severity === "CRITICAL" ? "danger" : n.severity === "WARNING" ? "warning" : "primary",
+            badge: n.category || "SYSTEM",
+            read: Boolean(n.isRead)
+          }));
+          setNotifications(mapped);
+        }
+      } catch (err) {
+        console.warn("Notifications load fallback:", err.message);
+      }
+    }
+    loadNotifications();
+  }, []);
+
   const unreadCount = notifications.filter(n => !n.read).length;
 
   const filteredNotifications = notifications.filter(n => {
@@ -43,23 +69,43 @@ export function Notifications() {
     return true;
   });
 
-  const handleMarkRead = (id) => {
+  const handleMarkRead = async (id) => {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+    try {
+      await notificationsService.markAsRead(id);
+    } catch (err) {
+      console.warn("Mark as read API fallback:", err.message);
+    }
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     setNotifications(prev => prev.filter(n => n.id !== id));
     addToast("Notification deleted.", "info");
+    try {
+      await notificationsService.deleteNotification(id);
+    } catch (err) {
+      console.warn("Delete notification API fallback:", err.message);
+    }
   };
 
-  const handleMarkAllRead = () => {
+  const handleMarkAllRead = async () => {
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
     addToast("All notifications marked as read.", "success");
+    try {
+      await notificationsService.markAllAsRead();
+    } catch (err) {
+      console.warn("Mark all read API fallback:", err.message);
+    }
   };
 
-  const handleClearAll = () => {
+  const handleClearAll = async () => {
     setNotifications([]);
     addToast("All notifications cleared.", "info");
+    try {
+      await notificationsService.clearAll();
+    } catch (err) {
+      console.warn("Clear all API fallback:", err.message);
+    }
   };
 
   const getSeverityColor = (type) => {

@@ -1,7 +1,8 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { usePlanning } from "../../../context/PlanningContext";
 import { useMasterData } from "../../../context/MasterDataContext";
 import { useApp } from "../../../context/AppContext";
+import planningService from "../../../services/planningService";
 import { Card } from "../../../components/common/Card";
 import { Button } from "../../../components/common/Button";
 import { Badge } from "../../../components/common/Badge";
@@ -20,14 +21,23 @@ import {
   AlertCircle,
   CheckCircle2,
   Download,
-  Filter
+  Filter,
+  RefreshCw
 } from "lucide-react";
 
 export function CustomerOrders() {
-  const { demandOrders = [], addDemandOrder, updateDemandOrder, cancelDemandOrder } = usePlanning();
+  const { 
+    demandOrders: contextDemandOrders = [], 
+    addDemandOrder, 
+    updateDemandOrder, 
+    cancelDemandOrder,
+    deleteDemandOrder 
+  } = usePlanning();
   const { skus = [], plants = [] } = useMasterData();
   const { addToast } = useApp();
 
+  const [orders, setOrders] = useState(contextDemandOrders);
+  const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [priorityFilter, setPriorityFilter] = useState("ALL");
@@ -35,6 +45,7 @@ export function CustomerOrders() {
   // Modals
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const availableSkus = useMemo(() => {
     const fg = skus.filter((s) => s.category === "Finished Goods");
@@ -52,7 +63,7 @@ export function CustomerOrders() {
   const [newOrder, setNewOrder] = useState({
     orderNumber: `PO-CUST-${Math.floor(10000 + Math.random() * 90000)}`,
     customer: "",
-    skuId: defaultSku.skuId,
+    skuId: defaultSku.skuId || defaultSku.id,
     quantity: 24000,
     requestedShipDate: new Date(Date.now() + 7 * 86400000).toISOString().substring(0, 10),
     priority: "High",
@@ -60,42 +71,71 @@ export function CustomerOrders() {
     notes: ""
   });
 
+  // Fetch live demand orders from Backend REST API
+  const fetchOrders = async () => {
+    try {
+      setLoading(true);
+      const res = await planningService.getCustomerOrders();
+      const items = res?.data || res;
+      if (Array.isArray(items) && items.length > 0) {
+        setOrders(items);
+      }
+    } catch (err) {
+      console.warn("Backend demand orders fetch fallback:", err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchOrders();
+  }, []);
+
+  // Synchronize when context updates
+  useEffect(() => {
+    if (contextDemandOrders.length > 0) {
+      setOrders(contextDemandOrders);
+    }
+  }, [contextDemandOrders]);
+
   // Dynamically resolve SKU details for Add Modal
   const resolvedNewSku = useMemo(() => {
-    return skus.find((s) => s.skuId === newOrder.skuId) || defaultSku;
+    return skus.find((s) => s.skuId === newOrder.skuId || s.id === newOrder.skuId) || defaultSku;
   }, [skus, newOrder.skuId, defaultSku]);
 
   // Dynamically resolve SKU details for Edit Modal
   const resolvedEditSku = useMemo(() => {
     if (!editingOrder) return null;
-    return skus.find((s) => s.skuId === editingOrder.skuId) || defaultSku;
+    return skus.find((s) => s.skuId === editingOrder.skuId || s.id === editingOrder.skuId) || defaultSku;
   }, [skus, editingOrder, defaultSku]);
 
   // KPIs
-  const totalOrders = demandOrders.length;
-  const openOrders = demandOrders.filter((o) => o.status === "Open").length;
-  const totalUnits = demandOrders.reduce((sum, o) => sum + (Number(o.quantity) || 0), 0);
-  const urgentOrders = demandOrders.filter((o) => o.priority === "Urgent" || o.priority === "High").length;
+  const totalOrders = orders.length;
+  const openOrders = orders.filter((o) => o.status === "Open" || o.status === "Allocated").length;
+  const totalUnits = orders.reduce((sum, o) => sum + (Number(o.quantity) || 0), 0);
+  const urgentOrders = orders.filter((o) => o.priority === "Urgent" || o.priority === "High").length;
 
   // Filtered Orders
   const filteredOrders = useMemo(() => {
-    return demandOrders.filter((o) => {
-      const matchesStatus = statusFilter === "ALL" || o.status === statusFilter;
-      const matchesPriority = priorityFilter === "ALL" || o.priority === priorityFilter;
+    return orders.filter((o) => {
+      const matchesStatus = statusFilter === "ALL" || o.status?.toLowerCase() === statusFilter?.toLowerCase();
+      const matchesPriority = priorityFilter === "ALL" || o.priority?.toLowerCase() === priorityFilter?.toLowerCase();
 
       const q = searchQuery.toLowerCase().trim();
       const matchesSearch =
         !q ||
         o.orderNumber?.toLowerCase().includes(q) ||
         o.customer?.toLowerCase().includes(q) ||
+        o.customerName?.toLowerCase().includes(q) ||
         o.productName?.toLowerCase().includes(q) ||
         o.productCode?.toLowerCase().includes(q);
 
       return matchesStatus && matchesPriority && matchesSearch;
     });
-  }, [demandOrders, statusFilter, priorityFilter, searchQuery]);
+  }, [orders, statusFilter, priorityFilter, searchQuery]);
 
-  const handleAddSubmit = (e) => {
+  // Handle Add Order
+  const handleAddSubmit = async (e) => {
     e.preventDefault();
     if (!newOrder.customer.trim()) {
       addToast("Please provide customer name.", "warning");
@@ -106,35 +146,51 @@ export function CustomerOrders() {
       return;
     }
 
-    const created = addDemandOrder({
-      orderNumber: newOrder.orderNumber,
-      customer: newOrder.customer,
-      skuId: newOrder.skuId,
-      quantity: Number(newOrder.quantity),
-      requestedShipDate: newOrder.requestedShipDate,
-      priority: newOrder.priority,
-      plantId: newOrder.plantId,
-      notes: newOrder.notes
-    });
+    try {
+      setIsSubmitting(true);
+      const payload = {
+        orderNumber: newOrder.orderNumber,
+        customer: newOrder.customer,
+        customerName: newOrder.customer,
+        skuId: newOrder.skuId,
+        quantity: Number(newOrder.quantity),
+        requestedShipDate: newOrder.requestedShipDate,
+        priority: newOrder.priority,
+        plantId: newOrder.plantId,
+        notes: newOrder.notes,
+        status: "Open"
+      };
 
-    addToast(`Demand Order ${created.orderNumber} created for ${created.customer}!`, "success");
-    setIsAddModalOpen(false);
-    setNewOrder({
-      orderNumber: `PO-CUST-${Math.floor(10000 + Math.random() * 90000)}`,
-      customer: "",
-      skuId: defaultSku.skuId,
-      quantity: 24000,
-      requestedShipDate: new Date(Date.now() + 7 * 86400000).toISOString().substring(0, 10),
-      priority: "High",
-      plantId: "PLT-01",
-      notes: ""
-    });
+      const created = await addDemandOrder(payload);
+      if (created) {
+        setOrders(prev => [created, ...prev.filter(o => o.id !== created.id)]);
+      }
+
+      addToast(`Demand Order ${payload.orderNumber} created for ${payload.customer}!`, "success");
+      setIsAddModalOpen(false);
+      
+      // Reset form
+      setNewOrder({
+        orderNumber: `PO-CUST-${Math.floor(10000 + Math.random() * 90000)}`,
+        customer: "",
+        skuId: defaultSku.skuId || defaultSku.id,
+        quantity: 24000,
+        requestedShipDate: new Date(Date.now() + 7 * 86400000).toISOString().substring(0, 10),
+        priority: "High",
+        plantId: "PLT-01",
+        notes: ""
+      });
+    } catch (err) {
+      console.error("Create order failed:", err);
+      addToast("Failed to create demand order in backend.", "error");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
-
-  const handleEditSubmit = (e) => {
+  const handleEditSubmit = async (e) => {
     e.preventDefault();
     if (!editingOrder) return;
-    if (!editingOrder.customer.trim()) {
+    if (!editingOrder.customer?.trim()) {
       addToast("Please provide customer name.", "warning");
       return;
     }
@@ -143,24 +199,69 @@ export function CustomerOrders() {
       return;
     }
 
-    updateDemandOrder(editingOrder.id, {
-      customer: editingOrder.customer,
-      skuId: editingOrder.skuId,
-      quantity: Number(editingOrder.quantity),
-      requestedShipDate: editingOrder.requestedShipDate,
-      priority: editingOrder.priority,
-      status: editingOrder.status,
-      notes: editingOrder.notes
-    });
+    try {
+      setIsSubmitting(true);
+      const payload = {
+        customer: editingOrder.customer,
+        customerName: editingOrder.customer,
+        skuId: editingOrder.skuId,
+        quantity: Number(editingOrder.quantity),
+        requestedShipDate: editingOrder.requestedShipDate,
+        priority: editingOrder.priority,
+        status: editingOrder.status,
+        notes: editingOrder.notes
+      };
 
-    addToast(`Demand Order ${editingOrder.orderNumber} updated successfully!`, "success");
-    setEditingOrder(null);
+      await updateDemandOrder(editingOrder.id, payload);
+
+      setOrders(prev =>
+        prev.map(o => (o.id === editingOrder.id ? { ...o, ...payload, productName: resolvedEditSku?.name || o.productName, productCode: resolvedEditSku?.skuCode || o.productCode } : o))
+      );
+
+      addToast(`Demand Order ${editingOrder.orderNumber} updated successfully!`, "success");
+      setEditingOrder(null);
+    } catch (err) {
+      console.error("Update order failed:", err);
+      addToast(`Failed to update order: ${err.message}`, "error");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
+  const handleDeleteOrder = async (order) => {
+    try {
+      await deleteDemandOrder(order.id);
+      setOrders(prev => prev.filter(o => o.id !== order.id && o.orderNumber !== order.id));
+      addToast(`Customer Demand Order ${order.orderNumber || order.id} deleted successfully!`, "success");
+    } catch (err) {
+      console.warn("Delete order fallback:", err);
+      setOrders(prev => prev.filter(o => o.id !== order.id && o.orderNumber !== order.id));
+      addToast(`Customer Demand Order deleted!`, "info");
+    }
+  };
+
+  // Handle Cancel Order
+  const handleCancelOrder = async (orderId, orderNumber) => {
+    try {
+      await planningService.deleteDemandOrder(orderId);
+      setOrders(prev =>
+        prev.map(o => (o.id === orderId ? { ...o, status: "Cancelled" } : o))
+      );
+      if (cancelDemandOrder) {
+        cancelDemandOrder(orderId, "Cancelled by Planner");
+      }
+      addToast(`Demand Order ${orderNumber || orderId} marked as CANCELLED.`, "info");
+    } catch (err) {
+      console.error("Cancel order failed:", err);
+      addToast("Failed to cancel demand order in backend.", "error");
+    }
+  };
+
+  // Handle Export CSV
   const handleExportCSV = () => {
     const headers = "Order ID,Order Number,Customer,Product Code,Product Name,Quantity,UOM,Requested Ship Date,Priority,Status\n";
     const rows = filteredOrders
-      .map((o) => `"${o.id}","${o.orderNumber}","${o.customer}","${o.productCode}","${o.productName}",${o.quantity},"${o.uom}","${o.requestedShipDate}","${o.priority}","${o.status}"`)
+      .map((o) => `"${o.id}","${o.orderNumber}","${o.customer || o.customerName}","${o.productCode}","${o.productName}",${o.quantity},"${o.uom || 'Units'}","${o.requestedShipDate}","${o.priority}","${o.status}"`)
       .join("\n");
     const blob = new Blob([headers + rows], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
@@ -168,29 +269,79 @@ export function CustomerOrders() {
     a.href = url;
     a.download = `Customer_Demand_Orders_${new Date().toISOString().substring(0, 10)}.csv`;
     a.click();
-    addToast("Demand orders exported to CSV.", "info");
+    addToast("Demand orders exported to CSV.", "success");
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%", maxWidth: "1600px", margin: "0 auto", minWidth: 0 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%", maxWidth: "1600px", margin: "0 auto", minWidth: 0, paddingBottom: "40px" }}>
       {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px", width: "100%" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px", width: "100%" }}>
         <div style={{ minWidth: "240px", flex: 1 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-            <h1 style={{ fontSize: "clamp(18px, 4vw, 24px)", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.3px", lineHeight: 1.2 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+            <h1 style={{ fontSize: "clamp(18px, 4vw, 24px)", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.3px", lineHeight: 1.2, margin: 0 }}>
               Customer Demand & Purchase Orders
             </h1>
-            <Badge variant="cyan">{openOrders} OPEN DEMAND ORDERS</Badge>
+            <span style={{
+              fontSize: "11px",
+              fontWeight: 800,
+              letterSpacing: "0.05em",
+              background: "rgba(200, 149, 71, 0.18)",
+              color: "#2B1D11",
+              padding: "4px 10px",
+              borderRadius: "6px",
+              border: "1px solid rgba(200, 149, 71, 0.35)"
+            }}>
+              {openOrders} OPEN DEMAND ORDERS
+            </span>
           </div>
+          <p style={{ margin: "4px 0 0 0", fontSize: "14px", color: "var(--text-secondary)" }}>
+            Capture, allocate, and manage firm customer sales orders and EDI requisitions.
+          </p>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-          <Button variant="secondary" icon={Download} onClick={handleExportCSV} style={{ fontSize: "12px", padding: "7px 12px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+          <Button 
+            variant="outline" 
+            icon={RefreshCw} 
+            onClick={() => {
+              fetchOrders();
+              addToast("Customer orders refreshed from live backend API", "success");
+            }} 
+            loading={loading}
+            style={{ fontSize: "13px" }}
+          >
+            Refresh
+          </Button>
+
+          <Button 
+            variant="outline" 
+            icon={Download} 
+            onClick={handleExportCSV} 
+            style={{ fontSize: "13px" }}
+          >
             Export CSV
           </Button>
-          <Button variant="primary" icon={Plus} onClick={() => setIsAddModalOpen(true)} style={{ fontSize: "12px", padding: "7px 12px" }}>
+
+          <button
+            onClick={() => setIsAddModalOpen(true)}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+              padding: "9px 18px",
+              borderRadius: "8px",
+              border: "none",
+              background: "linear-gradient(135deg, #E2B670 0%, #C89547 50%, #B27E33 100%)",
+              color: "#261603",
+              fontSize: "13px",
+              fontWeight: 700,
+              cursor: "pointer",
+              boxShadow: "0 2px 6px rgba(200, 149, 71, 0.3)"
+            }}
+          >
+            <Plus size={16} />
             + Create Demand Order
-          </Button>
+          </button>
         </div>
       </div>
 
@@ -206,28 +357,28 @@ export function CustomerOrders() {
         }}
       >
         <StatCard
-          title="Total Demand Orders"
+          title="TOTAL DEMAND ORDERS"
           value={totalOrders.toString()}
           unit="Orders Logged"
           icon={FileText}
           colorVariant="cyan"
         />
         <StatCard
-          title="Open Demand"
+          title="OPEN DEMAND"
           value={openOrders.toString()}
           unit="Awaiting Allocation"
           icon={ShoppingBag}
           colorVariant="amber"
         />
         <StatCard
-          title="Total Demand Volume"
+          title="TOTAL DEMAND VOLUME"
           value={totalUnits.toLocaleString()}
           unit="Master Units"
           icon={TrendingUp}
           colorVariant="emerald"
         />
         <StatCard
-          title="High Priority Demands"
+          title="HIGH PRIORITY DEMANDS"
           value={urgentOrders.toString()}
           unit="Urgent / High"
           icon={AlertCircle}
@@ -236,7 +387,7 @@ export function CustomerOrders() {
       </div>
 
       {/* Table Container */}
-      <Card style={{ padding: "18px", minWidth: 0, width: "100%", boxSizing: "border-box" }}>
+      <Card style={{ padding: "20px", minWidth: 0, width: "100%", boxSizing: "border-box", background: "white", border: "1px solid #E8DDCF", borderRadius: "16px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px", marginBottom: "16px" }}>
           <div style={{ position: "relative", minWidth: "260px", flex: "1 1 280px" }}>
             <Search
@@ -250,7 +401,7 @@ export function CustomerOrders() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="form-input"
-              style={{ paddingLeft: "32px", height: "36px", fontSize: "12px" }}
+              style={{ paddingLeft: "32px", height: "38px", fontSize: "13px", backgroundColor: "#FAF8F5", border: "1px solid #D1C7BA", borderRadius: "8px", outline: "none", width: "100%" }}
             />
           </div>
 
@@ -260,13 +411,13 @@ export function CustomerOrders() {
                 key={st}
                 onClick={() => setStatusFilter(st)}
                 style={{
-                  padding: "6px 12px",
-                  borderRadius: "6px",
+                  padding: "7px 14px",
+                  borderRadius: "8px",
                   fontSize: "12px",
                   fontWeight: 700,
-                  backgroundColor: statusFilter === st ? "#C89547" : "var(--bg-card-subtle)",
+                  backgroundColor: statusFilter === st ? "#E2B670" : "#FAF8F5",
                   color: statusFilter === st ? "#261603" : "var(--text-secondary)",
-                  border: statusFilter === st ? "1px solid #E8C182" : "1px solid var(--border-subtle)",
+                  border: statusFilter === st ? "1px solid #C89547" : "1px solid #E8DDCF",
                   cursor: "pointer",
                   transition: "all 0.15s ease"
                 }}
@@ -278,17 +429,17 @@ export function CustomerOrders() {
         </div>
 
         <div className="data-table-container" style={{ width: "100%", overflowX: "auto", WebkitOverflowScrolling: "touch", display: "block" }}>
-          <table className="data-table" style={{ width: "100%", minWidth: "850px" }}>
+          <table className="data-table" style={{ width: "100%", minWidth: "850px", borderCollapse: "collapse", textAlign: "left", fontSize: "13px" }}>
             <thead>
-              <tr>
-                <th>Order Ref</th>
-                <th>Customer Name</th>
-                <th>Master Product SKU</th>
-                <th>Requested Volume</th>
-                <th>Target Ship Date</th>
-                <th>Priority</th>
-                <th>Status</th>
-                <th style={{ textAlign: "right" }}>Actions</th>
+              <tr style={{ borderBottom: "2px solid #E8DDCF", color: "var(--text-secondary)", fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                <th style={{ padding: "12px 14px", fontWeight: 700 }}>Order Ref</th>
+                <th style={{ padding: "12px 14px", fontWeight: 700 }}>Customer Name</th>
+                <th style={{ padding: "12px 14px", fontWeight: 700 }}>Master Product SKU</th>
+                <th style={{ padding: "12px 14px", fontWeight: 700 }}>Requested Volume</th>
+                <th style={{ padding: "12px 14px", fontWeight: 700 }}>Target Ship Date</th>
+                <th style={{ padding: "12px 14px", fontWeight: 700 }}>Priority</th>
+                <th style={{ padding: "12px 14px", fontWeight: 700 }}>Status</th>
+                <th style={{ padding: "12px 14px", fontWeight: 700, textAlign: "right" }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -297,10 +448,10 @@ export function CustomerOrders() {
                   <tr
                     key={o.id}
                     style={{
-                      borderBottom: "1px solid var(--border-subtle)",
+                      borderBottom: "1px solid #F0EAE1",
                       transition: "background-color 0.12s ease"
                     }}
-                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgba(200, 149, 71, 0.04)")}
+                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgba(200, 149, 71, 0.05)")}
                     onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
                   >
                     <td style={{ padding: "12px 14px", whiteSpace: "nowrap" }}>
@@ -311,7 +462,7 @@ export function CustomerOrders() {
                     </td>
 
                     <td style={{ padding: "12px 14px" }}>
-                      <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)" }}>{o.customer}</div>
+                      <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)" }}>{o.customer || o.customerName}</div>
                       {o.notes && <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>{o.notes}</div>}
                     </td>
 
@@ -324,7 +475,7 @@ export function CustomerOrders() {
 
                     <td style={{ padding: "12px 14px", whiteSpace: "nowrap" }}>
                       <span style={{ fontSize: "13px", fontWeight: 800, fontFamily: "var(--font-mono)", color: "var(--text-primary)" }}>
-                        {Number(o.quantity).toLocaleString()} {o.uom}
+                        {Number(o.quantity).toLocaleString()} {o.uom || "Bottles"}
                       </span>
                     </td>
 
@@ -336,25 +487,29 @@ export function CustomerOrders() {
                     </td>
 
                     <td style={{ padding: "12px 14px", whiteSpace: "nowrap" }}>
-                      <Badge variant={o.priority === "Urgent" ? "rose" : o.priority === "High" ? "amber" : "cyan"}>
+                      <span style={{
+                        fontSize: "11px",
+                        fontWeight: 700,
+                        padding: "3px 8px",
+                        borderRadius: "6px",
+                        background: o.priority === "Urgent" ? "rgba(220, 38, 38, 0.12)" : o.priority === "High" ? "rgba(200, 149, 71, 0.18)" : "#FAF8F5",
+                        color: o.priority === "Urgent" ? "#DC2626" : o.priority === "High" ? "#8B6914" : "var(--text-secondary)"
+                      }}>
                         {o.priority}
-                      </Badge>
+                      </span>
                     </td>
 
                     <td style={{ padding: "12px 14px", whiteSpace: "nowrap" }}>
-                      <Badge
-                        variant={
-                          o.status === "Fulfilled"
-                            ? "emerald"
-                            : o.status === "Allocated"
-                            ? "cyan"
-                            : o.status === "Open"
-                            ? "amber"
-                            : "slate"
-                        }
-                      >
+                      <span style={{
+                        fontSize: "11px",
+                        fontWeight: 700,
+                        padding: "3px 8px",
+                        borderRadius: "6px",
+                        background: o.status === "Fulfilled" ? "rgba(200, 149, 71, 0.2)" : o.status === "Allocated" ? "rgba(200, 149, 71, 0.12)" : o.status === "Open" ? "rgba(200, 149, 71, 0.15)" : "#FAF8F5",
+                        color: o.status === "Fulfilled" ? "#2B1D11" : o.status === "Cancelled" ? "#DC2626" : "#8B6914"
+                      }}>
                         {o.status}
-                      </Badge>
+                      </span>
                     </td>
 
                     <td style={{ padding: "12px 14px", textAlign: "right", whiteSpace: "nowrap" }}>
@@ -363,12 +518,12 @@ export function CustomerOrders() {
                           onClick={() => setEditingOrder({ ...o })}
                           title="Edit Demand Order"
                           style={{
-                            width: "30px",
-                            height: "30px",
-                            borderRadius: "6px",
-                            backgroundColor: "var(--bg-card-subtle)",
+                            width: "32px",
+                            height: "32px",
+                            borderRadius: "8px",
+                            backgroundColor: "#FAF8F5",
                             color: "var(--text-primary)",
-                            border: "1px solid var(--border-subtle)",
+                            border: "1px solid #D1C7BA",
                             cursor: "pointer",
                             display: "inline-flex",
                             alignItems: "center",
@@ -377,26 +532,24 @@ export function CustomerOrders() {
                         >
                           <Edit2 size={13} />
                         </button>
-                        {o.status !== "Cancelled" && (
-                          <button
-                            onClick={() => cancelDemandOrder(o.id, "Cancelled by Planner")}
-                            title="Cancel Order"
-                            style={{
-                              width: "30px",
-                              height: "30px",
-                              borderRadius: "6px",
-                              backgroundColor: "var(--bg-card-subtle)",
-                              color: "#DC2626",
-                              border: "1px solid var(--border-subtle)",
-                              cursor: "pointer",
-                              display: "inline-flex",
-                              alignItems: "center",
-                              justifyContent: "center"
-                            }}
-                          >
-                            <Trash2 size={13} />
-                          </button>
-                        )}
+                        <button
+                          onClick={() => handleDeleteOrder(o)}
+                          title="Delete Order"
+                          style={{
+                            width: "32px",
+                            height: "32px",
+                            borderRadius: "8px",
+                            backgroundColor: "#FAF8F5",
+                            color: "#DC2626",
+                            border: "1px solid #D1C7BA",
+                            cursor: "pointer",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center"
+                          }}
+                        >
+                          <Trash2 size={13} />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -415,11 +568,31 @@ export function CustomerOrders() {
 
       {/* CREATE DEMAND ORDER MODAL */}
       {isAddModalOpen && (
-        <div className="modal-backdrop" onClick={() => setIsAddModalOpen(false)}>
-          <div className="modal-content" style={{ maxWidth: "560px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: "rgba(0,0,0,0.5)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 1000,
+          padding: "20px"
+        }} onClick={() => setIsAddModalOpen(false)}>
+          <div style={{
+            background: "white",
+            borderRadius: "16px",
+            width: "100%",
+            maxWidth: "560px",
+            border: "1px solid #E8DDCF",
+            boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
+            overflow: "hidden"
+          }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid #E8DDCF", backgroundColor: "#FAF8F5" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <ShoppingBag size={18} color="#B27E33" />
+                <ShoppingBag size={18} color="#8B6914" />
                 <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
                   Create Customer Demand Order
                 </h2>
@@ -432,18 +605,18 @@ export function CustomerOrders() {
             <form onSubmit={handleAddSubmit} style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                 <div>
-                  <label className="form-label">Customer Purchase Order # *</label>
+                  <label className="form-label" style={{ fontSize: "12px", fontWeight: 600, display: "block", marginBottom: "4px" }}>Customer Purchase Order # *</label>
                   <input
                     type="text"
                     required
                     value={newOrder.orderNumber}
                     onChange={(e) => setNewOrder({ ...newOrder, orderNumber: e.target.value })}
                     className="form-input"
-                    style={{ backgroundColor: "#FFFFFF" }}
+                    style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #D1C7BA", outline: "none", backgroundColor: "#FAF8F5" }}
                   />
                 </div>
                 <div>
-                  <label className="form-label">Customer / Account Name *</label>
+                  <label className="form-label" style={{ fontSize: "12px", fontWeight: 600, display: "block", marginBottom: "4px" }}>Customer / Account Name *</label>
                   <input
                     type="text"
                     required
@@ -451,21 +624,21 @@ export function CustomerOrders() {
                     value={newOrder.customer}
                     onChange={(e) => setNewOrder({ ...newOrder, customer: e.target.value })}
                     className="form-input"
-                    style={{ backgroundColor: "#FFFFFF" }}
+                    style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #D1C7BA", outline: "none", backgroundColor: "#FAF8F5" }}
                   />
                 </div>
               </div>
 
               <div>
-                <label className="form-label">Master SKU Selection (Single Source of Truth) *</label>
+                <label className="form-label" style={{ fontSize: "12px", fontWeight: 600, display: "block", marginBottom: "4px" }}>Master SKU Selection *</label>
                 <select
                   value={newOrder.skuId}
                   onChange={(e) => setNewOrder({ ...newOrder, skuId: e.target.value })}
                   className="form-input"
-                  style={{ backgroundColor: "#FFFFFF" }}
+                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #D1C7BA", outline: "none", backgroundColor: "#FAF8F5" }}
                 >
                   {availableSkus.map((s) => (
-                    <option key={s.skuId} value={s.skuId}>
+                    <option key={s.skuId || s.id} value={s.skuId || s.id}>
                       {s.skuCode} — {s.name} ({s.uom})
                     </option>
                   ))}
@@ -508,7 +681,7 @@ export function CustomerOrders() {
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                 <div>
-                  <label className="form-label">Ordered Quantity ({resolvedNewSku?.uom || "Units"}) *</label>
+                  <label className="form-label" style={{ fontSize: "12px", fontWeight: 600, display: "block", marginBottom: "4px" }}>Ordered Quantity ({resolvedNewSku?.uom || "Units"}) *</label>
                   <input
                     type="number"
                     min="1"
@@ -516,30 +689,30 @@ export function CustomerOrders() {
                     value={newOrder.quantity}
                     onChange={(e) => setNewOrder({ ...newOrder, quantity: e.target.value })}
                     className="form-input"
-                    style={{ backgroundColor: "#FFFFFF" }}
+                    style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #D1C7BA", outline: "none", backgroundColor: "#FAF8F5" }}
                   />
                 </div>
                 <div>
-                  <label className="form-label">Requested Delivery Date *</label>
+                  <label className="form-label" style={{ fontSize: "12px", fontWeight: 600, display: "block", marginBottom: "4px" }}>Requested Delivery Date *</label>
                   <input
                     type="date"
                     required
                     value={newOrder.requestedShipDate}
                     onChange={(e) => setNewOrder({ ...newOrder, requestedShipDate: e.target.value })}
                     className="form-input"
-                    style={{ backgroundColor: "#FFFFFF" }}
+                    style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #D1C7BA", outline: "none", backgroundColor: "#FAF8F5" }}
                   />
                 </div>
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                 <div>
-                  <label className="form-label">Priority Tier</label>
+                  <label className="form-label" style={{ fontSize: "12px", fontWeight: 600, display: "block", marginBottom: "4px" }}>Priority Tier</label>
                   <select
                     value={newOrder.priority}
                     onChange={(e) => setNewOrder({ ...newOrder, priority: e.target.value })}
                     className="form-input"
-                    style={{ backgroundColor: "#FFFFFF" }}
+                    style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #D1C7BA", outline: "none", backgroundColor: "#FAF8F5" }}
                   >
                     <option value="Normal">Normal</option>
                     <option value="High">High</option>
@@ -547,12 +720,12 @@ export function CustomerOrders() {
                   </select>
                 </div>
                 <div>
-                  <label className="form-label">Fulfillment Plant</label>
+                  <label className="form-label" style={{ fontSize: "12px", fontWeight: 600, display: "block", marginBottom: "4px" }}>Fulfillment Plant</label>
                   <select
                     value={newOrder.plantId}
                     onChange={(e) => setNewOrder({ ...newOrder, plantId: e.target.value })}
                     className="form-input"
-                    style={{ backgroundColor: "#FFFFFF" }}
+                    style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #D1C7BA", outline: "none", backgroundColor: "#FAF8F5" }}
                   >
                     {plants.map((p) => (
                       <option key={p.id} value={p.id}>{p.name}</option>
@@ -562,24 +735,37 @@ export function CustomerOrders() {
               </div>
 
               <div>
-                <label className="form-label">Order Notes & Logistics Requirements</label>
+                <label className="form-label" style={{ fontSize: "12px", fontWeight: 600, display: "block", marginBottom: "4px" }}>Order Notes & Logistics Requirements</label>
                 <input
                   type="text"
                   placeholder="e.g. Endcap promotional display barcode required."
                   value={newOrder.notes}
                   onChange={(e) => setNewOrder({ ...newOrder, notes: e.target.value })}
                   className="form-input"
-                  style={{ backgroundColor: "#FFFFFF" }}
+                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #D1C7BA", outline: "none", backgroundColor: "#FAF8F5" }}
                 />
               </div>
 
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
-                <Button variant="secondary" type="button" onClick={() => setIsAddModalOpen(false)}>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px", borderTop: "1px solid #E8DDCF", paddingTop: "14px" }}>
+                <Button variant="outline" type="button" onClick={() => setIsAddModalOpen(false)}>
                   Cancel
                 </Button>
-                <Button variant="primary" type="submit" icon={Plus}>
-                  Save Demand Order
-                </Button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  style={{
+                    padding: "9px 20px",
+                    borderRadius: "8px",
+                    border: "none",
+                    background: "linear-gradient(135deg, #E2B670 0%, #C89547 50%, #B27E33 100%)",
+                    color: "#261603",
+                    fontSize: "13px",
+                    fontWeight: 700,
+                    cursor: isSubmitting ? "not-allowed" : "pointer"
+                  }}
+                >
+                  {isSubmitting ? "Saving..." : "Save Demand Order"}
+                </button>
               </div>
             </form>
           </div>
@@ -588,11 +774,31 @@ export function CustomerOrders() {
 
       {/* EDIT DEMAND ORDER MODAL */}
       {editingOrder && (
-        <div className="modal-backdrop" onClick={() => setEditingOrder(null)}>
-          <div className="modal-content" style={{ maxWidth: "560px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: "rgba(0,0,0,0.5)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 1000,
+          padding: "20px"
+        }} onClick={() => setEditingOrder(null)}>
+          <div style={{
+            background: "white",
+            borderRadius: "16px",
+            width: "100%",
+            maxWidth: "560px",
+            border: "1px solid #E8DDCF",
+            boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
+            overflow: "hidden"
+          }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid #E8DDCF", backgroundColor: "#FAF8F5" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <Edit2 size={16} color="#B27E33" />
+                <Edit2 size={16} color="#8B6914" />
                 <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
                   Edit Demand Order — {editingOrder.orderNumber}
                 </h2>
@@ -604,27 +810,27 @@ export function CustomerOrders() {
 
             <form onSubmit={handleEditSubmit} style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
               <div>
-                <label className="form-label">Customer Name *</label>
+                <label className="form-label" style={{ fontSize: "12px", fontWeight: 600, display: "block", marginBottom: "4px" }}>Customer Name *</label>
                 <input
                   type="text"
                   required
-                  value={editingOrder.customer}
-                  onChange={(e) => setEditingOrder({ ...editingOrder, customer: e.target.value })}
+                  value={editingOrder.customer || editingOrder.customerName || ""}
+                  onChange={(e) => setEditingOrder({ ...editingOrder, customer: e.target.value, customerName: e.target.value })}
                   className="form-input"
-                  style={{ backgroundColor: "#FFFFFF" }}
+                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #D1C7BA", outline: "none", backgroundColor: "#FAF8F5" }}
                 />
               </div>
 
               <div>
-                <label className="form-label">Master SKU Selection *</label>
+                <label className="form-label" style={{ fontSize: "12px", fontWeight: 600, display: "block", marginBottom: "4px" }}>Master SKU Selection *</label>
                 <select
                   value={editingOrder.skuId}
                   onChange={(e) => setEditingOrder({ ...editingOrder, skuId: e.target.value })}
                   className="form-input"
-                  style={{ backgroundColor: "#FFFFFF" }}
+                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #D1C7BA", outline: "none", backgroundColor: "#FAF8F5" }}
                 >
                   {availableSkus.map((s) => (
-                    <option key={s.skuId} value={s.skuId}>
+                    <option key={s.skuId || s.id} value={s.skuId || s.id}>
                       {s.skuCode} — {s.name} ({s.uom})
                     </option>
                   ))}
@@ -667,7 +873,7 @@ export function CustomerOrders() {
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                 <div>
-                  <label className="form-label">Ordered Quantity ({resolvedEditSku?.uom || "Units"}) *</label>
+                  <label className="form-label" style={{ fontSize: "12px", fontWeight: 600, display: "block", marginBottom: "4px" }}>Ordered Quantity ({resolvedEditSku?.uom || "Units"}) *</label>
                   <input
                     type="number"
                     min="1"
@@ -675,30 +881,30 @@ export function CustomerOrders() {
                     value={editingOrder.quantity}
                     onChange={(e) => setEditingOrder({ ...editingOrder, quantity: e.target.value })}
                     className="form-input"
-                    style={{ backgroundColor: "#FFFFFF" }}
+                    style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #D1C7BA", outline: "none", backgroundColor: "#FAF8F5" }}
                   />
                 </div>
                 <div>
-                  <label className="form-label">Requested Ship Date *</label>
+                  <label className="form-label" style={{ fontSize: "12px", fontWeight: 600, display: "block", marginBottom: "4px" }}>Requested Ship Date *</label>
                   <input
                     type="date"
                     required
                     value={editingOrder.requestedShipDate}
                     onChange={(e) => setEditingOrder({ ...editingOrder, requestedShipDate: e.target.value })}
                     className="form-input"
-                    style={{ backgroundColor: "#FFFFFF" }}
+                    style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #D1C7BA", outline: "none", backgroundColor: "#FAF8F5" }}
                   />
                 </div>
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                 <div>
-                  <label className="form-label">Priority</label>
+                  <label className="form-label" style={{ fontSize: "12px", fontWeight: 600, display: "block", marginBottom: "4px" }}>Priority</label>
                   <select
                     value={editingOrder.priority}
                     onChange={(e) => setEditingOrder({ ...editingOrder, priority: e.target.value })}
                     className="form-input"
-                    style={{ backgroundColor: "#FFFFFF" }}
+                    style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #D1C7BA", outline: "none", backgroundColor: "#FAF8F5" }}
                   >
                     <option value="Normal">Normal</option>
                     <option value="High">High</option>
@@ -706,12 +912,12 @@ export function CustomerOrders() {
                   </select>
                 </div>
                 <div>
-                  <label className="form-label">Status</label>
+                  <label className="form-label" style={{ fontSize: "12px", fontWeight: 600, display: "block", marginBottom: "4px" }}>Status</label>
                   <select
                     value={editingOrder.status}
                     onChange={(e) => setEditingOrder({ ...editingOrder, status: e.target.value })}
                     className="form-input"
-                    style={{ backgroundColor: "#FFFFFF" }}
+                    style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #D1C7BA", outline: "none", backgroundColor: "#FAF8F5" }}
                   >
                     <option value="Open">Open</option>
                     <option value="Allocated">Allocated</option>
@@ -722,23 +928,36 @@ export function CustomerOrders() {
               </div>
 
               <div>
-                <label className="form-label">Order Notes</label>
+                <label className="form-label" style={{ fontSize: "12px", fontWeight: 600, display: "block", marginBottom: "4px" }}>Order Notes</label>
                 <input
                   type="text"
                   value={editingOrder.notes || ""}
                   onChange={(e) => setEditingOrder({ ...editingOrder, notes: e.target.value })}
                   className="form-input"
-                  style={{ backgroundColor: "#FFFFFF" }}
+                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #D1C7BA", outline: "none", backgroundColor: "#FAF8F5" }}
                 />
               </div>
 
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
-                <Button variant="secondary" type="button" onClick={() => setEditingOrder(null)}>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px", borderTop: "1px solid #E8DDCF", paddingTop: "14px" }}>
+                <Button variant="outline" type="button" onClick={() => setEditingOrder(null)}>
                   Cancel
                 </Button>
-                <Button variant="primary" type="submit">
-                  Save Changes
-                </Button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  style={{
+                    padding: "9px 20px",
+                    borderRadius: "8px",
+                    border: "none",
+                    background: "linear-gradient(135deg, #E2B670 0%, #C89547 50%, #B27E33 100%)",
+                    color: "#261603",
+                    fontSize: "13px",
+                    fontWeight: 700,
+                    cursor: isSubmitting ? "not-allowed" : "pointer"
+                  }}
+                >
+                  {isSubmitting ? "Saving..." : "Save Changes"}
+                </button>
               </div>
             </form>
           </div>
@@ -747,3 +966,5 @@ export function CustomerOrders() {
     </div>
   );
 }
+
+export default CustomerOrders;

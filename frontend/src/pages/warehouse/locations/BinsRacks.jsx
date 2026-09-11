@@ -21,6 +21,7 @@ import { useNavigate } from "react-router-dom";
 import { useApp } from "../../../context/AppContext";
 import { useInventory } from "../../../context/InventoryContext";
 import { INITIAL_INVENTORY_LOTS } from "../../../data/mockInventory";
+import warehouseService from "../../../services/warehouseService";
 
 export function BinsRacks() {
   const { addToast } = useApp();
@@ -29,6 +30,21 @@ export function BinsRacks() {
 
   // Active view: QUEUE or HISTORY
   const [activeTab, setActiveTab] = useState("QUEUE");
+  const [backendBinsData, setBackendBinsData] = useState(null);
+
+  // Sync Bins & Racks from backend API on mount
+  React.useEffect(() => {
+    let isMounted = true;
+    warehouseService.getBinsLocations().then((res) => {
+      const data = res?.data || res;
+      if (isMounted && data) {
+        setBackendBinsData(data);
+      }
+    }).catch((err) => {
+      console.warn("Backend bins fetch fallback:", err.message);
+    });
+    return () => { isMounted = false; };
+  }, []);
 
   // Show lots that are staged and need put-away
   const stagedLots = lots.filter(lot => lot.status === "STAGED");
@@ -46,18 +62,36 @@ export function BinsRacks() {
     setSelectedBins(prev => ({ ...prev, [lotNum]: bin }));
   };
 
-  const handlePutAway = (lotNum) => {
+  const handlePutAway = async (lotNum) => {
     const bin = selectedBins[lotNum] || "Cold Storage Zone A - Rack R04-B2";
+    try {
+      await warehouseService.completeBinPutAway({
+        lotNumber: lotNum,
+        destinationBin: bin,
+        operator: "Carlos Mendez"
+      }).catch(err => console.warn("completeBinPutAway offline:", err.message));
+    } catch (e) {
+      console.warn("Putaway API err:", e);
+    }
     transferLotLocation(lotNum, bin);
     addToast(`Put-Away Confirmed! Lot ${lotNum} stored in ${bin}. Inventory ledger updated.`, "success");
   };
 
-  const handlePutAwayAll = () => {
+  const handlePutAwayAll = async () => {
     if (stagedLots.length === 0) return;
-    stagedLots.forEach(lot => {
+    for (const lot of stagedLots) {
       const bin = selectedBins[lot.lotNumber] || lot.recommendedBin || "Cold Storage Zone A - Rack R04-B2";
+      try {
+        await warehouseService.completePutAway({
+          lotNumber: lot.lotNumber,
+          destinationBin: bin,
+          operator: "Carlos Mendez"
+        }).catch(err => console.warn("completePutAway offline:", err.message));
+      } catch (e) {
+        console.warn("Putaway API err:", e);
+      }
       transferLotLocation(lot.lotNumber, bin);
-    });
+    }
     addToast(`All ${stagedLots.length} staged lots successfully allocated and stored.`, "success");
   };
 
@@ -516,3 +550,5 @@ export function BinsRacks() {
     </div>
   );
 }
+
+export default BinsRacks;

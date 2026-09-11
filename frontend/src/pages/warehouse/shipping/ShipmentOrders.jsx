@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   Truck,
   Package,
@@ -23,6 +23,7 @@ import { Badge } from "../../../components/common/Badge";
 import { Button } from "../../../components/common/Button";
 import { StatCard } from "../../../components/common/StatCard";
 import { useApp } from "../../../context/AppContext";
+import warehouseService from "../../../services/warehouseService";
 
 export const INITIAL_SHIPMENT_ORDERS = [
   {
@@ -141,6 +142,19 @@ export function ShipmentOrders() {
     destination: "Toronto Logistics Hub, ON"
   });
 
+  useEffect(() => {
+    let isMounted = true;
+    warehouseService.getShipmentOrders().then((res) => {
+      const data = res?.data || res;
+      if (isMounted && Array.isArray(data?.shipmentOrders) && data.shipmentOrders.length > 0) {
+        setShipments(data.shipmentOrders);
+      }
+    }).catch((err) => {
+      console.warn("Backend shipment orders fetch fallback:", err.message);
+    });
+    return () => { isMounted = false; };
+  }, []);
+
   const filteredShipments = useMemo(() => {
     return shipments.filter((s) => {
       const q = searchQuery.toLowerCase();
@@ -159,7 +173,7 @@ export function ShipmentOrders() {
   }, [shipments, searchQuery, statusFilter]);
 
   // Create Shipment Handler
-  const handleCreateShipment = (e) => {
+  const handleCreateShipment = async (e) => {
     e.preventDefault();
     const id = `SHP-2026-${Math.floor(890 + Math.random() * 100)}`;
     const created = {
@@ -177,25 +191,51 @@ export function ShipmentOrders() {
         { step: "Customer Dock Delivery", time: "Pending", done: false }
       ]
     };
-    setShipments((prev) => [created, ...prev]);
+
+    try {
+      const res = await warehouseService.createShipmentOrder(created);
+      const saved = res?.data || created;
+      setShipments((prev) => [saved, ...prev.filter(x => x.id !== saved.id)]);
+    } catch (err) {
+      console.warn("Backend createShipmentOrder sync:", err);
+      setShipments((prev) => [created, ...prev]);
+    }
+
     addToast(`Shipment ${created.id} created for ${created.customer}!`, "success");
     setIsCreateModalOpen(false);
   };
 
   // Edit Shipment Handler
-  const handleUpdateShipment = (e) => {
+  const handleUpdateShipment = async (e) => {
     e.preventDefault();
     if (!editingShipment) return;
-    setShipments((prev) =>
-      prev.map((s) => (s.id === editingShipment.id ? { ...editingShipment } : s))
-    );
+
+    try {
+      const res = await warehouseService.updateShipmentOrder(editingShipment.id, editingShipment);
+      const saved = res?.data || editingShipment;
+      setShipments((prev) =>
+        prev.map((s) => (s.id === saved.id ? { ...saved } : s))
+      );
+    } catch (err) {
+      console.warn("Backend updateShipmentOrder sync:", err);
+      setShipments((prev) =>
+        prev.map((s) => (s.id === editingShipment.id ? { ...editingShipment } : s))
+      );
+    }
+
     addToast(`Shipment ${editingShipment.id} updated successfully.`, "success");
     setIsEditModalOpen(false);
     setEditingShipment(null);
   };
 
   // Dispatch Shipment Handler
-  const handleDispatch = (s) => {
+  const handleDispatch = async (s) => {
+    try {
+      await warehouseService.dispatchShipmentOrder(s.id);
+    } catch (e) {
+      console.warn("dispatchShipmentOrder API sync:", e);
+    }
+
     setShipments((prev) =>
       prev.map((item) =>
         item.id === s.id

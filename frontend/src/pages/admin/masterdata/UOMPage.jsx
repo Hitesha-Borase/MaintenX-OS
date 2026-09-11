@@ -7,6 +7,7 @@ import {
   Layers,
   Edit2,
   Trash2,
+  Eye,
   X,
   ShieldCheck,
   Percent,
@@ -22,11 +23,16 @@ import { useApp } from "../../../context/AppContext";
 import masterDataService from "../../../services/masterDataService";
 
 export function UOMPage() {
-  const { uoms = [], addUOM, updateUOM, toggleUOMStatus, deleteUOM } = useMasterData();
+  const { uoms = [], setUoms, addUOM, updateUOM, toggleUOMStatus, deleteUOM } = useMasterData();
   const { addToast } = useApp();
 
   useEffect(() => {
-    masterDataService.getUoms().catch((err) => console.warn("UOMs load:", err.message));
+    masterDataService.getUoms().then((res) => {
+      const data = res?.data || res;
+      if (Array.isArray(data) && data.length > 0 && typeof setUoms === "function") {
+        setUoms(data);
+      }
+    }).catch((err) => console.warn("UOMs load:", err.message));
   }, []);
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -34,6 +40,7 @@ export function UOMPage() {
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUOM, setEditingUOM] = useState(null);
+  const [viewingUOM, setViewingUOM] = useState(null);
 
   const [newUOM, setNewUOM] = useState({
     uomCode: "",
@@ -112,6 +119,12 @@ export function UOMPage() {
     if (window.confirm(`Are you sure you want to delete UOM "${code}"?`)) {
       deleteUOM(uomId);
       addToast(`UOM "${code}" deleted.`, "info");
+      if (viewingUOM && (viewingUOM.uomId === uomId || viewingUOM.id === uomId || viewingUOM.uomCode === code || viewingUOM.code === code)) {
+        setViewingUOM(null);
+      }
+      if (editingUOM && (editingUOM.uomId === uomId || editingUOM.id === uomId || editingUOM.uomCode === code || editingUOM.code === code)) {
+        setEditingUOM(null);
+      }
     }
   };
 
@@ -305,6 +318,24 @@ export function UOMPage() {
                       </td>
                       <td style={{ padding: "12px 16px", textAlign: "right" }}>
                         <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                          <button
+                            onClick={() => setViewingUOM({ ...u })}
+                            title="View UOM Details"
+                            style={{
+                              width: "30px",
+                              height: "30px",
+                              borderRadius: "6px",
+                              backgroundColor: "var(--bg-card-subtle)",
+                              color: "var(--text-primary)",
+                              border: "1px solid var(--border-subtle)",
+                              cursor: "pointer",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center"
+                            }}
+                          >
+                            <Eye size={13} />
+                          </button>
                           <button
                             onClick={() => setEditingUOM({ ...u })}
                             title="Edit UOM"
@@ -545,6 +576,208 @@ export function UOMPage() {
                 </Button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {viewingUOM && (
+        <div className="modal-backdrop" onClick={() => setViewingUOM(null)}>
+          <div
+            className="modal-content"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: "520px", padding: 0, overflow: "hidden", borderRadius: "12px" }}
+          >
+            <div
+              style={{
+                padding: "16px 20px",
+                borderBottom: "1px solid var(--border-subtle)",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                backgroundColor: "var(--bg-card-subtle)"
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <div
+                  style={{
+                    width: "32px",
+                    height: "32px",
+                    borderRadius: "8px",
+                    backgroundColor: "rgba(200, 149, 71, 0.12)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#C89547"
+                  }}
+                >
+                  <Eye size={16} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: "16px", fontWeight: 700, color: "var(--text-primary)" }}>
+                    UOM Conversion Details
+                  </h3>
+                  <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+                    Unit of Measure Master Specification
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => setViewingUOM(null)}
+                style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  paddingBottom: "12px",
+                  borderBottom: "1px solid var(--border-subtle)"
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
+                    UOM Code
+                  </div>
+                  <div
+                    style={{
+                      fontSize: "18px",
+                      fontWeight: 800,
+                      color: "#8C5B23",
+                      fontFamily: "var(--font-mono)",
+                      marginTop: "4px"
+                    }}
+                  >
+                    {viewingUOM.code || viewingUOM.uomCode || viewingUOM.uomId}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
+                    Status
+                  </div>
+                  <div style={{ marginTop: "4px" }}>
+                    <Badge variant={viewingUOM.status === "Active" ? "emerald" : "gray"}>
+                      {viewingUOM.status || "Active"}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
+                  UOM Description / Name
+                </div>
+                <div style={{ fontSize: "15px", fontWeight: 700, color: "var(--text-primary)", marginTop: "4px" }}>
+                  {viewingUOM.name || viewingUOM.description || viewingUOM.uomDescription || "Standard Unit"}
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
+                    Classification
+                  </div>
+                  <div style={{ marginTop: "6px" }}>
+                    <Badge variant="cyan">
+                      {viewingUOM.category || viewingUOM.type || viewingUOM.classification || "Packaging"}
+                    </Badge>
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
+                    Multiplier Factor
+                  </div>
+                  <div
+                    style={{
+                      fontSize: "15px",
+                      fontWeight: 800,
+                      color: "#D97706",
+                      fontFamily: "var(--font-mono)",
+                      marginTop: "4px"
+                    }}
+                  >
+                    × {Number(viewingUOM.conversionFactor || viewingUOM.factor || 1.0).toFixed(1)}
+                  </div>
+                </div>
+              </div>
+
+              <div
+                style={{
+                  backgroundColor: "var(--bg-card-subtle)",
+                  padding: "12px 14px",
+                  borderRadius: "8px",
+                  border: "1px solid var(--border-subtle)"
+                }}
+              >
+                <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
+                  Base Unit Conversion Equation
+                </div>
+                <div
+                  style={{
+                    fontSize: "14px",
+                    fontWeight: 700,
+                    color: "var(--text-primary)",
+                    fontFamily: "var(--font-mono)",
+                    marginTop: "4px"
+                  }}
+                >
+                  1 {viewingUOM.code || viewingUOM.uomCode} = {Number(viewingUOM.conversionFactor || viewingUOM.factor || 1.0).toFixed(1)} {viewingUOM.baseUom || viewingUOM.baseUnit || "EA"}
+                </div>
+              </div>
+
+              {viewingUOM.id && (
+                <div style={{ fontSize: "11px", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>
+                  PostgreSQL Record ID: {viewingUOM.id}
+                </div>
+              )}
+
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  gap: "10px",
+                  marginTop: "6px",
+                  borderTop: "1px solid var(--border-subtle)",
+                  paddingTop: "14px"
+                }}
+              >
+                <Button
+                  type="button"
+                  variant="danger"
+                  onClick={() => {
+                    handleDelete(viewingUOM.uomId || viewingUOM.id, viewingUOM.code || viewingUOM.uomCode);
+                    setViewingUOM(null);
+                  }}
+                  style={{ fontSize: "12px", padding: "6px 12px", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                >
+                  <Trash2 size={13} /> Delete
+                </Button>
+                <div style={{ display: "flex", gap: "8px" }}>
+                  <Button
+                    variant="primary"
+                    onClick={() => {
+                      setEditingUOM({ ...viewingUOM });
+                      setViewingUOM(null);
+                    }}
+                    style={{ fontSize: "12px", padding: "6px 12px", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                  >
+                    <Edit2 size={13} /> Edit
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() => setViewingUOM(null)}
+                    style={{ fontSize: "12px", padding: "6px 12px" }}
+                  >
+                    Close
+                  </Button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { useProduction } from "../../context/ProductionContext";
 import { useMasterData } from "../../context/MasterDataContext";
 import { useApp } from "../../context/AppContext";
@@ -6,6 +6,7 @@ import { Card } from "../../components/common/Card";
 import { Button } from "../../components/common/Button";
 import { Badge } from "../../components/common/Badge";
 import { StatCard } from "../../components/common/StatCard";
+import { productionService } from "../../services/productionService";
 import {
   Factory,
   Plus,
@@ -21,20 +22,27 @@ import {
   TrendingUp,
   ArrowRight,
   Sparkles,
-  Filter
+  Filter,
+  RefreshCw,
+  Play,
+  Pause,
+  Check,
+  Download
 } from "lucide-react";
 
 export function ProductionOrders() {
-  const { productionOrders = [], setProductionOrders } = useProduction();
+  const { productionOrders: ctxOrders = [], setProductionOrders: setCtxOrders } = useProduction();
   const { skus = [], lines = [] } = useMasterData();
   const { addToast } = useApp();
 
-  // Search & Filter state
+  const [orders, setOrders] = useState(ctxOrders || []);
+  const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Available finished goods or master SKUs
   const availableSkus = useMemo(() => {
@@ -57,64 +65,139 @@ export function ProductionOrders() {
   };
 
   const [formData, setFormData] = useState({
-    orderNumber: `ORD-2026-${Math.floor(1000 + Math.random() * 9000)}`,
-    skuId: defaultSku.skuId,
-    lineId: defaultLine.lineId,
+    orderNumber: `PO-2026-${Math.floor(1000 + Math.random() * 9000)}`,
+    skuId: defaultSku.skuId || defaultSku.id,
+    lineId: defaultLine.lineId || defaultLine.id,
     targetQuantity: 25000,
     plannedStartDate: new Date().toISOString().substring(0, 10),
-    priority: "Normal",
-    status: "Scheduled"
+    priority: "NORMAL",
+    status: "SCHEDULED"
   });
 
-  // Dynamically resolve SKU details from Single Source of Truth (MasterDataContext)
+  // Fetch production orders from backend API
+  const fetchOrders = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const res = await productionService.getOrders();
+      const list = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
+      if (list.length > 0) {
+        setOrders(list);
+        if (setCtxOrders) setCtxOrders(list);
+      } else if (ctxOrders.length > 0) {
+        setOrders(ctxOrders);
+      }
+    } catch (err) {
+      console.warn("Using contextual production orders fallback:", err.message);
+      if (ctxOrders.length > 0) {
+        setOrders(ctxOrders);
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  }, [ctxOrders, setCtxOrders]);
+
+  useEffect(() => {
+    fetchOrders();
+  }, []);
+
+  // Update order status via API
+  const handleUpdateStatus = async (orderId, newStatus) => {
+    // Optimistic local update
+    setOrders((prev) =>
+      prev.map((o) => (o.id === orderId ? { ...o, status: newStatus } : o))
+    );
+    if (setCtxOrders) {
+      setCtxOrders((prev) =>
+        prev.map((o) => (o.id === orderId ? { ...o, status: newStatus } : o))
+      );
+    }
+
+    try {
+      await productionService.updateOrderStatus(orderId, newStatus);
+      addToast(`Order status updated to ${newStatus} (Connected to API)`, "success");
+    } catch (err) {
+      console.warn("Backend status update fallback:", err.message);
+      addToast(`Status updated to ${newStatus}`, "info");
+    }
+  };
+
+  // Dynamically resolve SKU details
   const selectedSku = useMemo(() => {
-    return skus.find((s) => s.skuId === formData.skuId) || defaultSku;
+    return (
+      skus.find((s) => s.skuId === formData.skuId || s.id === formData.skuId) ||
+      defaultSku
+    );
   }, [skus, formData.skuId, defaultSku]);
 
-  // Dynamically resolve Line details from Single Source of Truth (MasterDataContext)
+  // Dynamically resolve Line details
   const selectedLine = useMemo(() => {
-    return lines.find((l) => l.lineId === formData.lineId) || defaultLine;
+    return (
+      lines.find((l) => l.lineId === formData.lineId || l.id === formData.lineId) ||
+      defaultLine
+    );
   }, [lines, formData.lineId, defaultLine]);
 
   // KPIs
-  const totalOrders = productionOrders.length;
-  const runningOrders = productionOrders.filter((o) => (o.status || "").toLowerCase().includes("run")).length;
-  const scheduledOrders = productionOrders.filter((o) => (o.status || "").toLowerCase().includes("sched")).length;
-  const totalVolume = productionOrders.reduce((sum, o) => sum + (Number(o.targetQuantity) || 0), 0);
+  const totalOrders = orders.length;
+  const runningOrders = orders.filter((o) =>
+    (typeof o?.status === "string" ? o.status : "").toLowerCase().includes("run")
+  ).length;
+  const scheduledOrders = orders.filter((o) =>
+    (typeof o?.status === "string" ? o.status : "").toLowerCase().includes("sched") ||
+    (typeof o?.status === "string" ? o.status : "").toLowerCase().includes("plan")
+  ).length;
+  const totalVolume = orders.reduce(
+    (sum, o) => sum + (Number(o?.targetQuantity) || 0),
+    0
+  );
 
   // Filtered list
   const filteredOrders = useMemo(() => {
-    return productionOrders.filter((po) => {
+    return orders.filter((po) => {
+      if (!po) return false;
+      const statusStr = typeof po.status === "string" ? po.status : "";
       const matchesStatus =
         statusFilter === "ALL" ||
-        (po.status || "").toLowerCase() === statusFilter.toLowerCase();
+        statusStr.toLowerCase() === statusFilter.toLowerCase();
 
       const q = searchQuery.toLowerCase().trim();
+      const lineStr =
+        typeof po.line === "object" ? po.line?.name || "" : po.line || "";
+      const prodName =
+        typeof po.productName === "string"
+          ? po.productName
+          : po.sku?.name || "";
+      const prodCode =
+        typeof po.productCode === "string"
+          ? po.productCode
+          : po.sku?.skuCode || "";
+      const ordNum = typeof po.orderNumber === "string" ? po.orderNumber : "";
+
       const matchesSearch =
         !q ||
-        (po.orderNumber || "").toLowerCase().includes(q) ||
-        (po.productName || "").toLowerCase().includes(q) ||
-        (po.productCode || "").toLowerCase().includes(q) ||
-        (po.line || "").toLowerCase().includes(q);
+        ordNum.toLowerCase().includes(q) ||
+        prodName.toLowerCase().includes(q) ||
+        prodCode.toLowerCase().includes(q) ||
+        lineStr.toLowerCase().includes(q);
 
       return matchesStatus && matchesSearch;
     });
-  }, [productionOrders, statusFilter, searchQuery]);
+  }, [orders, statusFilter, searchQuery]);
 
   const handleOpenCreateModal = () => {
     setFormData({
-      orderNumber: `ORD-2026-${Math.floor(1000 + Math.random() * 9000)}`,
-      skuId: availableSkus[0]?.skuId || defaultSku.skuId,
-      lineId: lines[0]?.lineId || defaultLine.lineId,
+      orderNumber: `PO-2026-${Math.floor(1000 + Math.random() * 9000)}`,
+      skuId: availableSkus[0]?.skuId || availableSkus[0]?.id || defaultSku.skuId,
+      lineId: lines[0]?.lineId || lines[0]?.id || defaultLine.lineId,
       targetQuantity: 25000,
       plannedStartDate: new Date().toISOString().substring(0, 10),
-      priority: "Normal",
-      status: "Scheduled"
+      priority: "NORMAL",
+      status: "SCHEDULED"
     });
     setIsModalOpen(true);
   };
 
-  const handleCreateOrder = (e) => {
+  const handleCreateOrder = async (e) => {
     e.preventDefault();
 
     if (!formData.orderNumber.trim()) {
@@ -127,40 +210,80 @@ export function ProductionOrders() {
       return;
     }
 
-    if (!selectedSku) {
-      addToast("Please select a valid SKU from the Master Catalog.", "warning");
-      return;
-    }
+    setIsSubmitting(true);
+
+    const payload = {
+      orderNumber: formData.orderNumber.trim(),
+      skuId: formData.skuId || selectedSku?.id || selectedSku?.skuId,
+      lineId: formData.lineId || selectedLine?.id || selectedLine?.lineId,
+      targetQuantity: Number(formData.targetQuantity),
+      plannedStart: `${formData.plannedStartDate}T06:00:00Z`,
+      plannedEnd: `${formData.plannedStartDate}T18:00:00Z`,
+      priority: formData.priority || "NORMAL"
+    };
 
     const newPO = {
       id: `PO-${Date.now()}`,
-      orderNumber: formData.orderNumber.trim(),
-      productCode: selectedSku.skuCode || selectedSku.skuId,
-      productName: selectedSku.name,
+      orderNumber: payload.orderNumber,
+      productCode: selectedSku?.skuCode || selectedSku?.skuId || "SKU-5001",
+      productName: selectedSku?.name || "Finished Goods",
       producedQuantity: 0,
-      targetQuantity: Number(formData.targetQuantity),
-      unit: selectedSku.uom || "Units",
-      status: formData.status || "Scheduled",
-      line: selectedLine.name || "Line 1 (Aseptic Bottling)",
-      plant: selectedLine.plantName || "Indore Plant - Processing & Bottling",
-      leadOperator: "Elena Rostova",
-      targetSpeedBPM: 500,
-      currentSpeedBPM: 0,
-      currentOEE: 0,
+      targetQuantity: payload.targetQuantity,
+      unit: selectedSku?.uom || "Bottles",
+      status: formData.status || "SCHEDULED",
+      line: selectedLine?.name || "Line 1",
+      plant: selectedLine?.plantName || "Main Bottling Plant",
       startTime: `${formData.plannedStartDate} 06:00`,
       estimatedEndTime: `${formData.plannedStartDate} 18:00`,
-      scrapQuantity: 0,
-      reworkQuantity: 0,
-      skuId: selectedSku.skuId,
-      lineId: selectedLine.lineId
+      skuId: payload.skuId,
+      lineId: payload.lineId
     };
 
-    setProductionOrders((prev) => [newPO, ...(prev || [])]);
-    addToast(
-      `Production Order ${newPO.orderNumber} successfully released for ${newPO.productName} on ${newPO.line}!`,
-      "success"
-    );
-    setIsModalOpen(false);
+    try {
+      const created = await productionService.createOrder(payload);
+      const finalPO = created?.order || created || newPO;
+      setOrders((prev) => [finalPO, ...prev]);
+      if (setCtxOrders) setCtxOrders((prev) => [finalPO, ...(prev || [])]);
+      addToast(
+        `Production Order ${payload.orderNumber} successfully created and released to MES! (API Connected)`,
+        "success"
+      );
+    } catch (err) {
+      console.warn("Backend create order fallback:", err.message);
+      setOrders((prev) => [newPO, ...prev]);
+      if (setCtxOrders) setCtxOrders((prev) => [newPO, ...(prev || [])]);
+      addToast(
+        `Production Order ${newPO.orderNumber} saved locally for ${newPO.productName}!`,
+        "success"
+      );
+    } finally {
+      setIsSubmitting(false);
+      setIsModalOpen(false);
+    }
+  };
+
+  // Export CSV handler
+  const handleExportCSV = () => {
+    addToast("Exporting Production Orders to CSV...", "info");
+    let csv = "Order Number,Product Name,Product Code,Line,Target Quantity,Produced Quantity,Progress %,Planned Start,Status\n";
+    filteredOrders.forEach((po) => {
+      const target = Number(po.targetQuantity) || 1;
+      const produced = Number(po.producedQuantity) || 0;
+      const pct = Math.min(100, Math.round((produced / target) * 100));
+      const pName = typeof po.productName === "string" ? po.productName : po.sku?.name || "Product";
+      const pCode = typeof po.productCode === "string" ? po.productCode : po.sku?.skuCode || "SKU";
+      const pLine = typeof po.line === "object" ? po.line?.name || "Line 1" : po.line || "Line 1";
+      const start = po.startTime ? String(po.startTime).substring(0, 10) : po.plannedStart ? String(po.plannedStart).substring(0, 10) : "2026-08-31";
+      csv += `"${po.orderNumber || po.id}","${pName}","${pCode}","${pLine}",${po.targetQuantity || 0},${produced},${pct}%,"${start}","${po.status || "SCHEDULED"}"\n`;
+    });
+
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `Production_Orders_${new Date().toISOString().substring(0, 10)}.csv`;
+    a.click();
+    addToast("Production Orders CSV downloaded successfully!", "success");
   };
 
   return (
@@ -172,11 +295,33 @@ export function ProductionOrders() {
             <h1 style={{ fontSize: "clamp(18px, 4vw, 24px)", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.3px", lineHeight: 1.2 }}>
               Supply Planning Production Orders
             </h1>
-            <Badge variant="emerald">{totalOrders} TOTAL ORDERS</Badge>
+            <Badge variant="amber">{totalOrders} TOTAL ORDERS</Badge>
           </div>
+          <p style={{ margin: "4px 0 0 0", fontSize: "13px", color: "var(--text-secondary)" }}>
+            Manage manufacturing work orders, view live batch progress, and dispatch to lines with real-time API sync.
+          </p>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+          <Button
+            variant="secondary"
+            icon={RefreshCw}
+            onClick={fetchOrders}
+            disabled={isLoading}
+            style={{ fontSize: "13px", padding: "8px 14px", fontWeight: 700 }}
+          >
+            {isLoading ? "Refreshing..." : "Refresh"}
+          </Button>
+
+          <Button
+            variant="secondary"
+            icon={Download}
+            onClick={handleExportCSV}
+            style={{ fontSize: "13px", padding: "8px 14px", fontWeight: 700 }}
+          >
+            Export CSV
+          </Button>
+
           <Button
             variant="primary"
             icon={Plus}
@@ -204,14 +349,14 @@ export function ProductionOrders() {
           value={totalOrders.toString()}
           unit="Active Runs"
           icon={Factory}
-          colorVariant="emerald"
+          colorVariant="amber"
         />
         <StatCard
           title="Running In Production"
           value={runningOrders.toString()}
           unit="Active Lines"
           icon={TrendingUp}
-          colorVariant="cyan"
+          colorVariant="amber"
         />
         <StatCard
           title="Scheduled Queue"
@@ -225,7 +370,7 @@ export function ProductionOrders() {
           value={totalVolume.toLocaleString()}
           unit="Master Units"
           icon={Package}
-          colorVariant="emerald"
+          colorVariant="amber"
         />
       </div>
 
@@ -273,7 +418,7 @@ export function ProductionOrders() {
 
         {/* Orders Table */}
         <div className="data-table-container" style={{ width: "100%", overflowX: "auto", WebkitOverflowScrolling: "touch", display: "block" }}>
-          <table className="data-table" style={{ width: "100%", minWidth: "850px" }}>
+          <table className="data-table" style={{ width: "100%", minWidth: "950px" }}>
             <thead>
               <tr>
                 <th>Order Number</th>
@@ -283,6 +428,7 @@ export function ProductionOrders() {
                 <th>Progress</th>
                 <th>Planned Start</th>
                 <th>Status</th>
+                <th style={{ textAlign: "right" }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -291,6 +437,7 @@ export function ProductionOrders() {
                   const target = Number(po.targetQuantity) || 1;
                   const produced = Number(po.producedQuantity) || 0;
                   const percent = Math.min(100, Math.round((produced / target) * 100));
+                  const status = (po.status || "SCHEDULED").toUpperCase();
 
                   return (
                     <tr
@@ -304,7 +451,7 @@ export function ProductionOrders() {
                     >
                       <td style={{ padding: "12px 14px", whiteSpace: "nowrap" }}>
                         <div style={{ fontSize: "13px", fontWeight: 800, color: "var(--text-primary)", fontFamily: "var(--font-mono)" }}>
-                          {po.orderNumber}
+                          {po.orderNumber || po.id}
                         </div>
                         <div style={{ fontSize: "10px", color: "var(--text-muted)" }}>
                           ID: {po.id}
@@ -313,39 +460,39 @@ export function ProductionOrders() {
 
                       <td style={{ padding: "12px 14px" }}>
                         <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)" }}>
-                          {po.productName}
+                          {typeof po.productName === "string" ? po.productName : (po.sku?.name || "Finished Product")}
                         </div>
                         <div style={{ fontSize: "11px", color: "#8C5B23", fontFamily: "var(--font-mono)", fontWeight: 700, marginTop: "2px" }}>
-                          {po.productCode}
+                          {typeof po.productCode === "string" ? po.productCode : (po.sku?.skuCode || po.skuId || "SKU-5001")}
                         </div>
                       </td>
 
                       <td style={{ padding: "12px 14px", whiteSpace: "nowrap" }}>
                         <div style={{ fontSize: "12px", fontWeight: 600, color: "var(--text-primary)" }}>
-                          {po.line || "Line 1"}
+                          {typeof po.line === "object" ? (po.line?.name || "Line 1") : (po.line || "Line 1")}
                         </div>
                         <div style={{ fontSize: "10px", color: "var(--text-muted)" }}>
-                          {po.plant || "Indore Plant"}
+                          {typeof po.plant === "object" ? (po.plant?.name || "Indore Plant") : (po.plant || "Indore Plant")}
                         </div>
                       </td>
 
                       <td style={{ padding: "12px 14px", whiteSpace: "nowrap" }}>
                         <span style={{ fontSize: "13px", fontWeight: 800, fontFamily: "var(--font-mono)", color: "var(--text-primary)" }}>
-                          {Number(po.targetQuantity).toLocaleString()} {po.unit || "Bottles"}
+                          {Number(po.targetQuantity || 0).toLocaleString()} {typeof po.unit === "object" ? (po.unit?.name || "Bottles") : (po.unit || "Bottles")}
                         </span>
                       </td>
 
                       <td style={{ padding: "12px 14px", minWidth: "140px" }}>
                         <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", marginBottom: "4px" }}>
                           <span style={{ fontWeight: 700, color: "var(--text-secondary)" }}>{produced.toLocaleString()}</span>
-                          <span style={{ fontWeight: 800, color: percent >= 100 ? "#059669" : "#D97706" }}>{percent}%</span>
+                          <span style={{ fontWeight: 800, color: percent >= 100 ? "#8C5B23" : "#C89547" }}>{percent}%</span>
                         </div>
                         <div style={{ width: "100%", height: "6px", backgroundColor: "var(--bg-card-subtle)", borderRadius: "3px", overflow: "hidden" }}>
                           <div
                             style={{
                               width: `${percent}%`,
                               height: "100%",
-                              backgroundColor: percent >= 100 ? "#059669" : "#C89547",
+                              backgroundColor: percent >= 100 ? "#8C5B23" : "#C89547",
                               borderRadius: "3px",
                               transition: "width 0.3s ease"
                             }}
@@ -356,31 +503,69 @@ export function ProductionOrders() {
                       <td style={{ padding: "12px 14px", whiteSpace: "nowrap" }}>
                         <div style={{ fontSize: "11px", color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: "4px" }}>
                           <Calendar size={12} color="var(--text-muted)" />
-                          <span>{po.startTime ? po.startTime.substring(0, 10) : "2026-08-31"}</span>
+                          <span>{po.startTime ? String(po.startTime).substring(0, 10) : (po.plannedStart ? String(po.plannedStart).substring(0, 10) : "2026-08-31")}</span>
                         </div>
                       </td>
 
                       <td style={{ padding: "12px 14px", whiteSpace: "nowrap" }}>
                         <Badge
                           variant={
-                            (po.status || "").toLowerCase().includes("run")
-                              ? "emerald"
-                              : (po.status || "").toLowerCase().includes("comp")
-                              ? "cyan"
-                              : (po.status || "").toLowerCase().includes("sched")
+                            status.includes("RUN")
+                              ? "amber"
+                              : status.includes("COMP")
+                              ? "neutral"
+                              : status.includes("SCHED") || status.includes("PLAN")
                               ? "amber"
                               : "rose"
                           }
                         >
-                          {po.status || "Scheduled"}
+                          {po.status || "SCHEDULED"}
                         </Badge>
+                      </td>
+
+                      <td style={{ padding: "12px 14px", textAlign: "right", whiteSpace: "nowrap" }}>
+                        <div style={{ display: "flex", justifyContent: "flex-end", gap: "6px" }}>
+                          {status !== "RUNNING" && status !== "COMPLETED" && (
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              icon={Play}
+                              onClick={() => handleUpdateStatus(po.id, "RUNNING")}
+                              style={{ fontSize: "11px", padding: "4px 8px" }}
+                            >
+                              Run
+                            </Button>
+                          )}
+                          {status === "RUNNING" && (
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              icon={Pause}
+                              onClick={() => handleUpdateStatus(po.id, "PAUSED")}
+                              style={{ fontSize: "11px", padding: "4px 8px" }}
+                            >
+                              Pause
+                            </Button>
+                          )}
+                          {status !== "COMPLETED" && (
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              icon={Check}
+                              onClick={() => handleUpdateStatus(po.id, "COMPLETED")}
+                              style={{ fontSize: "11px", padding: "4px 8px" }}
+                            >
+                              Done
+                            </Button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
                 })
               ) : (
                 <tr>
-                  <td colSpan={7} style={{ padding: "36px", textAlign: "center", color: "var(--text-muted)", fontSize: "13px" }}>
+                  <td colSpan={8} style={{ padding: "36px", textAlign: "center", color: "var(--text-muted)", fontSize: "13px" }}>
                     No production orders match the current filter.
                   </td>
                 </tr>
@@ -459,7 +644,7 @@ export function ProductionOrders() {
                 <input
                   type="text"
                   required
-                  placeholder="e.g. ORD-2026-904"
+                  placeholder="e.g. PO-2026-904"
                   value={formData.orderNumber}
                   onChange={(e) => setFormData({ ...formData, orderNumber: e.target.value })}
                   className="form-input"
@@ -473,7 +658,7 @@ export function ProductionOrders() {
                   <label className="form-label" style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-primary)", margin: 0 }}>
                     Master SKU Selection (Single Source of Truth) *
                   </label>
-                  <span style={{ fontSize: "10px", color: "#059669", fontWeight: 700 }}>
+                  <span style={{ fontSize: "10px", color: "#8C5B23", fontWeight: 700 }}>
                     ● Central Master Catalog ({availableSkus.length} SKUs)
                   </span>
                 </div>
@@ -484,7 +669,7 @@ export function ProductionOrders() {
                   style={{ backgroundColor: "#FFFFFF" }}
                 >
                   {availableSkus.map((s) => (
-                    <option key={s.skuId} value={s.skuId}>
+                    <option key={s.skuId || s.id} value={s.skuId || s.id}>
                       {s.skuCode} — {s.name} ({s.uom})
                     </option>
                   ))}
@@ -539,7 +724,7 @@ export function ProductionOrders() {
                     style={{ backgroundColor: "#FFFFFF" }}
                   >
                     {lines.map((l) => (
-                      <option key={l.lineId} value={l.lineId}>
+                      <option key={l.lineId || l.id} value={l.lineId || l.id}>
                         {l.lineCode ? `${l.lineCode} - ` : ""}{l.name}
                       </option>
                     ))}
@@ -587,9 +772,9 @@ export function ProductionOrders() {
                     className="form-input"
                     style={{ backgroundColor: "#FFFFFF" }}
                   >
-                    <option value="Scheduled">Scheduled</option>
-                    <option value="Running">Running</option>
-                    <option value="Paused">Paused</option>
+                    <option value="SCHEDULED">Scheduled</option>
+                    <option value="RUNNING">Running</option>
+                    <option value="PAUSED">Paused</option>
                   </select>
                 </div>
               </div>
@@ -599,8 +784,8 @@ export function ProductionOrders() {
                 <Button variant="secondary" type="button" onClick={() => setIsModalOpen(false)}>
                   Cancel
                 </Button>
-                <Button variant="primary" type="submit" icon={Plus}>
-                  Release Production Order
+                <Button variant="primary" type="submit" icon={Plus} disabled={isSubmitting}>
+                  {isSubmitting ? "Releasing..." : "Release Production Order"}
                 </Button>
               </div>
             </form>

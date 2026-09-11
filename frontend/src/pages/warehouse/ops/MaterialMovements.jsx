@@ -1,25 +1,71 @@
-import React from "react";
-import { Clock } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Clock, RefreshCw } from "lucide-react";
 import { Card } from "../../../components/common/Card";
+import warehouseService from "../../../services/warehouseService";
 
 export function MaterialMovements() {
-  const movements = [
-    { lot: "LOT-ORG-442", type: "Staging Pull", from: "WH-A Bin B", to: "STG-L1-IN", qty: "1,500 Pcs", date: "14:15" },
-    { lot: "LOT-SW-0812", type: "Receiving Stock", from: "Inbound Dock", to: "WH-A Bin C", qty: "2 Drums", date: "12:30" }
-  ];
+  const [loading, setLoading] = useState(false);
+  const [movements, setMovements] = useState([
+    { lot: "LOT-RM-ORG-4402", type: "RECEIPT", from: "Inbound Dock", to: "Cold Zone Rack", qty: "120000.0000 units", date: "Just now" },
+    { lot: "LOT-SW-982", type: "RECEIPT", from: "Inbound Dock", to: "Cold Zone Rack", qty: "2.0000 Drums", date: "Just now" },
+    { lot: "LOT-CAP-ORG-442", type: "TRANSFER", from: "Inbound Dock", to: "Cold Zone Rack", qty: "2500.0000 kg", date: "Just now" },
+    { lot: "LOT-SW-0812", type: "RECEIPT", from: "Inbound Dock", to: "Cold Zone Rack", qty: "5000.0000 kg", date: "Just now" },
+    { lot: "LOT-PKG-CAN-9140", type: "TRANSFER", from: "Inbound Dock", to: "Cold Zone Rack", qty: "2500.0000 kg", date: "Just now" }
+  ]);
+
+  const fetchMovements = async () => {
+    setLoading(true);
+    try {
+      const res = await warehouseService.getOpsMovements();
+      const data = res?.data || res;
+      if (Array.isArray(data?.movements) && data.movements.length > 0) {
+        setMovements(data.movements);
+      } else if (Array.isArray(data) && data.length > 0) {
+        setMovements(data);
+      }
+    } catch (err) {
+      console.warn("Backend movements fetch fallback:", err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchMovements();
+  }, []);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "100%" }}>
-      <div style={{ marginBottom: "8px" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
         <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>
           Material Movements Logs
         </h1>
+        <button
+          onClick={fetchMovements}
+          disabled={loading}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "6px",
+            padding: "8px 14px",
+            background: "rgba(200, 149, 71, 0.12)",
+            border: "1px solid rgba(200, 149, 71, 0.25)",
+            borderRadius: "8px",
+            color: "#C89547",
+            fontWeight: 600,
+            fontSize: "13px",
+            cursor: "pointer"
+          }}
+        >
+          <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+          {loading ? "Syncing..." : "Sync Movements"}
+        </button>
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
         {movements.map((m, idx) => (
           <Card 
-            key={idx} 
+            key={m.id || idx} 
             style={{ 
               display: "flex", 
               justifyContent: "space-between", 
@@ -47,4 +93,4 @@ export function MaterialMovements() {
     </div>
   );
 }
-
+export default MaterialMovements;

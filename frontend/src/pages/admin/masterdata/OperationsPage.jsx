@@ -6,6 +6,7 @@ import {
   X,
   Edit2,
   Trash2,
+  Eye,
   Clock,
   Cpu,
   Workflow,
@@ -28,6 +29,7 @@ export function OperationsPage() {
   const [deptFilter, setDeptFilter] = useState("ALL");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingOp, setEditingOp] = useState(null);
+  const [viewingOp, setViewingOp] = useState(null);
 
   // Live fetch from backend on mount & filter change to ensure Network visibility
   useEffect(() => {
@@ -116,6 +118,9 @@ export function OperationsPage() {
   const handleDelete = (operationId, code) => {
     if (window.confirm(`Are you sure you want to delete Operation "${code}"?`)) {
       deleteOperation(operationId);
+      if (viewingOp && (viewingOp.operationId === operationId || viewingOp.id === operationId || viewingOp.code === code || viewingOp.operationCode === code)) {
+        setViewingOp(null);
+      }
       addToast(`Operation "${code}" deleted.`, "info");
     }
   };
@@ -294,6 +299,24 @@ export function OperationsPage() {
                       </td>
                       <td style={{ padding: "12px 16px", textAlign: "right" }}>
                         <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                          <button
+                            onClick={() => setViewingOp({ ...op })}
+                            title="View Operation Details"
+                            style={{
+                              width: "30px",
+                              height: "30px",
+                              borderRadius: "6px",
+                              backgroundColor: "var(--bg-card-subtle)",
+                              color: "var(--text-primary)",
+                              border: "1px solid var(--border-subtle)",
+                              cursor: "pointer",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center"
+                            }}
+                          >
+                            <Eye size={13} />
+                          </button>
                           <button
                             onClick={() => setEditingOp({ ...op })}
                             title="Edit Operation"
@@ -523,6 +546,234 @@ export function OperationsPage() {
                 </Button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* VIEW OPERATION DETAILS MODAL */}
+      {viewingOp && (
+        <div className="modal-backdrop" onClick={() => setViewingOp(null)}>
+          <div
+            className="modal-content"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: "520px", padding: 0, overflow: "hidden", borderRadius: "12px" }}
+          >
+            <div
+              style={{
+                padding: "16px 20px",
+                borderBottom: "1px solid var(--border-subtle)",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                backgroundColor: "var(--bg-card-subtle)"
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <div
+                  style={{
+                    width: "32px",
+                    height: "32px",
+                    borderRadius: "8px",
+                    backgroundColor: "rgba(200, 149, 71, 0.12)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#C89547"
+                  }}
+                >
+                  <Eye size={16} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: "16px", fontWeight: 700, color: "var(--text-primary)" }}>
+                    Operation Specification Details
+                  </h3>
+                  <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+                    Standard Operations Master Catalogue
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => setViewingOp(null)}
+                style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  paddingBottom: "12px",
+                  borderBottom: "1px solid var(--border-subtle)"
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
+                    Operation Code
+                  </div>
+                  <div
+                    style={{
+                      fontSize: "18px",
+                      fontWeight: 800,
+                      color: "#8C5B23",
+                      fontFamily: "var(--font-mono)",
+                      marginTop: "4px"
+                    }}
+                  >
+                    {viewingOp.operationCode || viewingOp.code}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
+                    Status
+                  </div>
+                  <div style={{ marginTop: "4px" }}>
+                    <Badge variant={viewingOp.status === "Active" ? "emerald" : "gray"}>
+                      {viewingOp.status || "Active"}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
+                  Operation Name
+                </div>
+                <div style={{ fontSize: "15px", fontWeight: 700, color: "var(--text-primary)", marginTop: "4px" }}>
+                  {viewingOp.name}
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "12px" }}>
+                <div
+                  style={{
+                    backgroundColor: "var(--bg-card-subtle)",
+                    padding: "12px",
+                    borderRadius: "8px",
+                    border: "1px solid var(--border-subtle)"
+                  }}
+                >
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
+                    Sequence #
+                  </div>
+                  <div style={{ fontSize: "16px", fontWeight: 800, fontFamily: "var(--font-mono)", color: "var(--text-primary)", marginTop: "4px" }}>
+                    {viewingOp.sequence || 10}
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    backgroundColor: "var(--bg-card-subtle)",
+                    padding: "12px",
+                    borderRadius: "8px",
+                    border: "1px solid var(--border-subtle)"
+                  }}
+                >
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
+                    Std Duration
+                  </div>
+                  <div style={{ fontSize: "16px", fontWeight: 800, fontFamily: "var(--font-mono)", color: "#2563EB", marginTop: "4px" }}>
+                    {viewingOp.stdDurationMin || viewingOp.stdTimeMins || 45} mins
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    backgroundColor: "var(--bg-card-subtle)",
+                    padding: "12px",
+                    borderRadius: "8px",
+                    border: "1px solid var(--border-subtle)"
+                  }}
+                >
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
+                    Setup Time
+                  </div>
+                  <div style={{ fontSize: "16px", fontWeight: 800, fontFamily: "var(--font-mono)", color: "#D97706", marginTop: "4px" }}>
+                    {viewingOp.setupDurationMin || 15} mins
+                  </div>
+                </div>
+              </div>
+
+              <div
+                style={{
+                  backgroundColor: "var(--bg-card-subtle)",
+                  padding: "12px 14px",
+                  borderRadius: "8px",
+                  border: "1px solid var(--border-subtle)",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center"
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
+                    Department
+                  </div>
+                  <div style={{ marginTop: "4px" }}>
+                    <Badge variant="cyan">{viewingOp.department || "Packaging"}</Badge>
+                  </div>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
+                    Total Cycle
+                  </div>
+                  <div style={{ fontSize: "14px", fontWeight: 800, fontFamily: "var(--font-mono)", color: "var(--text-primary)", marginTop: "4px" }}>
+                    {(Number(viewingOp.stdDurationMin || viewingOp.stdTimeMins || 45) + Number(viewingOp.setupDurationMin || 15))} mins
+                  </div>
+                </div>
+              </div>
+
+              {viewingOp.id && (
+                <div style={{ fontSize: "11px", color: "var(--text-muted)", fontFamily: "var(--font-mono)", wordBreak: "break-all" }}>
+                  PostgreSQL Record ID: {viewingOp.id}
+                </div>
+              )}
+
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  gap: "10px",
+                  marginTop: "6px",
+                  borderTop: "1px solid var(--border-subtle)",
+                  paddingTop: "14px"
+                }}
+              >
+                <Button
+                  type="button"
+                  variant="danger"
+                  onClick={() => {
+                    handleDelete(viewingOp.operationId || viewingOp.code || viewingOp.id, viewingOp.operationCode || viewingOp.code);
+                    setViewingOp(null);
+                  }}
+                  style={{ fontSize: "12px", padding: "6px 12px", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                >
+                  <Trash2 size={13} /> Delete
+                </Button>
+                <div style={{ display: "flex", gap: "8px" }}>
+                  <Button
+                    variant="primary"
+                    onClick={() => {
+                      setEditingOp({ ...viewingOp });
+                      setViewingOp(null);
+                    }}
+                    style={{ fontSize: "12px", padding: "6px 12px", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                  >
+                    <Edit2 size={13} /> Edit
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() => setViewingOp(null)}
+                    style={{ fontSize: "12px", padding: "6px 12px" }}
+                  >
+                    Close
+                  </Button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}

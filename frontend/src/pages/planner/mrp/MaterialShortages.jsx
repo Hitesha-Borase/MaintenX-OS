@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { usePlanning } from "../../../context/PlanningContext";
 import { useApp } from "../../../context/AppContext";
+import planningService from "../../../services/planningService";
 import { Card } from "../../../components/common/Card";
 import { Button } from "../../../components/common/Button";
 import { Badge } from "../../../components/common/Badge";
@@ -21,13 +22,55 @@ export function MaterialShortages() {
   const { addToast } = useApp();
 
   const [expeditedItems, setExpeditedItems] = useState({});
+  const [loadingExpedite, setLoadingExpedite] = useState({});
+
+  useEffect(() => {
+    async function loadExpedited() {
+      try {
+        const res = await planningService.getExpeditedShortages();
+        const data = res?.data || res;
+        if (data && typeof data === "object") {
+          const map = {};
+          Object.keys(data).forEach((k) => {
+            map[k] = true;
+          });
+          setExpeditedItems(map);
+        }
+      } catch (err) {
+        console.warn("Could not fetch expedited shortages from backend:", err.message);
+      }
+    }
+    loadExpedited();
+  }, []);
 
   const shortages = mrpCalculations.filter((m) => m.shortage > 0);
 
-  const handleExpedite = (skuId, name) => {
-    setExpeditedItems((prev) => ({ ...prev, [skuId]: true }));
-    addToast(`Expedited supplier shipping notice dispatched for ${name}. Expected arrival reduced by 48 hours!`, "success");
+  const handleExpedite = async (skuId, name, skuCode) => {
+    setLoadingExpedite((prev) => ({ ...prev, [skuId]: true }));
+    try {
+      const res = await planningService.expediteShortage({
+        skuId,
+        skuCode,
+        name,
+        expediteMode: "Air/Express Freight",
+        leadTimeReductionHours: 48,
+        vendorName: "Indore Packaging & Beverage Ingredients Ltd"
+      });
+      const data = res?.data || res;
+      setExpeditedItems((prev) => ({ ...prev, [skuId]: true, [skuCode]: true }));
+      addToast(
+        res?.message || `Expedited supplier shipping notice dispatched for ${name}. Expected arrival reduced by 48 hours!`,
+        "success"
+      );
+    } catch (err) {
+      console.warn("Expedite shortage backend fallback:", err.message);
+      setExpeditedItems((prev) => ({ ...prev, [skuId]: true }));
+      addToast(`Expedited supplier shipping notice dispatched for ${name}. Expected arrival reduced by 48 hours!`, "success");
+    } finally {
+      setLoadingExpedite((prev) => ({ ...prev, [skuId]: false }));
+    }
   };
+
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%", maxWidth: "1600px", margin: "0 auto", minWidth: 0 }}>
@@ -127,11 +170,11 @@ export function MaterialShortages() {
                     variant={isExpedited ? "secondary" : "primary"}
                     size="sm"
                     icon={isExpedited ? CheckCircle2 : Send}
-                    onClick={() => handleExpedite(s.skuId, s.name)}
-                    disabled={isExpedited}
+                    onClick={() => handleExpedite(s.skuId, s.name, s.skuCode)}
+                    disabled={isExpedited || loadingExpedite[s.skuId]}
                     style={{ fontSize: "12px", padding: "6px 12px" }}
                   >
-                    {isExpedited ? "Inbound Expedited" : "Expedite Inbound Supply"}
+                    {isExpedited ? "Inbound Expedited" : loadingExpedite[s.skuId] ? "Expediting..." : "Expedite Inbound Supply"}
                   </Button>
                 </div>
               </Card>

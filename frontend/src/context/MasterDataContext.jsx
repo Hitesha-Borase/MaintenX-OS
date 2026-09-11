@@ -1683,10 +1683,10 @@ export function MasterDataProvider({ children }) {
           setPackConfigs(normalized);
         }
 
-        if (liveLineTargets.status === "fulfilled" && Array.isArray(liveLineTargets.value?.data || liveLineTargets.value) && (liveLineTargets.value?.data || liveLineTargets.value).length > 0) {
+        if (liveLineTargets.status === "fulfilled" && Array.isArray(liveLineTargets.value?.data || liveLineTargets.value)) {
           setLineTargets(liveLineTargets.value?.data || liveLineTargets.value);
         }
-        if (liveChangeovers.status === "fulfilled" && Array.isArray(liveChangeovers.value?.data || liveChangeovers.value) && (liveChangeovers.value?.data || liveChangeovers.value).length > 0) {
+        if (liveChangeovers.status === "fulfilled" && Array.isArray(liveChangeovers.value?.data || liveChangeovers.value)) {
           setChangeoverMatrix(liveChangeovers.value?.data || liveChangeovers.value);
         }
         if (liveSanitations.status === "fulfilled" && Array.isArray(liveSanitations.value?.data || liveSanitations.value) && (liveSanitations.value?.data || liveSanitations.value).length > 0) {
@@ -2469,37 +2469,55 @@ export function MasterDataProvider({ children }) {
   // ============================================================================
   // 10. CHANGEOVER MATRIX, SANITATION & ALLERGEN MUTATIONS
   // ============================================================================
-  const addChangeoverRule = (ruleData) => {
+  const addChangeoverRule = async (ruleData) => {
+    const tempId = ruleData.matrixId || ruleData.id || `CO-${Math.floor(1000 + Math.random() * 9000)}`;
     const newRecord = {
-      id: `CO-0${changeoverMatrix.length + 1}`,
-      matrixId: `CO-0${changeoverMatrix.length + 1}`,
-      fromSkuId: ruleData.fromSkuId,
-      fromSkuCode: ruleData.fromSkuCode,
+      id: ruleData.id || tempId,
+      matrixId: ruleData.matrixId || ruleData.id || tempId,
+      fromSkuId: ruleData.fromSkuId || "SKU-001",
+      fromSkuCode: ruleData.fromSkuCode || "SKU-5001",
       fromFamily: ruleData.fromFamily || "All Families",
-      toSkuId: ruleData.toSkuId,
-      toSkuCode: ruleData.toSkuCode,
+      toSkuId: ruleData.toSkuId || "SKU-002",
+      toSkuCode: ruleData.toSkuCode || "SKU-5002",
       toFamily: ruleData.toFamily || "All Families",
-      changeoverDurationMin: Number(ruleData.changeoverDurationMin) || 30,
+      changeoverDurationMin: Number(ruleData.changeoverDurationMin) || 0,
       sanitationClass: ruleData.sanitationClass || "Class B - Standard Rinse",
       allergenCleaningRequired: !!ruleData.allergenCleaningRequired,
       notes: ruleData.notes || "",
-      status: "Active"
+      status: ruleData.status || "Active"
     };
-    setChangeoverMatrix((prev) => [newRecord, ...prev]);
-    masterDataService.createChangeoverRule(newRecord).catch((err) => console.warn("API createChangeoverRule:", err.message));
-    logAudit({ entityId: newRecord.matrixId, entityType: "Changeover Matrix", action: "Created", newValue: `${newRecord.fromSkuCode} → ${newRecord.toSkuCode} (${newRecord.changeoverDurationMin}m)` });
-    return newRecord;
+
+    try {
+      const res = await masterDataService.createChangeoverRule(newRecord);
+      const saved = res?.data?.data || res?.data || res || newRecord;
+      setChangeoverMatrix((prev) => [saved, ...prev.filter((c) => (c.matrixId !== saved.matrixId && c.id !== saved.id && c.id !== newRecord.id))]);
+      logAudit({ entityId: saved.matrixId || saved.id, entityType: "Changeover Matrix", action: "Created", newValue: `${saved.fromSkuCode} → ${saved.toSkuCode} (${saved.changeoverDurationMin}m)` });
+      return saved;
+    } catch (err) {
+      console.warn("API createChangeoverRule fallback to local:", err.message);
+      setChangeoverMatrix((prev) => [newRecord, ...prev]);
+      logAudit({ entityId: newRecord.matrixId, entityType: "Changeover Matrix", action: "Created", newValue: `${newRecord.fromSkuCode} → ${newRecord.toSkuCode} (${newRecord.changeoverDurationMin}m)` });
+      return newRecord;
+    }
   };
 
-  const updateChangeoverRule = (matrixId, updated) => {
+  const updateChangeoverRule = async (matrixId, updated) => {
     setChangeoverMatrix((prev) => prev.map((c) => (c.matrixId === matrixId || c.id === matrixId ? { ...c, ...updated } : c)));
-    masterDataService.updateChangeoverRule(matrixId, updated).catch((err) => console.warn("API updateChangeoverRule:", err.message));
+    try {
+      await masterDataService.updateChangeoverRule(matrixId, updated);
+    } catch (err) {
+      console.warn("API updateChangeoverRule error:", err.message);
+    }
     logAudit({ entityId: matrixId, entityType: "Changeover Matrix", action: "Updated" });
   };
 
-  const deleteChangeoverRule = (matrixId) => {
+  const deleteChangeoverRule = async (matrixId) => {
     setChangeoverMatrix((prev) => prev.filter((c) => c.matrixId !== matrixId && c.id !== matrixId));
-    masterDataService.deleteChangeoverRule(matrixId).catch((err) => console.warn("API deleteChangeoverRule:", err.message));
+    try {
+      await masterDataService.deleteChangeoverRule(matrixId);
+    } catch (err) {
+      console.warn("API deleteChangeoverRule error:", err.message);
+    }
     logAudit({ entityId: matrixId, entityType: "Changeover Matrix", action: "Deleted" });
   };
 
@@ -3036,12 +3054,14 @@ export function MasterDataProvider({ children }) {
         updateDepartment,
         deleteDepartment,
         workCenters,
+        setWorkCenters,
         addWorkCenter,
         updateWorkCenter,
         deleteWorkCenter,
 
         // 1. Product Families
         productFamilies,
+        setProductFamilies,
         addProductFamily,
         updateProductFamily,
         toggleProductFamilyStatus,
@@ -3049,6 +3069,7 @@ export function MasterDataProvider({ children }) {
 
         // 2. UOMs
         uoms,
+        setUoms,
         addUOM,
         updateUOM,
         toggleUOMStatus,
@@ -3063,6 +3084,7 @@ export function MasterDataProvider({ children }) {
 
         // 4. Pack Configurations
         packConfigs,
+        setPackConfigs,
         addPackConfig,
         updatePackConfig,
         deletePackConfig,
@@ -3116,14 +3138,17 @@ export function MasterDataProvider({ children }) {
 
         // 10. Changeover, Sanitation, Allergens
         changeoverMatrix,
+        setChangeoverMatrix,
         addChangeoverRule,
         updateChangeoverRule,
         deleteChangeoverRule,
         sanitationClasses,
+        setSanitationClasses,
         addSanitationClass,
         updateSanitationClass,
         deleteSanitationClass,
         allergenRules,
+        setAllergenRules,
         addAllergenRule,
         updateAllergenRule,
         deleteAllergenRule,

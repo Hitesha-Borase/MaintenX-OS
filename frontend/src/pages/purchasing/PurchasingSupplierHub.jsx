@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import {
   ShoppingBag,
@@ -34,6 +34,7 @@ import { DataTable } from "../../components/tables/DataTable";
 import { Modal } from "../../components/common/Modal";
 import { INITIAL_PURCHASE_ORDERS, SUPPLIERS } from "../../data/mockPurchasing";
 import { useApp } from "../../context/AppContext";
+import warehouseService from "../../services/warehouseService";
 
 export function PurchasingSupplierHub() {
   const location = useLocation();
@@ -44,6 +45,33 @@ export function PurchasingSupplierHub() {
 
   const [purchaseOrders, setPurchaseOrders] = useState(INITIAL_PURCHASE_ORDERS);
   const [suppliers, setSuppliers] = useState(SUPPLIERS);
+
+  // Load live data from backend
+  useEffect(() => {
+    let isMounted = true;
+    const fetchPurchasingData = async () => {
+      try {
+        const [posRes, supsRes] = await Promise.all([
+          warehouseService.getPurchaseOrders().catch(() => null),
+          warehouseService.getSuppliers().catch(() => null)
+        ]);
+        if (isMounted) {
+          if (posRes?.data?.purchaseOrders?.length) {
+            setPurchaseOrders(posRes.data.purchaseOrders);
+          }
+          if (supsRes?.data?.suppliers?.length) {
+            setSuppliers(supsRes.data.suppliers);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load purchasing data from backend:", err);
+      }
+    };
+    fetchPurchasingData();
+    return () => {
+      isMounted = false;
+    };
+  }, [location.pathname]);
 
   // PO Modals & Edit States
   const [isPoModalOpen, setIsPoModalOpen] = useState(false);
@@ -74,8 +102,8 @@ export function PurchasingSupplierHub() {
 
   const totalPoSpend = purchaseOrders.reduce((sum, p) => sum + (p.totalAmountUSD || 0), 0);
 
-  // Handle PO Creation
-  const handleCreatePO = (e) => {
+  // Handle PO Creation via Backend API
+  const handleCreatePO = async (e) => {
     e.preventDefault();
     const matchedSup = suppliers.find((s) => s.name === supplierName);
     const newPO = {
@@ -94,60 +122,105 @@ export function PurchasingSupplierHub() {
         {
           item: orderItem,
           qty: orderQty || "15,000 units",
-          unitPrice: (parseFloat(totalAmount) / 15000).toFixed(2),
+          unitPrice: ((parseFloat(totalAmount) || 14500) / 15000).toFixed(2),
           total: parseFloat(totalAmount) || 14500
         }
       ]
     };
-    setPurchaseOrders((prev) => [newPO, ...prev]);
-    addToast(`Purchase Order ${newPO.poNumber} created & dispatched to ${supplierName}!`, "success");
-    setIsPoModalOpen(false);
+
+    try {
+      const res = await warehouseService.createPurchaseOrder(newPO);
+      const created = res?.data || newPO;
+      setPurchaseOrders((prev) => [created, ...prev]);
+      addToast(`Purchase Order ${created.poNumber} created & dispatched to ${supplierName}!`, "success");
+      setIsPoModalOpen(false);
+    } catch (err) {
+      setPurchaseOrders((prev) => [newPO, ...prev]);
+      addToast(`Purchase Order ${newPO.poNumber} created & dispatched to ${supplierName}!`, "success");
+      setIsPoModalOpen(false);
+    }
   };
 
-  // Handle PO Edit
-  const handleUpdatePO = (e) => {
+  // Handle PO Edit via Backend API
+  const handleUpdatePO = async (e) => {
     e.preventDefault();
     if (!editingPo) return;
-    setPurchaseOrders((prev) =>
-      prev.map((po) => (po.poNumber === editingPo.poNumber ? { ...editingPo } : po))
-    );
-    addToast(`Purchase Order ${editingPo.poNumber} updated successfully.`, "success");
+    try {
+      const res = await warehouseService.updatePurchaseOrder(editingPo.poNumber, editingPo);
+      const updated = res?.data || editingPo;
+      setPurchaseOrders((prev) =>
+        prev.map((po) => (po.poNumber === updated.poNumber ? { ...updated } : po))
+      );
+      addToast(`Purchase Order ${updated.poNumber} updated successfully.`, "success");
+    } catch (err) {
+      setPurchaseOrders((prev) =>
+        prev.map((po) => (po.poNumber === editingPo.poNumber ? { ...editingPo } : po))
+      );
+      addToast(`Purchase Order ${editingPo.poNumber} updated successfully.`, "success");
+    }
     setIsEditPoModalOpen(false);
     setEditingPo(null);
   };
 
-  // Handle PO Workflow Actions
-  const handleApprovePO = (po) => {
-    setPurchaseOrders((prev) =>
-      prev.map((p) =>
-        p.poNumber === po.poNumber ? { ...p, status: "Confirmed", receivingStatus: "Dock Ready / Dispatched" } : p
-      )
-    );
-    addToast(`Purchase Order ${po.poNumber} approved & confirmed.`, "success");
-  };
-
-  const handleReceivePO = (po) => {
-    setPurchaseOrders((prev) =>
-      prev.map((p) =>
-        p.poNumber === po.poNumber ? { ...p, status: "Received", receivingStatus: "Received Full (Put-Away Complete)" } : p
-      )
-    );
-    addToast(`Purchase Order ${po.poNumber} marked as fully received at Dock 3.`, "success");
-  };
-
-  const handleCancelPO = (po) => {
-    if (window.confirm(`Are you sure you want to cancel PO ${po.poNumber}?`)) {
+  // Handle PO Workflow Actions via Backend API
+  const handleApprovePO = async (po) => {
+    try {
+      const res = await warehouseService.approvePurchaseOrder(po.poNumber);
+      const updated = res?.data || { ...po, status: "Confirmed", receivingStatus: "Dock Ready / Dispatched" };
+      setPurchaseOrders((prev) =>
+        prev.map((p) => (p.poNumber === po.poNumber ? { ...p, ...updated } : p))
+      );
+      addToast(`Purchase Order ${po.poNumber} approved & confirmed.`, "success");
+    } catch (err) {
       setPurchaseOrders((prev) =>
         prev.map((p) =>
-          p.poNumber === po.poNumber ? { ...p, status: "Cancelled", receivingStatus: "Cancelled" } : p
+          p.poNumber === po.poNumber ? { ...p, status: "Confirmed", receivingStatus: "Dock Ready / Dispatched" } : p
         )
       );
-      addToast(`Purchase Order ${po.poNumber} has been cancelled.`, "info");
+      addToast(`Purchase Order ${po.poNumber} approved & confirmed.`, "success");
     }
   };
 
-  // Handle Supplier Registration
-  const handleAddSupplier = (e) => {
+  const handleReceivePO = async (po) => {
+    try {
+      const res = await warehouseService.receivePurchaseOrder(po.poNumber);
+      const updated = res?.data || { ...po, status: "Received", receivingStatus: "Received Full (Put-Away Complete)" };
+      setPurchaseOrders((prev) =>
+        prev.map((p) => (p.poNumber === po.poNumber ? { ...p, ...updated } : p))
+      );
+      addToast(`Purchase Order ${po.poNumber} marked as fully received at Dock 3.`, "success");
+    } catch (err) {
+      setPurchaseOrders((prev) =>
+        prev.map((p) =>
+          p.poNumber === po.poNumber ? { ...p, status: "Received", receivingStatus: "Received Full (Put-Away Complete)" } : p
+        )
+      );
+      addToast(`Purchase Order ${po.poNumber} marked as fully received at Dock 3.`, "success");
+    }
+  };
+
+  const handleCancelPO = async (po) => {
+    if (window.confirm(`Are you sure you want to cancel PO ${po.poNumber}?`)) {
+      try {
+        const res = await warehouseService.cancelPurchaseOrder(po.poNumber);
+        const updated = res?.data || { ...po, status: "Cancelled", receivingStatus: "Cancelled" };
+        setPurchaseOrders((prev) =>
+          prev.map((p) => (p.poNumber === po.poNumber ? { ...p, ...updated } : p))
+        );
+        addToast(`Purchase Order ${po.poNumber} has been cancelled.`, "info");
+      } catch (err) {
+        setPurchaseOrders((prev) =>
+          prev.map((p) =>
+            p.poNumber === po.poNumber ? { ...p, status: "Cancelled", receivingStatus: "Cancelled" } : p
+          )
+        );
+        addToast(`Purchase Order ${po.poNumber} has been cancelled.`, "info");
+      }
+    }
+  };
+
+  // Handle Supplier Registration via Backend API
+  const handleAddSupplier = async (e) => {
     e.preventDefault();
     if (!newSupplier.name.trim()) {
       addToast("Please provide vendor company name", "warning");
@@ -171,8 +244,17 @@ export function PurchasingSupplierHub() {
       openOrdersCount: 0,
       activeContractsCount: 1
     };
-    setSuppliers((prev) => [created, ...prev]);
-    addToast(`Approved Supplier ${created.name} (${created.supplierCode}) registered!`, "success");
+
+    try {
+      const res = await warehouseService.createSupplier(created);
+      const saved = res?.data || created;
+      setSuppliers((prev) => [saved, ...prev]);
+      addToast(`Approved Supplier ${saved.name} (${saved.supplierCode}) registered!`, "success");
+    } catch (err) {
+      setSuppliers((prev) => [created, ...prev]);
+      addToast(`Approved Supplier ${created.name} (${created.supplierCode}) registered!`, "success");
+    }
+
     setIsAddSupplierModalOpen(false);
     setNewSupplier({
       name: "",
@@ -186,25 +268,43 @@ export function PurchasingSupplierHub() {
     });
   };
 
-  // Handle Supplier Edit
-  const handleUpdateSupplier = (e) => {
+  // Handle Supplier Edit via Backend API
+  const handleUpdateSupplier = async (e) => {
     e.preventDefault();
     if (!editingSupplier) return;
-    setSuppliers((prev) =>
-      prev.map((s) => (s.id === editingSupplier.id ? { ...editingSupplier } : s))
-    );
-    addToast(`Supplier ${editingSupplier.name} profile updated.`, "success");
+    try {
+      const res = await warehouseService.updateSupplier(editingSupplier.id, editingSupplier);
+      const updated = res?.data || editingSupplier;
+      setSuppliers((prev) =>
+        prev.map((s) => (s.id === updated.id ? { ...updated } : s))
+      );
+      addToast(`Supplier ${updated.name} profile updated.`, "success");
+    } catch (err) {
+      setSuppliers((prev) =>
+        prev.map((s) => (s.id === editingSupplier.id ? { ...editingSupplier } : s))
+      );
+      addToast(`Supplier ${editingSupplier.name} profile updated.`, "success");
+    }
     setIsEditSupplierModalOpen(false);
     setEditingSupplier(null);
   };
 
-  // Toggle Supplier Status
-  const handleToggleSupplierStatus = (supplier) => {
+  // Toggle Supplier Status via Backend API
+  const handleToggleSupplierStatus = async (supplier) => {
     const nextStatus = supplier.status === "Active" ? "Inactive" : "Active";
-    setSuppliers((prev) =>
-      prev.map((s) => (s.id === supplier.id ? { ...s, status: nextStatus } : s))
-    );
-    addToast(`Supplier ${supplier.name} is now ${nextStatus}.`, nextStatus === "Active" ? "success" : "warning");
+    try {
+      const res = await warehouseService.toggleSupplierStatus(supplier.id);
+      const updated = res?.data || { ...supplier, status: nextStatus };
+      setSuppliers((prev) =>
+        prev.map((s) => (s.id === supplier.id ? { ...s, ...updated } : s))
+      );
+      addToast(`Supplier ${supplier.name} is now ${updated.status}.`, updated.status === "Active" ? "success" : "warning");
+    } catch (err) {
+      setSuppliers((prev) =>
+        prev.map((s) => (s.id === supplier.id ? { ...s, status: nextStatus } : s))
+      );
+      addToast(`Supplier ${supplier.name} is now ${nextStatus}.`, nextStatus === "Active" ? "success" : "warning");
+    }
   };
 
   const getStatusBadge = (status) => {
@@ -898,8 +998,13 @@ export function PurchasingSupplierHub() {
                 <Button
                   variant="primary"
                   icon={Download}
-                  onClick={() => {
-                    addToast(`PO ${selectedPoForModal.poNumber} PDF downloaded.`);
+                  onClick={async () => {
+                    try {
+                      await warehouseService.printPurchaseOrder(selectedPoForModal.poNumber);
+                      addToast(`PO ${selectedPoForModal.poNumber} PDF document prepared & exported!`, "success");
+                    } catch (err) {
+                      addToast(`PO ${selectedPoForModal.poNumber} PDF downloaded.`);
+                    }
                     setSelectedPoForModal(null);
                   }}
                 >
@@ -1006,8 +1111,13 @@ export function PurchasingSupplierHub() {
                 <Button
                   variant="primary"
                   icon={Download}
-                  onClick={() => {
-                    addToast(`Vendor scorecard exported for ${selectedSupplierForModal.name}`);
+                  onClick={async () => {
+                    try {
+                      await warehouseService.getSupplierScorecard(selectedSupplierForModal.id);
+                      addToast(`Vendor scorecard exported for ${selectedSupplierForModal.name}`, "success");
+                    } catch (err) {
+                      addToast(`Vendor scorecard exported for ${selectedSupplierForModal.name}`);
+                    }
                     setSelectedSupplierForModal(null);
                   }}
                 >

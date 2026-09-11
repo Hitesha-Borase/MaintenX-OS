@@ -37,7 +37,7 @@ export function UserProfileModal({ isOpen, onClose, user = null, onToggleStatus 
               <Badge variant={user.status === "Active" ? "emerald" : "secondary"}>{user.status}</Badge>
             </div>
             <div style={{ fontSize: "14px", color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: "6px" }}>
-              <Mail size={14} /> {user.name.toLowerCase().replace(" ", ".")}@example.com
+              <Mail size={14} /> {user.email || `${user.name.toLowerCase().replace(/\s+/g, ".")}@example.com`}
             </div>
           </div>
         </div>

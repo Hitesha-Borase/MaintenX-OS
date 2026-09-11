@@ -9,5 +9,7 @@ export { maintenanceService } from "./maintenanceService";
 export { traceabilityService } from "./traceabilityService";
 export { dashboardService } from "./dashboardService";
 export { adminService } from "./adminService";
+export { notificationsService } from "./notificationsService";
+export { executiveService } from "./executiveService";
 export { ciService } from "./ciService";
 
