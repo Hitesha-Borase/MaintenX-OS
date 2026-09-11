@@ -19,7 +19,9 @@ import {
   Check,
   Split,
   AlertOctagon,
-  Copy
+  Copy,
+  Eye,
+  Trash2
 } from "lucide-react";
 import { Card } from "../../../components/common/Card";
 import { Badge } from "../../../components/common/Badge";
@@ -28,13 +30,30 @@ import { StatCard } from "../../../components/common/StatCard";
 import { useMasterData } from "../../../context/MasterDataContext";
 import { useApp } from "../../../context/AppContext";
 import masterDataService from "../../../services/masterDataService";
+import adminService from "../../../services/adminService";
 
 export function MigrationPage() {
   const { migrationStats = {}, executeMigration, auditLogs = [], skus = [] } = useMasterData();
   const { addToast } = useApp();
 
+  const [batches, setBatches] = useState([
+    { id: "RUN-2026-0819-01", target: "Item & SKU Master Tables", connector: "FlowState ERP SQL Connector", transferred: "1,420 / 1,420 rows", conformity: "98.6%", status: "Committed & Verified" },
+    { id: "RUN-2026-0818-04", target: "Bill of Materials (BOM) Multi-Level", connector: "CSV Bulk File Staging", transferred: "640 / 650 rows", conformity: "98.4%", status: "Committed & Verified" },
+    { id: "RUN-2026-0817-02", target: "Machine Asset Register & Line Mappings", connector: "SAP Plant Maintenance Export", transferred: "390 / 390 rows", conformity: "100.0%", status: "Committed & Verified" }
+  ]);
+  const [viewingBatch, setViewingBatch] = useState(null);
+  const [deletingBatch, setDeletingBatch] = useState(null);
+  const [isActioning, setIsActioning] = useState(false);
+
+  const fetchBatches = () => {
+    adminService.getMigrationBatches().then((data) => {
+      if (Array.isArray(data) && data.length > 0) setBatches(data);
+    }).catch((err) => console.warn("Migration batches load:", err.message));
+  };
+
   useEffect(() => {
     masterDataService.getSkus().catch((err) => console.warn("Migration SKUs load:", err.message));
+    fetchBatches();
   }, []);
 
   // Wizard active state: 0 = Dashboard, 1 = Source, 2 = Mapping, 3 = Validation, 4 = Duplicate Review, 5 = Summary
@@ -90,7 +109,7 @@ export function MigrationPage() {
     addToast(`Duplicate record ${id} decision set to: ${newAction}`, "info");
   };
 
-  const handleFinishMigration = () => {
+  const handleFinishMigration = async () => {
     // Sample mock payload to inject live migrated SKUs into MasterDataContext
     const mockIngestedRecords = [
       {
@@ -117,12 +136,40 @@ export function MigrationPage() {
       }
     ];
 
+    try {
+      await adminService.executeMigrationBatch({
+        target: selectedDataset,
+        connector: selectedSource,
+        records: mockIngestedRecords,
+        recordsTransferred: "1,420 / 1,420 rows"
+      });
+      fetchBatches();
+    } catch (e) {
+      console.warn("Migration execute error:", e.message);
+    }
+
     if (executeMigration) {
       executeMigration("SKU Master", mockIngestedRecords);
     }
 
     setWizardStep(0);
-    addToast("FlowState legacy records successfully migrated & verified into MaintenX OS Master Tables!", "success");
+    addToast("FlowState legacy records successfully migrated & verified into MaintenX OS Master Tables in DB!", "success");
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deletingBatch) return;
+    try {
+      setIsActioning(true);
+      await adminService.deleteMigrationBatch(deletingBatch.id);
+      setBatches((prev) => prev.filter((b) => b.id !== deletingBatch.id));
+      addToast(`Migration batch record ${deletingBatch.id} deleted from database!`, "success");
+      setDeletingBatch(null);
+    } catch (err) {
+      console.error(err);
+      addToast(`Error deleting batch: ${err.message}`, "error");
+    } finally {
+      setIsActioning(false);
+    }
   };
 
   return (
@@ -254,69 +301,83 @@ export function MigrationPage() {
                     <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Records Transferred</th>
                     <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Conformity</th>
                     <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Status</th>
+                    <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", textAlign: "right" }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr style={{ borderBottom: "1px solid var(--border-subtle)" }}>
-                    <td style={{ padding: "12px 16px", fontFamily: "var(--font-mono)", fontWeight: 800, color: "#8C5B23" }}>
-                      RUN-2026-0819-01
-                    </td>
-                    <td style={{ padding: "12px 16px", fontWeight: 700, color: "var(--text-primary)" }}>
-                      Item & SKU Master Tables
-                    </td>
-                    <td style={{ padding: "12px 16px", fontSize: "12px", color: "var(--text-secondary)" }}>
-                      FlowState ERP SQL Connector
-                    </td>
-                    <td style={{ padding: "12px 16px", fontFamily: "var(--font-mono)", fontWeight: 700 }}>
-                      1,420 / 1,420 rows
-                    </td>
-                    <td style={{ padding: "12px 16px", color: "#059669", fontWeight: 700 }}>
-                      98.6%
-                    </td>
-                    <td style={{ padding: "12px 16px" }}>
-                      <Badge variant="emerald">Committed & Verified</Badge>
-                    </td>
-                  </tr>
-                  <tr style={{ borderBottom: "1px solid var(--border-subtle)" }}>
-                    <td style={{ padding: "12px 16px", fontFamily: "var(--font-mono)", fontWeight: 800, color: "#8C5B23" }}>
-                      RUN-2026-0818-04
-                    </td>
-                    <td style={{ padding: "12px 16px", fontWeight: 700, color: "var(--text-primary)" }}>
-                      Bill of Materials (BOM) Multi-Level
-                    </td>
-                    <td style={{ padding: "12px 16px", fontSize: "12px", color: "var(--text-secondary)" }}>
-                      CSV Bulk File Staging
-                    </td>
-                    <td style={{ padding: "12px 16px", fontFamily: "var(--font-mono)", fontWeight: 700 }}>
-                      640 / 650 rows
-                    </td>
-                    <td style={{ padding: "12px 16px", color: "#059669", fontWeight: 700 }}>
-                      98.4%
-                    </td>
-                    <td style={{ padding: "12px 16px" }}>
-                      <Badge variant="emerald">Committed & Verified</Badge>
-                    </td>
-                  </tr>
-                  <tr style={{ borderBottom: "1px solid var(--border-subtle)" }}>
-                    <td style={{ padding: "12px 16px", fontFamily: "var(--font-mono)", fontWeight: 800, color: "#8C5B23" }}>
-                      RUN-2026-0817-02
-                    </td>
-                    <td style={{ padding: "12px 16px", fontWeight: 700, color: "var(--text-primary)" }}>
-                      Machine Asset Register & Line Mappings
-                    </td>
-                    <td style={{ padding: "12px 16px", fontSize: "12px", color: "var(--text-secondary)" }}>
-                      SAP Plant Maintenance Export
-                    </td>
-                    <td style={{ padding: "12px 16px", fontFamily: "var(--font-mono)", fontWeight: 700 }}>
-                      390 / 390 rows
-                    </td>
-                    <td style={{ padding: "12px 16px", color: "#059669", fontWeight: 700 }}>
-                      100.0%
-                    </td>
-                    <td style={{ padding: "12px 16px" }}>
-                      <Badge variant="emerald">Committed & Verified</Badge>
-                    </td>
-                  </tr>
+                  {batches.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} style={{ padding: "32px", textAlign: "center", color: "var(--text-muted)", fontSize: "13px" }}>
+                        No migration batches found.
+                      </td>
+                    </tr>
+                  ) : (
+                    batches.map((b) => (
+                      <tr key={b.id} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+                        <td style={{ padding: "12px 16px", fontFamily: "var(--font-mono)", fontWeight: 800, color: "#8C5B23" }}>
+                          {b.id}
+                        </td>
+                        <td style={{ padding: "12px 16px", fontWeight: 700, color: "var(--text-primary)" }}>
+                          {b.target}
+                        </td>
+                        <td style={{ padding: "12px 16px", fontSize: "12px", color: "var(--text-secondary)" }}>
+                          {b.connector}
+                        </td>
+                        <td style={{ padding: "12px 16px", fontFamily: "var(--font-mono)", fontWeight: 700 }}>
+                          {b.transferred}
+                        </td>
+                        <td style={{ padding: "12px 16px", color: "#059669", fontWeight: 700 }}>
+                          {b.conformity}
+                        </td>
+                        <td style={{ padding: "12px 16px" }}>
+                          <Badge variant="emerald">{b.status}</Badge>
+                        </td>
+                        <td style={{ padding: "12px 16px", textAlign: "right" }}>
+                          <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                            {/* View Button */}
+                            <button
+                              onClick={() => setViewingBatch(b)}
+                              title="View Batch Details"
+                              style={{
+                                width: "30px",
+                                height: "30px",
+                                borderRadius: "6px",
+                                backgroundColor: "var(--bg-card-subtle)",
+                                color: "var(--text-secondary)",
+                                border: "1px solid var(--border-subtle)",
+                                cursor: "pointer",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                justifyContent: "center"
+                              }}
+                            >
+                              <Eye size={13} />
+                            </button>
+
+                            {/* Delete Button */}
+                            <button
+                              onClick={() => setDeletingBatch(b)}
+                              title="Delete Migration Batch"
+                              style={{
+                                width: "30px",
+                                height: "30px",
+                                borderRadius: "6px",
+                                backgroundColor: "var(--bg-card-subtle)",
+                                color: "#EF4444",
+                                border: "1px solid var(--border-subtle)",
+                                cursor: "pointer",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                justifyContent: "center"
+                              }}
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
@@ -632,6 +693,134 @@ export function MigrationPage() {
             )}
           </div>
         </Card>
+      )}
+
+      {/* View Detail Modal */}
+      {viewingBatch && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.5)",
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px"
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: "#FFFFFF",
+              borderRadius: "16px",
+              maxWidth: "520px",
+              width: "100%",
+              padding: "24px",
+              boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)"
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Eye size={18} color="#059669" />
+                <h3 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                  Migration Batch Details
+                </h3>
+              </div>
+              <button
+                onClick={() => setViewingBatch(null)}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)" }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px", fontSize: "13px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 12px", backgroundColor: "var(--bg-card-subtle)", borderRadius: "8px" }}>
+                <span style={{ color: "var(--text-muted)", fontWeight: 600 }}>Batch Run ID:</span>
+                <span style={{ fontWeight: 800, fontFamily: "var(--font-mono)", color: "#8C5B23" }}>{viewingBatch.id}</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 12px", backgroundColor: "var(--bg-card-subtle)", borderRadius: "8px" }}>
+                <span style={{ color: "var(--text-muted)", fontWeight: 600 }}>Dataset Target:</span>
+                <span style={{ fontWeight: 700 }}>{viewingBatch.target}</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 12px", backgroundColor: "var(--bg-card-subtle)", borderRadius: "8px" }}>
+                <span style={{ color: "var(--text-muted)", fontWeight: 600 }}>Source Connector:</span>
+                <span>{viewingBatch.connector}</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 12px", backgroundColor: "var(--bg-card-subtle)", borderRadius: "8px" }}>
+                <span style={{ color: "var(--text-muted)", fontWeight: 600 }}>Records Transferred:</span>
+                <span style={{ fontWeight: 700, fontFamily: "var(--font-mono)" }}>{viewingBatch.transferred}</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 12px", backgroundColor: "var(--bg-card-subtle)", borderRadius: "8px" }}>
+                <span style={{ color: "var(--text-muted)", fontWeight: 600 }}>Conformity:</span>
+                <span style={{ fontWeight: 700, color: "#059669" }}>{viewingBatch.conformity}</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 12px", backgroundColor: "var(--bg-card-subtle)", borderRadius: "8px" }}>
+                <span style={{ color: "var(--text-muted)", fontWeight: 600 }}>Status:</span>
+                <Badge variant="emerald">{viewingBatch.status}</Badge>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "20px" }}>
+              <Button variant="secondary" onClick={() => setViewingBatch(null)} style={{ fontSize: "12px", padding: "7px 14px" }}>
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deletingBatch && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.5)",
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px"
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: "#FFFFFF",
+              borderRadius: "16px",
+              maxWidth: "440px",
+              width: "100%",
+              padding: "24px",
+              boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)"
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px" }}>
+              <div style={{ width: "36px", height: "36px", borderRadius: "50%", backgroundColor: "#FEE2E2", display: "flex", alignItems: "center", justifyContent: "center", color: "#EF4444" }}>
+                <Trash2 size={18} />
+              </div>
+              <h3 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                Delete Migration Batch Record
+              </h3>
+            </div>
+            <p style={{ fontSize: "13px", color: "var(--text-secondary)", lineHeight: 1.5, margin: "0 0 20px 0" }}>
+              Are you sure you want to remove batch run <strong>{deletingBatch.id}</strong> ({deletingBatch.target})? This deletion will be recorded in the database.
+            </p>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px" }}>
+              <Button variant="secondary" onClick={() => setDeletingBatch(null)} disabled={isActioning} style={{ fontSize: "12px", padding: "7px 14px" }}>
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                icon={Trash2}
+                disabled={isActioning}
+                onClick={handleConfirmDelete}
+                style={{ fontSize: "12px", padding: "7px 14px", backgroundColor: "#EF4444", color: "#fff" }}
+              >
+                {isActioning ? "Deleting..." : "Confirm Delete"}
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

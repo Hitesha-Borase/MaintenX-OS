@@ -21,10 +21,6 @@ import adminService from "../../../services/adminService";
 export function SecurityPage() {
   const { addToast } = useApp();
 
-  useEffect(() => {
-    adminService.getRoles().catch((err) => console.warn("Security roles load:", err.message));
-  }, []);
-
   const [securityConfig, setSecurityConfig] = useState({
     enforceMFA: true,
     ssoEnabled: true,
@@ -35,8 +31,29 @@ export function SecurityPage() {
     ipWhitelist: "192.168.1.0/24, 10.0.0.0/16"
   });
 
-  const handleSave = () => {
-    addToast("Enterprise Security & 2FA Policies saved and enforced!", "success");
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    adminService.getSecurityPolicies()
+      .then((data) => {
+        if (data && typeof data === "object") {
+          setSecurityConfig((prev) => ({ ...prev, ...data }));
+        }
+      })
+      .catch((err) => console.warn("Security policies load:", err.message));
+  }, []);
+
+  const handleSave = async () => {
+    try {
+      setIsSaving(true);
+      await adminService.saveSecurityPolicies(securityConfig);
+      addToast("Enterprise Security & 2FA Policies saved and enforced in database!", "success");
+    } catch (err) {
+      console.error(err);
+      addToast(`Failed to save security policies: ${err.message}`, "error");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -53,8 +70,14 @@ export function SecurityPage() {
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-          <Button variant="primary" icon={Save} onClick={handleSave} style={{ fontSize: "12px", padding: "7px 14px" }}>
-            Save Security Policies
+          <Button
+            variant="primary"
+            icon={Save}
+            disabled={isSaving}
+            onClick={handleSave}
+            style={{ fontSize: "12px", padding: "7px 14px" }}
+          >
+            {isSaving ? "Saving to DB..." : "Save Security Policies"}
           </Button>
         </div>
       </div>
@@ -72,19 +95,19 @@ export function SecurityPage() {
       >
         <StatCard
           title="MFA Enforcement Rate"
-          value="100%"
+          value={securityConfig.enforceMFA ? "100%" : "Disabled"}
           unit="Enforced"
-          trend={{ value: "All admin & operator accounts", isPositive: true, text: "" }}
+          trend={{ value: "All admin & operator accounts", isPositive: securityConfig.enforceMFA, text: "" }}
           icon={Lock}
-          colorVariant="emerald"
+          colorVariant={securityConfig.enforceMFA ? "emerald" : "amber"}
         />
         <StatCard
           title="Single Sign-On (SSO)"
-          value="Active"
-          unit="Okta SAML 2.0"
-          trend={{ value: "Seamless corporate login", isPositive: true, text: "" }}
+          value={securityConfig.ssoEnabled ? "Active" : "Inactive"}
+          unit={securityConfig.ssoProvider || "Okta SAML 2.0"}
+          trend={{ value: "Seamless corporate login", isPositive: securityConfig.ssoEnabled, text: "" }}
           icon={KeyRound}
-          colorVariant="cyan"
+          colorVariant={securityConfig.ssoEnabled ? "cyan" : "amber"}
         />
         <StatCard
           title="IP Protection"

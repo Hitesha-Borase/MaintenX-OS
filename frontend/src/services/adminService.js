@@ -390,6 +390,102 @@ export class AdminService {
       return { success: true, id };
     }
   }
+
+  // ── 8. Security Policies ───────────────────────────────────────────
+  async getSecurityPolicies() {
+    try {
+      return await apiClient.get("/admin/security/policies");
+    } catch (err) {
+      console.warn("getSecurityPolicies fallback:", err.message);
+      return {
+        enforceMFA: true,
+        ssoEnabled: true,
+        ssoProvider: "Okta SAML 2.0",
+        sessionTimeoutMins: 30,
+        passwordMinLength: 12,
+        requireSpecialChar: true,
+        ipWhitelist: "192.168.1.0/24, 10.0.0.0/16",
+      };
+    }
+  }
+
+  async saveSecurityPolicies(policies) {
+    return await apiClient.post("/admin/security/policies", policies);
+  }
+
+  // ── 9. System Configuration ────────────────────────────────────────
+  async getSystemConfig() {
+    try {
+      return await apiClient.get("/admin/config");
+    } catch (err) {
+      console.warn("getSystemConfig fallback:", err.message);
+      return {
+        systemName: "MaintenX-OS Manufacturing Cloud",
+        timezone: "America/Chicago (Central Time)",
+        dateFormat: "YYYY-MM-DD",
+        shiftAStart: "06:00",
+        shiftBStart: "14:30",
+        shiftCStart: "23:00",
+        enableEdgeAIPredictions: true,
+        telemetryPollSeconds: 2,
+      };
+    }
+  }
+
+  async saveSystemConfig(config) {
+    return await apiClient.post("/admin/config", config);
+  }
+
+  // ── 10. Audit Logs ─────────────────────────────────────────────────
+  async getAuditLogs(query) {
+    try {
+      const url = query ? `/admin/audit-logs?query=${encodeURIComponent(query)}` : "/admin/audit-logs";
+      return await apiClient.get(url);
+    } catch (err) {
+      console.warn("getAuditLogs fallback:", err.message);
+      return [];
+    }
+  }
+
+  async deleteAuditLog(id) {
+    return await apiClient.delete(`/admin/audit-logs/${encodeURIComponent(id)}`);
+  }
+
+  // ── 7. Data Remediation ────────────────────────────────────────────
+  async getRemediationLog() {
+    try {
+      return await apiClient.get("/admin/data-health/remediation-log");
+    } catch (err) {
+      console.warn("getRemediationLog fallback:", err.message);
+      return [];
+    }
+  }
+
+  async executeRemediationEngine() {
+    return await apiClient.post("/admin/data-health/execute-remediation", {});
+  }
+
+  async deleteRemediationLog(id) {
+    return await apiClient.delete(`/admin/data-health/remediation-log/${encodeURIComponent(id)}`);
+  }
+
+  // ── 11. Data Migration ─────────────────────────────────────────────
+  async getMigrationBatches() {
+    try {
+      return await apiClient.get("/admin/migration/batches");
+    } catch (err) {
+      console.warn("getMigrationBatches fallback:", err.message);
+      return [];
+    }
+  }
+
+  async executeMigrationBatch(batchData) {
+    return await apiClient.post("/admin/migration/execute", batchData);
+  }
+
+  async deleteMigrationBatch(id) {
+    return await apiClient.delete(`/admin/migration/batches/${encodeURIComponent(id)}`);
+  }
 }
 
 
