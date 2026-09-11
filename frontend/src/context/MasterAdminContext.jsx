@@ -29,7 +29,13 @@ export function MasterAdminProvider({ children }) {
         if (parts.length === 3) {
           try {
             const payload = JSON.parse(atob(parts[1]));
-            if (payload.role === "master_admin" || payload.isMasterAdmin) {
+            if (
+              payload.role === "master_admin" ||
+              payload.isMasterAdmin ||
+              payload.role === "admin" ||
+              payload.role === "system_admin" ||
+              payload.role === "super_admin"
+            ) {
               return;
             }
           } catch {
@@ -246,6 +252,7 @@ export function MasterAdminProvider({ children }) {
 
   const addCompany = async (companyData) => {
     try {
+      await ensureMasterToken();
       const created = await masterAdminService.createCompany(companyData);
       await fetchAllData();
       return created;
