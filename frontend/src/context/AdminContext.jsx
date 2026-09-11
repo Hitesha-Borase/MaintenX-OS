@@ -104,7 +104,17 @@ export function AdminProvider({ children }) {
   // User Actions (Wired directly to backend)
   const addUser = async (userData) => {
     const created = await adminService.provisionUser(userData);
-    setUsers((prev) => [created, ...prev]);
+    setUsers((prev) => {
+      const idx = prev.findIndex(
+        (u) => (created.id && u.id === created.id) || (created.email && u.email?.toLowerCase() === created.email?.toLowerCase())
+      );
+      if (idx !== -1) {
+        const next = [...prev];
+        next[idx] = { ...next[idx], ...created };
+        return next;
+      }
+      return [created, ...prev];
+    });
     // refresh activity
     adminService.getActivityLogs().then((logs) => Array.isArray(logs) && setActivityLogs(logs));
     return created;

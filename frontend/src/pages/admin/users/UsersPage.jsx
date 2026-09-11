@@ -30,14 +30,21 @@ import { useApp } from "../../../context/AppContext";
 import { adminService } from "../../../services/adminService";
 
 export function UsersPage() {
-  const { users = [], addUser, updateUserStatus } = useAdmin();
+  const { users = [], setUsers, addUser, updateUserStatus } = useAdmin();
   const { plants = [], departments = [] } = useMasterData();
   const { addToast } = useApp();
 
-  // Trigger live GET /api/v1/admin/users on mount
+  // Trigger live GET /api/v1/admin/users on mount and sync with AdminContext
   React.useEffect(() => {
-    adminService.getUsers().catch((err) => console.warn("Live users fetch:", err.message));
-  }, []);
+    adminService
+      .getUsers()
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0 && setUsers) {
+          setUsers(data);
+        }
+      })
+      .catch((err) => console.warn("Live users fetch:", err.message));
+  }, [setUsers]);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("ALL");
@@ -95,12 +102,13 @@ export function UsersPage() {
 
       if (addUser) {
         await addUser({
-          name: formData.name,
-          email: formData.email,
+          name: formData.name.trim(),
+          email: formData.email.trim(),
           password: formData.password && formData.password.trim() ? formData.password.trim() : "Password@123",
           role: formData.role,
           department: formData.department,
           plant: plantName,
+          plantId: formData.plantId,
           status: "Active"
         });
       }
@@ -444,11 +452,11 @@ export function UsersPage() {
               </div>
 
               <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "8px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
-                <Button variant="secondary" onClick={() => setIsAddModalOpen(false)}>
+                <Button variant="secondary" onClick={() => setIsAddModalOpen(false)} disabled={isSubmitting}>
                   Cancel
                 </Button>
-                <Button variant="primary" type="submit">
-                  Create User
+                <Button variant="primary" type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? "Provisioning..." : "Create User"}
                 </Button>
               </div>
             </form>
