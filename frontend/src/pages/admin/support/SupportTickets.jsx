@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Card } from "../../../components/common/Card";
 import { Badge } from "../../../components/common/Badge";
 import { Button } from "../../../components/common/Button";
-import { Search, Filter, MessageSquare, CheckCircle } from "lucide-react";
+import { Search, Filter, MessageSquare, CheckCircle, Trash2 } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useMasterAdmin } from "../../../context/MasterAdminContext";
 import { TicketModal } from "./TicketModal";
@@ -11,9 +11,13 @@ export function SupportTickets() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const { addToast } = useApp();
-  const { supportTickets, updateTicketStatus } = useMasterAdmin();
+  const { supportTickets, updateTicketStatus, deleteTicket, fetchTickets } = useMasterAdmin();
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  React.useEffect(() => {
+    fetchTickets?.();
+  }, [fetchTickets]);
 
   const filteredTickets = supportTickets.filter(t => {
     const matchesSearch = t.company.toLowerCase().includes(searchTerm.toLowerCase()) || t.subject.toLowerCase().includes(searchTerm.toLowerCase());
@@ -21,17 +25,36 @@ export function SupportTickets() {
     return matchesSearch && matchesStatus;
   });
 
-  const handleResolve = (id) => {
-    updateTicketStatus(id, "Resolved");
+  const handleResolve = (id, resolution) => {
+    updateTicketStatus(id, "Resolved", resolution || "Resolved by Master Administrator");
     addToast(`Ticket ${id} marked as resolved`, "success");
     if (selectedTicket && selectedTicket.id === id) {
-      setSelectedTicket({ ...selectedTicket, status: "Resolved" });
+      setSelectedTicket({ ...selectedTicket, status: "Resolved", resolution });
+    }
+  };
+
+  const handleReply = (id, replyText) => {
+    updateTicketStatus(id, "In Progress", replyText);
+    addToast(`Reply recorded and ticket updated to In Progress`, "info");
+    if (selectedTicket && selectedTicket.id === id) {
+      setSelectedTicket({ ...selectedTicket, status: "In Progress", resolution: replyText });
     }
   };
 
   const handleOpenTicket = (ticket) => {
     setSelectedTicket(ticket);
     setIsModalOpen(true);
+  };
+
+  const handleDelete = async (ticket) => {
+    if (!window.confirm(`Delete ticket ${ticket.id}? This cannot be undone.`)) return;
+    try {
+      await deleteTicket(ticket.id);
+      addToast(`Ticket ${ticket.id} deleted`, "success");
+      if (selectedTicket?.id === ticket.id) setIsModalOpen(false);
+    } catch (e) {
+      addToast("Failed to delete ticket", "error");
+    }
   };
 
   const getPriorityColor = (priority) => {
@@ -54,23 +77,23 @@ export function SupportTickets() {
 
       <Card style={{ padding: "0", overflow: "hidden", borderRadius: "14px" }}>
         {/* Search & Filter Bar */}
-        <div style={{ padding: "14px 16px", borderBottom: "1px solid var(--border-subtle)", display: "flex", gap: "10px", flexWrap: "nowrap", backgroundColor: "#FFFFFF" }}>
-          <div style={{ flex: 1, minWidth: 0, position: "relative" }}>
-            <Search size={15} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
+        <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--border-subtle)", display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap", backgroundColor: "#FFFFFF" }}>
+          <div style={{ width: "260px", minWidth: "180px", position: "relative" }}>
+            <Search size={14} style={{ position: "absolute", left: "11px", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
             <input 
               type="text" 
               placeholder="Search by company or subject..." 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ width: "100%", padding: "8px 12px 8px 34px", borderRadius: "8px", border: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)", fontSize: "13px", boxSizing: "border-box", outline: "none" }}
+              style={{ width: "100%", padding: "7px 12px 7px 32px", borderRadius: "8px", border: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)", fontSize: "12px", boxSizing: "border-box", outline: "none" }}
             />
           </div>
-          <div style={{ display: "flex", gap: "8px", alignItems: "center", flexShrink: 0 }}>
-            <Filter size={14} color="var(--text-secondary)" style={{ flexShrink: 0, display: "none" }} className="hide-on-mobile" />
+          <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+            <Filter size={14} color="var(--text-secondary)" style={{ flexShrink: 0 }} />
             <select 
               value={statusFilter} 
               onChange={(e) => setStatusFilter(e.target.value)}
-              style={{ width: "110px", padding: "8px 10px", borderRadius: "8px", border: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)", color: "var(--text-primary)", fontSize: "13px", fontWeight: 500, outline: "none", boxSizing: "border-box" }}
+              style={{ width: "140px", padding: "7px 10px", borderRadius: "8px", border: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)", color: "var(--text-primary)", fontSize: "12px", fontWeight: 600, outline: "none", cursor: "pointer" }}
             >
               <option value="All">All Statuses</option>
               <option value="Open">Open</option>
@@ -121,6 +144,7 @@ export function SupportTickets() {
                   {ticket.status !== "Resolved" && (
                     <Button variant="ghost" size="sm" onClick={() => handleResolve(ticket.id)} title="Mark as Resolved" style={{ padding: "4px" }}><CheckCircle size={13} color="#10B981" /></Button>
                   )}
+                  <Button variant="ghost" size="sm" onClick={() => handleDelete(ticket)} title="Delete Ticket" style={{ padding: "4px" }}><Trash2 size={13} color="#EF4444" /></Button>
                 </div>
               </div>
             </div>
@@ -169,6 +193,7 @@ export function SupportTickets() {
                       {ticket.status !== "Resolved" && (
                         <Button variant="ghost" size="sm" onClick={() => handleResolve(ticket.id)} title="Mark as Resolved"><CheckCircle size={16} color="#10B981" /></Button>
                       )}
+                      <Button variant="ghost" size="sm" onClick={() => handleDelete(ticket)} title="Delete Ticket"><Trash2 size={16} color="#EF4444" /></Button>
                     </div>
                   </td>
                 </tr>
@@ -188,6 +213,7 @@ export function SupportTickets() {
         onClose={() => setIsModalOpen(false)}
         ticket={selectedTicket}
         onResolve={handleResolve}
+        onReply={handleReply}
       />
     </div>
   );

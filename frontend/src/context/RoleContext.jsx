@@ -574,7 +574,7 @@ export const NAVIGATION_CONFIG = {
     { label: "Plans & Pricing", path: "/master/plans-pricing", icon: "Tag" },
     { label: "Subscriptions", path: "/master/subscriptions", icon: "CreditCard" },
     { label: "Payments", path: "/master/payments", icon: "Banknote" },
-    { label: "Modules & Features", path: "/master/modules", icon: "Layers" },
+
     { label: "Platform Users", path: "/master/platform-users", icon: "Users" },
     { label: "Analytics", path: "/master/analytics", icon: "LineChart" },
     { label: "Activity & Audit Logs", path: "/master/audit-logs", icon: "FileText" },
@@ -650,15 +650,16 @@ export function RoleProvider({ children }) {
     }
   };
 
-  // Sync JWT token with backend on mount if authenticated but token is missing
+  // Sync JWT token with backend on mount & role change
   useEffect(() => {
-    const token = localStorage.getItem("maintenx_auth_token");
-    if (isAuthenticated && !token && currentRole?.user?.email) {
-      authService.login(currentRole.user.email, "Password@123").catch((e) => {
+    if (isAuthenticated && currentRole?.user?.email) {
+      authService.login(currentRole.user.email, "Password@123").then(() => {
+        window.dispatchEvent(new CustomEvent("maintenx:auth_ready"));
+      }).catch((e) => {
         console.warn("Auto-token acquisition on startup:", e.message);
       });
     }
-  }, [isAuthenticated, currentRole]);
+  }, [isAuthenticated, currentRole?.id, currentRole?.user?.email]);
 
   const login = (roleId) => {
     const found = ROLES.find((r) => r.id === roleId) || ROLES.find((r) => r.id === "plant_manager") || ROLES[10];
@@ -684,12 +685,15 @@ export function RoleProvider({ children }) {
       setIsAuthenticated(true);
       sessionStorage.setItem("flowstate_auth", "true");
 
-      const targetRoleId = requestedRoleId || response?.user?.role || "plant_manager";
-      const found = ROLES.find((r) => r.id === targetRoleId) || ROLES.find((r) => r.id === response?.user?.role) || ROLES[10];
+      // Prioritize the role assigned in PostgreSQL
+      const backendRoleCode = response?.user?.role;
+      const targetRoleId = backendRoleCode || requestedRoleId || "plant_manager";
+      const found = ROLES.find((r) => r.id === targetRoleId) || ROLES.find((r) => r.id === backendRoleCode) || ROLES[10];
 
       const mergedRole = {
         ...found,
         user: response?.user ? {
+          id: response.user.id,
           name: `${response.user.firstName || ""} ${response.user.lastName || ""}`.trim() || found.user?.name,
           email: response.user.email || found.user?.email,
           role: found.label,
@@ -705,17 +709,9 @@ export function RoleProvider({ children }) {
       }
       return { success: true, user: response?.user || mergedRole.user, role: mergedRole };
     } catch (err) {
-      console.warn("Backend auth fallback to role session:", err.message);
-      const targetRoleId = requestedRoleId || "plant_manager";
-      const found = ROLES.find((r) => r.id === targetRoleId) || ROLES[10];
-      setCurrentRole(found);
-      setIsAuthenticated(true);
-      sessionStorage.setItem("flowstate_auth", "true");
-      localStorage.setItem("flowstate_current_role", JSON.stringify(found));
-      if (found.user) {
-        localStorage.setItem("flowstate_user_profile", JSON.stringify(found.user));
-      }
-      return { success: true, user: found.user, role: found };
+      console.warn("Backend authentication failed:", err.message);
+      // Re-throw so Login page can catch and show explicit error without granting dashboard access
+      throw new Error(err?.data?.error?.message || err?.message || "Invalid email or password");
     }
   };
 

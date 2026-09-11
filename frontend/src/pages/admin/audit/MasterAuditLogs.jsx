@@ -6,10 +6,14 @@ import { Search, Download, Filter } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 
 export function MasterAuditLogs() {
-  const { auditLogs } = useMasterAdmin();
+  const { auditLogs, fetchAuditLogs } = useMasterAdmin();
   const [searchTerm, setSearchTerm] = useState("");
   const [eventFilter, setEventFilter] = useState("All");
   const { addToast } = useApp();
+
+  React.useEffect(() => {
+    fetchAuditLogs?.();
+  }, [fetchAuditLogs]);
 
   const filteredLogs = auditLogs.filter(log => {
     const matchesSearch = log.user.toLowerCase().includes(searchTerm.toLowerCase()) || log.target.toLowerCase().includes(searchTerm.toLowerCase()) || log.event.toLowerCase().includes(searchTerm.toLowerCase());
@@ -61,23 +65,23 @@ export function MasterAuditLogs() {
 
       <Card style={{ padding: "0", overflow: "hidden", borderRadius: "14px" }}>
         {/* Search & Filter Bar */}
-        <div style={{ padding: "14px 16px", borderBottom: "1px solid var(--border-subtle)", display: "flex", gap: "10px", flexWrap: "wrap", backgroundColor: "#FFFFFF" }}>
-          <div style={{ flex: "1 1 200px", position: "relative" }}>
-            <Search size={15} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
+        <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--border-subtle)", display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap", backgroundColor: "#FFFFFF" }}>
+          <div style={{ width: "260px", minWidth: "180px", position: "relative" }}>
+            <Search size={14} style={{ position: "absolute", left: "11px", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
             <input 
               type="text" 
               placeholder="Search by user or target..." 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ width: "100%", padding: "8px 12px 8px 34px", borderRadius: "8px", border: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)", fontSize: "13px", boxSizing: "border-box", outline: "none" }}
+              style={{ width: "100%", padding: "7px 12px 7px 32px", borderRadius: "8px", border: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)", fontSize: "12px", boxSizing: "border-box", outline: "none" }}
             />
           </div>
-          <div style={{ display: "flex", gap: "8px", alignItems: "center", flex: "1 1 150px", maxWidth: "200px" }}>
+          <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
             <Filter size={14} color="var(--text-secondary)" style={{ flexShrink: 0 }} />
             <select 
               value={eventFilter} 
               onChange={(e) => setEventFilter(e.target.value)}
-              style={{ flex: 1, minWidth: 0, padding: "8px 10px", borderRadius: "8px", border: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)", color: "var(--text-primary)", fontSize: "13px", fontWeight: 500, outline: "none", boxSizing: "border-box" }}
+              style={{ width: "180px", padding: "7px 10px", borderRadius: "8px", border: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)", color: "var(--text-primary)", fontSize: "12px", fontWeight: 600, outline: "none", cursor: "pointer" }}
             >
               {uniqueEvents.map(event => (
                 <option key={event} value={event}>{event}</option>

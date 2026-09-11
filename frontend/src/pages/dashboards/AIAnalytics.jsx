@@ -21,6 +21,7 @@ import { Badge } from "../../components/common/Badge";
 import { Button } from "../../components/common/Button";
 import { AI_AGENTS, PREDICTIVE_INSIGHTS, AI_QA_EXAMPLES } from "../../data/mockAIInsights";
 import { useApp } from "../../context/AppContext";
+import aiService from "../../services/aiService";
 
 export function AIAnalytics() {
   const { addToast } = useApp();
@@ -36,27 +37,37 @@ export function AIAnalytics() {
   const [inputQuery, setInputQuery] = useState("");
   const [isTyping, setIsTyping] = useState(false);
 
-  const handleApproveInsight = (insightId) => {
+  const handleApproveInsight = async (insightId) => {
     setInsights((prev) =>
       prev.map((ins) =>
         ins.id === insightId ? { ...ins, approvalStatus: "Approved by Operator - Action Dispatched" } : ins
       )
     );
-    addToast("AI Recommendation Approved: Action successfully dispatched to Line PLC & CMMS.");
+    try {
+      await aiService.approveInsight(insightId);
+    } catch {
+      // Keep optimistic UI update
+    }
+    addToast("AI Recommendation Approved: Action successfully dispatched to Line PLC & CMMS.", "success");
   };
 
-  const handleRejectInsight = (insightId) => {
+  const handleRejectInsight = async (insightId) => {
     setInsights((prev) =>
       prev.map((ins) =>
         ins.id === insightId ? { ...ins, approvalStatus: "Rejected by Supervisor" } : ins
       )
     );
+    try {
+      await aiService.rejectInsight(insightId);
+    } catch {
+      // Keep optimistic UI update
+    }
     addToast("AI Recommendation dismissed with operator feedback.", "warning");
   };
 
-  const handleSendMessage = (textToSend = inputQuery) => {
+  const handleSendMessage = async (textToSend = inputQuery) => {
     const q = textToSend.trim();
-    if (!q) return;
+    if (!q || isTyping) return;
 
     // Add user message
     const userMsg = {
@@ -69,8 +80,19 @@ export function AIAnalytics() {
     setInputQuery("");
     setIsTyping(true);
 
-    // Simulate AI inference match
-    setTimeout(() => {
+    try {
+      const response = await aiService.chat(q);
+      const aiMsg = {
+        sender: "AI",
+        text: response.reply || "Operational query processed.",
+        time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        tag: response.tag || "AI_RECOMMENDATION",
+        sources: response.sources || ["Operational SCADA Gateway", "CMMS Telemetry DB"],
+        provider: response.provider
+      };
+      setChatMessages((prev) => [...prev, aiMsg]);
+    } catch (err) {
+      console.warn("AI Backend query error, using local fallback:", err.message);
       let matched = AI_QA_EXAMPLES.find(
         (ex) =>
           ex.query.toLowerCase().includes(q.toLowerCase()) ||
@@ -80,25 +102,17 @@ export function AIAnalytics() {
           q.toLowerCase().includes("pm")
       );
 
-      if (!matched) {
-        matched = {
-          answer: `Analysis of active SCADA stream: For query "${q}", telemetry across Line 1 and Line 2 indicates normal operating limits with the exception of Pasteurizer HTST-300 loop pressure. Aegis neural model recommends checking work order WO-2026-0888.`,
-          sources: ["Real-Time SCADA Gateway", "CMMS Telemetry DB"],
-          tag: "AI_RECOMMENDATION"
-        };
-      }
-
       const aiMsg = {
         sender: "AI",
-        text: matched.answer,
+        text: matched ? matched.answer : `Analysis of active SCADA stream: For query "${q}", telemetry across active lines indicates normal operating bounds.`,
         time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        tag: matched.tag,
-        sources: matched.sources
+        tag: matched?.tag || "AI_RECOMMENDATION",
+        sources: matched?.sources || ["Real-Time SCADA Gateway", "CMMS Telemetry DB"]
       };
-
       setChatMessages((prev) => [...prev, aiMsg]);
+    } finally {
       setIsTyping(false);
-    }, 800);
+    }
   };
 
   const getTagBadge = (tag) => {

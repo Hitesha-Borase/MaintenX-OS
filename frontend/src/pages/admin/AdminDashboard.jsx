@@ -22,7 +22,9 @@ import {
   X,
   RefreshCw,
   Clock,
-  Sparkles
+  Sparkles,
+  Eye,
+  EyeOff
 } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { StatCard } from "../../components/common/StatCard";
@@ -57,6 +59,7 @@ export function AdminDashboard() {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
+    password: "",
     role: "Maintenance Lead",
     department: "Maintenance",
     plant: "Indore Mega Facility",
@@ -105,12 +108,16 @@ export function AdminDashboard() {
     setIsProvisioning(true);
     try {
       // addUser from AdminContext handles the API call — do NOT call adminService.provisionUser separately
-      const res = await addUser(formData);
+      const res = await addUser({
+        ...formData,
+        password: formData.password && formData.password.trim() ? formData.password.trim() : "Password@123"
+      });
       addToast(`New user ${formData.name} (${formData.role}) successfully provisioned into PostgreSQL Database!`, "success");
       setIsProvisionModalOpen(false);
       setFormData({
         name: "",
         email: "",
+        password: "",
         role: "Maintenance Lead",
         department: "Maintenance",
         plant: "Indore Mega Facility",
@@ -506,6 +513,42 @@ export function AdminDashboard() {
                     <option value="Active">Active</option>
                     <option value="Pending Invite">Pending Invite</option>
                   </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="form-label" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span>Security Password</span>
+                  <span style={{ fontSize: "11px", color: "var(--text-muted)", fontWeight: 400 }}>Default: Password@123</span>
+                </label>
+                <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                  <input
+                    type={showModalPassword ? "text" : "password"}
+                    placeholder="Enter custom login password (min. 6 characters)"
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF", paddingRight: "40px" }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowModalPassword(!showModalPassword)}
+                    style={{
+                      position: "absolute",
+                      right: "12px",
+                      background: "transparent",
+                      border: "none",
+                      color: "var(--text-muted)",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      padding: "4px"
+                    }}
+                    title={showModalPassword ? "Hide password" : "Show password"}
+                  >
+                    {showModalPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
                 </div>
               </div>
 

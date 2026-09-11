@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import maintenanceService from "../services/maintenanceService";
+import iotService from "../services/iotService";
 import { INITIAL_ASSETS, ASSET_HIERARCHY_TREE } from "../data/mockAssets";
 import { INITIAL_WORK_ORDERS } from "../data/mockWorkOrders";
 import { INITIAL_PM_SCHEDULES, INITIAL_PM_PLANS } from "../data/mockPMSchedules";
@@ -103,7 +104,7 @@ export function CMMSProvider({ children }) {
   const [repeatFailures, setRepeatFailures] = useState(REPEAT_FAILURES);
   const [reliabilityMetrics, setReliabilityMetrics] = useState(RELIABILITY_METRICS);
 
-  // 10. Machine / IoT Live Simulation
+  // 10. Machine / IoT Live Simulation & Streaming
   const [isLiveTelemetryStreaming, setIsLiveTelemetryStreaming] = useState(true);
   const [iotTelemetry, setIotTelemetry] = useState({
     vibration: 2.1,
@@ -115,6 +116,46 @@ export function CMMSProvider({ children }) {
     status: "Normal",
     lastUpdated: new Date().toLocaleTimeString()
   });
+
+  // Subscribe to live SSE telemetry stream
+  useEffect(() => {
+    if (!isLiveTelemetryStreaming) return;
+
+    const unsubscribe = iotService.connectLiveStream(
+      (packet) => {
+        if (packet.type === "TELEMETRY_UPDATE" && packet.data) {
+          const d = packet.data;
+          setIotTelemetry({
+            vibration: Number(d.vibration) || 2.1,
+            temperature: Number(d.temperature) || 62.4,
+            pressure: Number(d.pressure) || 6.2,
+            rpm: Number(d.rpm) || 1200,
+            powerKW: Number(d.powerKw) || 45.2,
+            flowRate: Number(d.flowRate) || 9400,
+            status: d.status || "Normal",
+            lastUpdated: new Date(d.timestamp || Date.now()).toLocaleTimeString()
+          });
+        } else if (packet.type === "SNAPSHOT" && Array.isArray(packet.data) && packet.data.length > 0) {
+          const d = packet.data[0];
+          setIotTelemetry({
+            vibration: Number(d.vibration) || 2.1,
+            temperature: Number(d.temperature) || 62.4,
+            pressure: Number(d.pressure) || 6.2,
+            rpm: Number(d.rpm) || 1200,
+            powerKW: Number(d.powerKw) || 45.2,
+            flowRate: Number(d.flowRate) || 9400,
+            status: d.status || "Normal",
+            lastUpdated: new Date(d.timestamp || Date.now()).toLocaleTimeString()
+          });
+        }
+      },
+      () => {}
+    );
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [isLiveTelemetryStreaming]);
 
   // 11. Maintenance Labour
   const [employees, setEmployees] = useState(() => {

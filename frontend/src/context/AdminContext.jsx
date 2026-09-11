@@ -190,14 +190,14 @@ export function AdminProvider({ children }) {
     }
   };
 
-  const fetchActivityLogs = async (query) => {
+  const fetchActivityLogs = useCallback(async (query) => {
     try {
       const logs = await adminService.getActivityLogs(query);
       if (Array.isArray(logs)) setActivityLogs(logs);
     } catch (err) {
       console.warn("Failed to fetch activity logs:", err);
     }
-  };
+  }, []);
 
   // Role Actions (Wired directly to backend)
   const addRole = async (roleData) => {

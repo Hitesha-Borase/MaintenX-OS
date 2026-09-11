@@ -34,7 +34,7 @@ import { CompanyDetails } from "./pages/admin/companies/CompanyDetails";
 import { MasterUsers } from "./pages/admin/users/MasterUsers";
 import { CompanyAdmins } from "./pages/admin/users/CompanyAdmins";
 import { ManageSubscriptions } from "./pages/admin/subscriptions/ManageSubscriptions";
-import { ManageModules } from "./pages/admin/modules/ManageModules";
+
 import { MasterActivity } from "./pages/admin/activity/MasterActivity";
 import { MasterAuditLogs } from "./pages/admin/audit/MasterAuditLogs";
 import { PlatformSettings } from "./pages/admin/settings/PlatformSettings";
@@ -478,7 +478,7 @@ export function AppContent() {
           <Route path="/master/plans-pricing" element={<PlansPricing />} />
           <Route path="/master/subscriptions" element={<ManageSubscriptions />} />
           <Route path="/master/payments" element={<PaymentsPage />} />
-          <Route path="/master/modules" element={<ManageModules />} />
+
           <Route path="/master/platform-users" element={<MasterUsers />} />
           <Route path="/master/analytics" element={<PlatformAnalytics />} />
           <Route path="/master/audit-logs" element={<MasterAuditLogs />} />

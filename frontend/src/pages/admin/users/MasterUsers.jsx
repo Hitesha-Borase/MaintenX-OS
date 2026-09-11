@@ -3,18 +3,22 @@ import { useMasterAdmin } from "../../../context/MasterAdminContext";
 import { Card } from "../../../components/common/Card";
 import { Badge } from "../../../components/common/Badge";
 import { Button } from "../../../components/common/Button";
-import { Search, Eye, Ban, CheckCircle, Filter } from "lucide-react";
+import { Search, Eye, Ban, CheckCircle, Filter, Trash2 } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { UserProfileModal } from "./UserProfileModal";
 
 export function MasterUsers() {
-  const { users, updateUserStatus } = useMasterAdmin();
+  const { users, updateUserStatus, removeUser, fetchUsers } = useMasterAdmin();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const { addToast } = useApp();
   
   const [selectedUser, setSelectedUser] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  React.useEffect(() => {
+    fetchUsers?.();
+  }, [fetchUsers]);
 
   const filteredUsers = users.filter(u => {
     const matchesSearch = u.name.toLowerCase().includes(searchTerm.toLowerCase()) || u.company.toLowerCase().includes(searchTerm.toLowerCase()) || u.role.toLowerCase().includes(searchTerm.toLowerCase());
@@ -51,6 +55,17 @@ export function MasterUsers() {
     }
   };
 
+  const handleDeleteUser = async (user) => {
+    if (!window.confirm(`Permanently delete user "${user.name}" (${user.email})? This cannot be undone.`)) return;
+    try {
+      await removeUser(user.id);
+      addToast(`User ${user.name} deleted permanently`, "success");
+      if (selectedUser?.id === user.id) setIsModalOpen(false);
+    } catch (e) {
+      addToast("Failed to delete user", "error");
+    }
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "100%" }}>
       <div>
@@ -60,23 +75,23 @@ export function MasterUsers() {
       </div>
 
       <Card style={{ padding: "0" }}>
-        <div style={{ padding: "14px 16px", borderBottom: "1px solid var(--border-subtle)", display: "flex", gap: "10px", flexWrap: "wrap", backgroundColor: "#FFFFFF" }}>
-          <div style={{ flex: "1 1 200px", position: "relative" }}>
-            <Search size={15} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
+        <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--border-subtle)", display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap", backgroundColor: "#FFFFFF" }}>
+          <div style={{ width: "260px", minWidth: "180px", position: "relative" }}>
+            <Search size={14} style={{ position: "absolute", left: "11px", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
             <input 
               type="text" 
               placeholder="Search by name, role, or company..." 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ width: "100%", padding: "8px 12px 8px 34px", borderRadius: "8px", border: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)", fontSize: "13px", boxSizing: "border-box", outline: "none" }}
+              style={{ width: "100%", padding: "7px 12px 7px 32px", borderRadius: "8px", border: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)", fontSize: "12px", boxSizing: "border-box", outline: "none" }}
             />
           </div>
-          <div style={{ display: "flex", gap: "8px", alignItems: "center", flex: "1 1 150px", maxWidth: "200px" }}>
+          <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
             <Filter size={14} color="var(--text-secondary)" style={{ flexShrink: 0 }} />
             <select 
               value={statusFilter} 
               onChange={(e) => setStatusFilter(e.target.value)}
-              style={{ flex: 1, minWidth: 0, padding: "8px 10px", borderRadius: "8px", border: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)", color: "var(--text-primary)", fontSize: "13px", fontWeight: 500, outline: "none", boxSizing: "border-box" }}
+              style={{ width: "150px", padding: "7px 10px", borderRadius: "8px", border: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)", color: "var(--text-primary)", fontSize: "12px", fontWeight: 600, outline: "none", cursor: "pointer" }}
             >
               <option value="All">All Statuses</option>
               <option value="Active">Active</option>
@@ -130,6 +145,7 @@ export function MasterUsers() {
                 ) : (
                   <Button variant="ghost" size="sm" onClick={() => handleActivate(user)} title="Activate User" style={{ padding: "4px" }}><CheckCircle size={13} color="#10B981" /></Button>
                 )}
+                <Button variant="ghost" size="sm" onClick={() => handleDeleteUser(user)} title="Delete User Permanently" style={{ padding: "4px" }}><Trash2 size={13} color="#EF4444" /></Button>
               </div>
             </div>
           ))}
@@ -176,6 +192,7 @@ export function MasterUsers() {
                       ) : (
                         <Button variant="ghost" size="sm" onClick={() => handleActivate(user)} title="Activate User"><CheckCircle size={16} color="#10B981" /></Button>
                       )}
+                      <Button variant="ghost" size="sm" onClick={() => handleDeleteUser(user)} title="Delete User Permanently"><Trash2 size={16} color="#EF4444" /></Button>
                     </div>
                   </td>
                 </tr>
