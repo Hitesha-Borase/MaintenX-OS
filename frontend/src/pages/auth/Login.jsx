@@ -24,7 +24,10 @@ import {
   Flame,
   Eye,
   EyeOff,
-  ArrowLeft
+  ArrowLeft,
+  Zap,
+  AlertCircle,
+  X
 } from "lucide-react";
 import { Button } from "../../components/common/Button";
 
@@ -55,12 +58,16 @@ export function Login() {
   const [password, setPassword] = useState("Password@123");
   const [showPassword, setShowPassword] = useState(false);
   const [hoveredRole, setHoveredRole] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [authError, setAuthError] = useState(null);
 
   const handleRoleSelect = (roleId) => {
     setSelectedRole(roleId);
+    setAuthError(null);
     const targetRole = ROLES.find((r) => r.id === roleId);
     if (targetRole?.user?.email) {
       setUsername(targetRole.user.email);
+      setPassword("Password@123");
     }
   };
 
@@ -81,25 +88,44 @@ export function Login() {
     setParticles(list);
   }, []);
 
+  // Real Credential Login: Validates against PostgreSQL users database
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const roleObj = ROLES.find((r) => r.id === selectedRole) || ROLES[10];
-
-    try {
-      if (loginWithCredentials && username && password) {
-        const res = await loginWithCredentials(username, password, selectedRole);
-        if (res?.success) {
-          addToast(`Authenticated as ${roleObj.label} (${res.user?.firstName ? `${res.user.firstName} ${res.user.lastName || ""}` : (roleObj.user?.name || "User")})!`, "success");
-          navigate(roleObj?.defaultRoute || "/dashboard");
-          return;
-        }
-      }
-    } catch (err) {
-      console.warn("API Login failed, using role authentication:", err);
+    setAuthError(null);
+    if (!username.trim() || !password) {
+      setAuthError({
+        title: "Required Credentials Missing",
+        message: "Please enter both your corporate username and security password."
+      });
+      return;
     }
 
+    setIsSubmitting(true);
+    try {
+      const res = await loginWithCredentials(username.trim(), password);
+      if (res?.success) {
+        const displayName = res.user?.name || (res.user?.firstName ? `${res.user.firstName} ${res.user.lastName || ""}`.trim() : "User");
+        addToast(`Authenticated as ${res.role?.label || "User"} (${displayName})! Welcome to MaintenX OS.`, "success");
+        navigate(res.role?.defaultRoute || "/dashboard");
+        return;
+      }
+    } catch (err) {
+      console.warn("Credential authentication failed:", err.message);
+      setAuthError({
+        title: "Invalid Corporate Credentials",
+        message: "The username or security password entered does not match our records. Please verify and try again."
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // 1-Click Quick Demo Login (for developers/testers)
+  const handleQuickDemoLogin = () => {
+    setAuthError(null);
+    const roleObj = ROLES.find((r) => r.id === selectedRole) || ROLES[10];
     login(selectedRole);
-    addToast(`Authenticated as ${roleObj.label} (${roleObj.user?.name || "User"})! Welcome to MaintenX OS.`, "success");
+    addToast(`Quick Demo Session: Authenticated as ${roleObj.label} (${roleObj.user?.name || "User"})!`, "success");
     navigate(roleObj?.defaultRoute || "/dashboard");
   };
 
@@ -389,7 +415,66 @@ export function Login() {
             </div>
           </div>
 
-          <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+          <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
+            {/* Prominent Top Error Alert Banner */}
+            {authError && (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: "12px",
+                  padding: "13px 16px",
+                  borderRadius: "12px",
+                  backgroundColor: "#FEF2F2",
+                  border: "1.5px solid #F87171",
+                  boxShadow: "0 4px 16px rgba(220, 38, 38, 0.12)",
+                  animation: "subtleScale 0.25s ease-out"
+                }}
+              >
+                <div
+                  style={{
+                    width: "28px",
+                    height: "28px",
+                    borderRadius: "50%",
+                    backgroundColor: "#FEE2E2",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                    marginTop: "1px"
+                  }}
+                >
+                  <AlertCircle size={17} color="#DC2626" />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: "13px", fontWeight: 800, color: "#991B1B", lineHeight: 1.35 }}>
+                    {authError.title}
+                  </div>
+                  <div style={{ fontSize: "11.5px", fontWeight: 600, color: "#B91C1C", marginTop: "3px", opacity: 0.95 }}>
+                    {authError.message}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setAuthError(null)}
+                  style={{
+                    background: "transparent",
+                    border: "none",
+                    color: "#991B1B",
+                    cursor: "pointer",
+                    padding: "4px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderRadius: "4px"
+                  }}
+                  title="Dismiss error"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            )}
+
             {/* Inputs Row */}
             <div className="login-inputs-grid">
               <div className="form-group" style={{ marginBottom: 0 }}>
@@ -400,13 +485,17 @@ export function Login() {
                   type="email"
                   className="form-input-amber"
                   value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+                  onChange={(e) => {
+                    setUsername(e.target.value);
+                    if (authError) setAuthError(null);
+                  }}
                   style={{
                     width: "100%",
                     padding: "11px 14px",
                     borderRadius: "10px",
                     backgroundColor: "#FFFFFF",
-                    border: "1px solid var(--border-subtle)",
+                    border: authError ? "1.5px solid #F87171" : "1px solid var(--border-subtle)",
+                    boxShadow: authError ? "0 0 0 3px rgba(239, 68, 68, 0.12)" : "none",
                     color: "var(--text-primary)",
                     fontSize: "13px",
                     fontWeight: 600,
@@ -426,13 +515,17 @@ export function Login() {
                     type={showPassword ? "text" : "password"}
                     className="form-input-amber"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      if (authError) setAuthError(null);
+                    }}
                     style={{
                       width: "100%",
                       padding: "11px 40px 11px 14px",
                       borderRadius: "10px",
                       backgroundColor: "#FFFFFF",
-                      border: "1px solid var(--border-subtle)",
+                      border: authError ? "1.5px solid #F87171" : "1px solid var(--border-subtle)",
+                      boxShadow: authError ? "0 0 0 3px rgba(239, 68, 68, 0.12)" : "none",
                       color: "var(--text-primary)",
                       fontSize: "13px",
                       fontWeight: 600,
@@ -557,33 +650,72 @@ export function Login() {
               </div>
             </div>
 
-            {/* Metallic Amber Gold Submit Button */}
-            <button
-              type="submit"
-              style={{
-                width: "100%",
-                height: "48px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "8px",
-                fontSize: "14px",
-                fontWeight: 800,
-                marginTop: "6px",
-                background: "linear-gradient(180deg, #E2B670 0%, #C89547 50%, #B27E33 100%)",
-                border: "1px solid #E8C182",
-                boxShadow: "0 4px 14px rgba(178, 126, 51, 0.35)",
-                borderRadius: "50px",
-                color: "#261603",
-                cursor: "pointer",
-                transition: "transform 0.15s ease",
-                outline: "none"
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.transform = "scale(1.015)"}
-              onMouseLeave={(e) => e.currentTarget.style.transform = "scale(1)"}
-            >
-              <Sparkles size={16} /> Authenticate & Start Session
-            </button>
+            {/* Action Buttons: Real Secure Login + Quick Demo Login */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "6px" }}>
+              {/* Metallic Amber Gold Submit Button for Real Email/Password Auth */}
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                style={{
+                  width: "100%",
+                  height: "48px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "8px",
+                  fontSize: "14px",
+                  fontWeight: 800,
+                  background: isSubmitting
+                    ? "#DCCFBF"
+                    : "linear-gradient(180deg, #E2B670 0%, #C89547 50%, #B27E33 100%)",
+                  border: "1px solid #E8C182",
+                  boxShadow: "0 4px 14px rgba(178, 126, 51, 0.35)",
+                  borderRadius: "50px",
+                  color: "#261603",
+                  cursor: isSubmitting ? "not-allowed" : "pointer",
+                  transition: "transform 0.15s ease",
+                  outline: "none",
+                  opacity: isSubmitting ? 0.7 : 1
+                }}
+                onMouseEnter={(e) => !isSubmitting && (e.currentTarget.style.transform = "scale(1.012)")}
+                onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
+              >
+                <Sparkles size={16} /> {isSubmitting ? "Verifying Credentials..." : "Authenticate & Start Session"}
+              </button>
+
+              {/* 1-Click Quick Demo Login Button */}
+              <button
+                type="button"
+                onClick={handleQuickDemoLogin}
+                style={{
+                  width: "100%",
+                  height: "40px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "6px",
+                  fontSize: "12px",
+                  fontWeight: 700,
+                  backgroundColor: "rgba(200, 149, 71, 0.08)",
+                  border: "1px dashed #C89547",
+                  borderRadius: "50px",
+                  color: "#8C5B23",
+                  cursor: "pointer",
+                  transition: "all 0.15s ease",
+                  outline: "none"
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = "rgba(200, 149, 71, 0.18)";
+                  e.currentTarget.style.borderColor = "#B27E33";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = "rgba(200, 149, 71, 0.08)";
+                  e.currentTarget.style.borderColor = "#C89547";
+                }}
+              >
+                <Zap size={14} color="#C89547" /> 1-Click Quick Demo Login ({ROLES.find((r) => r.id === selectedRole)?.label || "Selected Persona"})
+              </button>
+            </div>
           </form>
 
           <div style={{ textAlign: "center", fontSize: "11px", color: "var(--text-muted)", borderTop: "1px solid var(--border-subtle)", paddingTop: "12px", fontWeight: 600 }}>

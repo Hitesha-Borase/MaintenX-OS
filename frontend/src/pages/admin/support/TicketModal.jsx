@@ -4,17 +4,21 @@ import { Button } from "../../../components/common/Button";
 import { Send, CheckCircle, MessageSquare } from "lucide-react";
 import { Badge } from "../../../components/common/Badge";
 
-export function TicketModal({ isOpen, onClose, ticket = null, onResolve }) {
+export function TicketModal({ isOpen, onClose, ticket = null, onResolve, onReply }) {
   const [reply, setReply] = useState("");
-  const [messages, setMessages] = useState([
-    { sender: "User", text: "Please help, I have an issue with this." }
-  ]);
+  const [messages, setMessages] = useState([]);
 
   // Reset when opening a new ticket
   React.useEffect(() => {
     if (ticket) {
       setReply("");
-      setMessages([{ sender: "User", text: `Details for: ${ticket.subject}` }]);
+      const initial = [
+        { sender: ticket.company || "Tenant User", text: ticket.description || `Support request for: ${ticket.subject}` }
+      ];
+      if (ticket.resolution) {
+        initial.push({ sender: "Master Admin", text: `Resolution Note: ${ticket.resolution}` });
+      }
+      setMessages(initial);
     }
   }, [ticket]);
 
@@ -23,11 +27,14 @@ export function TicketModal({ isOpen, onClose, ticket = null, onResolve }) {
   const handleSendReply = () => {
     if (!reply.trim()) return;
     setMessages(prev => [...prev, { sender: "Master Admin", text: reply }]);
+    if (onReply) {
+      onReply(ticket.id, reply);
+    }
     setReply("");
   };
 
   const handleResolveClick = () => {
-    onResolve(ticket.id);
+    onResolve(ticket.id, reply || ticket.resolution || "Resolved by Master Administrator");
     onClose();
   };
 
