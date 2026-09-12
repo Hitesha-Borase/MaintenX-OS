@@ -3,6 +3,8 @@ import {
   UserPlus,
   Send,
   Trash2,
+  Eye,
+  Pencil,
   CheckCircle2,
   Clock,
   Plus,
@@ -22,15 +24,24 @@ import { useApp } from "../../../context/AppContext";
 import adminService from "../../../services/adminService";
 
 export function UserInvitationsPage() {
-  const { invitations = [], addInvitation, resendInvitation, deleteInvitation } = useAdmin();
-  const { addToast } = useApp();
+  const { invitations = [], setInvitations, addInvitation, updateInvitation, resendInvitation, deleteInvitation } = useAdmin() || {};
+  const { addToast } = useApp ? useApp() : { addToast: () => {} };
 
   useEffect(() => {
-    adminService.getInvitations().catch((err) => console.warn("Invitations load:", err.message));
-  }, []);
+    adminService
+      .getInvitations()
+      .then((data) => {
+        if (Array.isArray(data) && setInvitations) {
+          setInvitations(data);
+        }
+      })
+      .catch((err) => console.warn("Invitations load:", err.message));
+  }, [setInvitations]);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [viewingInvite, setViewingInvite] = useState(null);
   const [deletingInvite, setDeletingInvite] = useState(null);
+  const [editingInvite, setEditingInvite] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [newInvite, setNewInvite] = useState({
@@ -38,6 +49,40 @@ export function UserInvitationsPage() {
     role: "Quality Analyst",
     department: "Quality"
   });
+
+  const [editForm, setEditForm] = useState({
+    email: "",
+    role: "Quality Analyst",
+    department: "Quality",
+    status: "Pending"
+  });
+
+  const handleOpenEdit = (inv) => {
+    setEditingInvite(inv);
+    setEditForm({
+      email: inv.email,
+      role: inv.role,
+      department: inv.department || "Quality",
+      status: inv.status || "Pending"
+    });
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    if (!editingInvite) return;
+    try {
+      setIsSubmitting(true);
+      if (updateInvitation) {
+        await updateInvitation(editingInvite.id || editingInvite.email, editForm);
+      }
+      addToast(`Invitation for ${editForm.email} successfully updated in database!`, "success");
+      setEditingInvite(null);
+    } catch (err) {
+      addToast("Failed to update invitation: " + err.message, "error");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const handleResend = async (id, email) => {
     try {
@@ -182,6 +227,42 @@ export function UserInvitationsPage() {
                   <td>
                     <div style={{ display: "flex", gap: "6px" }}>
                       <button
+                        onClick={() => setViewingInvite(i)}
+                        title="View Invitation Details"
+                        style={{
+                          width: "30px",
+                          height: "30px",
+                          borderRadius: "6px",
+                          backgroundColor: "rgba(14, 165, 233, 0.1)",
+                          color: "#0284C7",
+                          border: "1px solid var(--border-subtle)",
+                          cursor: "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center"
+                        }}
+                      >
+                        <Eye size={13} />
+                      </button>
+                      <button
+                        onClick={() => handleOpenEdit(i)}
+                        title="Edit Invitation"
+                        style={{
+                          width: "30px",
+                          height: "30px",
+                          borderRadius: "6px",
+                          backgroundColor: "rgba(234, 179, 8, 0.1)",
+                          color: "#CA8A04",
+                          border: "1px solid var(--border-subtle)",
+                          cursor: "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center"
+                        }}
+                      >
+                        <Pencil size={13} />
+                      </button>
+                      <button
                         onClick={() => handleResend(i.id, i.email)}
                         title="Resend Invite Link"
                         style={{
@@ -297,6 +378,203 @@ export function UserInvitationsPage() {
       )}
 
       {/* CONFIRM REVOKE INVITATION MODAL */}
+      {/* VIEW INVITATION DETAILS MODAL */}
+      {viewingInvite && (
+        <div className="modal-backdrop" onClick={() => setViewingInvite(null)}>
+          <div className="modal-content" style={{ maxWidth: "480px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Eye size={18} color="#0284C7" />
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)" }}>
+                  Invitation Details
+                </h2>
+              </div>
+              <button onClick={() => setViewingInvite(null)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div>
+                  <span style={{ fontSize: "11px", color: "var(--text-muted)", display: "block" }}>Invite ID</span>
+                  <strong style={{ fontFamily: "var(--font-mono)", color: "#8C5B23" }}>{viewingInvite.id}</strong>
+                </div>
+                <div>
+                  <span style={{ fontSize: "11px", color: "var(--text-muted)", display: "block" }}>Status</span>
+                  <Badge variant="amber">{viewingInvite.status}</Badge>
+                </div>
+                <div>
+                  <span style={{ fontSize: "11px", color: "var(--text-muted)", display: "block" }}>Recipient Email</span>
+                  <strong style={{ color: "var(--text-primary)", fontSize: "13px" }}>{viewingInvite.email}</strong>
+                </div>
+                <div>
+                  <span style={{ fontSize: "11px", color: "var(--text-muted)", display: "block" }}>Assigned Role</span>
+                  <Badge variant="cyan">{viewingInvite.role}</Badge>
+                </div>
+                <div>
+                  <span style={{ fontSize: "11px", color: "var(--text-muted)", display: "block" }}>Department</span>
+                  <span style={{ color: "var(--text-primary)", fontSize: "13px" }}>{viewingInvite.department || "Operations"}</span>
+                </div>
+                <div>
+                  <span style={{ fontSize: "11px", color: "var(--text-muted)", display: "block" }}>Dispatched Date</span>
+                  <span style={{ color: "var(--text-secondary)", fontSize: "13px" }}>{viewingInvite.sentDate || "Recent"}</span>
+                </div>
+              </div>
+
+              <div style={{ borderTop: "1px solid var(--border-subtle)", paddingTop: "14px", display: "flex", justifyContent: "flex-end", gap: "8px" }}>
+                <Button variant="secondary" onClick={() => setViewingInvite(null)}>
+                  Close
+                </Button>
+                <Button
+                  variant="primary"
+                  icon={Send}
+                  onClick={() => {
+                    handleResend(viewingInvite.id, viewingInvite.email);
+                    setViewingInvite(null);
+                  }}
+                >
+                  Resend Link
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT INVITATION MODAL */}
+      {editingInvite && (
+        <div className="modal-backdrop" onClick={() => setEditingInvite(null)}>
+          <div className="modal-content" style={{ maxWidth: "480px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <div style={{ width: "28px", height: "28px", borderRadius: "50%", backgroundColor: "rgba(234, 179, 8, 0.12)", color: "#CA8A04", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <Pencil size={14} />
+                </div>
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)" }}>
+                  Edit Invitation ({editingInvite.id})
+                </h2>
+              </div>
+              <button onClick={() => setEditingInvite(null)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditSubmit} style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
+              <div>
+                <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)", marginBottom: "6px" }}>
+                  Recipient Email
+                </label>
+                <input
+                  type="email"
+                  required
+                  value={editForm.email}
+                  onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                  style={{
+                    width: "100%",
+                    padding: "8px 12px",
+                    borderRadius: "6px",
+                    border: "1px solid var(--border-subtle)",
+                    backgroundColor: "var(--bg-card)",
+                    color: "var(--text-primary)",
+                    fontSize: "13px"
+                  }}
+                />
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div>
+                  <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)", marginBottom: "6px" }}>
+                    Assigned Role
+                  </label>
+                  <select
+                    value={editForm.role}
+                    onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
+                    style={{
+                      width: "100%",
+                      padding: "8px 12px",
+                      borderRadius: "6px",
+                      border: "1px solid var(--border-subtle)",
+                      backgroundColor: "var(--bg-card)",
+                      color: "var(--text-primary)",
+                      fontSize: "13px"
+                    }}
+                  >
+                    <option value="System Administrator">System Administrator</option>
+                    <option value="Plant Manager">Plant Manager</option>
+                    <option value="Maintenance Lead">Maintenance Lead</option>
+                    <option value="Quality Analyst">Quality Analyst</option>
+                    <option value="QA Manager">QA Manager</option>
+                    <option value="Production Supervisor">Production Supervisor</option>
+                    <option value="Operator / Line Tech">Operator / Line Tech</option>
+                    <option value="Warehouse Specialist">Warehouse Specialist</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)", marginBottom: "6px" }}>
+                    Department
+                  </label>
+                  <select
+                    value={editForm.department}
+                    onChange={(e) => setEditForm({ ...editForm, department: e.target.value })}
+                    style={{
+                      width: "100%",
+                      padding: "8px 12px",
+                      borderRadius: "6px",
+                      border: "1px solid var(--border-subtle)",
+                      backgroundColor: "var(--bg-card)",
+                      color: "var(--text-primary)",
+                      fontSize: "13px"
+                    }}
+                  >
+                    <option value="Quality">Quality Assurance</option>
+                    <option value="Maintenance">Maintenance</option>
+                    <option value="Production">Production</option>
+                    <option value="Warehouse">Warehouse</option>
+                    <option value="Engineering">Engineering</option>
+                    <option value="Operations">Operations</option>
+                    <option value="Executive">Executive</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)", marginBottom: "6px" }}>
+                  Invitation Status
+                </label>
+                <select
+                  value={editForm.status}
+                  onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
+                  style={{
+                    width: "100%",
+                    padding: "8px 12px",
+                    borderRadius: "6px",
+                    border: "1px solid var(--border-subtle)",
+                    backgroundColor: "var(--bg-card)",
+                    color: "var(--text-primary)",
+                    fontSize: "13px"
+                  }}
+                >
+                  <option value="Pending">Pending</option>
+                  <option value="Accepted">Accepted</option>
+                  <option value="Revoked">Revoked</option>
+                </select>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "8px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
+                <Button variant="secondary" type="button" onClick={() => setEditingInvite(null)}>
+                  Cancel
+                </Button>
+                <Button variant="primary" type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? "Saving..." : "Update Invitation"}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {deletingInvite && (
         <div className="modal-backdrop" onClick={() => setDeletingInvite(null)}>
           <div className="modal-content" style={{ maxWidth: "420px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>

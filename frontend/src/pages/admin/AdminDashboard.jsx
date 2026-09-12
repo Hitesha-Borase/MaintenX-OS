@@ -37,8 +37,8 @@ import { useNavigate } from "react-router-dom";
 import { adminService } from "../../services/adminService";
 
 export function AdminDashboard() {
-  const { users = [], roles = [], items = [], dataHealthStats = {}, addUser } = useAdmin();
-  const { addToast } = useApp();
+  const { users = [], roles = [], items = [], dataHealthStats = {}, addUser } = useAdmin() || {};
+  const { addToast } = (useApp ? useApp() : null) || { addToast: () => {} };
   const navigate = useNavigate();
 
   const [isAuditing, setIsAuditing] = useState(false);

@@ -147,6 +147,10 @@ export const warehouseService = {
     return apiClient.post("/warehouse/lots", lotData);
   },
 
+  async deleteSupplier(id) {
+    return apiClient.delete(`/warehouse/suppliers/${id}`);
+  },
+
   async toggleSupplierStatus(id) {
     return apiClient.post(`/warehouse/suppliers/${id}/toggle-status`, {});
   },

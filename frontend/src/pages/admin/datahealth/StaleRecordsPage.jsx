@@ -11,6 +11,7 @@ import {
   Package,
   Layers,
   Eye,
+  Trash2,
   X
 } from "lucide-react";
 import { Card } from "../../../components/common/Card";
@@ -34,6 +35,7 @@ export function StaleRecordsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [viewingRecord, setViewingRecord] = useState(null);
   const [archivingRecord, setArchivingRecord] = useState(null);
+  const [deletingRecord, setDeletingRecord] = useState(null);
   const [isActioning, setIsActioning] = useState(false);
 
   const fetchScan = () => {
@@ -67,6 +69,25 @@ export function StaleRecordsPage() {
     } catch (err) {
       console.error(err);
       addToast(`Error archiving record: ${err.message}`, "error");
+    } finally {
+      setIsActioning(false);
+    }
+  };
+
+  const handleDeleteRecord = async (record) => {
+    try {
+      setIsActioning(true);
+      await adminService.deleteDataHealth({
+        category: "staleRecords",
+        id: record.id,
+        details: record
+      });
+      setStaleRecords((prev) => prev.filter((s) => s.id !== record.id));
+      addToast(`Record ${record.id} deleted from database!`, "success");
+      setDeletingRecord(null);
+    } catch (err) {
+      console.error(err);
+      addToast(`Error deleting record: ${err.message}`, "error");
     } finally {
       setIsActioning(false);
     }
@@ -316,11 +337,31 @@ export function StaleRecordsPage() {
                               justifyContent: "center"
                             }}
                           >
-                            <Archive size={13} />
+                              <Archive size={13} />
+                            </button>
+                          ) : (
+                            <span style={{ fontSize: "12px", color: "#059669", fontWeight: 700, padding: "0 4px" }}>Archived</span>
+                          )}
+
+                          {/* Delete Button */}
+                          <button
+                            onClick={() => setDeletingRecord(s)}
+                            title="Delete Record"
+                            style={{
+                              width: "30px",
+                              height: "30px",
+                              borderRadius: "6px",
+                              backgroundColor: "var(--bg-card-subtle)",
+                              color: "#DC2626",
+                              border: "1px solid var(--border-subtle)",
+                              cursor: "pointer",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center"
+                            }}
+                          >
+                            <Trash2 size={13} />
                           </button>
-                        ) : (
-                          <span style={{ fontSize: "12px", color: "#059669", fontWeight: 700, padding: "0 4px" }}>Archived</span>
-                        )}
                       </div>
                     </td>
                   </tr>
@@ -454,6 +495,60 @@ export function StaleRecordsPage() {
                 style={{ fontSize: "12px", padding: "7px 14px" }}
               >
                 {isActioning ? "Archiving..." : "Confirm Archive"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Delete Record Confirmation Modal */}
+      {deletingRecord && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.5)",
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px"
+          }}
+          onClick={() => setDeletingRecord(null)}
+        >
+          <div
+            style={{
+              backgroundColor: "#FFFFFF",
+              borderRadius: "16px",
+              maxWidth: "440px",
+              width: "100%",
+              padding: "24px",
+              boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)"
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px" }}>
+              <div style={{ width: "36px", height: "36px", borderRadius: "50%", backgroundColor: "rgba(220, 38, 38, 0.1)", display: "flex", alignItems: "center", justifyContent: "center", color: "#DC2626" }}>
+                <Trash2 size={18} />
+              </div>
+              <h3 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                Delete Stale Record
+              </h3>
+            </div>
+            <p style={{ fontSize: "13px", color: "var(--text-secondary)", lineHeight: 1.5, margin: "0 0 20px 0" }}>
+              Are you sure you want to permanently delete <strong>{deletingRecord.name}</strong> ({deletingRecord.id})? This will remove the record from the system and database.
+            </p>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px" }}>
+              <Button variant="secondary" onClick={() => setDeletingRecord(null)} disabled={isActioning} style={{ fontSize: "12px", padding: "7px 14px" }}>
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                icon={Trash2}
+                disabled={isActioning}
+                onClick={() => handleDeleteRecord(deletingRecord)}
+                style={{ backgroundColor: "#DC2626", borderColor: "#DC2626", color: "#FFFFFF", fontSize: "12px", padding: "7px 14px" }}
+              >
+                {isActioning ? "Deleting..." : "Delete Permanently"}
               </Button>
             </div>
           </div>

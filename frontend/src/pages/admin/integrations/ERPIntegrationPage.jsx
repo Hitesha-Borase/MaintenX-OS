@@ -6,7 +6,10 @@ import {
   AlertTriangle,
   Clock,
   Zap,
-  Activity
+  Activity,
+  Eye,
+  Trash2,
+  X
 } from "lucide-react";
 import { Card } from "../../../components/common/Card";
 import { Badge } from "../../../components/common/Badge";
@@ -26,6 +29,14 @@ export function ERPIntegrationPage() {
     errorQueue: "0 Errors"
   });
   const [syncStatus, setSyncStatus] = useState("Synchronized (Last: 2 mins ago)");
+  const [viewingEvent, setViewingEvent] = useState(null);
+  const [syncEvents, setSyncEvents] = useState([
+    { time: "2 mins ago", type: "Delta Sync", scope: "Purchase Orders, Inventory", count: "142", status: "Success" },
+    { time: "17 mins ago", type: "Delta Sync", scope: "Production Orders", count: "38", status: "Success" },
+    { time: "32 mins ago", type: "Delta Sync", scope: "Master Data (SKUs)", count: "14", status: "Success" },
+    { time: "47 mins ago", type: "Delta Sync", scope: "Purchase Orders, Inventory", count: "129", status: "Success" },
+    { time: "1 hour ago", type: "Full Master Sync", scope: "All ERP Entities", count: "4,592", status: "Success" }
+  ]);
 
   useEffect(() => {
     adminService.getERPStatus()
@@ -158,16 +169,11 @@ export function ERPIntegrationPage() {
                 <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Entity Scope</th>
                 <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Records Processed</th>
                 <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Status</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", textAlign: "right" }}>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {[
-                { time: "2 mins ago", type: "Delta Sync", scope: "Purchase Orders, Inventory", count: "142", status: "Success" },
-                { time: "17 mins ago", type: "Delta Sync", scope: "Production Orders", count: "38", status: "Success" },
-                { time: "32 mins ago", type: "Delta Sync", scope: "Master Data (SKUs)", count: "14", status: "Success" },
-                { time: "47 mins ago", type: "Delta Sync", scope: "Purchase Orders, Inventory", count: "129", status: "Success" },
-                { time: "1 hour ago", type: "Full Master Sync", scope: "All ERP Entities", count: "4,592", status: "Success" }
-              ].map((event, idx) => (
+              {syncEvents.map((event, idx) => (
                 <tr key={idx} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
                   <td style={{ padding: "12px 16px", fontSize: "12px", color: "var(--text-secondary)" }}>{event.time}</td>
                   <td style={{ padding: "12px 16px", fontSize: "13px", fontWeight: 700, color: "var(--text-primary)" }}>{event.type}</td>
@@ -176,12 +182,66 @@ export function ERPIntegrationPage() {
                   <td style={{ padding: "12px 16px" }}>
                     <Badge variant={event.status === "Success" ? "emerald" : "red"}>{event.status}</Badge>
                   </td>
+                  <td style={{ padding: "12px 16px", textAlign: "right" }}>
+                    <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                      <button onClick={() => setViewingEvent(event)} title="View Event Details" style={{ width: "28px", height: "28px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", color: "#0284C7", border: "1px solid var(--border-subtle)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+                        <Eye size={13} />
+                      </button>
+                      <button onClick={() => { setSyncEvents((prev) => prev.filter((_, i) => i !== idx)); addToast("Sync event removed from log.", "info"); }} title="Remove Event" style={{ width: "28px", height: "28px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", color: "#EF4444", border: "1px solid var(--border-subtle)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       </Card>
+
+      {/* VIEW EVENT MODAL */}
+      {viewingEvent && (
+        <div className="modal-backdrop" onClick={() => setViewingEvent(null)}>
+          <div className="modal-content" style={{ maxWidth: "480px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Activity size={18} color="#C89547" />
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>Sync Event Details</h2>
+              </div>
+              <button onClick={() => setViewingEvent(null)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+            <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Timestamp</div>
+                  <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)", marginTop: "4px" }}>{viewingEvent.time}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Status</div>
+                  <div style={{ marginTop: "6px" }}><Badge variant={viewingEvent.status === "Success" ? "emerald" : "red"}>{viewingEvent.status}</Badge></div>
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Event Type</div>
+                <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)", marginTop: "4px" }}>{viewingEvent.type}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Entity Scope</div>
+                <div style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>{viewingEvent.scope}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Records Processed</div>
+                <div style={{ fontSize: "20px", fontWeight: 800, color: "#059669", fontFamily: "var(--font-mono)", marginTop: "4px" }}>{viewingEvent.count}</div>
+              </div>
+              <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "12px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
+                <Button variant="secondary" onClick={() => setViewingEvent(null)}>Close</Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

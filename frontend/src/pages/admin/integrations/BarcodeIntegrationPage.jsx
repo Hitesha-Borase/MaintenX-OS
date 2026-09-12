@@ -7,6 +7,7 @@ import {
   Search,
   X,
   Edit2,
+  Eye,
   QrCode,
   Layers,
   ShieldCheck,
@@ -45,6 +46,8 @@ export function BarcodeIntegrationPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingFormat, setEditingFormat] = useState(null);
+  const [viewingFormat, setViewingFormat] = useState(null);
+  const [deletingFormat, setDeletingFormat] = useState(null);
   const [newFormat, setNewFormat] = useState({
     standard: "",
     useCase: "",
@@ -213,24 +216,29 @@ export function BarcodeIntegrationPage() {
                     <Badge variant="emerald">{f.status}</Badge>
                   </td>
                   <td>
-                    <button
-                      onClick={() => setEditingFormat({ ...f })}
-                      title="Edit Symbology"
-                      style={{
-                        width: "30px",
-                        height: "30px",
-                        borderRadius: "6px",
-                        backgroundColor: "var(--bg-card-subtle)",
-                        color: "var(--text-primary)",
-                        border: "1px solid var(--border-subtle)",
-                        cursor: "pointer",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        justifyContent: "center"
-                      }}
-                    >
-                      <Edit2 size={13} />
-                    </button>
+                    <div style={{ display: "inline-flex", gap: "6px", alignItems: "center" }}>
+                      <button
+                        onClick={() => setViewingFormat(f)}
+                        title="View Barcode Format Details"
+                        style={{ width: "30px", height: "30px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", color: "#0284C7", border: "1px solid var(--border-subtle)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+                      >
+                        <Eye size={13} />
+                      </button>
+                      <button
+                        onClick={() => setEditingFormat({ ...f })}
+                        title="Edit Symbology"
+                        style={{ width: "30px", height: "30px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", color: "var(--text-primary)", border: "1px solid var(--border-subtle)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+                      >
+                        <Edit2 size={13} />
+                      </button>
+                      <button
+                        onClick={() => setDeletingFormat(f)}
+                        title="Delete Format"
+                        style={{ width: "30px", height: "30px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", color: "#EF4444", border: "1px solid var(--border-subtle)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -365,6 +373,68 @@ export function BarcodeIntegrationPage() {
                 </Button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* VIEW BARCODE FORMAT MODAL */}
+      {viewingFormat && (
+        <div className="modal-backdrop" onClick={() => setViewingFormat(null)}>
+          <div className="modal-content" style={{ maxWidth: "480px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <QrCode size={18} color="#C89547" />
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>Barcode Format Details</h2>
+              </div>
+              <button onClick={() => setViewingFormat(null)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+            <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 16px", backgroundColor: "var(--bg-card-subtle)", borderRadius: "8px" }}>
+                <div style={{ fontSize: "16px", fontWeight: 800, color: "#8C5B23", fontFamily: "var(--font-mono)" }}>{viewingFormat.id}</div>
+                <Badge variant="emerald">{viewingFormat.status}</Badge>
+              </div>
+              <div>
+                <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Symbology Standard</div>
+                <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)", marginTop: "4px" }}>{viewingFormat.standard}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Application Use Case</div>
+                <div style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>{viewingFormat.useCase}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>AI App Identifier Prefix</div>
+                <div style={{ fontSize: "12px", fontFamily: "var(--font-mono)", color: "#0284C7", marginTop: "4px" }}>{viewingFormat.aiAppPrefix}</div>
+              </div>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "12px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
+                <Button variant="secondary" onClick={() => setViewingFormat(null)}>Close</Button>
+                <Button variant="primary" onClick={() => { const e = { ...viewingFormat }; setViewingFormat(null); setEditingFormat(e); }}>Edit Format</Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* DELETE FORMAT CONFIRM MODAL */}
+      {deletingFormat && (
+        <div className="modal-backdrop" onClick={() => setDeletingFormat(null)}>
+          <div className="modal-content" style={{ maxWidth: "450px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <AlertTriangle size={18} color="#DC2626" />
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>Delete Barcode Format</h2>
+              </div>
+              <button onClick={() => setDeletingFormat(null)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+            <div style={{ padding: "20px" }}>
+              <p style={{ fontSize: "13px", color: "var(--text-secondary)", margin: 0 }}>Are you sure you want to delete barcode format <strong>{deletingFormat.standard}</strong>?</p>
+            </div>
+            <div style={{ padding: "14px 20px", borderTop: "1px solid var(--border-subtle)", display: "flex", justifyContent: "flex-end", gap: "10px", backgroundColor: "var(--bg-card-subtle)" }}>
+              <Button variant="secondary" onClick={() => setDeletingFormat(null)}>Cancel</Button>
+              <Button variant="primary" onClick={() => { setFormats((prev) => prev.filter((f) => f.id !== deletingFormat.id)); addToast(`Format "${deletingFormat.standard}" deleted.`, "info"); setDeletingFormat(null); }} style={{ backgroundColor: "#DC2626", borderColor: "#DC2626", color: "#FFFFFF" }}>Delete</Button>
+            </div>
           </div>
         </div>
       )}

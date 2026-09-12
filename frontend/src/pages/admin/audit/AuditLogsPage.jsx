@@ -14,18 +14,20 @@ import {
   Tag,
   Eye,
   Trash2,
-  X
+  Edit2,
+  Plus,
+  X,
+  AlertTriangle,
+  CheckCircle2
 } from "lucide-react";
 import { Card } from "../../../components/common/Card";
 import { Badge } from "../../../components/common/Badge";
 import { Button } from "../../../components/common/Button";
 import { StatCard } from "../../../components/common/StatCard";
-import { useMasterData } from "../../../context/MasterDataContext";
 import { useApp } from "../../../context/AppContext";
 import adminService from "../../../services/adminService";
 
 export function AuditLogsPage() {
-  const { auditLogs: contextLogs = [] } = useMasterData();
   const { addToast } = useApp();
 
   const [dbLogs, setDbLogs] = useState([]);
@@ -34,13 +36,27 @@ export function AuditLogsPage() {
   const [entityFilter, setEntityFilter] = useState("ALL");
 
   const [viewingLog, setViewingLog] = useState(null);
+  const [editingLog, setEditingLog] = useState(null);
   const [deletingLog, setDeletingLog] = useState(null);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isActioning, setIsActioning] = useState(false);
+
+  // Form states for creating a new log
+  const [newLog, setNewLog] = useState({
+    user: "Alexander Vance",
+    userRole: "System Administrator",
+    entityType: "SKU Master",
+    entityId: "",
+    action: "Created",
+    oldValue: "-",
+    newValue: "",
+    notes: ""
+  });
 
   const fetchLogs = async () => {
     try {
       const data = await adminService.getAuditLogs();
-      if (Array.isArray(data) && data.length > 0) {
+      if (Array.isArray(data)) {
         setDbLogs(data);
       }
     } catch (err) {
@@ -52,27 +68,11 @@ export function AuditLogsPage() {
     fetchLogs();
   }, []);
 
-  // Merge DB logs with context logs (deduplicating by auditId)
-  const allLogs = useMemo(() => {
-    const list = [...dbLogs];
-    const existingIds = new Set(list.map((l) => l.auditId || l.id));
-    for (const cl of contextLogs) {
-      const id = cl.auditId || cl.id;
-      if (!existingIds.has(id)) {
-        list.push({
-          ...cl,
-          auditId: cl.auditId || `AUD-${Math.floor(1000 + Math.random() * 9000)}`,
-          id: cl.id || cl.auditId
-        });
-        existingIds.add(id);
-      }
-    }
-    return list;
-  }, [dbLogs, contextLogs]);
+  const allLogs = dbLogs;
 
   const filteredLogs = useMemo(() => {
     return allLogs.filter((l) => {
-      const matchesAction = actionFilter === "ALL" || l.action === actionFilter;
+      const matchesAction = actionFilter === "ALL" || l.action?.toLowerCase() === actionFilter.toLowerCase();
       const matchesEntity = entityFilter === "ALL" || l.entityType === entityFilter;
       const q = searchQuery.toLowerCase().trim();
       const matchesSearch =
@@ -88,20 +88,82 @@ export function AuditLogsPage() {
     });
   }, [allLogs, actionFilter, entityFilter, searchQuery]);
 
+  const handleCreateSubmit = async (e) => {
+    e.preventDefault();
+    if (!newLog.entityId.trim()) {
+      addToast("Please enter an Entity Target identifier.", "warning");
+      return;
+    }
+    try {
+      setIsActioning(true);
+      const res = await adminService.createAuditLog(newLog);
+      if (res && res.id) {
+        setDbLogs((prev) => [res, ...prev]);
+        addToast(`Audit log ${res.auditId || res.id} recorded in database!`, "success");
+      } else {
+        await fetchLogs();
+        addToast("Audit log successfully saved to database!", "success");
+      }
+      setIsAddModalOpen(false);
+      setNewLog({
+        user: "Alexander Vance",
+        userRole: "System Administrator",
+        entityType: "SKU Master",
+        entityId: "",
+        action: "Created",
+        oldValue: "-",
+        newValue: "",
+        notes: ""
+      });
+    } catch (err) {
+      console.error(err);
+      addToast(`Failed to create audit log: ${err.message}`, "error");
+    } finally {
+      setIsActioning(false);
+    }
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    if (!editingLog) return;
+    try {
+      setIsActioning(true);
+      const targetId = editingLog.id || editingLog.auditId;
+      await adminService.updateAuditLog(targetId, {
+        action: editingLog.action,
+        entityType: editingLog.entityType,
+        entityId: editingLog.entityId,
+        oldValue: editingLog.oldValue,
+        newValue: editingLog.newValue,
+        notes: editingLog.notes
+      });
+      setDbLogs((prev) =>
+        prev.map((l) => ((l.id || l.auditId) === targetId ? { ...l, ...editingLog } : l))
+      );
+      addToast(`Audit record ${editingLog.auditId || targetId} updated in database!`, "success");
+      setEditingLog(null);
+    } catch (err) {
+      console.error(err);
+      addToast(`Failed to update audit log: ${err.message}`, "error");
+    } finally {
+      setIsActioning(false);
+    }
+  };
+
   const handleDeleteLog = async () => {
     if (!deletingLog) return;
     try {
-      setIsDeleting(true);
+      setIsActioning(true);
       const targetId = deletingLog.id || deletingLog.auditId;
       await adminService.deleteAuditLog(targetId);
       setDbLogs((prev) => prev.filter((l) => (l.id || l.auditId) !== targetId));
-      addToast(`Audit record ${deletingLog.auditId} deleted from database!`, "success");
+      addToast(`Audit record ${deletingLog.auditId || targetId} deleted from database!`, "success");
       setDeletingLog(null);
     } catch (err) {
       console.error(err);
       addToast(`Failed to delete audit record: ${err.message}`, "error");
     } finally {
-      setIsDeleting(false);
+      setIsActioning(false);
     }
   };
 
@@ -130,9 +192,20 @@ export function AuditLogsPage() {
             </h1>
             <Badge variant="emerald">21 CFR PART 11 COMPLIANT</Badge>
           </div>
+          <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px", margin: 0 }}>
+            Live PostgreSQL audit registry tracking all master data creations, updates, and removals.
+          </p>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+          <Button
+            variant="primary"
+            icon={Plus}
+            onClick={() => setIsAddModalOpen(true)}
+            style={{ fontSize: "12px", padding: "7px 14px", fontWeight: 700 }}
+          >
+            Log Audit Entry
+          </Button>
           <Button variant="secondary" icon={Download} onClick={handleExportCSV} style={{ fontSize: "12px", padding: "7px 12px" }}>
             Export Audit Ledger (.csv)
           </Button>
@@ -154,7 +227,7 @@ export function AuditLogsPage() {
           title="Recorded Audit Events"
           value={allLogs.length.toString()}
           unit="Transactions"
-          trend={{ value: "Master data mutation trace", isPositive: true, text: "" }}
+          trend={{ value: "Live PostgreSQL trace", isPositive: true, text: "" }}
           icon={History}
           colorVariant="emerald"
         />
@@ -168,7 +241,7 @@ export function AuditLogsPage() {
         />
         <StatCard
           title="Regulated Approvals"
-          value={allLogs.filter((l) => l.action === "Approved").length.toString()}
+          value={allLogs.filter((l) => l.action?.toLowerCase() === "approved").length.toString()}
           unit="Sign-Offs"
           trend={{ value: "Quality & Plant approval gates", isPositive: true, text: "" }}
           icon={ShieldCheck}
@@ -176,7 +249,7 @@ export function AuditLogsPage() {
         />
         <StatCard
           title="Active System Actors"
-          value="5 Users"
+          value={`${new Set(allLogs.map(l => l.user).filter(Boolean)).size || 1} Users`}
           unit="Audited"
           trend={{ value: "Zero anonymous writes", isPositive: true, text: "" }}
           icon={UserCheck}
@@ -214,6 +287,8 @@ export function AuditLogsPage() {
               <option value="Machine Assets">Machine Assets</option>
               <option value="Quality Specs">Quality Specs</option>
               <option value="Changeover Matrix">Changeover Matrix</option>
+              <option value="User">User Account</option>
+              <option value="General">General / Platform</option>
             </select>
 
             <select
@@ -228,6 +303,7 @@ export function AuditLogsPage() {
               <option value="Approved">Approved</option>
               <option value="Rejected">Rejected</option>
               <option value="Deleted">Deleted</option>
+              <option value="LOGIN">LOGIN</option>
             </select>
           </div>
 
@@ -255,7 +331,7 @@ export function AuditLogsPage() {
                 filteredLogs.map((log) => {
                   return (
                     <tr
-                      key={log.auditId || log.id}
+                      key={log.id || log.auditId}
                       style={{
                         borderBottom: "1px solid var(--border-subtle)",
                         transition: "background-color 0.12s ease"
@@ -289,7 +365,7 @@ export function AuditLogsPage() {
                       </td>
 
                       <td style={{ padding: "12px 14px", whiteSpace: "nowrap" }}>
-                        <Badge variant={log.action === "Created" ? "emerald" : log.action === "Approved" ? "cyan" : log.action === "Rejected" ? "rose" : log.action === "Deleted" ? "amber" : "cyan"}>
+                        <Badge variant={log.action?.toLowerCase() === "created" ? "emerald" : log.action?.toLowerCase() === "approved" ? "cyan" : log.action?.toLowerCase() === "rejected" ? "rose" : log.action?.toLowerCase() === "deleted" ? "amber" : "cyan"}>
                           {log.action}
                         </Badge>
                       </td>
@@ -333,6 +409,26 @@ export function AuditLogsPage() {
                             <Eye size={13} />
                           </button>
 
+                          {/* Edit Button */}
+                          <button
+                            onClick={() => setEditingLog({ ...log })}
+                            title="Edit Audit Record"
+                            style={{
+                              width: "30px",
+                              height: "30px",
+                              borderRadius: "6px",
+                              backgroundColor: "var(--bg-card-subtle)",
+                              color: "#2563EB",
+                              border: "1px solid var(--border-subtle)",
+                              cursor: "pointer",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center"
+                            }}
+                          >
+                            <Edit2 size={13} />
+                          </button>
+
                           {/* Delete Button */}
                           <button
                             onClick={() => setDeletingLog(log)}
@@ -369,6 +465,279 @@ export function AuditLogsPage() {
         </div>
       </Card>
 
+      {/* Add Audit Record Modal */}
+      {isAddModalOpen && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.55)",
+            backdropFilter: "blur(4px)",
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px"
+          }}
+          onClick={() => setIsAddModalOpen(false)}
+        >
+          <div
+            style={{
+              backgroundColor: "#FFFFFF",
+              borderRadius: "16px",
+              maxWidth: "540px",
+              width: "100%",
+              boxShadow: "0 20px 40px rgba(0, 0, 0, 0.2)",
+              border: "1px solid var(--border-subtle)",
+              overflow: "hidden"
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ padding: "18px 20px", borderBottom: "1px solid var(--border-subtle)", display: "flex", justifyContent: "space-between", alignItems: "center", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <ShieldCheck size={18} color="#C89547" />
+                <h3 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                  Log New Audit Record
+                </h3>
+              </div>
+              <button
+                onClick={() => setIsAddModalOpen(false)}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)" }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateSubmit} style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div>
+                  <label className="form-label">User Actor *</label>
+                  <input
+                    type="text"
+                    required
+                    value={newLog.user}
+                    onChange={(e) => setNewLog({ ...newLog, user: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+                <div>
+                  <label className="form-label">Action *</label>
+                  <select
+                    value={newLog.action}
+                    onChange={(e) => setNewLog({ ...newLog, action: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  >
+                    <option value="Created">Created</option>
+                    <option value="Updated">Updated</option>
+                    <option value="Approved">Approved</option>
+                    <option value="Rejected">Rejected</option>
+                    <option value="Deleted">Deleted</option>
+                    <option value="QA_RELEASE">QA Release</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div>
+                  <label className="form-label">Entity Type *</label>
+                  <select
+                    value={newLog.entityType}
+                    onChange={(e) => setNewLog({ ...newLog, entityType: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  >
+                    <option value="SKU Master">SKU Master</option>
+                    <option value="BOM Recipe">BOM Recipe</option>
+                    <option value="Work Centers / Lines">Work Centers / Lines</option>
+                    <option value="Machine Assets">Machine Assets</option>
+                    <option value="Quality Specs">Quality Specs</option>
+                    <option value="Changeover Matrix">Changeover Matrix</option>
+                    <option value="User">User Account</option>
+                    <option value="General">General</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="form-label">Entity ID / Code *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. SKU-8088"
+                    value={newLog.entityId}
+                    onChange={(e) => setNewLog({ ...newLog, entityId: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div>
+                  <label className="form-label">Old Value</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. status: Draft"
+                    value={newLog.oldValue}
+                    onChange={(e) => setNewLog({ ...newLog, oldValue: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+                <div>
+                  <label className="form-label">New Value</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. status: Active"
+                    value={newLog.newValue}
+                    onChange={(e) => setNewLog({ ...newLog, newValue: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="form-label">Audit Notes & Reason</label>
+                <textarea
+                  rows={2}
+                  placeholder="Compliance rationale or transaction notes..."
+                  value={newLog.notes}
+                  onChange={(e) => setNewLog({ ...newLog, notes: e.target.value })}
+                  className="form-input"
+                  style={{ backgroundColor: "#FFFFFF", resize: "none" }}
+                />
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "6px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
+                <Button variant="secondary" onClick={() => setIsAddModalOpen(false)} disabled={isActioning} style={{ fontSize: "12px" }}>
+                  Cancel
+                </Button>
+                <Button variant="primary" type="submit" disabled={isActioning} style={{ fontSize: "12px" }}>
+                  {isActioning ? "Saving to Database..." : "Save Record to DB"}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Audit Record Modal */}
+      {editingLog && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.55)",
+            backdropFilter: "blur(4px)",
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px"
+          }}
+          onClick={() => setEditingLog(null)}
+        >
+          <div
+            style={{
+              backgroundColor: "#FFFFFF",
+              borderRadius: "16px",
+              maxWidth: "540px",
+              width: "100%",
+              boxShadow: "0 20px 40px rgba(0, 0, 0, 0.2)",
+              border: "1px solid var(--border-subtle)",
+              overflow: "hidden"
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ padding: "18px 20px", borderBottom: "1px solid var(--border-subtle)", display: "flex", justifyContent: "space-between", alignItems: "center", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Edit2 size={16} color="#2563EB" />
+                <h3 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                  Edit Audit Record ({editingLog.auditId || editingLog.id})
+                </h3>
+              </div>
+              <button
+                onClick={() => setEditingLog(null)}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)" }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditSubmit} style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div>
+                  <label className="form-label">Action *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingLog.action}
+                    onChange={(e) => setEditingLog({ ...editingLog, action: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+                <div>
+                  <label className="form-label">Entity Target ID *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingLog.entityId}
+                    onChange={(e) => setEditingLog({ ...editingLog, entityId: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div>
+                  <label className="form-label">Old Value</label>
+                  <input
+                    type="text"
+                    value={editingLog.oldValue}
+                    onChange={(e) => setEditingLog({ ...editingLog, oldValue: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+                <div>
+                  <label className="form-label">New Value</label>
+                  <input
+                    type="text"
+                    value={editingLog.newValue}
+                    onChange={(e) => setEditingLog({ ...editingLog, newValue: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="form-label">Notes</label>
+                <textarea
+                  rows={2}
+                  value={editingLog.notes || ""}
+                  onChange={(e) => setEditingLog({ ...editingLog, notes: e.target.value })}
+                  className="form-input"
+                  style={{ backgroundColor: "#FFFFFF", resize: "none" }}
+                />
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "6px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
+                <Button variant="secondary" onClick={() => setEditingLog(null)} disabled={isActioning} style={{ fontSize: "12px" }}>
+                  Cancel
+                </Button>
+                <Button variant="primary" type="submit" disabled={isActioning} style={{ fontSize: "12px" }}>
+                  {isActioning ? "Updating in Database..." : "Update Record in DB"}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* View Detail Modal */}
       {viewingLog && (
         <div
@@ -382,6 +751,7 @@ export function AuditLogsPage() {
             justifyContent: "center",
             padding: "20px"
           }}
+          onClick={() => setViewingLog(null)}
         >
           <div
             style={{
@@ -392,6 +762,7 @@ export function AuditLogsPage() {
               padding: "24px",
               boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)"
             }}
+            onClick={(e) => e.stopPropagation()}
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
@@ -466,6 +837,7 @@ export function AuditLogsPage() {
             justifyContent: "center",
             padding: "20px"
           }}
+          onClick={() => setDeletingLog(null)}
         >
           <div
             style={{
@@ -476,6 +848,7 @@ export function AuditLogsPage() {
               padding: "24px",
               boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)"
             }}
+            onClick={(e) => e.stopPropagation()}
           >
             <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px" }}>
               <div style={{ width: "36px", height: "36px", borderRadius: "50%", backgroundColor: "#FEE2E2", display: "flex", alignItems: "center", justifyContent: "center", color: "#EF4444" }}>
@@ -486,20 +859,20 @@ export function AuditLogsPage() {
               </h3>
             </div>
             <p style={{ fontSize: "13px", color: "var(--text-secondary)", lineHeight: 1.5, margin: "0 0 20px 0" }}>
-              Are you sure you want to remove audit event <strong>{deletingLog.auditId}</strong> ({deletingLog.action} on {deletingLog.entityId})? This record will be permanently deleted from the database.
+              Are you sure you want to remove audit event <strong>{deletingLog.auditId || deletingLog.id}</strong> ({deletingLog.action} on {deletingLog.entityId})? This record will be permanently deleted from the database.
             </p>
             <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px" }}>
-              <Button variant="secondary" onClick={() => setDeletingLog(null)} disabled={isDeleting} style={{ fontSize: "12px", padding: "7px 14px" }}>
+              <Button variant="secondary" onClick={() => setDeletingLog(null)} disabled={isActioning} style={{ fontSize: "12px", padding: "7px 14px" }}>
                 Cancel
               </Button>
               <Button
                 variant="danger"
                 icon={Trash2}
-                disabled={isDeleting}
+                disabled={isActioning}
                 onClick={handleDeleteLog}
                 style={{ fontSize: "12px", padding: "7px 14px", backgroundColor: "#EF4444", color: "#fff" }}
               >
-                {isDeleting ? "Deleting..." : "Confirm Delete"}
+                {isActioning ? "Deleting..." : "Confirm Delete"}
               </Button>
             </div>
           </div>

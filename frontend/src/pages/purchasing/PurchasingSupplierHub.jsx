@@ -44,33 +44,39 @@ export function PurchasingSupplierHub() {
   const isSuppliersPage = location.pathname.includes("supplier");
 
   const [purchaseOrders, setPurchaseOrders] = useState(INITIAL_PURCHASE_ORDERS);
-  const [suppliers, setSuppliers] = useState(SUPPLIERS);
+  const [suppliers, setSuppliers] = useState([]);
+  const [supplierMetrics, setSupplierMetrics] = useState({
+    activeVendors: 0,
+    meanOtif: "0.0%",
+    avgLeadTime: "0.0 Days",
+    inboundQualityRate: "0.0%"
+  });
 
   // Load live data from backend
-  useEffect(() => {
-    let isMounted = true;
-    const fetchPurchasingData = async () => {
-      try {
-        const [posRes, supsRes] = await Promise.all([
-          warehouseService.getPurchaseOrders().catch(() => null),
-          warehouseService.getSuppliers().catch(() => null)
-        ]);
-        if (isMounted) {
-          if (posRes?.data?.purchaseOrders?.length) {
-            setPurchaseOrders(posRes.data.purchaseOrders);
-          }
-          if (supsRes?.data?.suppliers?.length) {
-            setSuppliers(supsRes.data.suppliers);
-          }
-        }
-      } catch (err) {
-        console.error("Failed to load purchasing data from backend:", err);
+  const fetchPurchasingData = async () => {
+    try {
+      const [posRes, supsRes] = await Promise.all([
+        warehouseService.getPurchaseOrders().catch(() => null),
+        warehouseService.getSuppliers().catch(() => null)
+      ]);
+      if (posRes?.data?.purchaseOrders?.length) {
+        setPurchaseOrders(posRes.data.purchaseOrders);
       }
-    };
+      const supsList = supsRes?.data?.suppliers !== undefined ? supsRes.data.suppliers : supsRes?.data?.data?.suppliers;
+      if (Array.isArray(supsList)) {
+        setSuppliers(supsList);
+      }
+      const metrics = supsRes?.data?.metrics || supsRes?.data?.data?.metrics;
+      if (metrics) {
+        setSupplierMetrics(metrics);
+      }
+    } catch (err) {
+      console.error("Failed to load purchasing data from backend:", err);
+    }
+  };
+
+  useEffect(() => {
     fetchPurchasingData();
-    return () => {
-      isMounted = false;
-    };
   }, [location.pathname]);
 
   // PO Modals & Edit States
@@ -247,8 +253,8 @@ export function PurchasingSupplierHub() {
 
     try {
       const res = await warehouseService.createSupplier(created);
-      const saved = res?.data || created;
-      setSuppliers((prev) => [saved, ...prev]);
+      const saved = res?.data?.data || res?.data || created;
+      fetchPurchasingData();
       addToast(`Approved Supplier ${saved.name} (${saved.supplierCode}) registered!`, "success");
     } catch (err) {
       setSuppliers((prev) => [created, ...prev]);
@@ -273,12 +279,9 @@ export function PurchasingSupplierHub() {
     e.preventDefault();
     if (!editingSupplier) return;
     try {
-      const res = await warehouseService.updateSupplier(editingSupplier.id, editingSupplier);
-      const updated = res?.data || editingSupplier;
-      setSuppliers((prev) =>
-        prev.map((s) => (s.id === updated.id ? { ...updated } : s))
-      );
-      addToast(`Supplier ${updated.name} profile updated.`, "success");
+      await warehouseService.updateSupplier(editingSupplier.id, editingSupplier);
+      fetchPurchasingData();
+      addToast(`Supplier ${editingSupplier.name} profile updated.`, "success");
     } catch (err) {
       setSuppliers((prev) =>
         prev.map((s) => (s.id === editingSupplier.id ? { ...editingSupplier } : s))
@@ -293,17 +296,28 @@ export function PurchasingSupplierHub() {
   const handleToggleSupplierStatus = async (supplier) => {
     const nextStatus = supplier.status === "Active" ? "Inactive" : "Active";
     try {
-      const res = await warehouseService.toggleSupplierStatus(supplier.id);
-      const updated = res?.data || { ...supplier, status: nextStatus };
-      setSuppliers((prev) =>
-        prev.map((s) => (s.id === supplier.id ? { ...s, ...updated } : s))
-      );
-      addToast(`Supplier ${supplier.name} is now ${updated.status}.`, updated.status === "Active" ? "success" : "warning");
+      await warehouseService.toggleSupplierStatus(supplier.id);
+      fetchPurchasingData();
+      addToast(`Supplier ${supplier.name} is now ${nextStatus}.`, nextStatus === "Active" ? "success" : "warning");
     } catch (err) {
       setSuppliers((prev) =>
         prev.map((s) => (s.id === supplier.id ? { ...s, status: nextStatus } : s))
       );
       addToast(`Supplier ${supplier.name} is now ${nextStatus}.`, nextStatus === "Active" ? "success" : "warning");
+    }
+  };
+
+  // Delete Supplier via Backend API
+  const handleDeleteSupplier = async (supplier) => {
+    if (!window.confirm(`Are you sure you want to delete supplier "${supplier.name}"?`)) return;
+    try {
+      await warehouseService.deleteSupplier(supplier.id);
+      setSuppliers((prev) => prev.filter((s) => s.id !== supplier.id));
+      fetchPurchasingData();
+      addToast(`Supplier ${supplier.name} removed from database.`, "success");
+    } catch (err) {
+      console.error("Failed to delete supplier:", err);
+      addToast("Failed to delete supplier from database.", "error");
     }
   };
 
@@ -643,6 +657,20 @@ export function PurchasingSupplierHub() {
           >
             {row.status === "Active" ? "Deactivate" : "Activate"}
           </Button>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => handleDeleteSupplier(row)}
+            style={{
+              color: "#EF4444",
+              fontSize: "11px",
+              padding: "4px 8px"
+            }}
+            title="Delete Supplier"
+          >
+            Delete
+          </Button>
         </div>
       )
     }
@@ -682,7 +710,7 @@ export function PurchasingSupplierHub() {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "14px", width: "100%" }}>
             <StatCard
               title="Approved Active Vendors"
-              value={suppliers.length.toString()}
+              value={(supplierMetrics.activeVendors ?? suppliers.length).toString()}
               unit="Companies"
               trend={{ value: "100% Audited", isPositive: true, text: "ISO compliant" }}
               icon={Building2}
@@ -690,7 +718,7 @@ export function PurchasingSupplierHub() {
             />
             <StatCard
               title="Fleet Mean OTIF"
-              value="96.2%"
+              value={supplierMetrics.meanOtif || "0.0%"}
               unit="On-Time In-Full"
               trend={{ value: "+1.8%", isPositive: true, text: "vs last quarter" }}
               icon={Truck}
@@ -698,7 +726,7 @@ export function PurchasingSupplierHub() {
             />
             <StatCard
               title="Average Lead Time"
-              value="4.8 Days"
+              value={supplierMetrics.avgLeadTime || "0.0 Days"}
               unit="SLA Commitment"
               trend={{ value: "Low Transit Risk", isPositive: true, text: "contract terms" }}
               icon={Clock}
@@ -706,7 +734,7 @@ export function PurchasingSupplierHub() {
             />
             <StatCard
               title="Inbound Quality Rate"
-              value="99.4%"
+              value={supplierMetrics.inboundQualityRate || "0.0%"}
               unit="Acceptance Rate"
               trend={{ value: "Zero Rejections", isPositive: true, text: "CoA Verified" }}
               icon={CheckCircle2}
@@ -727,66 +755,81 @@ export function PurchasingSupplierHub() {
               </div>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "14px" }}>
-              {suppliers.map((sup) => (
-                <div
-                  key={sup.id}
-                  style={{
-                    padding: "16px",
-                    borderRadius: "10px",
-                    backgroundColor: "var(--bg-card-subtle)",
-                    border: "1px solid var(--border-subtle)",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "10px"
-                  }}
-                >
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                    <div>
-                      <span style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)", display: "block" }}>
-                        {sup.name}
-                      </span>
-                      <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>{sup.category}</span>
-                    </div>
-                    <Badge variant={sup.riskRating.includes("Low") ? "emerald" : "amber"}>
-                      {sup.riskRating.split(" ")[0]} Risk
-                    </Badge>
-                  </div>
-
+            {suppliers.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "40px", color: "var(--text-muted)", fontSize: "14px" }}>
+                No registered vendors found in database. Click <strong>"Register Approved Vendor"</strong> to add one.
+              </div>
+            ) : (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "14px" }}>
+                {suppliers.map((sup) => (
                   <div
+                    key={sup.id}
                     style={{
-                      display: "grid",
-                      gridTemplateColumns: "repeat(2, 1fr)",
-                      gap: "8px",
-                      padding: "10px",
-                      backgroundColor: "var(--bg-card)",
-                      borderRadius: "6px",
-                      fontSize: "11px"
+                      padding: "16px",
+                      borderRadius: "10px",
+                      backgroundColor: "var(--bg-card-subtle)",
+                      border: "1px solid var(--border-subtle)",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "10px"
                     }}
                   >
-                    <div>
-                      <span style={{ color: "var(--text-muted)", display: "block" }}>OTIF Delivery:</span>
-                      <strong style={{ color: "#10B981", fontSize: "13px" }}>{sup.otifScore}%</strong>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                      <div>
+                        <span style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)", display: "block" }}>
+                          {sup.name}
+                        </span>
+                        <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>{sup.category}</span>
+                      </div>
+                      <Badge variant={sup.riskRating?.includes("Low") ? "emerald" : "amber"}>
+                        {sup.riskRating ? sup.riskRating.split(" ")[0] : "Normal"} Risk
+                      </Badge>
                     </div>
-                    <div>
-                      <span style={{ color: "var(--text-muted)", display: "block" }}>Avg Lead Time:</span>
-                      <strong style={{ color: "var(--text-primary)", fontSize: "13px" }}>{sup.avgLeadTimeDays} Days</strong>
-                    </div>
-                  </div>
 
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "11px", color: "var(--text-muted)" }}>
-                    <span>Active Contracts: {sup.activeContractsCount || 2}</span>
-                    <button
-                      onClick={() => setSelectedSupplierForModal(sup)}
-                      className="btn btn-ghost"
-                      style={{ padding: "4px 8px", fontSize: "11px", color: "#8C5B23", fontWeight: 700 }}
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "repeat(2, 1fr)",
+                        gap: "8px",
+                        padding: "10px",
+                        backgroundColor: "var(--bg-card)",
+                        borderRadius: "6px",
+                        fontSize: "11px"
+                      }}
                     >
-                      Audit Details →
-                    </button>
+                      <div>
+                        <span style={{ color: "var(--text-muted)", display: "block" }}>OTIF Delivery:</span>
+                        <strong style={{ color: "#10B981", fontSize: "13px" }}>{sup.otifScore}%</strong>
+                      </div>
+                      <div>
+                        <span style={{ color: "var(--text-muted)", display: "block" }}>Avg Lead Time:</span>
+                        <strong style={{ color: "var(--text-primary)", fontSize: "13px" }}>{sup.avgLeadTimeDays} Days</strong>
+                      </div>
+                    </div>
+
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "11px", color: "var(--text-muted)" }}>
+                      <span>Active Contracts: {sup.activeContractsCount || 1}</span>
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        <button
+                          onClick={() => setSelectedSupplierForModal(sup)}
+                          className="btn btn-ghost"
+                          style={{ padding: "4px 8px", fontSize: "11px", color: "#8C5B23", fontWeight: 700 }}
+                        >
+                          Audit Details →
+                        </button>
+                        <button
+                          onClick={() => handleDeleteSupplier(sup)}
+                          className="btn btn-ghost"
+                          style={{ padding: "4px 8px", fontSize: "11px", color: "#EF4444", fontWeight: 700 }}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </Card>
 
           {/* Supplier Table */}

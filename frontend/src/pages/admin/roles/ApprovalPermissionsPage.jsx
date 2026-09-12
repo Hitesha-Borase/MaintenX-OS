@@ -7,7 +7,10 @@ import {
   FileCheck,
   AlertTriangle,
   Layers,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Eye,
+  Trash2,
+  X
 } from "lucide-react";
 import { Card } from "../../../components/common/Card";
 import { Badge } from "../../../components/common/Badge";
@@ -26,6 +29,9 @@ export function ApprovalPermissionsPage() {
     { id: "APR-04", event: "Emergency Schedule Override & Overtime", tier: "1-Tier Instant", authorizedRoles: "Plant Manager", compliance: "Internal Ops Policy" }
   ]);
 
+  const [viewingRule, setViewingRule] = useState(null);
+  const [deletingRule, setDeletingRule] = useState(null);
+
   useEffect(() => {
     adminService.getApprovalRules().then((rules) => {
       if (Array.isArray(rules) && rules.length > 0) {
@@ -33,6 +39,13 @@ export function ApprovalPermissionsPage() {
       }
     });
   }, []);
+
+  const handleDeleteRule = () => {
+    if (!deletingRule) return;
+    setApprovalRules((prev) => prev.filter((r) => r.id !== deletingRule.id));
+    addToast(`Approval Gate "${deletingRule.id}" successfully deleted.`, "success");
+    setDeletingRule(null);
+  };
 
 
   return (
@@ -101,6 +114,7 @@ export function ApprovalPermissionsPage() {
                 <th>Authorization Tier</th>
                 <th>Authorized Roles</th>
                 <th>Regulatory Standard</th>
+                <th>Action</th>
               </tr>
             </thead>
             <tbody>
@@ -121,12 +135,153 @@ export function ApprovalPermissionsPage() {
                       {a.compliance}
                     </span>
                   </td>
+                  <td>
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      <button
+                        onClick={() => setViewingRule(a)}
+                        title="View Rule Details"
+                        style={{
+                          width: "28px",
+                          height: "28px",
+                          borderRadius: "6px",
+                          backgroundColor: "rgba(14, 165, 233, 0.1)",
+                          color: "#0284C7",
+                          border: "1px solid var(--border-subtle)",
+                          cursor: "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center"
+                        }}
+                      >
+                        <Eye size={13} />
+                      </button>
+                      <button
+                        onClick={() => setDeletingRule(a)}
+                        title="Delete Approval Gate"
+                        style={{
+                          width: "28px",
+                          height: "28px",
+                          borderRadius: "6px",
+                          backgroundColor: "rgba(220, 38, 38, 0.1)",
+                          color: "#DC2626",
+                          border: "1px solid var(--border-subtle)",
+                          cursor: "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center"
+                        }}
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       </Card>
+
+      {/* VIEW RULE MODAL */}
+      {viewingRule && (
+        <div className="modal-backdrop" onClick={() => setViewingRule(null)}>
+          <div className="modal-content" style={{ maxWidth: "480px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Eye size={18} color="#0284C7" />
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)" }}>
+                  Approval Gate Details
+                </h2>
+              </div>
+              <button onClick={() => setViewingRule(null)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div>
+                  <span style={{ fontSize: "11px", color: "var(--text-muted)", display: "block" }}>Gate ID</span>
+                  <strong style={{ fontFamily: "var(--font-mono)", color: "#8C5B23" }}>{viewingRule.id}</strong>
+                </div>
+                <div>
+                  <span style={{ fontSize: "11px", color: "var(--text-muted)", display: "block" }}>Authorization Tier</span>
+                  <Badge variant="amber">{viewingRule.tier}</Badge>
+                </div>
+                <div>
+                  <span style={{ fontSize: "11px", color: "var(--text-muted)", display: "block" }}>Regulatory Standard</span>
+                  <span style={{ fontSize: "12px", color: "#059669", fontWeight: 700 }}>{viewingRule.compliance}</span>
+                </div>
+                <div>
+                  <span style={{ fontSize: "11px", color: "var(--text-muted)", display: "block" }}>Sign-off Roles</span>
+                  <span style={{ fontSize: "12px", color: "var(--text-primary)", fontWeight: 600 }}>{viewingRule.authorizedRoles}</span>
+                </div>
+              </div>
+
+              <div>
+                <span style={{ fontSize: "11px", color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>Event Trigger</span>
+                <div style={{ fontSize: "13px", color: "var(--text-primary)", padding: "10px 12px", backgroundColor: "var(--bg-card-subtle)", borderRadius: "6px", border: "1px solid var(--border-subtle)" }}>
+                  {viewingRule.event}
+                </div>
+              </div>
+
+              <div style={{ borderTop: "1px solid var(--border-subtle)", paddingTop: "14px", display: "flex", justifyContent: "flex-end" }}>
+                <Button variant="secondary" onClick={() => setViewingRule(null)}>
+                  Close
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CONFIRM DELETE RULE MODAL */}
+      {deletingRule && (
+        <div className="modal-backdrop" onClick={() => setDeletingRule(null)}>
+          <div className="modal-content" style={{ maxWidth: "420px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <div style={{ width: "28px", height: "28px", borderRadius: "50%", backgroundColor: "rgba(220, 38, 38, 0.12)", color: "#DC2626", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <AlertTriangle size={15} />
+                </div>
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)" }}>
+                  Confirm Delete Gate
+                </h2>
+              </div>
+              <button onClick={() => setDeletingRule(null)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
+              <p style={{ fontSize: "13px", color: "var(--text-primary)", lineHeight: 1.5, margin: 0 }}>
+                Kya aap sach me approval rule <strong>{deletingRule.id}</strong> ({deletingRule.event}) ko delete karna chahte hain?
+              </p>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "6px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
+                <Button variant="secondary" onClick={() => setDeletingRule(null)}>
+                  Cancel
+                </Button>
+                <button
+                  onClick={handleDeleteRule}
+                  style={{
+                    padding: "8px 16px",
+                    borderRadius: "6px",
+                    backgroundColor: "#DC2626",
+                    color: "#FFFFFF",
+                    fontWeight: 700,
+                    fontSize: "12px",
+                    border: "none",
+                    cursor: "pointer"
+                  }}
+                >
+                  Yes, Delete Gate
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

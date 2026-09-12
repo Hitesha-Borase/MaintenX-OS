@@ -6,6 +6,7 @@ import {
   X,
   Edit2,
   Trash2,
+  Eye,
   Clock,
   DollarSign,
   Briefcase,
@@ -43,6 +44,7 @@ export function LabourStandardsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingStandard, setEditingStandard] = useState(null);
+  const [viewingStandard, setViewingStandard] = useState(null);
   const [newStandard, setNewStandard] = useState({
     lineId: lines[0]?.lineId || "LIN-01",
     standardCrew: 8,
@@ -263,6 +265,13 @@ export function LabourStandardsPage() {
                   <td style={{ padding: "12px 16px", textAlign: "right" }}>
                     <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
                       <button
+                        onClick={() => setViewingStandard(s)}
+                        title="View Details"
+                        style={{ width: "30px", height: "30px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", color: "#0284C7", border: "1px solid var(--border-subtle)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+                      >
+                        <Eye size={13} />
+                      </button>
+                      <button
                         onClick={() => setEditingStandard({ ...s })}
                         title="Edit Standard"
                         style={{ width: "30px", height: "30px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", color: "var(--text-primary)", border: "1px solid var(--border-subtle)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
@@ -431,6 +440,75 @@ export function LabourStandardsPage() {
                 </Button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* VIEW STANDARD MODAL */}
+      {viewingStandard && (
+        <div className="modal-backdrop" onClick={() => setViewingStandard(null)}>
+          <div className="modal-content" style={{ maxWidth: "480px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Users size={18} color="#C89547" />
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                  Labour Standard Details
+                </h2>
+              </div>
+              <button onClick={() => setViewingStandard(null)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
+              <div style={{ padding: "12px 16px", backgroundColor: "var(--bg-card-subtle)", borderRadius: "8px" }}>
+                <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Production Line</div>
+                <div style={{ fontSize: "15px", fontWeight: 800, color: "var(--text-primary)", marginTop: "4px" }}>{viewingStandard.lineName}</div>
+                <div style={{ fontSize: "11px", fontFamily: "var(--font-mono)", color: "var(--text-muted)", marginTop: "2px" }}>{viewingStandard.id}</div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Standard Crew</div>
+                  <div style={{ fontSize: "18px", fontWeight: 800, color: "#0284C7", marginTop: "4px" }}>{viewingStandard.standardCrew}</div>
+                  <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>Operators/Line</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Labor Hours / 1k Units</div>
+                  <div style={{ fontSize: "18px", fontWeight: 800, color: "#8C5B23", marginTop: "4px" }}>{viewingStandard.stdLaborHoursPer1kUnits}</div>
+                  <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>hrs per 1,000 units</div>
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Direct Blended Cost</div>
+                  <div style={{ fontSize: "18px", fontWeight: 800, color: "#059669", marginTop: "4px" }}>{viewingStandard.directCostPerHour}</div>
+                  <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>per hour</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Status</div>
+                  <div style={{ marginTop: "6px" }}>
+                    <Badge variant="emerald">{viewingStandard.status || "Active"}</Badge>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "12px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
+                <Button variant="secondary" onClick={() => setViewingStandard(null)}>
+                  Close
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={() => {
+                    const toEdit = { ...viewingStandard };
+                    setViewingStandard(null);
+                    setEditingStandard(toEdit);
+                  }}
+                >
+                  Edit Standard
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       )}

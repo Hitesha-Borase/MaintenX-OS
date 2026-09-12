@@ -1223,10 +1223,7 @@ export const INITIAL_USERS = [
   { id: "USR-005", name: "David Kim", email: "david.kim@flowstate.io", role: "Production Supervisor", roleKey: "operator", department: "Production", plantId: "PLT-01", status: "Active", lastLogin: "3 days ago" }
 ];
 
-export const INITIAL_USER_INVITATIONS = [
-  { id: "INV-101", email: "clara.oswald@flowstate.io", role: "Quality Analyst", department: "Quality Assurance", invitedBy: "Alexander Vance", sentDate: "2026-08-30", status: "Pending" },
-  { id: "INV-102", email: "james.holden@flowstate.io", role: "Controls Engineer", department: "Maintenance", invitedBy: "Alexander Vance", sentDate: "2026-08-31", status: "Pending" }
-];
+export const INITIAL_USER_INVITATIONS = [];
 
 export const INITIAL_AUDIT_LOGS = [
   {
@@ -1475,41 +1472,10 @@ export function MasterDataProvider({ children }) {
     return saved ? JSON.parse(saved) : INITIAL_LINES;
   });
 
-  const [lineTargets, setLineTargets] = useState(() => {
-    const saved = localStorage.getItem("mx_master_line_targets");
-    return saved ? JSON.parse(saved) : INITIAL_LINE_TARGETS;
-  });
-
-  const [changeoverMatrix, setChangeoverMatrix] = useState(() => {
-    const saved = localStorage.getItem("mx_master_changeovers");
-    return saved ? JSON.parse(saved) : INITIAL_CHANGEOVER_MATRIX;
-  });
-
-  const [sanitationClasses, setSanitationClasses] = useState(() => {
-    const saved = localStorage.getItem("mx_master_sanitation");
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].sanitationClass) {
-          return parsed;
-        }
-      } catch (_) {}
-    }
-    return INITIAL_SANITATION_CLASSES;
-  });
-
-  const [allergenRules, setAllergenRules] = useState(() => {
-    const saved = localStorage.getItem("mx_master_allergens");
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].allergenName) {
-          return parsed;
-        }
-      } catch (_) {}
-    }
-    return INITIAL_ALLERGEN_RULES;
-  });
+  const [lineTargets, setLineTargets] = useState([]);
+  const [changeoverMatrix, setChangeoverMatrix] = useState([]);
+  const [sanitationClasses, setSanitationClasses] = useState([]);
+  const [allergenRules, setAllergenRules] = useState([]);
 
   const [labourStandards, setLabourStandards] = useState(() => {
     const saved = localStorage.getItem("mx_master_labour_standards");
@@ -1556,7 +1522,7 @@ export function MasterDataProvider({ children }) {
 
   const [auditLogs, setAuditLogs] = useState(() => {
     const saved = localStorage.getItem("mx_master_audit_logs");
-    return saved ? JSON.parse(saved) : INITIAL_AUDIT_LOGS;
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [rolePermissions, setRolePermissions] = useState(() => {
@@ -1689,7 +1655,7 @@ export function MasterDataProvider({ children }) {
         if (liveChangeovers.status === "fulfilled" && Array.isArray(liveChangeovers.value?.data || liveChangeovers.value)) {
           setChangeoverMatrix(liveChangeovers.value?.data || liveChangeovers.value);
         }
-        if (liveSanitations.status === "fulfilled" && Array.isArray(liveSanitations.value?.data || liveSanitations.value) && (liveSanitations.value?.data || liveSanitations.value).length > 0) {
+        if (liveSanitations.status === "fulfilled" && Array.isArray(liveSanitations.value?.data || liveSanitations.value)) {
           const raw = liveSanitations.value?.data || liveSanitations.value;
           const normalized = raw.map((s) => ({
             ...s,
@@ -1705,7 +1671,7 @@ export function MasterDataProvider({ children }) {
           }));
           setSanitationClasses(normalized);
         }
-        if (liveAllergens.status === "fulfilled" && Array.isArray(liveAllergens.value?.data || liveAllergens.value) && (liveAllergens.value?.data || liveAllergens.value).length > 0) {
+        if (liveAllergens.status === "fulfilled" && Array.isArray(liveAllergens.value?.data || liveAllergens.value)) {
           const raw = liveAllergens.value?.data || liveAllergens.value;
           const normalized = raw.map((a) => ({
             ...a,

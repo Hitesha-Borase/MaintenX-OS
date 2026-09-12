@@ -8,6 +8,7 @@ import {
   Lock,
   X,
   Search,
+  Eye,
   Zap,
   ShieldCheck,
   Server,
@@ -27,6 +28,8 @@ export function APIsIntegrationPage() {
     { id: "KEY-01", name: "SCADA Production Telemetry Ingest", keyMasked: "mfg_live_9482••••••••••••••••", rateLimit: "1,000 req/min", created: "2026-08-15", status: "Active" },
     { id: "KEY-02", name: "Warehouse WMS Pallet Sync", keyMasked: "wms_live_7104••••••••••••••••", rateLimit: "250 req/min", created: "2026-08-20", status: "Active" }
   ]);
+
+  const [viewingKey, setViewingKey] = useState(null);
 
   useEffect(() => {
     adminService.getApiKeys()
@@ -196,6 +199,13 @@ export function APIsIntegrationPage() {
                   <td>
                     <div style={{ display: "flex", gap: "6px" }}>
                       <button
+                        onClick={() => setViewingKey(k)}
+                        title="View API Key Details"
+                        style={{ width: "30px", height: "30px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", color: "#0284C7", border: "1px solid var(--border-subtle)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+                      >
+                        <Eye size={13} />
+                      </button>
+                      <button
                         onClick={() => addToast(`Key token for ${k.name} copied to clipboard!`, "info")}
                         title="Copy Key Token"
                         style={{
@@ -337,6 +347,53 @@ export function APIsIntegrationPage() {
                 >
                   Yes, Delete Key
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* VIEW API KEY MODAL */}
+      {viewingKey && (
+        <div className="modal-backdrop" onClick={() => setViewingKey(null)}>
+          <div className="modal-content" style={{ maxWidth: "500px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <KeyRound size={18} color="#C89547" />
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>API Key Details</h2>
+              </div>
+              <button onClick={() => setViewingKey(null)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+            <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 16px", backgroundColor: "var(--bg-card-subtle)", borderRadius: "8px" }}>
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Key Ref</div>
+                  <div style={{ fontSize: "18px", fontWeight: 900, color: "#8C5B23", fontFamily: "var(--font-mono)" }}>{viewingKey.id}</div>
+                </div>
+                <Badge variant="emerald">{viewingKey.status}</Badge>
+              </div>
+              <div>
+                <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Application Name</div>
+                <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)", marginTop: "4px" }}>{viewingKey.name}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>API Token (Masked)</div>
+                <code style={{ fontSize: "12px", color: "#059669", fontFamily: "var(--font-mono)", fontWeight: 700, display: "block", marginTop: "4px", padding: "8px 12px", backgroundColor: "var(--bg-card-subtle)", borderRadius: "6px", border: "1px solid var(--border-subtle)" }}>{viewingKey.keyMasked}</code>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Rate Limit</div>
+                  <div style={{ fontSize: "13px", fontWeight: 700, color: "#0284C7", fontFamily: "var(--font-mono)", marginTop: "4px" }}>{viewingKey.rateLimit}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Date Generated</div>
+                  <div style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>{viewingKey.created}</div>
+                </div>
+              </div>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "12px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
+                <Button variant="secondary" onClick={() => setViewingKey(null)}>Close</Button>
+                <Button variant="primary" onClick={() => { addToast(`Key token for ${viewingKey.name} copied!`, "info"); setViewingKey(null); }}>Copy Token</Button>
               </div>
             </div>
           </div>

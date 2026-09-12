@@ -6,6 +6,7 @@ import {
   X,
   Edit2,
   Trash2,
+  Eye,
   Layers,
   Thermometer,
   Boxes,
@@ -34,6 +35,7 @@ export function StorageResourcesPage() {
   const [typeFilter, setTypeFilter] = useState("ALL");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingRes, setEditingRes] = useState(null);
+  const [viewingRes, setViewingRes] = useState(null);
 
   const [newRes, setNewRes] = useState({
     plantId: activePlantId || "PLT-01",
@@ -304,6 +306,13 @@ export function StorageResourcesPage() {
                       <td style={{ padding: "12px 16px", textAlign: "right" }}>
                         <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
                           <button
+                            onClick={() => setViewingRes(r)}
+                            title="View Resource Details"
+                            style={{ width: "30px", height: "30px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", color: "#0284C7", border: "1px solid var(--border-subtle)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+                          >
+                            <Eye size={13} />
+                          </button>
+                          <button
                             onClick={() => setEditingRes({ ...r })}
                             title="Edit Resource"
                             style={{ width: "30px", height: "30px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", color: "var(--text-primary)", border: "1px solid var(--border-subtle)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
@@ -529,6 +538,62 @@ export function StorageResourcesPage() {
                 </Button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* VIEW STORAGE RESOURCE MODAL */}
+      {viewingRes && (
+        <div className="modal-backdrop" onClick={() => setViewingRes(null)}>
+          <div className="modal-content" style={{ maxWidth: "500px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Package size={18} color="#C89547" />
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>Storage Resource Details</h2>
+              </div>
+              <button onClick={() => setViewingRes(null)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+            <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 16px", backgroundColor: "var(--bg-card-subtle)", borderRadius: "8px" }}>
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Resource Code</div>
+                  <div style={{ fontSize: "16px", fontWeight: 800, color: "#8C5B23", fontFamily: "var(--font-mono)" }}>{viewingRes.resourceCode || viewingRes.resourceId || viewingRes.id}</div>
+                </div>
+                <Badge variant="emerald">{viewingRes.status || "Active"}</Badge>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Resource Name</div>
+                  <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)", marginTop: "4px" }}>{viewingRes.name}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Resource Type</div>
+                  <div style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>{viewingRes.resourceType || viewingRes.type}</div>
+                </div>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Total Capacity</div>
+                  <div style={{ fontSize: "13px", fontWeight: 800, color: "var(--text-primary)", marginTop: "4px" }}>{viewingRes.totalCapacity ? `${viewingRes.totalCapacity.toLocaleString()} ${viewingRes.capacityUnit || "Units"}` : viewingRes.capacity}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Temperature Zone</div>
+                  <div style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>{viewingRes.temperatureZone || viewingRes.temperature || "Ambient"}</div>
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Plant Facility</div>
+                <div style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px", display: "flex", alignItems: "center", gap: "4px" }}>
+                  <Building2 size={13} color="#C89547" />
+                  <span>{plants.find((p) => p.id === viewingRes.plantId)?.name || viewingRes.plantId || "All Plants"}</span>
+                </div>
+              </div>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "12px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
+                <Button variant="secondary" onClick={() => setViewingRes(null)}>Close</Button>
+                <Button variant="primary" onClick={() => { const e = { ...viewingRes }; setViewingRes(null); setEditingRes(e); }}>Edit Resource</Button>
+              </div>
+            </div>
           </div>
         </div>
       )}

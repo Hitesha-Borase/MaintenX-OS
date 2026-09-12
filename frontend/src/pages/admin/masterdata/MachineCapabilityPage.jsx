@@ -14,7 +14,8 @@ import {
   Clock,
   Layers,
   Wrench,
-  Power
+  Power,
+  Trash2
 } from "lucide-react";
 import { Card } from "../../../components/common/Card";
 import { Badge } from "../../../components/common/Badge";
@@ -25,7 +26,7 @@ import { useApp } from "../../../context/AppContext";
 import masterDataService from "../../../services/masterDataService";
 
 export function MachineCapabilityPage() {
-  const { assets = [], addAsset, updateAsset, toggleAssetStatus, lines = [], plants = [], auditLogs = [] } = useMasterData();
+  const { assets = [], addAsset, updateAsset, toggleAssetStatus, deleteAsset, lines = [], plants = [], auditLogs = [] } = useMasterData();
   const { addToast } = useApp();
 
   useEffect(() => {
@@ -40,6 +41,7 @@ export function MachineCapabilityPage() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingAsset, setEditingAsset] = useState(null);
   const [viewingAsset, setViewingAsset] = useState(null);
+  const [deletingAsset, setDeletingAsset] = useState(null);
   const [activeDetailTab, setActiveDetailTab] = useState("info"); // "info", "production", "maintenance", "downtime", "audit"
 
   const [newAsset, setNewAsset] = useState({
@@ -320,6 +322,13 @@ export function MachineCapabilityPage() {
                             title="Toggle Maintenance Status"
                           >
                             <Power size={14} />
+                          </button>
+                          <button
+                            onClick={() => setDeletingAsset(asset)}
+                            style={{ padding: "6px 8px", borderRadius: "6px", display: "inline-flex", alignItems: "center", justifyContent: "center", border: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)", color: "#EF4444", cursor: "pointer" }}
+                            title="Delete Asset"
+                          >
+                            <Trash2 size={14} />
                           </button>
                         </div>
                       </td>
@@ -802,6 +811,46 @@ export function MachineCapabilityPage() {
                 </Button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* DELETE ASSET CONFIRM MODAL */}
+      {deletingAsset && (
+        <div className="modal-backdrop" onClick={() => setDeletingAsset(null)}>
+          <div className="modal-content" style={{ maxWidth: "460px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <AlertTriangle size={18} color="#DC2626" />
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>Delete Machine Asset</h2>
+              </div>
+              <button onClick={() => setDeletingAsset(null)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+            <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "12px" }}>
+              <p style={{ fontSize: "13px", color: "var(--text-secondary)", margin: 0, lineHeight: 1.5 }}>
+                Are you sure you want to permanently delete machine <strong style={{ color: "var(--text-primary)" }}>{deletingAsset.name}</strong> ({deletingAsset.assetId})? This action cannot be undone.
+              </p>
+              <div style={{ padding: "10px 14px", backgroundColor: "rgba(220, 38, 38, 0.06)", border: "1px solid rgba(220, 38, 38, 0.2)", borderRadius: "8px", fontSize: "12px", color: "#DC2626" }}>
+                Warning: Work orders, maintenance schedules, and OEE history linked to this asset will be affected.
+              </div>
+            </div>
+            <div style={{ padding: "14px 20px", borderTop: "1px solid var(--border-subtle)", display: "flex", justifyContent: "flex-end", gap: "10px", backgroundColor: "var(--bg-card-subtle)" }}>
+              <Button variant="secondary" onClick={() => setDeletingAsset(null)}>Cancel</Button>
+              <Button
+                variant="primary"
+                onClick={() => {
+                  if (typeof deleteAsset === "function") {
+                    deleteAsset(deletingAsset.assetId || deletingAsset.id);
+                  }
+                  addToast(`Asset "${deletingAsset.name}" deleted.`, "info");
+                  setDeletingAsset(null);
+                }}
+                style={{ backgroundColor: "#DC2626", borderColor: "#DC2626", color: "#FFFFFF" }}
+              >
+                Delete Asset
+              </Button>
+            </div>
           </div>
         </div>
       )}

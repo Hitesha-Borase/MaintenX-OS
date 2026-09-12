@@ -30,16 +30,16 @@ import { useApp } from "../../../context/AppContext";
 import { adminService } from "../../../services/adminService";
 
 export function UsersPage() {
-  const { users = [], setUsers, addUser, editUser, deleteUser, updateUserStatus } = useAdmin();
-  const { plants = [], departments = [] } = useMasterData();
-  const { addToast } = useApp();
+  const { users = [], setUsers, addUser, editUser, deleteUser, updateUserStatus } = useAdmin() || {};
+  const { plants = [], departments = [] } = (useMasterData ? useMasterData() : null) || {};
+  const { addToast } = (useApp ? useApp() : null) || { addToast: () => {} };
 
   // Trigger live GET /api/v1/admin/users on mount and sync with AdminContext
   React.useEffect(() => {
     adminService
       .getUsers()
       .then((data) => {
-        if (Array.isArray(data) && data.length > 0 && setUsers) {
+        if (Array.isArray(data) && setUsers) {
           setUsers(data);
         }
       })

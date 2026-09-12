@@ -6,6 +6,7 @@ import {
   X,
   Edit2,
   Trash2,
+  Eye,
   AlertTriangle,
   Flame,
   ShieldCheck,
@@ -37,6 +38,7 @@ export function CCPLimitsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCCP, setEditingCCP] = useState(null);
+  const [viewingCCP, setViewingCCP] = useState(null);
   const [newCCP, setNewCCP] = useState({
     processStep: "Thermal Pasteurization Hold",
     hazard: "Pathogen Survival (Microbial)",
@@ -252,6 +254,13 @@ export function CCPLimitsPage() {
                   <td style={{ padding: "12px 16px", textAlign: "right" }}>
                     <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
                       <button
+                        onClick={() => setViewingCCP(c)}
+                        title="View CCP Details"
+                        style={{ width: "30px", height: "30px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", color: "#0284C7", border: "1px solid var(--border-subtle)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+                      >
+                        <Eye size={13} />
+                      </button>
+                      <button
                         onClick={() => setEditingCCP({ ...c })}
                         title="Edit CCP"
                         style={{ width: "30px", height: "30px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", color: "var(--text-primary)", border: "1px solid var(--border-subtle)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
@@ -426,6 +435,48 @@ export function CCPLimitsPage() {
                 </Button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* VIEW CCP MODAL */}
+      {viewingCCP && (
+        <div className="modal-backdrop" onClick={() => setViewingCCP(null)}>
+          <div className="modal-content" style={{ maxWidth: "520px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <ShieldAlert size={18} color="#DC2626" />
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>CCP Details</h2>
+              </div>
+              <button onClick={() => setViewingCCP(null)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+            <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 16px", backgroundColor: "var(--bg-card-subtle)", borderRadius: "8px" }}>
+                <div style={{ fontSize: "20px", fontWeight: 900, color: "#EF4444", fontFamily: "var(--font-mono)" }}>{viewingCCP.ccpNumber}</div>
+                <Badge variant="rose">{viewingCCP.status}</Badge>
+              </div>
+              <div>
+                <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Process Step</div>
+                <div style={{ fontSize: "13px", fontWeight: 800, color: "var(--text-primary)", marginTop: "4px" }}>{viewingCCP.processStep}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Target Hazard</div>
+                <div style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>{viewingCCP.hazard}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Critical Limit</div>
+                <div style={{ fontSize: "13px", fontWeight: 800, color: "#8C5B23", fontFamily: "var(--font-mono)", marginTop: "4px" }}>{viewingCCP.criticalLimit}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>PLC Automated Divert Action</div>
+                <div style={{ fontSize: "13px", fontWeight: 600, color: "var(--text-primary)", marginTop: "4px" }}>{viewingCCP.autoDivertAction}</div>
+              </div>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "12px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
+                <Button variant="secondary" onClick={() => setViewingCCP(null)}>Close</Button>
+                <Button variant="primary" onClick={() => { const e = { ...viewingCCP }; setViewingCCP(null); setEditingCCP(e); }}>Edit CCP</Button>
+              </div>
+            </div>
           </div>
         </div>
       )}

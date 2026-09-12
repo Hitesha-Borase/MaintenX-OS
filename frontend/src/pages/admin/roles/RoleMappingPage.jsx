@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   Users,
   ShieldCheck,
@@ -6,7 +6,11 @@ import {
   Building2,
   CheckCircle2,
   Lock,
-  Layers
+  Layers,
+  Eye,
+  Trash2,
+  AlertTriangle,
+  X
 } from "lucide-react";
 import { Card } from "../../../components/common/Card";
 import { Badge } from "../../../components/common/Badge";
@@ -17,8 +21,12 @@ import { useApp } from "../../../context/AppContext";
 import adminService from "../../../services/adminService";
 
 export function RoleMappingPage() {
-  const { users = [], updateUserRole, roles = [] } = useAdmin();
-  const { addToast } = useApp();
+  const { users = [], updateUserRole, deleteUser, roles = [] } = useAdmin() || {};
+  const { addToast } = (useApp ? useApp() : null) || { addToast: () => {} };
+
+  const [viewingUser, setViewingUser] = useState(null);
+  const [deletingUser, setDeletingUser] = useState(null);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
     adminService.getRoles().catch((err) => console.warn("Roles load:", err.message));
@@ -33,6 +41,22 @@ export function RoleMappingPage() {
       addToast(`Role for ${userName || userId} updated to ${newRole}.`, "success");
     } catch (err) {
       addToast("Failed to update role: " + err.message, "error");
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deletingUser) return;
+    try {
+      setIsProcessing(true);
+      if (deleteUser) {
+        await deleteUser(deletingUser.id);
+      }
+      addToast(`User ${deletingUser.name || deletingUser.email} deleted from database.`, "success");
+      setDeletingUser(null);
+    } catch (err) {
+      addToast("Failed to delete user: " + err.message, "error");
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -106,6 +130,7 @@ export function RoleMappingPage() {
                 <th>Department</th>
                 <th>Plant Scope</th>
                 <th>Change Role</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -147,12 +172,150 @@ export function RoleMappingPage() {
                       )}
                     </select>
                   </td>
+                  <td>
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      <button
+                        onClick={() => setViewingUser(u)}
+                        title="View Mapping Details"
+                        style={{
+                          width: "28px",
+                          height: "28px",
+                          borderRadius: "6px",
+                          backgroundColor: "rgba(14, 165, 233, 0.1)",
+                          color: "#0284C7",
+                          border: "1px solid var(--border-subtle)",
+                          cursor: "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center"
+                        }}
+                      >
+                        <Eye size={13} />
+                      </button>
+                      <button
+                        onClick={() => setDeletingUser(u)}
+                        title="Delete User from Database"
+                        style={{
+                          width: "28px",
+                          height: "28px",
+                          borderRadius: "6px",
+                          backgroundColor: "rgba(220, 38, 38, 0.1)",
+                          color: "#DC2626",
+                          border: "1px solid var(--border-subtle)",
+                          cursor: "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center"
+                        }}
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       </Card>
+
+      {/* VIEW MAPPING DETAILS MODAL */}
+      {viewingUser && (
+        <div className="modal-backdrop" onClick={() => setViewingUser(null)}>
+          <div className="modal-content" style={{ maxWidth: "480px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Eye size={18} color="#0284C7" />
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)" }}>
+                  User Role Mapping Details
+                </h2>
+              </div>
+              <button onClick={() => setViewingUser(null)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div>
+                  <span style={{ fontSize: "11px", color: "var(--text-muted)", display: "block" }}>User Account</span>
+                  <strong style={{ color: "var(--text-primary)", fontSize: "13px" }}>{viewingUser.name}</strong>
+                  <span style={{ fontSize: "11px", color: "var(--text-muted)", display: "block" }}>{viewingUser.email}</span>
+                </div>
+                <div>
+                  <span style={{ fontSize: "11px", color: "var(--text-muted)", display: "block" }}>Current Role</span>
+                  <Badge variant="cyan">{viewingUser.role}</Badge>
+                </div>
+                <div>
+                  <span style={{ fontSize: "11px", color: "var(--text-muted)", display: "block" }}>Department</span>
+                  <span style={{ color: "var(--text-primary)", fontSize: "13px" }}>{viewingUser.department || "Operations"}</span>
+                </div>
+                <div>
+                  <span style={{ fontSize: "11px", color: "var(--text-muted)", display: "block" }}>Plant Facility Scope</span>
+                  <span style={{ color: "var(--text-primary)", fontSize: "13px" }}>{viewingUser.plant || "Indore Plant"}</span>
+                </div>
+              </div>
+
+              <div style={{ borderTop: "1px solid var(--border-subtle)", paddingTop: "14px", display: "flex", justifyContent: "flex-end" }}>
+                <Button variant="secondary" onClick={() => setViewingUser(null)}>
+                  Close
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CONFIRM DELETE USER MODAL */}
+      {deletingUser && (
+        <div className="modal-backdrop" onClick={() => setDeletingUser(null)}>
+          <div className="modal-content" style={{ maxWidth: "420px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <div style={{ width: "28px", height: "28px", borderRadius: "50%", backgroundColor: "rgba(220, 38, 38, 0.12)", color: "#DC2626", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <AlertTriangle size={15} />
+                </div>
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)" }}>
+                  Confirm Delete User
+                </h2>
+              </div>
+              <button onClick={() => setDeletingUser(null)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
+              <p style={{ fontSize: "13px", color: "var(--text-primary)", lineHeight: 1.5, margin: 0 }}>
+                Kya aap sach me user <strong>{deletingUser.name}</strong> ({deletingUser.email}) ko database se permanent delete karna chahte hain?
+              </p>
+              <div style={{ fontSize: "12px", color: "#DC2626", backgroundColor: "rgba(220, 38, 38, 0.08)", padding: "10px 12px", borderRadius: "6px", border: "1px solid rgba(220, 38, 38, 0.2)" }}>
+                Warning: Yeh action user ko PostgreSQL database table aur role mappings se completely remove kar dega.
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "6px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
+                <Button variant="secondary" onClick={() => setDeletingUser(null)}>
+                  Cancel
+                </Button>
+                <button
+                  onClick={handleConfirmDelete}
+                  style={{
+                    padding: "8px 16px",
+                    borderRadius: "6px",
+                    backgroundColor: "#DC2626",
+                    color: "#FFFFFF",
+                    fontWeight: 700,
+                    fontSize: "12px",
+                    border: "none",
+                    cursor: "pointer"
+                  }}
+                >
+                  Yes, Delete User
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

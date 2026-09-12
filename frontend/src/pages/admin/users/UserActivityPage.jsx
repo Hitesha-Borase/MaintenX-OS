@@ -9,7 +9,9 @@ import {
   Lock,
   Layers,
   FileText,
-  RefreshCw
+  RefreshCw,
+  Eye,
+  X
 } from "lucide-react";
 import { Card } from "../../../components/common/Card";
 import { Badge } from "../../../components/common/Badge";
@@ -18,9 +20,10 @@ import { StatCard } from "../../../components/common/StatCard";
 import { useAdmin } from "../../../context/AdminContext";
 
 export function UserActivityPage() {
-  const { activityLogs = [], fetchActivityLogs } = useAdmin();
+  const { activityLogs = [], fetchActivityLogs } = useAdmin() || {};
   const [searchQuery, setSearchQuery] = useState("");
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [viewingLog, setViewingLog] = useState(null);
 
   useEffect(() => {
     if (fetchActivityLogs) {
@@ -149,6 +152,7 @@ export function UserActivityPage() {
                 <th>Category</th>
                 <th>IP Address</th>
                 <th>Timestamp</th>
+                <th>Action</th>
               </tr>
             </thead>
             <tbody>
@@ -170,12 +174,90 @@ export function UserActivityPage() {
                     {l.ip}
                   </td>
                   <td style={{ fontSize: "11px", color: "var(--text-secondary)" }}>{l.timestamp}</td>
+                  <td>
+                    <button
+                      onClick={() => setViewingLog(l)}
+                      title="View Activity Details"
+                      style={{
+                        width: "28px",
+                        height: "28px",
+                        borderRadius: "6px",
+                        backgroundColor: "rgba(14, 165, 233, 0.1)",
+                        color: "#0284C7",
+                        border: "1px solid var(--border-subtle)",
+                        cursor: "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center"
+                      }}
+                    >
+                      <Eye size={13} />
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       </Card>
+
+      {/* VIEW ACTIVITY LOG DETAILS MODAL */}
+      {viewingLog && (
+        <div className="modal-backdrop" onClick={() => setViewingLog(null)}>
+          <div className="modal-content" style={{ maxWidth: "500px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Eye size={18} color="#0284C7" />
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)" }}>
+                  Audit Event & Activity Details
+                </h2>
+              </div>
+              <button onClick={() => setViewingLog(null)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div>
+                  <span style={{ fontSize: "11px", color: "var(--text-muted)", display: "block" }}>Event ID</span>
+                  <strong style={{ fontFamily: "var(--font-mono)", color: "#8C5B23" }}>{viewingLog.id}</strong>
+                </div>
+                <div>
+                  <span style={{ fontSize: "11px", color: "var(--text-muted)", display: "block" }}>Category</span>
+                  <Badge variant="cyan">{viewingLog.category}</Badge>
+                </div>
+                <div>
+                  <span style={{ fontSize: "11px", color: "var(--text-muted)", display: "block" }}>User Account</span>
+                  <strong style={{ color: "var(--text-primary)", fontSize: "13px" }}>{viewingLog.user}</strong>
+                </div>
+                <div>
+                  <span style={{ fontSize: "11px", color: "var(--text-muted)", display: "block" }}>Origin IP</span>
+                  <span style={{ fontFamily: "var(--font-mono)", fontSize: "12px", color: "var(--text-primary)" }}>{viewingLog.ip}</span>
+                </div>
+              </div>
+
+              <div>
+                <span style={{ fontSize: "11px", color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>Action & Operation</span>
+                <div style={{ fontSize: "13px", color: "var(--text-primary)", padding: "10px 12px", backgroundColor: "var(--bg-card-subtle)", borderRadius: "6px", border: "1px solid var(--border-subtle)" }}>
+                  {viewingLog.action}
+                </div>
+              </div>
+
+              <div>
+                <span style={{ fontSize: "11px", color: "var(--text-muted)", display: "block" }}>Recorded Timestamp</span>
+                <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>{viewingLog.timestamp}</span>
+              </div>
+
+              <div style={{ borderTop: "1px solid var(--border-subtle)", paddingTop: "14px", display: "flex", justifyContent: "flex-end" }}>
+                <Button variant="secondary" onClick={() => setViewingLog(null)}>
+                  Close
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

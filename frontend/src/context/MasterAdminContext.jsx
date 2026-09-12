@@ -414,6 +414,18 @@ export function MasterAdminProvider({ children }) {
     }
   };
 
+  const deleteAuditLog = async (logId) => {
+    try {
+      setAuditLogs((prev) => prev.filter((l) => l.id !== logId));
+      await masterAdminService.deleteAuditLog(logId);
+      await fetchAuditLogs();
+    } catch (err) {
+      console.error("Failed to delete audit log:", err);
+      await fetchAuditLogs();
+      throw err;
+    }
+  };
+
   const addPlan = async (planDetails) => {
     try {
       await masterAdminService.createPlan(planDetails);
@@ -520,6 +532,7 @@ export function MasterAdminProvider({ children }) {
         resetAdminPassword,
         updateTicketStatus,
         deleteTicket,
+        deleteAuditLog,
         addPlan,
         editPlan,
         updatePlanStatus,

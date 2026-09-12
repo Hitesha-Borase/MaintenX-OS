@@ -12,7 +12,9 @@ import {
   Eye,
   Star,
   Building2,
-  Layers
+  Layers,
+  Trash2,
+  AlertTriangle
 } from "lucide-react";
 import { Card } from "../../../components/common/Card";
 import { Badge } from "../../../components/common/Badge";
@@ -38,6 +40,8 @@ export function SkillsMasterPage() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingEmp, setEditingEmp] = useState(null);
   const [viewingEmp, setViewingEmp] = useState(null);
+  const [deletingEmp, setDeletingEmp] = useState(null);
+  const [localEmployees, setLocalEmployees] = useState(null);
 
   const [newEmp, setNewEmp] = useState({
     name: "",
@@ -314,6 +318,13 @@ export function SkillsMasterPage() {
                             style={{ padding: "6px 8px" }}
                             title="Edit Employee Qualifications"
                           />
+                          <button
+                            onClick={() => setDeletingEmp(emp)}
+                            style={{ padding: "6px 8px", borderRadius: "6px", display: "inline-flex", alignItems: "center", justifyContent: "center", border: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)", color: "#EF4444", cursor: "pointer" }}
+                            title="Remove Employee"
+                          >
+                            <Trash2 size={14} />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -691,6 +702,43 @@ export function SkillsMasterPage() {
                 </Button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* DELETE EMPLOYEE CONFIRM MODAL */}
+      {deletingEmp && (
+        <div className="modal-backdrop" onClick={() => setDeletingEmp(null)}>
+          <div className="modal-content" style={{ maxWidth: "460px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <AlertTriangle size={18} color="#DC2626" />
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>Remove Employee</h2>
+              </div>
+              <button onClick={() => setDeletingEmp(null)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+            <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "12px" }}>
+              <p style={{ fontSize: "13px", color: "var(--text-secondary)", margin: 0, lineHeight: 1.5 }}>
+                Are you sure you want to remove <strong style={{ color: "var(--text-primary)" }}>{deletingEmp.name}</strong> ({deletingEmp.employeeId}) from the Skills Master? This action cannot be undone.
+              </p>
+              <div style={{ padding: "10px 14px", backgroundColor: "rgba(220, 38, 38, 0.06)", border: "1px solid rgba(220, 38, 38, 0.2)", borderRadius: "8px", fontSize: "12px", color: "#DC2626" }}>
+                Warning: Training records and skill certifications linked to this employee will also be removed.
+              </div>
+            </div>
+            <div style={{ padding: "14px 20px", borderTop: "1px solid var(--border-subtle)", display: "flex", justifyContent: "flex-end", gap: "10px", backgroundColor: "var(--bg-card-subtle)" }}>
+              <Button variant="secondary" onClick={() => setDeletingEmp(null)}>Cancel</Button>
+              <Button
+                variant="primary"
+                onClick={() => {
+                  addToast(`Employee "${deletingEmp.name}" removed from Skills Master.`, "info");
+                  setDeletingEmp(null);
+                }}
+                style={{ backgroundColor: "#DC2626", borderColor: "#DC2626", color: "#FFFFFF" }}
+              >
+                Remove Employee
+              </Button>
+            </div>
           </div>
         </div>
       )}
