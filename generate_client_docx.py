@@ -891,7 +891,7 @@ def generate_full_document(output_path):
                         
     add_callout(doc, "Interactive OpenAPI 3.0 Documentation",
                 "All backend API endpoints are automatically documented using Fastify Swagger and available interactively "
-                "at http://localhost:4000/docs. Plant IT integration engineers can test payloads and inspect JSON schemas directly in their browser.",
+                "at https://mainten-x-os-production.up.railway.app/docs. Plant IT integration engineers can test payloads and inspect JSON schemas directly in their browser.",
                 border_color=COLOR_BLUE_ACCENT)
 
     # =========================================================================
