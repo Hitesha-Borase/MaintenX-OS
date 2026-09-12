@@ -45,16 +45,16 @@ export function PMSchedulePage() {
     estimatedMinutes: 30
   });
 
-  const dueTodayCount = pmSchedules.filter((p) => p.status === "Due Today").length;
-  const overdueCount = pmSchedules.filter((p) => p.status === "Overdue").length;
-  const upcomingCount = pmSchedules.filter((p) => p.status === "Upcoming").length;
+  const dueTodayCount = pmSchedules.filter((p) => (p.status || "").includes("Due Today") || p.status === "DUE_TODAY").length;
+  const overdueCount = pmSchedules.filter((p) => (p.status || "").includes("Overdue") || p.status === "OVERDUE").length;
+  const upcomingCount = pmSchedules.filter((p) => (p.status || "").includes("Upcoming") || p.status === "SCHEDULED").length;
 
   const filteredSchedules = pmSchedules.filter((s) => {
     const matchesSearch =
-      s.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.assetName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.assignedTechnician?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.id?.toLowerCase().includes(searchQuery.toLowerCase());
+      (s.title || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (s.assetName || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (s.assignedTechnician || s.assignedTo || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (s.id || s.scheduleCode || "").toLowerCase().includes(searchQuery.toLowerCase());
 
     const matchesStatus = statusFilter === "ALL" || s.status === statusFilter;
     const matchesFreq = frequencyFilter === "ALL" || s.frequency === frequencyFilter;

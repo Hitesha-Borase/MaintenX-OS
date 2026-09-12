@@ -292,6 +292,18 @@ export const masterDataService = {
     return apiClient.get(`/master-data/assets${query}`);
   },
 
+  async createAsset(assetData) {
+    return apiClient.post("/master-data/assets", assetData);
+  },
+
+  async updateAsset(id, assetData) {
+    return apiClient.put(`/master-data/assets/${enc(id)}`, assetData);
+  },
+
+  async deleteAsset(id) {
+    return apiClient.delete(`/master-data/assets/${enc(id)}`);
+  },
+
   async getAssetDetails(plantId) {
     const query = plantId && plantId !== "ALL" ? `?plantId=${enc(plantId)}` : "";
     return apiClient.get(`/master-data/asset-details${query}`);

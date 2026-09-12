@@ -90,15 +90,15 @@ export function ShipmentsDemand() {
     });
   }, [demandOrders]);
 
+  const [dbShipments, setDbShipments] = useState([]);
+
   const fetchShipments = async () => {
     try {
       setLoading(true);
       const res = await planningService.getShipments();
-      const data = res?.data || res;
-      if (Array.isArray(data) && data.length > 0) {
-        // Filter out records that are already mirrored in demandOrders to avoid duplicates
-        const nonOrderShipments = data.filter(d => !demandOrders.some(o => o.orderNumber === d.orderRef));
-        setManualShipments(nonOrderShipments);
+      const data = Array.isArray(res) ? res : (res?.data || []);
+      if (data.length > 0) {
+        setDbShipments(data);
       }
     } catch (err) {
       console.warn("Outbound shipments backend fetch fallback:", err.message);
@@ -112,39 +112,34 @@ export function ShipmentsDemand() {
   }, []);
 
   const shipments = useMemo(() => {
-    return [...orderShipments, ...manualShipments];
-  }, [orderShipments, manualShipments]);
+    if (dbShipments.length > 0) {
+      return dbShipments;
+    }
+    return orderShipments;
+  }, [dbShipments, orderShipments]);
 
   const handleToggleShipmentStatus = async (shipment) => {
-    if (shipment.orderId) {
-      const nextOrderStatus = 
-        shipment.status === "Dispatched" 
-          ? "Allocated" 
-          : shipment.status === "Staged" 
-          ? "Fulfilled" 
-          : "Scheduled";
+    const nextSt = 
+      shipment.status === "Booked" ? "Pending Dispatch" :
+      shipment.status === "Pending Dispatch" ? "Staged" :
+      shipment.status === "Staged" ? "Dispatched" : "Booked";
 
-      setUpdatingId(shipment.orderId);
-      try {
-        await updateDemandOrder(shipment.orderId, { status: nextOrderStatus });
-        addToast(`Shipment for Order ${shipment.orderRef} updated in Database!`, "success");
-      } catch (err) {
-        console.error("Failed to update shipment status:", err);
-        addToast(`Failed to update shipment in DB: ${err.message}`, "error");
-      } finally {
-        setUpdatingId(null);
+    const targetId = shipment.id || shipment.shipmentNumber;
+    setUpdatingId(targetId);
+
+    try {
+      await planningService.updateShipmentStatus(targetId, nextSt);
+      if (shipment.orderId && updateDemandOrder) {
+        const nextOrderSt = nextSt === "Dispatched" ? "Fulfilled" : nextSt === "Staged" ? "Scheduled" : "Open";
+        await updateDemandOrder(shipment.orderId, { status: nextOrderSt }).catch(() => {});
       }
-    } else {
-      const nextSt = shipment.status === "Booked" ? "Staged" : shipment.status === "Staged" ? "Dispatched" : "Booked";
-      setManualShipments((prev) =>
-        prev.map((s) => (s.id === shipment.id ? { ...s, status: nextSt } : s))
-      );
-      addToast(`Shipment ${shipment.id} status updated to ${nextSt}!`, "success");
-      try {
-        await planningService.updateShipmentStatus(shipment.id, nextSt);
-      } catch (err) {
-        console.warn("Backend updateShipmentStatus fallback:", err.message);
-      }
+      await fetchShipments();
+      addToast(`Shipment ${shipment.orderRef || shipment.shipmentNumber || targetId} updated to ${nextSt} in Database!`, "success");
+    } catch (err) {
+      console.error("Failed to update shipment status:", err);
+      addToast(`Failed to update shipment in DB: ${err.message}`, "error");
+    } finally {
+      setUpdatingId(null);
     }
   };
 
@@ -157,16 +152,22 @@ export function ShipmentsDemand() {
 
     try {
       setIsSubmitting(true);
-      const res = await planningService.createShipment(newShipment);
-      const created = res?.data || res;
-      const optimistic = {
-        id: created?.id || `SH-${Math.floor(1000 + Math.random() * 9000)}`,
-        ...newShipment,
-        pallets: Number(newShipment.pallets)
+      const payload = {
+        destination: newShipment.destination,
+        customerName: newShipment.destination,
+        customer: newShipment.destination,
+        orderRef: newShipment.orderRef,
+        carrier: newShipment.carrier,
+        mode: newShipment.mode,
+        pallets: Number(newShipment.pallets),
+        units: newShipment.units,
+        scheduledDate: newShipment.scheduledDate,
+        dockDoor: newShipment.dockDoor,
+        status: newShipment.status
       };
-
-      setManualShipments((prev) => [optimistic, ...prev]);
-      addToast(`Outbound freight trailer booked for ${optimistic.destination}!`, "success");
+      await planningService.createShipment(payload);
+      await fetchShipments();
+      addToast(`Outbound freight trailer booked for ${payload.destination} and saved in DB!`, "success");
       setIsModalOpen(false);
       setNewShipment({
         destination: "",
@@ -396,7 +397,7 @@ export function ShipmentsDemand() {
                   <div>
                     <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
                       <span style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)" }}>{s.destination}</span>
-                      <span style={{ fontSize: "11px", fontFamily: "var(--font-mono)", color: "#8C5B23", fontWeight: 700 }}>{s.id}</span>
+                      <span style={{ fontSize: "11px", fontFamily: "var(--font-mono)", color: "#8C5B23", fontWeight: 700 }}>{s.shipmentNumber || s.id}</span>
                       <Badge variant="slate">Ref: {s.orderRef}</Badge>
                     </div>
                     <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "4px" }}>

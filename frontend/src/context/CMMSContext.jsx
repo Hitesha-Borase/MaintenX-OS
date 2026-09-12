@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import maintenanceService from "../services/maintenanceService";
+import masterDataService from "../services/masterDataService";
 import { INITIAL_ASSETS, ASSET_HIERARCHY_TREE } from "../data/mockAssets";
 import { INITIAL_WORK_ORDERS } from "../data/mockWorkOrders";
 import { INITIAL_PM_SCHEDULES, INITIAL_PM_PLANS } from "../data/mockPMSchedules";
@@ -18,10 +19,23 @@ import { DEFAULT_USER_PROFILE } from "../data/mockUserProfile";
 const CMMSContext = createContext();
 
 export function CMMSProvider({ children }) {
-  // 1. Assets State
+  // 1. Assets State - initialized from DB / local cache, clearing legacy mocks
   const [assets, setAssets] = useState(() => {
     const saved = localStorage.getItem("flowstate_assets");
-    return saved ? JSON.parse(saved) : INITIAL_ASSETS;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        const hasLegacyMocks = Array.isArray(parsed) && parsed.some(a => ["FM-001", "CP-102", "LB-204", "MX-003", "HT-105", "PK-401", "CV-301", "AC-505"].includes(a.id));
+        if (hasLegacyMocks) {
+          localStorage.removeItem("flowstate_assets");
+          return [];
+        }
+        return parsed;
+      } catch {
+        return [];
+      }
+    }
+    return [];
   });
 
   const [assetHierarchy, setAssetHierarchy] = useState(() => {
@@ -41,15 +55,16 @@ export function CMMSProvider({ children }) {
     return saved ? JSON.parse(saved) : INITIAL_PM_PLANS;
   });
 
-  const [pmSchedules, setPmSchedules] = useState(() => {
-    const saved = localStorage.getItem("flowstate_pm_schedules");
-    return saved ? JSON.parse(saved) : INITIAL_PM_SCHEDULES;
-  });
+  const [pmSchedules, setPmSchedules] = useState([]);
 
   // Checklists
   const [checklistTemplates, setChecklistTemplates] = useState(() => {
-    const saved = localStorage.getItem("flowstate_checklists");
-    return saved ? JSON.parse(saved) : CHECKLIST_TEMPLATES;
+    try {
+      const saved = localStorage.getItem("flowstate_checklists_v2");
+      if (saved) return JSON.parse(saved);
+      localStorage.removeItem("flowstate_checklists");
+    } catch (e) {}
+    return CHECKLIST_TEMPLATES;
   });
 
   const [checklistHistory, setChecklistHistory] = useState(() => {
@@ -59,8 +74,17 @@ export function CMMSProvider({ children }) {
 
   // 4. Breakdowns
   const [breakdowns, setBreakdowns] = useState(() => {
-    const saved = localStorage.getItem("flowstate_breakdowns");
-    return saved ? JSON.parse(saved) : INITIAL_BREAKDOWNS;
+    try {
+      const saved = localStorage.getItem("flowstate_breakdowns");
+      if (!saved) return [];
+      const parsed = JSON.parse(saved);
+      if (!Array.isArray(parsed)) return [];
+      // Filter out legacy mock data
+      const filtered = parsed.filter(b => !["BD-2026-042", "BD-2026-039", "BD-2026-035", "BD-2026-028"].includes(b?.id));
+      return filtered;
+    } catch {
+      return [];
+    }
   });
 
   // 5. Spare Parts & BOM & Requests
@@ -138,24 +162,113 @@ export function CMMSProvider({ children }) {
     return saved ? JSON.parse(saved) : DEFAULT_USER_PROFILE;
   });
 
+  // Normalize Work Orders from database
+  const normalizeWorkOrders = (rawList) => {
+    if (!Array.isArray(rawList)) return [];
+    return rawList.map((wo) => {
+      const rawStatus = (wo.status || "Open").trim();
+      let displayStatus = "Open";
+      if (rawStatus.toUpperCase() === "IN_PROGRESS" || rawStatus.toUpperCase() === "IN PROGRESS") displayStatus = "In Progress";
+      else if (rawStatus.toUpperCase() === "COMPLETED") displayStatus = "Completed";
+      else if (rawStatus.toUpperCase() === "CLOSED") displayStatus = "Closed";
+      else if (rawStatus.toUpperCase() === "ASSIGNED") displayStatus = "Assigned";
+      else if (rawStatus.toUpperCase() === "WAITING_FOR_PARTS" || rawStatus.toUpperCase() === "WAITING FOR PARTS") displayStatus = "Waiting for Parts";
+      else displayStatus = rawStatus.charAt(0).toUpperCase() + rawStatus.slice(1).toLowerCase();
+
+      return {
+        id: wo.woNumber || wo.id,
+        dbId: wo.id,
+        woNumber: wo.woNumber,
+        title: wo.title,
+        description: wo.description || "",
+        symptom: wo.description || "",
+        assetId: wo.asset?.assetCode || wo.assetId || "AST-001",
+        assetName: wo.asset?.name || "Industrial Asset",
+        type: wo.type ? (wo.type.charAt(0).toUpperCase() + wo.type.slice(1).toLowerCase()) : "Corrective",
+        priority: wo.priority || "P2 - High",
+        status: displayStatus,
+        rawStatus: wo.status,
+        assignedTechnician: wo.assignedUser
+          ? `${wo.assignedUser.firstName || ""} ${wo.assignedUser.lastName || ""}`.trim()
+          : (wo.assignedTechnician || "Unassigned"),
+        createdDate: wo.createdAt ? new Date(wo.createdAt).toISOString().substring(0, 10) : "2026-09-01",
+        dueDate: wo.scheduledDate ? new Date(wo.scheduledDate).toISOString().substring(0, 10) : (wo.dueDate || "2026-09-12"),
+        estimatedHours: wo.estimatedHours ? parseFloat(wo.estimatedHours) : 2.0,
+        actualHours: wo.actualHours ? parseFloat(wo.actualHours) : 0,
+        resolution: wo.completedAt ? "Work completed & verified" : (wo.resolution || null),
+        comments: wo.comments || [],
+        partsRequired: wo.partsRequired || [],
+        toolsRequired: wo.toolsRequired || []
+      };
+    });
+  };
+
+  // Refresh Work Orders from Backend
+  const refreshWorkOrders = useCallback(async () => {
+    try {
+      const res = await maintenanceService.getWorkOrders();
+      const list = Array.isArray(res) ? res : (res?.data || []);
+      if (Array.isArray(list) && list.length > 0) {
+        const normalized = normalizeWorkOrders(list);
+        setWorkOrders(normalized);
+        return normalized;
+      }
+    } catch (err) {
+      console.warn("maintenanceService.getWorkOrders refresh notice:", err.message || err);
+    }
+  }, []);
+
+  // Refresh Assets from Backend
+  const refreshAssets = useCallback(async () => {
+    try {
+      const res = await masterDataService.getAssets();
+      const list = res?.data || res || [];
+      if (Array.isArray(list)) {
+        setAssets(list);
+      }
+    } catch (err) {
+      console.warn("masterDataService.getAssets refresh notice:", err.message || err);
+    }
+  }, []);
+
   // Synchronize CMMS Work Orders & PM Schedules with Fastify backend
   useEffect(() => {
     async function syncCMMSBackend() {
       try {
-        const [remoteWOs, remotePMs, remoteSpares] = await Promise.allSettled([
+        const [remoteWOs, remotePMs, remoteSpares, remoteAssets, remoteBreakdowns] = await Promise.allSettled([
           maintenanceService.getWorkOrders(),
           maintenanceService.getPMSchedules(),
           maintenanceService.getSpareParts(),
+          masterDataService.getAssets(),
+          maintenanceService.getBreakdowns(),
         ]);
 
-        if (remoteWOs.status === "fulfilled" && Array.isArray(remoteWOs.value) && remoteWOs.value.length > 0) {
-          setWorkOrders(remoteWOs.value);
+        if (remoteWOs.status === "fulfilled") {
+          const list = Array.isArray(remoteWOs.value) ? remoteWOs.value : (remoteWOs.value?.data || []);
+          if (Array.isArray(list) && list.length > 0) {
+            setWorkOrders(normalizeWorkOrders(list));
+          }
         }
-        if (remotePMs.status === "fulfilled" && Array.isArray(remotePMs.value) && remotePMs.value.length > 0) {
-          setPmSchedules(remotePMs.value);
+        if (remotePMs.status === "fulfilled") {
+          const list = Array.isArray(remotePMs.value) ? remotePMs.value : (remotePMs.value?.data || []);
+          if (Array.isArray(list)) {
+            setPmSchedules(list);
+          }
         }
         if (remoteSpares.status === "fulfilled" && Array.isArray(remoteSpares.value) && remoteSpares.value.length > 0) {
           setSpareParts(remoteSpares.value);
+        }
+        if (remoteAssets.status === "fulfilled") {
+          const list = remoteAssets.value?.data || remoteAssets.value || [];
+          if (Array.isArray(list)) {
+            setAssets(list);
+          }
+        }
+        if (remoteBreakdowns.status === "fulfilled") {
+          const list = Array.isArray(remoteBreakdowns.value) ? remoteBreakdowns.value : (remoteBreakdowns.value?.data || []);
+          if (Array.isArray(list)) {
+            setBreakdowns(list);
+          }
         }
       } catch (err) {
         console.warn("CMMS backend sync fallback:", err.message);
@@ -219,7 +332,7 @@ export function CMMSProvider({ children }) {
   }, [pmSchedules]);
 
   useEffect(() => {
-    localStorage.setItem("flowstate_checklists", JSON.stringify(checklistTemplates));
+    localStorage.setItem("flowstate_checklists_v2", JSON.stringify(checklistTemplates));
   }, [checklistTemplates]);
 
   useEffect(() => {
@@ -302,7 +415,7 @@ export function CMMSProvider({ children }) {
   }, [isLiveTelemetryStreaming]);
 
   // Asset Actions
-  const addAsset = (newAsset) => {
+  const addAsset = async (newAsset) => {
     const id = newAsset.id || `ASSET-${Math.floor(100 + Math.random() * 900)}`;
     const assetWithMeta = {
       ...newAsset,
@@ -318,19 +431,43 @@ export function CMMSProvider({ children }) {
       pressure: newAsset.pressure || 6.0
     };
     setAssets((prev) => [assetWithMeta, ...prev]);
+
+    try {
+      const res = await masterDataService.createAsset({
+        id: assetWithMeta.id,
+        name: assetWithMeta.name,
+        type: assetWithMeta.type,
+        plant: assetWithMeta.plant,
+        department: assetWithMeta.department,
+        line: assetWithMeta.line,
+        location: assetWithMeta.location,
+        criticality: assetWithMeta.criticality,
+        status: assetWithMeta.status,
+        health: assetWithMeta.health,
+        manufacturer: assetWithMeta.manufacturer,
+        model: assetWithMeta.model,
+        installedDate: assetWithMeta.installedDate,
+        mtbf: assetWithMeta.mtbf,
+        mttr: assetWithMeta.mttr,
+      });
+      if (res?.data) {
+        setAssets((prev) => prev.map((a) => (a.id === assetWithMeta.id ? { ...a, ...res.data } : a)));
+      }
+    } catch (err) {
+      console.warn("masterDataService.createAsset error:", err.message);
+    }
     return assetWithMeta;
   };
 
-  const updateAssetStatus = (assetId, newStatus, healthChange = 0) => {
+  const updateAssetStatus = async (assetId, newStatus, healthChange = 0) => {
     setAssets((prev) =>
       prev.map((asset) => {
-        if (asset.id === assetId) {
+        if (asset.id === assetId || asset.dbId === assetId) {
           const updated = {
             ...asset,
             status: newStatus,
             health: Math.max(0, Math.min(100, asset.health + healthChange))
           };
-          // Dispatch custom event for cross-context synchronization (e.g. MasterDataContext line status)
           window.dispatchEvent(
             new CustomEvent("AssetStatusChanged", {
               detail: { assetId, status: newStatus, lineId: asset.lineId }
@@ -341,37 +478,82 @@ export function CMMSProvider({ children }) {
         return asset;
       })
     );
-    maintenanceService.updateAsset(assetId, { status: newStatus, healthChange }).catch(() => {});
+    try {
+      await masterDataService.updateAsset(assetId, { status: newStatus, healthChange });
+    } catch {
+      maintenanceService.updateAsset(assetId, { status: newStatus, healthChange }).catch(() => {});
+    }
   };
 
-  const updateAsset = (assetId, updatedFields) => {
+  const updateAsset = async (assetId, updatedFields) => {
     setAssets((prev) =>
       prev.map((asset) => {
-        if (asset.id === assetId) {
+        if (asset.id === assetId || asset.dbId === assetId) {
           return {
             ...asset,
             ...updatedFields,
-            id: asset.id, // preserve ID immutability
+            id: asset.id,
             lastUpdated: new Date().toISOString().replace("T", " ").substring(0, 16)
           };
         }
         return asset;
       })
     );
-    maintenanceService.updateAsset(assetId, updatedFields).catch(() => {});
+    try {
+      await masterDataService.updateAsset(assetId, updatedFields);
+    } catch (err) {
+      console.warn("masterDataService.updateAsset error:", err.message);
+    }
+  };
+
+  const deleteAsset = async (assetId) => {
+    setAssets((prev) => prev.filter((asset) => asset.id !== assetId && asset.dbId !== assetId));
+    try {
+      await masterDataService.deleteAsset(assetId);
+    } catch (err) {
+      console.warn("masterDataService.deleteAsset error:", err.message);
+    }
   };
 
   // Work Order Actions
-  const addWorkOrder = (newWO) => {
-    const id = newWO.id || `WO-2026-${Math.floor(1000 + Math.random() * 9000)}`;
-    const createdDate = newWO.createdDate || new Date().toISOString().replace("T", " ").substring(0, 16);
+  const addWorkOrder = async (newWO) => {
+    let createdFromBackend = null;
+    const techToAssign = newWO.assignedTechnician || newWO.technician || newWO.assignedTo;
+    try {
+      const res = await maintenanceService.createWorkOrder({
+        assetId: newWO.assetId || "ASSET-101",
+        title: newWO.title,
+        description: newWO.description || newWO.symptom || newWO.issue || "",
+        type: newWO.type || "Corrective",
+        priority: newWO.priority || "HIGH",
+        estimatedHours: Number(newWO.estimatedHours) || 2.0,
+        dueDate: newWO.dueDate,
+        scheduledDate: newWO.dueDate || newWO.scheduledDate,
+        assignedTo: techToAssign,
+        assignedTechnician: techToAssign,
+        technician: techToAssign
+      });
+      createdFromBackend = res?.data || res;
+    } catch (err) {
+      console.warn("maintenanceService.createWorkOrder error:", err.message);
+    }
+
+    const id = createdFromBackend?.woNumber || newWO.id || `WO-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+    const assignedTechName = createdFromBackend?.assignedUser
+      ? `${createdFromBackend.assignedUser.firstName || ""} ${createdFromBackend.assignedUser.lastName || ""}`.trim()
+      : (techToAssign || "Unassigned");
+
     const woWithMeta = {
       ...newWO,
       id,
-      createdDate,
+      dbId: createdFromBackend?.id,
+      woNumber: createdFromBackend?.woNumber || id,
+      createdDate: new Date().toISOString().substring(0, 10),
+      dueDate: newWO.dueDate || (createdFromBackend?.scheduledDate ? new Date(createdFromBackend.scheduledDate).toISOString().substring(0, 10) : new Date().toISOString().substring(0, 10)),
       status: newWO.status || "Open",
       priority: newWO.priority || "P2 - High",
       type: newWO.type || "Corrective",
+      assignedTechnician: assignedTechName,
       partsRequired: newWO.partsRequired || [],
       toolsRequired: newWO.toolsRequired || [],
       comments: newWO.comments || []
@@ -384,22 +566,63 @@ export function CMMSProvider({ children }) {
       );
     }
 
-    maintenanceService.createWorkOrder({
-      assetId: newWO.assetId || "ASSET-101",
-      title: newWO.title,
-      description: newWO.description || newWO.symptom || "",
-      type: newWO.type || "Corrective",
-      priority: newWO.priority || "HIGH",
-      estimatedHours: Number(newWO.estimatedHours) || 2.0,
-    }).catch(err => console.warn("maintenanceService.createWorkOrder:", err.message));
-
+    await refreshWorkOrders();
     return woWithMeta;
   };
 
-  const updateWorkOrderStatus = (woId, newStatus, notes = "") => {
+  const updateWorkOrder = async (woId, updateData) => {
+    const techName = updateData.technician || updateData.assignedTechnician;
     setWorkOrders((prev) =>
       prev.map((wo) => {
-        if (wo.id === woId) {
+        if (wo.id === woId || wo.dbId === woId || wo.woNumber === woId) {
+          return {
+            ...wo,
+            ...updateData,
+            title: updateData.title || wo.title,
+            description: updateData.description || updateData.issue || wo.description,
+            symptom: updateData.description || updateData.issue || wo.symptom,
+            priority: updateData.priority || wo.priority,
+            status: updateData.status || wo.status,
+            assignedTechnician: techName || wo.assignedTechnician,
+            dueDate: updateData.dueDate || wo.dueDate
+          };
+        }
+        return wo;
+      })
+    );
+
+    try {
+      await maintenanceService.updateWorkOrder(woId, {
+        title: updateData.title,
+        description: updateData.description || updateData.issue,
+        priority: updateData.priority,
+        status: updateData.status,
+        dueDate: updateData.dueDate,
+        technician: techName,
+        assignedTechnician: techName,
+        assignedTo: updateData.assignedTo || techName
+      });
+      await refreshWorkOrders();
+    } catch (err) {
+      console.warn("maintenanceService.updateWorkOrder error:", err.message);
+    }
+  };
+
+  const deleteWorkOrder = async (woId) => {
+    setWorkOrders((prev) => prev.filter((wo) => wo.id !== woId && wo.dbId !== woId && wo.woNumber !== woId));
+
+    try {
+      await maintenanceService.deleteWorkOrder(woId);
+      refreshWorkOrders();
+    } catch (err) {
+      console.warn("maintenanceService.deleteWorkOrder error:", err.message);
+    }
+  };
+
+  const updateWorkOrderStatus = async (woId, newStatus, notes = "") => {
+    setWorkOrders((prev) =>
+      prev.map((wo) => {
+        if (wo.id === woId || wo.dbId === woId || wo.woNumber === woId) {
           const updated = { ...wo, status: newStatus };
           if (notes) {
             updated.comments = [
@@ -417,7 +640,12 @@ export function CMMSProvider({ children }) {
       })
     );
 
-    maintenanceService.updateWorkOrderStatus(woId, newStatus).catch(err => console.warn("maintenanceService.updateWorkOrderStatus:", err.message));
+    try {
+      await maintenanceService.updateWorkOrderStatus(woId, newStatus);
+      refreshWorkOrders();
+    } catch (err) {
+      console.warn("maintenanceService.updateWorkOrderStatus:", err.message);
+    }
   };
 
   const startWorkOrder = (woId) => {
@@ -495,22 +723,82 @@ export function CMMSProvider({ children }) {
     return planWithMeta;
   };
 
-  const addPMSchedule = (newSchedule) => {
-    const id = newSchedule.id || `PM-SCH-${Math.floor(100 + Math.random() * 900)}`;
-    const schedWithMeta = {
-      ...newSchedule,
-      id,
-      status: "Upcoming",
-      complianceRate: "100%"
-    };
-    setPmSchedules((prev) => [schedWithMeta, ...prev]);
-    return schedWithMeta;
+  const refreshPMSchedules = useCallback(async () => {
+    try {
+      const res = await maintenanceService.getPMSchedules();
+      const list = Array.isArray(res) ? res : (res?.data || []);
+      if (Array.isArray(list)) {
+        setPmSchedules(list);
+        return list;
+      }
+    } catch (err) {
+      console.warn("refreshPMSchedules notice:", err.message || err);
+    }
+  }, []);
+
+  const addPMSchedule = async (newSchedule) => {
+    try {
+      const res = await maintenanceService.createPMSchedule({
+        title: newSchedule.title,
+        assetId: newSchedule.assetId,
+        assetName: newSchedule.assetName,
+        frequency: newSchedule.frequency,
+        status: newSchedule.status || "Upcoming",
+        assignedTo: newSchedule.assignedTechnician || newSchedule.assignedTo,
+        dueDate: newSchedule.dueNext || newSchedule.dueDate,
+        templateId: newSchedule.templateId,
+        priority: newSchedule.priority,
+      });
+      const created = res?.data || res;
+      await refreshPMSchedules();
+      return created;
+    } catch (err) {
+      console.warn("Backend createPMSchedule failed, using local fallback:", err.message);
+      const id = newSchedule.id || `PM-SCH-${Math.floor(100 + Math.random() * 900)}`;
+      const schedWithMeta = {
+        ...newSchedule,
+        id,
+        status: "Upcoming",
+        complianceRate: "100%"
+      };
+      setPmSchedules((prev) => [schedWithMeta, ...prev]);
+      return schedWithMeta;
+    }
   };
 
-  const updatePMScheduleStatus = (schedId, newStatus, activeWoId = null) => {
+  const updatePMSchedule = async (schedId, updateData) => {
+    try {
+      const res = await maintenanceService.updatePMSchedule(schedId, updateData);
+      await refreshPMSchedules();
+      return res?.data || res;
+    } catch (err) {
+      console.warn("Backend updatePMSchedule failed, using local fallback:", err.message);
+      setPmSchedules((prev) =>
+        prev.map((s) => (s.id === schedId || s.dbId === schedId || s.scheduleCode === schedId ? { ...s, ...updateData } : s))
+      );
+    }
+  };
+
+  const deletePMSchedule = async (schedId) => {
+    try {
+      await maintenanceService.deletePMSchedule(schedId);
+      await refreshPMSchedules();
+      return true;
+    } catch (err) {
+      console.warn("Backend deletePMSchedule failed, using local fallback:", err.message);
+      setPmSchedules((prev) => prev.filter((s) => s.id !== schedId && s.dbId !== schedId && s.scheduleCode !== schedId));
+    }
+  };
+
+  const updatePMScheduleStatus = async (schedId, newStatus, activeWoId = null) => {
+    try {
+      await maintenanceService.updatePMSchedule(schedId, { status: newStatus });
+    } catch (err) {
+      console.warn("Backend updatePMScheduleStatus sync failed:", err.message);
+    }
     setPmSchedules((prev) =>
       prev.map((s) => {
-        if (s.id === schedId) {
+        if (s.id === schedId || s.dbId === schedId || s.scheduleCode === schedId) {
           const updated = { ...s, status: newStatus };
           if (activeWoId) updated.activeWoId = activeWoId;
           return updated;
@@ -592,72 +880,86 @@ export function CMMSProvider({ children }) {
   };
 
   // Breakdown Actions
-  const reportBreakdown = (breakdownData) => {
-    const id = `BD-2026-${Math.floor(100 + Math.random() * 900)}`;
+  const reportBreakdown = async (breakdownData) => {
+    const tempId = `BD-2026-${Math.floor(100 + Math.random() * 900)}`;
     const newBD = {
       ...breakdownData,
-      id,
+      id: tempId,
       startTime: new Date().toISOString().replace("T", " ").substring(0, 16),
       status: "Active Repair",
       durationMinutes: 0
     };
     setBreakdowns((prev) => [newBD, ...prev]);
+
     if (breakdownData.assetId) {
       updateAssetStatus(breakdownData.assetId, "DOWN", -35);
-      
-      // Auto-create Emergency Work Order
-      if (breakdownData.priority === "P1" || breakdownData.priority === "Critical" || !breakdownData.priority) {
-          addWorkOrder({
-              title: `Emergency Repair: ${breakdownData.symptom || 'Breakdown'}`,
-              assetId: breakdownData.assetId,
-              type: "Emergency",
-              priority: "P1 - Critical",
-              status: "Open",
-              description: `Auto-generated from breakdown report ${id}.`
-          });
-      }
     }
+
+    try {
+      const res = await maintenanceService.reportBreakdown(breakdownData);
+      const serverBD = res?.data || res;
+      if (serverBD && (serverBD.id || serverBD.dbId)) {
+        setBreakdowns((prev) => prev.map((b) => (b.id === tempId ? { ...b, ...serverBD } : b)));
+        refreshWorkOrders();
+        return serverBD;
+      }
+    } catch (err) {
+      console.warn("maintenanceService.reportBreakdown error:", err.message);
+    }
+
     return newBD;
   };
 
-  const resolveBreakdown = (breakdownId, repairDetails) => {
+  const resolveBreakdown = async (breakdownId, repairDetails) => {
+    const target = breakdowns.find(b => b.id === breakdownId || b.dbId === breakdownId || b.workOrderId === breakdownId || b.downtimeLogId === breakdownId);
     setBreakdowns((prev) =>
       prev.map((bd) => {
-        if (bd.id === breakdownId) {
+        if (bd.id === breakdownId || bd.dbId === breakdownId) {
           if (bd.assetId) {
             updateAssetStatus(bd.assetId, "Operational", +30);
           }
           const endTimeStr = new Date().toISOString().replace("T", " ").substring(0, 16);
-          const start = new Date(bd.startTime);
+          const start = new Date(bd.startTime || Date.now());
           const end = new Date(endTimeStr);
           const durationMinutes = Math.max(0, Math.floor((end - start) / 60000));
           return {
             ...bd,
             status: "Resolved",
             endTime: endTimeStr,
-            durationMinutes,
+            durationMinutes: repairDetails?.durationMinutes || durationMinutes,
             ...repairDetails
           };
         }
         return bd;
       })
     );
-    maintenanceService.updateWorkOrderStatus(breakdownId, "Resolved").catch(err => console.warn("maintenanceService.updateWorkOrderStatus:", err.message));
-  };
 
-  const updateBreakdown = (breakdownId, updatedFields) => {
-    setBreakdowns((prev) =>
-      prev.map((bd) => (bd.id === breakdownId ? { ...bd, ...updatedFields } : bd))
-    );
-    if (updatedFields.status) {
-      maintenanceService.updateWorkOrderStatus(breakdownId, updatedFields.status).catch(err => console.warn("maintenanceService.updateWorkOrderStatus:", err.message));
+    try {
+      const targetId = target?.dbId || target?.downtimeLogId || target?.workOrderId || breakdownId;
+      await maintenanceService.resolveBreakdown(targetId, { ...repairDetails, breakdownId });
+    } catch (err) {
+      console.warn("maintenanceService.resolveBreakdown:", err.message);
     }
   };
 
-  const updateBreakdownStatus = (breakdownId, newStatus, notes = "") => {
+  const updateBreakdown = async (breakdownId, updatedFields) => {
+    const target = breakdowns.find(b => b.id === breakdownId || b.dbId === breakdownId || b.workOrderId === breakdownId || b.downtimeLogId === breakdownId);
+    setBreakdowns((prev) =>
+      prev.map((bd) => (bd.id === breakdownId || bd.dbId === breakdownId ? { ...bd, ...updatedFields } : bd))
+    );
+    try {
+      const targetId = target?.dbId || target?.downtimeLogId || target?.workOrderId || breakdownId;
+      await maintenanceService.updateBreakdown(targetId, { ...updatedFields, breakdownId });
+    } catch (err) {
+      console.warn("maintenanceService.updateBreakdown:", err.message);
+    }
+  };
+
+  const updateBreakdownStatus = async (breakdownId, newStatus, notes = "") => {
+    const target = breakdowns.find(b => b.id === breakdownId || b.dbId === breakdownId || b.workOrderId === breakdownId || b.downtimeLogId === breakdownId);
     setBreakdowns((prev) =>
       prev.map((bd) => {
-        if (bd.id === breakdownId) {
+        if (bd.id === breakdownId || bd.dbId === breakdownId) {
           const updated = { ...bd, status: newStatus };
           if (newStatus === "Resolved" || newStatus === "Closed") {
             if (bd.assetId) {
@@ -675,7 +977,23 @@ export function CMMSProvider({ children }) {
         return bd;
       })
     );
-    maintenanceService.updateWorkOrderStatus(breakdownId, newStatus).catch(err => console.warn("maintenanceService.updateWorkOrderStatus:", err.message));
+    try {
+      const targetId = target?.dbId || target?.downtimeLogId || target?.workOrderId || breakdownId;
+      await maintenanceService.updateBreakdown(targetId, { status: newStatus, notes, breakdownId });
+    } catch (err) {
+      console.warn("maintenanceService.updateBreakdownStatus:", err.message);
+    }
+  };
+
+  const deleteBreakdown = async (breakdownId) => {
+    const target = breakdowns.find(b => b.id === breakdownId || b.dbId === breakdownId || b.workOrderId === breakdownId || b.downtimeLogId === breakdownId);
+    setBreakdowns((prev) => prev.filter((bd) => bd.id !== breakdownId && bd.dbId !== breakdownId));
+    try {
+      const targetId = target?.dbId || target?.downtimeLogId || target?.workOrderId || breakdownId;
+      await maintenanceService.deleteBreakdown(targetId);
+    } catch (err) {
+      console.warn("maintenanceService.deleteBreakdown error:", err.message);
+    }
   };
 
   // Spare Parts Actions
@@ -904,11 +1222,16 @@ export function CMMSProvider({ children }) {
         addAsset,
         updateAsset,
         updateAssetStatus,
+        deleteAsset,
+        refreshAssets,
 
         // Work Orders
         workOrders,
         setWorkOrders,
         addWorkOrder,
+        updateWorkOrder,
+        deleteWorkOrder,
+        refreshWorkOrders,
         updateWorkOrderStatus,
         startWorkOrder,
         completeWorkOrder,
@@ -920,6 +1243,9 @@ export function CMMSProvider({ children }) {
         pmSchedules,
         setPmSchedules,
         addPMSchedule,
+        updatePMSchedule,
+        deletePMSchedule,
+        refreshPMSchedules,
         updatePMScheduleStatus,
         checklistTemplates,
         checklistHistory,
@@ -933,6 +1259,7 @@ export function CMMSProvider({ children }) {
         resolveBreakdown,
         updateBreakdown,
         updateBreakdownStatus,
+        deleteBreakdown,
 
         // Spare Parts & BOM & Requests
         spareParts,

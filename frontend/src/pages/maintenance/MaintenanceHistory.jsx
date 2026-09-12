@@ -27,126 +27,23 @@ import { useCMMS } from "../../context/CMMSContext";
 import { useApp } from "../../context/AppContext";
 import { maintenanceService } from "../../services/maintenanceService";
 
-// Rich initial historical maintenance records (GMP / ISO-55001 compliant)
-const INITIAL_MAINTENANCE_HISTORY = [
-  {
-    id: "HIST-2026-001",
-    date: "2026-09-04",
-    time: "14:15",
-    assetId: "ASSET-001",
-    assetName: "Rotary Bottling Filler (Aseptic)",
-    type: "Breakdown Repair",
-    taskTitle: "Infeed star-wheel jam & spindle bearing replacement",
-    technician: "Marcus Vance (Senior Tech)",
-    downtimeMinutes: 42,
-    partsUsed: "High-Temp Ceramic Bearing #6204 (2x)",
-    costUSD: 480.00,
-    status: "Verified & Closed",
-    rootCause: "Sub-microscopic particulate buildup caused friction torque limit trip.",
-    actionTaken: "Cleaned spindle housing, replaced bearings, calibrated torque sensor to 14.5 Nm.",
-    signoffBy: "Quality QA Lead (Dave Miller)",
-    complianceRef: "GMP-SOP-M04"
-  },
-  {
-    id: "HIST-2026-002",
-    date: "2026-09-03",
-    time: "09:30",
-    assetId: "ASSET-003",
-    assetName: "HTST Flash Pasteurizer",
-    type: "Preventive Maintenance",
-    taskTitle: "Quarterly Plate Heat Exchanger Gasket Overhaul",
-    technician: "Elena Rostova",
-    downtimeMinutes: 120,
-    partsUsed: "EPDM Food-Grade Gasket Kit Set-A",
-    costUSD: 850.00,
-    status: "Verified & Closed",
-    rootCause: "Scheduled preventive lifecycle replacement at 3,000 thermal cycles.",
-    actionTaken: "Opened plate pack, inspected for pinholes, replaced all gaskets, passed hydrostatic pressure test at 6.0 Bar.",
-    signoffBy: "Plant Safety Officer",
-    complianceRef: "HACCP-CCP-01"
-  },
-  {
-    id: "HIST-2026-003",
-    date: "2026-09-02",
-    time: "11:00",
-    assetId: "ASSET-002",
-    assetName: "Induction Cap Sealer",
-    type: "Calibration",
-    taskTitle: "RF Sealing Coil Power & Thermal Profiling",
-    technician: "Marcus Vance",
-    downtimeMinutes: 25,
-    partsUsed: "None (Calibration standard only)",
-    costUSD: 120.00,
-    status: "Verified & Closed",
-    rootCause: "Routine monthly metrology alignment.",
-    actionTaken: "Calibrated thermocouple with NIST-traceable thermal probe; adjusted output power to 3.8 kW.",
-    signoffBy: "QA Metrology Specialist",
-    complianceRef: "ISO-17025"
-  },
-  {
-    id: "HIST-2026-004",
-    date: "2026-09-01",
-    time: "16:45",
-    assetId: "ASSET-004",
-    assetName: "Sleeve Rotary Labeler",
-    type: "Breakdown Repair",
-    taskTitle: "Cutting Blade Roller Edge Re-sharpening & Alignment",
-    technician: "Carlos Mendez",
-    downtimeMinutes: 35,
-    partsUsed: "Carbide Rotary Blade Tip (1x)",
-    costUSD: 240.00,
-    status: "Verified & Closed",
-    rootCause: "Burr on foil roll caused blade dulling after 180,000 cuts.",
-    actionTaken: "Swapped blade tip, cleaned vacuum rotary drum, verified cut tolerance within ±0.2mm.",
-    signoffBy: "Packaging Line Supervisor",
-    complianceRef: "SOP-PKG-11"
-  },
-  {
-    id: "HIST-2026-005",
-    date: "2026-08-29",
-    time: "08:15",
-    assetId: "ASSET-005",
-    assetName: "Semi-Auto Depalletizer",
-    type: "Preventive Maintenance",
-    taskTitle: "Pneumatic Cylinder Seal Rebuild & Chain Tensioning",
-    technician: "Elena Rostova",
-    downtimeMinutes: 60,
-    partsUsed: "Festo Pneumatic Seal Kit PK-4",
-    costUSD: 195.00,
-    status: "Verified & Closed",
-    rootCause: "Preventive PM execution (PM-2026-W35).",
-    actionTaken: "Replaced rod wipers, lubricated drive chains with food-grade H1 grease, tested cycle speed.",
-    signoffBy: "Maintenance Lead",
-    complianceRef: "PM-DEP-002"
-  },
-  {
-    id: "HIST-2026-006",
-    date: "2026-08-27",
-    time: "13:10",
-    assetId: "ASSET-001",
-    assetName: "Rotary Bottling Filler (Aseptic)",
-    type: "Breakdown Repair",
-    taskTitle: "Filling Valve #14 Diaphragm Micro-Leak",
-    technician: "Marcus Vance",
-    downtimeMinutes: 28,
-    partsUsed: "PTFE Valve Diaphragm E-Seal (1x)",
-    costUSD: 110.00,
-    status: "Verified & Closed",
-    rootCause: "CIP (Clean-In-Place) caustic exposure degradation over 450 thermal cycles.",
-    actionTaken: "Sanitized valve manifold, replaced PTFE diaphragm, conducted helium leak test. Result: Zero leakage.",
-    signoffBy: "Sanitation & QA Manager",
-    complianceRef: "FDA-21CFR-111"
-  }
-];
+// Initial historical maintenance records (empty by default, loaded from database)
+const INITIAL_MAINTENANCE_HISTORY = [];
 
 export function MaintenanceHistory() {
   const { workOrders = [], breakdowns = [] } = useCMMS();
   const { addToast } = useApp();
+  const [historyRecords, setHistoryRecords] = useState([]);
+  const [selectedRecord, setSelectedRecord] = useState(null);
 
   React.useEffect(() => {
     const fetchHistory = async () => {
       try {
-        await maintenanceService.getHistory();
+        const res = await maintenanceService.getHistory();
+        const list = Array.isArray(res) ? res : (res?.data || []);
+        if (Array.isArray(list)) {
+          setHistoryRecords(list);
+        }
       } catch (err) {
         console.warn("API maintenance history fetch notice:", err.message || err);
       }
@@ -156,16 +53,17 @@ export function MaintenanceHistory() {
 
   const handleRefresh = async () => {
     try {
-      addToast("Refreshing maintenance history with plant telemetry...", "info");
-      await maintenanceService.getHistory();
-      addToast("Maintenance history synchronized with plant telemetry.", "success");
+      addToast("Refreshing maintenance history from database...", "info");
+      const res = await maintenanceService.getHistory();
+      const list = Array.isArray(res) ? res : (res?.data || []);
+      if (Array.isArray(list)) {
+        setHistoryRecords(list);
+      }
+      addToast("Maintenance history synchronized with database.", "success");
     } catch (err) {
       addToast("Maintenance history refreshed", "info");
     }
   };
-
-  const [historyRecords] = useState(INITIAL_MAINTENANCE_HISTORY);
-  const [selectedRecord, setSelectedRecord] = useState(null);
 
   // Filters
   const [searchTerm, setSearchTerm] = useState("");

@@ -21,12 +21,12 @@ export const CHECKLIST_TEMPLATES = [
             instruction: "Depress E-stop buttons at Operator HMI and Discharge Zone. Confirm safety relay de-energizes within 80ms.",
             type: "PASS_FAIL",
             required: true,
-            status: "PASS",
-            actualValue: "OK",
+            status: null,
+            actualValue: "",
             unit: "",
             limit: "De-energize < 100ms",
             criticality: "Critical",
-            comment: "Dual channel relay tripped simultaneously."
+            comment: ""
           },
           {
             id: "chk-02",
@@ -34,8 +34,8 @@ export const CHECKLIST_TEMPLATES = [
             instruction: "Verify all 4 acrylic enclosure doors latch firmly and trip interlock reed switch when cracked open > 5mm.",
             type: "PASS_FAIL",
             required: true,
-            status: "PASS",
-            actualValue: "OK",
+            status: null,
+            actualValue: "",
             unit: "",
             limit: "Trip < 5mm open",
             criticality: "Critical",
@@ -53,15 +53,14 @@ export const CHECKLIST_TEMPLATES = [
             instruction: "Mount magnetic accelerometer on lower bearing housing. Record peak vibration velocity (RMS) during 600 BPM dry run.",
             type: "NUMERIC_LIMIT",
             required: true,
-            status: "FAIL", // Simulating the failure workflow trigger from requirement #18 & #19
-            actualValue: 4.8,
+            status: null,
+            actualValue: "",
             unit: "mm/s",
             minLimit: 0.1,
             maxLimit: 3.0,
             limitText: "< 3.0 mm/s",
             criticality: "Critical",
-            comment: "Audible hum and high amplitude vibration on lower spindle cartridge. Exceeds ISO 10816 class 2 vibration threshold.",
-            photo: "/assets/img/vibration-sensor-fail.jpg"
+            comment: ""
           },
           {
             id: "chk-04",
@@ -69,14 +68,14 @@ export const CHECKLIST_TEMPLATES = [
             instruction: "Use FLIR infrared gun to measure gearbox surface temperature after 20 minutes continuous run.",
             type: "NUMERIC_LIMIT",
             required: true,
-            status: "PASS",
-            actualValue: 62.4,
+            status: null,
+            actualValue: "",
             unit: "°C",
             minLimit: 20.0,
             maxLimit: 75.0,
             limitText: "< 75.0 °C",
             criticality: "High",
-            comment: "Within normal thermal operating band."
+            comment: ""
           },
           {
             id: "chk-05",
@@ -84,12 +83,12 @@ export const CHECKLIST_TEMPLATES = [
             instruction: "Inspect filling heads 1-12 for liquid seepage, elastomer scoring, or swelling.",
             type: "PASS_FAIL",
             required: true,
-            status: "PASS",
-            actualValue: "OK",
+            status: null,
+            actualValue: "",
             unit: "",
             limit: "Zero drip at 4.5 bar",
             criticality: "High",
-            comment: "Head 7 seal ring replaced during previous shift. All other heads dry."
+            comment: ""
           }
         ]
       },
@@ -103,14 +102,14 @@ export const CHECKLIST_TEMPLATES = [
             instruction: "Check grease reservoir level on Lincoln Centro-Matic central pump.",
             type: "NUMERIC_LIMIT",
             required: true,
-            status: "PASS",
-            actualValue: 80,
+            status: null,
+            actualValue: "",
             unit: "%",
             minLimit: 25,
             maxLimit: 100,
             limitText: "> 25%",
             criticality: "Medium",
-            comment: "Topped off with Mobil SHC Polyrex 462."
+            comment: ""
           },
           {
             id: "chk-07",
@@ -118,14 +117,14 @@ export const CHECKLIST_TEMPLATES = [
             instruction: "Read analog pressure gauge on FRL unit. Must be maintained at 6.0 ± 0.3 bar.",
             type: "NUMERIC_LIMIT",
             required: true,
-            status: "PASS",
-            actualValue: 6.2,
+            status: null,
+            actualValue: "",
             unit: "bar",
             minLimit: 5.7,
             maxLimit: 6.5,
             limitText: "5.7 - 6.5 bar",
             criticality: "Medium",
-            comment: "Moisture trap purged."
+            comment: ""
           },
           {
             id: "chk-08",
@@ -133,22 +132,22 @@ export const CHECKLIST_TEMPLATES = [
             instruction: "Perform ultrasonic leak detection on CIP nitrogen blanket line.",
             type: "PASS_FAIL",
             required: false,
-            status: "N/A",
-            actualValue: "N/A",
+            status: null,
+            actualValue: "",
             unit: "",
             limit: "Zero leakage",
             criticality: "Low",
-            comment: "Line not scheduled for nitrogen dosing run this week."
+            comment: ""
           }
         ]
       }
     ],
     toolsUsed: ["SKF TKSA 41 Laser Aligner", "FLIR TG165 Thermal Camera", "Lincoln Central Grease Gun"],
-    partsUsed: [{ partNo: "LUB-MOB-462", name: "Mobil Grease Cartridge", qty: 1 }],
+    partsUsed: [],
     supervisorSignOff: {
       required: true,
       supervisor: "Thomas Sterling",
-      status: "Pending Action", // Pending Action, Approved, Rejected
+      status: "Pending Action",
       signedAt: null
     }
   },
@@ -173,14 +172,14 @@ export const CHECKLIST_TEMPLATES = [
             instruction: "Pressurize product channel to 10.0 bar for 15 minutes. Pressure loss must not exceed 0.2 bar.",
             type: "NUMERIC_LIMIT",
             required: true,
-            status: "FAIL",
-            actualValue: 7.6,
+            status: null,
+            actualValue: "",
             unit: "bar",
             minLimit: 9.8,
             maxLimit: 10.5,
             limitText: "> 9.8 bar after 15 min",
             criticality: "Critical",
-            comment: "Pressure drop of 2.4 bar detected. Leakage traced to plate pack #42-48."
+            comment: ""
           },
           {
             id: "chk-ht-02",
@@ -188,14 +187,14 @@ export const CHECKLIST_TEMPLATES = [
             instruction: "Calibrate Endress+Hauser Deltabar PMD75 against reference deadweight tester.",
             type: "NUMERIC_LIMIT",
             required: true,
-            status: "PASS",
-            actualValue: 0.02,
+            status: null,
+            actualValue: "",
             unit: "bar",
             minLimit: -0.05,
             maxLimit: 0.05,
             limitText: "±0.05 bar",
             criticality: "High",
-            comment: "Calibration valid until 2026-11-14."
+            comment: ""
           }
         ]
       }
@@ -230,14 +229,14 @@ export const CHECKLIST_TEMPLATES = [
             instruction: "Measure slip torque using digital torque wrench Mecmesin CapTest.",
             type: "NUMERIC_LIMIT",
             required: true,
-            status: "PASS",
-            actualValue: 2.85,
+            status: null,
+            actualValue: "",
             unit: "Nm",
             minLimit: 2.6,
             maxLimit: 3.1,
             limitText: "2.6 - 3.1 Nm",
             criticality: "High",
-            comment: "Torque evenly balanced across all chucks."
+            comment: ""
           }
         ]
       }
@@ -247,8 +246,8 @@ export const CHECKLIST_TEMPLATES = [
     supervisorSignOff: {
       required: true,
       supervisor: "Thomas Sterling",
-      status: "Approved",
-      signedAt: "2026-06-15 11:30"
+      status: "Pending Action",
+      signedAt: null
     }
   }
 ];

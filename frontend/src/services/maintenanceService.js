@@ -13,8 +13,32 @@ export const maintenanceService = {
     return apiClient.patch(`/maintenance/work-orders/${workOrderId}/status`, { status });
   },
 
+  async updateWorkOrder(workOrderId, workOrderData) {
+    return apiClient.put(`/maintenance/work-orders/${workOrderId}`, workOrderData);
+  },
+
+  async deleteWorkOrder(workOrderId) {
+    return apiClient.delete(`/maintenance/work-orders/${workOrderId}`);
+  },
+
   async getBreakdowns() {
     return apiClient.get("/maintenance/breakdowns");
+  },
+
+  async reportBreakdown(breakdownData) {
+    return apiClient.post("/maintenance/breakdowns", breakdownData);
+  },
+
+  async updateBreakdown(breakdownId, breakdownData) {
+    return apiClient.put(`/maintenance/breakdowns/${breakdownId}`, breakdownData);
+  },
+
+  async resolveBreakdown(breakdownId, resolveData) {
+    return apiClient.post(`/maintenance/breakdowns/${breakdownId}/resolve`, resolveData);
+  },
+
+  async deleteBreakdown(breakdownId) {
+    return apiClient.delete(`/maintenance/breakdowns/${breakdownId}`);
   },
 
   async updateAsset(assetId, assetData) {
@@ -51,6 +75,14 @@ export const maintenanceService = {
 
   async createPMSchedule(scheduleData) {
     return apiClient.post("/maintenance/pm-schedules", scheduleData);
+  },
+
+  async updatePMSchedule(scheduleId, scheduleData) {
+    return apiClient.put(`/maintenance/pm-schedules/${scheduleId}`, scheduleData);
+  },
+
+  async deletePMSchedule(scheduleId) {
+    return apiClient.delete(`/maintenance/pm-schedules/${scheduleId}`);
   },
 
   async getPM() {

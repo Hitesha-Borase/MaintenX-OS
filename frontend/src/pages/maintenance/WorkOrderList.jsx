@@ -20,7 +20,8 @@ import {
   Package,
   Calendar,
   Layers,
-  FileText
+  FileText,
+  Trash2
 } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { StatCard } from "../../components/common/StatCard";
@@ -36,6 +37,9 @@ export function WorkOrderList() {
   const {
     workOrders = [],
     addWorkOrder,
+    updateWorkOrder,
+    deleteWorkOrder,
+    refreshWorkOrders,
     updateWorkOrderStatus,
     startWorkOrder,
     completeWorkOrder,
@@ -56,18 +60,14 @@ export function WorkOrderList() {
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [isResolveModalOpen, setIsResolveModalOpen] = useState(false);
   const [isCloseModalOpen, setIsCloseModalOpen] = useState(false);
+  const [deleteConfirmWO, setDeleteConfirmWO] = useState(null);
   const [selectedWO, setSelectedWO] = useState(null);
 
   React.useEffect(() => {
-    const fetchWOs = async () => {
-      try {
-        await maintenanceService.getWorkOrders();
-      } catch (err) {
-        console.warn("API work orders fetch notice:", err.message || err);
-      }
-    };
-    fetchWOs();
-  }, []);
+    if (refreshWorkOrders) {
+      refreshWorkOrders();
+    }
+  }, [refreshWorkOrders]);
 
   // Forms State
   const [createForm, setCreateForm] = useState({
@@ -137,13 +137,13 @@ export function WorkOrderList() {
   const handleConfirmCreate = async (e) => {
     e.preventDefault();
     if (!createForm.title.trim()) {
-      addToast("Please provide work order title", "error");
+      addToast("Please provide work order title", "warning");
       return;
     }
-    const asset = assets.find((a) => a.id === createForm.assetId);
+    const asset = assets.find((a) => a.id === createForm.assetId || a.assetCode === createForm.assetId);
 
     try {
-      await maintenanceService.createWorkOrder({
+      const newWO = await addWorkOrder({
         title: createForm.title,
         assetId: createForm.assetId,
         assetName: asset?.name || createForm.assetId,
@@ -154,23 +154,23 @@ export function WorkOrderList() {
         dueDate: createForm.dueDate,
         status: "Open"
       });
+      if (refreshWorkOrders) {
+        await refreshWorkOrders();
+      }
+      addToast(`Work Order ${newWO.id || ""} created successfully in database!`, "success");
+      setIsCreateModalOpen(false);
+      setCreateForm({
+        title: "",
+        assetId: assets[0]?.id || "AST-001",
+        issue: "",
+        priority: "P2 - High",
+        type: "Corrective",
+        technician: "Marcus Vance",
+        dueDate: new Date().toISOString().substring(0, 10)
+      });
     } catch (err) {
-      console.warn("API createWorkOrder notice:", err.message || err);
+      addToast(err?.message || "Failed to create work order", "error");
     }
-
-    const newWO = addWorkOrder({
-      title: createForm.title,
-      assetId: createForm.assetId,
-      assetName: asset?.name || createForm.assetId,
-      description: createForm.issue || createForm.title,
-      type: createForm.type,
-      priority: createForm.priority,
-      assignedTechnician: createForm.technician,
-      dueDate: createForm.dueDate,
-      status: "Open"
-    });
-    addToast(`Work Order ${newWO.id} created successfully!`, "success");
-    setIsCreateModalOpen(false);
   };
 
   const handleOpenView = (wo) => {
@@ -191,17 +191,52 @@ export function WorkOrderList() {
     setIsEditModalOpen(true);
   };
 
-  const handleConfirmEdit = (e) => {
+  const handleConfirmEdit = async (e) => {
     e.preventDefault();
     if (!selectedWO) return;
-    updateWorkOrderStatus(selectedWO.id, editForm.status, `Updated parameters: ${editForm.title}`);
-    selectedWO.title = editForm.title;
-    selectedWO.description = editForm.issue;
-    selectedWO.priority = editForm.priority;
-    selectedWO.assignedTechnician = editForm.technician;
-    selectedWO.dueDate = editForm.dueDate;
-    addToast(`Work Order ${selectedWO.id} updated successfully.`, "success");
-    setIsEditModalOpen(false);
+    const targetId = selectedWO.dbId || selectedWO.id || selectedWO.woNumber;
+    try {
+      if (updateWorkOrder) {
+        await updateWorkOrder(targetId, {
+          title: editForm.title,
+          description: editForm.issue,
+          issue: editForm.issue,
+          priority: editForm.priority,
+          status: editForm.status,
+          technician: editForm.technician,
+          dueDate: editForm.dueDate
+        });
+      }
+      if (refreshWorkOrders) {
+        await refreshWorkOrders();
+      }
+      addToast(`Work Order ${selectedWO.id} updated successfully in database.`, "success");
+      setIsEditModalOpen(false);
+      setSelectedWO(null);
+    } catch (err) {
+      addToast(err?.message || "Failed to update Work Order", "error");
+    }
+  };
+
+  const handleDeleteClick = (wo) => {
+    setDeleteConfirmWO(wo);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteConfirmWO) return;
+    const targetId = deleteConfirmWO.dbId || deleteConfirmWO.id || deleteConfirmWO.woNumber;
+    try {
+      if (deleteWorkOrder) {
+        await deleteWorkOrder(targetId);
+      }
+      if (refreshWorkOrders) {
+        await refreshWorkOrders();
+      }
+      addToast(`Work Order ${deleteConfirmWO.id || deleteConfirmWO.woNumber} deleted successfully from database.`, "success");
+      setDeleteConfirmWO(null);
+    } catch (err) {
+      addToast(err?.message || "Failed to delete Work Order", "error");
+    }
   };
 
   const handleOpenAssign = (wo) => {
@@ -210,14 +245,24 @@ export function WorkOrderList() {
     setIsAssignModalOpen(true);
   };
 
-  const handleConfirmAssign = (e) => {
+  const handleConfirmAssign = async (e) => {
     e.preventDefault();
     if (!selectedWO) return;
-    selectedWO.assignedTechnician = assignTech;
-    if (selectedWO.status === "Open") {
-      updateWorkOrderStatus(selectedWO.id, "Assigned", `Dispatched technician ${assignTech}`);
-    } else {
-      addToast(`Reassigned ${selectedWO.id} to ${assignTech}`);
+    const targetId = selectedWO.dbId || selectedWO.id || selectedWO.woNumber;
+    try {
+      if (updateWorkOrder) {
+        await updateWorkOrder(targetId, {
+          status: "Assigned",
+          technician: assignTech,
+          assignedTechnician: assignTech,
+        });
+      }
+      if (refreshWorkOrders) {
+        await refreshWorkOrders();
+      }
+      addToast(`Reassigned ${selectedWO.id} to ${assignTech}`, "success");
+    } catch (err) {
+      addToast(err?.message || "Failed to assign technician", "error");
     }
     setIsAssignModalOpen(false);
   };
@@ -388,7 +433,7 @@ export function WorkOrderList() {
             <span style={{ color: isDone ? "#10B981" : "var(--text-muted)", fontWeight: isDone ? 600 : 400 }}>
               {isDone ? (row.resolution || "Resolved & Verified") : "Pending Work"}
             </span>
-            {row.actualHours && (
+            {Number(row.actualHours) > 0 && (
               <div style={{ color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>
                 {row.actualHours} hrs logged
               </div>
@@ -447,6 +492,17 @@ export function WorkOrderList() {
                 <span>Edit</span>
               </button>
             )}
+
+            {/* Delete Button */}
+            <button
+              type="button"
+              className="table-btn table-btn-delete"
+              onClick={() => handleDeleteClick(row)}
+              title="Delete Work Order"
+            >
+              <Trash2 size={13} color="#DC2626" />
+              <span>Delete</span>
+            </button>
 
             {/* Contextual Action: Assign (if open & unassigned) */}
             {isOpen && isUnassigned && (
@@ -1062,6 +1118,48 @@ export function WorkOrderList() {
               </Button>
             </div>
           </form>
+        </Modal>
+      )}
+
+      {/* 7. Delete Work Order Confirmation Modal */}
+      {deleteConfirmWO && (
+        <Modal
+          isOpen={!!deleteConfirmWO}
+          onClose={() => setDeleteConfirmWO(null)}
+          title="Confirm Work Order Deletion"
+          subtitle="Permanently remove work order from registry & database"
+          maxWidth="460px"
+        >
+          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+            <div style={{ padding: "14px 16px", borderRadius: "10px", backgroundColor: "rgba(239, 68, 68, 0.08)", border: "1px solid rgba(239, 68, 68, 0.25)" }}>
+              <div style={{ fontSize: "14px", fontWeight: 700, color: "#DC2626" }}>
+                Delete {deleteConfirmWO.id || deleteConfirmWO.woNumber}?
+              </div>
+              <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "4px" }}>
+                <strong>Issue:</strong> {deleteConfirmWO.title}
+              </div>
+              <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "2px" }}>
+                <strong>Asset:</strong> {deleteConfirmWO.assetName || deleteConfirmWO.assetId}
+              </div>
+              <p style={{ fontSize: "12px", color: "#EF4444", marginTop: "10px", fontWeight: 500 }}>
+                ⚠️ This action cannot be undone. The record will be permanently deleted from the PostgreSQL database.
+              </p>
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+              <Button variant="secondary" onClick={() => setDeleteConfirmWO(null)}>
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                icon={Trash2}
+                onClick={handleConfirmDelete}
+                style={{ backgroundColor: "#DC2626", borderColor: "#DC2626" }}
+              >
+                Delete Work Order
+              </Button>
+            </div>
+          </div>
         </Modal>
       )}
     </div>

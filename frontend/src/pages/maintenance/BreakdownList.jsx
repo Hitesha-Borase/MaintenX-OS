@@ -22,6 +22,7 @@ import {
   ArrowRight,
   User,
   Filter,
+  Trash2,
   X
 } from "lucide-react";
 import { Card } from "../../components/common/Card";
@@ -37,10 +38,12 @@ import maintenanceService from "../../services/maintenanceService";
 export function BreakdownList() {
   const {
     breakdowns = [],
+    setBreakdowns,
     reportBreakdown,
     updateBreakdown,
     updateBreakdownStatus,
     resolveBreakdown,
+    deleteBreakdown,
     addWorkOrder,
     assets = []
   } = useCMMS();
@@ -50,13 +53,17 @@ export function BreakdownList() {
   React.useEffect(() => {
     const fetchBDs = async () => {
       try {
-        await maintenanceService.getBreakdowns();
+        const res = await maintenanceService.getBreakdowns();
+        const list = Array.isArray(res) ? res : (res?.data || []);
+        if (Array.isArray(list) && setBreakdowns) {
+          setBreakdowns(list);
+        }
       } catch (err) {
         console.warn("API breakdown fetch notice:", err.message || err);
       }
     };
     fetchBDs();
-  }, []);
+  }, [setBreakdowns]);
 
   // Filters State
   const [statusFilter, setStatusFilter] = useState("ALL");
@@ -162,15 +169,17 @@ export function BreakdownList() {
     setIsReportModalOpen(true);
   };
 
-  const handleSubmitReport = (e) => {
+  const handleSubmitReport = async (e) => {
     e.preventDefault();
     if (!newForm.symptom.trim()) {
       addToast("Please describe the breakdown symptom", "error");
       return;
     }
-    const asset = assets.find((a) => a.id === newForm.assetId);
-    const newBD = reportBreakdown({
-      assetId: newForm.assetId,
+    const asset = assets.find((a) => a.id === newForm.assetId || a.assetCode === newForm.assetId || a.dbId === newForm.assetId);
+    const resolvedAssetId = asset?.dbId || asset?.assetCode || newForm.assetId;
+
+    const newBD = await reportBreakdown({
+      assetId: resolvedAssetId,
       assetName: asset?.name || newForm.assetId,
       plant: asset?.plant || "Plant 1 - North Facility",
       department: asset?.department || "Packaging",
@@ -182,6 +191,8 @@ export function BreakdownList() {
       status: "Open",
       reportedBy: newForm.reportedBy,
       technician: newForm.technician,
+      productionLossUnits: parseInt(newForm.productionLossUnits) || 2500,
+      downtimeCostUSD: parseInt(newForm.downtimeCostUSD) || 3500,
       impact: {
         productionLossUnits: parseInt(newForm.productionLossUnits) || 2500,
         downtimeCostUSD: parseInt(newForm.downtimeCostUSD) || 3500,
@@ -190,7 +201,7 @@ export function BreakdownList() {
       }
     });
 
-    addToast(`Breakdown ${newBD.id} reported on ${asset?.line || "Line 1"}. Line halted!`, "warning");
+    addToast(`Breakdown ${newBD?.id || "reported"} saved in database! Line halted.`, "warning");
     setIsReportModalOpen(false);
   };
 
@@ -213,11 +224,11 @@ export function BreakdownList() {
     setIsEditModalOpen(true);
   };
 
-  const handleSaveEdit = (e) => {
+  const handleSaveEdit = async (e) => {
     e.preventDefault();
     if (!selectedBreakdown) return;
-    updateBreakdown(selectedBreakdown.id, editForm);
-    addToast(`Breakdown ${selectedBreakdown.id} updated successfully.`, "success");
+    await updateBreakdown(selectedBreakdown.id, editForm);
+    addToast(`Breakdown ${selectedBreakdown.id} updated in database.`, "success");
     setIsEditModalOpen(false);
   };
 
@@ -227,14 +238,14 @@ export function BreakdownList() {
     setIsAssignModalOpen(true);
   };
 
-  const handleConfirmAssign = (e) => {
+  const handleConfirmAssign = async (e) => {
     e.preventDefault();
     if (!selectedBreakdown) return;
-    updateBreakdown(selectedBreakdown.id, {
+    await updateBreakdown(selectedBreakdown.id, {
       technician: assignTech,
       status: selectedBreakdown.status === "Open" ? "Assigned" : selectedBreakdown.status
     });
-    addToast(`Technician ${assignTech} dispatched to ${selectedBreakdown.id}.`, "success");
+    addToast(`Technician ${assignTech} dispatched and saved in database.`, "success");
     setIsAssignModalOpen(false);
   };
 
@@ -249,10 +260,10 @@ export function BreakdownList() {
     setIsCreateWOModalOpen(true);
   };
 
-  const handleConfirmCreateWO = (e) => {
+  const handleConfirmCreateWO = async (e) => {
     e.preventDefault();
     if (!selectedBreakdown) return;
-    const createdWO = addWorkOrder({
+    const createdWO = await addWorkOrder({
       title: woForm.title,
       assetId: selectedBreakdown.assetId,
       assetName: selectedBreakdown.assetName,
@@ -263,17 +274,17 @@ export function BreakdownList() {
       description: `Generated from Breakdown ${selectedBreakdown.id}. Symptom: ${selectedBreakdown.symptom}`
     });
 
-    updateBreakdown(selectedBreakdown.id, {
-      linkedWorkOrder: createdWO.id,
+    await updateBreakdown(selectedBreakdown.id, {
+      linkedWorkOrder: createdWO?.woNumber || createdWO?.id,
       status: "In Progress"
     });
 
-    addToast(`Work Order ${createdWO.id} created and linked to ${selectedBreakdown.id}!`, "success");
+    addToast(`Work Order created and linked to ${selectedBreakdown.id}!`, "success");
     setIsCreateWOModalOpen(false);
   };
 
-  const handleStartInvestigation = (bd) => {
-    updateBreakdownStatus(bd.id, "Investigating", "Root cause investigation initiated.");
+  const handleStartInvestigation = async (bd) => {
+    await updateBreakdownStatus(bd.id, "Investigating", "Root cause investigation initiated.");
     addToast(`Investigation started for ${bd.id}. Status changed to 'Investigating'.`, "info");
   };
 
@@ -288,23 +299,28 @@ export function BreakdownList() {
     setIsResolveModalOpen(true);
   };
 
-  const handleConfirmResolve = (e) => {
+  const handleConfirmResolve = async (e) => {
     e.preventDefault();
     if (!selectedBreakdown) return;
-    resolveBreakdown(selectedBreakdown.id, {
+    await resolveBreakdown(selectedBreakdown.id, {
       resolution: resolveForm.resolutionNotes,
       repairAction: resolveForm.resolutionNotes,
       rootCause: resolveForm.rootCause,
       durationMinutes: parseInt(resolveForm.downtimeMinutes) || 45,
       status: "Resolved"
     });
-    addToast(`Breakdown ${selectedBreakdown.id} resolved! Machine returned to Operational state.`, "success");
+    addToast(`Breakdown ${selectedBreakdown.id} resolved in database! Machine returned to Operational state.`, "success");
     setIsResolveModalOpen(false);
   };
 
-  const handleCloseBreakdown = (bd) => {
-    updateBreakdownStatus(bd.id, "Closed", "Verified and closed by shift supervisor.");
-    addToast(`Breakdown ${bd.id} verified and closed.`, "success");
+  const handleCloseBreakdown = async (bd) => {
+    await updateBreakdownStatus(bd.id, "Closed", "Verified and closed by shift supervisor.");
+    addToast(`Breakdown ${bd.id} verified and closed in database.`, "success");
+  };
+
+  const handleDeleteBreakdown = async (bd) => {
+    await deleteBreakdown(bd.id);
+    addToast(`Breakdown ${bd.id} deleted from database.`, "info");
   };
 
   // Severity Badge Helper
@@ -580,6 +596,18 @@ export function BreakdownList() {
                 Closed
               </span>
             )}
+
+            {/* Delete */}
+            <button
+              type="button"
+              className="table-btn table-btn-delete"
+              onClick={() => handleDeleteBreakdown(row)}
+              title="Delete Breakdown Record"
+              style={{ color: "#EF4444" }}
+            >
+              <Trash2 size={13} color="#EF4444" />
+              <span>Delete</span>
+            </button>
           </div>
         );
       }

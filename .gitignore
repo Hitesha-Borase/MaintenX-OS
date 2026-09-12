@@ -27,3 +27,6 @@ pnpm-debug.log*
 Thumbs.db
 .vscode/
 .idea/
+*.zip
+maintenxos*
+backend/.env.local.backup

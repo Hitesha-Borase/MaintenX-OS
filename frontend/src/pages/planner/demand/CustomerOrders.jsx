@@ -76,10 +76,8 @@ export function CustomerOrders() {
     try {
       setLoading(true);
       const res = await planningService.getCustomerOrders();
-      const items = res?.data || res;
-      if (Array.isArray(items) && items.length > 0) {
-        setOrders(items);
-      }
+      const items = Array.isArray(res) ? res : (res?.data || []);
+      setOrders(items);
     } catch (err) {
       console.warn("Backend demand orders fetch fallback:", err.message);
     } finally {
@@ -111,9 +109,15 @@ export function CustomerOrders() {
 
   // KPIs
   const totalOrders = orders.length;
-  const openOrders = orders.filter((o) => o.status === "Open" || o.status === "Allocated").length;
+  const openOrders = orders.filter((o) => {
+    const s = (o.status || "").toLowerCase();
+    return s === "open" || s === "allocated";
+  }).length;
   const totalUnits = orders.reduce((sum, o) => sum + (Number(o.quantity) || 0), 0);
-  const urgentOrders = orders.filter((o) => o.priority === "Urgent" || o.priority === "High").length;
+  const urgentOrders = orders.filter((o) => {
+    const p = (o.priority || "").toLowerCase();
+    return p === "urgent" || p === "high";
+  }).length;
 
   // Filtered Orders
   const filteredOrders = useMemo(() => {
@@ -162,9 +166,7 @@ export function CustomerOrders() {
       };
 
       const created = await addDemandOrder(payload);
-      if (created) {
-        setOrders(prev => [created, ...prev.filter(o => o.id !== created.id)]);
-      }
+      await fetchOrders();
 
       addToast(`Demand Order ${payload.orderNumber} created for ${payload.customer}!`, "success");
       setIsAddModalOpen(false);
@@ -213,10 +215,7 @@ export function CustomerOrders() {
       };
 
       await updateDemandOrder(editingOrder.id, payload);
-
-      setOrders(prev =>
-        prev.map(o => (o.id === editingOrder.id ? { ...o, ...payload, productName: resolvedEditSku?.name || o.productName, productCode: resolvedEditSku?.skuCode || o.productCode } : o))
-      );
+      await fetchOrders();
 
       addToast(`Demand Order ${editingOrder.orderNumber} updated successfully!`, "success");
       setEditingOrder(null);
@@ -231,7 +230,7 @@ export function CustomerOrders() {
   const handleDeleteOrder = async (order) => {
     try {
       await deleteDemandOrder(order.id);
-      setOrders(prev => prev.filter(o => o.id !== order.id && o.orderNumber !== order.id));
+      await fetchOrders();
       addToast(`Customer Demand Order ${order.orderNumber || order.id} deleted successfully!`, "success");
     } catch (err) {
       console.warn("Delete order fallback:", err);
@@ -243,13 +242,12 @@ export function CustomerOrders() {
   // Handle Cancel Order
   const handleCancelOrder = async (orderId, orderNumber) => {
     try {
-      await planningService.deleteDemandOrder(orderId);
-      setOrders(prev =>
-        prev.map(o => (o.id === orderId ? { ...o, status: "Cancelled" } : o))
-      );
       if (cancelDemandOrder) {
-        cancelDemandOrder(orderId, "Cancelled by Planner");
+        await cancelDemandOrder(orderId, "Cancelled by Planner");
+      } else {
+        await planningService.updateDemandOrder(orderId, { status: "Cancelled" });
       }
+      await fetchOrders();
       addToast(`Demand Order ${orderNumber || orderId} marked as CANCELLED.`, "info");
     } catch (err) {
       console.error("Cancel order failed:", err);
@@ -921,6 +919,8 @@ export function CustomerOrders() {
                   >
                     <option value="Open">Open</option>
                     <option value="Allocated">Allocated</option>
+                    <option value="Scheduled">Scheduled</option>
+                    <option value="In Production">In Production</option>
                     <option value="Fulfilled">Fulfilled</option>
                     <option value="Cancelled">Cancelled</option>
                   </select>

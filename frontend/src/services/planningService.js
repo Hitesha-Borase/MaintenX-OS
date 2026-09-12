@@ -1,51 +1,65 @@
 import apiClient from './apiClient';
 
+function unwrapList(res) {
+  if (Array.isArray(res)) return res;
+  if (Array.isArray(res?.data)) return res.data;
+  if (Array.isArray(res?.data?.data)) return res.data.data;
+  return [];
+}
+
+function unwrapItem(res) {
+  if (res && typeof res === 'object' && res.data !== undefined) {
+    return res.data;
+  }
+  return res;
+}
+
 export const planningService = {
   // Command Center Dashboard Summary
   async getDashboardSummary(params = {}) {
     const response = await apiClient.get('/planning/dashboard', { params });
-    return response.data?.data || response.data || {};
+    return unwrapItem(response) || {};
   },
 
   // Demand Orders
   async getCustomerOrders(filters = {}) {
     const response = await apiClient.get('/demand/orders', { params: filters });
-    return response.data?.data || response.data || [];
+    return unwrapList(response);
   },
 
   async getDemandOrders(filters = {}) {
     const response = await apiClient.get('/demand/orders', { params: filters });
-    return response.data?.data || response.data || [];
+    return unwrapList(response);
   },
 
   async createDemandOrder(orderData) {
     const response = await apiClient.post('/demand/orders', orderData);
-    return response.data?.data || response.data;
+    return unwrapItem(response);
   },
 
   async createCustomerOrder(data) {
     const response = await apiClient.post('/demand/orders', data);
-    return response.data?.data || response.data;
+    return unwrapItem(response);
   },
 
   async updateCustomerOrder(id, data) {
     const response = await apiClient.patch(`/demand/orders/${id}`, data);
-    return response.data?.data || response.data;
+    return unwrapItem(response);
   },
 
   async updateDemandOrder(id, data) {
     const response = await apiClient.patch(`/demand/orders/${id}`, data);
-    return response.data?.data || response.data;
+    return unwrapItem(response);
   },
 
   async deleteCustomerOrder(id) {
     const response = await apiClient.delete(`/demand/orders/${id}`);
-    return response.data?.data || response.data;
+    return unwrapItem(response);
   },
 
   async deleteDemandOrder(id) {
     const response = await apiClient.delete(`/demand/orders/${id}`);
-    return response.data?.data || response.data;
+    return unwrapItem(response);
   },
 
   async createApsSchedule(scheduleData) {
@@ -61,168 +75,183 @@ export const planningService = {
   // Forecasts
   async getForecasts(filters = {}) {
     const response = await apiClient.get('/forecasts', { params: filters });
-    return response.data?.data || response.data || [];
+    return unwrapList(response);
   },
 
   async createForecast(data) {
     const response = await apiClient.post('/forecasts', data);
-    return response.data?.data || response.data;
+    return unwrapItem(response);
   },
 
   async updateForecast(id, data) {
     const response = await apiClient.patch(`/forecasts/${id}`, data);
-    return response.data?.data || response.data;
+    return unwrapItem(response);
   },
 
   async deleteForecast(id) {
     const response = await apiClient.delete(`/forecasts/${id}`);
-    return response.data?.data || response.data;
+    return unwrapItem(response);
   },
 
   // Demand History
   async getDemandHistory() {
     const response = await apiClient.get('/forecast/history');
-    return response.data?.data || response.data || [];
+    return unwrapList(response);
   },
 
   // Promotions & Uplift Events
   async getPromotions() {
     const response = await apiClient.get('/forecast/promotions');
-    return response.data?.data || response.data || [];
+    return unwrapList(response);
   },
 
   async createPromotion(data) {
     const response = await apiClient.post('/forecast/promotions', data);
-    return response.data?.data || response.data;
+    return unwrapItem(response);
   },
 
   async updatePromotion(id, data) {
     const response = await apiClient.patch(`/forecast/promotions/${id}`, data);
-    return response.data?.data || response.data;
+    return unwrapItem(response);
   },
 
   async deletePromotion(id) {
     const response = await apiClient.delete(`/promotions/${id}`);
-    return response.data?.data || response.data;
+    return unwrapItem(response);
   },
 
   // Statistical Forecast Engine Run
   async runForecast(data) {
     const response = await apiClient.post('/forecast/run', data);
-    return response.data?.data || response.data;
+    return unwrapItem(response);
   },
 
   // Shipments
   async getShipments(filters = {}) {
     const response = await apiClient.get('/shipments', { params: filters });
-    return response.data?.data || response.data || [];
+    return unwrapList(response);
   },
 
   async createShipment(data) {
     const response = await apiClient.post('/shipments', data);
-    return response.data?.data || response.data;
+    return unwrapItem(response);
   },
 
   async updateShipmentStatus(id, status) {
     const response = await apiClient.patch(`/shipments/${id}`, { status });
-    return response.data?.data || response.data;
+    return unwrapItem(response);
   },
 
   // MRP Operations
   async getMrpNetRequirements() {
     const response = await apiClient.get('/mrp/net-requirements');
-    return response.data?.data || response.data || [];
+    return unwrapList(response);
+  },
+
+  async generateMrpRequirements() {
+    const response = await apiClient.post('/mrp/net-requirements/generate');
+    return unwrapList(response);
+  },
+
+  async updateMrpNetRequirement(id, data) {
+    const response = await apiClient.patch(`/mrp/net-requirements/${id}`, data);
+    return unwrapItem(response);
+  },
+
+  async deleteMrpNetRequirement(id) {
+    const response = await apiClient.delete(`/mrp/net-requirements/${id}`);
+    return unwrapItem(response);
   },
 
   async runMrpEngine(data = {}) {
     const response = await apiClient.post('/mrp/run', data);
-    return response.data?.data || response.data;
+    return unwrapItem(response);
   },
 
   async createPurchaseRequisition(data) {
     const response = await apiClient.post('/mrp/requisitions', data);
-    return response.data?.data || response.data;
+    return unwrapItem(response);
   },
 
   async getPurchaseRequisitions() {
     const response = await apiClient.get('/mrp/requisitions');
-    return response.data?.data || response.data || [];
+    return unwrapList(response);
   },
 
   async expediteShortage(data) {
     const response = await apiClient.post('/mrp/expedite', data);
-    return response.data?.data || response.data;
+    return unwrapItem(response);
   },
 
   async getExpeditedShortages() {
     const response = await apiClient.get('/mrp/expedited');
-    return response.data?.data || response.data || {};
+    return unwrapItem(response) || {};
   },
 
   async updateSafetyStockPolicy(data) {
     const response = await apiClient.post('/mrp/safety-stock', data);
-    return response.data?.data || response.data;
+    return unwrapItem(response);
   },
 
   async getSafetyStockPolicies() {
     const response = await apiClient.get('/mrp/safety-stock');
-    return response.data?.data || response.data || {};
+    return unwrapItem(response) || {};
   },
 
   async getServiceRisks() {
     const response = await apiClient.get('/mrp/service-risks');
-    return response.data?.data || response.data || [];
+    return unwrapList(response);
   },
 
   async mitigateServiceRisk(riskId, data = {}) {
     const response = await apiClient.post(`/mrp/service-risks/${riskId}/mitigate`, data);
-    return response.data?.data || response.data;
+    return unwrapItem(response);
   },
 
   // APS & Scheduling
   async getAPSSchedules(filters = {}) {
     const response = await apiClient.get('/aps/schedules', { params: filters });
-    return response.data?.data || response.data || [];
+    return unwrapList(response);
   },
 
   async createAPSSchedule(data) {
     const response = await apiClient.post('/aps/schedules', data);
-    return response.data?.data || response.data;
+    return unwrapItem(response);
   },
 
   async rescheduleAPSSchedule(id, data) {
     const response = await apiClient.patch(`/aps/schedules/${id}/reschedule`, data);
-    return response.data?.data || response.data;
+    return unwrapItem(response);
   },
 
   async splitAPSSchedule(id, data) {
     const response = await apiClient.post(`/aps/schedules/${id}/split`, data);
-    return response.data?.data || response.data;
+    return unwrapItem(response);
   },
 
   async optimizeAPSSchedule(data = {}) {
     const response = await apiClient.post('/aps/optimize', data);
-    return response.data?.data || response.data;
+    return unwrapItem(response);
   },
 
   async getCapacityCalculations() {
     const response = await apiClient.get('/aps/capacity');
-    return response.data?.data || response.data || {};
+    return unwrapItem(response) || {};
   },
 
   async getWorkCenters() {
     const response = await apiClient.get('/aps/work-centers');
-    return response.data?.data || response.data || [];
+    return unwrapList(response);
   },
 
   async getChangeovers() {
     const response = await apiClient.get('/aps/changeovers');
-    return response.data?.data || response.data || [];
+    return unwrapList(response);
   },
 
   async createChangeover(data) {
     const response = await apiClient.post('/aps/changeovers', data);
-    return response.data?.data || response.data;
+    return unwrapItem(response);
   },
 
   // Supply & Demand Balance
