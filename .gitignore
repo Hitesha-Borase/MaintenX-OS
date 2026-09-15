@@ -23,6 +23,10 @@ yarn-debug.log*
 pnpm-debug.log*
 
 # System & Editor
+*.dump
+backend/src/scratch/
+backend/*.mjs
+backend/scratch_check_ci.cjs
 .DS_Store
 Thumbs.db
 .vscode/

@@ -152,26 +152,40 @@ export function UserActivityPage() {
               </tr>
             </thead>
             <tbody>
-              {filteredLogs.map((l) => (
-                <tr key={l.id}>
-                  <td>
-                    <span style={{ fontWeight: 800, color: "#8C5B23", fontFamily: "var(--font-mono)" }}>{l.id}</span>
+              {filteredLogs.length === 0 ? (
+                <tr>
+                  <td colSpan={6} style={{ textAlign: "center", padding: "48px 16px" }}>
+                    <Activity size={36} color="var(--text-muted)" style={{ margin: "0 auto 12px", opacity: 0.5 }} />
+                    <div style={{ fontSize: "14px", fontWeight: 700, color: "var(--text-primary)", marginBottom: "4px" }}>
+                      No Live Activity Recorded Yet
+                    </div>
+                    <div style={{ fontSize: "12px", color: "var(--text-muted)", maxWidth: "420px", margin: "0 auto" }}>
+                      User sign-ins, master data modifications, and governance events performed in this organization will stream here in real-time.
+                    </div>
                   </td>
-                  <td>
-                    <strong style={{ color: "var(--text-primary)" }}>{l.user}</strong>
-                  </td>
-                  <td style={{ fontSize: "12px", color: "var(--text-secondary)", maxWidth: "340px" }}>
-                    {l.action}
-                  </td>
-                  <td>
-                    <Badge variant="cyan">{l.category}</Badge>
-                  </td>
-                  <td style={{ fontFamily: "var(--font-mono)", fontSize: "11px", color: "var(--text-muted)" }}>
-                    {l.ip}
-                  </td>
-                  <td style={{ fontSize: "11px", color: "var(--text-secondary)" }}>{l.timestamp}</td>
                 </tr>
-              ))}
+              ) : (
+                filteredLogs.map((l) => (
+                  <tr key={l.id}>
+                    <td>
+                      <span style={{ fontWeight: 800, color: "#8C5B23", fontFamily: "var(--font-mono)" }}>{l.id}</span>
+                    </td>
+                    <td>
+                      <strong style={{ color: "var(--text-primary)" }}>{l.user}</strong>
+                    </td>
+                    <td style={{ fontSize: "12px", color: "var(--text-secondary)", maxWidth: "340px" }}>
+                      {l.action}
+                    </td>
+                    <td>
+                      <Badge variant="cyan">{l.category}</Badge>
+                    </td>
+                    <td style={{ fontFamily: "var(--font-mono)", fontSize: "11px", color: "var(--text-muted)" }}>
+                      {l.ip}
+                    </td>
+                    <td style={{ fontSize: "11px", color: "var(--text-secondary)" }}>{l.timestamp}</td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

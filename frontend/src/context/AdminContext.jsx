@@ -4,8 +4,12 @@ import adminService from "../services/adminService";
 const AdminContext = createContext();
 
 export function AdminProvider({ children }) {
+  const hasAuthToken = Boolean(typeof window !== "undefined" && (localStorage.getItem("maintenx_auth_token") || localStorage.getItem("flowstate_token")));
+  const hasTenant = Boolean(typeof window !== "undefined" && (localStorage.getItem("maintenx_tenant_name") || localStorage.getItem("maintenx_tenant_id")));
+
   // 1. Users
   const [users, setUsers] = useState(() => {
+    if (hasAuthToken || hasTenant) return [];
     const saved = localStorage.getItem("admin_users");
     return saved
       ? JSON.parse(saved)
@@ -19,46 +23,39 @@ export function AdminProvider({ children }) {
   });
 
   // 2. User Invitations
-  const [invitations, setInvitations] = useState([
-    { id: "INV-101", email: "clara.oswald@flowstate.io", role: "Quality Analyst", department: "Quality", invitedBy: "Alexander Vance", sentDate: "2026-08-30", status: "Pending" },
-    { id: "INV-102", email: "james.holden@flowstate.io", role: "Controls Engineer", department: "Maintenance", invitedBy: "Alexander Vance", sentDate: "2026-08-31", status: "Pending" },
-    { id: "INV-445", email: "abc@gmail.com", role: "Quality Analyst", department: "Quality", invitedBy: "Alexander Vance", sentDate: "2026-09-07", status: "Pending" }
-  ]);
+  const [invitations, setInvitations] = useState(() => {
+    if (hasAuthToken || hasTenant) return [];
+    return [
+      { id: "INV-101", email: "clara.oswald@flowstate.io", role: "Quality Analyst", department: "Quality", invitedBy: "Alexander Vance", sentDate: "2026-08-30", status: "Pending" },
+      { id: "INV-102", email: "james.holden@flowstate.io", role: "Controls Engineer", department: "Maintenance", invitedBy: "Alexander Vance", sentDate: "2026-08-31", status: "Pending" },
+    ];
+  });
 
   // 3. User Activity Logs
-  const [activityLogs, setActivityLogs] = useState([
-    { id: "ACT-801", user: "Alexander Vance", action: "Updated ERP Sync Frequency to 15 mins", timestamp: "10:45 AM", ip: "192.168.1.10", category: "Configuration" },
-    { id: "ACT-802", user: "Robert Thorne", action: "Approved Schedule Recovery Catch-up Plan", timestamp: "09:30 AM", ip: "192.168.1.45", category: "Planning" },
-    { id: "ACT-803", user: "Sarah Jenkins", action: "Released Lot LOT-CIT-0830 Certificate of Analysis", timestamp: "08:15 AM", ip: "192.168.1.72", category: "Quality" },
-    { id: "ACT-804", user: "Alexander Vance", action: "Modified Role Permissions for Maintenance Lead", timestamp: "Yesterday", ip: "192.168.1.10", category: "Security" }
-  ]);
+  const [activityLogs, setActivityLogs] = useState(() => {
+    if (hasAuthToken || hasTenant) return [];
+    return [
+      { id: "ACT-801", user: "Alexander Vance", action: "Updated ERP Sync Frequency to 15 mins", timestamp: "10:45 AM", ip: "192.168.1.10", category: "Configuration" },
+      { id: "ACT-802", user: "Robert Thorne", action: "Approved Schedule Recovery Catch-up Plan", timestamp: "09:30 AM", ip: "192.168.1.45", category: "Planning" },
+      { id: "ACT-803", user: "Sarah Jenkins", action: "Released Lot LOT-CIT-0830 Certificate of Analysis", timestamp: "08:15 AM", ip: "192.168.1.72", category: "Quality" },
+      { id: "ACT-804", user: "Alexander Vance", action: "Modified Role Permissions for Maintenance Lead", timestamp: "Yesterday", ip: "192.168.1.10", category: "Security" }
+    ];
+  });
 
   // 4. Roles
-  const [roles, setRoles] = useState([
-    { id: "ROL-01", name: "System Administrator", description: "Full system governance, master data, security, user administration", userCount: 2, isSystem: true },
-    { id: "ROL-02", name: "Plant Manager", description: "Executive plant operations, OEE, planning, recovery, cross-functional oversight", userCount: 4, isSystem: true },
-    { id: "ROL-03", name: "Maintenance Lead", description: "CMMS, asset condition monitoring, work order dispatch, spare parts", userCount: 8, isSystem: false },
-    { id: "ROL-04", name: "QA Manager", description: "Quality inspection logs, holds, CoA release, statistical process control", userCount: 5, isSystem: false },
-    { id: "ROL-05", name: "Operator / Line Tech", description: "Shop floor execution, hour-by-hour logging, downtime reporting", userCount: 42, isSystem: false }
-  ]);
+  const [roles, setRoles] = useState([]);
 
   // 5. Master Data SKU Items
-  const [items, setItems] = useState([
-    { id: "SKU-5001", name: "500ml Sparkling Citrus Soda", category: "Finished Goods", family: "Sparkling Flavors", uom: "Bottles", stdCost: "$0.42", active: true },
-    { id: "SKU-5002", name: "1L Tonic Water Natural", category: "Finished Goods", family: "Tonics & Mixers", uom: "Bottles", stdCost: "$0.68", active: true },
-    { id: "SKU-5003", name: "330ml Organic Ginger Beer", category: "Finished Goods", family: "Ginger Beers", uom: "Cans", stdCost: "$0.38", active: true },
-    { id: "ING-1001", name: "Liquid Cane Sugar 67°Bx", category: "Raw Ingredients", family: "Sweeteners", uom: "Liters", stdCost: "$1.20", active: true },
-    { id: "PKG-2001", name: "28mm Tamper-Evident Cap", category: "Packaging", family: "Caps & Closures", uom: "Units", stdCost: "$0.02", active: true }
-  ]);
+  const [items, setItems] = useState([]);
 
   // 6. Data Health Counts
   const [dataHealthStats, setDataHealthStats] = useState({
-    missingDataCount: 3,
-    duplicatesCount: 2,
-    invalidRefsCount: 1,
-    brokenRelCount: 2,
-    staleRecordsCount: 4,
-    healthScore: 96.2
+    missingDataCount: 0,
+    duplicatesCount: 0,
+    invalidRefsCount: 0,
+    brokenRelCount: 0,
+    staleRecordsCount: 0,
+    healthScore: 99.98
   });
 
   const [loading, setLoading] = useState(false);
@@ -74,16 +71,16 @@ export function AdminProvider({ children }) {
         adminService.getRoles(),
       ]);
 
-      if (backendUsers.status === "fulfilled" && Array.isArray(backendUsers.value) && backendUsers.value.length > 0) {
+      if (backendUsers.status === "fulfilled" && Array.isArray(backendUsers.value)) {
         setUsers(backendUsers.value);
       }
-      if (backendInvites.status === "fulfilled" && Array.isArray(backendInvites.value) && backendInvites.value.length > 0) {
+      if (backendInvites.status === "fulfilled" && Array.isArray(backendInvites.value)) {
         setInvitations(backendInvites.value);
       }
-      if (backendLogs.status === "fulfilled" && Array.isArray(backendLogs.value) && backendLogs.value.length > 0) {
+      if (backendLogs.status === "fulfilled" && Array.isArray(backendLogs.value)) {
         setActivityLogs(backendLogs.value);
       }
-      if (backendRoles.status === "fulfilled" && Array.isArray(backendRoles.value) && backendRoles.value.length > 0) {
+      if (backendRoles.status === "fulfilled" && Array.isArray(backendRoles.value)) {
         setRoles(backendRoles.value);
       }
     } catch (err) {
@@ -98,7 +95,26 @@ export function AdminProvider({ children }) {
   }, [refreshAll]);
 
   useEffect(() => {
-    localStorage.setItem("admin_users", JSON.stringify(users));
+    const handleTenantChanged = () => {
+      setUsers([]);
+      setInvitations([]);
+      setActivityLogs([]);
+      setRoles([]);
+      refreshAll();
+    };
+    window.addEventListener("maintenx:tenant_changed", handleTenantChanged);
+    window.addEventListener("maintenx:auth_ready", handleTenantChanged);
+    return () => {
+      window.removeEventListener("maintenx:tenant_changed", handleTenantChanged);
+      window.removeEventListener("maintenx:auth_ready", handleTenantChanged);
+    };
+  }, [refreshAll]);
+
+  useEffect(() => {
+    const isTenant = Boolean(localStorage.getItem("maintenx_tenant_name") || localStorage.getItem("maintenx_tenant_id"));
+    if (!isTenant && users.length > 0) {
+      localStorage.setItem("admin_users", JSON.stringify(users));
+    }
   }, [users]);
 
   // User Actions (Wired directly to backend)

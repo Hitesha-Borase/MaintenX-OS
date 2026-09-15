@@ -28,24 +28,20 @@ export function EscapeCause() {
   const { addToast } = useApp();
   const { investigations = [], updateRCA, advanceRcaPhase } = useCI();
 
-  const [activeCase, setActiveCase] = useState(() => investigations[0]?.id || "RCA-2026-001");
+  const [activeCase, setActiveCase] = useState(() => investigations[0]?.id || "");
 
   useEffect(() => {
     ciService.getInvestigations().catch((err) => console.warn("Escape investigations load:", err.message));
   }, []);
 
   useEffect(() => {
-    if (investigations.length > 0 && !investigations.some((i) => i.id === activeCase)) {
+    if (investigations.length > 0 && (!activeCase || !investigations.some((i) => i.id === activeCase))) {
       setActiveCase(investigations[0].id);
     }
   }, [investigations, activeCase]);
 
   const currentInv = useMemo(() => {
-    return investigations.find((i) => i.id === activeCase) || investigations[0] || {
-      id: "RCA-2026-001",
-      title: "Active Investigation",
-      eightD: {}
-    };
+    return investigations.find((i) => i.id === activeCase) || investigations[0] || null;
   }, [investigations, activeCase]);
 
   const [escapeStatement, setEscapeStatement] = useState("");
@@ -54,12 +50,10 @@ export function EscapeCause() {
   useEffect(() => {
     if (currentInv) {
       setEscapeStatement(
-        currentInv.eightD?.d7Prevention ||
-        "Pre-shift calibration checks were not codified in SOP, allowing actuator degradation to remain undetected prior to critical event."
+        currentInv.eightD?.d7Prevention || ""
       );
       setPreventiveAction(
-        currentInv.eightD?.d5CorrectiveAction ||
-        "Codify mandatory 3-point metrology audit and install redundant smart valve positioner"
+        currentInv.eightD?.d5CorrectiveAction || ""
       );
     }
   }, [currentInv]);
@@ -198,8 +192,23 @@ export function EscapeCause() {
         />
       </div>
 
-      {/* Case Switcher Tab Bar */}
-      <Card style={{ padding: "14px", minWidth: 0, width: "100%", boxSizing: "border-box" }}>
+      {!currentInv || investigations.length === 0 ? (
+        <Card style={{ padding: "48px 24px", textAlign: "center" }}>
+          <ShieldAlert size={40} color="#C89547" style={{ margin: "0 auto 12px" }} />
+          <h3 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", marginBottom: "6px" }}>
+            No Active RCA Investigations Found
+          </h3>
+          <p style={{ fontSize: "13px", color: "var(--text-muted)", marginBottom: "16px" }}>
+            Initiate a root cause investigation first to configure escape point barriers and prevention plans.
+          </p>
+          <Button variant="primary" onClick={() => navigate("/ci/rca/investigations")}>
+            Go to RCA Hub
+          </Button>
+        </Card>
+      ) : (
+        <>
+          {/* Case Switcher Tab Bar */}
+          <Card style={{ padding: "14px", minWidth: 0, width: "100%", boxSizing: "border-box" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
             <span style={{ fontSize: "11px", fontWeight: 800, color: "var(--text-muted)", textTransform: "uppercase" }}>Select Investigation Case:</span>
@@ -340,6 +349,8 @@ export function EscapeCause() {
           </div>
         </form>
       </Card>
+        </>
+      )}
     </div>
   );
 }

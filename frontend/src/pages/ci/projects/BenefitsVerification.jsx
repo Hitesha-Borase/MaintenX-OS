@@ -285,10 +285,17 @@ export function BenefitsVerification() {
               </tr>
             </thead>
             <tbody>
-              {filteredProjects.map((p) => {
-                const isLocked = p.benefitStatus === "Verified & Locked";
-                return (
-                  <tr key={p.id} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+              {filteredProjects.length === 0 ? (
+                <tr>
+                  <td colSpan={6} style={{ padding: "36px 16px", textAlign: "center", color: "var(--text-muted)", fontSize: "13px" }}>
+                    No project benefits awaiting or certified for 21 CFR Part 11 locking.
+                  </td>
+                </tr>
+              ) : (
+                filteredProjects.map((p) => {
+                  const isLocked = p.benefitStatus === "Verified & Locked";
+                  return (
+                    <tr key={p.id} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
                     <td style={{ padding: "12px 16px" }}>
                       <div style={{ fontWeight: 800, color: "var(--text-primary)", fontSize: "13px" }}>{p.name}</div>
                       <div style={{ fontSize: "11px", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>{p.id} • {p.owner}</div>
@@ -360,7 +367,7 @@ export function BenefitsVerification() {
                     </td>
                   </tr>
                 );
-              })}
+              }))}
             </tbody>
           </table>
         </div>

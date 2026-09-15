@@ -26,9 +26,9 @@ export function DowntimeLoss() {
   const navigate = useNavigate();
   const { addToast } = useApp();
 
-  // Trigger live GET /api/v1/ci/loss-deployments on mount
+  // Trigger live GET /api/v1/ci/losses on mount
   React.useEffect(() => {
-    ciService.getLossDeployments().catch((err) => console.warn("Live loss fetch:", err.message));
+    ciService.getLosses().catch((err) => console.warn("Live loss fetch:", err.message));
   }, []);
 
   const { lossRecords = [], initiateRCA } = useCI();
@@ -36,7 +36,7 @@ export function DowntimeLoss() {
   const [searchQuery, setSearchQuery] = useState("");
 
   const downtimeLosses = useMemo(() => {
-    return lossRecords.filter((l) => l.category.toLowerCase().includes("downtime") || l.hoursLost > 0);
+    return lossRecords.filter((l) => l.category?.toLowerCase().includes("downtime") || l.hoursLost > 0);
   }, [lossRecords]);
 
   const totalDowntimeHours = useMemo(() => {
@@ -46,6 +46,13 @@ export function DowntimeLoss() {
   const totalFinancialLoss = useMemo(() => {
     return downtimeLosses.reduce((acc, l) => acc + (Number(l.financialImpactUSD) || 0), 0);
   }, [downtimeLosses]);
+
+  const availability = useMemo(() => {
+    if (totalDowntimeHours === 0) return "100.0%";
+    const standardOperatingHours = 720;
+    const avail = Math.max(0, ((standardOperatingHours - totalDowntimeHours) / standardOperatingHours) * 100);
+    return `${avail.toFixed(1)}%`;
+  }, [totalDowntimeHours]);
 
   const handleExportCSV = () => {
     const headers = "Loss ID,Event Name,Line ID,Asset ID,Hours Lost,Units Lost,Financial Impact USD,Linked RCA,Linked Project,Date\n";
@@ -82,7 +89,7 @@ export function DowntimeLoss() {
             <h1 style={{ fontSize: "clamp(18px, 4vw, 24px)", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.3px", lineHeight: 1.2 }}>
               Downtime Loss Analysis
             </h1>
-            <Badge variant="rose">93.8% AVAILABILITY</Badge>
+            <Badge variant={totalDowntimeHours > 0 ? "rose" : "emerald"}>{availability} AVAILABILITY</Badge>
           </div>
         </div>
 
@@ -114,7 +121,7 @@ export function DowntimeLoss() {
           title="Total Downtime"
           value={`${totalDowntimeHours.toFixed(1)} hrs`}
           unit="Aggregate Outage"
-          trend={{ value: "Across fleet", isPositive: false, text: "" }}
+          trend={{ value: totalDowntimeHours > 0 ? "Production stoppage logged" : "Zero downtime recorded", isPositive: totalDowntimeHours === 0, text: "" }}
           icon={Clock}
           colorVariant="cyan"
         />
@@ -122,17 +129,17 @@ export function DowntimeLoss() {
           title="Financial Loss"
           value={`$${totalFinancialLoss.toLocaleString()}`}
           unit="Direct Downtime Cost"
-          trend={{ value: "Production stoppage impact", isPositive: false, text: "" }}
+          trend={{ value: totalFinancialLoss > 0 ? "Direct stoppage impact" : "Zero financial impact", isPositive: totalFinancialLoss === 0, text: "" }}
           icon={DollarSign}
           colorVariant="rose"
         />
         <StatCard
           title="OEE Availability"
-          value="93.8%"
-          unit="Target: 95%"
-          trend={{ value: "-1.2% gap vs benchmark", isPositive: false, text: "" }}
+          value={availability}
+          unit="Calculated Availability"
+          trend={{ value: totalDowntimeHours > 0 ? "Target: > 95%" : "100% Operational", isPositive: parseFloat(availability) >= 95, text: "" }}
           icon={Activity}
-          colorVariant="amber"
+          colorVariant={parseFloat(availability) >= 95 ? "emerald" : "amber"}
         />
         <StatCard
           title="Active Investigations"
@@ -208,8 +215,15 @@ export function DowntimeLoss() {
               </tr>
             </thead>
             <tbody>
-              {filteredLosses.map((l) => (
-                <tr key={l.id} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+              {filteredLosses.length === 0 ? (
+                <tr>
+                  <td colSpan={7} style={{ padding: "36px 16px", textAlign: "center", color: "var(--text-muted)", fontSize: "13px" }}>
+                    No downtime loss events logged in the selected period.
+                  </td>
+                </tr>
+              ) : (
+                filteredLosses.map((l) => (
+                  <tr key={l.id} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
                   <td style={{ padding: "12px 16px" }}>
                     <div style={{ fontWeight: 800, color: "var(--text-primary)", fontSize: "13px" }}>{l.eventName}</div>
                     <div style={{ fontSize: "11px", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>{l.id} • {l.date}</div>
@@ -258,7 +272,7 @@ export function DowntimeLoss() {
                     </button>
                   </td>
                 </tr>
-              ))}
+              )))}
             </tbody>
           </table>
         </div>

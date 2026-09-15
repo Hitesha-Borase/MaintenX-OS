@@ -5,12 +5,18 @@ import qualityService from "../services/qualityService";
 const QualityContext = createContext();
 
 export function QualityProvider({ children }) {
+  const hasAuthToken = Boolean(typeof window !== "undefined" && (localStorage.getItem("maintenx_auth_token") || localStorage.getItem("flowstate_token")));
+  const hasTenant = Boolean(typeof window !== "undefined" && (localStorage.getItem("maintenx_tenant_name") || localStorage.getItem("maintenx_tenant_id")));
+  const isTenantActive = Boolean(hasTenant || hasAuthToken);
+
   const [qualityChecks, setQualityChecks] = useState(() => {
+    if (isTenantActive) return [];
     const saved = localStorage.getItem("flowstate_quality_checks");
     return saved ? JSON.parse(saved) : INITIAL_QUALITY_CHECKS;
   });
 
   const [deviations, setDeviations] = useState(() => {
+    if (isTenantActive) return [];
     const saved = localStorage.getItem("flowstate_deviations");
     return saved ? JSON.parse(saved) : DEVIATIONS_HOLDS;
   });
@@ -28,16 +34,16 @@ export function QualityProvider({ children }) {
       ]);
 
       const checksList = Array.isArray(remoteChecks.value) ? remoteChecks.value : (Array.isArray(remoteChecks.value?.data) ? remoteChecks.value.data : null);
-      if (remoteChecks.status === "fulfilled" && checksList && checksList.length > 0) {
+      if (remoteChecks.status === "fulfilled" && checksList !== null) {
         setQualityChecks(checksList);
       }
       const queueList = Array.isArray(remoteQueue.value) ? remoteQueue.value : (Array.isArray(remoteQueue.value?.data) ? remoteQueue.value.data : null);
-      if (remoteQueue.status === "fulfilled" && queueList) {
+      if (remoteQueue.status === "fulfilled" && queueList !== null) {
         setReleaseQueue(queueList);
       }
       const holdsList = Array.isArray(remoteHolds.value) ? remoteHolds.value : (Array.isArray(remoteHolds.value?.data) ? remoteHolds.value.data : null);
-      if (remoteHolds.status === "fulfilled" && holdsList && holdsList.length > 0) {
-        setDeviations((prev) => [...holdsList, ...prev.filter(d => !holdsList.some(r => r.id === d.id))]);
+      if (remoteHolds.status === "fulfilled" && holdsList !== null) {
+        setDeviations(holdsList);
       }
     } catch (err) {
       console.warn("Quality backend sync fallback:", err.message);
@@ -49,6 +55,18 @@ export function QualityProvider({ children }) {
   useEffect(() => {
     syncWithBackend();
   }, [syncWithBackend]);
+
+  useEffect(() => {
+    const handleTenantChanged = () => {
+      setQualityChecks([]);
+      setDeviations([]);
+      setReleaseQueue([]);
+      localStorage.removeItem("flowstate_quality_checks");
+      localStorage.removeItem("flowstate_deviations");
+    };
+    window.addEventListener("maintenx:tenant_changed", handleTenantChanged);
+    return () => window.removeEventListener("maintenx:tenant_changed", handleTenantChanged);
+  }, []);
 
   useEffect(() => {
     localStorage.setItem("flowstate_quality_checks", JSON.stringify(qualityChecks));

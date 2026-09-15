@@ -11,7 +11,7 @@ export const dashboardService = {
   },
 
   async getPlantManagerKPIs(plantId) {
-    return apiClient.get(`/plant-manager/command-center/kpis${plantId ? `?plantId=${plantId}` : ""}`);
+    return apiClient.get(`/dashboards/kpis${plantId ? `?plantId=${plantId}` : ""}`);
   },
 
   // ─── Line Lead Dashboard ────────────────────────────────────────────────────

@@ -1,6 +1,14 @@
 import apiClient from "./apiClient";
 
 export const authService = {
+  async register(registrationData) {
+    const data = await apiClient.post("/auth/register", registrationData);
+    if (data?.token) {
+      apiClient.setToken(data.token);
+    }
+    return data;
+  },
+
   async login(email, password) {
     const data = await apiClient.post("/auth/login", { email, password });
     if (data?.token) {

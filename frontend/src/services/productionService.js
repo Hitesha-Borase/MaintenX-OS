@@ -13,6 +13,10 @@ export const productionService = {
     return apiClient.patch(`/production/orders/${orderId}/status`, { status });
   },
 
+  async deleteOrder(orderId) {
+    return apiClient.delete(`/production/orders/${orderId}`);
+  },
+
   async getBatches() {
     return apiClient.get("/production/batches");
   },

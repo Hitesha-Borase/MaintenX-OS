@@ -132,6 +132,11 @@ export function MasterUsers() {
                   <div style={{ fontSize: "11px", fontWeight: 600, color: "var(--text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     🏢 {user.company}
                   </div>
+                  {user.email && (
+                    <div style={{ fontSize: "10.5px", color: "#2563EB", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      ✉️ {user.email}
+                    </div>
+                  )}
                   <div style={{ fontSize: "10.5px", color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     👤 {user.role}
                   </div>
@@ -162,6 +167,7 @@ export function MasterUsers() {
             <thead>
               <tr style={{ backgroundColor: "var(--bg-card-subtle)", borderBottom: "1px solid var(--border-subtle)", textAlign: "left" }}>
                 <th style={{ padding: "16px 20px", fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase", whiteSpace: "nowrap" }}>User Name</th>
+                <th style={{ padding: "16px 20px", fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase", whiteSpace: "nowrap" }}>Email</th>
                 <th style={{ padding: "16px 20px", fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase", whiteSpace: "nowrap" }}>Company</th>
                 <th style={{ padding: "16px 20px", fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase", whiteSpace: "nowrap" }}>Role</th>
                 <th style={{ padding: "16px 20px", fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase", whiteSpace: "nowrap" }}>Status</th>
@@ -178,6 +184,15 @@ export function MasterUsers() {
                       </div>
                       {user.name}
                     </div>
+                  </td>
+                  <td style={{ padding: "16px 20px", fontSize: "13px", color: "var(--text-secondary)", whiteSpace: "nowrap" }}>
+                    {user.email ? (
+                      <a href={`mailto:${user.email}`} style={{ color: "#2563EB", textDecoration: "none", fontWeight: 500 }}>
+                        {user.email}
+                      </a>
+                    ) : (
+                      <span style={{ color: "var(--text-muted)" }}>—</span>
+                    )}
                   </td>
                   <td style={{ padding: "16px 20px", fontWeight: 600, color: "var(--text-secondary)", whiteSpace: "nowrap" }}>{user.company}</td>
                   <td style={{ padding: "16px 20px", fontSize: "14px", fontWeight: 500, color: "var(--text-primary)", whiteSpace: "nowrap" }}>{user.role}</td>

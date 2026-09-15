@@ -39,7 +39,9 @@ export function Investigations() {
     openRcaCount,
     advanceRcaPhase,
     initiateRCA,
-    refreshInvestigations
+    refreshInvestigations,
+    availableAssets = [],
+    availableLines = []
   } = useCI();
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -51,12 +53,15 @@ export function Investigations() {
 
   const [newTitle, setNewTitle] = useState("");
   const [newAssetId, setNewAssetId] = useState("");
+  const [newLineId, setNewLineId] = useState("");
+  const [newSeverity, setNewSeverity] = useState("High");
 
   useEffect(() => {
-    if (assets.length > 0 && !newAssetId) {
-      setNewAssetId(assets[0].assetCode || assets[0].id);
+    const list = (assets && assets.length > 0) ? assets : availableAssets;
+    if (list && list.length > 0 && !newAssetId) {
+      setNewAssetId(list[0].assetCode || list[0].id);
     }
-  }, [assets, newAssetId]);
+  }, [assets, availableAssets, newAssetId]);
 
   const phases = ["Event", "Evidence", "Hypothesis & Tests", "Occurrence Cause", "Escape Cause", "CAPA", "Verification", "Closed"];
 
@@ -96,29 +101,41 @@ export function Investigations() {
       return;
     }
 
-    const selectedAsset = assets.find(a => (a.assetCode || a.id) === newAssetId) || assets[0] || {};
+    const assetPool = [...(assets || []), ...(availableAssets || [])];
+    const selectedAsset = assetPool.find((a) => a.id === newAssetId || a.assetCode === newAssetId) || assetPool[0] || {};
+    const selectedLine = (availableLines || []).find((l) => l.id === newLineId || l.code === newLineId) || {};
+
     const assetCode = selectedAsset.assetCode || selectedAsset.id || newAssetId || "FM-001";
-    const assetName = selectedAsset.name || "Critical Equipment";
-    const lineId = selectedAsset.lineId || "LIN-01";
-    const lineName = selectedAsset.lineName || "Line 1 — Production";
+    const assetName = selectedAsset.name || selectedAsset.assetName || "Critical Equipment";
+    const lineId = selectedLine.code || selectedLine.id || selectedAsset.lineId || newLineId || "LIN-01";
+    const lineName = selectedLine.name || selectedAsset.lineName || "Line 1 — Production";
 
     try {
       await maintenanceService.createRCAInvestigation({
         assetId: assetCode,
-        assetName: assetName,
-        lineId: lineId,
-        lineName: lineName,
-        title: newTitle.trim()
-      }).catch(() => {});
-
-      await initiateRCA(assetCode, null, newTitle.trim(), {
         assetName,
         lineId,
-        lineName
+        lineName,
+        title: newTitle.trim(),
+        severity: newSeverity,
+      }).catch(() => {});
+
+      await initiateRCA({
+        title: newTitle.trim(),
+        assetId: assetCode,
+        assetName,
+        lineId,
+        lineName,
+        severity: newSeverity,
+        problemStatement: newTitle.trim()
       });
+
       setNewTitle("");
+      setNewAssetId("");
+      setNewLineId("");
       setIsCreateModalOpen(false);
       await loadData();
+      addToast("RCA Investigation successfully initiated.", "success");
     } catch (err) {
       addToast("Failed to initiate RCA investigation.", "error");
     }
@@ -328,8 +345,15 @@ export function Investigations() {
               </tr>
             </thead>
             <tbody>
-              {filteredInvestigations.map((inv) => (
-                <tr key={inv.id} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+              {filteredInvestigations.length === 0 ? (
+                <tr>
+                  <td colSpan={6} style={{ padding: "36px 16px", textAlign: "center", color: "var(--text-muted)", fontSize: "13px" }}>
+                    No Root Cause Investigations recorded. Click <strong>"Initiate RCA 2.0"</strong> to log an incident.
+                  </td>
+                </tr>
+              ) : (
+                filteredInvestigations.map((inv) => (
+                  <tr key={inv.id} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
                   <td style={{ padding: "12px 16px" }}>
                     <div style={{ fontWeight: 800, color: "var(--text-primary)", fontSize: "13px" }}>{inv.title}</div>
                     <div style={{ fontSize: "11px", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>
@@ -437,7 +461,7 @@ export function Investigations() {
                     </div>
                   </td>
                 </tr>
-              ))}
+              )))}
             </tbody>
           </table>
         </div>
@@ -474,25 +498,60 @@ export function Investigations() {
               </div>
 
               <div>
-                <label className="form-label">Source Asset</label>
+                <label className="form-label">Source Asset / Equipment</label>
                 <select
                   value={newAssetId}
                   onChange={(e) => setNewAssetId(e.target.value)}
                   className="form-input"
                   style={{ backgroundColor: "#FFFFFF" }}
                 >
-                  {assets && assets.length > 0 ? (
-                    assets.map((ast) => {
-                      const code = ast.assetCode || ast.id;
-                      return (
-                        <option key={code} value={code}>
-                          {code} — {ast.name} {ast.lineName ? `(${ast.lineName})` : ""}
-                        </option>
-                      );
-                    })
-                  ) : (
+                  <option value="">-- Select Target Equipment --</option>
+                  {(availableAssets && availableAssets.length > 0 ? availableAssets : (assets || [])).map((ast) => {
+                    const code = ast.asset_code || ast.assetCode || ast.tag || ast.id;
+                    const name = ast.name || ast.asset_name || ast.assetName || "Asset";
+                    return (
+                      <option key={ast.id || code} value={code}>
+                        {code} — {name} {ast.lineName ? `(${ast.lineName})` : ""}
+                      </option>
+                    );
+                  })}
+                  {(!availableAssets || availableAssets.length === 0) && (!assets || assets.length === 0) && (
                     <option value="FM-001">FM-001 — Rotary Filling Machine 48-Valve</option>
                   )}
+                </select>
+              </div>
+
+              <div>
+                <label className="form-label">Production Line</label>
+                <select
+                  value={newLineId}
+                  onChange={(e) => setNewLineId(e.target.value)}
+                  className="form-input"
+                  style={{ backgroundColor: "#FFFFFF" }}
+                >
+                  <option value="">-- Select Production Line --</option>
+                  {(availableLines || []).map((line) => (
+                    <option key={line.id || line.code} value={line.code || line.id}>
+                      {line.name || line.line_name || line.code || line.id}
+                    </option>
+                  ))}
+                  {(!availableLines || availableLines.length === 0) && (
+                    <option value="Line 1 — Production">Line 1 — Production</option>
+                  )}
+                </select>
+              </div>
+
+              <div>
+                <label className="form-label">Severity Level</label>
+                <select
+                  value={newSeverity}
+                  onChange={(e) => setNewSeverity(e.target.value)}
+                  className="form-input"
+                  style={{ backgroundColor: "#FFFFFF" }}
+                >
+                  <option value="Critical">Critical (CCP / Safety / Regulatory Impact)</option>
+                  <option value="High">High (Extended Breakdown / High Scrap)</option>
+                  <option value="Medium">Medium (Speed / Performance Degradation)</option>
                 </select>
               </div>
 

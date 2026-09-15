@@ -5,7 +5,12 @@ import warehouseService from "../services/warehouseService";
 const InventoryContext = createContext();
 
 export function InventoryProvider({ children }) {
+  const hasAuthToken = Boolean(typeof window !== "undefined" && (localStorage.getItem("maintenx_auth_token") || localStorage.getItem("flowstate_token")));
+  const hasTenant = Boolean(typeof window !== "undefined" && (localStorage.getItem("maintenx_tenant_name") || localStorage.getItem("maintenx_tenant_id")));
+  const isTenantActive = Boolean(hasTenant || hasAuthToken);
+
   const [lots, setLots] = useState(() => {
+    if (isTenantActive) return [];
     const saved = localStorage.getItem("flowstate_inventory_lots");
     if (saved) {
       try {
@@ -23,28 +28,37 @@ export function InventoryProvider({ children }) {
 
   const [zones, setZones] = useState(WAREHOUSE_ZONES);
   
-  const [shipments, setShipments] = useState([
-    { id: "SHP-001", item: "Glass Bottles 1L", volume: "20,000 Pcs", status: "TRANSIT", supplier: "GlassCorp", expected: "2026-09-02" },
-    { id: "SHP-002", item: "Liquid Cane Sugar 500L", volume: "2 Drums", status: "ARRIVED", supplier: "Sugar Valley", expected: "2026-09-02" }
-  ]);
+  const [shipments, setShipments] = useState(() => {
+    if (isTenantActive) return [];
+    return [
+      { id: "SHP-001", item: "Glass Bottles 1L", volume: "20,000 Pcs", status: "TRANSIT", supplier: "GlassCorp", expected: "2026-09-02" },
+      { id: "SHP-002", item: "Liquid Cane Sugar 500L", volume: "2 Drums", status: "ARRIVED", supplier: "Sugar Valley", expected: "2026-09-02" }
+    ];
+  });
   
-  const [pickLists, setPickLists] = useState([
-    { id: "PL-101", order: "ORD-991", status: "PENDING", items: 2 },
-    { id: "PL-102", order: "ORD-992", status: "IN_PROGRESS", items: 5 }
-  ]);
+  const [pickLists, setPickLists] = useState(() => {
+    if (isTenantActive) return [];
+    return [
+      { id: "PL-101", order: "ORD-991", status: "PENDING", items: 2 },
+      { id: "PL-102", order: "ORD-992", status: "IN_PROGRESS", items: 5 }
+    ];
+  });
 
-  const [putAwayHistory, setPutAwayHistory] = useState([
-    {
-      lotNumber: "LOT-RM-GNG-0092",
-      materialName: "Organic Ginger Root Extract Fluid 20:1",
-      quantity: 120,
-      unit: "kg",
-      fromLocation: "Dock 02 - Receiving Staging",
-      toLocation: "Ambient Storage Bay 2 - Bin G-12",
-      timestamp: "2026-09-03 07:30 AM",
-      operator: "Alexander Vance"
-    }
-  ]);
+  const [putAwayHistory, setPutAwayHistory] = useState(() => {
+    if (isTenantActive) return [];
+    return [
+      {
+        lotNumber: "LOT-RM-GNG-0092",
+        materialName: "Organic Ginger Root Extract Fluid 20:1",
+        quantity: 120,
+        unit: "kg",
+        fromLocation: "Dock 02 - Receiving Staging",
+        toLocation: "Ambient Storage Bay 2 - Bin G-12",
+        timestamp: "2026-09-03 07:30 AM",
+        operator: "Alexander Vance"
+      }
+    ];
+  });
 
   const [isLoading, setIsLoading] = useState(false);
 
@@ -58,12 +72,12 @@ export function InventoryProvider({ children }) {
       ]);
 
       const lotsList = Array.isArray(remoteLots.value) ? remoteLots.value : (Array.isArray(remoteLots.value?.data) ? remoteLots.value.data : null);
-      if (remoteLots.status === "fulfilled" && lotsList && lotsList.length > 0) {
+      if (remoteLots.status === "fulfilled" && lotsList !== null) {
         setLots(lotsList);
       }
       const txList = Array.isArray(remoteTx.value) ? remoteTx.value : (Array.isArray(remoteTx.value?.data) ? remoteTx.value.data : null);
-      if (remoteTx.status === "fulfilled" && txList && txList.length > 0) {
-        setPutAwayHistory((prev) => [...txList, ...prev]);
+      if (remoteTx.status === "fulfilled" && txList !== null) {
+        setPutAwayHistory(txList);
       }
     } catch (err) {
       console.warn("Warehouse backend sync fallback:", err.message);
@@ -75,6 +89,18 @@ export function InventoryProvider({ children }) {
   useEffect(() => {
     syncWithBackend();
   }, [syncWithBackend]);
+
+  useEffect(() => {
+    const handleTenantChanged = () => {
+      setLots([]);
+      setShipments([]);
+      setPickLists([]);
+      setPutAwayHistory([]);
+      localStorage.removeItem("flowstate_inventory_lots");
+    };
+    window.addEventListener("maintenx:tenant_changed", handleTenantChanged);
+    return () => window.removeEventListener("maintenx:tenant_changed", handleTenantChanged);
+  }, []);
 
   useEffect(() => {
     localStorage.setItem("flowstate_inventory_lots", JSON.stringify(lots));

@@ -33,13 +33,19 @@ import { Button } from "../../components/common/Button";
 import { AreaChart } from "../../components/charts/AreaChart";
 import { useAdmin } from "../../context/AdminContext";
 import { useApp } from "../../context/AppContext";
+import { useRole } from "../../context/RoleContext";
 import { useNavigate } from "react-router-dom";
 import { adminService } from "../../services/adminService";
 
 export function AdminDashboard() {
   const { users = [], roles = [], items = [], dataHealthStats = {}, addUser } = useAdmin();
+  const { currentRole } = useRole();
   const { addToast } = useApp();
   const navigate = useNavigate();
+
+  const companyName = (currentRole?.user?.companyName && currentRole?.user?.companyName !== "MaintenX OS")
+    ? currentRole.user.companyName
+    : localStorage.getItem("maintenx_tenant_name") || "";
 
   const [isAuditing, setIsAuditing] = useState(false);
   const [isProvisionModalOpen, setIsProvisionModalOpen] = useState(false);
@@ -137,7 +143,7 @@ export function AdminDashboard() {
         <div style={{ minWidth: "240px", flex: 1 }}>
           <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
             <h1 style={{ fontSize: "clamp(18px, 4vw, 24px)", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.3px", lineHeight: 1.2 }}>
-              System Administrator Command Dashboard
+              {companyName ? `${companyName} — Command Dashboard` : "System Administrator Command Dashboard"}
             </h1>
             <Badge variant="emerald" dot>
               SYSTEM HEALTH 99.98%
@@ -180,9 +186,13 @@ export function AdminDashboard() {
         {/* 1. Active Users & RBAC */}
         <StatCard
           title="Active Users & RBAC"
-          value={liveMetrics ? liveMetrics.totalUsers.toString() : users.length.toString()}
+          value={liveMetrics?.totalUsers != null ? liveMetrics.totalUsers.toString() : users.length.toString()}
           unit="Accounts"
-          trend={{ value: `${liveMetrics ? liveMetrics.activeUsers : (users.filter(u => u.status === "Active").length || 5)} Active • ${liveMetrics ? liveMetrics.rolesCount : (roles.length || 12)} Roles`, isPositive: true, text: "" }}
+          trend={{
+            value: `${liveMetrics?.activeUsers != null ? liveMetrics.activeUsers : users.filter(u => u.status === "Active").length} Active • ${liveMetrics?.rolesCount != null ? liveMetrics.rolesCount : roles.length} Roles`,
+            isPositive: true,
+            text: ""
+          }}
           icon={Users}
           colorVariant="cyan"
           onClick={() => navigate("/users")}
@@ -191,9 +201,13 @@ export function AdminDashboard() {
         {/* 2. Enterprise Plants & Master Data */}
         <StatCard
           title="Plants & Master Data"
-          value={`${liveMetrics?.sitesCount || 2} Sites`}
-          unit={`${liveMetrics?.linesCount || 6} Lines`}
-          trend={{ value: `${liveMetrics?.skusCount || items.length || 5} SKUs • ${liveMetrics?.syncedTablesCount || 17} Tables Synced`, isPositive: true, text: "" }}
+          value={`${liveMetrics?.sitesCount != null ? liveMetrics.sitesCount : 0} Sites`}
+          unit={`${liveMetrics?.linesCount != null ? liveMetrics.linesCount : 0} Lines`}
+          trend={{
+            value: `${liveMetrics?.skusCount != null ? liveMetrics.skusCount : items.length} SKUs • ${liveMetrics?.syncedTablesCount != null ? liveMetrics.syncedTablesCount : 0} Tables Synced`,
+            isPositive: true,
+            text: ""
+          }}
           icon={Building2}
           colorVariant="amber"
           onClick={() => navigate("/master-data/items")}
@@ -202,9 +216,9 @@ export function AdminDashboard() {
         {/* 3. Integrations Status */}
         <StatCard
           title="Integrations Status"
-          value={`${liveMetrics?.liveConnectors || 4} / ${liveMetrics?.totalConnectors || 4} Live`}
+          value={`${liveMetrics?.liveConnectors != null ? liveMetrics.liveConnectors : 0} / ${liveMetrics?.totalConnectors != null ? liveMetrics.totalConnectors : 0} Live`}
           unit="Connectors"
-          trend={{ value: "SAP S/4HANA & IoT Connected", isPositive: true, text: "" }}
+          trend={{ value: liveMetrics?.liveConnectors ? "Connected" : "Standard SaaS Tenant", isPositive: true, text: "" }}
           icon={Cpu}
           colorVariant="emerald"
           onClick={() => navigate("/integrations/erp")}
@@ -213,7 +227,7 @@ export function AdminDashboard() {
         {/* 4. Data Health & Security */}
         <StatCard
           title="Data Health & Security"
-          value={`${liveMetrics?.qualityIndex || dataHealthStats.healthScore || 96.2}%`}
+          value={`${liveMetrics?.qualityIndex != null ? liveMetrics.qualityIndex : (dataHealthStats.healthScore || 99.98)}%`}
           unit="Quality Index"
           trend={{ value: "Hardened MFA • 21 CFR Part 11", isPositive: true, text: "" }}
           icon={ShieldCheck}
@@ -461,12 +475,20 @@ export function AdminDashboard() {
                     onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                     style={{ backgroundColor: "#FFFFFF" }}
                   >
-                    <option value="System Administrator">System Administrator</option>
-                    <option value="Plant Manager">Plant Manager</option>
-                    <option value="Maintenance Lead">Maintenance Lead</option>
-                    <option value="QA Manager">QA Manager</option>
-                    <option value="Production Supervisor">Production Supervisor</option>
-                    <option value="Operator / Line Tech">Operator / Line Tech</option>
+                    {roles && roles.length > 0 ? (
+                      roles.map((r) => (
+                        <option key={r.id || r.name} value={r.name}>{r.name}</option>
+                      ))
+                    ) : (
+                      <>
+                        <option value="System Administrator">System Administrator</option>
+                        <option value="Plant Manager">Plant Manager</option>
+                        <option value="Maintenance Lead">Maintenance Lead</option>
+                        <option value="QA Manager">QA Manager</option>
+                        <option value="Production Supervisor">Production Supervisor</option>
+                        <option value="Operator / Line Tech">Operator / Line Tech</option>
+                      </>
+                    )}
                   </select>
                 </div>
 

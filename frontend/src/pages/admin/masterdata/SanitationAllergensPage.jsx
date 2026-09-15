@@ -40,15 +40,15 @@ export function SanitationAllergensPage() {
 
   useEffect(() => {
     masterDataService.getSanitationClasses().then((res) => {
-      const data = res?.data?.data || res?.data || res;
-      if (Array.isArray(data) && data.length > 0 && typeof setSanitationClasses === "function") {
+      const data = res?.data?.data !== undefined ? res.data.data : (res?.data !== undefined ? res.data : res);
+      if (Array.isArray(data) && typeof setSanitationClasses === "function") {
         setSanitationClasses(data);
       }
     }).catch((err) => console.warn("Sanitation load:", err.message));
 
     masterDataService.getAllergenRules().then((res) => {
-      const data = res?.data?.data || res?.data || res;
-      if (Array.isArray(data) && data.length > 0 && typeof setAllergenRules === "function") {
+      const data = res?.data?.data !== undefined ? res.data.data : (res?.data !== undefined ? res.data : res);
+      if (Array.isArray(data) && typeof setAllergenRules === "function") {
         setAllergenRules(data);
       }
     }).catch((err) => console.warn("Allergen rules load:", err.message));

@@ -43,10 +43,16 @@ export function HypothesisTests() {
   }, [selectedRcaFilter]);
 
   const [newHyp, setNewHyp] = useState({
-    rcaId: investigations[0]?.id || "RCA-2026-001",
+    rcaId: investigations[0]?.id || "",
     statement: "",
     testMethod: ""
   });
+
+  useEffect(() => {
+    if (!newHyp.rcaId && investigations.length > 0) {
+      setNewHyp((prev) => ({ ...prev, rcaId: investigations[0].id }));
+    }
+  }, [investigations]);
 
   const handleValidate = async (rcaId, hypId, isConfirmed) => {
     await validateRootCause(rcaId, hypId, isConfirmed);
@@ -58,6 +64,10 @@ export function HypothesisTests() {
 
   const handleCreateHypothesis = async (e) => {
     e.preventDefault();
+    if (!newHyp.rcaId) {
+      addToast("Please select an active RCA investigation.", "warning");
+      return;
+    }
     if (!newHyp.statement.trim() || !newHyp.testMethod.trim()) {
       addToast("Please provide both statement and test method.", "warning");
       return;
@@ -69,7 +79,7 @@ export function HypothesisTests() {
     });
     setIsAddModalOpen(false);
     setNewHyp({
-      rcaId: investigations[0]?.id || "RCA-2026-001",
+      rcaId: investigations[0]?.id || "",
       statement: "",
       testMethod: ""
     });
@@ -250,8 +260,15 @@ export function HypothesisTests() {
               </tr>
             </thead>
             <tbody>
-              {filteredHypotheses.map((h) => (
-                <tr key={h.id} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+              {filteredHypotheses.length === 0 ? (
+                <tr>
+                  <td colSpan={6} style={{ padding: "36px 16px", textAlign: "center", color: "var(--text-muted)", fontSize: "13px" }}>
+                    No root cause hypotheses formulated. Click <strong>"Formulate Hypothesis"</strong> to begin scientific test trials.
+                  </td>
+                </tr>
+              ) : (
+                filteredHypotheses.map((h) => (
+                  <tr key={h.id} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
                   <td style={{ padding: "12px 16px", fontFamily: "var(--font-mono)", fontWeight: 800, color: "#8C5B23" }}>
                     {h.rcaId}
                   </td>
@@ -328,7 +345,7 @@ export function HypothesisTests() {
                     </div>
                   </td>
                 </tr>
-              ))}
+              )))}
             </tbody>
           </table>
         </div>
@@ -373,6 +390,7 @@ export function HypothesisTests() {
                   onChange={(e) => setNewHyp({ ...newHyp, rcaId: e.target.value })}
                   style={{ width: "100%", padding: "8px 12px", borderRadius: "6px", border: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)", color: "var(--text-primary)" }}
                 >
+                  <option value="">-- Select RCA Investigation --</option>
                   {investigations.map((inv) => (
                     <option key={inv.id} value={inv.id}>{inv.id} — {inv.title.substring(0, 36)}...</option>
                   ))}

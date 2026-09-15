@@ -28,26 +28,20 @@ export function OccurrenceCause() {
   const { addToast } = useApp();
   const { investigations = [], updateRCA, advanceRcaPhase } = useCI();
 
-  const [activeCase, setActiveCase] = useState(() => investigations[0]?.id || "RCA-2026-001");
+  const [activeCase, setActiveCase] = useState(() => investigations[0]?.id || "");
 
   useEffect(() => {
     ciService.getInvestigations().catch((err) => console.warn("Investigations load:", err.message));
   }, []);
 
   useEffect(() => {
-    if (investigations.length > 0 && !investigations.some((i) => i.id === activeCase)) {
+    if (investigations.length > 0 && (!activeCase || !investigations.some((i) => i.id === activeCase))) {
       setActiveCase(investigations[0].id);
     }
   }, [investigations, activeCase]);
 
   const currentInv = useMemo(() => {
-    return investigations.find((i) => i.id === activeCase) || investigations[0] || {
-      id: "RCA-2026-001",
-      title: "Active Investigation",
-      whyTree: [],
-      eightD: {},
-      problemStatement: ""
-    };
+    return investigations.find((i) => i.id === activeCase) || investigations[0] || null;
   }, [investigations, activeCase]);
 
   // Local editable state for current investigation's 5-Why and root cause statement
@@ -114,7 +108,7 @@ export function OccurrenceCause() {
     addToast("Occurrence Cause 5-Why analysis exported to CSV.", "info");
   };
 
-  const isConfirmed = currentInv.status === "Root Cause Validated" || currentInv.currentPhase === "Occurrence Cause";
+  const isConfirmed = currentInv ? (currentInv.status === "Root Cause Validated" || currentInv.currentPhase === "Occurrence Cause") : false;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%", maxWidth: "1200px", margin: "0 auto", minWidth: 0 }}>
@@ -155,15 +149,15 @@ export function OccurrenceCause() {
       >
         <StatCard
           title="Occurrence Confidence"
-          value={isConfirmed ? "100%" : "85%"}
-          unit={isConfirmed ? "Validated" : "Under Review"}
+          value={currentInv ? (isConfirmed ? "100%" : "85%") : "0%"}
+          unit={currentInv ? (isConfirmed ? "Validated" : "Under Review") : "No Active Case"}
           icon={CheckCircle2}
           colorVariant="emerald"
         />
         <StatCard
           title="Active Asset"
-          value={currentInv.assetName ? currentInv.assetName.substring(0, 14) + "..." : "Primary Asset"}
-          unit={currentInv.assetId || "AST-001"}
+          value={currentInv?.assetName ? (currentInv.assetName.substring(0, 14) + "...") : "None Selected"}
+          unit={currentInv?.assetId || "No Asset"}
           icon={ShieldAlert}
           colorVariant="rose"
         />
@@ -176,14 +170,29 @@ export function OccurrenceCause() {
         />
         <StatCard
           title="Investigation Status"
-          value={currentInv.status || "Open"}
-          unit={currentInv.currentPhase || "Event"}
+          value={currentInv?.status || "None"}
+          unit={currentInv?.currentPhase || "No Phase"}
           icon={Sparkles}
           colorVariant="emerald"
         />
       </div>
 
-      {/* Case Switcher Tab Bar */}
+      {!currentInv || investigations.length === 0 ? (
+        <Card style={{ padding: "48px 24px", textAlign: "center" }}>
+          <ShieldAlert size={40} color="#C89547" style={{ margin: "0 auto 12px" }} />
+          <h3 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", marginBottom: "6px" }}>
+            No Active RCA Investigations Found
+          </h3>
+          <p style={{ fontSize: "13px", color: "var(--text-muted)", marginBottom: "16px" }}>
+            Initiate a root cause investigation first to unlock 5-Why Occurrence Cause validation.
+          </p>
+          <Button variant="primary" onClick={() => navigate("/ci/rca/investigations")}>
+            Go to RCA Hub
+          </Button>
+        </Card>
+      ) : (
+        <>
+          {/* Case Switcher Tab Bar */}
       <Card style={{ padding: "14px", minWidth: 0, width: "100%", boxSizing: "border-box" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
@@ -347,6 +356,8 @@ export function OccurrenceCause() {
           </div>
         </form>
       </Card>
+        </>
+      )}
     </div>
   );
 }

@@ -232,6 +232,10 @@ export const INITIAL_APS_SCHEDULES = [
 ];
 
 export function PlanningProvider({ children }) {
+  const hasAuthToken = Boolean(typeof window !== "undefined" && (localStorage.getItem("maintenx_auth_token") || localStorage.getItem("flowstate_token")));
+  const hasTenant = Boolean(typeof window !== "undefined" && (localStorage.getItem("maintenx_tenant_name") || localStorage.getItem("maintenx_tenant_id")));
+  const isTenantActive = Boolean(hasTenant || hasAuthToken);
+
   const { skus = [], boms = [], lines = [], assets = [], logAudit } = useMasterData();
   const { productionOrders = [], setProductionOrders } = useProduction();
   const { addToast } = useApp();
@@ -244,16 +248,19 @@ export function PlanningProvider({ children }) {
   const [forecasts, setForecasts] = useState([]);
 
   const [scheduleVersions, setScheduleVersions] = useState(() => {
+    if (isTenantActive) return [];
     const saved = localStorage.getItem("flowstate_planning_versions");
     return saved ? JSON.parse(saved) : INITIAL_SCHEDULE_VERSIONS;
   });
 
   const [schedules, setSchedules] = useState(() => {
+    if (isTenantActive) return [];
     const saved = localStorage.getItem("flowstate_planning_schedules");
     return saved ? JSON.parse(saved) : INITIAL_APS_SCHEDULES;
   });
 
   const [materialReservations, setMaterialReservations] = useState(() => {
+    if (isTenantActive) return [];
     const saved = localStorage.getItem("flowstate_planning_reservations");
     return saved
       ? JSON.parse(saved)
@@ -411,7 +418,7 @@ export function PlanningProvider({ children }) {
         }
         if (remoteSchedules.status === "fulfilled") {
           const items = remoteSchedules.value?.data || remoteSchedules.value;
-          if (Array.isArray(items) && items.length > 0) {
+          if (Array.isArray(items)) {
             setSchedules(items);
           }
         }
@@ -421,6 +428,20 @@ export function PlanningProvider({ children }) {
     }
     syncPlanningBackend();
   }, [skus]);
+
+  useEffect(() => {
+    const handleTenantChanged = () => {
+      setDemandOrders([]);
+      setForecasts([]);
+      setScheduleVersions([]);
+      setSchedules([]);
+      setMaterialReservations([]);
+      localStorage.removeItem("flowstate_planning_versions");
+      localStorage.removeItem("flowstate_planning_schedules");
+      localStorage.removeItem("flowstate_planning_reservations");
+    };
+    window.addEventListener("maintenx:tenant_changed", handleTenantChanged);
+  }, []);
 
   // ==========================================
   // 1. DEMAND ORDERS CRUD

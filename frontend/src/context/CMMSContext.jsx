@@ -19,8 +19,13 @@ import { DEFAULT_USER_PROFILE } from "../data/mockUserProfile";
 const CMMSContext = createContext();
 
 export function CMMSProvider({ children }) {
+  const hasAuthToken = Boolean(typeof window !== "undefined" && (localStorage.getItem("maintenx_auth_token") || localStorage.getItem("flowstate_token")));
+  const hasTenant = Boolean(typeof window !== "undefined" && (localStorage.getItem("maintenx_tenant_name") || localStorage.getItem("maintenx_tenant_id")));
+  const isTenantActive = Boolean(hasTenant || hasAuthToken);
+
   // 1. Assets State - initialized from DB / local cache, clearing legacy mocks
   const [assets, setAssets] = useState(() => {
+    if (isTenantActive) return [];
     const saved = localStorage.getItem("flowstate_assets");
     if (saved) {
       try {
@@ -39,12 +44,14 @@ export function CMMSProvider({ children }) {
   });
 
   const [assetHierarchy, setAssetHierarchy] = useState(() => {
+    if (isTenantActive) return [];
     const saved = localStorage.getItem("flowstate_asset_hierarchy");
     return saved ? JSON.parse(saved) : ASSET_HIERARCHY_TREE;
   });
 
   // 2. Work Orders State - 100% Live PostgreSQL DB state, purge legacy mocks
   const [workOrders, setWorkOrders] = useState(() => {
+    if (isTenantActive) return [];
     const saved = localStorage.getItem("flowstate_work_orders");
     if (saved) {
       try {
@@ -67,14 +74,20 @@ export function CMMSProvider({ children }) {
 
   // 3. PM Plans & Schedules
   const [pmPlans, setPmPlans] = useState(() => {
+    if (isTenantActive) return [];
     const saved = localStorage.getItem("flowstate_pm_plans");
     return saved ? JSON.parse(saved) : INITIAL_PM_PLANS;
   });
 
-  const [pmSchedules, setPmSchedules] = useState([]);
+  const [pmSchedules, setPmSchedules] = useState(() => {
+    if (isTenantActive) return [];
+    const saved = localStorage.getItem("flowstate_pm_schedules");
+    return saved ? JSON.parse(saved) : INITIAL_PM_SCHEDULES;
+  });
 
   // Checklists
   const [checklistTemplates, setChecklistTemplates] = useState(() => {
+    if (isTenantActive) return [];
     try {
       const saved = localStorage.getItem("flowstate_checklists_v2");
       if (saved) return JSON.parse(saved);
@@ -84,12 +97,14 @@ export function CMMSProvider({ children }) {
   });
 
   const [checklistHistory, setChecklistHistory] = useState(() => {
+    if (isTenantActive) return [];
     const saved = localStorage.getItem("flowstate_checklist_history");
     return saved ? JSON.parse(saved) : CHECKLIST_HISTORY;
   });
 
   // 4. Breakdowns
   const [breakdowns, setBreakdowns] = useState(() => {
+    if (isTenantActive) return [];
     try {
       const saved = localStorage.getItem("flowstate_breakdowns");
       if (!saved) return [];
@@ -105,6 +120,7 @@ export function CMMSProvider({ children }) {
 
   // 5. Spare Parts & BOM & Requests
   const [spareParts, setSpareParts] = useState(() => {
+    if (isTenantActive) return [];
     const saved = localStorage.getItem("flowstate_spare_parts");
     if (saved) {
       try {
@@ -122,15 +138,17 @@ export function CMMSProvider({ children }) {
     return [];
   });
 
-  const [equipmentBOMs] = useState(EQUIPMENT_BOMS);
+  const [equipmentBOMs] = useState(() => (isTenantActive ? {} : EQUIPMENT_BOMS));
 
   const [partsRequests, setPartsRequests] = useState(() => {
+    if (isTenantActive) return [];
     const saved = localStorage.getItem("flowstate_parts_requests");
     return saved ? JSON.parse(saved) : INITIAL_PARTS_REQUESTS;
   });
 
   // 6. Calibrations & History
   const [calibrations, setCalibrations] = useState(() => {
+    if (isTenantActive) return [];
     const saved = localStorage.getItem("flowstate_calibrations");
     if (saved) {
       try {
@@ -149,18 +167,21 @@ export function CMMSProvider({ children }) {
   });
 
   const [calibrationHistory, setCalibrationHistory] = useState(() => {
+    if (isTenantActive) return [];
     const saved = localStorage.getItem("flowstate_calibration_history");
     return saved ? JSON.parse(saved) : CALIBRATION_HISTORY;
   });
 
   // 7. Failure Codes
   const [failureCodes, setFailureCodes] = useState(() => {
+    if (isTenantActive) return [];
     const saved = localStorage.getItem("flowstate_failure_codes");
     return saved ? JSON.parse(saved) : INITIAL_FAILURE_CODES;
   });
 
   // 8. Troubleshooting & Verified Solutions
   const [solutions, setSolutions] = useState(() => {
+    if (isTenantActive) return [];
     const saved = localStorage.getItem("flowstate_solutions");
     if (saved) {
       try {
@@ -179,8 +200,8 @@ export function CMMSProvider({ children }) {
   });
 
   // 9. Reliability
-  const [repeatFailures, setRepeatFailures] = useState(REPEAT_FAILURES);
-  const [reliabilityMetrics, setReliabilityMetrics] = useState(RELIABILITY_METRICS);
+  const [repeatFailures, setRepeatFailures] = useState(() => (isTenantActive ? [] : REPEAT_FAILURES));
+  const [reliabilityMetrics, setReliabilityMetrics] = useState(() => (isTenantActive ? {} : RELIABILITY_METRICS));
 
   // 10. Machine / IoT Live Simulation & Streaming
   const [isLiveTelemetryStreaming, setIsLiveTelemetryStreaming] = useState(true);
@@ -532,6 +553,46 @@ export function CMMSProvider({ children }) {
       }
     }
     syncCMMSBackend();
+  }, []);
+
+  useEffect(() => {
+    const handleTenantChanged = () => {
+      setAssets([]);
+      setAssetHierarchy([]);
+      setWorkOrders([]);
+      setPmPlans([]);
+      setPmSchedules([]);
+      setChecklistTemplates([]);
+      setChecklistHistory([]);
+      setBreakdowns([]);
+      setSpareParts([]);
+      setPartsRequests([]);
+      setCalibrations([]);
+      setCalibrationHistory([]);
+      setFailureCodes([]);
+      setSolutions([]);
+      setRepeatFailures([]);
+      setReliabilityMetrics({});
+      const keys = [
+        "flowstate_assets",
+        "flowstate_asset_hierarchy",
+        "flowstate_work_orders",
+        "flowstate_pm_plans",
+        "flowstate_pm_schedules",
+        "flowstate_checklists",
+        "flowstate_checklist_history",
+        "flowstate_breakdowns",
+        "flowstate_spare_parts",
+        "flowstate_parts_requests",
+        "flowstate_calibrations",
+        "flowstate_calibration_history",
+        "flowstate_failure_codes",
+        "flowstate_solutions"
+      ];
+      keys.forEach((k) => localStorage.removeItem(k));
+    };
+    window.addEventListener("maintenx:tenant_changed", handleTenantChanged);
+    return () => window.removeEventListener("maintenx:tenant_changed", handleTenantChanged);
   }, []);
 
   // Dynamic MTTR / MTBF recalculation based on actual Breakdowns

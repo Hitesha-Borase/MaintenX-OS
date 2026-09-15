@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Factory,
@@ -16,24 +16,48 @@ import { StatCard } from "../../../components/common/StatCard";
 import { Badge } from "../../../components/common/Badge";
 import { Button } from "../../../components/common/Button";
 import { useApp } from "../../../context/AppContext";
+import { useCI } from "../../../context/CIContext";
 import ciService from "../../../services/ciService";
 
 export function ProductionLoss() {
   const navigate = useNavigate();
   const { addToast } = useApp();
+  const { lossRecords = [] } = useCI();
 
   useEffect(() => {
     ciService.getLosses("ALL", "Production").catch((err) => console.warn("Production loss load:", err.message));
   }, []);
 
-  const [timeRange, setTimeRange] = useState("Week 35 (Current)");
+  const [timeRange, setTimeRange] = useState("Active Operational Cycle");
 
-  const lossCauses = [
-    { cause: "Unplanned Mechanical & Electrical Breakdowns", percentage: "4.1%", volume: "19,680 Bottles", cost: "$9,840", route: "/ci/loss/downtime" },
-    { cause: "Planned Clean-in-Place (CIP) & Changeover Overhead", percentage: "3.2%", volume: "15,360 Bottles", cost: "$7,680", route: "/ci/loss/downtime" },
-    { cause: "Quality Quarantine & Out-of-Spec Rejects", percentage: "2.8%", volume: "13,440 Bottles", cost: "$6,720", route: "/ci/loss/quality" },
-    { cause: "Micro-Stoppages & Speed Derating", percentage: "2.1%", volume: "10,080 Bottles", cost: "$5,040", route: "/ci/loss/yield" }
-  ];
+  const totalUnitsLost = useMemo(() => {
+    return lossRecords.reduce((acc, l) => acc + (Number(l.unitsLost) || 0), 0);
+  }, [lossRecords]);
+
+  const totalFinancialLoss = useMemo(() => {
+    return lossRecords.reduce((acc, l) => acc + (Number(l.financialImpactUSD) || 0), 0);
+  }, [lossRecords]);
+
+  const totalHoursLost = useMemo(() => {
+    return lossRecords.reduce((acc, l) => acc + (Number(l.hoursLost) || 0), 0);
+  }, [lossRecords]);
+
+  const lossCauses = useMemo(() => {
+    if (lossRecords.length === 0) return [];
+    return lossRecords.map((item) => ({
+      cause: item.eventName || item.category,
+      percentage: totalFinancialLoss > 0
+        ? `${Math.round(((item.financialImpactUSD || 0) / totalFinancialLoss) * 100)}%`
+        : "0%",
+      volume: `${(item.unitsLost || 0).toLocaleString()} Units`,
+      cost: `$${(item.financialImpactUSD || 0).toLocaleString()}`,
+      route: item.category?.toLowerCase().includes("quality")
+        ? "/ci/loss/quality"
+        : item.category?.toLowerCase().includes("yield")
+        ? "/ci/loss/yield"
+        : "/ci/loss/downtime"
+    }));
+  }, [lossRecords, totalFinancialLoss]);
 
   const handleExportCSV = () => {
     const headers = "Loss Category,OEE Impact %,Lost Volume (Units),Financial Loss ($)\n";
@@ -58,7 +82,9 @@ export function ProductionLoss() {
             <h1 style={{ fontSize: "clamp(18px, 4vw, 24px)", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.3px", lineHeight: 1.2 }}>
               Production Loss Analysis
             </h1>
-            <Badge variant="rose">12.2% TOTAL LOSS</Badge>
+            <Badge variant={totalFinancialLoss > 0 ? "rose" : "emerald"}>
+              {totalFinancialLoss > 0 ? `$${totalFinancialLoss.toLocaleString()} LOGGED LOSS` : "ZERO UNPLANNED LOSS"}
+            </Badge>
           </div>
         </div>
 
@@ -72,7 +98,7 @@ export function ProductionLoss() {
         </div>
       </div>
 
-      {/* KPI Tickers - 2x2 on mobile, 4 on desktop */}
+      {/* KPI Tickers */}
       <div
         className="kpi-grid-responsive grid-4"
         style={{
@@ -84,36 +110,36 @@ export function ProductionLoss() {
         }}
       >
         <StatCard
-          title="Target Output"
-          value="480,000"
-          unit="Bottles"
-          trend={{ value: "Weekly production baseline", isPositive: true, text: "" }}
+          title="Recorded Incidents"
+          value={lossRecords.length.toString()}
+          unit="Events"
+          trend={{ value: lossRecords.length > 0 ? "Under investigation" : "Clean operational baseline", isPositive: lossRecords.length === 0, text: "" }}
           icon={Factory}
           colorVariant="cyan"
         />
         <StatCard
-          title="Actual Output"
-          value="421,440"
-          unit="Bottles"
-          trend={{ value: "Achieved gross output (87.8%)", isPositive: true, text: "" }}
+          title="Lost Production Hours"
+          value={`${totalHoursLost.toFixed(1)} hrs`}
+          unit="Aggregate Hours"
+          trend={{ value: totalHoursLost > 0 ? "Production stoppage logged" : "Zero stoppage", isPositive: totalHoursLost === 0, text: "" }}
           icon={Sparkles}
           colorVariant="emerald"
         />
         <StatCard
-          title="Total Production Loss"
-          value="58,560"
-          unit="Bottles"
-          trend={{ value: "-12.2% output gap", isPositive: false, text: "" }}
+          title="Total Units Lost"
+          value={totalUnitsLost.toLocaleString()}
+          unit="Units"
+          trend={{ value: totalUnitsLost > 0 ? "Volume deficit" : "Zero unit loss", isPositive: totalUnitsLost === 0, text: "" }}
           icon={TrendingDown}
-          colorVariant="rose"
+          colorVariant={totalUnitsLost > 0 ? "rose" : "emerald"}
         />
         <StatCard
-          title="Financial Opportunity"
-          value="$29,280"
-          unit="Weekly"
-          trend={{ value: "Recoverable capacity value", isPositive: false, text: "" }}
+          title="Financial Loss"
+          value={`$${totalFinancialLoss.toLocaleString()}`}
+          unit="Direct Impact"
+          trend={{ value: totalFinancialLoss > 0 ? "Direct downtime value" : "Zero loss logged", isPositive: totalFinancialLoss === 0, text: "" }}
           icon={AlertTriangle}
-          colorVariant="amber"
+          colorVariant={totalFinancialLoss > 0 ? "rose" : "emerald"}
         />
       </div>
 
@@ -130,58 +156,64 @@ export function ProductionLoss() {
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-          {lossCauses.map((item, idx) => (
-            <div
-              key={idx}
-              style={{
-                padding: "12px 14px",
-                borderRadius: "10px",
-                backgroundColor: "var(--bg-card-subtle)",
-                border: "1px solid var(--border-subtle)",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                flexWrap: "wrap",
-                gap: "10px"
-              }}
-            >
-              <div style={{ minWidth: "200px", flex: 1 }}>
-                <div style={{ fontSize: "13px", fontWeight: 800, color: "var(--text-primary)" }}>
-                  {item.cause}
-                </div>
-                <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "4px", display: "flex", gap: "12px", flexWrap: "wrap" }}>
-                  <span>Lost Units: <strong style={{ color: "var(--text-primary)" }}>{item.volume}</strong></span>
-                  <span>Financial Impact: <strong style={{ color: "#DC2626" }}>{item.cost}</strong></span>
-                </div>
-              </div>
-
-              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <span style={{ fontSize: "15px", fontWeight: 800, color: "#DC2626", fontFamily: "var(--font-mono)" }}>
-                  {item.percentage}
-                </span>
-
-                <button
-                  onClick={() => navigate(item.route)}
-                  style={{
-                    padding: "5px 10px",
-                    borderRadius: "6px",
-                    fontSize: "11px",
-                    fontWeight: 700,
-                    backgroundColor: "var(--bg-card-subtle)",
-                    color: "var(--text-primary)",
-                    border: "1px solid var(--border-subtle)",
-                    cursor: "pointer",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "4px"
-                  }}
-                >
-                  <span>Drill Down</span>
-                  <ArrowRight size={12} />
-                </button>
-              </div>
+          {lossCauses.length === 0 ? (
+            <div style={{ padding: "36px 16px", textAlign: "center", color: "var(--text-muted)", fontSize: "13px" }}>
+              No production loss events recorded in current cycle.
             </div>
-          ))}
+          ) : (
+            lossCauses.map((item, idx) => (
+              <div
+                key={idx}
+                style={{
+                  padding: "12px 14px",
+                  borderRadius: "10px",
+                  backgroundColor: "var(--bg-card-subtle)",
+                  border: "1px solid var(--border-subtle)",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  flexWrap: "wrap",
+                  gap: "10px"
+                }}
+              >
+                <div style={{ minWidth: "200px", flex: 1 }}>
+                  <div style={{ fontSize: "13px", fontWeight: 800, color: "var(--text-primary)" }}>
+                    {item.cause}
+                  </div>
+                  <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "4px", display: "flex", gap: "12px", flexWrap: "wrap" }}>
+                    <span>Lost Units: <strong style={{ color: "var(--text-primary)" }}>{item.volume}</strong></span>
+                    <span>Financial Impact: <strong style={{ color: "#DC2626" }}>{item.cost}</strong></span>
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <span style={{ fontSize: "15px", fontWeight: 800, color: "#DC2626", fontFamily: "var(--font-mono)" }}>
+                    {item.percentage}
+                  </span>
+
+                  <button
+                    onClick={() => navigate(item.route)}
+                    style={{
+                      padding: "5px 10px",
+                      borderRadius: "6px",
+                      fontSize: "11px",
+                      fontWeight: 700,
+                      backgroundColor: "var(--bg-card-subtle)",
+                      color: "var(--text-primary)",
+                      border: "1px solid var(--border-subtle)",
+                      cursor: "pointer",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "4px"
+                    }}
+                  >
+                    <span>Drill Down</span>
+                    <ArrowRight size={12} />
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </Card>
     </div>

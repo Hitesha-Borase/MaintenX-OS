@@ -88,6 +88,17 @@ class ApiClient {
       sanitizedHeaders["Authorization"] = `Bearer ${token}`;
     }
 
+    if (!endpoint.includes("/auth/login")) {
+      const tenantId = typeof window !== "undefined" ? (localStorage.getItem("maintenx_tenant_id") || "5bce8458-909a-4dd2-b221-614c32ac7c89") : "5bce8458-909a-4dd2-b221-614c32ac7c89";
+      if (!sanitizedHeaders["X-Tenant-Id"]) {
+        sanitizedHeaders["X-Tenant-Id"] = tenantId;
+      }
+      const tenantName = typeof window !== "undefined" ? (localStorage.getItem("maintenx_tenant_name") || "") : "";
+      if (tenantName && !sanitizedHeaders["X-Tenant-Name"]) {
+        sanitizedHeaders["X-Tenant-Name"] = tenantName;
+      }
+    }
+
     Object.entries(rawHeaders).forEach(([k, v]) => {
       if (k !== "params" && typeof v === "string") {
         sanitizedHeaders[k] = v;
@@ -111,28 +122,8 @@ class ApiClient {
       const response = await fetch(url, fetchConfig);
       const data = await response.json().catch(() => null);
 
-      if (response.status === 401 && !options._retry && !endpoint.includes("/auth/login")) {
-        // Attempt automatic session token renewal using active role profile
-        try {
-          const profileRaw = localStorage.getItem("flowstate_user_profile") || localStorage.getItem("flowstate_current_role");
-          const profile = profileRaw ? JSON.parse(profileRaw) : null;
-          const email = profile?.email || profile?.user?.email;
-          if (email) {
-            const loginRes = await fetch(`${this.baseUrl}/auth/login`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ email, password: "Password@123" })
-            });
-            const loginData = await loginRes.json().catch(() => null);
-            const newToken = loginData?.data?.token || loginData?.token;
-            if (newToken) {
-              this.setToken(newToken);
-              return this.request(endpoint, { ...options, _retry: true });
-            }
-          }
-        } catch {
-          // fallback to standard error
-        }
+      if (response.status === 401 && !endpoint.includes("/auth/login")) {
+        this.setToken(null);
       }
 
       if (!response.ok) {
@@ -143,7 +134,21 @@ class ApiClient {
         throw error;
       }
 
-      return data?.data !== undefined ? data.data : data;
+      const unwrapped = data?.data !== undefined ? data.data : data;
+      if (typeof unwrapped === "object" && unwrapped !== null) {
+        try {
+          if (!("data" in unwrapped)) {
+            Object.defineProperty(unwrapped, "data", {
+              get() { return this; },
+              configurable: true,
+              enumerable: false,
+            });
+          }
+        } catch {
+          // Object might be non-extensible
+        }
+      }
+      return unwrapped;
     } catch (err) {
       console.warn(`[API Warning] ${options.method || "GET"} ${endpoint}:`, err.message);
       throw err;

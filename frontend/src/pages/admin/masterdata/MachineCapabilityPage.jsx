@@ -14,7 +14,9 @@ import {
   Clock,
   Layers,
   Wrench,
-  Power
+  Power,
+  Trash2,
+  Settings
 } from "lucide-react";
 import { Card } from "../../../components/common/Card";
 import { Badge } from "../../../components/common/Badge";
@@ -28,9 +30,33 @@ export function MachineCapabilityPage() {
   const { assets = [], addAsset, updateAsset, toggleAssetStatus, lines = [], plants = [], auditLogs = [] } = useMasterData();
   const { addToast } = useApp();
 
+  // Live Physical Assets directly from PostgreSQL DB
+  const [liveAssets, setLiveAssets] = useState([]);
+  const [isLoadingAssets, setIsLoadingAssets] = useState(false);
+
+  const fetchLiveAssets = async () => {
+    setIsLoadingAssets(true);
+    try {
+      const res = await masterDataService.getAssets();
+      let data = res?.data !== undefined ? res.data : res;
+      if (data && data.status === "success" && data.data) {
+        data = data.data;
+      }
+      if (Array.isArray(data)) {
+        setLiveAssets(data);
+      }
+    } catch (err) {
+      console.warn("Fetch live assets error:", err.message);
+    } finally {
+      setIsLoadingAssets(false);
+    }
+  };
+
   useEffect(() => {
-    masterDataService.getAssets().catch((err) => console.warn("Assets load:", err.message));
+    fetchLiveAssets();
   }, []);
+
+  const effectiveAssets = liveAssets.length > 0 ? liveAssets : (assets || []);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [criticalityFilter, setCriticalityFilter] = useState("ALL");
@@ -38,23 +64,143 @@ export function MachineCapabilityPage() {
 
   // Modals
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isTypesModalOpen, setIsTypesModalOpen] = useState(false);
   const [editingAsset, setEditingAsset] = useState(null);
   const [viewingAsset, setViewingAsset] = useState(null);
   const [activeDetailTab, setActiveDetailTab] = useState("info"); // "info", "production", "maintenance", "downtime", "audit"
 
+  // Dynamic Asset Categories from DB
+  const [assetTypes, setAssetTypes] = useState([]);
+  const [newTypeName, setNewTypeName] = useState("");
+  const [newTypeCode, setNewTypeCode] = useState("");
+  const [newTypeDesc, setNewTypeDesc] = useState("");
+  const [isSavingType, setIsSavingType] = useState(false);
+
+  const fetchAssetTypes = async () => {
+    try {
+      const res = await masterDataService.getAssetTypes();
+      if (res && Array.isArray(res)) {
+        setAssetTypes(res);
+      } else if (res?.data && Array.isArray(res.data)) {
+        setAssetTypes(res.data);
+      }
+    } catch (err) {
+      console.warn("Fetch asset types error:", err.message);
+    }
+  };
+
+  useEffect(() => {
+    fetchAssetTypes();
+  }, []);
+
+  const displayTypes = assetTypes;
+
+  const handleCreateAssetType = async (e) => {
+    e.preventDefault();
+    if (!newTypeName.trim()) return;
+    setIsSavingType(true);
+    try {
+      const created = await masterDataService.createAssetType({
+        name: newTypeName.trim(),
+        code: newTypeCode.trim(),
+        description: newTypeDesc.trim()
+      });
+      addToast(`Asset category "${newTypeName}" created in database!`, "success");
+      setNewTypeName("");
+      setNewTypeCode("");
+      setNewTypeDesc("");
+      await fetchAssetTypes();
+      setNewAsset((prev) => ({ ...prev, type: created?.name || newTypeName.trim() }));
+    } catch (err) {
+      addToast(`Failed to save category: ${err.message}`, "error");
+    } finally {
+      setIsSavingType(false);
+    }
+  };
+
+  const handleDeleteAssetType = async (id, name) => {
+    if (!window.confirm(`Delete category "${name}"?`)) return;
+    try {
+      await masterDataService.deleteAssetType(id);
+      addToast(`Category "${name}" deleted from database!`, "info");
+      await fetchAssetTypes();
+    } catch (err) {
+      addToast(`Failed to delete category: ${err.message}`, "error");
+    }
+  };
+
+  // Dynamic Criticality Ratings from DB
+  const [criticalityLevels, setCriticalityLevels] = useState([]);
+  const [isCritModalOpen, setIsCritModalOpen] = useState(false);
+  const [newCritName, setNewCritName] = useState("");
+  const [newCritCode, setNewCritCode] = useState("");
+  const [newCritDesc, setNewCritDesc] = useState("");
+  const [isSavingCrit, setIsSavingCrit] = useState(false);
+
+  const fetchCriticalityLevels = async () => {
+    try {
+      const res = await masterDataService.getCriticalityLevels();
+      if (res && Array.isArray(res)) {
+        setCriticalityLevels(res);
+      } else if (res?.data && Array.isArray(res.data)) {
+        setCriticalityLevels(res.data);
+      }
+    } catch (err) {
+      console.warn("Fetch criticality levels error:", err.message);
+    }
+  };
+
+  useEffect(() => {
+    fetchCriticalityLevels();
+  }, []);
+
+  const handleCreateCriticalityLevel = async (e) => {
+    e.preventDefault();
+    if (!newCritName.trim()) return;
+    setIsSavingCrit(true);
+    try {
+      const created = await masterDataService.createCriticalityLevel({
+        name: newCritName.trim(),
+        code: newCritCode.trim(),
+        description: newCritDesc.trim()
+      });
+      addToast(`Criticality rating "${newCritName}" saved to database!`, "success");
+      setNewCritName("");
+      setNewCritCode("");
+      setNewCritDesc("");
+      await fetchCriticalityLevels();
+      setNewAsset((prev) => ({ ...prev, criticality: created?.name || newCritName.trim() }));
+    } catch (err) {
+      addToast(`Failed to save rating: ${err.message}`, "error");
+    } finally {
+      setIsSavingCrit(false);
+    }
+  };
+
+  const handleDeleteCriticalityLevel = async (id, name) => {
+    if (!window.confirm(`Delete criticality rating "${name}"?`)) return;
+    try {
+      await masterDataService.deleteCriticalityLevel(id);
+      addToast(`Criticality rating "${name}" deleted from database!`, "info");
+      await fetchCriticalityLevels();
+    } catch (err) {
+      addToast(`Failed to delete rating: ${err.message}`, "error");
+    }
+  };
+
   const [newAsset, setNewAsset] = useState({
     name: "",
-    type: "Packaging / Filling",
-    lineId: "LIN-01",
-    plantId: "PLT-01",
-    criticality: "Critical (Class A)",
-    manufacturer: "Krones AG",
+    type: "",
+    lineId: "",
+    plantId: plants[0]?.id || plants[0]?.plantId || "PLT-01",
+    criticality: "",
+    manufacturer: "",
     serialNumber: ""
   });
 
   const filteredAssets = useMemo(() => {
-    return assets.filter((a) => {
-      const matchesCrit = criticalityFilter === "ALL" || a.criticality?.includes(criticalityFilter);
+    return effectiveAssets.filter((a) => {
+      const matchesCrit = criticalityFilter === "ALL" || (a.criticality && a.criticality.includes(criticalityFilter));
       const matchesLine = lineFilter === "ALL" || a.lineId === lineFilter;
       const q = searchQuery.toLowerCase().trim();
       const matchesSearch =
@@ -67,34 +213,90 @@ export function MachineCapabilityPage() {
 
       return matchesCrit && matchesLine && matchesSearch;
     });
-  }, [assets, criticalityFilter, lineFilter, searchQuery]);
+  }, [effectiveAssets, criticalityFilter, lineFilter, searchQuery]);
 
-  const handleAddSubmit = (e) => {
+  // C - CREATE MACHINE ASSET (DB + LIVE SYNC)
+  const handleAddSubmit = async (e) => {
     e.preventDefault();
     if (!newAsset.name.trim()) {
       addToast("Please provide asset name.", "warning");
       return;
     }
-    const created = addAsset(newAsset);
-    addToast(`Asset ${created.assetId} (${created.name}) commissioned!`, "success");
-    setIsAddModalOpen(false);
-    setNewAsset({
-      name: "",
-      type: "Packaging / Filling",
-      lineId: "LIN-01",
-      plantId: "PLT-01",
-      criticality: "Critical (Class A)",
-      manufacturer: "Krones AG",
-      serialNumber: ""
-    });
+    try {
+      const payload = {
+        name: newAsset.name.trim(),
+        type: newAsset.type || (displayTypes[0]?.name || "Packaging / Filling"),
+        lineId: newAsset.lineId || null,
+        plantId: newAsset.plantId || plants[0]?.id || plants[0]?.plantId || null,
+        criticality: newAsset.criticality || (criticalityLevels[0]?.name || "Critical (Class A)"),
+        manufacturer: (newAsset.manufacturer || "").trim() || "Krones AG",
+        serialNumber: (newAsset.serialNumber || "").trim() || `SN-${Math.floor(1000 + Math.random() * 9000)}`,
+        status: "Operational"
+      };
+      const created = await masterDataService.createAsset(payload);
+      addToast(`Asset ${created?.assetId || newAsset.name} commissioned into DB!`, "success");
+      setIsAddModalOpen(false);
+      setNewAsset({
+        name: "",
+        type: "",
+        lineId: "",
+        plantId: plants[0]?.id || plants[0]?.plantId || "PLT-01",
+        criticality: "",
+        manufacturer: "",
+        serialNumber: ""
+      });
+      await fetchLiveAssets();
+    } catch (err) {
+      addToast(`Failed to register asset: ${err.message}`, "error");
+    }
   };
 
-  const handleEditSubmit = (e) => {
+  // U - UPDATE MACHINE ASSET (DB + LIVE SYNC)
+  const handleEditSubmit = async (e) => {
     e.preventDefault();
     if (!editingAsset.name.trim()) return;
-    updateAsset(editingAsset.assetId, editingAsset);
-    addToast(`Asset ${editingAsset.assetId} updated successfully!`, "success");
-    setEditingAsset(null);
+    try {
+      const targetId = editingAsset.id;
+      await masterDataService.updateAsset(targetId, {
+        name: editingAsset.name.trim(),
+        type: editingAsset.type,
+        lineId: editingAsset.lineId,
+        criticality: editingAsset.criticality,
+        status: editingAsset.status,
+        manufacturer: editingAsset.manufacturer
+      });
+      addToast(`Asset ${editingAsset.assetId || editingAsset.name} updated in DB!`, "success");
+      setEditingAsset(null);
+      await fetchLiveAssets();
+    } catch (err) {
+      addToast(`Failed to update asset: ${err.message}`, "error");
+    }
+  };
+
+  // U - TOGGLE STATUS (OPERATIONAL <-> UNDER MAINTENANCE IN DB)
+  const handleToggleStatus = async (asset) => {
+    const next = asset.status === "Operational" ? "Under Maintenance" : "Operational";
+    try {
+      const targetId = asset.id;
+      await masterDataService.updateAsset(targetId, { status: next });
+      addToast(`Asset ${asset.assetId} status changed to ${next} in DB!`, "info");
+      await fetchLiveAssets();
+    } catch (err) {
+      addToast(`Failed to update status: ${err.message}`, "error");
+    }
+  };
+
+  // D - DELETE MACHINE ASSET (DB + LIVE SYNC)
+  const handleDeleteAsset = async (asset) => {
+    if (!window.confirm(`Are you sure you want to delete machine asset "${asset.name}" (${asset.assetId}) from database?`)) return;
+    try {
+      const targetId = asset.id;
+      await masterDataService.deleteAsset(targetId);
+      addToast(`Asset "${asset.name}" (${asset.assetId}) deleted from DB!`, "info");
+      await fetchLiveAssets();
+    } catch (err) {
+      addToast(`Failed to delete asset: ${err.message}`, "error");
+    }
   };
 
   return (
@@ -106,11 +308,27 @@ export function MachineCapabilityPage() {
             <h1 style={{ fontSize: "clamp(18px, 4vw, 24px)", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.3px", lineHeight: 1.2 }}>
               Machine & Asset Master Management
             </h1>
-            <Badge variant="cyan">{assets.length} PHYSICAL ASSETS</Badge>
+            <Badge variant="cyan">{effectiveAssets.length} PHYSICAL ASSETS</Badge>
           </div>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+          <Button
+            variant="secondary"
+            icon={Settings}
+            onClick={() => setIsTypesModalOpen(true)}
+            style={{ fontSize: "12px", padding: "7px 12px", background: "var(--bg-card)", border: "1px solid var(--border-subtle)" }}
+          >
+            ⚙️ Manage Asset Types ({displayTypes.length})
+          </Button>
+          <Button
+            variant="secondary"
+            icon={ShieldCheck}
+            onClick={() => setIsCritModalOpen(true)}
+            style={{ fontSize: "12px", padding: "7px 12px", background: "var(--bg-card)", border: "1px solid var(--border-subtle)" }}
+          >
+            🛡️ Manage Criticality ({criticalityLevels.length})
+          </Button>
           <Button variant="primary" icon={Plus} onClick={() => setIsAddModalOpen(true)} style={{ fontSize: "12px", padding: "7px 12px" }}>
             + Register New Machine Asset
           </Button>
@@ -138,7 +356,7 @@ export function MachineCapabilityPage() {
         />
         <StatCard
           title="Class A Critical Assets"
-          value={assets.filter((a) => a.criticality?.includes("Class A")).length.toString()}
+          value={effectiveAssets.filter((a) => a.criticality?.includes("Class A")).length.toString()}
           unit="High Priority"
           trend={{ value: "24/7 condition telemetry", isPositive: true, text: "" }}
           icon={AlertTriangle}
@@ -146,7 +364,7 @@ export function MachineCapabilityPage() {
         />
         <StatCard
           title="Operational Equipments"
-          value={assets.filter((a) => a.status === "Operational").length.toString()}
+          value={effectiveAssets.filter((a) => a.status === "Operational").length.toString()}
           unit="Online"
           trend={{ value: "Connected to plant telemetry", isPositive: true, text: "" }}
           icon={Cpu}
@@ -198,13 +416,13 @@ export function MachineCapabilityPage() {
             >
               <option value="ALL">All Lines</option>
               {lines.map((l) => (
-                <option key={l.lineId} value={l.lineId}>{l.lineCode} — {l.name.split(" ")[0]}</option>
+                <option key={l.lineId || l.id} value={l.lineId || l.id}>{l.lineCode || l.code} — {l.name.split(" ")[0]}</option>
               ))}
             </select>
           </div>
 
           <div style={{ fontSize: "12px", color: "var(--text-muted)", fontWeight: 600 }}>
-            Showing <strong>{filteredAssets.length}</strong> of {assets.length} Machines
+            Showing <strong>{filteredAssets.length}</strong> of {effectiveAssets.length} Machines
           </div>
         </div>
 
@@ -226,10 +444,10 @@ export function MachineCapabilityPage() {
             <tbody>
               {filteredAssets.length > 0 ? (
                 filteredAssets.map((asset) => {
-                  const lineObj = lines.find((l) => l.lineId === asset.lineId);
+                  const lineObj = lines.find((l) => (l.lineId === asset.lineId || l.id === asset.lineId));
                   return (
                     <tr
-                      key={asset.assetId}
+                      key={asset.id}
                       style={{
                         borderBottom: "1px solid var(--border-subtle)",
                         transition: "background-color 0.12s ease"
@@ -258,7 +476,7 @@ export function MachineCapabilityPage() {
 
                       <td style={{ padding: "12px 14px", whiteSpace: "nowrap" }}>
                         <span style={{ fontSize: "12px", fontWeight: 600, color: "var(--text-primary)" }}>
-                          {lineObj ? lineObj.name : "Bottling Line 1"}
+                          {lineObj ? lineObj.name : (asset.lineName || "Standalone / Unassigned")}
                         </span>
                       </td>
 
@@ -302,10 +520,7 @@ export function MachineCapabilityPage() {
                             title="Edit Asset"
                           />
                           <button
-                            onClick={() => {
-                              toggleAssetStatus(asset.assetId);
-                              addToast(`Asset ${asset.assetId} status toggled!`, "info");
-                            }}
+                            onClick={() => handleToggleStatus(asset)}
                             style={{
                               padding: "6px 8px",
                               borderRadius: "6px",
@@ -320,6 +535,23 @@ export function MachineCapabilityPage() {
                             title="Toggle Maintenance Status"
                           >
                             <Power size={14} />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteAsset(asset)}
+                            style={{
+                              padding: "6px 8px",
+                              borderRadius: "6px",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              border: "1px solid var(--border-subtle)",
+                              backgroundColor: "rgba(239, 68, 68, 0.08)",
+                              color: "#EF4444",
+                              cursor: "pointer"
+                            }}
+                            title="Delete Asset from Database"
+                          >
+                            <Trash2 size={14} />
                           </button>
                         </div>
                       </td>
@@ -337,6 +569,302 @@ export function MachineCapabilityPage() {
           </table>
         </div>
       </Card>
+
+      {/* ASSET TYPES / CATEGORIES MASTER MODAL */}
+      {isTypesModalOpen && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(38, 22, 3, 0.55)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 10000,
+            padding: "16px"
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: "#FFFFFF",
+              borderRadius: "14px",
+              width: "100%",
+              maxWidth: "600px",
+              boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
+              border: "1px solid var(--border-subtle)",
+              overflow: "hidden"
+            }}
+          >
+            <div style={{ padding: "18px 22px", borderBottom: "1px solid var(--border-subtle)", display: "flex", justifyContent: "space-between", alignItems: "center", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Settings size={18} color="#B27E33" />
+                <h3 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                  Asset Categories Master (PostgreSQL DB)
+                </h3>
+              </div>
+              <button onClick={() => setIsTypesModalOpen(false)} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-muted)" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ padding: "22px", display: "flex", flexDirection: "column", gap: "16px" }}>
+              {/* Form to add custom category */}
+              <form onSubmit={handleCreateAssetType} style={{ padding: "14px", backgroundColor: "#FFFBF2", borderRadius: "10px", border: "1px solid #F5E6CC", display: "flex", flexDirection: "column", gap: "10px" }}>
+                <div style={{ fontSize: "12px", fontWeight: 800, color: "#8C5E1A" }}>+ Add New Category / Machine Type to Database</div>
+                <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "10px" }}>
+                  <div>
+                    <label style={{ fontSize: "10px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase" }}>Category / Type Name *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Industrial Boiler, Conveyor..."
+                      value={newTypeName}
+                      onChange={(e) => setNewTypeName(e.target.value)}
+                      className="form-input"
+                      style={{ height: "34px", fontSize: "12px", marginTop: "3px" }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: "10px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase" }}>Code (Optional)</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. BLR, CNV"
+                      value={newTypeCode}
+                      onChange={(e) => setNewTypeCode(e.target.value)}
+                      className="form-input"
+                      style={{ height: "34px", fontSize: "12px", marginTop: "3px" }}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label style={{ fontSize: "10px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase" }}>Description (Optional)</label>
+                  <input
+                    type="text"
+                    placeholder="Brief description of this equipment type..."
+                    value={newTypeDesc}
+                    onChange={(e) => setNewTypeDesc(e.target.value)}
+                    className="form-input"
+                    style={{ height: "34px", fontSize: "12px", marginTop: "3px" }}
+                  />
+                </div>
+                <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                  <Button variant="primary" type="submit" disabled={isSavingType || !newTypeName.trim()} style={{ fontSize: "12px", padding: "6px 14px" }}>
+                    {isSavingType ? "Saving..." : "Save to Database"}
+                  </Button>
+                </div>
+              </form>
+
+              {/* List of current types */}
+              <div>
+                <div style={{ fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", textTransform: "uppercase", marginBottom: "8px" }}>
+                  Current Active Categories ({displayTypes.length})
+                </div>
+                <div style={{ maxHeight: "200px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "6px" }}>
+                  {displayTypes.length === 0 ? (
+                    <div style={{ padding: "18px", textAlign: "center", color: "var(--text-muted)", fontSize: "12px", border: "1px dashed var(--border-subtle)", borderRadius: "8px", backgroundColor: "#FAFAFA" }}>
+                      Database me abhi koi category nahi hai (0 rows in public.asset_types).<br />
+                      <span style={{ fontSize: "11px", marginTop: "4px", display: "inline-block" }}>Upar diye gaye form se apni machine category add karein.</span>
+                    </div>
+                  ) : (
+                    displayTypes.map((t) => (
+                      <div
+                        key={t.id || t.name}
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          padding: "8px 12px",
+                          backgroundColor: "#FAFAFA",
+                          border: "1px solid var(--border-subtle)",
+                          borderRadius: "8px"
+                        }}
+                      >
+                        <div>
+                          <span style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)" }}>{t.name}</span>
+                          {t.code && (
+                            <span style={{ marginLeft: "8px", fontSize: "11px", padding: "2px 6px", backgroundColor: "#EAEAEA", borderRadius: "4px", color: "#555" }}>
+                              {t.code}
+                            </span>
+                          )}
+                          {t.description && (
+                            <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>{t.description}</div>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteAssetType(t.id, t.name)}
+                          title="Delete Category"
+                          style={{ background: "none", border: "none", color: "#E11D48", cursor: "pointer", padding: "4px" }}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", borderTop: "1px solid var(--border-subtle)", paddingTop: "12px" }}>
+                <Button variant="secondary" onClick={() => setIsTypesModalOpen(false)} style={{ fontSize: "12px" }}>
+                  Close
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CRITICALITY RATINGS MASTER MODAL */}
+      {isCritModalOpen && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(38, 22, 3, 0.55)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 10000,
+            padding: "16px"
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: "#FFFFFF",
+              borderRadius: "14px",
+              width: "100%",
+              maxWidth: "600px",
+              boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
+              border: "1px solid var(--border-subtle)",
+              overflow: "hidden"
+            }}
+          >
+            <div style={{ padding: "18px 22px", borderBottom: "1px solid var(--border-subtle)", display: "flex", justifyContent: "space-between", alignItems: "center", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <ShieldCheck size={18} color="#B27E33" />
+                <h3 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                  Criticality Ratings Master (PostgreSQL DB: public.criticality_levels)
+                </h3>
+              </div>
+              <button onClick={() => setIsCritModalOpen(false)} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-muted)" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ padding: "22px", display: "flex", flexDirection: "column", gap: "16px" }}>
+              {/* Form to add custom criticality level */}
+              <form onSubmit={handleCreateCriticalityLevel} style={{ padding: "14px", backgroundColor: "#FFFBF2", borderRadius: "10px", border: "1px solid #F5E6CC", display: "flex", flexDirection: "column", gap: "10px" }}>
+                <div style={{ fontSize: "12px", fontWeight: 800, color: "#8C5E1A" }}>+ Add New Criticality Rating to Database</div>
+                <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "10px" }}>
+                  <div>
+                    <label style={{ fontSize: "10px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase" }}>Rating Name *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Critical (Class A), High (Class B)..."
+                      value={newCritName}
+                      onChange={(e) => setNewCritName(e.target.value)}
+                      className="form-input"
+                      style={{ height: "34px", fontSize: "12px", marginTop: "3px" }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: "10px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase" }}>Code (Optional)</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. CLS-A, P1"
+                      value={newCritCode}
+                      onChange={(e) => setNewCritCode(e.target.value)}
+                      className="form-input"
+                      style={{ height: "34px", fontSize: "12px", marginTop: "3px" }}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label style={{ fontSize: "10px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase" }}>Description (Optional)</label>
+                  <input
+                    type="text"
+                    placeholder="Impact or severity level description..."
+                    value={newCritDesc}
+                    onChange={(e) => setNewCritDesc(e.target.value)}
+                    className="form-input"
+                    style={{ height: "34px", fontSize: "12px", marginTop: "3px" }}
+                  />
+                </div>
+                <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                  <Button variant="primary" type="submit" disabled={isSavingCrit || !newCritName.trim()} style={{ fontSize: "12px", padding: "6px 14px" }}>
+                    {isSavingCrit ? "Saving..." : "Save to Database"}
+                  </Button>
+                </div>
+              </form>
+
+              {/* List of current ratings */}
+              <div>
+                <div style={{ fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", textTransform: "uppercase", marginBottom: "8px" }}>
+                  Current Active Ratings in DB ({criticalityLevels.length})
+                </div>
+                <div style={{ maxHeight: "200px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "6px" }}>
+                  {criticalityLevels.length === 0 ? (
+                    <div style={{ padding: "18px", textAlign: "center", color: "var(--text-muted)", fontSize: "12px", border: "1px dashed var(--border-subtle)", borderRadius: "8px", backgroundColor: "#FAFAFA" }}>
+                      Database me abhi koi rating nahi hai (0 rows in public.criticality_levels).<br />
+                      <span style={{ fontSize: "11px", marginTop: "4px", display: "inline-block" }}>Upar diye gaye form se apni criticality rating add karein.</span>
+                    </div>
+                  ) : (
+                    criticalityLevels.map((c) => (
+                      <div
+                        key={c.id || c.name}
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          padding: "8px 12px",
+                          backgroundColor: "#FAFAFA",
+                          border: "1px solid var(--border-subtle)",
+                          borderRadius: "8px"
+                        }}
+                      >
+                        <div>
+                          <span style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)" }}>{c.name}</span>
+                          {c.code && (
+                            <span style={{ marginLeft: "8px", fontSize: "11px", padding: "2px 6px", backgroundColor: "#EAEAEA", borderRadius: "4px", color: "#555" }}>
+                              {c.code}
+                            </span>
+                          )}
+                          {c.description && (
+                            <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>{c.description}</div>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteCriticalityLevel(c.id, c.name)}
+                          title="Delete Rating"
+                          style={{ background: "none", border: "none", color: "#E11D48", cursor: "pointer", padding: "4px" }}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", borderTop: "1px solid var(--border-subtle)", paddingTop: "12px" }}>
+                <Button variant="secondary" onClick={() => setIsCritModalOpen(false)} style={{ fontSize: "12px" }}>
+                  Close
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* CREATE NEW ASSET MODAL */}
       {isAddModalOpen && (
@@ -395,18 +923,26 @@ export function MachineCapabilityPage() {
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                 <div>
-                  <label style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase" }}>Asset Type</label>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <label style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase" }}>Asset Type</label>
+                    <button
+                      type="button"
+                      onClick={() => setIsTypesModalOpen(true)}
+                      style={{ background: "none", border: "none", color: "#B27E33", fontSize: "11px", fontWeight: 700, cursor: "pointer", textDecoration: "underline" }}
+                    >
+                      + Add / Manage Types
+                    </button>
+                  </div>
                   <select
                     value={newAsset.type}
                     onChange={(e) => setNewAsset({ ...newAsset, type: e.target.value })}
                     className="form-input"
                     style={{ height: "36px", fontSize: "12px", marginTop: "4px" }}
                   >
-                    <option value="Packaging / Filling">Packaging / Filling</option>
-                    <option value="Thermal Processing">Thermal Processing</option>
-                    <option value="Packaging / Capping">Packaging / Capping</option>
-                    <option value="Forming / Molding">Forming / Molding</option>
-                    <option value="Inspection / QA">Inspection / QA</option>
+                    <option value="">-- Select Asset Type --</option>
+                    {displayTypes.map((t) => (
+                      <option key={t.id || t.name} value={t.name}>{t.name} {t.code ? `(${t.code})` : ""}</option>
+                    ))}
                   </select>
                 </div>
 
@@ -418,8 +954,9 @@ export function MachineCapabilityPage() {
                     className="form-input"
                     style={{ height: "36px", fontSize: "12px", marginTop: "4px" }}
                   >
+                    <option value="">-- Standalone / Unassigned --</option>
                     {lines.map((l) => (
-                      <option key={l.lineId} value={l.lineId}>{l.lineCode} — {l.name}</option>
+                      <option key={l.lineId || l.id} value={l.lineId || l.id}>{l.lineCode || l.code} — {l.name}</option>
                     ))}
                   </select>
                 </div>
@@ -427,16 +964,26 @@ export function MachineCapabilityPage() {
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                 <div>
-                  <label style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase" }}>Criticality Rating</label>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <label style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase" }}>Criticality Rating</label>
+                    <button
+                      type="button"
+                      onClick={() => setIsCritModalOpen(true)}
+                      style={{ background: "none", border: "none", color: "#B27E33", fontSize: "11px", fontWeight: 700, cursor: "pointer", textDecoration: "underline" }}
+                    >
+                      + Add / Manage Ratings
+                    </button>
+                  </div>
                   <select
                     value={newAsset.criticality}
                     onChange={(e) => setNewAsset({ ...newAsset, criticality: e.target.value })}
                     className="form-input"
                     style={{ height: "36px", fontSize: "12px", marginTop: "4px" }}
                   >
-                    <option value="Critical (Class A)">Critical (Class A)</option>
-                    <option value="High (Class B)">High (Class B)</option>
-                    <option value="Medium (Class C)">Medium (Class C)</option>
+                    <option value="">-- Select Criticality Rating --</option>
+                    {criticalityLevels.map((c) => (
+                      <option key={c.id || c.name} value={c.name}>{c.name} {c.code ? `(${c.code})` : ""}</option>
+                    ))}
                   </select>
                 </div>
 
@@ -740,27 +1287,26 @@ export function MachineCapabilityPage() {
                     className="form-input"
                     style={{ height: "36px", fontSize: "12px", marginTop: "4px" }}
                   >
-                    <option value="Packaging / Filling">Packaging / Filling</option>
-                    <option value="Thermal Processing">Thermal Processing</option>
-                    <option value="Packaging / Capping">Packaging / Capping</option>
-                    <option value="Forming / Molding">Forming / Molding</option>
-                    <option value="Inspection / QA">Inspection / QA</option>
+                    {displayTypes.map((t) => (
+                      <option key={t.id || t.name} value={t.name}>{t.name} {t.code ? `(${t.code})` : ""}</option>
+                    ))}
                   </select>
                 </div>
 
                 <div>
                   <label style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase" }}>Assigned Line</label>
                   <select
-                    value={editingAsset.lineId}
+                    value={editingAsset.lineId || ""}
                     onChange={(e) => {
-                      const l = lines.find((line) => line.lineId === e.target.value);
-                      setEditingAsset({ ...editingAsset, lineId: e.target.value, lineName: l?.name });
+                      const l = lines.find((line) => (line.lineId || line.id) === e.target.value);
+                      setEditingAsset({ ...editingAsset, lineId: e.target.value, lineName: l?.name || "" });
                     }}
                     className="form-input"
                     style={{ height: "36px", fontSize: "12px", marginTop: "4px" }}
                   >
+                    <option value="">-- Standalone / Unassigned --</option>
                     {lines.map((l) => (
-                      <option key={l.lineId} value={l.lineId}>{l.lineCode} — {l.name}</option>
+                      <option key={l.lineId || l.id} value={l.lineId || l.id}>{l.lineCode || l.code} — {l.name}</option>
                     ))}
                   </select>
                 </div>
@@ -770,14 +1316,15 @@ export function MachineCapabilityPage() {
                 <div>
                   <label style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase" }}>Criticality Rating</label>
                   <select
-                    value={editingAsset.criticality}
+                    value={editingAsset.criticality || ""}
                     onChange={(e) => setEditingAsset({ ...editingAsset, criticality: e.target.value })}
                     className="form-input"
                     style={{ height: "36px", fontSize: "12px", marginTop: "4px" }}
                   >
-                    <option value="Critical (Class A)">Critical (Class A)</option>
-                    <option value="High (Class B)">High (Class B)</option>
-                    <option value="Medium (Class C)">Medium (Class C)</option>
+                    <option value="">-- Select Criticality Rating --</option>
+                    {criticalityLevels.map((c) => (
+                      <option key={c.id || c.name} value={c.name}>{c.name} {c.code ? `(${c.code})` : ""}</option>
+                    ))}
                   </select>
                 </div>
 

@@ -68,13 +68,7 @@ export function ManageSubscriptions() {
 
   const formatPlanName = (planStr) => {
     if (!planStr) return "—";
-    let clean = planStr.replace(/\(.*\)/g, "").trim();
-    const lower = clean.toLowerCase();
-    if (lower.includes("complete")) return "MaintenX OS Complete";
-    if (lower.includes("bundle")) return "Bundles";
-    if (lower.includes("pilot")) return "Plant Pilot";
-    if (lower.includes("individual")) return "Individual Modules";
-    return clean.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+    return planStr.replace(/\(.*\)/g, "").trim();
   };
 
   const thStyle = {

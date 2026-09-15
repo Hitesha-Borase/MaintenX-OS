@@ -1,76 +1,166 @@
-import React, { useState, useEffect } from "react";
-import { Bell, AlertTriangle, Check, CheckCheck, CheckCircle2, Trash2, X } from "lucide-react";
+import React, { useState, useMemo, useEffect } from "react";
+import { Bell, AlertTriangle, Check, CheckCircle2, Trash2, X, ShieldAlert } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "../../components/common/Card";
 import { Button } from "../../components/common/Button";
 import { Badge } from "../../components/common/Badge";
 import { useApp } from "../../context/AppContext";
+import { useCI } from "../../context/CIContext";
 import ciService from "../../services/ciService";
 
 export function Notifications() {
+  const navigate = useNavigate();
   const { addToast } = useApp();
+  const {
+    capaActions = [],
+    investigations = [],
+    ciProjects = [],
+    standards = [],
+    reliabilityRecords = []
+  } = useCI();
 
   useEffect(() => {
     ciService.getDashboardSummary().catch((err) => console.warn("Notifications sync:", err.message));
   }, []);
 
   const [activeTab, setActiveTab] = useState("All");
-  const [filterTab, setFilterTab] = useState("all"); // "all", "unread", "read"
+  const [readIds, setReadIds] = useState(new Set());
+  const [dismissedIds, setDismissedIds] = useState(new Set());
   const [deletingNotification, setDeletingNotification] = useState(null);
   const [isClearAllModalOpen, setIsClearAllModalOpen] = useState(false);
 
-  const [notifications, setNotifications] = useState([
-    { 
-      id: 1, 
-      title: "CAPA Overdue — CA-301", 
-      msg: "Corrective action CA-301 (Viton diaphragm replacement) is past its due date. Responsible: Pedro Alves.", 
-      time: "1 hr ago", 
-      path: "/ci/capa/corrective",
-      type: "danger",
-      badge: "OVERDUE",
-      read: false
-    },
-    { 
-      id: 2, 
-      title: "CI Project Action Milestone — CI-001", 
-      msg: "Filler nozzle dynamic laser flow rate calibration (ACT-01) due in 2 days.", 
-      time: "4 hrs ago", 
-      path: "/ci/projects/actions",
-      type: "warning",
-      badge: "MILESTONE",
-      read: false
-    },
-    { 
-      id: 3, 
-      title: "Benefits Verification Required — CI-003", 
-      msg: "90-day trial window for Label Application Defect Elimination concluded. Ready for finance sign-off.", 
-      time: "1 day ago", 
-      path: "/ci/benefits/verify",
-      type: "warning",
-      badge: "AUDIT",
-      read: true
-    },
-    { 
-      id: 4, 
-      title: "New RCA Submitted — Line 4 Jam", 
-      msg: "A new Root Cause Analysis has been drafted for the recurring accumulation table jam on Line 4.", 
-      time: "2 days ago", 
-      path: "/ci/5why/rca",
-      type: "info",
-      badge: "RCA",
-      read: true
-    }
-  ]);
+  // Derive real-time notification alerts from database state
+  const notifications = useMemo(() => {
+    const list = [];
+    const now = new Date();
 
-  const handleMarkAllRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    // 1. Overdue CAPA
+    capaActions.forEach((ca) => {
+      const isOverdue = ca.dueDate && new Date(ca.dueDate) < now && ca.status !== "Completed" && ca.status !== "Verified";
+      if (isOverdue) {
+        list.push({
+          id: `notif-capa-od-${ca.id}`,
+          title: `CAPA Overdue — ${ca.id}`,
+          msg: `Action "${ca.description}" is past its target due date (${ca.dueDate}). Responsible: ${ca.assignedTo}.`,
+          time: "Immediate SLA Violation",
+          path: "/ci/capa/corrective",
+          type: "danger",
+          badge: "OVERDUE"
+        });
+      } else if (ca.status === "Pending") {
+        list.push({
+          id: `notif-capa-pend-${ca.id}`,
+          title: `CAPA Pending — ${ca.id}`,
+          msg: `Action "${ca.description}" requires implementation. Assigned to: ${ca.assignedTo}.`,
+          time: `Target: ${ca.dueDate}`,
+          path: "/ci/capa/corrective",
+          type: "warning",
+          badge: "CAPA"
+        });
+      }
+    });
+
+    // 2. Open Investigations
+    investigations.forEach((inv) => {
+      if (inv.status !== "Closed") {
+        list.push({
+          id: `notif-rca-${inv.id}`,
+          title: `RCA Investigation Active — ${inv.id}`,
+          msg: `${inv.title} on ${inv.assetName || inv.assetId} is currently in 8D phase "${inv.currentPhase}". Lead: ${inv.lead}.`,
+          time: `Priority: ${inv.priority}`,
+          path: "/ci/rca/investigations",
+          type: inv.priority === "Critical" ? "danger" : "warning",
+          badge: inv.currentPhase || "RCA"
+        });
+      }
+    });
+
+    // 3. Bad Actor Assets
+    reliabilityRecords.forEach((rec) => {
+      if (rec.isBadActor) {
+        list.push({
+          id: `notif-rel-${rec.assetId}`,
+          title: `Bad Actor Asset Flagged — ${rec.assetName}`,
+          msg: `${rec.assetId} on ${rec.lineName} reached ${rec.failuresCount} failures with ${rec.totalDowntimeMin} min downtime. Systematic RCA recommended.`,
+          time: "Reliability Alert",
+          path: "/ci/reliability",
+          type: "danger",
+          badge: "BAD ACTOR"
+        });
+      }
+    });
+
+    // 4. CI Projects
+    ciProjects.forEach((proj) => {
+      if (proj.status === "Active" || proj.status === "Planning") {
+        list.push({
+          id: `notif-proj-${proj.id}`,
+          title: `Kaizen Project Milestone — ${proj.name}`,
+          msg: `Project ${proj.id} targeting $${Number(proj.annualizedTargetSavings || 0).toLocaleString()} annualized savings. Project Lead: ${proj.lead}.`,
+          time: `Status: ${proj.status}`,
+          path: "/ci/projects/list",
+          type: "info",
+          badge: "KAIZEN"
+        });
+      }
+    });
+
+    // 5. Standards in Review or Draft
+    standards.forEach((std) => {
+      if (std.status === "Review" || std.status === "Draft") {
+        list.push({
+          id: `notif-std-${std.id}`,
+          title: `Controlled Standard — ${std.title}`,
+          msg: `Document ${std.id} (${std.type}) is currently under "${std.status}". Owner: ${std.owner}.`,
+          time: `Revision: ${std.version}`,
+          path: "/ci/standards",
+          type: "warning",
+          badge: "STANDARD"
+        });
+      }
+    });
+
+    return list
+      .filter((n) => !dismissedIds.has(n.id))
+      .map((n) => ({
+        ...n,
+        read: readIds.has(n.id)
+      }));
+  }, [capaActions, investigations, reliabilityRecords, ciProjects, standards, readIds, dismissedIds]);
+
+  const handleMarkAsRead = (id) => {
+    setReadIds((prev) => new Set([...prev, id]));
+    addToast("Notification marked as read.", "success");
+  };
+
+  const handleMarkAllAsRead = () => {
+    const allIds = notifications.map((n) => n.id);
+    setReadIds((prev) => new Set([...prev, ...allIds]));
     addToast("All notifications marked as read.", "success");
   };
 
-  const handleClearAll = () => {
-    setNotifications([]);
-    addToast("All notifications cleared.", "info");
+  const handleConfirmClearAll = () => {
+    const allIds = notifications.map((n) => n.id);
+    setDismissedIds((prev) => new Set([...prev, ...allIds]));
+    addToast("All notifications dismissed.", "info");
+    setIsClearAllModalOpen(false);
   };
+
+  const handleConfirmDelete = () => {
+    if (!deletingNotification) return;
+    setDismissedIds((prev) => new Set([...prev, deletingNotification.id]));
+    addToast("Notification dismissed.", "info");
+    setDeletingNotification(null);
+  };
+
+  const unreadCount = notifications.filter((n) => !n.read).length;
+  const readCount = notifications.filter((n) => n.read).length;
+
+  const filteredNotifs = notifications.filter((n) => {
+    if (activeTab === "Unread") return !n.read;
+    if (activeTab === "Read") return n.read;
+    return true;
+  });
 
   const getSeverityColor = (type) => {
     switch (type) {
@@ -92,42 +182,9 @@ export function Notifications() {
     if (type === "danger") return AlertTriangle;
     return Bell;
   };
-  const handleMarkAsRead = (id) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: true } : n))
-    );
-    addToast("Notification marked as read.", "success");
-  };
-
-  const handleMarkAllAsRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-    addToast("All notifications marked as read.", "success");
-  };
-
-  const handleConfirmClearAll = () => {
-    setNotifications([]);
-    addToast("All notifications cleared.", "info");
-    setIsClearAllModalOpen(false);
-  };
-
-  const handleConfirmDelete = () => {
-    if (!deletingNotification) return;
-    setNotifications((prev) => prev.filter((n) => n.id !== deletingNotification.id));
-    addToast("Notification removed.", "info");
-    setDeletingNotification(null);
-  };
-
-  const unreadCount = notifications.filter((n) => !n.read).length;
-  const readCount = notifications.filter((n) => n.read).length;
-
-  const filteredNotifs = notifications.filter((n) => {
-    if (filterTab === "unread") return !n.read;
-    if (filterTab === "read") return n.read;
-    return true;
-  });
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "24px", width: "100%" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "24px", width: "100%", maxWidth: "1600px", margin: "0 auto" }}>
       {/* Header and Actions */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
         <div>
@@ -142,14 +199,14 @@ export function Notifications() {
             )}
           </div>
           <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginTop: "4px", fontWeight: 500 }}>
-            CAPA overdue alerts, RCA phase updates, and CI project action reminders
+            Live alerts derived from overdue CAPAs, active RCA investigations, bad actor telemetry, and project milestones
           </p>
         </div>
         <div style={{ display: "flex", gap: "12px" }}>
-          <Button variant="outline" size="sm" icon={CheckCircle2} onClick={handleMarkAllAsRead}>
+          <Button variant="outline" size="sm" icon={CheckCircle2} onClick={handleMarkAllAsRead} disabled={notifications.length === 0}>
             Mark All as Read
           </Button>
-          <Button variant="ghost" size="sm" icon={Trash2} onClick={() => setIsClearAllModalOpen(true)}>
+          <Button variant="ghost" size="sm" icon={Trash2} onClick={() => setIsClearAllModalOpen(true)} disabled={notifications.length === 0}>
             Clear All
           </Button>
         </div>
@@ -157,8 +214,8 @@ export function Notifications() {
 
       {/* Tabs */}
       <div style={{ display: "flex", gap: "24px", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "12px", marginTop: "8px" }}>
-        {["All", "Unread", "Read"].map(tab => {
-          const count = tab === "All" ? notifications.length : tab === "Unread" ? unreadCount : notifications.length - unreadCount;
+        {["All", "Unread", "Read"].map((tab) => {
+          const count = tab === "All" ? notifications.length : tab === "Unread" ? unreadCount : readCount;
           const isActive = activeTab === tab;
           return (
             <button
@@ -189,7 +246,12 @@ export function Notifications() {
           <div style={{ padding: "16px", backgroundColor: "rgba(200, 149, 71, 0.1)", borderRadius: "50%" }}>
             <Bell size={32} color="#C89547" />
           </div>
-          <span style={{ fontSize: "15px", color: "var(--text-secondary)", fontWeight: 500 }}>No notifications found in this view.</span>
+          <span style={{ fontSize: "15px", color: "var(--text-secondary)", fontWeight: 600 }}>
+            No notifications found in this view.
+          </span>
+          <span style={{ fontSize: "13px", color: "var(--text-muted)", maxWidth: "440px" }}>
+            All continuous improvement investigations, CAPAs, reliability monitoring records, and standard operating procedures are up to date.
+          </span>
         </Card>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
@@ -197,30 +259,32 @@ export function Notifications() {
             const IconComponent = getIcon(n.type);
             const color = getSeverityColor(n.type);
             const bg = getSeverityBg(n.type);
-            
+
             return (
-              <Card 
-                key={n.id} 
-                style={{ 
-                  display: "flex", 
-                  alignItems: "flex-start", 
-                  justifyContent: "space-between", 
-                  gap: "16px", 
+              <Card
+                key={n.id}
+                style={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  justifyContent: "space-between",
+                  gap: "16px",
                   padding: "16px 20px",
                   borderLeft: `4px solid ${color}`,
                   flexWrap: "wrap",
-                  opacity: n.read ? 0.7 : 1
+                  opacity: n.read ? 0.7 : 1,
+                  cursor: n.path ? "pointer" : "default"
                 }}
+                onClick={() => n.path && navigate(n.path)}
               >
                 <div style={{ display: "flex", gap: "16px", flex: 1, minWidth: "280px" }}>
                   <div style={{ display: "flex", alignItems: "center", paddingTop: "8px", width: "12px" }}>
                     {!n.read && <div style={{ width: "8px", height: "8px", borderRadius: "50%", backgroundColor: color }} />}
                   </div>
-                  
+
                   <div style={{ width: "40px", height: "40px", borderRadius: "10px", backgroundColor: bg, display: "flex", alignItems: "center", justifyContent: "center", color: color, flexShrink: 0 }}>
                     <IconComponent size={20} />
                   </div>
-                  
+
                   <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
                       <h4 style={{ fontSize: "15px", fontWeight: 700, color: "var(--text-primary)", margin: 0 }}>{n.title}</h4>
@@ -230,8 +294,8 @@ export function Notifications() {
                     <p style={{ fontSize: "14px", color: "var(--text-secondary)", margin: 0, lineHeight: 1.5 }}>{n.msg}</p>
                   </div>
                 </div>
-                
-                <div style={{ display: "flex", gap: "8px", alignItems: "center", paddingTop: "4px" }}>
+
+                <div style={{ display: "flex", gap: "8px", alignItems: "center", paddingTop: "4px" }} onClick={(e) => e.stopPropagation()}>
                   {!n.read && (
                     <Button variant="outline" size="sm" icon={Check} onClick={() => handleMarkAsRead(n.id)}>
                       Mark as Read
@@ -255,7 +319,7 @@ export function Notifications() {
                   <AlertTriangle size={15} />
                 </div>
                 <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)" }}>
-                  Confirm Delete
+                  Dismiss Notification
                 </h2>
               </div>
               <button onClick={() => setDeletingNotification(null)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
@@ -265,7 +329,7 @@ export function Notifications() {
 
             <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
               <p style={{ fontSize: "13px", color: "var(--text-primary)", lineHeight: 1.5, margin: 0 }}>
-                Kya aap sach me is notification (<strong>{deletingNotification.title}</strong>) ko delete karna chahte hain?
+                Are you sure you want to dismiss this notification: <strong>{deletingNotification.title}</strong>?
               </p>
 
               <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "6px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
@@ -285,7 +349,7 @@ export function Notifications() {
                     cursor: "pointer"
                   }}
                 >
-                  Yes, Delete
+                  Yes, Dismiss
                 </button>
               </div>
             </div>
@@ -303,7 +367,7 @@ export function Notifications() {
                   <AlertTriangle size={15} />
                 </div>
                 <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)" }}>
-                  Confirm Clear All
+                  Dismiss All Notifications
                 </h2>
               </div>
               <button onClick={() => setIsClearAllModalOpen(false)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
@@ -313,7 +377,7 @@ export function Notifications() {
 
             <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
               <p style={{ fontSize: "13px", color: "var(--text-primary)", lineHeight: 1.5, margin: 0 }}>
-                Kya aap sach me <strong>sabhi {notifications.length} notifications</strong> ko delete / clear karna chahte hain?
+                Are you sure you want to dismiss all <strong>{notifications.length} active notification(s)</strong>?
               </p>
 
               <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "6px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
@@ -343,3 +407,4 @@ export function Notifications() {
     </div>
   );
 }
+

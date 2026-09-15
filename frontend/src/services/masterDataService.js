@@ -286,18 +286,41 @@ export const masterDataService = {
     return apiClient.delete(`/master-data/boms/${enc(id)}`);
   },
 
+  async getAssetTypes() {
+    return apiClient.get("/master-data/asset-types");
+  },
+
+  async createAssetType(data) {
+    return apiClient.post("/master-data/asset-types", data);
+  },
+
+  async deleteAssetType(id) {
+    return apiClient.delete(`/master-data/asset-types/${enc(id)}`);
+  },
+
+  async getCriticalityLevels() {
+    return apiClient.get("/master-data/criticality-levels");
+  },
+
+  async createCriticalityLevel(data) {
+    return apiClient.post("/master-data/criticality-levels", data);
+  },
+
+  async deleteCriticalityLevel(id) {
+    return apiClient.delete(`/master-data/criticality-levels/${enc(id)}`);
+  },
 
   async getAssets(plantId) {
     const query = plantId && plantId !== "ALL" ? `?plantId=${enc(plantId)}` : "";
     return apiClient.get(`/master-data/assets${query}`);
   },
 
-  async createAsset(assetData) {
-    return apiClient.post("/master-data/assets", assetData);
+  async createAsset(data) {
+    return apiClient.post("/master-data/assets", data);
   },
 
-  async updateAsset(id, assetData) {
-    return apiClient.put(`/master-data/assets/${enc(id)}`, assetData);
+  async updateAsset(id, data) {
+    return apiClient.put(`/master-data/assets/${enc(id)}`, data);
   },
 
   async deleteAsset(id) {
@@ -314,8 +337,44 @@ export const masterDataService = {
     return apiClient.get(`/master-data/staff${query}`);
   },
 
+  async createEmployee(data) {
+    return apiClient.post("/master-data/staff", data);
+  },
+
+  async createStaff(data) {
+    return apiClient.post("/master-data/staff", data);
+  },
+
+  async updateEmployee(id, data) {
+    return apiClient.put(`/master-data/staff/${enc(id)}`, data);
+  },
+
+  async updateStaff(id, data) {
+    return apiClient.put(`/master-data/staff/${enc(id)}`, data);
+  },
+
+  async deleteEmployee(id) {
+    return apiClient.delete(`/master-data/staff/${enc(id)}`);
+  },
+
+  async deleteStaff(id) {
+    return apiClient.delete(`/master-data/staff/${enc(id)}`);
+  },
+
   async getQualitySpecs() {
     return apiClient.get("/master-data/quality-specs");
+  },
+
+  async createQualitySpec(data) {
+    return apiClient.post("/master-data/quality-specs", data);
+  },
+
+  async updateQualitySpec(id, data) {
+    return apiClient.put(`/master-data/quality-specs/${enc(id)}`, data);
+  },
+
+  async deleteQualitySpec(id) {
+    return apiClient.delete(`/master-data/quality-specs/${enc(id)}`);
   },
 
   // 15. Labour Standards
@@ -351,6 +410,19 @@ export const masterDataService = {
 
   async deleteStorageResource(id) {
     return apiClient.delete(`/master-data/work-centers/${enc(id)}`);
+  },
+
+  // 17. Deviation Categories Master (Stored in DB: public.tenants.settings)
+  async getDeviationCategories() {
+    return apiClient.get("/quality/deviation-categories");
+  },
+
+  async saveDeviationCategory(data) {
+    return apiClient.post("/quality/deviation-categories", data);
+  },
+
+  async deleteDeviationCategory(id) {
+    return apiClient.delete(`/quality/deviation-categories/${enc(id)}`);
   },
 };
 
