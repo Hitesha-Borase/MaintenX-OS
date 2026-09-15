@@ -25,7 +25,7 @@ import dashboardService from "../../services/dashboardService";
 export function HBManagement() {
   const { addToast } = useApp();
 
-  const [records, setRecords] = useState(LIVE_HB_RECORDS);
+  const [records, setRecords] = useState([]);
   const [selectedShift, setSelectedShift] = useState("All");
   const [selectedLine, setSelectedLine] = useState("All");
   const [isLogModalOpen, setIsLogModalOpen] = useState(false);
@@ -54,9 +54,8 @@ export function HBManagement() {
     async function fetchHBRecords() {
       try {
         const res = await dashboardService.getSupervisorLiveHB();
-        if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
-          setRecords(res.data);
-        }
+        const list = Array.isArray(res) ? res : (res?.data && Array.isArray(res.data) ? res.data : []);
+        setRecords(list);
       } catch (err) {
         console.error("Failed to fetch live HB records:", err);
       }

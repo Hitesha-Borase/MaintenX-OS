@@ -28,6 +28,7 @@ export function NotificationsPage() {
     markNotificationAsRead,
     markAllNotificationsAsRead,
     clearAllNotifications,
+    refreshNotifications,
     userProfile,
     updateUserProfile
   } = useCMMS();
@@ -35,15 +36,10 @@ export function NotificationsPage() {
   const navigate = useNavigate();
 
   React.useEffect(() => {
-    const fetchNotifications = async () => {
-      try {
-        await maintenanceService.getNotifications();
-      } catch (err) {
-        console.warn("API notifications fetch notice:", err.message || err);
-      }
-    };
-    fetchNotifications();
-  }, []);
+    if (refreshNotifications) {
+      refreshNotifications();
+    }
+  }, [refreshNotifications]);
 
   const [typeFilter, setTypeFilter] = useState("ALL");
   const [isPrefModalOpen, setIsPrefModalOpen] = useState(false);

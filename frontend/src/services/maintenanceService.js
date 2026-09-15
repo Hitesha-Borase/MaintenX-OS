@@ -97,6 +97,18 @@ export const maintenanceService = {
     return apiClient.get("/maintenance/notifications");
   },
 
+  async markNotificationAsRead(id) {
+    return apiClient.patch(`/maintenance/notifications/${id}/read`);
+  },
+
+  async markAllNotificationsAsRead() {
+    return apiClient.post("/maintenance/notifications/mark-all-read");
+  },
+
+  async clearAllNotifications() {
+    return apiClient.delete("/maintenance/notifications");
+  },
+
   async getProfile() {
     return apiClient.get("/maintenance/profile");
   },
@@ -107,6 +119,33 @@ export const maintenanceService = {
 
   async getSpareParts() {
     return apiClient.get("/maintenance/spare-parts");
+  },
+
+  async createSparePart(data) {
+    return apiClient.post("/maintenance/spare-parts", data);
+  },
+
+  async updateSparePart(id, data) {
+    return apiClient.patch(`/maintenance/spare-parts/${id}`, data);
+  },
+
+  async deleteSparePart(id) {
+    return apiClient.delete(`/maintenance/spare-parts/${id}`);
+  },
+
+  async issueSparePart(workOrderId, data) {
+    if (workOrderId) {
+      return apiClient.post(`/maintenance/work-orders/${workOrderId}/parts`, data);
+    }
+    return apiClient.post("/maintenance/spare-parts/issue", { workOrderId, ...data });
+  },
+
+  async getCalibrations() {
+    return apiClient.get("/maintenance/calibrations");
+  },
+
+  async createCalibration(data) {
+    return apiClient.post("/maintenance/calibrations", data);
   },
 
   async getReliabilityMetrics() {
@@ -137,7 +176,7 @@ export const maintenanceService = {
     return apiClient.post(`/maintenance/work-orders/${woId}/execution`, data);
   },
 
-  async issueSparePart(woId, data) {
+  async issueWorkOrderPart(woId, data) {
     return apiClient.post(`/maintenance/work-orders/${woId}/parts`, data);
   },
 

@@ -52,7 +52,8 @@ export function CorrectiveActions() {
     actionType: "Corrective",
     owner: "Marcus Vance (Maintenance Lead)",
     dueDate: new Date(Date.now() + 7 * 86400000).toISOString().substring(0, 10),
-    priority: "High"
+    priority: "High",
+    status: "Open"
   });
 
   const correctiveList = useMemo(() => {
@@ -74,7 +75,8 @@ export function CorrectiveActions() {
       actionType: "Corrective",
       owner: "Marcus Vance (Maintenance Lead)",
       dueDate: new Date(Date.now() + 7 * 86400000).toISOString().substring(0, 10),
-      priority: "High"
+      priority: "High",
+      status: "Open"
     });
   };
 
@@ -417,6 +419,37 @@ export function CorrectiveActions() {
                     className="form-input"
                     style={{ backgroundColor: "#FFFFFF" }}
                   />
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div>
+                  <label className="form-label">Priority</label>
+                  <select
+                    value={newAction.priority}
+                    onChange={(e) => setNewAction({ ...newAction, priority: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  >
+                    <option value="Critical">Critical</option>
+                    <option value="High">High</option>
+                    <option value="Medium">Medium</option>
+                    <option value="Low">Low</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="form-label">Lifecycle Status</label>
+                  <select
+                    value={newAction.status || "Open"}
+                    onChange={(e) => setNewAction({ ...newAction, status: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  >
+                    <option value="Open">Open</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Completed">Completed</option>
+                  </select>
                 </div>
               </div>
 

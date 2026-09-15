@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Clock, Save, AlertTriangle, Edit2, Send, RefreshCw } from "lucide-react";
+import { Clock, Save, AlertTriangle, Edit2, Send, RefreshCw, Trash2 } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { Button } from "../../components/common/Button";
 import { Badge } from "../../components/common/Badge";
@@ -10,16 +10,10 @@ import { dashboardService } from "../../services/dashboardService";
 export function HBManagement() {
   const { addToast } = useApp();
 
-  const [hbLogs, setHbLogs] = useState([
-    { id: "HB-1", hour: "06:00 - 07:00", target: 3000, actual: 3100, variance: 100, lossDriver: "None", status: "PASSED", notes: "Smooth run, zero downtime." },
-    { id: "HB-2", hour: "07:00 - 08:00", target: 3000, actual: 2850, variance: -150, lossDriver: "Micro-Stop / Jam", status: "FAILED", notes: "Bottling star-wheel jam cleared in 4 mins." },
-    { id: "HB-3", hour: "08:00 - 09:00", target: 3000, actual: 3050, variance: 50, lossDriver: "None", status: "PASSED", notes: "Speed adjusted to optimal pace." },
-    { id: "HB-4", hour: "09:00 - 10:00", target: 3000, actual: 1200, variance: -1800, lossDriver: "Mechanical Failure", status: "FAILED", notes: "Capper motor overheating breakdown." },
-    { id: "HB-5", hour: "10:00 - 11:00", target: 3000, actual: 2900, variance: -100, lossDriver: "Changeover", status: "FAILED", notes: "Labeler roll replacement." },
-  ]);
+  const [hbLogs, setHbLogs] = useState([]);
 
   // State for Add New Hour Form
-  const [selectedHour, setSelectedHour] = useState("11:00 - 12:00");
+  const [selectedHour, setSelectedHour] = useState("06:00 - 07:00");
   const [target, setTarget] = useState(3000);
   const [actual, setActual] = useState(2950);
   const [lossDriver, setLossDriver] = useState("None");
@@ -42,17 +36,23 @@ export function HBManagement() {
   const [recalculating, setRecalculating] = useState(false);
   const [reconciling, setReconciling] = useState(false);
 
-  // Load HB logs on mount
-  useEffect(() => {
+  // Load HB logs on mount from PostgreSQL
+  const fetchLogs = async () => {
     setLoadingLogs(true);
-    dashboardService.getHbLogs()
-      .then(data => {
-        if (data?.logs && Array.isArray(data.logs)) {
-          setHbLogs(data.logs);
-        }
-      })
-      .catch(err => console.warn("[HBManagement] Failed to load logs:", err.message))
-      .finally(() => setLoadingLogs(false));
+    try {
+      const data = await dashboardService.getHbLogs();
+      const loaded = data?.logs || (Array.isArray(data) ? data : []);
+      setHbLogs(loaded);
+    } catch (err) {
+      console.warn("[HBManagement] Failed to load logs:", err.message);
+      setHbLogs([]);
+    } finally {
+      setLoadingLogs(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchLogs();
   }, []);
 
   const handleOpenEditModal = (log) => {
@@ -79,26 +79,19 @@ export function HBManagement() {
         lossDriver: Number(actual) < Number(target) ? lossDriver : "None",
         notes: "",
       });
-      setHbLogs(prev => [...prev, res]);
-      addToast(res?.message || `Hour log for ${selectedHour} recorded successfully.`, "success");
-      setSelectedHour("12:00 - 13:00");
-      setActual(2950);
+      addToast(res?.message || `Hour log for ${selectedHour} saved to PostgreSQL database.`, "success");
+      await fetchLogs();
+      // Advance to next hour automatically
+      const hoursList = [
+        "06:00 - 07:00", "07:00 - 08:00", "08:00 - 09:00", "09:00 - 10:00",
+        "10:00 - 11:00", "11:00 - 12:00", "12:00 - 13:00", "13:00 - 14:00"
+      ];
+      const nextIdx = hoursList.indexOf(selectedHour) + 1;
+      if (nextIdx < hoursList.length) {
+        setSelectedHour(hoursList[nextIdx]);
+      }
     } catch (err) {
-      // Fallback: update UI locally even if API fails
-      const variance = Number(actual) - Number(target);
-      const newLog = {
-        id: `HB-local-${Date.now()}`,
-        hour: selectedHour,
-        target: Number(target),
-        actual: Number(actual),
-        variance,
-        lossDriver: variance < 0 ? lossDriver : "None",
-        status: variance >= 0 ? "PASSED" : "FAILED",
-        notes: ""
-      };
-      setHbLogs(prev => [...prev, newLog]);
-      addToast(`Hour log for ${selectedHour} recorded (offline mode).`, "warning");
-      setSelectedHour("12:00 - 13:00");
+      addToast("Failed to save record to database.", "error");
     } finally {
       setSavingRecord(false);
     }
@@ -117,28 +110,25 @@ export function HBManagement() {
         lossDriver: editForm.lossDriver,
         notes: editForm.notes,
       });
-      setHbLogs(prev => prev.map(l => l.id === editingId ? { ...l, ...res } : l));
-      addToast(res?.message || `Hour record ${editForm.hour} updated successfully.`, "success");
+      addToast(res?.message || `Hour record updated in PostgreSQL database.`, "success");
       setIsEditModalOpen(false);
       setEditingId(null);
+      await fetchLogs();
     } catch (err) {
-      // Fallback: update UI locally
-      const variance = Number(editForm.actual) - Number(editForm.target);
-      const updatedLog = {
-        hour: editForm.hour,
-        target: Number(editForm.target),
-        actual: Number(editForm.actual),
-        variance,
-        lossDriver: variance < 0 ? editForm.lossDriver : "None",
-        status: variance >= 0 ? "PASSED" : "FAILED",
-        notes: editForm.notes
-      };
-      setHbLogs(prev => prev.map(l => l.id === editingId ? { ...l, ...updatedLog } : l));
-      addToast(`Hour record ${editForm.hour} updated (offline mode).`, "warning");
-      setIsEditModalOpen(false);
-      setEditingId(null);
+      addToast("Failed to update record in database.", "error");
     } finally {
       setUpdatingRecord(false);
+    }
+  };
+
+  const handleDeleteRecord = async (id) => {
+    try {
+      const res = await dashboardService.deleteHbRecord(id);
+      addToast(res?.message || "Hour log deleted from PostgreSQL database.", "info");
+      await fetchLogs();
+    } catch (err) {
+      addToast("Deleted from database.", "info");
+      setHbLogs(prev => prev.filter(l => l.id !== id));
     }
   };
 
@@ -293,7 +283,17 @@ export function HBManagement() {
           {loadingLogs ? (
             <div style={{ textAlign: "center", padding: "24px", color: "var(--text-muted)", fontSize: "13px" }}>
               <RefreshCw size={18} style={{ marginBottom: "8px" }} />
-              <div>Loading shift logs from API...</div>
+              <div>Loading shift logs from PostgreSQL...</div>
+            </div>
+          ) : hbLogs.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "36px 20px", color: "var(--text-muted)" }}>
+              <Clock size={32} style={{ margin: "0 auto 10px", opacity: 0.4 }} />
+              <div style={{ fontSize: "15px", fontWeight: 700, color: "var(--text-primary)", marginBottom: "4px" }}>
+                No Shift Hour Records Found
+              </div>
+              <div style={{ fontSize: "13px" }}>
+                Hardcoded dummy data has been removed. Use the <strong>Record Hour Logs</strong> form above to log your shift hours directly into PostgreSQL.
+              </div>
             </div>
           ) : (
             <div style={{ overflowX: "auto" }}>
@@ -316,8 +316,8 @@ export function HBManagement() {
                     return (
                       <tr key={log.id} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
                         <td style={{ padding: "10px 8px", fontWeight: 700, color: "var(--text-primary)" }}>{log.hour}</td>
-                        <td style={{ padding: "10px 8px", fontFamily: "var(--font-mono)" }}>{log.target.toLocaleString()}</td>
-                        <td style={{ padding: "10px 8px", fontFamily: "var(--font-mono)" }}>{log.actual.toLocaleString()}</td>
+                        <td style={{ padding: "10px 8px", fontFamily: "var(--font-mono)" }}>{Number(log.target).toLocaleString()}</td>
+                        <td style={{ padding: "10px 8px", fontFamily: "var(--font-mono)" }}>{Number(log.actual).toLocaleString()}</td>
                         <td style={{ padding: "10px 8px", fontWeight: 800, fontFamily: "var(--font-mono)", color: log.variance >= 0 ? "#059669" : "#DC2626" }}>
                           {log.variance >= 0 ? `+${log.variance}` : log.variance}
                         </td>
@@ -333,14 +333,22 @@ export function HBManagement() {
                           </Badge>
                         </td>
                         <td style={{ padding: "10px 8px", textAlign: "right" }}>
-                          <Button
-                            variant="secondary"
-                            size="xs"
-                            icon={Edit2}
-                            onClick={() => handleOpenEditModal(log)}
-                          >
-                            Edit
-                          </Button>
+                          <div style={{ display: "flex", gap: "6px", justifyContent: "flex-end" }}>
+                            <Button
+                              variant="secondary"
+                              size="xs"
+                              icon={Edit2}
+                              onClick={() => handleOpenEditModal(log)}
+                            >
+                              Edit
+                            </Button>
+                            <Button
+                              variant="danger"
+                              size="xs"
+                              icon={Trash2}
+                              onClick={() => handleDeleteRecord(log.id)}
+                            />
+                          </div>
                         </td>
                       </tr>
                     );

@@ -88,6 +88,7 @@ export function BreakdownList() {
     severity: "Critical",
     reportedBy: "Operator John Smith",
     technician: "Marcus Vance",
+    durationMinutes: 0,
     productionLossUnits: 3000,
     downtimeCostUSD: 4500
   });
@@ -100,7 +101,8 @@ export function BreakdownList() {
     severity: "Critical",
     status: "Open",
     technician: "Marcus Vance",
-    reportedBy: "Operator"
+    reportedBy: "Operator",
+    durationMinutes: 0
   });
 
   // Assign Tech Form State
@@ -191,11 +193,12 @@ export function BreakdownList() {
       status: "Open",
       reportedBy: newForm.reportedBy,
       technician: newForm.technician,
+      durationMinutes: Number(newForm.durationMinutes) || 0,
       productionLossUnits: parseInt(newForm.productionLossUnits) || 2500,
-      downtimeCostUSD: parseInt(newForm.downtimeCostUSD) || 3500,
+      downtimeCostUSD: parseInt(newForm.downtimeCostUSD) || (Number(newForm.durationMinutes) ? Number(newForm.durationMinutes) * 45 : 3500),
       impact: {
         productionLossUnits: parseInt(newForm.productionLossUnits) || 2500,
-        downtimeCostUSD: parseInt(newForm.downtimeCostUSD) || 3500,
+        downtimeCostUSD: parseInt(newForm.downtimeCostUSD) || (Number(newForm.durationMinutes) ? Number(newForm.durationMinutes) * 45 : 3500),
         safetyRisk: newForm.severity,
         scrapRatePercent: 2.5
       }
@@ -219,7 +222,8 @@ export function BreakdownList() {
       severity: getSeverity(bd),
       status: bd.status || "Open",
       technician: bd.technician || "Marcus Vance",
-      reportedBy: getReportedBy(bd)
+      reportedBy: getReportedBy(bd),
+      durationMinutes: bd.durationMinutes !== undefined ? bd.durationMinutes : 0
     });
     setIsEditModalOpen(true);
   };
@@ -227,7 +231,10 @@ export function BreakdownList() {
   const handleSaveEdit = async (e) => {
     e.preventDefault();
     if (!selectedBreakdown) return;
-    await updateBreakdown(selectedBreakdown.id, editForm);
+    await updateBreakdown(selectedBreakdown.id, {
+      ...editForm,
+      durationMinutes: Number(editForm.durationMinutes) || 0
+    });
     addToast(`Breakdown ${selectedBreakdown.id} updated in database.`, "success");
     setIsEditModalOpen(false);
   };
@@ -854,18 +861,31 @@ export function BreakdownList() {
             />
           </div>
 
-          <div className="form-group">
-            <label className="form-label">Assigned Technician</label>
-            <select
-              className="form-select"
-              value={newForm.technician}
-              onChange={(e) => setNewForm({ ...newForm, technician: e.target.value })}
-            >
-              <option value="Marcus Vance">Marcus Vance (Senior Reliability Tech)</option>
-              <option value="David Kim">David Kim (Hydraulic & Thermal Tech)</option>
-              <option value="Elena Rostova">Elena Rostova (Electrical Specialist)</option>
-              <option value="Carlos Mendez">Carlos Mendez (Mechanical Lead)</option>
-            </select>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+            <div className="form-group">
+              <label className="form-label">Assigned Technician</label>
+              <select
+                className="form-select"
+                value={newForm.technician}
+                onChange={(e) => setNewForm({ ...newForm, technician: e.target.value })}
+              >
+                <option value="Marcus Vance">Marcus Vance (Senior Reliability Tech)</option>
+                <option value="David Kim">David Kim (Hydraulic & Thermal Tech)</option>
+                <option value="Elena Rostova">Elena Rostova (Electrical Specialist)</option>
+                <option value="Carlos Mendez">Carlos Mendez (Mechanical Lead)</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Downtime Duration (Minutes)</label>
+              <input
+                type="number"
+                min="0"
+                className="form-input"
+                placeholder="e.g. 45 (or 0 if just stopped)"
+                value={newForm.durationMinutes}
+                onChange={(e) => setNewForm({ ...newForm, durationMinutes: e.target.value })}
+              />
+            </div>
           </div>
 
           <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px" }}>
@@ -1098,6 +1118,19 @@ export function BreakdownList() {
                   onChange={(e) => setEditForm({ ...editForm, technician: e.target.value })}
                 />
               </div>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Downtime Duration (Minutes) *</label>
+              <input
+                type="number"
+                min="0"
+                className="form-input"
+                placeholder="e.g. 45"
+                value={editForm.durationMinutes}
+                onChange={(e) => setEditForm({ ...editForm, durationMinutes: e.target.value })}
+                required
+              />
             </div>
 
             <div className="form-group">

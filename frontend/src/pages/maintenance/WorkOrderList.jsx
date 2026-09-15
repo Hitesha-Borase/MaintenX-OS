@@ -86,7 +86,9 @@ export function WorkOrderList() {
     priority: "P2 - High",
     status: "Open",
     technician: "Marcus Vance",
-    dueDate: "2026-09-12"
+    dueDate: "2026-09-12",
+    actualHours: "0.0",
+    estimatedHours: "2.0"
   });
 
   const [assignTech, setAssignTech] = useState("Marcus Vance");
@@ -129,17 +131,15 @@ export function WorkOrderList() {
       priority: "P2 - High",
       type: "Corrective",
       technician: "Marcus Vance",
-      dueDate: new Date(Date.now() + 7 * 86400000).toISOString().substring(0, 10)
+      dueDate: new Date(Date.now() + 7 * 86400000).toISOString().substring(0, 10),
+      estimatedHours: "2.0"
     });
     setIsCreateModalOpen(true);
   };
 
   const handleConfirmCreate = async (e) => {
     e.preventDefault();
-    if (!createForm.title.trim()) {
-      addToast("Please provide work order title", "warning");
-      return;
-    }
+    if (!createForm.title) return;
     const asset = assets.find((a) => a.id === createForm.assetId || a.assetCode === createForm.assetId);
 
     try {
@@ -152,6 +152,7 @@ export function WorkOrderList() {
         priority: createForm.priority,
         assignedTechnician: createForm.technician,
         dueDate: createForm.dueDate,
+        estimatedHours: parseFloat(createForm.estimatedHours) || 2.0,
         status: "Open"
       });
       if (refreshWorkOrders) {
@@ -166,7 +167,8 @@ export function WorkOrderList() {
         priority: "P2 - High",
         type: "Corrective",
         technician: "Marcus Vance",
-        dueDate: new Date().toISOString().substring(0, 10)
+        dueDate: new Date().toISOString().substring(0, 10),
+        estimatedHours: "2.0"
       });
     } catch (err) {
       addToast(err?.message || "Failed to create work order", "error");
@@ -186,7 +188,9 @@ export function WorkOrderList() {
       priority: wo.priority || "P2 - High",
       status: wo.status || "Open",
       technician: wo.assignedTechnician || "Marcus Vance",
-      dueDate: wo.dueDate || "2026-09-12"
+      dueDate: wo.dueDate || "2026-09-12",
+      actualHours: wo.actualHours != null && wo.actualHours !== "" ? String(wo.actualHours) : "0.0",
+      estimatedHours: wo.estimatedHours != null && wo.estimatedHours !== "" ? String(wo.estimatedHours) : "2.0"
     });
     setIsEditModalOpen(true);
   };
@@ -204,7 +208,9 @@ export function WorkOrderList() {
           priority: editForm.priority,
           status: editForm.status,
           technician: editForm.technician,
-          dueDate: editForm.dueDate
+          dueDate: editForm.dueDate,
+          actualHours: editForm.actualHours !== "" ? parseFloat(editForm.actualHours) : 0,
+          estimatedHours: editForm.estimatedHours !== "" ? parseFloat(editForm.estimatedHours) : 2.0
         });
       }
       if (refreshWorkOrders) {
@@ -795,18 +801,32 @@ export function WorkOrderList() {
             </div>
           </div>
 
-          <div className="form-group">
-            <label className="form-label">Assigned Specialist</label>
-            <select
-              className="form-select"
-              value={createForm.technician}
-              onChange={(e) => setCreateForm({ ...createForm, technician: e.target.value })}
-            >
-              <option value="Marcus Vance">Marcus Vance (Senior Reliability Tech)</option>
-              <option value="David Kim">David Kim (Hydraulic & Thermal Tech)</option>
-              <option value="Elena Rostova">Elena Rostova (Electrical Specialist)</option>
-              <option value="Carlos Mendez">Carlos Mendez (Mechanical Lead)</option>
-            </select>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+            <div className="form-group">
+              <label className="form-label">Assigned Specialist</label>
+              <select
+                className="form-select"
+                value={createForm.technician}
+                onChange={(e) => setCreateForm({ ...createForm, technician: e.target.value })}
+              >
+                <option value="Marcus Vance">Marcus Vance (Senior Reliability Tech)</option>
+                <option value="David Kim">David Kim (Hydraulic & Thermal Tech)</option>
+                <option value="Elena Rostova">Elena Rostova (Electrical Specialist)</option>
+                <option value="Carlos Mendez">Carlos Mendez (Mechanical Lead)</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Estimated Hours (hrs)</label>
+              <input
+                type="number"
+                step="0.1"
+                min="0.5"
+                className="form-input"
+                value={createForm.estimatedHours}
+                onChange={(e) => setCreateForm({ ...createForm, estimatedHours: e.target.value })}
+                placeholder="e.g. 2.0"
+              />
+            </div>
           </div>
 
           <div className="form-group">
@@ -985,6 +1005,36 @@ export function WorkOrderList() {
                   value={editForm.dueDate}
                   onChange={(e) => setEditForm({ ...editForm, dueDate: e.target.value })}
                   required
+                />
+              </div>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+              <div className="form-group">
+                <label className="form-label" style={{ display: "flex", justifyContent: "space-between" }}>
+                  <span>Actual Labour Hours (hrs)</span>
+                  <span style={{ color: "#38BDF8", fontSize: "11px" }}>Logs to DB</span>
+                </label>
+                <input
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  className="form-input"
+                  value={editForm.actualHours}
+                  onChange={(e) => setEditForm({ ...editForm, actualHours: e.target.value })}
+                  placeholder="e.g. 2.5"
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Estimated Hours (hrs)</label>
+                <input
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  className="form-input"
+                  value={editForm.estimatedHours}
+                  onChange={(e) => setEditForm({ ...editForm, estimatedHours: e.target.value })}
+                  placeholder="e.g. 2.0"
                 />
               </div>
             </div>

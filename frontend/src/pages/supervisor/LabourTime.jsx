@@ -20,31 +20,67 @@ import { Badge } from "../../components/common/Badge";
 import { StatCard } from "../../components/common/StatCard";
 import { Modal } from "../../components/common/Modal";
 import { useApp } from "../../context/AppContext";
-import { LABOUR_DATA } from "../../data/mockLabour";
 import dashboardService from "../../services/dashboardService";
 
 export function LabourTime() {
   const { addToast } = useApp();
 
-  const [labour, setLabour] = useState(LABOUR_DATA);
+  const [labour, setLabour] = useState({
+    plannedLabour: 0,
+    actualLabour: 0,
+    availableLabour: 0,
+    labourUtilization: 0,
+    labourProductivity: 0,
+    labourProductivityTrend: "0%",
+    labourProductivityTarget: "150",
+    labourAllocationDirect: 0,
+    labourAllocationIndirect: 0,
+    lines: [],
+    shifts: []
+  });
+  const [loading, setLoading] = useState(true);
   const [isRebalanceModalOpen, setIsRebalanceModalOpen] = useState(false);
   const [rebalanceForm, setRebalanceForm] = useState({
-    fromLine: "Line 1 — High-Speed Aseptic Bottling",
-    toLine: "Line 3 — Canning & Seaming Automation",
+    fromLine: "",
+    toLine: "",
     operatorsCount: 1
   });
 
-  useEffect(() => {
-    async function fetchLabourData() {
-      try {
-        const res = await dashboardService.getSupervisorLabourTime();
-        if (res && res.data) {
-          setLabour(res.data);
+  const fetchLabourData = async () => {
+    try {
+      setLoading(true);
+      const res = await dashboardService.getSupervisorLabourTime();
+      const payload = res?.data || res;
+      if (payload) {
+        setLabour({
+          plannedLabour: payload.plannedLabour || 0,
+          actualLabour: payload.actualLabour || 0,
+          availableLabour: payload.availableLabour || 0,
+          labourUtilization: payload.labourUtilization || 0,
+          labourProductivity: payload.labourProductivity || 0,
+          labourProductivityTrend: payload.labourProductivityTrend || "0%",
+          labourProductivityTarget: payload.labourProductivityTarget || "150",
+          labourAllocationDirect: payload.labourAllocationDirect || 0,
+          labourAllocationIndirect: payload.labourAllocationIndirect || 0,
+          lines: payload.lines || [],
+          shifts: payload.shifts || []
+        });
+        if (payload.lines && payload.lines.length > 0) {
+          setRebalanceForm(prev => ({
+            ...prev,
+            fromLine: prev.fromLine || payload.lines[0]?.line,
+            toLine: prev.toLine || payload.lines[1]?.line || payload.lines[0]?.line
+          }));
         }
-      } catch (err) {
-        console.error("Failed to fetch labour time data:", err);
       }
+    } catch (err) {
+      console.error("Failed to fetch labour time data:", err);
+    } finally {
+      setLoading(false);
     }
+  };
+
+  useEffect(() => {
     fetchLabourData();
   }, []);
 
@@ -150,7 +186,11 @@ export function LabourTime() {
           title="Planned Labour"
           value={labour.plannedLabour}
           unit="Headcount"
-          trend={{ value: "Budgeted shift schedule", isPositive: true, text: "" }}
+          trend={{
+            value: labour.plannedLabour > 0 ? "Budgeted shift schedule" : "No shift roster planned",
+            isPositive: true,
+            text: ""
+          }}
           icon={Users}
           colorVariant="blue"
         />
@@ -158,7 +198,11 @@ export function LabourTime() {
           title="Actual Labour"
           value={labour.actualLabour}
           unit="Clocked On Floor"
-          trend={{ value: `${labour.actualLabour - labour.plannedLabour} Variance (-2 Open)`, isPositive: false, text: "" }}
+          trend={{
+            value: `${labour.actualLabour - labour.plannedLabour >= 0 ? "+" : ""}${labour.actualLabour - labour.plannedLabour} Variance`,
+            isPositive: labour.actualLabour >= labour.plannedLabour,
+            text: ""
+          }}
           icon={CheckCircle2}
           colorVariant="emerald"
         />
@@ -166,7 +210,11 @@ export function LabourTime() {
           title="Available Labour"
           value={labour.availableLabour}
           unit="Ready at Stations"
-          trend={{ value: "1 Operator on break", isPositive: true, text: "" }}
+          trend={{
+            value: `${labour.availableLabour} of ${labour.actualLabour} operators active`,
+            isPositive: true,
+            text: ""
+          }}
           icon={ShieldCheck}
           colorVariant="cyan"
         />
@@ -174,7 +222,11 @@ export function LabourTime() {
           title="Labour Utilization"
           value={`${labour.labourUtilization}%`}
           unit="Efficiency"
-          trend={{ value: "Target: > 92.0%", isPositive: true, text: "" }}
+          trend={{
+            value: labour.plannedLabour > 0 ? "Target: > 90.0%" : "Awaiting shift plan",
+            isPositive: labour.labourUtilization >= 90,
+            text: ""
+          }}
           icon={TrendingUp}
           colorVariant="indigo"
         />
@@ -182,7 +234,13 @@ export function LabourTime() {
           title="Labour Productivity"
           value={labour.labourProductivity}
           unit="Units / Labor Hr"
-          trend={{ value: `${labour.labourProductivityTrend} vs target (${labour.labourProductivityTarget})`, isPositive: true, text: "" }}
+          trend={{
+            value: labour.labourProductivity > 0
+              ? `${labour.labourProductivityTrend} vs target (${labour.labourProductivityTarget} u/hr)`
+              : "No shift production logs",
+            isPositive: labour.labourProductivity >= Number(labour.labourProductivityTarget || 0),
+            text: ""
+          }}
           icon={Award}
           colorVariant="emerald"
         />
@@ -228,11 +286,11 @@ export function LabourTime() {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px", marginTop: "10px", fontSize: "12px", color: "var(--text-secondary)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
             <div style={{ width: "9px", height: "9px", borderRadius: "50%", backgroundColor: "#10B981" }} />
-            <span>Direct Production Operators: <strong>41 Headcount</strong> (Filler, Seamer, Capper, Packer)</span>
+            <span>Direct Production Operators: <strong>{labour.actualLabour} Headcount</strong></span>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
             <div style={{ width: "9px", height: "9px", borderRadius: "50%", backgroundColor: "#F59E0B" }} />
-            <span>Indirect Support: <strong>5 Headcount</strong> (Forklift, Staging, Line Sanitation)</span>
+            <span>Indirect Support / Gap: <strong>{Math.max(0, labour.plannedLabour - labour.actualLabour)} Headcount</strong></span>
           </div>
         </div>
       </Card>
@@ -251,53 +309,63 @@ export function LabourTime() {
         </div>
 
         <div className="data-table-container" style={{ overflowX: "auto", width: "100%" }}>
-          <table className="data-table" style={{ width: "100%", minWidth: "850px", borderCollapse: "collapse" }}>
-            <thead>
-              <tr style={{ backgroundColor: "var(--bg-card-subtle)", textAlign: "left" }}>
-                <th style={{ padding: "10px 14px", fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", whiteSpace: "nowrap" }}>LINE & DEPARTMENT</th>
-                <th style={{ padding: "10px 14px", fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", whiteSpace: "nowrap" }}>PLANNED</th>
-                <th style={{ padding: "10px 14px", fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", whiteSpace: "nowrap" }}>ACTUAL</th>
-                <th style={{ padding: "10px 14px", fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", whiteSpace: "nowrap" }}>AVAILABLE</th>
-                <th style={{ padding: "10px 14px", fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", whiteSpace: "nowrap" }}>UTILIZATION</th>
-                <th style={{ padding: "10px 14px", fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", whiteSpace: "nowrap" }}>PRODUCTIVITY</th>
-                <th style={{ padding: "10px 14px", fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", whiteSpace: "nowrap" }}>LINE LEAD</th>
-                <th style={{ padding: "10px 14px", fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", whiteSpace: "nowrap", textAlign: "right" }}>STATUS</th>
-              </tr>
-            </thead>
-            <tbody>
-              {labour.lines.map((l, idx) => (
-                <tr key={idx} style={{ borderBottom: "1px solid var(--border-subtle)", height: "46px" }}>
-                  <td style={{ padding: "8px 14px", whiteSpace: "nowrap" }}>
-                    <div style={{ fontWeight: 800, color: "var(--text-primary)", fontSize: "13px", lineHeight: 1.2 }}>{l.line}</div>
-                    <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>{l.department}</div>
-                  </td>
-                  <td style={{ padding: "8px 14px", fontFamily: "var(--font-mono)", fontSize: "13px", whiteSpace: "nowrap" }}>
-                    {l.planned}
-                  </td>
-                  <td style={{ padding: "8px 14px", fontFamily: "var(--font-mono)", fontWeight: 800, color: l.actual < l.planned ? "#D97706" : "#059669", fontSize: "13px", whiteSpace: "nowrap" }}>
-                    {l.actual}
-                  </td>
-                  <td style={{ padding: "8px 14px", fontFamily: "var(--font-mono)", fontSize: "13px", whiteSpace: "nowrap" }}>
-                    {l.available}
-                  </td>
-                  <td style={{ padding: "8px 14px", fontFamily: "var(--font-mono)", fontSize: "13px", whiteSpace: "nowrap" }}>
-                    {l.utilization}
-                  </td>
-                  <td style={{ padding: "8px 14px", fontFamily: "var(--font-mono)", fontWeight: 700, color: "#0284C7", fontSize: "13px", whiteSpace: "nowrap" }}>
-                    {l.productivity} u/hr
-                  </td>
-                  <td style={{ padding: "8px 14px", fontSize: "12px", color: "var(--text-primary)", fontWeight: 600, whiteSpace: "nowrap" }}>
-                    {l.lead}
-                  </td>
-                  <td style={{ padding: "8px 14px", textAlign: "right", whiteSpace: "nowrap" }}>
-                    <Badge variant={l.status === "Optimal" ? "emerald" : "amber"}>
-                      {l.status}
-                    </Badge>
-                  </td>
+          {labour.lines.length === 0 ? (
+            <div style={{ padding: "40px 20px", textAlign: "center", color: "var(--text-secondary)" }}>
+              <Users size={36} style={{ margin: "0 auto 10px", opacity: 0.35, display: "block" }} />
+              <div style={{ fontWeight: 700, fontSize: "14px", color: "var(--text-primary)" }}>No Staff Allocated to Production Lines</div>
+              <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "4px" }}>
+                Assign operators to a line in Employee List or Shift Management to view live allocations.
+              </div>
+            </div>
+          ) : (
+            <table className="data-table" style={{ width: "100%", minWidth: "850px", borderCollapse: "collapse" }}>
+              <thead>
+                <tr style={{ backgroundColor: "var(--bg-card-subtle)", textAlign: "left" }}>
+                  <th style={{ padding: "10px 14px", fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", whiteSpace: "nowrap" }}>LINE & DEPARTMENT</th>
+                  <th style={{ padding: "10px 14px", fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", whiteSpace: "nowrap" }}>PLANNED</th>
+                  <th style={{ padding: "10px 14px", fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", whiteSpace: "nowrap" }}>ACTUAL</th>
+                  <th style={{ padding: "10px 14px", fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", whiteSpace: "nowrap" }}>AVAILABLE</th>
+                  <th style={{ padding: "10px 14px", fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", whiteSpace: "nowrap" }}>UTILIZATION</th>
+                  <th style={{ padding: "10px 14px", fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", whiteSpace: "nowrap" }}>PRODUCTIVITY</th>
+                  <th style={{ padding: "10px 14px", fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", whiteSpace: "nowrap" }}>LINE LEAD</th>
+                  <th style={{ padding: "10px 14px", fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", whiteSpace: "nowrap", textAlign: "right" }}>STATUS</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {labour.lines.map((l, idx) => (
+                  <tr key={idx} style={{ borderBottom: "1px solid var(--border-subtle)", height: "46px" }}>
+                    <td style={{ padding: "8px 14px", whiteSpace: "nowrap" }}>
+                      <div style={{ fontWeight: 800, color: "var(--text-primary)", fontSize: "13px", lineHeight: 1.2 }}>{l.line}</div>
+                      <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>{l.department}</div>
+                    </td>
+                    <td style={{ padding: "8px 14px", fontFamily: "var(--font-mono)", fontSize: "13px", whiteSpace: "nowrap" }}>
+                      {l.planned}
+                    </td>
+                    <td style={{ padding: "8px 14px", fontFamily: "var(--font-mono)", fontWeight: 800, color: l.actual < l.planned ? "#D97706" : "#059669", fontSize: "13px", whiteSpace: "nowrap" }}>
+                      {l.actual}
+                    </td>
+                    <td style={{ padding: "8px 14px", fontFamily: "var(--font-mono)", fontSize: "13px", whiteSpace: "nowrap" }}>
+                      {l.available}
+                    </td>
+                    <td style={{ padding: "8px 14px", fontFamily: "var(--font-mono)", fontSize: "13px", whiteSpace: "nowrap" }}>
+                      {l.utilization}
+                    </td>
+                    <td style={{ padding: "8px 14px", fontFamily: "var(--font-mono)", fontWeight: 700, color: "#0284C7", fontSize: "13px", whiteSpace: "nowrap" }}>
+                      {l.productivity} u/hr
+                    </td>
+                    <td style={{ padding: "8px 14px", fontSize: "12px", color: "var(--text-primary)", fontWeight: 600, whiteSpace: "nowrap" }}>
+                      {l.lead}
+                    </td>
+                    <td style={{ padding: "8px 14px", textAlign: "right", whiteSpace: "nowrap" }}>
+                      <Badge variant={l.status === "Optimal" ? "emerald" : "amber"}>
+                        {l.status}
+                      </Badge>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </Card>
 
@@ -315,48 +383,58 @@ export function LabourTime() {
         </div>
 
         <div className="data-table-container" style={{ overflowX: "auto", width: "100%" }}>
-          <table className="data-table" style={{ width: "100%", minWidth: "750px", borderCollapse: "collapse" }}>
-            <thead>
-              <tr style={{ backgroundColor: "var(--bg-card-subtle)", textAlign: "left" }}>
-                <th style={{ padding: "10px 14px", fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", whiteSpace: "nowrap" }}>SHIFT</th>
-                <th style={{ padding: "10px 14px", fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", whiteSpace: "nowrap" }}>PLANNED</th>
-                <th style={{ padding: "10px 14px", fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", whiteSpace: "nowrap" }}>ACTUAL</th>
-                <th style={{ padding: "10px 14px", fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", whiteSpace: "nowrap" }}>AVAILABLE</th>
-                <th style={{ padding: "10px 14px", fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", whiteSpace: "nowrap" }}>UTILIZATION</th>
-                <th style={{ padding: "10px 14px", fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", whiteSpace: "nowrap" }}>PRODUCTIVITY</th>
-                <th style={{ padding: "10px 14px", fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", whiteSpace: "nowrap", textAlign: "right" }}>COVERAGE STATUS</th>
-              </tr>
-            </thead>
-            <tbody>
-              {labour.shifts.map((s, idx) => (
-                <tr key={idx} style={{ borderBottom: "1px solid var(--border-subtle)", height: "46px" }}>
-                  <td style={{ padding: "8px 14px", fontWeight: 800, color: "var(--text-primary)", fontSize: "13px", whiteSpace: "nowrap" }}>
-                    {s.shift}
-                  </td>
-                  <td style={{ padding: "8px 14px", fontFamily: "var(--font-mono)", fontSize: "13px", whiteSpace: "nowrap" }}>
-                    {s.planned}
-                  </td>
-                  <td style={{ padding: "8px 14px", fontFamily: "var(--font-mono)", fontWeight: 800, color: s.actual < s.planned ? "#D97706" : "#059669", fontSize: "13px", whiteSpace: "nowrap" }}>
-                    {s.actual}
-                  </td>
-                  <td style={{ padding: "8px 14px", fontFamily: "var(--font-mono)", fontSize: "13px", whiteSpace: "nowrap" }}>
-                    {s.available}
-                  </td>
-                  <td style={{ padding: "8px 14px", fontFamily: "var(--font-mono)", fontSize: "13px", whiteSpace: "nowrap" }}>
-                    {s.utilization}
-                  </td>
-                  <td style={{ padding: "8px 14px", fontFamily: "var(--font-mono)", fontWeight: 700, color: "#0284C7", fontSize: "13px", whiteSpace: "nowrap" }}>
-                    {s.productivity} u/hr
-                  </td>
-                  <td style={{ padding: "8px 14px", textAlign: "right", whiteSpace: "nowrap" }}>
-                    <Badge variant={s.status === "Full Coverage" ? "emerald" : "amber"}>
-                      {s.status}
-                    </Badge>
-                  </td>
+          {labour.shifts.length === 0 ? (
+            <div style={{ padding: "40px 20px", textAlign: "center", color: "var(--text-secondary)" }}>
+              <Clock size={36} style={{ margin: "0 auto 10px", opacity: 0.35, display: "block" }} />
+              <div style={{ fontWeight: 700, fontSize: "14px", color: "var(--text-primary)" }}>No Active Shift Attendance</div>
+              <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "4px" }}>
+                Operators clocked in on shift will appear here with live coverage and productivity pacing.
+              </div>
+            </div>
+          ) : (
+            <table className="data-table" style={{ width: "100%", minWidth: "750px", borderCollapse: "collapse" }}>
+              <thead>
+                <tr style={{ backgroundColor: "var(--bg-card-subtle)", textAlign: "left" }}>
+                  <th style={{ padding: "10px 14px", fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", whiteSpace: "nowrap" }}>SHIFT</th>
+                  <th style={{ padding: "10px 14px", fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", whiteSpace: "nowrap" }}>PLANNED</th>
+                  <th style={{ padding: "10px 14px", fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", whiteSpace: "nowrap" }}>ACTUAL</th>
+                  <th style={{ padding: "10px 14px", fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", whiteSpace: "nowrap" }}>AVAILABLE</th>
+                  <th style={{ padding: "10px 14px", fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", whiteSpace: "nowrap" }}>UTILIZATION</th>
+                  <th style={{ padding: "10px 14px", fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", whiteSpace: "nowrap" }}>PRODUCTIVITY</th>
+                  <th style={{ padding: "10px 14px", fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", whiteSpace: "nowrap", textAlign: "right" }}>COVERAGE STATUS</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {labour.shifts.map((s, idx) => (
+                  <tr key={idx} style={{ borderBottom: "1px solid var(--border-subtle)", height: "46px" }}>
+                    <td style={{ padding: "8px 14px", fontWeight: 800, color: "var(--text-primary)", fontSize: "13px", whiteSpace: "nowrap" }}>
+                      {s.shift}
+                    </td>
+                    <td style={{ padding: "8px 14px", fontFamily: "var(--font-mono)", fontSize: "13px", whiteSpace: "nowrap" }}>
+                      {s.planned}
+                    </td>
+                    <td style={{ padding: "8px 14px", fontFamily: "var(--font-mono)", fontWeight: 800, color: s.actual < s.planned ? "#D97706" : "#059669", fontSize: "13px", whiteSpace: "nowrap" }}>
+                      {s.actual}
+                    </td>
+                    <td style={{ padding: "8px 14px", fontFamily: "var(--font-mono)", fontSize: "13px", whiteSpace: "nowrap" }}>
+                      {s.available}
+                    </td>
+                    <td style={{ padding: "8px 14px", fontFamily: "var(--font-mono)", fontSize: "13px", whiteSpace: "nowrap" }}>
+                      {s.utilization}
+                    </td>
+                    <td style={{ padding: "8px 14px", fontFamily: "var(--font-mono)", fontWeight: 700, color: "#0284C7", fontSize: "13px", whiteSpace: "nowrap" }}>
+                      {s.productivity} u/hr
+                    </td>
+                    <td style={{ padding: "8px 14px", textAlign: "right", whiteSpace: "nowrap" }}>
+                      <Badge variant={s.status === "Full Coverage" ? "emerald" : "amber"}>
+                        {s.status}
+                      </Badge>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </Card>
 

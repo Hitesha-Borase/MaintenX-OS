@@ -254,19 +254,22 @@ export function CIProvider({ children }) {
   // ==========================================
 
   // 1. RCA: Initiate
-  const initiateRCA = async (assetId, sourceBreakdownId, customProblem) => {
-    const asset = reliabilityRecords.find((r) => r.assetId === assetId) ||
-                  masterAssets.find((a) => a.assetId === assetId) || {
-                    assetName: "Production Machine",
-                    lineId: "LIN-01",
-                    lineName: "Line 1",
-                    plantId: activePlantId
-                  };
+  const initiateRCA = async (assetId, sourceBreakdownId, customProblem, assetMeta = {}) => {
+    const foundAsset = reliabilityRecords.find((r) => r.assetId === assetId) ||
+                       masterAssets.find((a) => a.assetId === assetId) || {};
+    const asset = {
+      assetName: assetMeta.assetName || foundAsset.assetName || foundAsset.name || "Production Machine",
+      lineId: assetMeta.lineId || foundAsset.lineId || "LIN-01",
+      lineName: assetMeta.lineName || foundAsset.lineName || "Line 1 — Production",
+      plantId: assetMeta.plantId || foundAsset.plantId || activePlantId,
+      ...foundAsset,
+      ...assetMeta
+    };
 
     const newRcaPayload = {
-      title: customProblem || `Investigation — ${asset.assetName || asset.name || "Equipment"} Breakdown`,
+      title: customProblem || `Investigation — ${asset.assetName || "Equipment"} Breakdown`,
       assetId: asset.assetId || assetId,
-      assetName: asset.assetName || asset.name || "Critical Equipment",
+      assetName: asset.assetName || "Critical Equipment",
       lineId: asset.lineId || "LIN-01",
       lineName: asset.lineName || "Line 1 — Production",
       plantId: asset.plantId || activePlantId,

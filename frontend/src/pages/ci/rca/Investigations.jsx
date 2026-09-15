@@ -25,6 +25,7 @@ import { Button } from "../../../components/common/Button";
 import { Badge } from "../../../components/common/Badge";
 import { StatCard } from "../../../components/common/StatCard";
 import { useCI } from "../../../context/CIContext";
+import { useCMMS } from "../../../context/CMMSContext";
 import { useApp } from "../../../context/AppContext";
 import { ciService } from "../../../services/ciService";
 import { maintenanceService } from "../../../services/maintenanceService";
@@ -32,6 +33,7 @@ import { maintenanceService } from "../../../services/maintenanceService";
 export function Investigations() {
   const navigate = useNavigate();
   const { addToast } = useApp();
+  const { assets = [] } = useCMMS();
   const {
     investigations = [],
     openRcaCount,
@@ -48,7 +50,13 @@ export function Investigations() {
   const [summaryData, setSummaryData] = useState(null);
 
   const [newTitle, setNewTitle] = useState("");
-  const [newAssetId, setNewAssetId] = useState("AST-002");
+  const [newAssetId, setNewAssetId] = useState("");
+
+  useEffect(() => {
+    if (assets.length > 0 && !newAssetId) {
+      setNewAssetId(assets[0].assetCode || assets[0].id);
+    }
+  }, [assets, newAssetId]);
 
   const phases = ["Event", "Evidence", "Hypothesis & Tests", "Occurrence Cause", "Escape Cause", "CAPA", "Verification", "Closed"];
 
@@ -88,13 +96,26 @@ export function Investigations() {
       return;
     }
 
+    const selectedAsset = assets.find(a => (a.assetCode || a.id) === newAssetId) || assets[0] || {};
+    const assetCode = selectedAsset.assetCode || selectedAsset.id || newAssetId || "FM-001";
+    const assetName = selectedAsset.name || "Critical Equipment";
+    const lineId = selectedAsset.lineId || "LIN-01";
+    const lineName = selectedAsset.lineName || "Line 1 — Production";
+
     try {
       await maintenanceService.createRCAInvestigation({
-        assetId: newAssetId,
+        assetId: assetCode,
+        assetName: assetName,
+        lineId: lineId,
+        lineName: lineName,
         title: newTitle.trim()
       }).catch(() => {});
 
-      await initiateRCA(newAssetId, null, newTitle.trim());
+      await initiateRCA(assetCode, null, newTitle.trim(), {
+        assetName,
+        lineId,
+        lineName
+      });
       setNewTitle("");
       setIsCreateModalOpen(false);
       await loadData();
@@ -460,10 +481,18 @@ export function Investigations() {
                   className="form-input"
                   style={{ backgroundColor: "#FFFFFF" }}
                 >
-                  <option value="AST-002">AST-002 — HTST Flash Pasteurizer (Line 2)</option>
-                  <option value="AST-001">AST-001 — Rotary Isobaric Bottle Filler (Line 1)</option>
-                  <option value="AST-004">AST-004 — Sleeve Rotary Labeler (Line 1)</option>
-                  <option value="AST-005">AST-005 — Automated Case Packer (Line 1)</option>
+                  {assets && assets.length > 0 ? (
+                    assets.map((ast) => {
+                      const code = ast.assetCode || ast.id;
+                      return (
+                        <option key={code} value={code}>
+                          {code} — {ast.name} {ast.lineName ? `(${ast.lineName})` : ""}
+                        </option>
+                      );
+                    })
+                  ) : (
+                    <option value="FM-001">FM-001 — Rotary Filling Machine 48-Valve</option>
+                  )}
                 </select>
               </div>
 
@@ -556,6 +585,15 @@ export function Investigations() {
                     Go to {selectedRcaDetail.currentPhase}
                   </Button>
                 )}
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setSelectedRcaDetail(null);
+                    navigate("/ci/rca/occurrence");
+                  }}
+                >
+                  Edit 5-Why Answers
+                </Button>
                 <Button variant="primary" onClick={() => { setSelectedRcaDetail(null); navigate("/ci/capa/corrective"); }}>
                   View CAPA Actions
                 </Button>

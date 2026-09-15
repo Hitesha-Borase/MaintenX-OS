@@ -14,7 +14,6 @@ import { INITIAL_FAILURE_CODES } from "../data/mockFailureCodes";
 import { RELIABILITY_METRICS, REPEAT_FAILURES } from "../data/mockReliability";
 import { INITIAL_EMPLOYEES, SKILLS_MATRIX } from "../data/mockLabour";
 import { REPORT_TEMPLATES } from "../data/mockReports";
-import { INITIAL_NOTIFICATIONS } from "../data/mockNotifications";
 import { DEFAULT_USER_PROFILE } from "../data/mockUserProfile";
 
 const CMMSContext = createContext();
@@ -44,10 +43,26 @@ export function CMMSProvider({ children }) {
     return saved ? JSON.parse(saved) : ASSET_HIERARCHY_TREE;
   });
 
-  // 2. Work Orders State
+  // 2. Work Orders State - 100% Live PostgreSQL DB state, purge legacy mocks
   const [workOrders, setWorkOrders] = useState(() => {
     const saved = localStorage.getItem("flowstate_work_orders");
-    return saved ? JSON.parse(saved) : INITIAL_WORK_ORDERS;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        const hasLegacyMocks = Array.isArray(parsed) && parsed.some(w =>
+          ["WO-2026-0891", "WO-2026-0888", "WO-2026-0885", "WO-2026-0870", "WO-2026-0865", "WO-2026-0850"].includes(w?.id) ||
+          (w?.title && (w.title.includes("Vibration on Main Drive") || w.title.includes("Plate Seal Leakage")))
+        );
+        if (hasLegacyMocks) {
+          localStorage.removeItem("flowstate_work_orders");
+          return [];
+        }
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+    return [];
   });
 
   // 3. PM Plans & Schedules
@@ -91,7 +106,20 @@ export function CMMSProvider({ children }) {
   // 5. Spare Parts & BOM & Requests
   const [spareParts, setSpareParts] = useState(() => {
     const saved = localStorage.getItem("flowstate_spare_parts");
-    return saved ? JSON.parse(saved) : INITIAL_SPARE_PARTS;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        const hasLegacyMocks = Array.isArray(parsed) && parsed.some((p) => ["BRG-6208-2RS", "GSK-EPDM-HT105", "SL-VTON-45"].includes(p?.partNo));
+        if (hasLegacyMocks) {
+          localStorage.removeItem("flowstate_spare_parts");
+          return [];
+        }
+        return parsed;
+      } catch {
+        return [];
+      }
+    }
+    return [];
   });
 
   const [equipmentBOMs] = useState(EQUIPMENT_BOMS);
@@ -104,7 +132,20 @@ export function CMMSProvider({ children }) {
   // 6. Calibrations & History
   const [calibrations, setCalibrations] = useState(() => {
     const saved = localStorage.getItem("flowstate_calibrations");
-    return saved ? JSON.parse(saved) : INITIAL_CALIBRATIONS;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        const hasLegacyMocks = Array.isArray(parsed) && parsed.some((c) => ["CAL-2026-088", "CAL-2026-082", "CAL-2026-091", "CAL-2026-079"].includes(c?.id));
+        if (hasLegacyMocks) {
+          localStorage.removeItem("flowstate_calibrations");
+          return [];
+        }
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+    return [];
   });
 
   const [calibrationHistory, setCalibrationHistory] = useState(() => {
@@ -121,7 +162,20 @@ export function CMMSProvider({ children }) {
   // 8. Troubleshooting & Verified Solutions
   const [solutions, setSolutions] = useState(() => {
     const saved = localStorage.getItem("flowstate_solutions");
-    return saved ? JSON.parse(saved) : INITIAL_SOLUTIONS;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        const hasLegacyMocks = Array.isArray(parsed) && parsed.some((s) => ["SOL-2026-012", "SOL-2025-084", "SOL-2025-045"].includes(s?.id));
+        if (hasLegacyMocks) {
+          localStorage.removeItem("flowstate_solutions");
+          return [];
+        }
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+    return [];
   });
 
   // 9. Reliability
@@ -191,16 +245,44 @@ export function CMMSProvider({ children }) {
   // 12. Reports
   const [reportTemplates] = useState(REPORT_TEMPLATES);
 
-  // 13. Notifications
+  // 13. Notifications - 100% Live DB state, purge legacy mocks
   const [notifications, setNotifications] = useState(() => {
     const saved = localStorage.getItem("flowstate_notifications");
-    return saved ? JSON.parse(saved) : INITIAL_NOTIFICATIONS;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        const hasLegacyMocks = Array.isArray(parsed) && parsed.some((n) =>
+          ["NOTIF-001", "NOTIF-002", "NOTIF-003", "NOTIF-004", "NOTIF-005", "NOTIF-006"].includes(n?.id) ||
+          (n?.title && (n.title.includes("Heat Exchanger HT-105") || n.title.includes("Pasteurizer Monthly") || n.title.includes("Coriolis Flowmeter") || n.title.includes("EPDM Gaskets")))
+        );
+        if (hasLegacyMocks) {
+          localStorage.removeItem("flowstate_notifications");
+          return [];
+        }
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+    return [];
   });
 
-  // 14. Profile
+  // 14. Profile - 100% Live PostgreSQL DB state, purge legacy mocks
   const [userProfile, setUserProfile] = useState(() => {
     const saved = localStorage.getItem("flowstate_user_profile");
-    return saved ? JSON.parse(saved) : DEFAULT_USER_PROFILE;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed?.name?.includes("Marcus Vance") || parsed?.completedWOsThisYear === 142 || !parsed?.name) {
+          localStorage.removeItem("flowstate_user_profile");
+          return null;
+        }
+        return parsed;
+      } catch {
+        return null;
+      }
+    }
+    return null;
   });
 
   // Normalize Work Orders from database
@@ -223,7 +305,9 @@ export function CMMSProvider({ children }) {
         title: wo.title,
         description: wo.description || "",
         symptom: wo.description || "",
-        assetId: wo.asset?.assetCode || wo.assetId || "AST-001",
+        assetId: wo.asset?.assetCode || wo.asset?.id || wo.assetId || "AST-001",
+        dbAssetId: wo.assetId || wo.asset?.id,
+        assetCode: wo.asset?.assetCode,
         assetName: wo.asset?.name || "Industrial Asset",
         type: wo.type ? (wo.type.charAt(0).toUpperCase() + wo.type.slice(1).toLowerCase()) : "Corrective",
         priority: wo.priority || "P2 - High",
@@ -235,7 +319,7 @@ export function CMMSProvider({ children }) {
         createdDate: wo.createdAt ? new Date(wo.createdAt).toISOString().substring(0, 10) : "2026-09-01",
         dueDate: wo.scheduledDate ? new Date(wo.scheduledDate).toISOString().substring(0, 10) : (wo.dueDate || "2026-09-12"),
         estimatedHours: wo.estimatedHours ? parseFloat(wo.estimatedHours) : 2.0,
-        actualHours: wo.actualHours ? parseFloat(wo.actualHours) : 0,
+        actualHours: wo.actualHours != null && wo.actualHours !== "" ? parseFloat(wo.actualHours) : 0,
         resolution: wo.completedAt ? "Work completed & verified" : (wo.resolution || null),
         comments: wo.comments || [],
         partsRequired: wo.partsRequired || [],
@@ -272,16 +356,110 @@ export function CMMSProvider({ children }) {
     }
   }, []);
 
+  // Refresh Reliability from Backend
+  const refreshReliability = useCallback(async () => {
+    try {
+      const res = await maintenanceService.getReliabilityMetrics();
+      const data = res?.data || res;
+      if (data && data.plantOverall) {
+        setReliabilityMetrics(data);
+        if (Array.isArray(data.repeatFailures)) {
+          setRepeatFailures(data.repeatFailures);
+        }
+        return data;
+      }
+    } catch (err) {
+      console.warn("maintenanceService.getReliabilityMetrics refresh notice:", err.message || err);
+    }
+  }, []);
+
+  // Refresh Calibrations from Backend
+  const refreshCalibrations = useCallback(async () => {
+    try {
+      const res = await maintenanceService.getCalibrations();
+      const list = Array.isArray(res) ? res : (res?.data || []);
+      if (Array.isArray(list)) {
+        setCalibrations(list);
+        return list;
+      }
+    } catch (err) {
+      console.warn("maintenanceService.getCalibrations refresh notice:", err.message || err);
+    }
+  }, []);
+
+  // Refresh Spare Parts from Backend
+  const refreshSpareParts = useCallback(async () => {
+    try {
+      const res = await maintenanceService.getSpareParts();
+      const list = Array.isArray(res) ? res : (res?.data || []);
+      if (Array.isArray(list)) {
+        setSpareParts(list);
+        return list;
+      }
+    } catch (err) {
+      console.warn("maintenanceService.getSpareParts refresh notice:", err.message || err);
+    }
+  }, []);
+
+  // Refresh Troubleshooting Solutions from Backend
+  const refreshSolutions = useCallback(async () => {
+    try {
+      const res = await maintenanceService.getTroubleshooting();
+      const list = Array.isArray(res) ? res : (res?.data || []);
+      if (Array.isArray(list)) {
+        setSolutions(list);
+        return list;
+      }
+    } catch (err) {
+      console.warn("maintenanceService.getTroubleshooting refresh notice:", err.message || err);
+    }
+  }, []);
+
+  // Refresh Notifications from Backend
+  const refreshNotifications = useCallback(async () => {
+    try {
+      const res = await maintenanceService.getNotifications();
+      const list = Array.isArray(res) ? res : (res?.data || []);
+      if (Array.isArray(list)) {
+        setNotifications(list);
+        localStorage.setItem("flowstate_notifications", JSON.stringify(list));
+        return list;
+      }
+    } catch (err) {
+      console.warn("maintenanceService.getNotifications refresh notice:", err.message || err);
+    }
+  }, []);
+
+  // Refresh Profile from Backend
+  const refreshProfile = useCallback(async () => {
+    try {
+      const res = await maintenanceService.getProfile();
+      const profileData = res?.data || res;
+      if (profileData && profileData.name) {
+        setUserProfile(profileData);
+        localStorage.setItem("flowstate_user_profile", JSON.stringify(profileData));
+        return profileData;
+      }
+    } catch (err) {
+      console.warn("maintenanceService.getProfile refresh notice:", err.message || err);
+    }
+  }, []);
+
   // Synchronize CMMS Work Orders & PM Schedules with Fastify backend
   useEffect(() => {
     async function syncCMMSBackend() {
       try {
-        const [remoteWOs, remotePMs, remoteSpares, remoteAssets, remoteBreakdowns] = await Promise.allSettled([
+        const [remoteWOs, remotePMs, remoteSpares, remoteAssets, remoteBreakdowns, remoteReliability, remoteCalibrations, remoteSolutions, remoteNotifs, remoteProf] = await Promise.allSettled([
           maintenanceService.getWorkOrders(),
           maintenanceService.getPMSchedules(),
           maintenanceService.getSpareParts(),
           masterDataService.getAssets(),
           maintenanceService.getBreakdowns(),
+          maintenanceService.getReliabilityMetrics(),
+          maintenanceService.getCalibrations(),
+          maintenanceService.getTroubleshooting(),
+          maintenanceService.getNotifications(),
+          maintenanceService.getProfile(),
         ]);
 
         if (remoteWOs.status === "fulfilled") {
@@ -296,8 +474,11 @@ export function CMMSProvider({ children }) {
             setPmSchedules(list);
           }
         }
-        if (remoteSpares.status === "fulfilled" && Array.isArray(remoteSpares.value) && remoteSpares.value.length > 0) {
-          setSpareParts(remoteSpares.value);
+        if (remoteSpares.status === "fulfilled") {
+          const list = Array.isArray(remoteSpares.value) ? remoteSpares.value : (remoteSpares.value?.data || []);
+          if (Array.isArray(list)) {
+            setSpareParts(list);
+          }
         }
         if (remoteAssets.status === "fulfilled") {
           const list = remoteAssets.value?.data || remoteAssets.value || [];
@@ -309,6 +490,41 @@ export function CMMSProvider({ children }) {
           const list = Array.isArray(remoteBreakdowns.value) ? remoteBreakdowns.value : (remoteBreakdowns.value?.data || []);
           if (Array.isArray(list)) {
             setBreakdowns(list);
+          }
+        }
+        if (remoteReliability.status === "fulfilled") {
+          const data = remoteReliability.value?.data || remoteReliability.value;
+          if (data && data.plantOverall) {
+            setReliabilityMetrics(data);
+            if (Array.isArray(data.repeatFailures)) {
+              setRepeatFailures(data.repeatFailures);
+            }
+          }
+        }
+        if (remoteCalibrations.status === "fulfilled") {
+          const list = Array.isArray(remoteCalibrations.value) ? remoteCalibrations.value : (remoteCalibrations.value?.data || []);
+          if (Array.isArray(list)) {
+            setCalibrations(list);
+          }
+        }
+        if (remoteSolutions.status === "fulfilled") {
+          const list = Array.isArray(remoteSolutions.value) ? remoteSolutions.value : (remoteSolutions.value?.data || []);
+          if (Array.isArray(list)) {
+            setSolutions(list);
+          }
+        }
+        if (remoteNotifs.status === "fulfilled") {
+          const list = Array.isArray(remoteNotifs.value) ? remoteNotifs.value : (remoteNotifs.value?.data || []);
+          if (Array.isArray(list)) {
+            setNotifications(list);
+            localStorage.setItem("flowstate_notifications", JSON.stringify(list));
+          }
+        }
+        if (remoteProf.status === "fulfilled") {
+          const profileData = remoteProf.value?.data || remoteProf.value;
+          if (profileData && profileData.name) {
+            setUserProfile(profileData);
+            localStorage.setItem("flowstate_user_profile", JSON.stringify(profileData));
           }
         }
       } catch (err) {
@@ -527,23 +743,39 @@ export function CMMSProvider({ children }) {
   };
 
   const updateAsset = async (assetId, updatedFields) => {
-    setAssets((prev) =>
-      prev.map((asset) => {
-        if (asset.id === assetId || asset.dbId === assetId) {
-          return {
-            ...asset,
-            ...updatedFields,
-            id: asset.id,
-            lastUpdated: new Date().toISOString().replace("T", " ").substring(0, 16)
-          };
-        }
-        return asset;
-      })
-    );
     try {
-      await masterDataService.updateAsset(assetId, updatedFields);
+      const res = await masterDataService.updateAsset(assetId, updatedFields);
+      const serverAsset = res?.data || res;
+      setAssets((prev) =>
+        prev.map((asset) => {
+          if (asset.id === assetId || asset.dbId === assetId || asset.assetCode === assetId) {
+            return {
+              ...asset,
+              ...(typeof serverAsset === "object" ? serverAsset : {}),
+              ...updatedFields,
+              id: asset.id,
+              lastUpdated: new Date().toISOString().replace("T", " ").substring(0, 16)
+            };
+          }
+          return asset;
+        })
+      );
+      return serverAsset;
     } catch (err) {
       console.warn("masterDataService.updateAsset error:", err.message);
+      setAssets((prev) =>
+        prev.map((asset) => {
+          if (asset.id === assetId || asset.dbId === assetId || asset.assetCode === assetId) {
+            return {
+              ...asset,
+              ...updatedFields,
+              id: asset.id,
+              lastUpdated: new Date().toISOString().replace("T", " ").substring(0, 16)
+            };
+          }
+          return asset;
+        })
+      );
     }
   };
 
@@ -625,7 +857,9 @@ export function CMMSProvider({ children }) {
             priority: updateData.priority || wo.priority,
             status: updateData.status || wo.status,
             assignedTechnician: techName || wo.assignedTechnician,
-            dueDate: updateData.dueDate || wo.dueDate
+            dueDate: updateData.dueDate || wo.dueDate,
+            actualHours: updateData.actualHours !== undefined ? Number(updateData.actualHours) : wo.actualHours,
+            estimatedHours: updateData.estimatedHours !== undefined ? Number(updateData.estimatedHours) : wo.estimatedHours
           };
         }
         return wo;
@@ -641,7 +875,9 @@ export function CMMSProvider({ children }) {
         dueDate: updateData.dueDate,
         technician: techName,
         assignedTechnician: techName,
-        assignedTo: updateData.assignedTo || techName
+        assignedTo: updateData.assignedTo || techName,
+        actualHours: updateData.actualHours !== undefined ? Number(updateData.actualHours) : undefined,
+        estimatedHours: updateData.estimatedHours !== undefined ? Number(updateData.estimatedHours) : undefined
       });
       await refreshWorkOrders();
     } catch (err) {
@@ -849,7 +1085,7 @@ export function CMMSProvider({ children }) {
     );
   };
 
-  const addCalibrationRecord = (recordData) => {
+  const addCalibrationRecord = async (recordData) => {
     const id = `CAL-${Math.floor(1000 + Math.random() * 9000)}`;
     const newRecord = {
       id,
@@ -860,8 +1096,22 @@ export function CMMSProvider({ children }) {
       status: "Valid",
       certificate: `CERT-${Math.floor(10000 + Math.random() * 90000)}`,
       technician: recordData.technician || userProfile?.name || "Metrology Tech",
-      result: recordData.result || "PASS - Within Tolerance"
+      result: recordData.result || "PASS - Within Tolerance",
+      isUserCreated: true
     };
+    try {
+      const res = await maintenanceService.createCalibration(newRecord);
+      const saved = (res && res.id) ? res : (res?.data?.data || res?.data);
+      if (saved && saved.id) {
+        setCalibrations((prev) => [saved, ...prev.filter(c => c.id !== saved.id)]);
+        if (refreshCalibrations) {
+          await refreshCalibrations();
+        }
+        return saved;
+      }
+    } catch (e) {
+      console.warn("Could not save calibration to backend DB:", e.message);
+    }
     setCalibrations((prev) => [newRecord, ...prev]);
     return newRecord;
   };
@@ -924,11 +1174,12 @@ export function CMMSProvider({ children }) {
   const reportBreakdown = async (breakdownData) => {
     const tempId = `BD-2026-${Math.floor(100 + Math.random() * 900)}`;
     const newBD = {
+      durationMinutes: 0,
       ...breakdownData,
       id: tempId,
       startTime: new Date().toISOString().replace("T", " ").substring(0, 16),
       status: "Active Repair",
-      durationMinutes: 0
+      durationMinutes: breakdownData.durationMinutes !== undefined ? Number(breakdownData.durationMinutes) : 0
     };
     setBreakdowns((prev) => [newBD, ...prev]);
 
@@ -942,6 +1193,7 @@ export function CMMSProvider({ children }) {
       if (serverBD && (serverBD.id || serverBD.dbId)) {
         setBreakdowns((prev) => prev.map((b) => (b.id === tempId ? { ...b, ...serverBD } : b)));
         refreshWorkOrders();
+        if (refreshNotifications) refreshNotifications();
         return serverBD;
       }
     } catch (err) {
@@ -967,7 +1219,7 @@ export function CMMSProvider({ children }) {
             ...bd,
             status: "Resolved",
             endTime: endTimeStr,
-            durationMinutes: repairDetails?.durationMinutes || durationMinutes,
+            durationMinutes: repairDetails?.durationMinutes !== undefined ? Number(repairDetails.durationMinutes) : durationMinutes,
             ...repairDetails
           };
         }
@@ -978,6 +1230,8 @@ export function CMMSProvider({ children }) {
     try {
       const targetId = target?.dbId || target?.downtimeLogId || target?.workOrderId || breakdownId;
       await maintenanceService.resolveBreakdown(targetId, { ...repairDetails, breakdownId });
+      refreshWorkOrders();
+      if (refreshNotifications) refreshNotifications();
     } catch (err) {
       console.warn("maintenanceService.resolveBreakdown:", err.message);
     }
@@ -985,12 +1239,20 @@ export function CMMSProvider({ children }) {
 
   const updateBreakdown = async (breakdownId, updatedFields) => {
     const target = breakdowns.find(b => b.id === breakdownId || b.dbId === breakdownId || b.workOrderId === breakdownId || b.downtimeLogId === breakdownId);
+    const normalizedFields = {
+      ...updatedFields,
+      ...(updatedFields.durationMinutes !== undefined && updatedFields.durationMinutes !== null && updatedFields.durationMinutes !== ""
+        ? { durationMinutes: Number(updatedFields.durationMinutes) }
+        : {})
+    };
     setBreakdowns((prev) =>
-      prev.map((bd) => (bd.id === breakdownId || bd.dbId === breakdownId ? { ...bd, ...updatedFields } : bd))
+      prev.map((bd) => (bd.id === breakdownId || bd.dbId === breakdownId ? { ...bd, ...normalizedFields } : bd))
     );
     try {
       const targetId = target?.dbId || target?.downtimeLogId || target?.workOrderId || breakdownId;
-      await maintenanceService.updateBreakdown(targetId, { ...updatedFields, breakdownId });
+      await maintenanceService.updateBreakdown(targetId, { ...normalizedFields, breakdownId });
+      refreshWorkOrders();
+      if (refreshNotifications) refreshNotifications();
     } catch (err) {
       console.warn("maintenanceService.updateBreakdown:", err.message);
     }
@@ -1021,6 +1283,7 @@ export function CMMSProvider({ children }) {
     try {
       const targetId = target?.dbId || target?.downtimeLogId || target?.workOrderId || breakdownId;
       await maintenanceService.updateBreakdown(targetId, { status: newStatus, notes, breakdownId });
+      if (refreshNotifications) refreshNotifications();
     } catch (err) {
       console.warn("maintenanceService.updateBreakdownStatus:", err.message);
     }
@@ -1038,33 +1301,101 @@ export function CMMSProvider({ children }) {
   };
 
   // Spare Parts Actions
-  const addSparePart = (newPart) => {
+  const addSparePart = async (newPart) => {
+    const stock = Number(newPart.stock ?? newPart.currentStock ?? 0);
+    const minStock = Number(newPart.minStock ?? newPart.minStockLevel ?? 5);
     const partWithMeta = {
       ...newPart,
-      status: newPart.stock <= newPart.minStock ? "Low Stock" : "In Stock"
+      partNo: newPart.partNo || newPart.partNumber,
+      stock,
+      minStock,
+      status: stock <= minStock ? "Low Stock" : "In Stock"
     };
+
+    try {
+      const res = await maintenanceService.createSparePart(partWithMeta);
+      const saved = (res && res.id) ? res : (res?.data?.data || res?.data);
+      if (saved && (saved.id || saved.partNo)) {
+        setSpareParts((prev) => [saved, ...prev.filter(p => p.id !== saved.id && p.partNo !== saved.partNo)]);
+        if (refreshSpareParts) {
+          await refreshSpareParts();
+        }
+        return saved;
+      }
+    } catch (e) {
+      console.warn("Could not save spare part to backend DB:", e.message);
+    }
+
     setSpareParts((prev) => [partWithMeta, ...prev]);
     return partWithMeta;
   };
 
-  const issueSparePart = (partNo, qty = 1, workOrderId = "") => {
-    let partName = partNo;
+  const updateSparePart = async (partId, updateData) => {
     setSpareParts((prev) =>
       prev.map((part) => {
-        if (part.partNo === partNo) {
-          partName = part.name;
-          const updatedStock = Math.max(0, part.stock - qty);
-          const status = updatedStock <= part.minStock ? "Low Stock" : "In Stock";
-          return { ...part, stock: updatedStock, status };
+        if (part.id === partId || part.partNo === partId || part.partNumber === partId) {
+          const updated = { ...part, ...updateData };
+          const stock = Number(updated.stock ?? updated.currentStock ?? 0);
+          const minStock = Number(updated.minStock ?? updated.minStockLevel ?? 5);
+          return {
+            ...updated,
+            stock,
+            minStock,
+            status: stock <= minStock ? "Low Stock" : "In Stock"
+          };
         }
         return part;
       })
     );
-    
+
+    try {
+      await maintenanceService.updateSparePart(partId, updateData);
+      if (refreshSpareParts) {
+        await refreshSpareParts();
+      }
+    } catch (e) {
+      console.warn("Could not update spare part in backend DB:", e.message);
+    }
+  };
+
+  const deleteSparePart = async (partId) => {
+    setSpareParts((prev) => prev.filter(p => p.id !== partId && p.partNo !== partId && p.partNumber !== partId));
+
+    try {
+      await maintenanceService.deleteSparePart(partId);
+      if (refreshSpareParts) {
+        await refreshSpareParts();
+      }
+    } catch (e) {
+      console.warn("Could not delete spare part from backend DB:", e.message);
+    }
+  };
+
+  const issueSparePart = async (partNo, qty = 1, workOrderId = "", assetId = "") => {
+    let partName = partNo;
+    setSpareParts((prev) =>
+      prev.map((part) => {
+        if (part.partNo === partNo || part.id === partNo) {
+          partName = part.name;
+          const updatedStock = Math.max(0, part.stock - qty);
+          const status = updatedStock <= part.minStock ? "Low Stock" : "In Stock";
+          const currentLinked = Array.isArray(part.linkedAssets)
+            ? part.linkedAssets
+            : (part.linkedAssets ? String(part.linkedAssets).split(',').map(s => s.trim()) : []);
+          const newLinked = assetId && !currentLinked.includes(assetId)
+            ? [...currentLinked, assetId]
+            : currentLinked;
+
+          return { ...part, stock: updatedStock, status, linkedAssets: newLinked };
+        }
+        return part;
+      })
+    );
+
     if (workOrderId) {
       setWorkOrders((prev) => 
         prev.map((wo) => {
-          if (wo.id === workOrderId) {
+          if (wo.id === workOrderId || wo.woNumber === workOrderId) {
             const newPart = { partNo, name: partName, qty, status: "Issued" };
             return {
               ...wo,
@@ -1075,12 +1406,21 @@ export function CMMSProvider({ children }) {
         })
       );
     }
+
+    try {
+      await maintenanceService.issueSparePart(workOrderId, { partNo, qty, assetId });
+      if (refreshSpareParts) {
+        await refreshSpareParts();
+      }
+    } catch (e) {
+      console.warn("Could not record spare part issuance in backend DB:", e.message);
+    }
   };
 
-  const returnSparePart = (partNo, qty = 1) => {
+  const returnSparePart = async (partNo, qty = 1) => {
     setSpareParts((prev) =>
       prev.map((part) => {
-        if (part.partNo === partNo) {
+        if (part.partNo === partNo || part.id === partNo) {
           const updatedStock = part.stock + qty;
           const status = updatedStock <= part.minStock ? "Low Stock" : "In Stock";
           return { ...part, stock: updatedStock, status };
@@ -1088,18 +1428,21 @@ export function CMMSProvider({ children }) {
         return part;
       })
     );
+
+    try {
+      await maintenanceService.issueSparePart("", { partNo, qty: -qty, action: "RETURN" });
+      if (refreshSpareParts) {
+        await refreshSpareParts();
+      }
+    } catch (e) {
+      console.warn("Could not record spare part return in backend DB:", e.message);
+    }
   };
 
-  const restockSparePart = (partNo, qty) => {
-    setSpareParts((prev) =>
-      prev.map((part) => {
-        if (part.partNo === partNo) {
-          const updatedStock = part.stock + qty;
-          return { ...part, stock: updatedStock, status: updatedStock <= part.minStock ? "Low Stock" : "In Stock" };
-        }
-        return part;
-      })
-    );
+  const restockSparePart = async (partNo, qty) => {
+    const target = spareParts.find(p => p.partNo === partNo || p.id === partNo);
+    const newStock = target ? (target.stock + qty) : qty;
+    await updateSparePart(partNo, { stock: newStock });
   };
 
   // Parts Requests Actions
@@ -1137,7 +1480,8 @@ export function CMMSProvider({ children }) {
       ...newCal,
       id,
       status: "Valid",
-      statusColor: "emerald"
+      statusColor: "emerald",
+      isUserCreated: true
     };
     setCalibrations((prev) => [calWithMeta, ...prev]);
     return calWithMeta;
@@ -1183,17 +1527,26 @@ export function CMMSProvider({ children }) {
   };
 
   // Troubleshooting / Solutions Actions
-  const addVerifiedSolution = (solutionData) => {
-    const id = `SOL-2026-${Math.floor(100 + Math.random() * 900)}`;
+  const addVerifiedSolution = async (solutionData) => {
+    try {
+      const res = await maintenanceService.createTroubleshootingSolution(solutionData);
+      const serverSol = res?.data || res;
+      if (serverSol && serverSol.id) {
+        setSolutions((prev) => [serverSol, ...prev.filter((s) => s.id !== serverSol.id)]);
+        return serverSol;
+      }
+    } catch (err) {
+      console.warn("maintenanceService.createTroubleshootingSolution error:", err.message);
+    }
+    const tempId = `SOL-2026-${Math.floor(100 + Math.random() * 900)}`;
     const newSol = {
       ...solutionData,
-      id,
+      id: tempId,
       successfulUsesCount: 1,
       verificationDate: new Date().toISOString().substring(0, 10),
       verifiedBy: userProfile?.name || "Senior Reliability Specialist"
     };
     setSolutions((prev) => [newSol, ...prev]);
-    maintenanceService.createTroubleshootingSolution(newSol).catch(() => {});
     return newSol;
   };
 
@@ -1221,18 +1574,34 @@ export function CMMSProvider({ children }) {
   // Notifications Actions
   const unreadNotifCount = notifications.filter((n) => !n.read).length;
 
-  const markNotificationAsRead = (id) => {
+  const markNotificationAsRead = async (id) => {
     setNotifications((prev) =>
       prev.map((n) => (n.id === id ? { ...n, read: true } : n))
     );
+    try {
+      await maintenanceService.markNotificationAsRead(id);
+    } catch (err) {
+      console.warn("markNotificationAsRead API error:", err.message || err);
+    }
   };
 
-  const markAllNotificationsAsRead = () => {
+  const markAllNotificationsAsRead = async () => {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    try {
+      await maintenanceService.markAllNotificationsAsRead();
+    } catch (err) {
+      console.warn("markAllNotificationsAsRead API error:", err.message || err);
+    }
   };
 
-  const clearAllNotifications = () => {
+  const clearAllNotifications = async () => {
     setNotifications([]);
+    localStorage.removeItem("flowstate_notifications");
+    try {
+      await maintenanceService.clearAllNotifications();
+    } catch (err) {
+      console.warn("clearAllNotifications API error:", err.message || err);
+    }
   };
 
   const addNotification = (notif) => {
@@ -1249,8 +1618,13 @@ export function CMMSProvider({ children }) {
   };
 
   // Profile Actions
-  const updateUserProfile = (updatedProfile) => {
+  const updateUserProfile = async (updatedProfile) => {
     setUserProfile((prev) => ({ ...prev, ...updatedProfile }));
+    try {
+      await maintenanceService.updateProfile(updatedProfile);
+    } catch (e) {
+      console.warn("updateProfile API notice:", e.message);
+    }
   };
 
   return (
@@ -1306,6 +1680,9 @@ export function CMMSProvider({ children }) {
         spareParts,
         setSpareParts,
         addSparePart,
+        updateSparePart,
+        deleteSparePart,
+        refreshSpareParts,
         issueSparePart,
         returnSparePart,
         restockSparePart,
@@ -1320,6 +1697,7 @@ export function CMMSProvider({ children }) {
         addCalibrationSchedule,
         recordCalibrationResult,
         addCalibrationRecord,
+        refreshCalibrations,
 
         // Failure Codes
         failureCodes,
@@ -1327,12 +1705,14 @@ export function CMMSProvider({ children }) {
 
         // Troubleshooting
         solutions,
+        refreshSolutions,
         addVerifiedSolution,
         rateSolution,
 
         // Reliability
         repeatFailures,
         reliabilityMetrics,
+        refreshReliability,
 
         // Machine / IoT
         iotTelemetry,
@@ -1350,6 +1730,7 @@ export function CMMSProvider({ children }) {
         // Notifications
         notifications,
         unreadNotifCount,
+        refreshNotifications,
         markNotificationAsRead,
         markAllNotificationsAsRead,
         clearAllNotifications,
@@ -1357,7 +1738,8 @@ export function CMMSProvider({ children }) {
 
         // Profile
         userProfile,
-        updateUserProfile
+        updateUserProfile,
+        refreshProfile
       }}
     >
       {children}
