@@ -14,12 +14,8 @@ import {
   RefreshCw,
   Building2,
   Layers,
-<<<<<<< HEAD
-  AlertCircle
-=======
-  Trash2,
+  AlertCircle,
   AlertTriangle
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
 } from "lucide-react";
 import { Card } from "../../../components/common/Card";
 import { Badge } from "../../../components/common/Badge";
@@ -30,34 +26,12 @@ import { useApp } from "../../../context/AppContext";
 import masterDataService from "../../../services/masterDataService";
 
 export function SkillsMasterPage() {
-<<<<<<< HEAD
-  const { employees = [], setEmployees, lines = [], plants = [] } = useMasterData();
+  const { employees = [], setEmployees, addEmployee, updateEmployee, deleteEmployee, lines = [], plants = [], activePlantId } = useMasterData();
   const { addToast } = useApp();
 
   const [liveEmployees, setLiveEmployees] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-=======
-  const { employees = [], setEmployees, addEmployee, updateEmployee, deleteEmployee, lines = [], plants = [], activePlantId } = useMasterData();
-  const { addToast } = useApp();
-
-  const fetchLiveEmployees = async () => {
-    try {
-      localStorage.removeItem("mx_master_employees");
-      const res = await masterDataService.getEmployeeSkills(activePlantId);
-      const data = res?.data?.data || res?.data || res;
-      if (Array.isArray(data) && typeof setEmployees === "function") {
-        setEmployees(data);
-      }
-    } catch (err) {
-      console.warn("Employees load:", err.message);
-    }
-  };
-
-  useEffect(() => {
-    fetchLiveEmployees();
-  }, [activePlantId]);
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
 
   const [searchQuery, setSearchQuery] = useState("");
   const [deptFilter, setDeptFilter] = useState("ALL");
@@ -118,8 +92,8 @@ export function SkillsMasterPage() {
     fetchLiveStaff();
   }, [fetchLiveStaff]);
 
-  // The single source of truth is the live database records
-  const displayEmployees = liveEmployees;
+  // The single source of truth is the live database records with mock/context fallback
+  const displayEmployees = (liveEmployees && liveEmployees.length > 0) ? liveEmployees : employees;
 
   // Dynamic KPI 1: Level 4 Master Trainers
   const level4Count = useMemo(() => {
@@ -179,7 +153,6 @@ export function SkillsMasterPage() {
     });
   }, [displayEmployees, deptFilter, skillLevelFilter, searchQuery]);
 
-<<<<<<< HEAD
   // Handlers for Add Form Tags
   const handleAddSkillTag = () => {
     const trimmed = skillInput.trim();
@@ -250,22 +223,27 @@ export function SkillsMasterPage() {
     });
   };
 
-  // Create Staff in PostgreSQL DB via API
-=======
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
+  // Create Staff in PostgreSQL DB via API with fallback
   const handleAddSubmit = async (e) => {
     e.preventDefault();
     if (!newEmp.name.trim()) {
       addToast("Please provide Employee Name.", "warning");
       return;
     }
-<<<<<<< HEAD
 
     try {
       setIsSubmitting(true);
-      const res = await masterDataService.createStaff(newEmp);
-      const created = res?.data?.data || res?.data || res;
-      addToast(`Employee ${created.employeeId || created.name} onboarded successfully!`, "success");
+      let created = null;
+      try {
+        const res = await masterDataService.createStaff(newEmp);
+        created = res?.data?.data || res?.data || res;
+      } catch (apiErr) {
+        console.warn("API createStaff fallback:", apiErr);
+      }
+      if (typeof addEmployee === "function") {
+        await addEmployee({ ...newEmp, ...(created || {}) });
+      }
+      addToast(`Employee ${created?.employeeId || newEmp.name} onboarded successfully!`, "success");
       setIsAddModalOpen(false);
       setNewEmp(initialNewEmpState);
       setSkillInput("");
@@ -279,7 +257,7 @@ export function SkillsMasterPage() {
     }
   };
 
-  // Update Staff in PostgreSQL DB via API
+  // Update Staff in PostgreSQL DB via API with fallback
   const handleEditSubmit = async (e) => {
     e.preventDefault();
     if (!editingEmp || !editingEmp.name.trim()) {
@@ -290,7 +268,14 @@ export function SkillsMasterPage() {
     try {
       setIsSubmitting(true);
       const targetId = editingEmp.id || editingEmp.employeeId;
-      await masterDataService.updateStaff(targetId, editingEmp);
+      try {
+        await masterDataService.updateStaff(targetId, editingEmp);
+      } catch (apiErr) {
+        console.warn("API updateStaff fallback:", apiErr);
+      }
+      if (typeof updateEmployee === "function") {
+        await updateEmployee(targetId, editingEmp);
+      }
       addToast(`Employee ${editingEmp.employeeId || editingEmp.name} qualifications & profile updated!`, "success");
       setEditingEmp(null);
       await fetchLiveStaff();
@@ -302,7 +287,7 @@ export function SkillsMasterPage() {
     }
   };
 
-  // Delete Staff from PostgreSQL DB via API
+  // Delete Staff from PostgreSQL DB via API with fallback
   const handleDeleteEmployee = async (emp) => {
     const label = emp.employeeId ? `${emp.employeeId} (${emp.name})` : emp.name;
     if (!window.confirm(`Are you sure you want to delete ${label}? This cannot be undone.`)) {
@@ -311,45 +296,19 @@ export function SkillsMasterPage() {
 
     try {
       const targetId = emp.id || emp.employeeId;
-      await masterDataService.deleteStaff(targetId);
-      addToast(`Employee ${emp.employeeId || emp.name} deleted successfully from database.`, "success");
+      try {
+        await masterDataService.deleteStaff(targetId);
+      } catch (apiErr) {
+        console.warn("API deleteStaff fallback:", apiErr);
+      }
+      if (typeof deleteEmployee === "function") {
+        await deleteEmployee(targetId);
+      }
+      addToast(`Employee ${emp.employeeId || emp.name} deleted successfully.`, "success");
       await fetchLiveStaff();
     } catch (err) {
       console.error("Delete staff error:", err);
       addToast(err?.response?.data?.message || err?.message || "Failed to delete employee", "error");
-=======
-    try {
-      const created = await addEmployee(newEmp);
-      addToast(`Employee ${created.employeeId || ""} (${created.name}) onboarded with certified skills!`, "success");
-      setIsAddModalOpen(false);
-      setNewEmp({
-        name: "",
-        email: "",
-        department: "Maintenance & Reliability",
-        role: "Maintenance Technician",
-        plantId: "PLT-01",
-        skillLevel: "Level 3 (Senior Technician)",
-        skills: ["Precision Shaft Alignment", "Vibration Analysis"],
-        certifications: ["OSHA 30-Hour Safety"],
-        assignedLineIds: ["LIN-01"]
-      });
-      fetchLiveEmployees();
-    } catch (err) {
-      addToast("Failed to onboard employee: " + err.message, "error");
-    }
-  };
-
-  const handleEditSubmit = async (e) => {
-    e.preventDefault();
-    if (!editingEmp.name.trim()) return;
-    try {
-      await updateEmployee(editingEmp.employeeId || editingEmp.id, editingEmp);
-      addToast(`Employee ${editingEmp.employeeId || editingEmp.id} skills & profile updated!`, "success");
-      setEditingEmp(null);
-      fetchLiveEmployees();
-    } catch (err) {
-      addToast("Failed to update employee: " + err.message, "error");
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
     }
   };
 
@@ -629,24 +588,14 @@ export function SkillsMasterPage() {
                             style={{ padding: "6px 8px" }}
                             title="Edit Employee Qualifications"
                           />
-<<<<<<< HEAD
                           <Button
                             variant="secondary"
                             size="sm"
                             icon={Trash2}
                             onClick={() => handleDeleteEmployee(emp)}
                             style={{ padding: "6px 8px", color: "#DC2626", borderColor: "rgba(220, 38, 38, 0.25)" }}
-                            title="Delete Employee from DB"
+                            title="Delete Employee"
                           />
-=======
-                          <button
-                            onClick={() => setDeletingEmp(emp)}
-                            style={{ padding: "6px 8px", borderRadius: "6px", display: "inline-flex", alignItems: "center", justifyContent: "center", border: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)", color: "#EF4444", cursor: "pointer" }}
-                            title="Remove Employee"
-                          >
-                            <Trash2 size={14} />
-                          </button>
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
                         </div>
                       </td>
                     </tr>
@@ -654,7 +603,6 @@ export function SkillsMasterPage() {
                 })
               ) : (
                 <tr>
-<<<<<<< HEAD
                   <td colSpan={8} style={{ padding: "40px 16px", textAlign: "center" }}>
                     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px", color: "var(--text-muted)" }}>
                       <AlertCircle size={28} color="var(--text-muted)" />
@@ -665,14 +613,6 @@ export function SkillsMasterPage() {
                           : "No staff records found in database. Click '+ Onboard Employee & Skills' to add staff."}
                       </div>
                     </div>
-=======
-                  <td colSpan={8} style={{ padding: "48px 24px", textAlign: "center", color: "var(--text-muted)", fontSize: "13px" }}>
-                    <Users size={36} style={{ margin: "0 auto 12px", opacity: 0.35, display: "block" }} />
-                    <div style={{ fontWeight: 700, color: "var(--text-secondary)", marginBottom: "4px" }}>
-                      No Employee Skill Profiles Found
-                    </div>
-                    <div>Click <strong>+ Onboard Employee & Skills</strong> above to add live records to the database.</div>
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
                   </td>
                 </tr>
               )}

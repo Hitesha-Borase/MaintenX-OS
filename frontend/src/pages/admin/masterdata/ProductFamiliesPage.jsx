@@ -27,18 +27,11 @@ export function ProductFamiliesPage() {
   const { productFamilies = [], setProductFamilies, addProductFamily, updateProductFamily, deleteProductFamily, toggleProductFamilyStatus, skus = [], plants = [], activePlantId } = useMasterData();
   const { addToast } = useApp();
 
-<<<<<<< HEAD
-  useEffect(() => {
-    masterDataService.getProductFamilies().then((res) => {
-      const data = res?.data !== undefined ? res.data : res;
-=======
   const fetchFamilies = React.useCallback(async () => {
     try {
-      localStorage.removeItem("mx_master_families");
       const res = await masterDataService.getProductFamilies();
-      const data = res?.data || res;
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
-      if (Array.isArray(data) && typeof setProductFamilies === "function") {
+      const data = res?.data !== undefined ? res.data : res;
+      if (Array.isArray(data) && data.length > 0 && typeof setProductFamilies === "function") {
         setProductFamilies(data);
       }
     } catch (err) {

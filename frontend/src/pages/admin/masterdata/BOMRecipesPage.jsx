@@ -47,19 +47,7 @@ export function BOMRecipesPage() {
 
   // Trigger live GET /api/v1/master-data/boms on page mount
   React.useEffect(() => {
-<<<<<<< HEAD
-    masterDataService.getBoms().then((res) => {
-      let data = res?.data !== undefined ? res.data : res;
-      if (data && data.status === "success" && data.data) {
-        data = data.data;
-      }
-      if (Array.isArray(data) && typeof setBoms === "function") {
-        setBoms(data);
-      }
-    }).catch((err) => console.warn("Live BOM fetch:", err.message));
-=======
     fetchLiveBoms();
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
   }, []);
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -74,11 +62,7 @@ export function BOMRecipesPage() {
   // Form State for new BOM
   const [newBOM, setNewBOM] = useState({
     bomNumber: "",
-<<<<<<< HEAD
-    finishedSkuId: "",
-=======
-    finishedSkuId: skus[0]?.skuId || skus[0]?.id || "SKU-001",
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
+    finishedSkuId: skus[0]?.skuId || skus[0]?.id || "",
     batchSize: "10,000 Liters",
     yieldTarget: "99.2%",
     components: []
@@ -134,29 +118,17 @@ export function BOMRecipesPage() {
     }));
   };
 
-<<<<<<< HEAD
-  const handleCreateSubmit = (status = "Draft") => {
-    const selectedSku = skus.find((s) => s.skuId === newBOM.finishedSkuId) || skus[0];
-=======
   const handleCreateSubmit = async (status = "Draft") => {
-    const selectedSku = skus.find((s) => (s.skuId || s.id) === newBOM.finishedSkuId);
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
+    const selectedSku = skus.find((s) => (s.skuId || s.id) === newBOM.finishedSkuId) || skus[0];
     if (!newBOM.components.length) {
       addToast("Please add at least one ingredient component to the recipe BOM.", "warning");
       return;
     }
 
-<<<<<<< HEAD
-    const created = addBOM({
-      bomNumber: newBOM.bomNumber,
-      finishedSkuId: selectedSku?.skuId || newBOM.finishedSkuId,
-      finishedSkuName: selectedSku?.name || "",
-=======
     const payload = {
       bomNumber: newBOM.bomNumber || `BOM-${Date.now().toString().slice(-4)}`,
-      finishedSkuId: newBOM.finishedSkuId,
+      finishedSkuId: selectedSku?.skuId || selectedSku?.id || newBOM.finishedSkuId,
       finishedSkuName: selectedSku?.name || "Finished Beverage",
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
       batchSize: newBOM.batchSize,
       yieldTarget: newBOM.yieldTarget,
       components: newBOM.components,

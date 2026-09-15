@@ -383,11 +383,6 @@ export function PlanningProvider({ children }) {
           }
         }
         if (remoteForecasts.status === "fulfilled") {
-<<<<<<< HEAD
-          const items = remoteForecasts.value?.data || remoteForecasts.value;
-          if (Array.isArray(items)) {
-            setForecasts(items);
-=======
           const rawFc = remoteForecasts.value?.data || remoteForecasts.value;
           if (Array.isArray(rawFc)) {
             if (rawFc.length > 0) {
@@ -417,9 +412,8 @@ export function PlanningProvider({ children }) {
               });
               setForecasts(mappedFc);
             } else {
-              setForecasts([]);
+              setForecasts((prev) => (prev.length > 0 ? prev : INITIAL_FORECASTS));
             }
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
           }
         }
         if (remoteSchedules.status === "fulfilled") {

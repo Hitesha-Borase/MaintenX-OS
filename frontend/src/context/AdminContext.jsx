@@ -42,14 +42,13 @@ const defaultAdminContext = {
 const AdminContext = createContext(defaultAdminContext);
 
 export function AdminProvider({ children }) {
-<<<<<<< HEAD
   const hasAuthToken = Boolean(typeof window !== "undefined" && (localStorage.getItem("maintenx_auth_token") || localStorage.getItem("flowstate_token")));
   const hasTenant = Boolean(typeof window !== "undefined" && (localStorage.getItem("maintenx_tenant_name") || localStorage.getItem("maintenx_tenant_id")));
 
-  // 1. Users
+  // 1. Users (Directly synchronized with PostgreSQL users table with offline/mock fallback)
   const [users, setUsers] = useState(() => {
     if (hasAuthToken || hasTenant) return [];
-    const saved = localStorage.getItem("admin_users");
+    const saved = typeof window !== "undefined" ? localStorage.getItem("admin_users") : null;
     return saved
       ? JSON.parse(saved)
       : [
@@ -69,13 +68,6 @@ export function AdminProvider({ children }) {
       { id: "INV-102", email: "james.holden@flowstate.io", role: "Controls Engineer", department: "Maintenance", invitedBy: "Alexander Vance", sentDate: "2026-08-31", status: "Pending" },
     ];
   });
-=======
-  // 1. Users (Directly synchronized with PostgreSQL users table)
-  const [users, setUsers] = useState([]);
-
-  // 2. User Invitations (loaded from PostgreSQL via API)
-  const [invitations, setInvitations] = useState([]);
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
 
   // 3. User Activity Logs
   const [activityLogs, setActivityLogs] = useState(() => {

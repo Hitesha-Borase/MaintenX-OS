@@ -7,36 +7,6 @@ const MasterDataContext = createContext();
 // INITIAL MOCK MASTER DATASETS (ENTERPRISE-GRADE STABLE ID ARCHITECTURE)
 // ============================================================================
 
-<<<<<<< HEAD
-export const INITIAL_COMPANIES = [];
-export const INITIAL_PLANTS = [];
-export const INITIAL_DEPARTMENTS = [];
-export const INITIAL_WORK_CENTERS = [];
-export const INITIAL_PRODUCT_FAMILIES = [];
-export const INITIAL_UOMS = [];
-export const INITIAL_SKUS = [];
-export const INITIAL_PACK_CONFIGS = [];
-export const INITIAL_SHELF_LIFE = [];
-export const INITIAL_CUSTOMERS = [];
-export const INITIAL_CUSTOMER_SKU_MAPPINGS = [];
-export const INITIAL_BOMS = [];
-export const INITIAL_OPERATIONS = [];
-export const INITIAL_ROUTINGS = [];
-export const INITIAL_LINES = [];
-export const INITIAL_LINE_TARGETS = [];
-export const INITIAL_CHANGEOVER_MATRIX = [];
-export const INITIAL_SANITATION_CLASSES = [];
-export const INITIAL_ALLERGEN_RULES = [];
-export const INITIAL_LABOUR_STANDARDS = [];
-export const INITIAL_ASSETS = [];
-export const INITIAL_EMPLOYEES = [];
-export const INITIAL_TRAINING_RECORDS = [];
-export const INITIAL_QUALITY_SPECS = [];
-export const INITIAL_STORAGE_RESOURCES = [];
-export const INITIAL_USERS = [];
-export const INITIAL_USER_INVITATIONS = [];
-export const INITIAL_AUDIT_LOGS = [];
-=======
 export const INITIAL_COMPANIES = [
   { id: "CMP-01", name: "ABC Manufacturing Global", code: "ABCMFG", currency: "USD", taxId: "US-9842109-K", headquarters: "Austin, TX", status: "Active" }
 ];
@@ -335,7 +305,6 @@ export const INITIAL_AUDIT_LOGS = [
     notes: "Line speed test post-de-bottlenecking Kaizen project"
   }
 ];
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
 
 export const INITIAL_ROLE_PERMISSIONS = {
   admin: {
@@ -488,14 +457,13 @@ export function MasterDataProvider({ children }) {
     if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
     return INITIAL_DEPARTMENTS;
   });
-<<<<<<< HEAD
   const [workCenters, setWorkCenters] = useState(() => {
     const saved = localStorage.getItem("mx_master_workcenters");
     if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
     return INITIAL_WORK_CENTERS;
   });
 
-  // 1. Core Master Datasets with Cache Initialization
+  // 1. Core Master Datasets with Cache Initialization & Live DB Sync
   const [productFamilies, setProductFamilies] = useState(() => {
     const saved = localStorage.getItem("mx_master_families");
     if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
@@ -514,21 +482,11 @@ export function MasterDataProvider({ children }) {
     return INITIAL_SKUS;
   });
 
-  const [packConfigs, setpackConfigs] = useState(() => {
+  const [packConfigs, setPackConfigs] = useState(() => {
     const saved = localStorage.getItem("mx_master_pack_configs");
     if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
     return INITIAL_PACK_CONFIGS;
   });
-=======
-  const [workCenters, setWorkCenters] = useState([]);
-
-  // 1. Core Master Datasets with Live Database Synchronization
-  const [productFamilies, setProductFamilies] = useState([]);
-  const [uoms, setUoms] = useState([]);
-  const [skus, setSkus] = useState([]);
-
-  const [packConfigs, setPackConfigs] = useState([]);
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
 
   const [shelfLifeRecords, setShelfLifeRecords] = useState(() => {
     const saved = localStorage.getItem("mx_master_shelflife");
@@ -544,15 +502,11 @@ export function MasterDataProvider({ children }) {
     return INITIAL_CUSTOMER_SKU_MAPPINGS;
   });
 
-<<<<<<< HEAD
   const [boms, setBoms] = useState(() => {
     const saved = localStorage.getItem("mx_master_boms");
     if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
     return INITIAL_BOMS;
   });
-=======
-  const [boms, setBoms] = useState([]);
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
 
   const [operations, setOperations] = useState(() => {
     const saved = localStorage.getItem("mx_master_operations");
@@ -560,7 +514,6 @@ export function MasterDataProvider({ children }) {
     return INITIAL_OPERATIONS;
   });
 
-<<<<<<< HEAD
   const [routings, setRoutings] = useState(() => {
     const saved = localStorage.getItem("mx_master_routings");
     if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
@@ -633,21 +586,6 @@ export function MasterDataProvider({ children }) {
     if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
     return INITIAL_EMPLOYEES;
   });
-=======
-  const [routings, setRoutings] = useState([]);
-
-  const [lines, setLines] = useState([]);
-
-  const [lineTargets, setLineTargets] = useState([]);
-  const [changeoverMatrix, setChangeoverMatrix] = useState([]);
-  const [sanitationClasses, setSanitationClasses] = useState([]);
-  const [allergenRules, setAllergenRules] = useState([]);
-  const [labourStandards, setLabourStandards] = useState([]);
-
-  const [assets, setAssets] = useState([]);
-
-  const [employees, setEmployees] = useState([]);
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
 
   const [trainingRecords, setTrainingRecords] = useState(() => {
     const saved = localStorage.getItem("mx_master_training");
@@ -655,7 +593,6 @@ export function MasterDataProvider({ children }) {
     return INITIAL_TRAINING_RECORDS;
   });
 
-<<<<<<< HEAD
   const [qualitySpecs, setQualitySpecs] = useState(() => {
     const saved = localStorage.getItem("mx_master_quality_specs");
     if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
@@ -667,13 +604,12 @@ export function MasterDataProvider({ children }) {
     if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
     return INITIAL_STORAGE_RESOURCES;
   });
-=======
-  const [qualitySpecs, setQualitySpecs] = useState([]);
 
-  const [storageResources, setStorageResources] = useState([]);
-
-  const [ccpLimits, setCcpLimits] = useState([]);
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
+  const [ccpLimits, setCcpLimits] = useState(() => {
+    const saved = localStorage.getItem("mx_master_ccp_limits");
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
+    return [];
+  });
 
   const [users, setUsers] = useState(() => {
     const saved = localStorage.getItem("mx_admin_users");
@@ -685,12 +621,8 @@ export function MasterDataProvider({ children }) {
 
   const [auditLogs, setAuditLogs] = useState(() => {
     const saved = localStorage.getItem("mx_master_audit_logs");
-<<<<<<< HEAD
     if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
     return INITIAL_AUDIT_LOGS;
-=======
-    return saved ? JSON.parse(saved) : [];
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
   });
 
   const [rolePermissions, setRolePermissions] = useState(() => {
@@ -754,20 +686,13 @@ export function MasterDataProvider({ children }) {
           liveSanitations,
           liveAllergens,
           liveLabourStandards,
-<<<<<<< HEAD
-=======
           liveEmployees,
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
           liveSkus,
           liveBoms,
           liveAssets,
           liveSpecs,
-<<<<<<< HEAD
-          liveStaff,
-=======
           liveCCPs,
           liveStorage,
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
         ] = await Promise.allSettled([
           masterDataService.getCompanies(),
           masterDataService.getPlants(),
@@ -789,8 +714,8 @@ export function MasterDataProvider({ children }) {
           masterDataService.getBoms(),
           masterDataService.getAssets(activePlantId),
           masterDataService.getQualitySpecs(),
-<<<<<<< HEAD
-          masterDataService.getStaff(activePlantId),
+          masterDataService.getCCPLimits(),
+          masterDataService.getStorageResources(activePlantId),
         ]);
 
         const safeArr = (item) => {
@@ -799,7 +724,7 @@ export function MasterDataProvider({ children }) {
           if (v && v.status === "success" && v.data) {
             v = v.data;
           }
-          return Array.isArray(v) ? v : null;
+          return Array.isArray(v) && v.length > 0 ? v : null;
         };
 
         const compArr = safeArr(liveCompanies);
@@ -832,43 +757,6 @@ export function MasterDataProvider({ children }) {
         const packArr = safeArr(livePackConfigs);
         if (packArr) {
           setPackConfigs(packArr.map((p) => ({
-=======
-          masterDataService.getCCPLimits(),
-          masterDataService.getStorageResources(activePlantId),
-        ]);
-
-        if (liveCompanies.status === "fulfilled" && Array.isArray(liveCompanies.value?.data || liveCompanies.value) && (liveCompanies.value?.data || liveCompanies.value).length > 0) {
-          setCompanies(liveCompanies.value?.data || liveCompanies.value);
-        }
-        if (livePlants.status === "fulfilled" && Array.isArray(livePlants.value?.data || livePlants.value) && (livePlants.value?.data || livePlants.value).length > 0) {
-          setPlants(livePlants.value?.data || livePlants.value);
-        }
-        if (liveDepts.status === "fulfilled" && Array.isArray(liveDepts.value?.data || liveDepts.value) && (liveDepts.value?.data || liveDepts.value).length > 0) {
-          setDepartments(liveDepts.value?.data || liveDepts.value);
-        }
-        if (liveLines.status === "fulfilled" && Array.isArray(liveLines.value?.data || liveLines.value)) {
-          setLines(liveLines.value?.data || liveLines.value);
-        }
-        if (liveWcs.status === "fulfilled" && Array.isArray(liveWcs.value?.data || liveWcs.value)) {
-          setWorkCenters(liveWcs.value?.data || liveWcs.value);
-        }
-        if (liveOperations.status === "fulfilled" && Array.isArray(liveOperations.value?.data || liveOperations.value) && (liveOperations.value?.data || liveOperations.value).length > 0) {
-          setOperations(liveOperations.value?.data || liveOperations.value);
-        }
-        if (liveRoutings.status === "fulfilled" && Array.isArray(liveRoutings.value?.data || liveRoutings.value)) {
-          setRoutings(liveRoutings.value?.data || liveRoutings.value);
-        }
-        if (liveProductFamilies.status === "fulfilled" && Array.isArray(liveProductFamilies.value?.data || liveProductFamilies.value)) {
-          setProductFamilies(liveProductFamilies.value?.data || liveProductFamilies.value);
-        }
-        if (liveUoms.status === "fulfilled" && Array.isArray(liveUoms.value?.data || liveUoms.value)) {
-          setUoms(liveUoms.value?.data || liveUoms.value);
-        }
-        if (livePackConfigs.status === "fulfilled" && Array.isArray(livePackConfigs.value?.data || livePackConfigs.value)) {
-          const raw = livePackConfigs.value?.data || livePackConfigs.value;
-          // Normalize backend field names to frontend's expected field names
-          const normalized = raw.map((p) => ({
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
             ...p,
             packConfigId: p.packConfigId || p.configId || p.id,
             packCode: p.packCode || p.code || p.packConfigCode || p.id,
@@ -882,7 +770,6 @@ export function MasterDataProvider({ children }) {
           })));
         }
 
-<<<<<<< HEAD
         const targetsArr = safeArr(liveLineTargets);
         if (targetsArr) setLineTargets(targetsArr);
 
@@ -892,17 +779,6 @@ export function MasterDataProvider({ children }) {
         const sanArr = safeArr(liveSanitations);
         if (sanArr) {
           setSanitationClasses(sanArr.map((s) => ({
-=======
-        if (liveLineTargets.status === "fulfilled" && Array.isArray(liveLineTargets.value?.data || liveLineTargets.value)) {
-          setLineTargets(liveLineTargets.value?.data || liveLineTargets.value);
-        }
-        if (liveChangeovers.status === "fulfilled" && Array.isArray(liveChangeovers.value?.data || liveChangeovers.value)) {
-          setChangeoverMatrix(liveChangeovers.value?.data || liveChangeovers.value);
-        }
-        if (liveSanitations.status === "fulfilled" && Array.isArray(liveSanitations.value?.data || liveSanitations.value)) {
-          const raw = liveSanitations.value?.data || liveSanitations.value;
-          const normalized = raw.map((s) => ({
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
             ...s,
             id: s.id || s.sanitationId || s.classId,
             sanitationId: s.sanitationId || s.id || s.classId,
@@ -915,16 +791,10 @@ export function MasterDataProvider({ children }) {
             status: s.status || "Active",
           })));
         }
-<<<<<<< HEAD
 
         const algArr = safeArr(liveAllergens);
         if (algArr) {
           setAllergenRules(algArr.map((a) => ({
-=======
-        if (liveAllergens.status === "fulfilled" && Array.isArray(liveAllergens.value?.data || liveAllergens.value)) {
-          const raw = liveAllergens.value?.data || liveAllergens.value;
-          const normalized = raw.map((a) => ({
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
             ...a,
             id: a.id || a.allergenId || a.ruleId,
             allergenId: a.allergenId || a.id || a.ruleId,
@@ -934,12 +804,14 @@ export function MasterDataProvider({ children }) {
             cleaningProtocol: a.cleaningProtocol || a.protocol || "Class A Full CIP + Sensory Swab Verification",
             changeoverRestriction: a.changeoverRestriction || a.verificationTest || "Mandatory QA clearance sign-off",
             status: a.status || "Active",
-<<<<<<< HEAD
           })));
         }
 
         const lbrArr = safeArr(liveLabourStandards);
         if (lbrArr) setLabourStandards(lbrArr);
+
+        const empArr = safeArr(liveEmployees);
+        if (empArr) setEmployees(empArr);
 
         const skuArr = safeArr(liveSkus);
         if (skuArr) setSkus(skuArr);
@@ -953,37 +825,11 @@ export function MasterDataProvider({ children }) {
         const specArr = safeArr(liveSpecs);
         if (specArr) setQualitySpecs(specArr);
 
-        const staffArr = safeArr(liveStaff);
-        if (staffArr) setEmployees(staffArr);
-=======
-          }));
-          setAllergenRules(normalized);
-        }
-        if (liveLabourStandards.status === "fulfilled" && Array.isArray(liveLabourStandards.value?.data || liveLabourStandards.value)) {
-          setLabourStandards(liveLabourStandards.value?.data || liveLabourStandards.value);
-        }
-        if (liveEmployees.status === "fulfilled" && Array.isArray(liveEmployees.value?.data || liveEmployees.value)) {
-          setEmployees(liveEmployees.value?.data || liveEmployees.value);
-        }
-        if (liveSkus.status === "fulfilled" && Array.isArray(liveSkus.value?.data || liveSkus.value)) {
-          setSkus(liveSkus.value?.data || liveSkus.value);
-        }
-        if (liveBoms.status === "fulfilled" && Array.isArray(liveBoms.value?.data || liveBoms.value)) {
-          setBoms(liveBoms.value?.data || liveBoms.value);
-        }
-        if (liveAssets.status === "fulfilled" && Array.isArray(liveAssets.value?.data || liveAssets.value)) {
-          setAssets(liveAssets.value?.data || liveAssets.value);
-        }
-        if (liveSpecs.status === "fulfilled" && Array.isArray(liveSpecs.value?.data || liveSpecs.value)) {
-          setQualitySpecs(liveSpecs.value?.data || liveSpecs.value);
-        }
-        if (liveCCPs.status === "fulfilled" && Array.isArray(liveCCPs.value?.data || liveCCPs.value)) {
-          setCcpLimits(liveCCPs.value?.data || liveCCPs.value);
-        }
-        if (liveStorage.status === "fulfilled" && Array.isArray(liveStorage.value?.data || liveStorage.value)) {
-          setStorageResources(liveStorage.value?.data || liveStorage.value);
-        }
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
+        const ccpArr = safeArr(liveCCPs);
+        if (ccpArr) setCcpLimits(ccpArr);
+
+        const storArr = safeArr(liveStorage);
+        if (storArr) setStorageResources(storArr);
       } catch (err) {
         console.warn("MasterData backend sync fallback:", err.message);
       }
@@ -1633,11 +1479,10 @@ export function MasterDataProvider({ children }) {
   // ============================================================================
   // 9. WORK CENTERS / LINES & LINE TARGETS MUTATIONS
   // ============================================================================
-<<<<<<< HEAD
-  const addLine = (lineData) => {
+  const addLine = async (lineData) => {
     const newRecord = {
-      id: `LIN-0${lines.length + 1}`,
-      lineId: `LIN-0${lines.length + 1}`,
+      id: lineData.id || `LIN-0${lines.length + 1}`,
+      lineId: lineData.lineId || `LIN-0${lines.length + 1}`,
       lineCode: (lineData.lineCode || lineData.code || `LINE-${lines.length + 1}`).toUpperCase(),
       code: (lineData.lineCode || lineData.code || `LINE-${lines.length + 1}`).toUpperCase(),
       name: lineData.name,
@@ -1658,23 +1503,19 @@ export function MasterDataProvider({ children }) {
       currentRunningSku: lineData.currentRunningSku || null,
       healthScore: 95,
     };
-    setLines((prev) => [newRecord, ...prev]);
-    masterDataService.createLine(newRecord).catch((err) => console.warn("API createLine:", err.message));
-    logAudit({ entityId: newRecord.lineCode, entityType: "Work Centers / Lines", action: "Created", newValue: newRecord.name });
-    return newRecord;
-=======
-  const addLine = async (lineData) => {
     try {
-      const res = await masterDataService.createLine(lineData);
-      const created = res?.data || res;
-      setLines((prev) => [created, ...prev.filter((l) => l.id !== created.id && l.lineCode !== created.lineCode)]);
-      logAudit({ entityId: created.lineCode || created.code, entityType: "Work Centers / Lines", action: "Created", newValue: created.name });
-      return created;
+      const res = await masterDataService.createLine({ ...newRecord, ...lineData });
+      const created = res?.data || res || newRecord;
+      const merged = { ...newRecord, ...created };
+      setLines((prev) => [merged, ...prev.filter((l) => l.id !== merged.id && l.lineCode !== merged.lineCode)]);
+      logAudit({ entityId: merged.lineCode || merged.code, entityType: "Work Centers / Lines", action: "Created", newValue: merged.name });
+      return merged;
     } catch (err) {
-      console.warn("API createLine:", err.message);
-      throw err;
+      console.warn("API createLine fallback:", err.message);
+      setLines((prev) => [newRecord, ...prev.filter((l) => l.id !== newRecord.id && l.lineCode !== newRecord.lineCode)]);
+      logAudit({ entityId: newRecord.lineCode, entityType: "Work Centers / Lines", action: "Created", newValue: newRecord.name });
+      return newRecord;
     }
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
   };
 
   const updateLine = async (lineId, updated) => {
@@ -2123,19 +1964,17 @@ export function MasterDataProvider({ children }) {
     logAudit({ entityId: empId, entityType: "Employees & Skills", action: "Updated" });
   };
 
-<<<<<<< HEAD
-  const deleteEmployee = (empId) => {
-    setEmployees((prev) => prev.filter((e) => e.employeeId !== empId && e.id !== empId));
-    masterDataService.deleteEmployee(empId).catch((err) => console.warn("API deleteEmployee:", err.message));
-=======
   const deleteEmployee = async (empId) => {
+    setEmployees((prev) => prev.filter((e) => e.employeeId !== empId && e.id !== empId));
     try {
-      await masterDataService.deleteEmployeeSkill(empId);
+      if (masterDataService.deleteEmployeeSkill) {
+        await masterDataService.deleteEmployeeSkill(empId);
+      } else if (masterDataService.deleteEmployee) {
+        await masterDataService.deleteEmployee(empId);
+      }
     } catch (err) {
       console.warn("API deleteEmployee error:", err.message);
     }
-    setEmployees((prev) => prev.filter((e) => e.employeeId !== empId && e.id !== empId));
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
     logAudit({ entityId: empId, entityType: "Employees & Skills", action: "Deleted" });
   };
 
@@ -2161,7 +2000,6 @@ export function MasterDataProvider({ children }) {
   // 13. QUALITY SPECS & CCP LIMITS MUTATIONS
   // ============================================================================
   const addQualitySpec = async (specData) => {
-<<<<<<< HEAD
     const selectedSku = skus.find((s) => s.skuId === specData.skuId || s.id === specData.skuId);
     let createdRecord = null;
     try {
@@ -2195,10 +2033,11 @@ export function MasterDataProvider({ children }) {
       testMethod: specData.testMethod || "",
       effectiveFrom: specData.effectiveFrom || new Date().toISOString().substring(0, 10),
       effectiveTo: "2030-12-31",
-      revisionHistory: []
+      revisionHistory: [],
+      ...(createdRecord || {})
     };
-    setQualitySpecs((prev) => [newRecord, ...prev]);
-    logAudit({ entityId: newRecord.specId, entityType: "Quality Specs", action: "Created", newValue: `${newRecord.parameter} for ${newRecord.skuCode}` });
+    setQualitySpecs((prev) => [newRecord, ...prev.filter((q) => q.id !== newRecord.id && q.specId !== newRecord.specId)]);
+    logAudit({ entityId: newRecord.specId || newRecord.id, entityType: "Quality Specs", action: "Created", newValue: `${newRecord.parameter} for ${newRecord.skuCode || newRecord.skuId}` });
     return newRecord;
   };
 
@@ -2207,32 +2046,9 @@ export function MasterDataProvider({ children }) {
     try {
       await masterDataService.updateQualitySpec(specId, updated);
     } catch (err) {
-      console.warn("API updateQualitySpec:", err.message);
+      console.warn("API updateQualitySpec error:", err.message);
     }
     logAudit({ entityId: specId, entityType: "Quality Specs", action: "Updated" });
-=======
-    try {
-      const res = await masterDataService.createQualitySpec(specData);
-      const created = res?.data || res;
-      setQualitySpecs((prev) => [created, ...prev.filter((q) => q.id !== created.id && q.specId !== created.specId)]);
-      logAudit({ entityId: created.specId || created.id, entityType: "Quality Specs", action: "Created", newValue: `${created.parameter} for ${created.skuCode || created.skuId}` });
-      return created;
-    } catch (err) {
-      console.warn("API createQualitySpec error:", err.message);
-      throw err;
-    }
-  };
-
-  const updateQualitySpec = async (specId, updated) => {
-    try {
-      await masterDataService.updateQualitySpec(specId, updated);
-      setQualitySpecs((prev) => prev.map((q) => (q.specId === specId || q.id === specId ? { ...q, ...updated } : q)));
-      logAudit({ entityId: specId, entityType: "Quality Specs", action: "Updated" });
-    } catch (err) {
-      console.warn("API updateQualitySpec error:", err.message);
-      throw err;
-    }
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
   };
 
   const approveQualitySpec = async (specId) => {
@@ -2262,7 +2078,6 @@ export function MasterDataProvider({ children }) {
   };
 
   const deleteQualitySpec = async (specId) => {
-<<<<<<< HEAD
     setQualitySpecs((prev) => prev.filter((q) => q.specId !== specId && q.id !== specId));
     try {
       await masterDataService.deleteQualitySpec(specId);
@@ -2270,15 +2085,6 @@ export function MasterDataProvider({ children }) {
       console.warn("API deleteQualitySpec:", err.message);
     }
     logAudit({ entityId: specId, entityType: "Quality Specs", action: "Deleted" });
-=======
-    try {
-      await masterDataService.deleteQualitySpec(specId);
-      setQualitySpecs((prev) => prev.filter((q) => q.specId !== specId && q.id !== specId));
-      logAudit({ entityId: specId, entityType: "Quality Specs", action: "Deleted" });
-    } catch (err) {
-      console.warn("API deleteQualitySpec error:", err.message);
-      throw err;
-    }
   };
 
   // HACCP CCP Limits
@@ -2317,7 +2123,6 @@ export function MasterDataProvider({ children }) {
       console.warn("API deleteCCPLimit error:", err.message);
       throw err;
     }
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
   };
 
   // ============================================================================

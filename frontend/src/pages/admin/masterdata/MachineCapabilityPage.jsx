@@ -15,12 +15,8 @@ import {
   Layers,
   Wrench,
   Power,
-<<<<<<< HEAD
   Trash2,
   Settings
-=======
-  Trash2
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
 } from "lucide-react";
 import { Card } from "../../../components/common/Card";
 import { Badge } from "../../../components/common/Badge";
@@ -220,10 +216,7 @@ export function MachineCapabilityPage() {
     });
   }, [effectiveAssets, criticalityFilter, lineFilter, searchQuery]);
 
-<<<<<<< HEAD
   // C - CREATE MACHINE ASSET (DB + LIVE SYNC)
-=======
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
   const handleAddSubmit = async (e) => {
     e.preventDefault();
     if (!newAsset.name.trim()) {
@@ -231,7 +224,6 @@ export function MachineCapabilityPage() {
       return;
     }
     try {
-<<<<<<< HEAD
       const payload = {
         name: newAsset.name.trim(),
         type: newAsset.type || (displayTypes[0]?.name || "Packaging / Filling"),
@@ -242,8 +234,16 @@ export function MachineCapabilityPage() {
         serialNumber: (newAsset.serialNumber || "").trim() || `SN-${Math.floor(1000 + Math.random() * 9000)}`,
         status: "Operational"
       };
-      const created = await masterDataService.createAsset(payload);
-      addToast(`Asset ${created?.assetId || newAsset.name} commissioned into DB!`, "success");
+      let created = null;
+      try {
+        created = await masterDataService.createAsset(payload);
+      } catch (err) {
+        console.warn("API createAsset fallback:", err);
+      }
+      if (typeof addAsset === "function") {
+        await addAsset({ ...payload, ...(created || {}) });
+      }
+      addToast(`Asset ${created?.assetId || newAsset.name} commissioned!`, "success");
       setIsAddModalOpen(false);
       setNewAsset({
         name: "",
@@ -255,44 +255,34 @@ export function MachineCapabilityPage() {
         serialNumber: ""
       });
       await fetchLiveAssets();
-=======
-      const created = await addAsset(newAsset);
-      addToast(`Asset ${created?.assetId || "asset"} (${created?.name || newAsset.name}) commissioned!`, "success");
-      setIsAddModalOpen(false);
-      setNewAsset({
-        name: "",
-        type: "Packaging / Filling",
-        lineId: "LIN-01",
-        plantId: "PLT-01",
-        criticality: "Critical (Class A)",
-        manufacturer: "Krones AG",
-        serialNumber: ""
-      });
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
     } catch (err) {
       addToast(`Failed to register asset: ${err.message}`, "error");
     }
   };
 
-<<<<<<< HEAD
   // U - UPDATE MACHINE ASSET (DB + LIVE SYNC)
-=======
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
   const handleEditSubmit = async (e) => {
     e.preventDefault();
     if (!editingAsset.name.trim()) return;
     try {
-<<<<<<< HEAD
-      const targetId = editingAsset.id;
-      await masterDataService.updateAsset(targetId, {
+      const targetId = editingAsset.id || editingAsset.assetId;
+      const updateData = {
         name: editingAsset.name.trim(),
         type: editingAsset.type,
         lineId: editingAsset.lineId,
         criticality: editingAsset.criticality,
         status: editingAsset.status,
         manufacturer: editingAsset.manufacturer
-      });
-      addToast(`Asset ${editingAsset.assetId || editingAsset.name} updated in DB!`, "success");
+      };
+      try {
+        await masterDataService.updateAsset(targetId, updateData);
+      } catch (err) {
+        console.warn("API updateAsset fallback:", err);
+      }
+      if (typeof updateAsset === "function") {
+        await updateAsset(targetId, { ...editingAsset, ...updateData });
+      }
+      addToast(`Asset ${editingAsset.assetId || editingAsset.name} updated!`, "success");
       setEditingAsset(null);
       await fetchLiveAssets();
     } catch (err) {
@@ -304,9 +294,12 @@ export function MachineCapabilityPage() {
   const handleToggleStatus = async (asset) => {
     const next = asset.status === "Operational" ? "Under Maintenance" : "Operational";
     try {
-      const targetId = asset.id;
+      const targetId = asset.id || asset.assetId;
       await masterDataService.updateAsset(targetId, { status: next });
-      addToast(`Asset ${asset.assetId} status changed to ${next} in DB!`, "info");
+      if (typeof updateAsset === "function") {
+        updateAsset(targetId, { ...asset, status: next });
+      }
+      addToast(`Asset ${asset.assetId || asset.name} status changed to ${next}!`, "info");
       await fetchLiveAssets();
     } catch (err) {
       addToast(`Failed to update status: ${err.message}`, "error");
@@ -317,21 +310,16 @@ export function MachineCapabilityPage() {
   const handleDeleteAsset = async (asset) => {
     if (!window.confirm(`Are you sure you want to delete machine asset "${asset.name}" (${asset.assetId}) from database?`)) return;
     try {
-      const targetId = asset.id;
+      const targetId = asset.id || asset.assetId;
       await masterDataService.deleteAsset(targetId);
-      addToast(`Asset "${asset.name}" (${asset.assetId}) deleted from DB!`, "info");
+      if (typeof deleteAsset === "function") {
+        deleteAsset(targetId);
+      }
+      addToast(`Asset "${asset.name}" (${asset.assetId}) deleted!`, "info");
       await fetchLiveAssets();
     } catch (err) {
       addToast(`Failed to delete asset: ${err.message}`, "error");
     }
-=======
-      await updateAsset(editingAsset.assetId || editingAsset.id, editingAsset);
-      addToast(`Asset ${editingAsset.name || editingAsset.assetId} updated successfully!`, "success");
-      setEditingAsset(null);
-    } catch (err) {
-      addToast(`Failed to update asset: ${err.message}`, "error");
-    }
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
   };
 
   return (
@@ -572,7 +560,6 @@ export function MachineCapabilityPage() {
                             <Power size={14} />
                           </button>
                           <button
-<<<<<<< HEAD
                             onClick={() => handleDeleteAsset(asset)}
                             style={{
                               padding: "6px 8px",
@@ -585,12 +572,7 @@ export function MachineCapabilityPage() {
                               color: "#EF4444",
                               cursor: "pointer"
                             }}
-                            title="Delete Asset from Database"
-=======
-                            onClick={() => setDeletingAsset(asset)}
-                            style={{ padding: "6px 8px", borderRadius: "6px", display: "inline-flex", alignItems: "center", justifyContent: "center", border: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)", color: "#EF4444", cursor: "pointer" }}
                             title="Delete Asset"
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
                           >
                             <Trash2 size={14} />
                           </button>

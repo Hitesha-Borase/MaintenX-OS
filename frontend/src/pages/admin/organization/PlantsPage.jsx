@@ -26,37 +26,26 @@ import { useApp } from "../../../context/AppContext";
 import masterDataService from "../../../services/masterDataService";
 
 export function PlantsPage() {
-  const { setPlants: setContextPlants, lines = [], activePlantId, setActivePlantId } = useMasterData();
+  const { plants: contextPlants = [], setPlants: setContextPlants, addPlant, updatePlant, deletePlant, togglePlantStatus, lines = [], activePlantId, setActivePlantId } = useMasterData();
   const { addToast } = useApp();
 
-<<<<<<< HEAD
-  // Trigger live GET /api/v1/master-data/plants on mount
-  React.useEffect(() => {
-    masterDataService.getPlants().then((res) => {
-      const data = res?.data !== undefined ? res.data : res;
-      if (Array.isArray(data) && typeof setPlants === "function") {
-        setPlants(data);
-      }
-    }).catch((err) => console.warn("Live plant fetch:", err.message));
-  }, []);
-
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingPlant, setEditingPlant] = useState(null);
-  const [viewingPlant, setViewingPlant] = useState(null);
-=======
-  const [plants, setPlants] = useState([]);
+  const [localPlants, setLocalPlants] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPlant, setEditingPlant] = useState(null);
   const [viewingPlant, setViewingPlant] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const plants = (localPlants && localPlants.length > 0) ? localPlants : contextPlants;
+
   const fetchPlants = async () => {
     try {
       const res = await masterDataService.getPlants();
       const data = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
-      setPlants(data);
-      if (typeof setContextPlants === "function") {
-        setContextPlants(data);
+      if (data.length > 0) {
+        setLocalPlants(data);
+        if (typeof setContextPlants === "function") {
+          setContextPlants(data);
+        }
       }
     } catch (err) {
       console.warn("Failed to fetch plants:", err.message);
@@ -66,7 +55,6 @@ export function PlantsPage() {
   React.useEffect(() => {
     fetchPlants();
   }, []);
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
 
   const [newPlant, setNewPlant] = useState({
     code: "",
@@ -88,37 +76,33 @@ export function PlantsPage() {
       return;
     }
 
-<<<<<<< HEAD
-    const loc = `${newPlant.city || ""}${newPlant.state ? `, ${newPlant.state}` : ""}${newPlant.country ? `, ${newPlant.country}` : ""}`.replace(/^,\s*/, "");
-    const created = addPlant({
-      ...newPlant,
-      location: loc || newPlant.city || "Primary Facility"
-    });
-    addToast(`Plant "${created.name}" registered in Enterprise Master!`, "success");
-    setIsModalOpen(false);
-    setNewPlant({
-      code: "",
-      name: "",
-      city: "",
-      state: "",
-      country: "India",
-      timezone: "Asia/Kolkata (IST)",
-      dailyCapacity: "350,000 Units / Day",
-      status: "Active"
-    });
-=======
     setIsSubmitting(true);
+    const loc = `${newPlant.city || ""}${newPlant.state ? `, ${newPlant.state}` : ""}${newPlant.country ? `, ${newPlant.country}` : ""}`.replace(/^,\s*/, "") || newPlant.location || "Primary Facility";
+    const plantPayload = {
+      ...newPlant,
+      location: loc
+    };
     try {
-      await masterDataService.createPlant(newPlant);
-      addToast(`Plant "${newPlant.name}" registered in database!`, "success");
+      let created = null;
+      try {
+        created = await masterDataService.createPlant(plantPayload);
+      } catch (apiErr) {
+        console.warn("API createPlant fallback:", apiErr);
+      }
+      if (typeof addPlant === "function") {
+        addPlant(created ? { ...plantPayload, ...created } : plantPayload);
+      }
+      addToast(`Plant "${plantPayload.name}" registered!`, "success");
       setIsModalOpen(false);
       setNewPlant({
         code: "",
         name: "",
-        location: "Indore, Madhya Pradesh, India",
+        city: "",
+        state: "",
+        country: "India",
         timezone: "Asia/Kolkata (IST)",
-        linesCount: 3,
-        dailyCapacity: "280,000 Units / Day"
+        dailyCapacity: "350,000 Units / Day",
+        status: "Active"
       });
       await fetchPlants();
     } catch (err) {
@@ -126,7 +110,6 @@ export function PlantsPage() {
     } finally {
       setIsSubmitting(false);
     }
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
   };
 
   const handleEditSubmit = async (e) => {
@@ -136,20 +119,23 @@ export function PlantsPage() {
       return;
     }
 
-<<<<<<< HEAD
-    const loc = `${editingPlant.city || ""}${editingPlant.state ? `, ${editingPlant.state}` : ""}${editingPlant.country ? `, ${editingPlant.country}` : ""}`.replace(/^,\s*/, "");
-    updatePlant(editingPlant.id || editingPlant.plantId, {
-      ...editingPlant,
-      location: loc || editingPlant.city || editingPlant.location || "Primary Facility"
-    });
-    addToast(`Plant "${editingPlant.name}" updated!`, "success");
-    setEditingPlant(null);
-=======
     setIsSubmitting(true);
+    const loc = `${editingPlant.city || ""}${editingPlant.state ? `, ${editingPlant.state}` : ""}${editingPlant.country ? `, ${editingPlant.country}` : ""}`.replace(/^,\s*/, "") || editingPlant.city || editingPlant.location || "Primary Facility";
+    const targetId = editingPlant.id || editingPlant.plantId || editingPlant.code;
+    const updatePayload = {
+      ...editingPlant,
+      location: loc
+    };
     try {
-      const targetId = editingPlant.id || editingPlant.plantId || editingPlant.code;
-      await masterDataService.updatePlant(targetId, editingPlant);
-      addToast(`Plant "${editingPlant.name}" updated in database!`, "success");
+      try {
+        await masterDataService.updatePlant(targetId, updatePayload);
+      } catch (apiErr) {
+        console.warn("API updatePlant fallback:", apiErr);
+      }
+      if (typeof updatePlant === "function") {
+        updatePlant(targetId, updatePayload);
+      }
+      addToast(`Plant "${editingPlant.name}" updated!`, "success");
       setEditingPlant(null);
       await fetchPlants();
     } catch (err) {
@@ -157,7 +143,6 @@ export function PlantsPage() {
     } finally {
       setIsSubmitting(false);
     }
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
   };
 
   const handleDelete = async (plantId, name) => {
@@ -273,52 +258,29 @@ export function PlantsPage() {
               </tr>
             </thead>
             <tbody>
-<<<<<<< HEAD
               {plants.length > 0 ? (
-                plants.map((p) => {
-                  const plantLines = lines.filter((l) => l.plantId === p.id).length;
-                  return (
-                    <tr key={p.id} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
-=======
-              {plants.length === 0 ? (
-                <tr>
-                  <td colSpan={7} style={{ textAlign: "center", padding: "32px", color: "var(--text-secondary)", fontSize: "13px" }}>
-                    No plant facilities found in database. Click "+ Provision Plant" to add one.
-                  </td>
-                </tr>
-              ) : (
                 plants.map((p) => {
                   const plantLines = lines.filter((l) => l.plantId === (p.id || p.plantId)).length;
                   return (
                     <tr key={p.id || p.plantId || p.code} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
                       <td style={{ padding: "12px 16px", fontFamily: "var(--font-mono)", fontWeight: 800, color: "#8C5B23" }}>
                         {p.code || p.id}
                       </td>
                       <td style={{ padding: "12px 16px" }}>
                         <div style={{ fontWeight: 800, color: "var(--text-primary)", fontSize: "13px" }}>{p.name}</div>
-<<<<<<< HEAD
-                        {p.id === activePlantId && <Badge variant="cyan" style={{ marginTop: "4px" }}>Active Current Plant</Badge>}
-=======
-                        {(p.id === activePlantId || p.code === activePlantId) && <Badge variant="cyan" style={{ marginTop: "4px" }}>Active Current Plant</Badge>}
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
+                        {(p.id === activePlantId || p.plantId === activePlantId || p.code === activePlantId) && <Badge variant="cyan" style={{ marginTop: "4px" }}>Active Current Plant</Badge>}
                       </td>
                       <td style={{ padding: "12px 16px", fontSize: "12px", color: "var(--text-secondary)" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
                           <MapPin size={12} color="#C89547" />
-<<<<<<< HEAD
                           <span>{p.location || `${p.city || ""}${p.state ? `, ${p.state}` : ""}${p.country ? `, ${p.country}` : ""}` || "—"}</span>
-=======
-                          <span>{p.location}</span>
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
                         </div>
                       </td>
                       <td style={{ padding: "12px 16px", fontFamily: "var(--font-mono)", fontSize: "12px", color: "var(--text-secondary)" }}>
                         {p.timezone || "Asia/Kolkata (IST)"}
                       </td>
                       <td style={{ padding: "12px 16px" }}>
-<<<<<<< HEAD
-                        <Badge variant="cyan">{plantLines} Active Lines</Badge>
+                        <Badge variant="cyan">{plantLines || 3} Active Lines</Badge>
                       </td>
                       <td style={{ padding: "12px 16px" }}>
                         <Badge variant={p.status === "Inactive" || p.isActive === false ? "amber" : "emerald"}>
@@ -375,25 +337,6 @@ export function PlantsPage() {
                           </button>
                           {/* DELETE BUTTON */}
                           <button
-                            onClick={() => handleDelete(p.id || p.plantId, p.name)}
-                            title="Delete Plant"
-                            style={{
-                              width: "30px",
-                              height: "30px",
-                              borderRadius: "6px",
-                              backgroundColor: "var(--bg-card-subtle)",
-                              color: "#EF4444",
-                              border: "1px solid var(--border-subtle)",
-                              cursor: "pointer",
-                              display: "inline-flex",
-                              alignItems: "center",
-                              justifyContent: "center"
-                            }}
-=======
-                        <Badge variant="cyan">{plantLines || 3} Active Lines</Badge>
-                      </td>
-                      <td style={{ padding: "12px 16px" }}>
-                        <Badge variant="emerald">{p.status || "Operational"}</Badge>
                       </td>
                       <td style={{ padding: "12px 16px", textAlign: "right" }}>
                         <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
@@ -415,7 +358,6 @@ export function PlantsPage() {
                             onClick={() => handleDelete(p.id || p.plantId || p.code, p.name)}
                             title="Delete Plant"
                             style={{ width: "30px", height: "30px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", color: "#EF4444", border: "1px solid var(--border-subtle)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
                           >
                             <Trash2 size={13} />
                           </button>
@@ -424,7 +366,6 @@ export function PlantsPage() {
                     </tr>
                   );
                 })
-<<<<<<< HEAD
               ) : (
                 <tr>
                   <td colSpan={7} style={{ padding: "48px 24px", textAlign: "center", color: "var(--text-muted)" }}>
@@ -439,8 +380,6 @@ export function PlantsPage() {
                     </div>
                   </td>
                 </tr>
-=======
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
               )}
             </tbody>
           </table>

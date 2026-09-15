@@ -271,7 +271,7 @@ export function UserActivityPage() {
             <tbody>
               {filteredLogs.length === 0 ? (
                 <tr>
-                  <td colSpan={6} style={{ textAlign: "center", padding: "48px 16px" }}>
+                  <td colSpan={7} style={{ textAlign: "center", padding: "48px 16px" }}>
                     <Activity size={36} color="var(--text-muted)" style={{ margin: "0 auto 12px", opacity: 0.5 }} />
                     <div style={{ fontSize: "14px", fontWeight: 700, color: "var(--text-primary)", marginBottom: "4px" }}>
                       No Live Activity Recorded Yet
@@ -280,80 +280,6 @@ export function UserActivityPage() {
                       User sign-ins, master data modifications, and governance events performed in this organization will stream here in real-time.
                     </div>
                   </td>
-<<<<<<< HEAD
-=======
-                  <td>
-                    <strong style={{ color: "var(--text-primary)" }}>{l.user}</strong>
-                  </td>
-                  <td style={{ fontSize: "12px", color: "var(--text-secondary)", maxWidth: "340px" }}>
-                    {l.action}
-                  </td>
-                  <td>
-                    <Badge variant={l.category === "Security" ? "cyan" : "amber"}>{l.category}</Badge>
-                  </td>
-                  <td style={{ fontFamily: "var(--font-mono)", fontSize: "11px", color: "var(--text-muted)" }}>
-                    {l.ip}
-                  </td>
-                  <td style={{ fontSize: "11px", color: "var(--text-secondary)" }}>{l.timestamp}</td>
-                  <td>
-                    <div style={{ display: "flex", gap: "5px" }}>
-                      <button
-                        onClick={() => setViewingLog(l)}
-                        title="View Activity Details"
-                        style={{
-                          width: "28px",
-                          height: "28px",
-                          borderRadius: "6px",
-                          backgroundColor: "rgba(14, 165, 233, 0.1)",
-                          color: "#0284C7",
-                          border: "1px solid var(--border-subtle)",
-                          cursor: "pointer",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          justifyContent: "center"
-                        }}
-                      >
-                        <Eye size={13} />
-                      </button>
-                      <button
-                        onClick={() => handleOpenEdit(l)}
-                        title="Edit Audit Note"
-                        style={{
-                          width: "28px",
-                          height: "28px",
-                          borderRadius: "6px",
-                          backgroundColor: "rgba(234, 179, 8, 0.1)",
-                          color: "#CA8A04",
-                          border: "1px solid var(--border-subtle)",
-                          cursor: "pointer",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          justifyContent: "center"
-                        }}
-                      >
-                        <Pencil size={13} />
-                      </button>
-                      <button
-                        onClick={() => setDeletingLog(l)}
-                        title="Delete Audit Log from Database"
-                        style={{
-                          width: "28px",
-                          height: "28px",
-                          borderRadius: "6px",
-                          backgroundColor: "rgba(220, 38, 38, 0.1)",
-                          color: "#DC2626",
-                          border: "1px solid var(--border-subtle)",
-                          cursor: "pointer",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          justifyContent: "center"
-                        }}
-                      >
-                        <Trash2 size={13} />
-                      </button>
-                    </div>
-                  </td>
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
                 </tr>
               ) : (
                 filteredLogs.map((l) => (
@@ -368,12 +294,70 @@ export function UserActivityPage() {
                       {l.action}
                     </td>
                     <td>
-                      <Badge variant="cyan">{l.category}</Badge>
+                      <Badge variant={l.category === "Security" ? "cyan" : "amber"}>{l.category}</Badge>
                     </td>
                     <td style={{ fontFamily: "var(--font-mono)", fontSize: "11px", color: "var(--text-muted)" }}>
                       {l.ip}
                     </td>
                     <td style={{ fontSize: "11px", color: "var(--text-secondary)" }}>{l.timestamp}</td>
+                    <td>
+                      <div style={{ display: "flex", gap: "5px" }}>
+                        <button
+                          onClick={() => setViewingLog(l)}
+                          title="View Activity Details"
+                          style={{
+                            width: "28px",
+                            height: "28px",
+                            borderRadius: "6px",
+                            backgroundColor: "rgba(14, 165, 233, 0.1)",
+                            color: "#0284C7",
+                            border: "1px solid var(--border-subtle)",
+                            cursor: "pointer",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center"
+                          }}
+                        >
+                          <Eye size={13} />
+                        </button>
+                        <button
+                          onClick={() => handleOpenEdit(l)}
+                          title="Edit Audit Note"
+                          style={{
+                            width: "28px",
+                            height: "28px",
+                            borderRadius: "6px",
+                            backgroundColor: "rgba(234, 179, 8, 0.1)",
+                            color: "#CA8A04",
+                            border: "1px solid var(--border-subtle)",
+                            cursor: "pointer",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center"
+                          }}
+                        >
+                          <Pencil size={13} />
+                        </button>
+                        <button
+                          onClick={() => setDeletingLog(l)}
+                          title="Delete Audit Log from Database"
+                          style={{
+                            width: "28px",
+                            height: "28px",
+                            borderRadius: "6px",
+                            backgroundColor: "rgba(220, 38, 38, 0.1)",
+                            color: "#DC2626",
+                            border: "1px solid var(--border-subtle)",
+                            cursor: "pointer",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center"
+                          }}
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 ))
               )}

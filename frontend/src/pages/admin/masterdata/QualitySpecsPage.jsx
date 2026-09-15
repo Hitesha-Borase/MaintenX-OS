@@ -28,12 +28,9 @@ import { useApp } from "../../../context/AppContext";
 import masterDataService from "../../../services/masterDataService";
 
 export function QualitySpecsPage() {
-<<<<<<< HEAD
   const { qualitySpecs = [], setQualitySpecs, addQualitySpec, updateQualitySpec, approveQualitySpec, rejectQualitySpec, deleteQualitySpec, skus = [] } = useMasterData();
-=======
-  const { qualitySpecs = [], addQualitySpec, updateQualitySpec, approveQualitySpec, rejectQualitySpec, deleteQualitySpec, skus = [] } = useMasterData();
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
   const { addToast } = useApp();
+  const [deletingSpec, setDeletingSpec] = useState(null);
 
   const fetchLiveSpecs = async () => {
     try {
@@ -177,7 +174,6 @@ export function QualitySpecsPage() {
       return;
     }
 
-<<<<<<< HEAD
     setIsSubmitting(true);
     try {
       const created = await addQualitySpec(newSpec);
@@ -191,7 +187,7 @@ export function QualitySpecsPage() {
       fetchLiveSpecs();
     } catch (err) {
       console.error("Add quality spec error:", err);
-      addToast("Failed to register quality specification", "error");
+      addToast(`Failed to register quality specification: ${err.message}`, "error");
     } finally {
       setIsSubmitting(false);
     }
@@ -208,42 +204,13 @@ export function QualitySpecsPage() {
   const handleEditSubmit = async (e) => {
     e.preventDefault();
     if (!editingSpec.parameter.trim()) return;
-    await updateQualitySpec(editingSpec.specId, editingSpec);
-    addToast(`Specification ${editingSpec.specId} updated!`, "success");
-    setEditingSpec(null);
-    fetchLiveSpecs();
-=======
-    try {
-      const created = await addQualitySpec(newSpec);
-      addToast(`Specification ${created?.specId || "spec"} (${created?.parameter || newSpec.parameter}) registered!`, "success");
-      setIsAddModalOpen(false);
-      setNewSpec({
-        skuId: "SKU-001",
-        specificationTitle: "",
-        parameter: "Soluble Solids (Brix)",
-        target: "10.5",
-        min: "10.3",
-        max: "10.7",
-        uom: "°Bx",
-        criticality: "Critical CCP (HACCP-1)",
-        testMethod: "Digital Refractometer"
-      });
-    } catch (err) {
-      addToast(`Failed to create quality spec: ${err.message}`, "error");
-    }
-  };
-
-  const handleEditSubmit = async (e) => {
-    e.preventDefault();
-    if (!editingSpec.parameter.trim()) return;
     try {
       await updateQualitySpec(editingSpec.specId || editingSpec.id, editingSpec);
-      addToast(`Specification ${editingSpec.specId} updated!`, "success");
+      addToast(`Specification ${editingSpec.specId || editingSpec.id} updated!`, "success");
       setEditingSpec(null);
+      fetchLiveSpecs();
     } catch (err) {
       addToast(`Failed to update quality spec: ${err.message}`, "error");
-    }
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
   };
 
   return (
@@ -527,16 +494,6 @@ export function QualitySpecsPage() {
                             style={{ padding: "6px 8px" }}
                             title="Edit Specification"
                           />
-<<<<<<< HEAD
-                          <Button
-                            variant="danger"
-                            size="sm"
-                            icon={Trash2}
-                            onClick={() => handleDelete(spec.specId || spec.id)}
-                            style={{ padding: "6px 8px" }}
-                            title="Delete Specification"
-                          />
-=======
                           <button
                             onClick={() => setDeletingSpec(spec)}
                             style={{ padding: "6px 8px", borderRadius: "6px", display: "inline-flex", alignItems: "center", justifyContent: "center", border: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)", color: "#EF4444", cursor: "pointer" }}
@@ -544,7 +501,6 @@ export function QualitySpecsPage() {
                           >
                             <Trash2 size={14} />
                           </button>
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
                         </div>
                       </td>
                     </tr>
@@ -998,8 +954,6 @@ export function QualitySpecsPage() {
           }}
         />
       )}
-<<<<<<< HEAD
-
       {/* ADD DEVIATION CATEGORY MODAL */}
       {isCatModalOpen && (
         <div
@@ -1095,7 +1049,10 @@ export function QualitySpecsPage() {
                 </Button>
               </div>
             </form>
-=======
+          </div>
+        </div>
+      )}
+
       {/* DELETE SPEC CONFIRM MODAL */}
       {deletingSpec && (
         <div className="modal-backdrop" onClick={() => setDeletingSpec(null)}>
@@ -1138,9 +1095,7 @@ export function QualitySpecsPage() {
                 Delete Spec
               </Button>
             </div>
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
           </div>
-        </div>
       )}
     </div>
   );

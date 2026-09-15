@@ -25,19 +25,11 @@ export function OrgWorkCentersPage() {
   const { workCenters = [], setWorkCenters, addWorkCenter, updateWorkCenter, deleteWorkCenter, lines = [], assets = [], plants = [] } = useMasterData();
   const { addToast } = useApp();
 
-<<<<<<< HEAD
-  // Trigger live GET /api/v1/master-data/work-centers on mount
-  React.useEffect(() => {
-    masterDataService.getWorkCenters().then((res) => {
-      const data = res?.data !== undefined ? res.data : res;
-      if (Array.isArray(data) && typeof setWorkCenters === "function") {
-=======
   const fetchWorkCenters = async () => {
     try {
       const res = await masterDataService.getWorkCenters();
-      const data = res?.data || res;
-      if (Array.isArray(data)) {
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
+      const data = res?.data !== undefined ? res.data : res;
+      if (Array.isArray(data) && data.length > 0 && typeof setWorkCenters === "function") {
         setWorkCenters(data);
       }
     } catch (err) {
@@ -45,11 +37,7 @@ export function OrgWorkCentersPage() {
     }
   };
 
-  // Trigger live GET /api/v1/master-data/work-centers on mount and clear demo cache
   React.useEffect(() => {
-    try {
-      localStorage.removeItem("mx_master_workcenters");
-    } catch (_) {}
     fetchWorkCenters();
   }, []);
 

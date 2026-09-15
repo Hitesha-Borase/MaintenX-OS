@@ -316,21 +316,12 @@ export const masterDataService = {
     return apiClient.get(`/master-data/assets${query}`);
   },
 
-<<<<<<< HEAD
-  async createAsset(data) {
-    return apiClient.post("/master-data/assets", data);
-  },
-
-  async updateAsset(id, data) {
-    return apiClient.put(`/master-data/assets/${enc(id)}`, data);
-=======
   async createAsset(assetData) {
     return apiClient.post("/master-data/assets", assetData);
   },
 
   async updateAsset(id, assetData) {
     return apiClient.put(`/master-data/assets/${enc(id)}`, assetData);
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
   },
 
   async deleteAsset(id) {
@@ -347,7 +338,6 @@ export const masterDataService = {
     return apiClient.get(`/master-data/staff${query}`);
   },
 
-<<<<<<< HEAD
   async createEmployee(data) {
     return apiClient.post("/master-data/staff", data);
   },
@@ -372,28 +362,17 @@ export const masterDataService = {
     return apiClient.delete(`/master-data/staff/${enc(id)}`);
   },
 
-=======
   // 14. Quality Specifications & Parameter Master
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
   async getQualitySpecs() {
     return apiClient.get("/master-data/quality-specs");
   },
 
-<<<<<<< HEAD
-  async createQualitySpec(data) {
-    return apiClient.post("/master-data/quality-specs", data);
-  },
-
-  async updateQualitySpec(id, data) {
-    return apiClient.put(`/master-data/quality-specs/${enc(id)}`, data);
-=======
   async createQualitySpec(specData) {
     return apiClient.post("/master-data/quality-specs", specData);
   },
 
   async updateQualitySpec(id, specData) {
     return apiClient.put(`/master-data/quality-specs/${enc(id)}`, specData);
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
   },
 
   async deleteQualitySpec(id) {
@@ -501,5 +480,6 @@ export const masterDataService = {
   },
 };
 
+export { masterDataService };
 export default masterDataService;
 

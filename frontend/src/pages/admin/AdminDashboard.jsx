@@ -38,14 +38,9 @@ import { useNavigate } from "react-router-dom";
 import { adminService } from "../../services/adminService";
 
 export function AdminDashboard() {
-<<<<<<< HEAD
-  const { users = [], roles = [], items = [], dataHealthStats = {}, addUser } = useAdmin();
-  const { currentRole } = useRole();
-  const { addToast } = useApp();
-=======
   const { users = [], roles = [], items = [], dataHealthStats = {}, addUser } = useAdmin() || {};
+  const { currentRole } = (useRole ? useRole() : null) || {};
   const { addToast } = (useApp ? useApp() : null) || { addToast: () => {} };
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
   const navigate = useNavigate();
 
   const companyName = (currentRole?.user?.companyName && currentRole?.user?.companyName !== "MaintenX OS")

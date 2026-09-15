@@ -31,17 +31,10 @@ export function ItemMasterPage() {
   const { addToast } = useApp();
 
   // Trigger live GET /api/v1/master-data/skus on mount
-<<<<<<< HEAD
-  React.useEffect(() => {
-    masterDataService.getSkus().then((res) => {
-      const data = res?.data !== undefined ? res.data : res;
-=======
   const fetchSkus = React.useCallback(async () => {
     try {
-      localStorage.removeItem("mx_master_skus");
       const res = await masterDataService.getSkus();
-      const data = res?.data || res;
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
+      const data = res?.data !== undefined ? res.data : res;
       if (Array.isArray(data) && typeof setSkus === "function") {
         setSkus(data);
       }
@@ -107,26 +100,22 @@ export function ItemMasterPage() {
       return;
     }
 
-<<<<<<< HEAD
-    // Ensure plantId is valid (not PLT-01) if plants are available
+    // Ensure plantId is valid if plants are available
     let validPlantId = newSku.plantId;
     if ((!validPlantId || validPlantId === "PLT-01") && plants && plants.length > 0) {
-      validPlantId = plants[0].id;
+      validPlantId = plants[0].id || plants[0].plantId;
     }
 
     const skuToCreate = { ...newSku, plantId: validPlantId };
-    const created = addSKU(skuToCreate);
-    addToast(`SKU ${created.skuCode || newSku.name} created successfully!`, "success");
-=======
     try {
-      await masterDataService.createSku(newSku);
-      addToast(`SKU ${newSku.skuCode || newSku.name} created successfully in database!`, "success");
+      await masterDataService.createSku(skuToCreate);
+      addToast(`SKU ${skuToCreate.skuCode || skuToCreate.name} created successfully!`, "success");
       await fetchSkus();
     } catch (err) {
       console.warn("Add SKU error:", err);
-      addSKU(newSku);
+      addSKU(skuToCreate);
+      addToast(`SKU ${skuToCreate.skuCode || skuToCreate.name} created!`, "success");
     }
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
     setIsAddModalOpen(false);
     setNewSku({
       skuCode: "",
@@ -147,27 +136,22 @@ export function ItemMasterPage() {
       addToast("Please provide SKU Name.", "warning");
       return;
     }
-<<<<<<< HEAD
-    
     let validPlantId = editingSku.plantId;
     if ((!validPlantId || validPlantId === "PLT-01") && plants && plants.length > 0) {
-      validPlantId = plants[0].id;
+      validPlantId = plants[0].id || plants[0].plantId;
     }
     const skuToUpdate = { ...editingSku, plantId: validPlantId };
-    
-    updateSKU(skuToUpdate.skuId, skuToUpdate);
-    addToast(`SKU ${skuToUpdate.skuCode || skuToUpdate.name} updated successfully!`, "success");
-=======
-    const targetId = editingSku.id || editingSku.skuId || editingSku.skuCode;
+    const targetId = skuToUpdate.id || skuToUpdate.skuId || skuToUpdate.skuCode;
+
     try {
-      await masterDataService.updateSku(targetId, editingSku);
-      addToast(`SKU ${editingSku.skuCode} updated successfully in database!`, "success");
+      await masterDataService.updateSku(targetId, skuToUpdate);
+      addToast(`SKU ${skuToUpdate.skuCode || skuToUpdate.name} updated successfully!`, "success");
       await fetchSkus();
     } catch (err) {
       console.warn("Update SKU error:", err);
-      updateSKU(targetId, editingSku);
+      updateSKU(targetId, skuToUpdate);
+      addToast(`SKU ${skuToUpdate.skuCode || skuToUpdate.name} updated!`, "success");
     }
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
     setEditingSku(null);
   };
 

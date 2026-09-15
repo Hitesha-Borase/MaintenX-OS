@@ -26,18 +26,11 @@ export function PackagingMasterPage() {
   const { packConfigs = [], setPackConfigs, addPackConfig, updatePackConfig, deletePackConfig, skus = [] } = useMasterData();
   const { addToast } = useApp();
 
-<<<<<<< HEAD
-  useEffect(() => {
-    masterDataService.getPackConfigs().then((res) => {
-      const data = res?.data !== undefined ? res.data : res;
-=======
   const fetchPackConfigs = React.useCallback(async () => {
     try {
-      localStorage.removeItem("mx_master_pack_configs");
       const res = await masterDataService.getPackConfigs();
-      const data = res?.data || res;
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
-      if (Array.isArray(data) && typeof setPackConfigs === "function") {
+      const data = res?.data !== undefined ? res.data : res;
+      if (Array.isArray(data) && data.length > 0 && typeof setPackConfigs === "function") {
         setPackConfigs(data);
       }
     } catch (err) {

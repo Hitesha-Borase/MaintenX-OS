@@ -30,15 +30,9 @@ import { useApp } from "../../../context/AppContext";
 import { adminService } from "../../../services/adminService";
 
 export function UsersPage() {
-<<<<<<< HEAD
-  const { users = [], roles = [], addUser, updateUserStatus } = useAdmin();
-  const { plants = [], departments = [] } = useMasterData();
-  const { addToast } = useApp();
-=======
-  const { users = [], setUsers, addUser, editUser, deleteUser, updateUserStatus } = useAdmin() || {};
+  const { users = [], roles = [], setUsers, addUser, editUser, deleteUser, updateUserStatus } = useAdmin() || {};
   const { plants = [], departments = [] } = (useMasterData ? useMasterData() : null) || {};
   const { addToast } = (useApp ? useApp() : null) || { addToast: () => {} };
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
 
   // Trigger live GET /api/v1/admin/users on mount and sync with AdminContext
   React.useEffect(() => {

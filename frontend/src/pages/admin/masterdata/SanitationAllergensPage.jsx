@@ -38,28 +38,18 @@ export function SanitationAllergensPage() {
   } = useMasterData();
   const { addToast } = useApp();
 
-<<<<<<< HEAD
-  useEffect(() => {
-    masterDataService.getSanitationClasses().then((res) => {
-      const data = res?.data?.data !== undefined ? res.data.data : (res?.data !== undefined ? res.data : res);
-      if (Array.isArray(data) && typeof setSanitationClasses === "function") {
-        setSanitationClasses(data);
-=======
   const fetchLiveSanitationAndAllergens = async () => {
     try {
-      localStorage.removeItem("mx_master_sanitation");
-      localStorage.removeItem("mx_master_allergens");
       const [sanRes, algRes] = await Promise.all([
         masterDataService.getSanitationClasses(),
         masterDataService.getAllergenRules()
       ]);
       const sanData = sanRes?.data?.data || sanRes?.data || sanRes;
-      if (Array.isArray(sanData) && typeof setSanitationClasses === "function") {
+      if (Array.isArray(sanData) && sanData.length > 0 && typeof setSanitationClasses === "function") {
         setSanitationClasses(sanData);
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
       }
       const algData = algRes?.data?.data || algRes?.data || algRes;
-      if (Array.isArray(algData) && typeof setAllergenRules === "function") {
+      if (Array.isArray(algData) && algData.length > 0 && typeof setAllergenRules === "function") {
         setAllergenRules(algData);
       }
     } catch (err) {
@@ -67,19 +57,9 @@ export function SanitationAllergensPage() {
     }
   };
 
-<<<<<<< HEAD
-    masterDataService.getAllergenRules().then((res) => {
-      const data = res?.data?.data !== undefined ? res.data.data : (res?.data !== undefined ? res.data : res);
-      if (Array.isArray(data) && typeof setAllergenRules === "function") {
-        setAllergenRules(data);
-      }
-    }).catch((err) => console.warn("Allergen rules load:", err.message));
-  }, [setSanitationClasses, setAllergenRules]);
-=======
   useEffect(() => {
     fetchLiveSanitationAndAllergens();
   }, []);
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
 
   const [activeTab, setActiveTab] = useState("sanitation"); // "sanitation" | "allergens"
   const [searchQuery, setSearchQuery] = useState("");

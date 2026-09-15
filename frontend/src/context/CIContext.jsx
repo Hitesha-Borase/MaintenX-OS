@@ -259,63 +259,6 @@ export function CIProvider({ children }) {
   // 1. RCA: Initiate
   const initiateRCA = async (assetOrId, sourceBreakdownId, customProblem, extraFields = {}) => {
     let payload = {};
-<<<<<<< HEAD
-    if (typeof assetOrId === "object" && assetOrId !== null) {
-      payload = {
-        title: assetOrId.title || "Critical Component Failure Investigation",
-        assetId: assetOrId.assetId || "AST-001",
-        assetName: assetOrId.assetName || "Production Asset",
-        lineId: assetOrId.lineId || "LIN-01",
-        lineName: assetOrId.lineName || "Line 1 — Production",
-        plantId: assetOrId.plantId || activePlantId,
-        sourceBreakdownId: assetOrId.sourceBreakdownId || null,
-        sourceWorkOrderId: assetOrId.sourceWorkOrderId || null,
-        severity: assetOrId.severity || "High",
-        status: "Open",
-        currentPhase: "Event",
-        problemStatement: assetOrId.problemStatement || assetOrId.description || "Investigation initiated to determine root cause and implement permanent CAPA.",
-        leadInvestigator: currentUser,
-        teamMembers: [currentUser],
-        eventDate: new Date().toISOString().substring(0, 10),
-        daysActive: 1,
-        whyTree: assetOrId.whyTree || [],
-        eightD: assetOrId.eightD || { d1Team: currentUser, d2Problem: assetOrId.title },
-      };
-    } else {
-      const assetId = assetOrId;
-      const asset = reliabilityRecords.find((r) => r.assetId === assetId) ||
-                    availableAssets.find((a) => a.id === assetId || a.assetId === assetId || a.assetCode === assetId) || {
-                      assetName: "Production Machine",
-                      lineId: "LIN-01",
-                      lineName: "Line 1 — Production",
-                      plantId: activePlantId
-                    };
-
-      payload = {
-        title: customProblem || extraFields.title || `Investigation — ${asset.assetName || asset.name || "Equipment"} Breakdown`,
-        assetId: asset.assetId || asset.assetCode || asset.id || assetId || "AST-001",
-        assetName: asset.assetName || asset.name || "Critical Equipment",
-        lineId: asset.lineId || extraFields.lineId || "LIN-01",
-        lineName: asset.lineName || extraFields.lineName || "Line 1 — Production",
-        plantId: asset.plantId || extraFields.plantId || activePlantId,
-        sourceBreakdownId: sourceBreakdownId || null,
-        sourceWorkOrderId: null,
-        severity: extraFields.severity || "High",
-        status: "Open",
-        currentPhase: "Event",
-        problemStatement: customProblem || extraFields.problemStatement || `Systematic failure detected on ${asset.assetName || asset.name || "equipment"}. Investigation initiated to determine root cause.`,
-        leadInvestigator: currentUser,
-        teamMembers: [currentUser],
-        eventDate: new Date().toISOString().substring(0, 10),
-        daysActive: 1,
-        whyTree: [],
-        eightD: {
-          d1Team: currentUser,
-          d2Problem: customProblem || "Equipment failure event logged.",
-        }
-      };
-    }
-=======
     const defaultWhyTree = [
       { id: "W1", question: "Why did the equipment fail during operation?", answer: "" },
       { id: "W2", question: "Why did the sub-component experience premature wear?", answer: "" },
@@ -333,7 +276,6 @@ export function CIProvider({ children }) {
       d7Prevention: "",
       d8Closure: ""
     };
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
 
     if (typeof assetOrId === "object" && assetOrId !== null) {
       payload = {

@@ -55,16 +55,12 @@ export function Investigations() {
   const [newAssetId, setNewAssetId] = useState("");
   const [newLineId, setNewLineId] = useState("");
   const [newSeverity, setNewSeverity] = useState("High");
-<<<<<<< HEAD
-=======
-
   useEffect(() => {
     const list = (assets && assets.length > 0) ? assets : availableAssets;
     if (list && list.length > 0 && !newAssetId) {
       setNewAssetId(list[0].assetCode || list[0].id);
     }
   }, [assets, availableAssets, newAssetId]);
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
 
   const phases = ["Event", "Evidence", "Hypothesis & Tests", "Occurrence Cause", "Escape Cause", "CAPA", "Verification", "Closed"];
 
@@ -114,21 +110,6 @@ export function Investigations() {
     const lineName = selectedLine.name || selectedAsset.lineName || "Line 1 — Production";
 
     try {
-<<<<<<< HEAD
-      const selectedAsset = availableAssets.find((a) => a.id === newAssetId || a.assetCode === newAssetId) || {};
-      const selectedLine = availableLines.find((l) => l.id === newLineId || l.code === newLineId) || {};
-
-      await initiateRCA({
-        title: newTitle.trim(),
-        assetId: selectedAsset.assetCode || selectedAsset.id || newAssetId || "AST-001",
-        assetName: selectedAsset.name || selectedAsset.assetName || "Production Asset",
-        lineId: selectedLine.code || selectedLine.id || newLineId || "LIN-01",
-        lineName: selectedLine.name || "Main Production Line",
-        severity: newSeverity,
-        problemStatement: newTitle.trim()
-      });
-
-=======
       await maintenanceService.createRCAInvestigation({
         assetId: assetCode,
         assetName,
@@ -147,8 +128,6 @@ export function Investigations() {
         severity: newSeverity,
         problemStatement: newTitle.trim()
       });
-
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
       setNewTitle("");
       setNewAssetId("");
       setNewLineId("");
@@ -525,15 +504,6 @@ export function Investigations() {
                   style={{ backgroundColor: "#FFFFFF" }}
                 >
                   <option value="">-- Select Target Equipment --</option>
-<<<<<<< HEAD
-                  {availableAssets.map((ast) => (
-                    <option key={ast.id} value={ast.id}>
-                      {ast.name || ast.asset_name || ast.assetName || ast.id} ({ast.asset_code || ast.assetCode || ast.tag || "Asset"})
-                    </option>
-                  ))}
-                  {availableAssets.length === 0 && (
-                    <option value="AST-001">AST-001 — Primary Production Line Asset</option>
-=======
                   {(availableAssets && availableAssets.length > 0 ? availableAssets : (assets || [])).map((ast) => {
                     const code = ast.asset_code || ast.assetCode || ast.tag || ast.id;
                     const name = ast.name || ast.asset_name || ast.assetName || "Asset";
@@ -545,7 +515,6 @@ export function Investigations() {
                   })}
                   {(!availableAssets || availableAssets.length === 0) && (!assets || assets.length === 0) && (
                     <option value="FM-001">FM-001 — Rotary Filling Machine 48-Valve</option>
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
                   )}
                 </select>
               </div>
@@ -559,21 +528,12 @@ export function Investigations() {
                   style={{ backgroundColor: "#FFFFFF" }}
                 >
                   <option value="">-- Select Production Line --</option>
-<<<<<<< HEAD
-                  {availableLines.map((line) => (
-                    <option key={line.id} value={line.id}>
-                      {line.name || line.line_name || line.code || line.id}
-                    </option>
-                  ))}
-                  {availableLines.length === 0 && (
-=======
                   {(availableLines || []).map((line) => (
                     <option key={line.id || line.code} value={line.code || line.id}>
                       {line.name || line.line_name || line.code || line.id}
                     </option>
                   ))}
                   {(!availableLines || availableLines.length === 0) && (
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
                     <option value="Line 1 — Production">Line 1 — Production</option>
                   )}
                 </select>

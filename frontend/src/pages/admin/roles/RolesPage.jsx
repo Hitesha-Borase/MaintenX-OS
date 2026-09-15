@@ -25,35 +25,21 @@ import { useNavigate } from "react-router-dom";
 import { adminService } from "../../../services/adminService";
 
 export function RolesPage() {
-<<<<<<< HEAD
-  const { roles = [], addRole, setRoles } = useAdmin();
-  const { addToast } = useApp();
-=======
   const { roles = [], setRoles, addRole, updateRole, deleteRole } = useAdmin() || {};
   const { addToast } = (useApp ? useApp() : null) || { addToast: () => {} };
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
   const navigate = useNavigate();
 
   // Trigger live GET /api/v1/admin/roles on mount
   React.useEffect(() => {
-<<<<<<< HEAD
     adminService
       .getRoles()
       .then((data) => {
-        if (Array.isArray(data) && setRoles) setRoles(data);
-      })
-      .catch((err) => console.warn("Live roles fetch:", err.message));
-  }, [setRoles]);
-=======
-    adminService.getRoles()
-      .then((data) => {
-        if (Array.isArray(data) && setRoles) {
+        if (Array.isArray(data) && data.length > 0 && setRoles) {
           setRoles(data);
         }
       })
       .catch((err) => console.warn("Live roles fetch:", err.message));
-  }, []);
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
+  }, [setRoles]);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [viewingRole, setViewingRole] = useState(null);
@@ -218,94 +204,9 @@ export function RolesPage() {
             <p style={{ fontSize: "13px", color: "var(--text-secondary)", maxWidth: "460px", margin: "0 auto 20px", lineHeight: 1.5 }}>
               This company currently has no custom roles created. Click below to add roles and configure your company's team structure.
             </p>
-<<<<<<< HEAD
             <Button variant="primary" icon={Plus} onClick={() => setIsModalOpen(true)} style={{ margin: "0 auto" }}>
               + Create Custom Role
             </Button>
-=======
-
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid var(--border-subtle)", paddingTop: "12px", flexWrap: "wrap", gap: "8px" }}>
-              <span style={{ fontSize: "12px", color: "var(--text-muted)", display: "flex", alignItems: "center", gap: "6px" }}>
-                <Users size={14} /> <strong style={{ color: "var(--text-primary)" }}>{r.userCount}</strong> assigned users
-              </span>
-              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                <button
-                  onClick={() => setViewingRole(r)}
-                  title="View Role Details"
-                  style={{
-                    width: "28px",
-                    height: "28px",
-                    borderRadius: "6px",
-                    backgroundColor: "rgba(14, 165, 233, 0.1)",
-                    color: "#0284C7",
-                    border: "1px solid var(--border-subtle)",
-                    cursor: "pointer",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center"
-                  }}
-                >
-                  <Eye size={13} />
-                </button>
-                <button
-                  onClick={() => handleStartEdit(r)}
-                  title="Edit Role"
-                  style={{
-                    width: "28px",
-                    height: "28px",
-                    borderRadius: "6px",
-                    backgroundColor: "rgba(217, 119, 6, 0.1)",
-                    color: "#D97706",
-                    border: "1px solid var(--border-subtle)",
-                    cursor: "pointer",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center"
-                  }}
-                >
-                  <Pencil size={13} />
-                </button>
-                <button
-                  onClick={() => navigate("/roles/permissions")}
-                  title="Edit Granular Permissions"
-                  style={{
-                    padding: "4px 8px",
-                    borderRadius: "6px",
-                    fontSize: "11px",
-                    fontWeight: 700,
-                    backgroundColor: "var(--bg-card-subtle)",
-                    color: "var(--text-primary)",
-                    border: "1px solid var(--border-subtle)",
-                    cursor: "pointer",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "4px"
-                  }}
-                >
-                  <span>Permissions</span>
-                  <ArrowRight size={11} />
-                </button>
-                <button
-                  onClick={() => setDeletingRole(r)}
-                  title="Delete Role"
-                  style={{
-                    width: "28px",
-                    height: "28px",
-                    borderRadius: "6px",
-                    backgroundColor: "rgba(220, 38, 38, 0.1)",
-                    color: "#DC2626",
-                    border: "1px solid var(--border-subtle)",
-                    cursor: "pointer",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center"
-                  }}
-                >
-                  <Trash2 size={13} />
-                </button>
-              </div>
-            </div>
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
           </Card>
         ) : (
           roles.map((r) => (
@@ -328,25 +229,85 @@ export function RolesPage() {
                 <span style={{ fontSize: "12px", color: "var(--text-muted)", display: "flex", alignItems: "center", gap: "6px" }}>
                   <Users size={14} /> <strong style={{ color: "var(--text-primary)" }}>{r.userCount || 0}</strong> assigned users
                 </span>
-                <button
-                  onClick={() => navigate("/roles/permissions")}
-                  style={{
-                    padding: "4px 10px",
-                    borderRadius: "6px",
-                    fontSize: "11px",
-                    fontWeight: 700,
-                    backgroundColor: "var(--bg-card-subtle)",
-                    color: "var(--text-primary)",
-                    border: "1px solid var(--border-subtle)",
-                    cursor: "pointer",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "4px"
-                  }}
-                >
-                  <span>Edit Permissions</span>
-                  <ArrowRight size={12} />
-                </button>
+                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  <button
+                    onClick={() => setViewingRole(r)}
+                    title="View Role Details"
+                    style={{
+                      width: "28px",
+                      height: "28px",
+                      borderRadius: "6px",
+                      backgroundColor: "rgba(14, 165, 233, 0.1)",
+                      color: "#0284C7",
+                      border: "1px solid var(--border-subtle)",
+                      cursor: "pointer",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center"
+                    }}
+                  >
+                    <Eye size={13} />
+                  </button>
+                  <button
+                    onClick={() => {
+                      setEditingRole(r);
+                      setEditFormData({ name: r.name || "", description: r.description || "" });
+                    }}
+                    title="Edit Role"
+                    style={{
+                      width: "28px",
+                      height: "28px",
+                      borderRadius: "6px",
+                      backgroundColor: "rgba(217, 119, 6, 0.1)",
+                      color: "#D97706",
+                      border: "1px solid var(--border-subtle)",
+                      cursor: "pointer",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center"
+                    }}
+                  >
+                    <Pencil size={13} />
+                  </button>
+                  <button
+                    onClick={() => navigate("/roles/permissions")}
+                    title="Edit Granular Permissions"
+                    style={{
+                      padding: "4px 8px",
+                      borderRadius: "6px",
+                      fontSize: "11px",
+                      fontWeight: 700,
+                      backgroundColor: "var(--bg-card-subtle)",
+                      color: "var(--text-primary)",
+                      border: "1px solid var(--border-subtle)",
+                      cursor: "pointer",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "4px"
+                    }}
+                  >
+                    <span>Permissions</span>
+                    <ArrowRight size={11} />
+                  </button>
+                  <button
+                    onClick={() => setDeletingRole(r)}
+                    title="Delete Role"
+                    style={{
+                      width: "28px",
+                      height: "28px",
+                      borderRadius: "6px",
+                      backgroundColor: "rgba(220, 38, 38, 0.1)",
+                      color: "#DC2626",
+                      border: "1px solid var(--border-subtle)",
+                      cursor: "pointer",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center"
+                    }}
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                </div>
               </div>
             </Card>
           ))

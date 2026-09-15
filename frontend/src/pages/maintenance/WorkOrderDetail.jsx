@@ -28,15 +28,12 @@ import { maintenanceService } from "../../services/maintenanceService";
 export function WorkOrderDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-<<<<<<< HEAD
   const { currentRole } = useRole();
   const isPlantManager = currentRole?.id === "plant_manager";
   const managerName = currentRole?.user?.name
     ? `${currentRole.user.name} (${currentRole.label || "Plant Manager"})`
     : "Arthur Sterling (Plant Manager)";
 
-  const { workOrders, updateWorkOrderStatus, startWorkOrder, completeWorkOrder, addVerifiedSolution, issueSparePart, spareParts } = useCMMS();
-=======
   const {
     workOrders,
     updateWorkOrder,
@@ -48,7 +45,6 @@ export function WorkOrderDetail() {
     issueSparePart,
     spareParts
   } = useCMMS();
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
   const { addToast } = useApp();
 
   const wo = workOrders.find((w) => w.id === id || w.woNumber === id || w.dbId === id) || workOrders[0];
@@ -60,14 +56,10 @@ export function WorkOrderDetail() {
     wo?.actualHours != null && wo.actualHours !== "" ? String(wo.actualHours) : "0"
   );
   const [isSignOffModalOpen, setIsSignOffModalOpen] = useState(false);
-<<<<<<< HEAD
-  const [supervisorName, setSupervisorName] = useState(managerName);
-=======
-  const [supervisorName, setSupervisorName] = useState("Thomas Sterling (Plant Operations)");
+  const [supervisorName, setSupervisorName] = useState(managerName || "Thomas Sterling (Plant Operations)");
   const [actualHoursLog, setActualHoursLog] = useState(
     wo?.actualHours != null && wo.actualHours !== "" ? String(wo.actualHours) : "0"
   );
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
   const [isIssuePartModalOpen, setIsIssuePartModalOpen] = useState(false);
   const [selectedPartNo, setSelectedPartNo] = useState("");
   const [issueQty, setIssueQty] = useState(1);
@@ -171,23 +163,21 @@ export function WorkOrderDetail() {
     } catch (err) {
       console.warn("Sign off notice:", err);
     }
-<<<<<<< HEAD
     const signOffNote = isPlantManager
-      ? `Managerial sign-off & operational clearance authorized by ${supervisorName}. Labour: ${actualHoursLog || "0"} hrs.`
-      : `Supervisor sign-off completed by ${supervisorName}. Labour: ${actualHoursLog || "0"} hrs.`;
+      ? `Managerial sign-off & operational clearance authorized by ${supervisorName}. Labour: ${hoursNum} hrs.`
+      : `Supervisor sign-off completed by ${supervisorName}. Labour: ${hoursNum} hrs.`;
     updateWorkOrderStatus(wo.id, "Verified", signOffNote);
-    completeWorkOrder(wo.id, { actualHours: parseFloat(actualHoursLog) || 0, status: "Verified" });
-    setIsSignOffModalOpen(false);
-    addToast(`Work order ${wo.id} verified and signed off by Management!`, "success");
-=======
-    updateWorkOrderStatus(wo.id, "Verified", `Supervisor sign-off completed by ${supervisorName}. Labour: ${hoursNum} hrs.`);
-    completeWorkOrder(wo.id, { actualHours: hoursNum });
+    completeWorkOrder(wo.id, { actualHours: hoursNum, status: "Verified" });
     if (refreshWorkOrders) {
       await refreshWorkOrders();
     }
     setIsSignOffModalOpen(false);
-    addToast(`Work order ${wo.id} verified and ${hoursNum} labour hrs signed off!`, "success");
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
+    addToast(
+      isPlantManager
+        ? `Work order ${wo.id} verified and signed off by Management!`
+        : `Work order ${wo.id} verified and ${hoursNum} labour hrs signed off!`,
+      "success"
+    );
   };
 
   const handleIssuePart = async (e) => {

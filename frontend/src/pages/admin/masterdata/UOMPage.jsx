@@ -26,18 +26,11 @@ export function UOMPage() {
   const { uoms = [], setUoms, addUOM, updateUOM, toggleUOMStatus, deleteUOM } = useMasterData();
   const { addToast } = useApp();
 
-<<<<<<< HEAD
-  useEffect(() => {
-    masterDataService.getUoms().then((res) => {
-      const data = res?.data !== undefined ? res.data : res;
-=======
   const fetchUoms = React.useCallback(async () => {
     try {
-      localStorage.removeItem("mx_master_uoms");
       const res = await masterDataService.getUoms();
-      const data = res?.data || res;
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
-      if (Array.isArray(data) && typeof setUoms === "function") {
+      const data = res?.data !== undefined ? res.data : res;
+      if (Array.isArray(data) && data.length > 0 && typeof setUoms === "function") {
         setUoms(data);
       }
     } catch (err) {

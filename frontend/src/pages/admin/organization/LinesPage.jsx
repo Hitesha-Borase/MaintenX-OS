@@ -25,19 +25,11 @@ export function LinesPage() {
   const { lines = [], setLines, addLine, updateLine, deleteLine, plants = [], assets = [] } = useMasterData();
   const { addToast } = useApp();
 
-<<<<<<< HEAD
-  // Trigger live GET /api/v1/master-data/lines on mount
-  React.useEffect(() => {
-    masterDataService.getLines().then((res) => {
-      const data = res?.data !== undefined ? res.data : res;
-      if (Array.isArray(data) && typeof setLines === "function") {
-=======
   const fetchLines = async () => {
     try {
       const res = await masterDataService.getLines();
-      const data = res?.data || res;
-      if (Array.isArray(data)) {
->>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
+      const data = res?.data !== undefined ? res.data : res;
+      if (Array.isArray(data) && data.length > 0 && typeof setLines === "function") {
         setLines(data);
       }
     } catch (err) {
@@ -45,11 +37,7 @@ export function LinesPage() {
     }
   };
 
-  // Trigger live GET /api/v1/master-data/lines on mount and clear demo cache
   React.useEffect(() => {
-    try {
-      localStorage.removeItem("mx_master_lines");
-    } catch (_) {}
     fetchLines();
   }, []);
 
