@@ -8,6 +8,7 @@ import {
   Gauge,
   Edit2,
   Trash2,
+  Eye,
   ShieldCheck,
   CheckCircle2,
   Eye,
@@ -25,9 +26,10 @@ import { useApp } from "../../../context/AppContext";
 import masterDataService from "../../../services/masterDataService";
 
 export function PlantsPage() {
-  const { plants = [], setPlants, addPlant, updatePlant, deletePlant, lines = [], activePlantId, setActivePlantId } = useMasterData();
+  const { setPlants: setContextPlants, lines = [], activePlantId, setActivePlantId } = useMasterData();
   const { addToast } = useApp();
 
+<<<<<<< HEAD
   // Trigger live GET /api/v1/master-data/plants on mount
   React.useEffect(() => {
     masterDataService.getPlants().then((res) => {
@@ -41,6 +43,30 @@ export function PlantsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPlant, setEditingPlant] = useState(null);
   const [viewingPlant, setViewingPlant] = useState(null);
+=======
+  const [plants, setPlants] = useState([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingPlant, setEditingPlant] = useState(null);
+  const [viewingPlant, setViewingPlant] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const fetchPlants = async () => {
+    try {
+      const res = await masterDataService.getPlants();
+      const data = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
+      setPlants(data);
+      if (typeof setContextPlants === "function") {
+        setContextPlants(data);
+      }
+    } catch (err) {
+      console.warn("Failed to fetch plants:", err.message);
+    }
+  };
+
+  React.useEffect(() => {
+    fetchPlants();
+  }, []);
+>>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
 
   const [newPlant, setNewPlant] = useState({
     code: "",
@@ -55,13 +81,14 @@ export function PlantsPage() {
 
   const totalLines = useMemo(() => lines.length, [lines]);
 
-  const handleAddSubmit = (e) => {
+  const handleAddSubmit = async (e) => {
     e.preventDefault();
     if (!newPlant.name.trim() || !newPlant.code.trim()) {
       addToast("Please provide plant name and code.", "warning");
       return;
     }
 
+<<<<<<< HEAD
     const loc = `${newPlant.city || ""}${newPlant.state ? `, ${newPlant.state}` : ""}${newPlant.country ? `, ${newPlant.country}` : ""}`.replace(/^,\s*/, "");
     const created = addPlant({
       ...newPlant,
@@ -79,15 +106,37 @@ export function PlantsPage() {
       dailyCapacity: "350,000 Units / Day",
       status: "Active"
     });
+=======
+    setIsSubmitting(true);
+    try {
+      await masterDataService.createPlant(newPlant);
+      addToast(`Plant "${newPlant.name}" registered in database!`, "success");
+      setIsModalOpen(false);
+      setNewPlant({
+        code: "",
+        name: "",
+        location: "Indore, Madhya Pradesh, India",
+        timezone: "Asia/Kolkata (IST)",
+        linesCount: 3,
+        dailyCapacity: "280,000 Units / Day"
+      });
+      await fetchPlants();
+    } catch (err) {
+      addToast(`Failed to create plant: ${err.message}`, "error");
+    } finally {
+      setIsSubmitting(false);
+    }
+>>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
   };
 
-  const handleEditSubmit = (e) => {
+  const handleEditSubmit = async (e) => {
     e.preventDefault();
     if (!editingPlant.name.trim() || !editingPlant.code.trim()) {
       addToast("Please provide plant name and code.", "warning");
       return;
     }
 
+<<<<<<< HEAD
     const loc = `${editingPlant.city || ""}${editingPlant.state ? `, ${editingPlant.state}` : ""}${editingPlant.country ? `, ${editingPlant.country}` : ""}`.replace(/^,\s*/, "");
     updatePlant(editingPlant.id || editingPlant.plantId, {
       ...editingPlant,
@@ -95,12 +144,37 @@ export function PlantsPage() {
     });
     addToast(`Plant "${editingPlant.name}" updated!`, "success");
     setEditingPlant(null);
+=======
+    setIsSubmitting(true);
+    try {
+      const targetId = editingPlant.id || editingPlant.plantId || editingPlant.code;
+      await masterDataService.updatePlant(targetId, editingPlant);
+      addToast(`Plant "${editingPlant.name}" updated in database!`, "success");
+      setEditingPlant(null);
+      await fetchPlants();
+    } catch (err) {
+      addToast(`Failed to update plant: ${err.message}`, "error");
+    } finally {
+      setIsSubmitting(false);
+    }
+>>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
   };
 
-  const handleDelete = (plantId, name) => {
-    if (window.confirm(`Are you sure you want to delete Plant "${name}"?`)) {
-      deletePlant(plantId);
-      addToast(`Plant "${name}" deleted.`, "info");
+  const handleDelete = async (plantId, name) => {
+    if (window.confirm(`Are you sure you want to delete Plant "${name}"? This will permanently delete it from the database.`)) {
+      try {
+        await masterDataService.deletePlant(plantId);
+        addToast(`Plant "${name}" deleted from database.`, "success");
+        if (editingPlant && (editingPlant.id === plantId || editingPlant.plantId === plantId)) {
+          setEditingPlant(null);
+        }
+        if (viewingPlant && (viewingPlant.id === plantId || viewingPlant.plantId === plantId)) {
+          setViewingPlant(null);
+        }
+        await fetchPlants();
+      } catch (err) {
+        addToast(`Failed to delete plant: ${err.message}`, "error");
+      }
     }
   };
 
@@ -199,28 +273,51 @@ export function PlantsPage() {
               </tr>
             </thead>
             <tbody>
+<<<<<<< HEAD
               {plants.length > 0 ? (
                 plants.map((p) => {
                   const plantLines = lines.filter((l) => l.plantId === p.id).length;
                   return (
                     <tr key={p.id} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+=======
+              {plants.length === 0 ? (
+                <tr>
+                  <td colSpan={7} style={{ textAlign: "center", padding: "32px", color: "var(--text-secondary)", fontSize: "13px" }}>
+                    No plant facilities found in database. Click "+ Provision Plant" to add one.
+                  </td>
+                </tr>
+              ) : (
+                plants.map((p) => {
+                  const plantLines = lines.filter((l) => l.plantId === (p.id || p.plantId)).length;
+                  return (
+                    <tr key={p.id || p.plantId || p.code} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+>>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
                       <td style={{ padding: "12px 16px", fontFamily: "var(--font-mono)", fontWeight: 800, color: "#8C5B23" }}>
                         {p.code || p.id}
                       </td>
                       <td style={{ padding: "12px 16px" }}>
                         <div style={{ fontWeight: 800, color: "var(--text-primary)", fontSize: "13px" }}>{p.name}</div>
+<<<<<<< HEAD
                         {p.id === activePlantId && <Badge variant="cyan" style={{ marginTop: "4px" }}>Active Current Plant</Badge>}
+=======
+                        {(p.id === activePlantId || p.code === activePlantId) && <Badge variant="cyan" style={{ marginTop: "4px" }}>Active Current Plant</Badge>}
+>>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
                       </td>
                       <td style={{ padding: "12px 16px", fontSize: "12px", color: "var(--text-secondary)" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
                           <MapPin size={12} color="#C89547" />
+<<<<<<< HEAD
                           <span>{p.location || `${p.city || ""}${p.state ? `, ${p.state}` : ""}${p.country ? `, ${p.country}` : ""}` || "—"}</span>
+=======
+                          <span>{p.location}</span>
+>>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
                         </div>
                       </td>
                       <td style={{ padding: "12px 16px", fontFamily: "var(--font-mono)", fontSize: "12px", color: "var(--text-secondary)" }}>
                         {p.timezone || "Asia/Kolkata (IST)"}
                       </td>
                       <td style={{ padding: "12px 16px" }}>
+<<<<<<< HEAD
                         <Badge variant="cyan">{plantLines} Active Lines</Badge>
                       </td>
                       <td style={{ padding: "12px 16px" }}>
@@ -292,6 +389,33 @@ export function PlantsPage() {
                               alignItems: "center",
                               justifyContent: "center"
                             }}
+=======
+                        <Badge variant="cyan">{plantLines || 3} Active Lines</Badge>
+                      </td>
+                      <td style={{ padding: "12px 16px" }}>
+                        <Badge variant="emerald">{p.status || "Operational"}</Badge>
+                      </td>
+                      <td style={{ padding: "12px 16px", textAlign: "right" }}>
+                        <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                          <button
+                            onClick={() => setViewingPlant(p)}
+                            title="View Plant Details"
+                            style={{ width: "30px", height: "30px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", color: "#0284C7", border: "1px solid var(--border-subtle)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+                          >
+                            <Eye size={13} />
+                          </button>
+                          <button
+                            onClick={() => setEditingPlant({ ...p })}
+                            title="Edit Plant"
+                            style={{ width: "30px", height: "30px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", color: "var(--text-primary)", border: "1px solid var(--border-subtle)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+                          >
+                            <Edit2 size={13} />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(p.id || p.plantId || p.code, p.name)}
+                            title="Delete Plant"
+                            style={{ width: "30px", height: "30px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", color: "#EF4444", border: "1px solid var(--border-subtle)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+>>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
                           >
                             <Trash2 size={13} />
                           </button>
@@ -300,6 +424,7 @@ export function PlantsPage() {
                     </tr>
                   );
                 })
+<<<<<<< HEAD
               ) : (
                 <tr>
                   <td colSpan={7} style={{ padding: "48px 24px", textAlign: "center", color: "var(--text-muted)" }}>
@@ -314,6 +439,8 @@ export function PlantsPage() {
                     </div>
                   </td>
                 </tr>
+=======
+>>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
               )}
             </tbody>
           </table>
@@ -699,6 +826,84 @@ export function PlantsPage() {
                 </Button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* VIEW PLANT MODAL */}
+      {viewingPlant && (
+        <div className="modal-backdrop" onClick={() => setViewingPlant(null)}>
+          <div className="modal-content" style={{ maxWidth: "520px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Building2 size={18} color="#C89547" />
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                  Plant Facility Details
+                </h2>
+              </div>
+              <button onClick={() => setViewingPlant(null)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 16px", backgroundColor: "var(--bg-card-subtle)", borderRadius: "8px" }}>
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Plant Code</div>
+                  <div style={{ fontSize: "16px", fontWeight: 800, color: "#8C5B23", fontFamily: "var(--font-mono)" }}>{viewingPlant.code || viewingPlant.id}</div>
+                </div>
+                <Badge variant="emerald">{viewingPlant.status || "Operational"}</Badge>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Facility Name</div>
+                  <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)", marginTop: "4px" }}>{viewingPlant.name}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Timezone</div>
+                  <div style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>{viewingPlant.timezone || "Asia/Kolkata (IST)"}</div>
+                </div>
+              </div>
+
+              <div>
+                <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Geographic Location</div>
+                <div style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px", display: "flex", alignItems: "center", gap: "6px" }}>
+                  <MapPin size={14} color="#C89547" />
+                  <span>{viewingPlant.location || "Indore, Madhya Pradesh, India"}</span>
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Configured Lines</div>
+                  <div style={{ fontSize: "13px", fontWeight: 600, color: "var(--text-primary)", marginTop: "4px" }}>
+                    {lines.filter((l) => l.plantId === viewingPlant.id).length || viewingPlant.linesCount || 3} Active Lines
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Daily Capacity</div>
+                  <div style={{ fontSize: "13px", fontWeight: 600, color: "var(--text-primary)", marginTop: "4px" }}>
+                    {viewingPlant.dailyCapacity || "280,000 Units / Day"}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "12px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
+                <Button variant="secondary" onClick={() => setViewingPlant(null)}>
+                  Close
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={() => {
+                    const toEdit = { ...viewingPlant };
+                    setViewingPlant(null);
+                    setEditingPlant(toEdit);
+                  }}
+                >
+                  Edit Plant
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       )}

@@ -887,12 +887,34 @@ export function RoleProvider({ children }) {
     });
   };
 
+  const updateCurrentUserProfile = (updates) => {
+    setCurrentRole((prev) => {
+      if (!prev) return prev;
+      const updatedUser = {
+        ...prev.user,
+        ...updates
+      };
+      const updated = {
+        ...prev,
+        user: updatedUser
+      };
+      try {
+        localStorage.setItem("flowstate_current_role", JSON.stringify(updated));
+        localStorage.setItem("flowstate_user_profile", JSON.stringify(updatedUser));
+      } catch (e) {
+        // ignore
+      }
+      return updated;
+    });
+  };
+
   return (
     <RoleContext.Provider
       value={{
         currentRole,
         setCurrentRole,
         setRoleById,
+        updateCurrentUserProfile,
         ROLES,
         canAccessPath,
         isAuthenticated,

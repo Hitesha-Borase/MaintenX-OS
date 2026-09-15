@@ -1,6 +1,10 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import maintenanceService from "../services/maintenanceService";
+<<<<<<< HEAD
 import { masterDataService } from "../services/masterDataService";
+=======
+import masterDataService from "../services/masterDataService";
+>>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
 import iotService from "../services/iotService";
 import { INITIAL_ASSETS, ASSET_HIERARCHY_TREE } from "../data/mockAssets";
 import { INITIAL_WORK_ORDERS } from "../data/mockWorkOrders";
@@ -14,7 +18,6 @@ import { INITIAL_FAILURE_CODES } from "../data/mockFailureCodes";
 import { RELIABILITY_METRICS, REPEAT_FAILURES } from "../data/mockReliability";
 import { INITIAL_EMPLOYEES, SKILLS_MATRIX } from "../data/mockLabour";
 import { REPORT_TEMPLATES } from "../data/mockReports";
-import { INITIAL_NOTIFICATIONS } from "../data/mockNotifications";
 import { DEFAULT_USER_PROFILE } from "../data/mockUserProfile";
 
 const CMMSContext = createContext();
@@ -24,6 +27,7 @@ export function CMMSProvider({ children }) {
   const hasTenant = Boolean(typeof window !== "undefined" && (localStorage.getItem("maintenx_tenant_name") || localStorage.getItem("maintenx_tenant_id")));
   const isTenantActive = Boolean(hasTenant || hasAuthToken);
 
+<<<<<<< HEAD
   // 1. Assets State — Unified with MasterDataContext / PostgreSQL Assets
   const [assets, setAssets] = useState(() => {
     const masterSaved = typeof window !== "undefined" ? localStorage.getItem("mx_master_assets") : null;
@@ -54,11 +58,30 @@ export function CMMSProvider({ children }) {
           if (real.length > 0) return real;
         }
       } catch (e) {}
+=======
+  // 1. Assets State - initialized from DB / local cache, clearing legacy mocks
+  const [assets, setAssets] = useState(() => {
+    if (isTenantActive) return [];
+    const saved = localStorage.getItem("flowstate_assets");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        const hasLegacyMocks = Array.isArray(parsed) && parsed.some(a => ["FM-001", "CP-102", "LB-204", "MX-003", "HT-105", "PK-401", "CV-301", "AC-505"].includes(a.id));
+        if (hasLegacyMocks) {
+          localStorage.removeItem("flowstate_assets");
+          return [];
+        }
+        return parsed;
+      } catch {
+        return [];
+      }
+>>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
     }
     return [];
   });
 
   const [assetHierarchy, setAssetHierarchy] = useState(() => {
+<<<<<<< HEAD
     return [];
   });
 
@@ -74,12 +97,39 @@ export function CMMSProvider({ children }) {
           );
         }
       } catch (e) {}
+=======
+    if (isTenantActive) return [];
+    const saved = localStorage.getItem("flowstate_asset_hierarchy");
+    return saved ? JSON.parse(saved) : ASSET_HIERARCHY_TREE;
+  });
+
+  // 2. Work Orders State - 100% Live PostgreSQL DB state, purge legacy mocks
+  const [workOrders, setWorkOrders] = useState(() => {
+    if (isTenantActive) return [];
+    const saved = localStorage.getItem("flowstate_work_orders");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        const hasLegacyMocks = Array.isArray(parsed) && parsed.some(w =>
+          ["WO-2026-0891", "WO-2026-0888", "WO-2026-0885", "WO-2026-0870", "WO-2026-0865", "WO-2026-0850"].includes(w?.id) ||
+          (w?.title && (w.title.includes("Vibration on Main Drive") || w.title.includes("Plate Seal Leakage")))
+        );
+        if (hasLegacyMocks) {
+          localStorage.removeItem("flowstate_work_orders");
+          return [];
+        }
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+>>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
     }
     return [];
   });
 
   // 3. PM Plans & Schedules
   const [pmPlans, setPmPlans] = useState(() => {
+<<<<<<< HEAD
     const saved = typeof window !== "undefined" ? localStorage.getItem("flowstate_pm_plans") : null;
     if (saved) {
       try {
@@ -103,10 +153,22 @@ export function CMMSProvider({ children }) {
       } catch (e) {}
     }
     return [];
+=======
+    if (isTenantActive) return [];
+    const saved = localStorage.getItem("flowstate_pm_plans");
+    return saved ? JSON.parse(saved) : INITIAL_PM_PLANS;
+  });
+
+  const [pmSchedules, setPmSchedules] = useState(() => {
+    if (isTenantActive) return [];
+    const saved = localStorage.getItem("flowstate_pm_schedules");
+    return saved ? JSON.parse(saved) : INITIAL_PM_SCHEDULES;
+>>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
   });
 
   // Checklists
   const [checklistTemplates, setChecklistTemplates] = useState(() => {
+<<<<<<< HEAD
     const saved = typeof window !== "undefined" ? localStorage.getItem("flowstate_checklists") : null;
     if (saved) {
       try {
@@ -114,10 +176,19 @@ export function CMMSProvider({ children }) {
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       } catch (e) {}
     }
+=======
+    if (isTenantActive) return [];
+    try {
+      const saved = localStorage.getItem("flowstate_checklists_v2");
+      if (saved) return JSON.parse(saved);
+      localStorage.removeItem("flowstate_checklists");
+    } catch (e) {}
+>>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
     return CHECKLIST_TEMPLATES;
   });
 
   const [checklistHistory, setChecklistHistory] = useState(() => {
+<<<<<<< HEAD
     const saved = typeof window !== "undefined" ? localStorage.getItem("flowstate_checklist_history") : null;
     if (saved) {
       try {
@@ -126,10 +197,16 @@ export function CMMSProvider({ children }) {
       } catch (e) {}
     }
     return CHECKLIST_HISTORY;
+=======
+    if (isTenantActive) return [];
+    const saved = localStorage.getItem("flowstate_checklist_history");
+    return saved ? JSON.parse(saved) : CHECKLIST_HISTORY;
+>>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
   });
 
   // 4. Breakdowns
   const [breakdowns, setBreakdowns] = useState(() => {
+<<<<<<< HEAD
     const saved = typeof window !== "undefined" ? localStorage.getItem("flowstate_breakdowns") : null;
     if (saved) {
       try {
@@ -140,23 +217,53 @@ export function CMMSProvider({ children }) {
       } catch (e) {}
     }
     return [];
+=======
+    if (isTenantActive) return [];
+    try {
+      const saved = localStorage.getItem("flowstate_breakdowns");
+      if (!saved) return [];
+      const parsed = JSON.parse(saved);
+      if (!Array.isArray(parsed)) return [];
+      // Filter out legacy mock data
+      const filtered = parsed.filter(b => !["BD-2026-042", "BD-2026-039", "BD-2026-035", "BD-2026-028"].includes(b?.id));
+      return filtered;
+    } catch {
+      return [];
+    }
+>>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
   });
 
   // 5. Spare Parts & BOM & Requests
   const [spareParts, setSpareParts] = useState(() => {
+    if (isTenantActive) return [];
     const saved = localStorage.getItem("flowstate_spare_parts");
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
+<<<<<<< HEAD
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       } catch (e) {}
     }
     return INITIAL_SPARE_PARTS;
+=======
+        const hasLegacyMocks = Array.isArray(parsed) && parsed.some((p) => ["BRG-6208-2RS", "GSK-EPDM-HT105", "SL-VTON-45"].includes(p?.partNo));
+        if (hasLegacyMocks) {
+          localStorage.removeItem("flowstate_spare_parts");
+          return [];
+        }
+        return parsed;
+      } catch {
+        return [];
+      }
+    }
+    return [];
+>>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
   });
 
-  const [equipmentBOMs] = useState(EQUIPMENT_BOMS);
+  const [equipmentBOMs] = useState(() => (isTenantActive ? {} : EQUIPMENT_BOMS));
 
   const [partsRequests, setPartsRequests] = useState(() => {
+    if (isTenantActive) return [];
     const saved = localStorage.getItem("flowstate_parts_requests");
     if (saved) {
       try {
@@ -169,17 +276,33 @@ export function CMMSProvider({ children }) {
 
   // 6. Calibrations & History
   const [calibrations, setCalibrations] = useState(() => {
+    if (isTenantActive) return [];
     const saved = localStorage.getItem("flowstate_calibrations");
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
+<<<<<<< HEAD
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       } catch (e) {}
     }
     return INITIAL_CALIBRATIONS;
+=======
+        const hasLegacyMocks = Array.isArray(parsed) && parsed.some((c) => ["CAL-2026-088", "CAL-2026-082", "CAL-2026-091", "CAL-2026-079"].includes(c?.id));
+        if (hasLegacyMocks) {
+          localStorage.removeItem("flowstate_calibrations");
+          return [];
+        }
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+    return [];
+>>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
   });
 
   const [calibrationHistory, setCalibrationHistory] = useState(() => {
+    if (isTenantActive) return [];
     const saved = localStorage.getItem("flowstate_calibration_history");
     if (saved) {
       try {
@@ -192,6 +315,7 @@ export function CMMSProvider({ children }) {
 
   // 7. Failure Codes
   const [failureCodes, setFailureCodes] = useState(() => {
+    if (isTenantActive) return [];
     const saved = localStorage.getItem("flowstate_failure_codes");
     if (saved) {
       try {
@@ -204,19 +328,34 @@ export function CMMSProvider({ children }) {
 
   // 8. Troubleshooting & Verified Solutions
   const [solutions, setSolutions] = useState(() => {
+    if (isTenantActive) return [];
     const saved = localStorage.getItem("flowstate_solutions");
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
+<<<<<<< HEAD
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       } catch (e) {}
     }
     return INITIAL_SOLUTIONS;
+=======
+        const hasLegacyMocks = Array.isArray(parsed) && parsed.some((s) => ["SOL-2026-012", "SOL-2025-084", "SOL-2025-045"].includes(s?.id));
+        if (hasLegacyMocks) {
+          localStorage.removeItem("flowstate_solutions");
+          return [];
+        }
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+    return [];
+>>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
   });
 
   // 9. Reliability
-  const [repeatFailures, setRepeatFailures] = useState(REPEAT_FAILURES);
-  const [reliabilityMetrics, setReliabilityMetrics] = useState(RELIABILITY_METRICS);
+  const [repeatFailures, setRepeatFailures] = useState(() => (isTenantActive ? [] : REPEAT_FAILURES));
+  const [reliabilityMetrics, setReliabilityMetrics] = useState(() => (isTenantActive ? {} : RELIABILITY_METRICS));
 
   // 10. Machine / IoT Live Simulation & Streaming
   const [isLiveTelemetryStreaming, setIsLiveTelemetryStreaming] = useState(true);
@@ -281,27 +420,224 @@ export function CMMSProvider({ children }) {
   // 12. Reports
   const [reportTemplates] = useState(REPORT_TEMPLATES);
 
-  // 13. Notifications
+  // 13. Notifications - 100% Live DB state, purge legacy mocks
   const [notifications, setNotifications] = useState(() => {
     const saved = localStorage.getItem("flowstate_notifications");
-    return saved ? JSON.parse(saved) : INITIAL_NOTIFICATIONS;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        const hasLegacyMocks = Array.isArray(parsed) && parsed.some((n) =>
+          ["NOTIF-001", "NOTIF-002", "NOTIF-003", "NOTIF-004", "NOTIF-005", "NOTIF-006"].includes(n?.id) ||
+          (n?.title && (n.title.includes("Heat Exchanger HT-105") || n.title.includes("Pasteurizer Monthly") || n.title.includes("Coriolis Flowmeter") || n.title.includes("EPDM Gaskets")))
+        );
+        if (hasLegacyMocks) {
+          localStorage.removeItem("flowstate_notifications");
+          return [];
+        }
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+    return [];
   });
 
-  // 14. Profile
+  // 14. Profile - 100% Live PostgreSQL DB state, purge legacy mocks
   const [userProfile, setUserProfile] = useState(() => {
     const saved = localStorage.getItem("flowstate_user_profile");
-    return saved ? JSON.parse(saved) : DEFAULT_USER_PROFILE;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed?.name?.includes("Marcus Vance") || parsed?.completedWOsThisYear === 142 || !parsed?.name) {
+          localStorage.removeItem("flowstate_user_profile");
+          return null;
+        }
+        return parsed;
+      } catch {
+        return null;
+      }
+    }
+    return null;
   });
 
+<<<<<<< HEAD
   // Synchronize CMMS Work Orders, Assets & PM Schedules with Fastify backend
   useEffect(() => {
     async function syncCMMSBackend() {
       try {
         const [remoteWOs, remotePMs, remoteSpares, remoteAssets] = await Promise.allSettled([
+=======
+  // Normalize Work Orders from database
+  const normalizeWorkOrders = (rawList) => {
+    if (!Array.isArray(rawList)) return [];
+    return rawList.map((wo) => {
+      const rawStatus = (wo.status || "Open").trim();
+      let displayStatus = "Open";
+      if (rawStatus.toUpperCase() === "IN_PROGRESS" || rawStatus.toUpperCase() === "IN PROGRESS") displayStatus = "In Progress";
+      else if (rawStatus.toUpperCase() === "COMPLETED") displayStatus = "Completed";
+      else if (rawStatus.toUpperCase() === "CLOSED") displayStatus = "Closed";
+      else if (rawStatus.toUpperCase() === "ASSIGNED") displayStatus = "Assigned";
+      else if (rawStatus.toUpperCase() === "WAITING_FOR_PARTS" || rawStatus.toUpperCase() === "WAITING FOR PARTS") displayStatus = "Waiting for Parts";
+      else displayStatus = rawStatus.charAt(0).toUpperCase() + rawStatus.slice(1).toLowerCase();
+
+      return {
+        id: wo.woNumber || wo.id,
+        dbId: wo.id,
+        woNumber: wo.woNumber,
+        title: wo.title,
+        description: wo.description || "",
+        symptom: wo.description || "",
+        assetId: wo.asset?.assetCode || wo.asset?.id || wo.assetId || "AST-001",
+        dbAssetId: wo.assetId || wo.asset?.id,
+        assetCode: wo.asset?.assetCode,
+        assetName: wo.asset?.name || "Industrial Asset",
+        type: wo.type ? (wo.type.charAt(0).toUpperCase() + wo.type.slice(1).toLowerCase()) : "Corrective",
+        priority: wo.priority || "P2 - High",
+        status: displayStatus,
+        rawStatus: wo.status,
+        assignedTechnician: wo.assignedUser
+          ? `${wo.assignedUser.firstName || ""} ${wo.assignedUser.lastName || ""}`.trim()
+          : (wo.assignedTechnician || "Unassigned"),
+        createdDate: wo.createdAt ? new Date(wo.createdAt).toISOString().substring(0, 10) : "2026-09-01",
+        dueDate: wo.scheduledDate ? new Date(wo.scheduledDate).toISOString().substring(0, 10) : (wo.dueDate || "2026-09-12"),
+        estimatedHours: wo.estimatedHours ? parseFloat(wo.estimatedHours) : 2.0,
+        actualHours: wo.actualHours != null && wo.actualHours !== "" ? parseFloat(wo.actualHours) : 0,
+        resolution: wo.completedAt ? "Work completed & verified" : (wo.resolution || null),
+        comments: wo.comments || [],
+        partsRequired: wo.partsRequired || [],
+        toolsRequired: wo.toolsRequired || []
+      };
+    });
+  };
+
+  // Refresh Work Orders from Backend
+  const refreshWorkOrders = useCallback(async () => {
+    try {
+      const res = await maintenanceService.getWorkOrders();
+      const list = Array.isArray(res) ? res : (res?.data || []);
+      if (Array.isArray(list) && list.length > 0) {
+        const normalized = normalizeWorkOrders(list);
+        setWorkOrders(normalized);
+        return normalized;
+      }
+    } catch (err) {
+      console.warn("maintenanceService.getWorkOrders refresh notice:", err.message || err);
+    }
+  }, []);
+
+  // Refresh Assets from Backend
+  const refreshAssets = useCallback(async () => {
+    try {
+      const res = await masterDataService.getAssets();
+      const list = res?.data || res || [];
+      if (Array.isArray(list)) {
+        setAssets(list);
+      }
+    } catch (err) {
+      console.warn("masterDataService.getAssets refresh notice:", err.message || err);
+    }
+  }, []);
+
+  // Refresh Reliability from Backend
+  const refreshReliability = useCallback(async () => {
+    try {
+      const res = await maintenanceService.getReliabilityMetrics();
+      const data = res?.data || res;
+      if (data && data.plantOverall) {
+        setReliabilityMetrics(data);
+        if (Array.isArray(data.repeatFailures)) {
+          setRepeatFailures(data.repeatFailures);
+        }
+        return data;
+      }
+    } catch (err) {
+      console.warn("maintenanceService.getReliabilityMetrics refresh notice:", err.message || err);
+    }
+  }, []);
+
+  // Refresh Calibrations from Backend
+  const refreshCalibrations = useCallback(async () => {
+    try {
+      const res = await maintenanceService.getCalibrations();
+      const list = Array.isArray(res) ? res : (res?.data || []);
+      if (Array.isArray(list)) {
+        setCalibrations(list);
+        return list;
+      }
+    } catch (err) {
+      console.warn("maintenanceService.getCalibrations refresh notice:", err.message || err);
+    }
+  }, []);
+
+  // Refresh Spare Parts from Backend
+  const refreshSpareParts = useCallback(async () => {
+    try {
+      const res = await maintenanceService.getSpareParts();
+      const list = Array.isArray(res) ? res : (res?.data || []);
+      if (Array.isArray(list)) {
+        setSpareParts(list);
+        return list;
+      }
+    } catch (err) {
+      console.warn("maintenanceService.getSpareParts refresh notice:", err.message || err);
+    }
+  }, []);
+
+  // Refresh Troubleshooting Solutions from Backend
+  const refreshSolutions = useCallback(async () => {
+    try {
+      const res = await maintenanceService.getTroubleshooting();
+      const list = Array.isArray(res) ? res : (res?.data || []);
+      if (Array.isArray(list)) {
+        setSolutions(list);
+        return list;
+      }
+    } catch (err) {
+      console.warn("maintenanceService.getTroubleshooting refresh notice:", err.message || err);
+    }
+  }, []);
+
+  // Refresh Notifications from Backend
+  const refreshNotifications = useCallback(async () => {
+    try {
+      const res = await maintenanceService.getNotifications();
+      const list = Array.isArray(res) ? res : (res?.data || []);
+      if (Array.isArray(list)) {
+        setNotifications(list);
+        localStorage.setItem("flowstate_notifications", JSON.stringify(list));
+        return list;
+      }
+    } catch (err) {
+      console.warn("maintenanceService.getNotifications refresh notice:", err.message || err);
+    }
+  }, []);
+
+  // Refresh Profile from Backend
+  const refreshProfile = useCallback(async () => {
+    try {
+      const res = await maintenanceService.getProfile();
+      const profileData = res?.data || res;
+      if (profileData && profileData.name) {
+        setUserProfile(profileData);
+        localStorage.setItem("flowstate_user_profile", JSON.stringify(profileData));
+        return profileData;
+      }
+    } catch (err) {
+      console.warn("maintenanceService.getProfile refresh notice:", err.message || err);
+    }
+  }, []);
+
+  // Synchronize CMMS Work Orders & PM Schedules with Fastify backend
+  useEffect(() => {
+    async function syncCMMSBackend() {
+      try {
+        const [remoteWOs, remotePMs, remoteSpares, remoteAssets, remoteBreakdowns, remoteReliability, remoteCalibrations, remoteSolutions, remoteNotifs, remoteProf] = await Promise.allSettled([
+>>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
           maintenanceService.getWorkOrders(),
           maintenanceService.getPMSchedules(),
           maintenanceService.getSpareParts(),
           masterDataService.getAssets(),
+<<<<<<< HEAD
         ]);
 
         if (remoteAssets.status === "fulfilled" && Array.isArray(remoteAssets.value) && remoteAssets.value.length > 0) {
@@ -344,6 +680,80 @@ export function CMMSProvider({ children }) {
         }
         if (remoteSpares.status === "fulfilled" && Array.isArray(remoteSpares.value)) {
           setSpareParts(remoteSpares.value);
+=======
+          maintenanceService.getBreakdowns(),
+          maintenanceService.getReliabilityMetrics(),
+          maintenanceService.getCalibrations(),
+          maintenanceService.getTroubleshooting(),
+          maintenanceService.getNotifications(),
+          maintenanceService.getProfile(),
+        ]);
+
+        if (remoteWOs.status === "fulfilled") {
+          const list = Array.isArray(remoteWOs.value) ? remoteWOs.value : (remoteWOs.value?.data || []);
+          if (Array.isArray(list) && list.length > 0) {
+            setWorkOrders(normalizeWorkOrders(list));
+          }
+        }
+        if (remotePMs.status === "fulfilled") {
+          const list = Array.isArray(remotePMs.value) ? remotePMs.value : (remotePMs.value?.data || []);
+          if (Array.isArray(list)) {
+            setPmSchedules(list);
+          }
+        }
+        if (remoteSpares.status === "fulfilled") {
+          const list = Array.isArray(remoteSpares.value) ? remoteSpares.value : (remoteSpares.value?.data || []);
+          if (Array.isArray(list)) {
+            setSpareParts(list);
+          }
+        }
+        if (remoteAssets.status === "fulfilled") {
+          const list = remoteAssets.value?.data || remoteAssets.value || [];
+          if (Array.isArray(list)) {
+            setAssets(list);
+          }
+        }
+        if (remoteBreakdowns.status === "fulfilled") {
+          const list = Array.isArray(remoteBreakdowns.value) ? remoteBreakdowns.value : (remoteBreakdowns.value?.data || []);
+          if (Array.isArray(list)) {
+            setBreakdowns(list);
+          }
+        }
+        if (remoteReliability.status === "fulfilled") {
+          const data = remoteReliability.value?.data || remoteReliability.value;
+          if (data && data.plantOverall) {
+            setReliabilityMetrics(data);
+            if (Array.isArray(data.repeatFailures)) {
+              setRepeatFailures(data.repeatFailures);
+            }
+          }
+        }
+        if (remoteCalibrations.status === "fulfilled") {
+          const list = Array.isArray(remoteCalibrations.value) ? remoteCalibrations.value : (remoteCalibrations.value?.data || []);
+          if (Array.isArray(list)) {
+            setCalibrations(list);
+          }
+        }
+        if (remoteSolutions.status === "fulfilled") {
+          const list = Array.isArray(remoteSolutions.value) ? remoteSolutions.value : (remoteSolutions.value?.data || []);
+          if (Array.isArray(list)) {
+            setSolutions(list);
+          }
+        }
+        if (remoteNotifs.status === "fulfilled") {
+          const list = Array.isArray(remoteNotifs.value) ? remoteNotifs.value : (remoteNotifs.value?.data || []);
+          if (Array.isArray(list)) {
+            setNotifications(list);
+            localStorage.setItem("flowstate_notifications", JSON.stringify(list));
+          }
+        }
+        if (remoteProf.status === "fulfilled") {
+          const profileData = remoteProf.value?.data || remoteProf.value;
+          if (profileData && profileData.name) {
+            setUserProfile(profileData);
+            localStorage.setItem("flowstate_user_profile", JSON.stringify(profileData));
+          }
+>>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
         }
       } catch (err) {
         console.warn("CMMS backend sync fallback:", err.message);
@@ -352,6 +762,7 @@ export function CMMSProvider({ children }) {
     syncCMMSBackend();
   }, []);
 
+<<<<<<< HEAD
   // Real-time synchronization with MasterDataContext asset changes
   useEffect(() => {
     const handleSyncAssets = (e) => {
@@ -403,6 +814,8 @@ export function CMMSProvider({ children }) {
     };
   }, []);
 
+=======
+>>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
   useEffect(() => {
     const handleTenantChanged = () => {
       setAssets([]);
@@ -443,6 +856,7 @@ export function CMMSProvider({ children }) {
     return () => window.removeEventListener("maintenx:tenant_changed", handleTenantChanged);
   }, []);
 
+<<<<<<< HEAD
   // Persist workOrders state across dashboards
   useEffect(() => {
     if (workOrders && workOrders.length > 0) {
@@ -450,6 +864,8 @@ export function CMMSProvider({ children }) {
     }
   }, [workOrders]);
 
+=======
+>>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
   // Dynamic MTTR / MTBF recalculation based on actual Breakdowns
   useEffect(() => {
     const resolvedBDs = breakdowns.filter(b => b.status === "Resolved" || b.status === "Closed");
@@ -505,7 +921,7 @@ export function CMMSProvider({ children }) {
   }, [pmSchedules]);
 
   useEffect(() => {
-    localStorage.setItem("flowstate_checklists", JSON.stringify(checklistTemplates));
+    localStorage.setItem("flowstate_checklists_v2", JSON.stringify(checklistTemplates));
   }, [checklistTemplates]);
 
   useEffect(() => {
@@ -588,7 +1004,7 @@ export function CMMSProvider({ children }) {
   }, [isLiveTelemetryStreaming]);
 
   // Asset Actions
-  const addAsset = (newAsset) => {
+  const addAsset = async (newAsset) => {
     const id = newAsset.id || `ASSET-${Math.floor(100 + Math.random() * 900)}`;
     const assetWithMeta = {
       ...newAsset,
@@ -604,19 +1020,43 @@ export function CMMSProvider({ children }) {
       pressure: newAsset.pressure || 6.0
     };
     setAssets((prev) => [assetWithMeta, ...prev]);
+
+    try {
+      const res = await masterDataService.createAsset({
+        id: assetWithMeta.id,
+        name: assetWithMeta.name,
+        type: assetWithMeta.type,
+        plant: assetWithMeta.plant,
+        department: assetWithMeta.department,
+        line: assetWithMeta.line,
+        location: assetWithMeta.location,
+        criticality: assetWithMeta.criticality,
+        status: assetWithMeta.status,
+        health: assetWithMeta.health,
+        manufacturer: assetWithMeta.manufacturer,
+        model: assetWithMeta.model,
+        installedDate: assetWithMeta.installedDate,
+        mtbf: assetWithMeta.mtbf,
+        mttr: assetWithMeta.mttr,
+      });
+      if (res?.data) {
+        setAssets((prev) => prev.map((a) => (a.id === assetWithMeta.id ? { ...a, ...res.data } : a)));
+      }
+    } catch (err) {
+      console.warn("masterDataService.createAsset error:", err.message);
+    }
     return assetWithMeta;
   };
 
-  const updateAssetStatus = (assetId, newStatus, healthChange = 0) => {
+  const updateAssetStatus = async (assetId, newStatus, healthChange = 0) => {
     setAssets((prev) =>
       prev.map((asset) => {
-        if (asset.id === assetId) {
+        if (asset.id === assetId || asset.dbId === assetId) {
           const updated = {
             ...asset,
             status: newStatus,
             health: Math.max(0, Math.min(100, asset.health + healthChange))
           };
-          // Dispatch custom event for cross-context synchronization (e.g. MasterDataContext line status)
           window.dispatchEvent(
             new CustomEvent("AssetStatusChanged", {
               detail: { assetId, status: newStatus, lineId: asset.lineId }
@@ -627,37 +1067,98 @@ export function CMMSProvider({ children }) {
         return asset;
       })
     );
-    maintenanceService.updateAsset(assetId, { status: newStatus, healthChange }).catch(() => {});
+    try {
+      await masterDataService.updateAsset(assetId, { status: newStatus, healthChange });
+    } catch {
+      maintenanceService.updateAsset(assetId, { status: newStatus, healthChange }).catch(() => {});
+    }
   };
 
-  const updateAsset = (assetId, updatedFields) => {
-    setAssets((prev) =>
-      prev.map((asset) => {
-        if (asset.id === assetId) {
-          return {
-            ...asset,
-            ...updatedFields,
-            id: asset.id, // preserve ID immutability
-            lastUpdated: new Date().toISOString().replace("T", " ").substring(0, 16)
-          };
-        }
-        return asset;
-      })
-    );
-    maintenanceService.updateAsset(assetId, updatedFields).catch(() => {});
+  const updateAsset = async (assetId, updatedFields) => {
+    try {
+      const res = await masterDataService.updateAsset(assetId, updatedFields);
+      const serverAsset = res?.data || res;
+      setAssets((prev) =>
+        prev.map((asset) => {
+          if (asset.id === assetId || asset.dbId === assetId || asset.assetCode === assetId) {
+            return {
+              ...asset,
+              ...(typeof serverAsset === "object" ? serverAsset : {}),
+              ...updatedFields,
+              id: asset.id,
+              lastUpdated: new Date().toISOString().replace("T", " ").substring(0, 16)
+            };
+          }
+          return asset;
+        })
+      );
+      return serverAsset;
+    } catch (err) {
+      console.warn("masterDataService.updateAsset error:", err.message);
+      setAssets((prev) =>
+        prev.map((asset) => {
+          if (asset.id === assetId || asset.dbId === assetId || asset.assetCode === assetId) {
+            return {
+              ...asset,
+              ...updatedFields,
+              id: asset.id,
+              lastUpdated: new Date().toISOString().replace("T", " ").substring(0, 16)
+            };
+          }
+          return asset;
+        })
+      );
+    }
+  };
+
+  const deleteAsset = async (assetId) => {
+    setAssets((prev) => prev.filter((asset) => asset.id !== assetId && asset.dbId !== assetId));
+    try {
+      await masterDataService.deleteAsset(assetId);
+    } catch (err) {
+      console.warn("masterDataService.deleteAsset error:", err.message);
+    }
   };
 
   // Work Order Actions
-  const addWorkOrder = (newWO) => {
-    const id = newWO.id || `WO-2026-${Math.floor(1000 + Math.random() * 9000)}`;
-    const createdDate = newWO.createdDate || new Date().toISOString().replace("T", " ").substring(0, 16);
+  const addWorkOrder = async (newWO) => {
+    let createdFromBackend = null;
+    const techToAssign = newWO.assignedTechnician || newWO.technician || newWO.assignedTo;
+    try {
+      const res = await maintenanceService.createWorkOrder({
+        assetId: newWO.assetId || "ASSET-101",
+        title: newWO.title,
+        description: newWO.description || newWO.symptom || newWO.issue || "",
+        type: newWO.type || "Corrective",
+        priority: newWO.priority || "HIGH",
+        estimatedHours: Number(newWO.estimatedHours) || 2.0,
+        dueDate: newWO.dueDate,
+        scheduledDate: newWO.dueDate || newWO.scheduledDate,
+        assignedTo: techToAssign,
+        assignedTechnician: techToAssign,
+        technician: techToAssign
+      });
+      createdFromBackend = res?.data || res;
+    } catch (err) {
+      console.warn("maintenanceService.createWorkOrder error:", err.message);
+    }
+
+    const id = createdFromBackend?.woNumber || newWO.id || `WO-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+    const assignedTechName = createdFromBackend?.assignedUser
+      ? `${createdFromBackend.assignedUser.firstName || ""} ${createdFromBackend.assignedUser.lastName || ""}`.trim()
+      : (techToAssign || "Unassigned");
+
     const woWithMeta = {
       ...newWO,
       id,
-      createdDate,
+      dbId: createdFromBackend?.id,
+      woNumber: createdFromBackend?.woNumber || id,
+      createdDate: new Date().toISOString().substring(0, 10),
+      dueDate: newWO.dueDate || (createdFromBackend?.scheduledDate ? new Date(createdFromBackend.scheduledDate).toISOString().substring(0, 10) : new Date().toISOString().substring(0, 10)),
       status: newWO.status || "Open",
       priority: newWO.priority || "P2 - High",
       type: newWO.type || "Corrective",
+      assignedTechnician: assignedTechName,
       partsRequired: newWO.partsRequired || [],
       toolsRequired: newWO.toolsRequired || [],
       comments: newWO.comments || []
@@ -670,22 +1171,67 @@ export function CMMSProvider({ children }) {
       );
     }
 
-    maintenanceService.createWorkOrder({
-      assetId: newWO.assetId || "ASSET-101",
-      title: newWO.title,
-      description: newWO.description || newWO.symptom || "",
-      type: newWO.type || "Corrective",
-      priority: newWO.priority || "HIGH",
-      estimatedHours: Number(newWO.estimatedHours) || 2.0,
-    }).catch(err => console.warn("maintenanceService.createWorkOrder:", err.message));
-
+    await refreshWorkOrders();
     return woWithMeta;
   };
 
-  const updateWorkOrderStatus = (woId, newStatus, notes = "") => {
+  const updateWorkOrder = async (woId, updateData) => {
+    const techName = updateData.technician || updateData.assignedTechnician;
     setWorkOrders((prev) =>
       prev.map((wo) => {
-        if (wo.id === woId) {
+        if (wo.id === woId || wo.dbId === woId || wo.woNumber === woId) {
+          return {
+            ...wo,
+            ...updateData,
+            title: updateData.title || wo.title,
+            description: updateData.description || updateData.issue || wo.description,
+            symptom: updateData.description || updateData.issue || wo.symptom,
+            priority: updateData.priority || wo.priority,
+            status: updateData.status || wo.status,
+            assignedTechnician: techName || wo.assignedTechnician,
+            dueDate: updateData.dueDate || wo.dueDate,
+            actualHours: updateData.actualHours !== undefined ? Number(updateData.actualHours) : wo.actualHours,
+            estimatedHours: updateData.estimatedHours !== undefined ? Number(updateData.estimatedHours) : wo.estimatedHours
+          };
+        }
+        return wo;
+      })
+    );
+
+    try {
+      await maintenanceService.updateWorkOrder(woId, {
+        title: updateData.title,
+        description: updateData.description || updateData.issue,
+        priority: updateData.priority,
+        status: updateData.status,
+        dueDate: updateData.dueDate,
+        technician: techName,
+        assignedTechnician: techName,
+        assignedTo: updateData.assignedTo || techName,
+        actualHours: updateData.actualHours !== undefined ? Number(updateData.actualHours) : undefined,
+        estimatedHours: updateData.estimatedHours !== undefined ? Number(updateData.estimatedHours) : undefined
+      });
+      await refreshWorkOrders();
+    } catch (err) {
+      console.warn("maintenanceService.updateWorkOrder error:", err.message);
+    }
+  };
+
+  const deleteWorkOrder = async (woId) => {
+    setWorkOrders((prev) => prev.filter((wo) => wo.id !== woId && wo.dbId !== woId && wo.woNumber !== woId));
+
+    try {
+      await maintenanceService.deleteWorkOrder(woId);
+      refreshWorkOrders();
+    } catch (err) {
+      console.warn("maintenanceService.deleteWorkOrder error:", err.message);
+    }
+  };
+
+  const updateWorkOrderStatus = async (woId, newStatus, notes = "") => {
+    setWorkOrders((prev) =>
+      prev.map((wo) => {
+        if (wo.id === woId || wo.dbId === woId || wo.woNumber === woId) {
           const updated = { ...wo, status: newStatus };
           if (notes) {
             updated.comments = [
@@ -703,7 +1249,12 @@ export function CMMSProvider({ children }) {
       })
     );
 
-    maintenanceService.updateWorkOrderStatus(woId, newStatus).catch(err => console.warn("maintenanceService.updateWorkOrderStatus:", err.message));
+    try {
+      await maintenanceService.updateWorkOrderStatus(woId, newStatus);
+      refreshWorkOrders();
+    } catch (err) {
+      console.warn("maintenanceService.updateWorkOrderStatus:", err.message);
+    }
   };
 
   const startWorkOrder = (woId) => {
@@ -781,22 +1332,82 @@ export function CMMSProvider({ children }) {
     return planWithMeta;
   };
 
-  const addPMSchedule = (newSchedule) => {
-    const id = newSchedule.id || `PM-SCH-${Math.floor(100 + Math.random() * 900)}`;
-    const schedWithMeta = {
-      ...newSchedule,
-      id,
-      status: "Upcoming",
-      complianceRate: "100%"
-    };
-    setPmSchedules((prev) => [schedWithMeta, ...prev]);
-    return schedWithMeta;
+  const refreshPMSchedules = useCallback(async () => {
+    try {
+      const res = await maintenanceService.getPMSchedules();
+      const list = Array.isArray(res) ? res : (res?.data || []);
+      if (Array.isArray(list)) {
+        setPmSchedules(list);
+        return list;
+      }
+    } catch (err) {
+      console.warn("refreshPMSchedules notice:", err.message || err);
+    }
+  }, []);
+
+  const addPMSchedule = async (newSchedule) => {
+    try {
+      const res = await maintenanceService.createPMSchedule({
+        title: newSchedule.title,
+        assetId: newSchedule.assetId,
+        assetName: newSchedule.assetName,
+        frequency: newSchedule.frequency,
+        status: newSchedule.status || "Upcoming",
+        assignedTo: newSchedule.assignedTechnician || newSchedule.assignedTo,
+        dueDate: newSchedule.dueNext || newSchedule.dueDate,
+        templateId: newSchedule.templateId,
+        priority: newSchedule.priority,
+      });
+      const created = res?.data || res;
+      await refreshPMSchedules();
+      return created;
+    } catch (err) {
+      console.warn("Backend createPMSchedule failed, using local fallback:", err.message);
+      const id = newSchedule.id || `PM-SCH-${Math.floor(100 + Math.random() * 900)}`;
+      const schedWithMeta = {
+        ...newSchedule,
+        id,
+        status: "Upcoming",
+        complianceRate: "100%"
+      };
+      setPmSchedules((prev) => [schedWithMeta, ...prev]);
+      return schedWithMeta;
+    }
   };
 
-  const updatePMScheduleStatus = (schedId, newStatus, activeWoId = null) => {
+  const updatePMSchedule = async (schedId, updateData) => {
+    try {
+      const res = await maintenanceService.updatePMSchedule(schedId, updateData);
+      await refreshPMSchedules();
+      return res?.data || res;
+    } catch (err) {
+      console.warn("Backend updatePMSchedule failed, using local fallback:", err.message);
+      setPmSchedules((prev) =>
+        prev.map((s) => (s.id === schedId || s.dbId === schedId || s.scheduleCode === schedId ? { ...s, ...updateData } : s))
+      );
+    }
+  };
+
+  const deletePMSchedule = async (schedId) => {
+    try {
+      await maintenanceService.deletePMSchedule(schedId);
+      await refreshPMSchedules();
+      return true;
+    } catch (err) {
+      console.warn("Backend deletePMSchedule failed, using local fallback:", err.message);
+      setPmSchedules((prev) => prev.filter((s) => s.id !== schedId && s.dbId !== schedId && s.scheduleCode !== schedId));
+    }
+  };
+
+  const updatePMScheduleStatus = async (schedId, newStatus, activeWoId = null) => {
+    try {
+      await maintenanceService.updatePMSchedule(schedId, { status: newStatus });
+    } catch (err) {
+      console.warn("Backend updatePMScheduleStatus sync failed:", err.message);
+    }
     setPmSchedules((prev) =>
       prev.map((s) => {
-        if (s.id === schedId) {
+        if (s.id === schedId || s.dbId === schedId || s.scheduleCode === schedId) {
           const updated = { ...s, status: newStatus };
           if (activeWoId) updated.activeWoId = activeWoId;
           return updated;
@@ -806,7 +1417,7 @@ export function CMMSProvider({ children }) {
     );
   };
 
-  const addCalibrationRecord = (recordData) => {
+  const addCalibrationRecord = async (recordData) => {
     const id = `CAL-${Math.floor(1000 + Math.random() * 9000)}`;
     const newRecord = {
       id,
@@ -817,8 +1428,22 @@ export function CMMSProvider({ children }) {
       status: "Valid",
       certificate: `CERT-${Math.floor(10000 + Math.random() * 90000)}`,
       technician: recordData.technician || userProfile?.name || "Metrology Tech",
-      result: recordData.result || "PASS - Within Tolerance"
+      result: recordData.result || "PASS - Within Tolerance",
+      isUserCreated: true
     };
+    try {
+      const res = await maintenanceService.createCalibration(newRecord);
+      const saved = (res && res.id) ? res : (res?.data?.data || res?.data);
+      if (saved && saved.id) {
+        setCalibrations((prev) => [saved, ...prev.filter(c => c.id !== saved.id)]);
+        if (refreshCalibrations) {
+          await refreshCalibrations();
+        }
+        return saved;
+      }
+    } catch (e) {
+      console.warn("Could not save calibration to backend DB:", e.message);
+    }
     setCalibrations((prev) => [newRecord, ...prev]);
     return newRecord;
   };
@@ -878,72 +1503,98 @@ export function CMMSProvider({ children }) {
   };
 
   // Breakdown Actions
-  const reportBreakdown = (breakdownData) => {
-    const id = `BD-2026-${Math.floor(100 + Math.random() * 900)}`;
+  const reportBreakdown = async (breakdownData) => {
+    const tempId = `BD-2026-${Math.floor(100 + Math.random() * 900)}`;
     const newBD = {
+      durationMinutes: 0,
       ...breakdownData,
-      id,
+      id: tempId,
       startTime: new Date().toISOString().replace("T", " ").substring(0, 16),
       status: "Active Repair",
-      durationMinutes: 0
+      durationMinutes: breakdownData.durationMinutes !== undefined ? Number(breakdownData.durationMinutes) : 0
     };
     setBreakdowns((prev) => [newBD, ...prev]);
+
     if (breakdownData.assetId) {
       updateAssetStatus(breakdownData.assetId, "DOWN", -35);
-      
-      // Auto-create Emergency Work Order
-      if (breakdownData.priority === "P1" || breakdownData.priority === "Critical" || !breakdownData.priority) {
-          addWorkOrder({
-              title: `Emergency Repair: ${breakdownData.symptom || 'Breakdown'}`,
-              assetId: breakdownData.assetId,
-              type: "Emergency",
-              priority: "P1 - Critical",
-              status: "Open",
-              description: `Auto-generated from breakdown report ${id}.`
-          });
-      }
     }
+
+    try {
+      const res = await maintenanceService.reportBreakdown(breakdownData);
+      const serverBD = res?.data || res;
+      if (serverBD && (serverBD.id || serverBD.dbId)) {
+        setBreakdowns((prev) => prev.map((b) => (b.id === tempId ? { ...b, ...serverBD } : b)));
+        refreshWorkOrders();
+        if (refreshNotifications) refreshNotifications();
+        return serverBD;
+      }
+    } catch (err) {
+      console.warn("maintenanceService.reportBreakdown error:", err.message);
+    }
+
     return newBD;
   };
 
-  const resolveBreakdown = (breakdownId, repairDetails) => {
+  const resolveBreakdown = async (breakdownId, repairDetails) => {
+    const target = breakdowns.find(b => b.id === breakdownId || b.dbId === breakdownId || b.workOrderId === breakdownId || b.downtimeLogId === breakdownId);
     setBreakdowns((prev) =>
       prev.map((bd) => {
-        if (bd.id === breakdownId) {
+        if (bd.id === breakdownId || bd.dbId === breakdownId) {
           if (bd.assetId) {
             updateAssetStatus(bd.assetId, "Operational", +30);
           }
           const endTimeStr = new Date().toISOString().replace("T", " ").substring(0, 16);
-          const start = new Date(bd.startTime);
+          const start = new Date(bd.startTime || Date.now());
           const end = new Date(endTimeStr);
           const durationMinutes = Math.max(0, Math.floor((end - start) / 60000));
           return {
             ...bd,
             status: "Resolved",
             endTime: endTimeStr,
-            durationMinutes,
+            durationMinutes: repairDetails?.durationMinutes !== undefined ? Number(repairDetails.durationMinutes) : durationMinutes,
             ...repairDetails
           };
         }
         return bd;
       })
     );
-    maintenanceService.updateWorkOrderStatus(breakdownId, "Resolved").catch(err => console.warn("maintenanceService.updateWorkOrderStatus:", err.message));
-  };
 
-  const updateBreakdown = (breakdownId, updatedFields) => {
-    setBreakdowns((prev) =>
-      prev.map((bd) => (bd.id === breakdownId ? { ...bd, ...updatedFields } : bd))
-    );
-    if (updatedFields.status) {
-      maintenanceService.updateWorkOrderStatus(breakdownId, updatedFields.status).catch(err => console.warn("maintenanceService.updateWorkOrderStatus:", err.message));
+    try {
+      const targetId = target?.dbId || target?.downtimeLogId || target?.workOrderId || breakdownId;
+      await maintenanceService.resolveBreakdown(targetId, { ...repairDetails, breakdownId });
+      refreshWorkOrders();
+      if (refreshNotifications) refreshNotifications();
+    } catch (err) {
+      console.warn("maintenanceService.resolveBreakdown:", err.message);
     }
   };
 
-  const updateBreakdownStatus = (breakdownId, newStatus, notes = "") => {
+  const updateBreakdown = async (breakdownId, updatedFields) => {
+    const target = breakdowns.find(b => b.id === breakdownId || b.dbId === breakdownId || b.workOrderId === breakdownId || b.downtimeLogId === breakdownId);
+    const normalizedFields = {
+      ...updatedFields,
+      ...(updatedFields.durationMinutes !== undefined && updatedFields.durationMinutes !== null && updatedFields.durationMinutes !== ""
+        ? { durationMinutes: Number(updatedFields.durationMinutes) }
+        : {})
+    };
+    setBreakdowns((prev) =>
+      prev.map((bd) => (bd.id === breakdownId || bd.dbId === breakdownId ? { ...bd, ...normalizedFields } : bd))
+    );
+    try {
+      const targetId = target?.dbId || target?.downtimeLogId || target?.workOrderId || breakdownId;
+      await maintenanceService.updateBreakdown(targetId, { ...normalizedFields, breakdownId });
+      refreshWorkOrders();
+      if (refreshNotifications) refreshNotifications();
+    } catch (err) {
+      console.warn("maintenanceService.updateBreakdown:", err.message);
+    }
+  };
+
+  const updateBreakdownStatus = async (breakdownId, newStatus, notes = "") => {
+    const target = breakdowns.find(b => b.id === breakdownId || b.dbId === breakdownId || b.workOrderId === breakdownId || b.downtimeLogId === breakdownId);
     setBreakdowns((prev) =>
       prev.map((bd) => {
-        if (bd.id === breakdownId) {
+        if (bd.id === breakdownId || bd.dbId === breakdownId) {
           const updated = { ...bd, status: newStatus };
           if (newStatus === "Resolved" || newStatus === "Closed") {
             if (bd.assetId) {
@@ -961,37 +1612,122 @@ export function CMMSProvider({ children }) {
         return bd;
       })
     );
-    maintenanceService.updateWorkOrderStatus(breakdownId, newStatus).catch(err => console.warn("maintenanceService.updateWorkOrderStatus:", err.message));
+    try {
+      const targetId = target?.dbId || target?.downtimeLogId || target?.workOrderId || breakdownId;
+      await maintenanceService.updateBreakdown(targetId, { status: newStatus, notes, breakdownId });
+      if (refreshNotifications) refreshNotifications();
+    } catch (err) {
+      console.warn("maintenanceService.updateBreakdownStatus:", err.message);
+    }
+  };
+
+  const deleteBreakdown = async (breakdownId) => {
+    const target = breakdowns.find(b => b.id === breakdownId || b.dbId === breakdownId || b.workOrderId === breakdownId || b.downtimeLogId === breakdownId);
+    setBreakdowns((prev) => prev.filter((bd) => bd.id !== breakdownId && bd.dbId !== breakdownId));
+    try {
+      const targetId = target?.dbId || target?.downtimeLogId || target?.workOrderId || breakdownId;
+      await maintenanceService.deleteBreakdown(targetId);
+    } catch (err) {
+      console.warn("maintenanceService.deleteBreakdown error:", err.message);
+    }
   };
 
   // Spare Parts Actions
-  const addSparePart = (newPart) => {
+  const addSparePart = async (newPart) => {
+    const stock = Number(newPart.stock ?? newPart.currentStock ?? 0);
+    const minStock = Number(newPart.minStock ?? newPart.minStockLevel ?? 5);
     const partWithMeta = {
       ...newPart,
-      status: newPart.stock <= newPart.minStock ? "Low Stock" : "In Stock"
+      partNo: newPart.partNo || newPart.partNumber,
+      stock,
+      minStock,
+      status: stock <= minStock ? "Low Stock" : "In Stock"
     };
+
+    try {
+      const res = await maintenanceService.createSparePart(partWithMeta);
+      const saved = (res && res.id) ? res : (res?.data?.data || res?.data);
+      if (saved && (saved.id || saved.partNo)) {
+        setSpareParts((prev) => [saved, ...prev.filter(p => p.id !== saved.id && p.partNo !== saved.partNo)]);
+        if (refreshSpareParts) {
+          await refreshSpareParts();
+        }
+        return saved;
+      }
+    } catch (e) {
+      console.warn("Could not save spare part to backend DB:", e.message);
+    }
+
     setSpareParts((prev) => [partWithMeta, ...prev]);
     return partWithMeta;
   };
 
-  const issueSparePart = (partNo, qty = 1, workOrderId = "") => {
-    let partName = partNo;
+  const updateSparePart = async (partId, updateData) => {
     setSpareParts((prev) =>
       prev.map((part) => {
-        if (part.partNo === partNo) {
-          partName = part.name;
-          const updatedStock = Math.max(0, part.stock - qty);
-          const status = updatedStock <= part.minStock ? "Low Stock" : "In Stock";
-          return { ...part, stock: updatedStock, status };
+        if (part.id === partId || part.partNo === partId || part.partNumber === partId) {
+          const updated = { ...part, ...updateData };
+          const stock = Number(updated.stock ?? updated.currentStock ?? 0);
+          const minStock = Number(updated.minStock ?? updated.minStockLevel ?? 5);
+          return {
+            ...updated,
+            stock,
+            minStock,
+            status: stock <= minStock ? "Low Stock" : "In Stock"
+          };
         }
         return part;
       })
     );
-    
+
+    try {
+      await maintenanceService.updateSparePart(partId, updateData);
+      if (refreshSpareParts) {
+        await refreshSpareParts();
+      }
+    } catch (e) {
+      console.warn("Could not update spare part in backend DB:", e.message);
+    }
+  };
+
+  const deleteSparePart = async (partId) => {
+    setSpareParts((prev) => prev.filter(p => p.id !== partId && p.partNo !== partId && p.partNumber !== partId));
+
+    try {
+      await maintenanceService.deleteSparePart(partId);
+      if (refreshSpareParts) {
+        await refreshSpareParts();
+      }
+    } catch (e) {
+      console.warn("Could not delete spare part from backend DB:", e.message);
+    }
+  };
+
+  const issueSparePart = async (partNo, qty = 1, workOrderId = "", assetId = "") => {
+    let partName = partNo;
+    setSpareParts((prev) =>
+      prev.map((part) => {
+        if (part.partNo === partNo || part.id === partNo) {
+          partName = part.name;
+          const updatedStock = Math.max(0, part.stock - qty);
+          const status = updatedStock <= part.minStock ? "Low Stock" : "In Stock";
+          const currentLinked = Array.isArray(part.linkedAssets)
+            ? part.linkedAssets
+            : (part.linkedAssets ? String(part.linkedAssets).split(',').map(s => s.trim()) : []);
+          const newLinked = assetId && !currentLinked.includes(assetId)
+            ? [...currentLinked, assetId]
+            : currentLinked;
+
+          return { ...part, stock: updatedStock, status, linkedAssets: newLinked };
+        }
+        return part;
+      })
+    );
+
     if (workOrderId) {
       setWorkOrders((prev) => 
         prev.map((wo) => {
-          if (wo.id === workOrderId) {
+          if (wo.id === workOrderId || wo.woNumber === workOrderId) {
             const newPart = { partNo, name: partName, qty, status: "Issued" };
             return {
               ...wo,
@@ -1002,12 +1738,21 @@ export function CMMSProvider({ children }) {
         })
       );
     }
+
+    try {
+      await maintenanceService.issueSparePart(workOrderId, { partNo, qty, assetId });
+      if (refreshSpareParts) {
+        await refreshSpareParts();
+      }
+    } catch (e) {
+      console.warn("Could not record spare part issuance in backend DB:", e.message);
+    }
   };
 
-  const returnSparePart = (partNo, qty = 1) => {
+  const returnSparePart = async (partNo, qty = 1) => {
     setSpareParts((prev) =>
       prev.map((part) => {
-        if (part.partNo === partNo) {
+        if (part.partNo === partNo || part.id === partNo) {
           const updatedStock = part.stock + qty;
           const status = updatedStock <= part.minStock ? "Low Stock" : "In Stock";
           return { ...part, stock: updatedStock, status };
@@ -1015,18 +1760,21 @@ export function CMMSProvider({ children }) {
         return part;
       })
     );
+
+    try {
+      await maintenanceService.issueSparePart("", { partNo, qty: -qty, action: "RETURN" });
+      if (refreshSpareParts) {
+        await refreshSpareParts();
+      }
+    } catch (e) {
+      console.warn("Could not record spare part return in backend DB:", e.message);
+    }
   };
 
-  const restockSparePart = (partNo, qty) => {
-    setSpareParts((prev) =>
-      prev.map((part) => {
-        if (part.partNo === partNo) {
-          const updatedStock = part.stock + qty;
-          return { ...part, stock: updatedStock, status: updatedStock <= part.minStock ? "Low Stock" : "In Stock" };
-        }
-        return part;
-      })
-    );
+  const restockSparePart = async (partNo, qty) => {
+    const target = spareParts.find(p => p.partNo === partNo || p.id === partNo);
+    const newStock = target ? (target.stock + qty) : qty;
+    await updateSparePart(partNo, { stock: newStock });
   };
 
   // Parts Requests Actions
@@ -1064,7 +1812,8 @@ export function CMMSProvider({ children }) {
       ...newCal,
       id,
       status: "Valid",
-      statusColor: "emerald"
+      statusColor: "emerald",
+      isUserCreated: true
     };
     setCalibrations((prev) => [calWithMeta, ...prev]);
     return calWithMeta;
@@ -1110,17 +1859,26 @@ export function CMMSProvider({ children }) {
   };
 
   // Troubleshooting / Solutions Actions
-  const addVerifiedSolution = (solutionData) => {
-    const id = `SOL-2026-${Math.floor(100 + Math.random() * 900)}`;
+  const addVerifiedSolution = async (solutionData) => {
+    try {
+      const res = await maintenanceService.createTroubleshootingSolution(solutionData);
+      const serverSol = res?.data || res;
+      if (serverSol && serverSol.id) {
+        setSolutions((prev) => [serverSol, ...prev.filter((s) => s.id !== serverSol.id)]);
+        return serverSol;
+      }
+    } catch (err) {
+      console.warn("maintenanceService.createTroubleshootingSolution error:", err.message);
+    }
+    const tempId = `SOL-2026-${Math.floor(100 + Math.random() * 900)}`;
     const newSol = {
       ...solutionData,
-      id,
+      id: tempId,
       successfulUsesCount: 1,
       verificationDate: new Date().toISOString().substring(0, 10),
       verifiedBy: userProfile?.name || "Senior Reliability Specialist"
     };
     setSolutions((prev) => [newSol, ...prev]);
-    maintenanceService.createTroubleshootingSolution(newSol).catch(() => {});
     return newSol;
   };
 
@@ -1148,18 +1906,34 @@ export function CMMSProvider({ children }) {
   // Notifications Actions
   const unreadNotifCount = notifications.filter((n) => !n.read).length;
 
-  const markNotificationAsRead = (id) => {
+  const markNotificationAsRead = async (id) => {
     setNotifications((prev) =>
       prev.map((n) => (n.id === id ? { ...n, read: true } : n))
     );
+    try {
+      await maintenanceService.markNotificationAsRead(id);
+    } catch (err) {
+      console.warn("markNotificationAsRead API error:", err.message || err);
+    }
   };
 
-  const markAllNotificationsAsRead = () => {
+  const markAllNotificationsAsRead = async () => {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    try {
+      await maintenanceService.markAllNotificationsAsRead();
+    } catch (err) {
+      console.warn("markAllNotificationsAsRead API error:", err.message || err);
+    }
   };
 
-  const clearAllNotifications = () => {
+  const clearAllNotifications = async () => {
     setNotifications([]);
+    localStorage.removeItem("flowstate_notifications");
+    try {
+      await maintenanceService.clearAllNotifications();
+    } catch (err) {
+      console.warn("clearAllNotifications API error:", err.message || err);
+    }
   };
 
   const addNotification = (notif) => {
@@ -1176,8 +1950,13 @@ export function CMMSProvider({ children }) {
   };
 
   // Profile Actions
-  const updateUserProfile = (updatedProfile) => {
+  const updateUserProfile = async (updatedProfile) => {
     setUserProfile((prev) => ({ ...prev, ...updatedProfile }));
+    try {
+      await maintenanceService.updateProfile(updatedProfile);
+    } catch (e) {
+      console.warn("updateProfile API notice:", e.message);
+    }
   };
 
   return (
@@ -1190,11 +1969,16 @@ export function CMMSProvider({ children }) {
         addAsset,
         updateAsset,
         updateAssetStatus,
+        deleteAsset,
+        refreshAssets,
 
         // Work Orders
         workOrders,
         setWorkOrders,
         addWorkOrder,
+        updateWorkOrder,
+        deleteWorkOrder,
+        refreshWorkOrders,
         updateWorkOrderStatus,
         startWorkOrder,
         completeWorkOrder,
@@ -1206,6 +1990,9 @@ export function CMMSProvider({ children }) {
         pmSchedules,
         setPmSchedules,
         addPMSchedule,
+        updatePMSchedule,
+        deletePMSchedule,
+        refreshPMSchedules,
         updatePMScheduleStatus,
         checklistTemplates,
         checklistHistory,
@@ -1219,11 +2006,15 @@ export function CMMSProvider({ children }) {
         resolveBreakdown,
         updateBreakdown,
         updateBreakdownStatus,
+        deleteBreakdown,
 
         // Spare Parts & BOM & Requests
         spareParts,
         setSpareParts,
         addSparePart,
+        updateSparePart,
+        deleteSparePart,
+        refreshSpareParts,
         issueSparePart,
         returnSparePart,
         restockSparePart,
@@ -1238,6 +2029,7 @@ export function CMMSProvider({ children }) {
         addCalibrationSchedule,
         recordCalibrationResult,
         addCalibrationRecord,
+        refreshCalibrations,
 
         // Failure Codes
         failureCodes,
@@ -1245,12 +2037,14 @@ export function CMMSProvider({ children }) {
 
         // Troubleshooting
         solutions,
+        refreshSolutions,
         addVerifiedSolution,
         rateSolution,
 
         // Reliability
         repeatFailures,
         reliabilityMetrics,
+        refreshReliability,
 
         // Machine / IoT
         iotTelemetry,
@@ -1268,6 +2062,7 @@ export function CMMSProvider({ children }) {
         // Notifications
         notifications,
         unreadNotifCount,
+        refreshNotifications,
         markNotificationAsRead,
         markAllNotificationsAsRead,
         clearAllNotifications,
@@ -1275,7 +2070,8 @@ export function CMMSProvider({ children }) {
 
         // Profile
         userProfile,
-        updateUserProfile
+        updateUserProfile,
+        refreshProfile
       }}
     >
       {children}

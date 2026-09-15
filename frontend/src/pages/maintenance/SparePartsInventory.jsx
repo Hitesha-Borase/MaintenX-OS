@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Package,
   Plus,
@@ -11,7 +11,9 @@ import {
   DollarSign,
   Download,
   RotateCcw,
-  X
+  X,
+  Edit2,
+  Trash2
 } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { StatCard } from "../../components/common/StatCard";
@@ -21,11 +23,17 @@ import { DataTable } from "../../components/tables/DataTable";
 import { Modal } from "../../components/common/Modal";
 import { useCMMS } from "../../context/CMMSContext";
 import { useApp } from "../../context/AppContext";
-import { maintenanceService } from "../../services/maintenanceService";
+import maintenanceService from "../../services/maintenanceService";
 
 export function SparePartsInventory() {
-  const { spareParts, addSparePart, issueSparePart, returnSparePart } = useCMMS();
+  const { spareParts = [], addSparePart, updateSparePart, deleteSparePart, refreshSpareParts, issueSparePart, returnSparePart } = useCMMS();
   const { addToast } = useApp();
+
+  useEffect(() => {
+    if (refreshSpareParts) {
+      refreshSpareParts();
+    }
+  }, [refreshSpareParts]);
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newPart, setNewPart] = useState({
@@ -39,6 +47,13 @@ export function SparePartsInventory() {
     supplier: "Festool Automation"
   });
 
+  // Edit Part Modal State
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editPart, setEditPart] = useState(null);
+
+  // Delete Part Confirmation State
+  const [deleteModalPart, setDeleteModalPart] = useState(null);
+
   const [issueModalPart, setIssueModalPart] = useState(null);
   const [issueQty, setIssueQty] = useState(1);
   const [woNumber, setWoNumber] = useState("WO-2026-0891");
@@ -46,19 +61,22 @@ export function SparePartsInventory() {
   const [returnModalPart, setReturnModalPart] = useState(null);
   const [returnQty, setReturnQty] = useState(1);
 
-  const lowStockCount = spareParts.filter((p) => p.status.includes("Low Stock")).length;
-  const totalValuation = spareParts.reduce((sum, p) => sum + p.stock * p.unitCost, 0);
+  const lowStockCount = spareParts.filter((p) => (p.status || "").toLowerCase().includes("low stock")).length;
+  const totalValuation = spareParts.reduce((sum, p) => sum + (Number(p.stock) || 0) * (Number(p.unitCost) || 0), 0);
 
-  const handleAddPartSubmit = (e) => {
+  const handleAddPartSubmit = async (e) => {
     e.preventDefault();
     if (!newPart.partNo.trim() || !newPart.name.trim()) {
       addToast("Please provide part number and description.", "warning");
       return;
     }
     if (addSparePart) {
-      addSparePart(newPart);
+      await addSparePart(newPart);
     }
-    addToast(`Spare Part ${newPart.partNo} (${newPart.name}) added to catalog!`, "success");
+    if (refreshSpareParts) {
+      await refreshSpareParts();
+    }
+    addToast(`Spare Part ${newPart.partNo} (${newPart.name}) saved to database!`, "success");
     setIsAddModalOpen(false);
     setNewPart({
       partNo: "",
@@ -70,6 +88,49 @@ export function SparePartsInventory() {
       unitCost: 45.0,
       supplier: "Festool Automation"
     });
+  };
+
+  const handleOpenEdit = (part) => {
+    setEditPart({
+      id: part.id,
+      partNo: part.partNo || part.partNumber || "",
+      name: part.name || "",
+      category: part.category || "Mechanical",
+      stock: part.stock ?? part.currentStock ?? 0,
+      minStock: part.minStock ?? part.minStockLevel ?? 5,
+      location: part.location || part.binLocation || "",
+      unitCost: part.unitCost ?? 0,
+      supplier: part.supplier || part.supplierName || ""
+    });
+    setIsEditModalOpen(true);
+  };
+
+  const handleEditPartSubmit = async (e) => {
+    e.preventDefault();
+    if (!editPart) return;
+    try {
+      if (updateSparePart) {
+        await updateSparePart(editPart.id || editPart.partNo, editPart);
+      }
+      addToast(`Spare Part ${editPart.partNo} updated successfully in database!`, "success");
+      setIsEditModalOpen(false);
+      setEditPart(null);
+    } catch (err) {
+      addToast("Failed to update spare part: " + err.message, "error");
+    }
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteModalPart) return;
+    try {
+      if (deleteSparePart) {
+        await deleteSparePart(deleteModalPart.id || deleteModalPart.partNo);
+      }
+      addToast(`Spare Part ${deleteModalPart.partNo} deleted from database.`, "success");
+      setDeleteModalPart(null);
+    } catch (err) {
+      addToast("Failed to delete spare part: " + err.message, "error");
+    }
   };
 
   const handleIssue = async (e) => {
@@ -84,7 +145,9 @@ export function SparePartsInventory() {
     } catch (err) {
       console.warn("Issue spare part notice:", err);
     }
-    issueSparePart(issueModalPart.partNo, issueQty, woNumber);
+    if (issueSparePart) {
+      await issueSparePart(issueModalPart.partNo, issueQty, woNumber);
+    }
     addToast(`Issued ${issueQty} units of ${issueModalPart.partNo} to ${woNumber}`, "success");
     setIssueModalPart(null);
   };
@@ -101,7 +164,9 @@ export function SparePartsInventory() {
     } catch (err) {
       console.warn("Return spare part notice:", err);
     }
-    returnSparePart(returnModalPart.partNo, returnQty);
+    if (returnSparePart) {
+      await returnSparePart(returnModalPart.partNo, returnQty);
+    }
     addToast(`Returned ${returnQty} units of ${returnModalPart.partNo} to stock`, "success");
     setReturnModalPart(null);
   };
@@ -167,7 +232,7 @@ export function SparePartsInventory() {
       accessor: "actions",
       sortable: false,
       render: (_, row) => (
-        <div style={{ display: "flex", gap: "6px" }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ display: "flex", gap: "6px", alignItems: "center" }} onClick={(e) => e.stopPropagation()}>
           <Button
             variant="secondary"
             size="sm"
@@ -186,6 +251,22 @@ export function SparePartsInventory() {
           >
             Return
           </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            icon={Edit2}
+            onClick={() => handleOpenEdit(row)}
+            title="Edit Spare Part in Database"
+          >
+            Edit
+          </Button>
+          <Button
+            variant="danger"
+            size="sm"
+            icon={Trash2}
+            onClick={() => setDeleteModalPart(row)}
+            title="Delete Spare Part from Database"
+          />
         </div>
       )
     }
@@ -478,6 +559,163 @@ export function SparePartsInventory() {
           </div>
         </form>
       </Modal>
+
+      {/* Edit Part Modal */}
+      {isEditModalOpen && editPart && (
+        <div className="modal-backdrop" onClick={() => setIsEditModalOpen(false)}>
+          <div className="modal-content" style={{ maxWidth: "500px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+              <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)" }}>
+                Edit Spare Part ({editPart.partNo})
+              </h2>
+              <button onClick={() => setIsEditModalOpen(false)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditPartSubmit} style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
+                <div>
+                  <label className="form-label">Part Number</label>
+                  <input
+                    type="text"
+                    required
+                    value={editPart.partNo}
+                    onChange={(e) => setEditPart({ ...editPart, partNo: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+
+                <div>
+                  <label className="form-label">Category</label>
+                  <select
+                    className="form-select"
+                    value={editPart.category}
+                    onChange={(e) => setEditPart({ ...editPart, category: e.target.value })}
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  >
+                    <option value="Pneumatics">Pneumatics</option>
+                    <option value="Electrical">Electrical</option>
+                    <option value="Mechanical">Mechanical</option>
+                    <option value="Bearings & Seals">Bearings & Seals</option>
+                    <option value="Sensors">Sensors</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="form-label">Part Description *</label>
+                <input
+                  type="text"
+                  required
+                  value={editPart.name}
+                  onChange={(e) => setEditPart({ ...editPart, name: e.target.value })}
+                  className="form-input"
+                  style={{ backgroundColor: "#FFFFFF" }}
+                />
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: "12px" }}>
+                <div>
+                  <label className="form-label">Current Stock</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={editPart.stock}
+                    onChange={(e) => setEditPart({ ...editPart, stock: parseInt(e.target.value) || 0 })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+
+                <div>
+                  <label className="form-label">Safety Stock</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={editPart.minStock}
+                    onChange={(e) => setEditPart({ ...editPart, minStock: parseInt(e.target.value) || 1 })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+
+                <div>
+                  <label className="form-label">Unit Cost ($)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={editPart.unitCost}
+                    onChange={(e) => setEditPart({ ...editPart, unitCost: parseFloat(e.target.value) || 0 })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
+                <div>
+                  <label className="form-label">Storage Bin / Location</label>
+                  <input
+                    type="text"
+                    value={editPart.location}
+                    onChange={(e) => setEditPart({ ...editPart, location: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+
+                <div>
+                  <label className="form-label">Primary OEM / Supplier</label>
+                  <input
+                    type="text"
+                    value={editPart.supplier}
+                    onChange={(e) => setEditPart({ ...editPart, supplier: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
+                <Button variant="secondary" onClick={() => setIsEditModalOpen(false)}>
+                  Cancel
+                </Button>
+                <Button variant="primary" type="submit">
+                  Save Changes to DB
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteModalPart && (
+        <Modal
+          isOpen={!!deleteModalPart}
+          onClose={() => setDeleteModalPart(null)}
+          title="Delete Spare Part"
+          subtitle={`Are you sure you want to permanently delete ${deleteModalPart.partNo} from database?`}
+        >
+          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+            <p style={{ fontSize: "14px", color: "var(--text-secondary)" }}>
+              Part: <strong>{deleteModalPart.name}</strong> ({deleteModalPart.partNo})<br />
+              This action cannot be undone and will delete the record from PostgreSQL.
+            </p>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px" }}>
+              <Button variant="secondary" onClick={() => setDeleteModalPart(null)}>
+                Cancel
+              </Button>
+              <Button variant="danger" onClick={handleDeleteConfirm} icon={Trash2}>
+                Confirm Delete
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

@@ -8,7 +8,10 @@ import {
   CheckCircle2,
   XCircle,
   AlertTriangle,
-  Layers
+  Layers,
+  Eye,
+  Trash2,
+  X
 } from "lucide-react";
 import { Card } from "../../../components/common/Card";
 import { Badge } from "../../../components/common/Badge";
@@ -19,15 +22,24 @@ import { useApp } from "../../../context/AppContext";
 import adminService from "../../../services/adminService";
 
 export function UserStatusPage() {
-  const { users = [], updateUserStatus, bulkUpdateStatus } = useAdmin();
-  const { addToast } = useApp();
+  const { users = [], setUsers, updateUserStatus, deleteUser, bulkUpdateStatus } = useAdmin() || {};
+  const { addToast } = useApp ? useApp() : { addToast: () => {} };
 
   useEffect(() => {
-    adminService.getUsers().catch((err) => console.warn("Users load:", err.message));
-  }, []);
+    adminService
+      .getUsers()
+      .then((data) => {
+        if (Array.isArray(data) && setUsers) {
+          setUsers(data);
+        }
+      })
+      .catch((err) => console.warn("Users load:", err.message));
+  }, [setUsers]);
 
   const [filterState, setFilterState] = useState("ALL");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [viewingUser, setViewingUser] = useState(null);
+  const [deletingUser, setDeletingUser] = useState(null);
 
   const filteredUsers = users.filter((u) => {
     if (filterState === "ALL") return true;
@@ -63,6 +75,22 @@ export function UserStatusPage() {
       addToast(`${userName || userId} status updated to ${next}`, "info");
     } catch (err) {
       addToast("Failed to update status: " + err.message, "error");
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deletingUser) return;
+    try {
+      setIsProcessing(true);
+      if (deleteUser) {
+        await deleteUser(deletingUser.id);
+      }
+      addToast(`User ${deletingUser.name || deletingUser.email} successfully deleted.`, "success");
+      setDeletingUser(null);
+    } catch (err) {
+      addToast("Failed to delete user: " + err.message, "error");
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -189,21 +217,60 @@ export function UserStatusPage() {
                       </Badge>
                     </td>
                     <td>
-                      <button
-                        onClick={() => handleRowStatusChange(u.id, u.status, u.name)}
-                        style={{
-                          padding: "4px 10px",
-                          borderRadius: "6px",
-                          fontSize: "11px",
-                          fontWeight: 700,
-                          backgroundColor: isActive ? "var(--bg-card-subtle)" : "rgba(16, 185, 129, 0.1)",
-                          color: isActive ? "#DC2626" : "#059669",
-                          border: "1px solid var(--border-subtle)",
-                          cursor: "pointer"
-                        }}
-                      >
-                        {isActive ? "Lockout" : "Re-Enable"}
-                      </button>
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        <button
+                          onClick={() => setViewingUser(u)}
+                          title="View User Status & Profile"
+                          style={{
+                            width: "28px",
+                            height: "28px",
+                            borderRadius: "6px",
+                            backgroundColor: "rgba(14, 165, 233, 0.1)",
+                            color: "#0284C7",
+                            border: "1px solid var(--border-subtle)",
+                            cursor: "pointer",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center"
+                          }}
+                        >
+                          <Eye size={13} />
+                        </button>
+                        <button
+                          onClick={() => handleRowStatusChange(u.id, u.status, u.name)}
+                          title={isActive ? "Lockout User Account" : "Re-Enable User Account"}
+                          style={{
+                            padding: "4px 8px",
+                            borderRadius: "6px",
+                            fontSize: "11px",
+                            fontWeight: 700,
+                            backgroundColor: isActive ? "var(--bg-card-subtle)" : "rgba(16, 185, 129, 0.1)",
+                            color: isActive ? "#DC2626" : "#059669",
+                            border: "1px solid var(--border-subtle)",
+                            cursor: "pointer"
+                          }}
+                        >
+                          {isActive ? "Lockout" : "Enable"}
+                        </button>
+                        <button
+                          onClick={() => setDeletingUser(u)}
+                          title="Delete User from Database"
+                          style={{
+                            width: "28px",
+                            height: "28px",
+                            borderRadius: "6px",
+                            backgroundColor: "rgba(220, 38, 38, 0.1)",
+                            color: "#DC2626",
+                            border: "1px solid var(--border-subtle)",
+                            cursor: "pointer",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center"
+                          }}
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -212,6 +279,130 @@ export function UserStatusPage() {
           </table>
         </div>
       </Card>
+
+      {/* VIEW USER DETAILS MODAL */}
+      {viewingUser && (
+        <div className="modal-backdrop" onClick={() => setViewingUser(null)}>
+          <div className="modal-content" style={{ maxWidth: "480px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Eye size={18} color="#0284C7" />
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)" }}>
+                  User Account & Status Details
+                </h2>
+              </div>
+              <button onClick={() => setViewingUser(null)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div>
+                  <span style={{ fontSize: "11px", color: "var(--text-muted)", display: "block" }}>User ID</span>
+                  <strong style={{ fontFamily: "var(--font-mono)", color: "#8C5B23" }}>{viewingUser.id}</strong>
+                </div>
+                <div>
+                  <span style={{ fontSize: "11px", color: "var(--text-muted)", display: "block" }}>Status</span>
+                  <Badge variant={viewingUser.status === "Active" ? "emerald" : "rose"}>
+                    {viewingUser.status}
+                  </Badge>
+                </div>
+                <div>
+                  <span style={{ fontSize: "11px", color: "var(--text-muted)", display: "block" }}>Full Name</span>
+                  <strong style={{ color: "var(--text-primary)", fontSize: "13px" }}>{viewingUser.name}</strong>
+                </div>
+                <div>
+                  <span style={{ fontSize: "11px", color: "var(--text-muted)", display: "block" }}>Email</span>
+                  <span style={{ color: "var(--text-primary)", fontSize: "12px" }}>{viewingUser.email}</span>
+                </div>
+                <div>
+                  <span style={{ fontSize: "11px", color: "var(--text-muted)", display: "block" }}>Assigned Role</span>
+                  <Badge variant="cyan">{viewingUser.role}</Badge>
+                </div>
+                <div>
+                  <span style={{ fontSize: "11px", color: "var(--text-muted)", display: "block" }}>Department</span>
+                  <span style={{ color: "var(--text-primary)", fontSize: "13px" }}>{viewingUser.department || "Operations"}</span>
+                </div>
+                <div>
+                  <span style={{ fontSize: "11px", color: "var(--text-muted)", display: "block" }}>Plant Facility</span>
+                  <span style={{ color: "var(--text-primary)", fontSize: "13px" }}>{viewingUser.plant || "Indore Plant"}</span>
+                </div>
+                <div>
+                  <span style={{ fontSize: "11px", color: "var(--text-muted)", display: "block" }}>Last Login</span>
+                  <span style={{ color: "var(--text-secondary)", fontSize: "13px" }}>{viewingUser.lastLogin || "Today"}</span>
+                </div>
+              </div>
+
+              <div style={{ borderTop: "1px solid var(--border-subtle)", paddingTop: "14px", display: "flex", justifyContent: "flex-end", gap: "8px" }}>
+                <Button variant="secondary" onClick={() => setViewingUser(null)}>
+                  Close
+                </Button>
+                <Button
+                  variant={viewingUser.status === "Active" ? "danger" : "primary"}
+                  onClick={() => {
+                    handleRowStatusChange(viewingUser.id, viewingUser.status, viewingUser.name);
+                    setViewingUser(null);
+                  }}
+                >
+                  {viewingUser.status === "Active" ? "Lockout User" : "Activate User"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CONFIRM DELETE USER MODAL */}
+      {deletingUser && (
+        <div className="modal-backdrop" onClick={() => setDeletingUser(null)}>
+          <div className="modal-content" style={{ maxWidth: "420px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <div style={{ width: "28px", height: "28px", borderRadius: "50%", backgroundColor: "rgba(220, 38, 38, 0.12)", color: "#DC2626", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <AlertTriangle size={15} />
+                </div>
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)" }}>
+                  Confirm Delete User
+                </h2>
+              </div>
+              <button onClick={() => setDeletingUser(null)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
+              <p style={{ fontSize: "13px", color: "var(--text-primary)", lineHeight: 1.5, margin: 0 }}>
+                Kya aap sach me user <strong>{deletingUser.name}</strong> ({deletingUser.email}) ko database se permanent delete karna chahte hain?
+              </p>
+              <div style={{ fontSize: "12px", color: "#DC2626", backgroundColor: "rgba(220, 38, 38, 0.08)", padding: "10px 12px", borderRadius: "6px", border: "1px solid rgba(220, 38, 38, 0.2)" }}>
+                Warning: Yeh action user ko PostgreSQL database table se completely remove kar dega.
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "6px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
+                <Button variant="secondary" onClick={() => setDeletingUser(null)}>
+                  Cancel
+                </Button>
+                <button
+                  onClick={handleConfirmDelete}
+                  style={{
+                    padding: "8px 16px",
+                    borderRadius: "6px",
+                    backgroundColor: "#DC2626",
+                    color: "#FFFFFF",
+                    fontWeight: 700,
+                    fontSize: "12px",
+                    border: "none",
+                    cursor: "pointer"
+                  }}
+                >
+                  Yes, Delete User
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

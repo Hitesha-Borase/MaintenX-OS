@@ -1,9 +1,48 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import adminService from "../services/adminService";
 
-const AdminContext = createContext();
+const defaultAdminContext = {
+  users: [],
+  setUsers: () => {},
+  loading: false,
+  addUser: async () => {},
+  editUser: async () => {},
+  deleteUser: async () => {},
+  updateUserStatus: async () => {},
+  bulkUpdateStatus: async () => {},
+  updateUserRole: async () => {},
+  invitations: [],
+  setInvitations: () => {},
+  addInvitation: async () => {},
+  updateInvitation: async () => {},
+  resendInvitation: async () => {},
+  deleteInvitation: async () => {},
+  activityLogs: [],
+  fetchActivityLogs: async () => {},
+  refreshAll: async () => {},
+  roles: [],
+  setRoles: () => {},
+  addRole: async () => {},
+  updateRole: async () => {},
+  deleteRole: async () => {},
+  items: [],
+  setItems: () => {},
+  addItem: async () => {},
+  dataHealthStats: {
+    missingDataCount: 0,
+    duplicatesCount: 0,
+    invalidRefsCount: 0,
+    brokenRelCount: 0,
+    staleRecordsCount: 0,
+    healthScore: 100
+  },
+  setDataHealthStats: () => {}
+};
+
+const AdminContext = createContext(defaultAdminContext);
 
 export function AdminProvider({ children }) {
+<<<<<<< HEAD
   const hasAuthToken = Boolean(typeof window !== "undefined" && (localStorage.getItem("maintenx_auth_token") || localStorage.getItem("flowstate_token")));
   const hasTenant = Boolean(typeof window !== "undefined" && (localStorage.getItem("maintenx_tenant_name") || localStorage.getItem("maintenx_tenant_id")));
 
@@ -30,6 +69,13 @@ export function AdminProvider({ children }) {
       { id: "INV-102", email: "james.holden@flowstate.io", role: "Controls Engineer", department: "Maintenance", invitedBy: "Alexander Vance", sentDate: "2026-08-31", status: "Pending" },
     ];
   });
+=======
+  // 1. Users (Directly synchronized with PostgreSQL users table)
+  const [users, setUsers] = useState([]);
+
+  // 2. User Invitations (loaded from PostgreSQL via API)
+  const [invitations, setInvitations] = useState([]);
+>>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
 
   // 3. User Activity Logs
   const [activityLogs, setActivityLogs] = useState(() => {
@@ -73,6 +119,7 @@ export function AdminProvider({ children }) {
 
       if (backendUsers.status === "fulfilled" && Array.isArray(backendUsers.value)) {
         setUsers(backendUsers.value);
+        localStorage.setItem("admin_users", JSON.stringify(backendUsers.value));
       }
       if (backendInvites.status === "fulfilled" && Array.isArray(backendInvites.value)) {
         setInvitations(backendInvites.value);
@@ -120,10 +167,57 @@ export function AdminProvider({ children }) {
   // User Actions (Wired directly to backend)
   const addUser = async (userData) => {
     const created = await adminService.provisionUser(userData);
-    setUsers((prev) => [created, ...prev]);
+    if (created && created.id) {
+      setUsers((prev) => {
+        const filtered = prev.filter(
+          (u) => u.id !== created.id && u.email?.toLowerCase() !== created.email?.toLowerCase()
+        );
+        return [created, ...filtered];
+      });
+    }
+    // Live resync with DB
+    adminService.getUsers().then((liveUsers) => {
+      if (Array.isArray(liveUsers)) {
+        setUsers(liveUsers);
+      }
+    }).catch(() => {});
     // refresh activity
-    adminService.getActivityLogs().then((logs) => Array.isArray(logs) && setActivityLogs(logs));
+    adminService.getActivityLogs().then((logs) => Array.isArray(logs) && setActivityLogs(logs)).catch(() => {});
     return created;
+  };
+
+  const editUser = async (userId, userData) => {
+    const updated = await adminService.editUser(userId, userData);
+    setUsers((prev) =>
+      prev.map((u) => (u.id === userId || u.email?.toLowerCase() === updated.email?.toLowerCase() ? { ...u, ...updated } : u))
+    );
+    // Live resync with DB
+    adminService.getUsers().then((liveUsers) => {
+      if (Array.isArray(liveUsers)) {
+        setUsers(liveUsers);
+      }
+    }).catch(() => {});
+    // refresh activity
+    adminService.getActivityLogs().then((logs) => Array.isArray(logs) && setActivityLogs(logs)).catch(() => {});
+    return updated;
+  };
+
+  const deleteUser = async (userId) => {
+    try {
+      await adminService.deleteUser(userId);
+      setUsers((prev) => prev.filter((u) => u.id !== userId && u.email !== userId));
+      localStorage.removeItem("admin_users");
+      // Live resync with DB
+      const liveUsers = await adminService.getUsers();
+      if (Array.isArray(liveUsers)) {
+        setUsers(liveUsers);
+        localStorage.setItem("admin_users", JSON.stringify(liveUsers));
+      }
+      adminService.getActivityLogs().then((logs) => Array.isArray(logs) && setActivityLogs(logs)).catch(() => {});
+    } catch (err) {
+      console.error("deleteUser failed:", err);
+      throw err;
+    }
   };
 
   const updateUserStatus = async (userId, status) => {
@@ -162,47 +256,81 @@ export function AdminProvider({ children }) {
   const addInvitation = async (inv) => {
     try {
       const newInv = await adminService.createInvitation(inv);
-      setInvitations((prev) => [newInv, ...prev]);
-      // refresh activity
-      adminService.getActivityLogs().then((logs) => Array.isArray(logs) && setActivityLogs(logs));
+      if (newInv && newInv.id) {
+        setInvitations((prev) => [newInv, ...prev.filter((i) => i.id !== newInv.id && i.email !== newInv.email)]);
+      }
+      // Resync from DB to ensure UI matches database exactly
+      const dbInvites = await adminService.getInvitations();
+      if (Array.isArray(dbInvites)) setInvitations(dbInvites);
+      adminService.getActivityLogs().then((logs) => Array.isArray(logs) && setActivityLogs(logs)).catch(() => {});
       return newInv;
     } catch (err) {
-      const fallback = {
-        id: `INV-${Math.floor(100 + Math.random() * 900)}`,
-        ...inv,
-        sentDate: new Date().toISOString().substring(0, 10),
-        status: "Pending",
-      };
-      setInvitations((prev) => [fallback, ...prev]);
-      return fallback;
+      throw err;
+    }
+  };
+
+  const updateInvitation = async (invitationId, updateData) => {
+    try {
+      const res = await adminService.updateInvitation(invitationId, updateData);
+      const dbInvites = await adminService.getInvitations();
+      if (Array.isArray(dbInvites)) setInvitations(dbInvites);
+      adminService.getActivityLogs().then((logs) => Array.isArray(logs) && setActivityLogs(logs)).catch(() => {});
+      return res;
+    } catch (err) {
+      console.warn("updateInvitation error:", err);
+      throw err;
     }
   };
 
   const resendInvitation = async (invitationId) => {
     try {
       await adminService.resendInvitation(invitationId);
-      const today = new Date().toISOString().substring(0, 10);
-      setInvitations((prev) =>
-        prev.map((i) => (i.id === invitationId || i.email === invitationId ? { ...i, sentDate: today } : i))
-      );
-      // refresh activity
-      adminService.getActivityLogs().then((logs) => Array.isArray(logs) && setActivityLogs(logs));
+      // Resync from DB
+      const dbInvites = await adminService.getInvitations();
+      if (Array.isArray(dbInvites)) setInvitations(dbInvites);
+      adminService.getActivityLogs().then((logs) => Array.isArray(logs) && setActivityLogs(logs)).catch(() => {});
     } catch (err) {
-      const today = new Date().toISOString().substring(0, 10);
-      setInvitations((prev) =>
-        prev.map((i) => (i.id === invitationId || i.email === invitationId ? { ...i, sentDate: today } : i))
-      );
+      console.warn("resendInvitation error:", err);
     }
   };
 
   const deleteInvitation = async (invitationId) => {
+    const cleanTargetId = String(invitationId || "").trim().toLowerCase();
+    const cleanTargetIdNoSpace = cleanTargetId.replace(/\s+/g, "");
     try {
       await adminService.deleteInvitation(invitationId);
-      setInvitations((prev) => prev.filter((i) => i.id !== invitationId && i.email !== invitationId));
-      // refresh activity
-      adminService.getActivityLogs().then((logs) => Array.isArray(logs) && setActivityLogs(logs));
+      // Immediately remove from UI state
+      setInvitations((prev) =>
+        prev.filter((i) => {
+          const iId = String(i.id || "").trim().toLowerCase();
+          const iEmail = String(i.email || "").trim().toLowerCase();
+          return (
+            iId !== cleanTargetId &&
+            iId.replace(/\s+/g, "") !== cleanTargetIdNoSpace &&
+            iEmail !== cleanTargetId
+          );
+        })
+      );
+      // Resync from DB to confirm deletion
+      const dbInvites = await adminService.getInvitations();
+      if (Array.isArray(dbInvites)) {
+        setInvitations(dbInvites);
+      }
+      adminService.getActivityLogs().then((logs) => Array.isArray(logs) && setActivityLogs(logs)).catch(() => {});
     } catch (err) {
-      setInvitations((prev) => prev.filter((i) => i.id !== invitationId && i.email !== invitationId));
+      console.warn("deleteInvitation error:", err);
+      setInvitations((prev) =>
+        prev.filter((i) => {
+          const iId = String(i.id || "").trim().toLowerCase();
+          const iEmail = String(i.email || "").trim().toLowerCase();
+          return (
+            iId !== cleanTargetId &&
+            iId.replace(/\s+/g, "") !== cleanTargetIdNoSpace &&
+            iEmail !== cleanTargetId
+          );
+        })
+      );
+      throw err;
     }
   };
 
@@ -214,6 +342,41 @@ export function AdminProvider({ children }) {
       console.warn("Failed to fetch activity logs:", err);
     }
   }, []);
+
+  const deleteActivityLog = async (logId) => {
+    try {
+      await adminService.deleteActivityLog(logId);
+      setActivityLogs((prev) => prev.filter((l) => l.id !== logId && l.dbId !== logId));
+      const logs = await adminService.getActivityLogs();
+      if (Array.isArray(logs)) setActivityLogs(logs);
+    } catch (err) {
+      console.warn("deleteActivityLog error:", err);
+      setActivityLogs((prev) => prev.filter((l) => l.id !== logId && l.dbId !== logId));
+    }
+  };
+
+  const createActivityLog = async (data) => {
+    try {
+      const newLog = await adminService.createActivityLog(data);
+      const logs = await adminService.getActivityLogs();
+      if (Array.isArray(logs)) setActivityLogs(logs);
+      return newLog;
+    } catch (err) {
+      console.warn("createActivityLog error:", err);
+      throw err;
+    }
+  };
+
+  const updateActivityLog = async (logId, data) => {
+    try {
+      await adminService.updateActivityLog(logId, data);
+      const logs = await adminService.getActivityLogs();
+      if (Array.isArray(logs)) setActivityLogs(logs);
+    } catch (err) {
+      console.warn("updateActivityLog error:", err);
+      throw err;
+    }
+  };
 
   // Role Actions (Wired directly to backend)
   const addRole = async (roleData) => {
@@ -234,6 +397,37 @@ export function AdminProvider({ children }) {
       setRoles((prev) => [...prev, fallback]);
       return fallback;
     }
+  };
+
+  const updateRole = async (roleId, roleData) => {
+    try {
+      if (adminService.updateRole) {
+        await adminService.updateRole(roleId, roleData);
+      }
+      setRoles((prev) =>
+        prev.map((r) =>
+          r.id === roleId || r.dbId === roleId || r.code === roleId
+            ? { ...r, ...roleData }
+            : r
+        )
+      );
+      adminService.getActivityLogs().then((logs) => Array.isArray(logs) && setActivityLogs(logs)).catch(() => {});
+    } catch (err) {
+      console.warn("updateRole service error:", err);
+      throw err;
+    }
+  };
+
+  const deleteRole = async (roleId) => {
+    try {
+      if (adminService.deleteRole) {
+        await adminService.deleteRole(roleId);
+      }
+    } catch (err) {
+      console.warn("deleteRole service call:", err);
+    }
+    setRoles((prev) => prev.filter((r) => r.id !== roleId && r.code !== roleId));
+    adminService.getActivityLogs().then((logs) => Array.isArray(logs) && setActivityLogs(logs)).catch(() => {});
   };
 
   const updateUserRole = async (userId, newRole) => {
@@ -268,20 +462,29 @@ export function AdminProvider({ children }) {
         setUsers,
         loading,
         addUser,
+        editUser,
+        deleteUser,
         updateUserStatus,
         bulkUpdateStatus,
         updateUserRole,
         invitations,
         setInvitations,
         addInvitation,
+        updateInvitation,
         resendInvitation,
         deleteInvitation,
         activityLogs,
+        setActivityLogs,
         fetchActivityLogs,
+        deleteActivityLog,
+        createActivityLog,
+        updateActivityLog,
         refreshAll,
         roles,
         setRoles,
         addRole,
+        updateRole,
+        deleteRole,
         items,
         setItems,
         addItem,
@@ -294,6 +497,6 @@ export function AdminProvider({ children }) {
   );
 }
 
-export const useAdmin = () => useContext(AdminContext);
+export const useAdmin = () => useContext(AdminContext) || defaultAdminContext;
 
 

@@ -204,6 +204,19 @@ export function InventoryProvider({ children }) {
     setPickLists(prev => prev.map(p => p.id === id ? { ...p, status: "STAGED_FOR_ISSUE" } : p));
   };
 
+  const removeLot = async (lotIdOrNumber) => {
+    try {
+      await warehouseService.deleteLot(lotIdOrNumber);
+    } catch (err) {
+      console.warn("deleteLot backend error:", err);
+    }
+    setLots((prev) => prev.filter((l) => (
+      l.id !== lotIdOrNumber && 
+      l.lotNumber !== lotIdOrNumber && 
+      l.lot_number !== lotIdOrNumber
+    )));
+  };
+
   return (
     <InventoryContext.Provider
       value={{
@@ -216,6 +229,7 @@ export function InventoryProvider({ children }) {
         startPickList,
         completePickList,
         addLot,
+        removeLot,
         transferLotLocation,
         putAwayHistory,
         isLoading,

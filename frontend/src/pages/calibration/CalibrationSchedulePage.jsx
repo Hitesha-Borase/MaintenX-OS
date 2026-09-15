@@ -43,18 +43,19 @@ export function CalibrationSchedulePage() {
     standardUsed: "Vaisala Reference Hygrometer"
   });
 
-  const dueSoonCount = calibrations.filter((c) => c.status === "Due Soon").length;
-  const overdueCount = calibrations.filter((c) => c.status === "Overdue").length;
-  const validCount = calibrations.filter((c) => c.status === "Valid").length;
+  const dueSoonCount = calibrations.filter((c) => (c.status || "").toLowerCase() === "due soon" || (c.status || "").toLowerCase() === "due_soon").length;
+  const overdueCount = calibrations.filter((c) => ["overdue", "failed", "expired"].includes((c.status || "").toLowerCase())).length;
+  const validCount = calibrations.filter((c) => (c.status || "").toLowerCase() === "valid").length;
 
   const filteredCalibrations = calibrations.filter((c) => {
+    const q = searchQuery.toLowerCase();
     const matchesSearch =
-      c.id?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.instrumentId?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.instrumentName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.assetName?.toLowerCase().includes(searchQuery.toLowerCase());
+      (c.id || "").toLowerCase().includes(q) ||
+      (c.instrumentId || "").toLowerCase().includes(q) ||
+      (c.instrumentName || c.name || "").toLowerCase().includes(q) ||
+      (c.assetName || "").toLowerCase().includes(q);
 
-    const matchesStatus = statusFilter === "ALL" || c.status === statusFilter;
+    const matchesStatus = statusFilter === "ALL" || (c.status || "").toUpperCase() === statusFilter.toUpperCase();
     return matchesSearch && matchesStatus;
   });
 

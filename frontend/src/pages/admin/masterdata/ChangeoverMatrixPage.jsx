@@ -6,12 +6,14 @@ import {
   X,
   Edit2,
   Trash2,
+  Eye,
   ArrowRight,
   Shuffle,
   ShieldCheck,
   Zap,
   CheckCircle2,
-  Boxes
+  Boxes,
+  Database
 } from "lucide-react";
 import { Card } from "../../../components/common/Card";
 import { Badge } from "../../../components/common/Badge";
@@ -27,9 +29,9 @@ export function ChangeoverMatrixPage() {
 
   const [loading, setLoading] = useState(false);
 
-  // Live fetch from PostgreSQL database on mount
-  useEffect(() => {
+  const fetchLiveChangeover = () => {
     setLoading(true);
+    localStorage.removeItem("mx_master_changeover");
     masterDataService.getChangeoverRules()
       .then((res) => {
         const data = res?.data?.data || res?.data || res;
@@ -39,11 +41,17 @@ export function ChangeoverMatrixPage() {
       })
       .catch((err) => console.warn("Changeover database live load:", err.message))
       .finally(() => setLoading(false));
-  }, [setChangeoverMatrix]);
+  };
+
+  // Live fetch from PostgreSQL database on mount
+  useEffect(() => {
+    fetchLiveChangeover();
+  }, []);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingRule, setEditingRule] = useState(null);
+  const [viewingRule, setViewingRule] = useState(null);
 
   const finishedSkus = useMemo(() => {
     if (!Array.isArray(skus) || skus.length === 0) return [];
@@ -111,7 +119,8 @@ export function ChangeoverMatrixPage() {
 
     try {
       const created = await addChangeoverRule(rulePayload);
-      addToast(`Changeover rule successfully saved to database (${created.fromSkuCode || "Rule"} → ${created.toSkuCode || ""})!`, "success");
+      fetchLiveChangeover();
+      addToast("Changeover standard rule saved to PostgreSQL database!", "success");
       setIsModalOpen(false);
       setNewRule({
         fromSkuId: finishedSkus[0]?.skuId || finishedSkus[0]?.id || "SKU-001",
@@ -141,7 +150,8 @@ export function ChangeoverMatrixPage() {
         changeoverDurationMin: Number(editingRule.changeoverDurationMin) || 0
       });
 
-      addToast("Changeover rule successfully updated in database!", "success");
+      fetchLiveChangeover();
+      addToast("Changeover rule successfully updated in PostgreSQL database!", "success");
       setEditingRule(null);
     } catch (err) {
       addToast(`Failed to update changeover rule: ${err.message}`, "error");
@@ -149,10 +159,12 @@ export function ChangeoverMatrixPage() {
   };
 
   const handleDelete = async (matrixId) => {
-    if (window.confirm("Are you sure you want to delete this changeover rule from the database?")) {
+    if (!matrixId) return;
+    if (window.confirm("Are you sure you want to permanently delete this changeover rule from the PostgreSQL database?")) {
       try {
         await deleteChangeoverRule(matrixId);
-        addToast("Changeover rule deleted from database.", "info");
+        fetchLiveChangeover();
+        addToast("Changeover rule deleted from PostgreSQL database.", "success");
       } catch (err) {
         addToast(`Failed to delete changeover rule: ${err.message}`, "error");
       }
@@ -199,7 +211,7 @@ export function ChangeoverMatrixPage() {
         />
         <StatCard
           title="Average SMED Time"
-          value="35 mins"
+          value={changeoverMatrix.length > 0 ? `${Math.round(changeoverMatrix.reduce((sum, c) => sum + (Number(c.changeoverDurationMin) || 0), 0) / changeoverMatrix.length)} mins` : "0 mins"}
           unit="Standard Clean"
           icon={Clock}
           colorVariant="cyan"
@@ -213,7 +225,7 @@ export function ChangeoverMatrixPage() {
         />
         <StatCard
           title="Same-Family Optimization"
-          value="0-15m"
+          value={changeoverMatrix.length > 0 ? `${changeoverMatrix.filter(c => (c.fromFamily && c.toFamily && c.fromFamily === c.toFamily) || Number(c.changeoverDurationMin) <= 15).length} Rules` : "0 Rules"}
           unit="Paced"
           icon={Zap}
           colorVariant="emerald"
@@ -324,6 +336,24 @@ export function ChangeoverMatrixPage() {
                     </td>
                     <td style={{ padding: "12px 16px", textAlign: "right" }}>
                       <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                        <button
+                          onClick={() => setViewingRule({ ...m })}
+                          title="View Transition Rule Details"
+                          style={{
+                            width: "30px",
+                            height: "30px",
+                            borderRadius: "6px",
+                            backgroundColor: "var(--bg-card-subtle)",
+                            color: "#2563EB",
+                            border: "1px solid var(--border-subtle)",
+                            cursor: "pointer",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center"
+                          }}
+                        >
+                          <Eye size={13} />
+                        </button>
                         <button
                           onClick={() => setEditingRule({ ...m })}
                           title="Edit Rule"
@@ -559,6 +589,283 @@ export function ChangeoverMatrixPage() {
                 </Button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* VIEW CHANGEOVER TRANSITION RULE DETAILS MODAL */}
+      {viewingRule && (
+        <div className="modal-backdrop" onClick={() => setViewingRule(null)}>
+          <div
+            className="modal-content"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: "580px", padding: 0, overflow: "hidden", borderRadius: "14px", backgroundColor: "#FFFFFF" }}
+          >
+            {/* Modal Header */}
+            <div
+              style={{
+                padding: "16px 20px",
+                borderBottom: "1px solid var(--border-subtle)",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                backgroundColor: "var(--bg-card-subtle)"
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <div
+                  style={{
+                    width: "36px",
+                    height: "36px",
+                    borderRadius: "8px",
+                    backgroundColor: "rgba(200, 149, 71, 0.12)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#C89547"
+                  }}
+                >
+                  <Eye size={18} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: "16px", fontWeight: 800, color: "var(--text-primary)" }}>
+                    Changeover Transition Rule Details
+                  </h3>
+                  <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+                    SMED Standard Transition & Sanitation Specification
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => setViewingRule(null)}
+                style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer", display: "flex", alignItems: "center" }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
+              {/* Reference ID & Status Header */}
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  paddingBottom: "12px",
+                  borderBottom: "1px solid var(--border-subtle)"
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
+                    Rule Reference / Matrix ID
+                  </div>
+                  <div
+                    style={{
+                      fontSize: "18px",
+                      fontWeight: 800,
+                      color: "#8C5B23",
+                      fontFamily: "var(--font-mono)",
+                      marginTop: "2px"
+                    }}
+                  >
+                    {viewingRule.matrixId || viewingRule.id || "CO-RULE"}
+                  </div>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <Badge variant={viewingRule.status === "Active" ? "emerald" : "gray"}>
+                    {viewingRule.status || "Active"}
+                  </Badge>
+                  {viewingRule.allergenCleaningRequired ? (
+                    <Badge variant="amber">Mandatory Allergen CIP</Badge>
+                  ) : (
+                    <Badge variant="emerald">Standard Sanitation</Badge>
+                  )}
+                </div>
+              </div>
+
+              {/* Transition Route Visualization Banner */}
+              <div
+                style={{
+                  backgroundColor: "var(--bg-card-subtle)",
+                  border: "1px solid var(--border-subtle)",
+                  borderRadius: "10px",
+                  padding: "16px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: "12px"
+                }}
+              >
+                {/* From SKU */}
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: "10px", fontWeight: 800, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                    Previous SKU
+                  </div>
+                  <div style={{ fontSize: "15px", fontWeight: 800, color: "var(--text-primary)", marginTop: "4px" }}>
+                    {viewingRule.fromSkuCode}
+                  </div>
+                  <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
+                    {viewingRule.fromFamily || "All Families"}
+                  </div>
+                </div>
+
+                {/* Arrow */}
+                <div
+                  style={{
+                    width: "36px",
+                    height: "36px",
+                    borderRadius: "50%",
+                    backgroundColor: "#FFFFFF",
+                    border: "1px solid var(--border-subtle)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0
+                  }}
+                >
+                  <ArrowRight size={18} color="#C89547" />
+                </div>
+
+                {/* To SKU */}
+                <div style={{ flex: 1, textAlign: "right" }}>
+                  <div style={{ fontSize: "10px", fontWeight: 800, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                    Next SKU Transition
+                  </div>
+                  <div style={{ fontSize: "15px", fontWeight: 800, color: "#8C5B23", marginTop: "4px" }}>
+                    {viewingRule.toSkuCode}
+                  </div>
+                  <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
+                    {viewingRule.toFamily || "All Families"}
+                  </div>
+                </div>
+              </div>
+
+              {/* SMED & Sanitation Metrics Grid */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div
+                  style={{
+                    backgroundColor: "var(--bg-card-subtle)",
+                    padding: "14px",
+                    borderRadius: "8px",
+                    border: "1px solid var(--border-subtle)"
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                    <Clock size={14} color="#D97706" />
+                    <span style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
+                      SMED Standard Duration
+                    </span>
+                  </div>
+                  <div
+                    style={{
+                      fontSize: "20px",
+                      fontWeight: 800,
+                      fontFamily: "var(--font-mono)",
+                      color: viewingRule.changeoverDurationMin === 0 ? "#059669" : "#D97706",
+                      marginTop: "6px"
+                    }}
+                  >
+                    {viewingRule.changeoverDurationMin} mins
+                  </div>
+                  <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>
+                    Stop-to-First Good Unit Standard
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    backgroundColor: "var(--bg-card-subtle)",
+                    padding: "14px",
+                    borderRadius: "8px",
+                    border: "1px solid var(--border-subtle)"
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                    <ShieldCheck size={14} color="#059669" />
+                    <span style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
+                      Sanitation Class
+                    </span>
+                  </div>
+                  <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)", marginTop: "6px", lineHeight: 1.3 }}>
+                    {viewingRule.sanitationClass || "Standard Wash"}
+                  </div>
+                  <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>
+                    Clean-In-Place Protocol
+                  </div>
+                </div>
+              </div>
+
+              {/* SOP / Cleaning Protocol Notes */}
+              <div>
+                <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", marginBottom: "6px" }}>
+                  Operating Procedures & Notes
+                </div>
+                <div
+                  style={{
+                    backgroundColor: "var(--bg-card-subtle)",
+                    padding: "12px 14px",
+                    borderRadius: "8px",
+                    border: "1px solid var(--border-subtle)",
+                    fontSize: "12px",
+                    color: viewingRule.notes ? "var(--text-primary)" : "var(--text-muted)",
+                    lineHeight: 1.5,
+                    fontStyle: viewingRule.notes ? "normal" : "italic"
+                  }}
+                >
+                  {viewingRule.notes || "Standard line changeover SOP applies. No custom tooling or manual washout overrides recorded for this SKU pair."}
+                </div>
+              </div>
+
+              {/* Database Live State Indicator */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  padding: "8px 12px",
+                  borderRadius: "6px",
+                  backgroundColor: "rgba(5, 150, 105, 0.08)",
+                  border: "1px solid rgba(5, 150, 105, 0.2)",
+                  fontSize: "11px",
+                  color: "#059669"
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: 600 }}>
+                  <Database size={13} />
+                  Database Synced: PostgreSQL public.changeover_rules
+                </div>
+                <span style={{ fontFamily: "var(--font-mono)", fontSize: "10px", color: "var(--text-muted)" }}>
+                  DB Ref: {viewingRule.id || viewingRule.matrixId}
+                </span>
+              </div>
+
+              {/* Modal Actions Footer */}
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  gap: "10px",
+                  borderTop: "1px solid var(--border-subtle)",
+                  paddingTop: "14px"
+                }}
+              >
+                <Button variant="secondary" onClick={() => setViewingRule(null)}>
+                  Close
+                </Button>
+                <Button
+                  variant="primary"
+                  icon={Edit2}
+                  onClick={() => {
+                    const rule = { ...viewingRule };
+                    setViewingRule(null);
+                    setEditingRule(rule);
+                  }}
+                >
+                  Edit Rule
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       )}

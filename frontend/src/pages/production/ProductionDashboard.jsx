@@ -113,7 +113,10 @@ export function ProductionDashboard() {
         const currentStatus = localLineStatuses[lineKey] || (isOrderRunning ? "RUNNING" : (line.status || "IDLE").toUpperCase());
         const isRunning = currentStatus === "RUNNING";
         const ratedSpeed = line.nominalSpeedBpm || (line.capacityPerHour ? Math.round(line.capacityPerHour / 60) : 633);
+<<<<<<< HEAD
         const scrap = Number(activeOrder?.scrapQuantity || activeOrder?.scrapQty || 0);
+=======
+>>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
 
         return {
           id: lineKey,

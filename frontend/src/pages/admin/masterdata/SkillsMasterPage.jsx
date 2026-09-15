@@ -14,7 +14,12 @@ import {
   RefreshCw,
   Building2,
   Layers,
+<<<<<<< HEAD
   AlertCircle
+=======
+  Trash2,
+  AlertTriangle
+>>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
 } from "lucide-react";
 import { Card } from "../../../components/common/Card";
 import { Badge } from "../../../components/common/Badge";
@@ -25,12 +30,34 @@ import { useApp } from "../../../context/AppContext";
 import masterDataService from "../../../services/masterDataService";
 
 export function SkillsMasterPage() {
+<<<<<<< HEAD
   const { employees = [], setEmployees, lines = [], plants = [] } = useMasterData();
   const { addToast } = useApp();
 
   const [liveEmployees, setLiveEmployees] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+=======
+  const { employees = [], setEmployees, addEmployee, updateEmployee, deleteEmployee, lines = [], plants = [], activePlantId } = useMasterData();
+  const { addToast } = useApp();
+
+  const fetchLiveEmployees = async () => {
+    try {
+      localStorage.removeItem("mx_master_employees");
+      const res = await masterDataService.getEmployeeSkills(activePlantId);
+      const data = res?.data?.data || res?.data || res;
+      if (Array.isArray(data) && typeof setEmployees === "function") {
+        setEmployees(data);
+      }
+    } catch (err) {
+      console.warn("Employees load:", err.message);
+    }
+  };
+
+  useEffect(() => {
+    fetchLiveEmployees();
+  }, [activePlantId]);
+>>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
 
   const [searchQuery, setSearchQuery] = useState("");
   const [deptFilter, setDeptFilter] = useState("ALL");
@@ -40,6 +67,8 @@ export function SkillsMasterPage() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingEmp, setEditingEmp] = useState(null);
   const [viewingEmp, setViewingEmp] = useState(null);
+  const [deletingEmp, setDeletingEmp] = useState(null);
+  const [localEmployees, setLocalEmployees] = useState(null);
 
   const initialNewEmpState = {
     name: "",
@@ -150,6 +179,7 @@ export function SkillsMasterPage() {
     });
   }, [displayEmployees, deptFilter, skillLevelFilter, searchQuery]);
 
+<<<<<<< HEAD
   // Handlers for Add Form Tags
   const handleAddSkillTag = () => {
     const trimmed = skillInput.trim();
@@ -221,12 +251,15 @@ export function SkillsMasterPage() {
   };
 
   // Create Staff in PostgreSQL DB via API
+=======
+>>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
   const handleAddSubmit = async (e) => {
     e.preventDefault();
     if (!newEmp.name.trim()) {
       addToast("Please provide Employee Name.", "warning");
       return;
     }
+<<<<<<< HEAD
 
     try {
       setIsSubmitting(true);
@@ -284,6 +317,39 @@ export function SkillsMasterPage() {
     } catch (err) {
       console.error("Delete staff error:", err);
       addToast(err?.response?.data?.message || err?.message || "Failed to delete employee", "error");
+=======
+    try {
+      const created = await addEmployee(newEmp);
+      addToast(`Employee ${created.employeeId || ""} (${created.name}) onboarded with certified skills!`, "success");
+      setIsAddModalOpen(false);
+      setNewEmp({
+        name: "",
+        email: "",
+        department: "Maintenance & Reliability",
+        role: "Maintenance Technician",
+        plantId: "PLT-01",
+        skillLevel: "Level 3 (Senior Technician)",
+        skills: ["Precision Shaft Alignment", "Vibration Analysis"],
+        certifications: ["OSHA 30-Hour Safety"],
+        assignedLineIds: ["LIN-01"]
+      });
+      fetchLiveEmployees();
+    } catch (err) {
+      addToast("Failed to onboard employee: " + err.message, "error");
+    }
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    if (!editingEmp.name.trim()) return;
+    try {
+      await updateEmployee(editingEmp.employeeId || editingEmp.id, editingEmp);
+      addToast(`Employee ${editingEmp.employeeId || editingEmp.id} skills & profile updated!`, "success");
+      setEditingEmp(null);
+      fetchLiveEmployees();
+    } catch (err) {
+      addToast("Failed to update employee: " + err.message, "error");
+>>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
     }
   };
 
@@ -563,6 +629,7 @@ export function SkillsMasterPage() {
                             style={{ padding: "6px 8px" }}
                             title="Edit Employee Qualifications"
                           />
+<<<<<<< HEAD
                           <Button
                             variant="secondary"
                             size="sm"
@@ -571,6 +638,15 @@ export function SkillsMasterPage() {
                             style={{ padding: "6px 8px", color: "#DC2626", borderColor: "rgba(220, 38, 38, 0.25)" }}
                             title="Delete Employee from DB"
                           />
+=======
+                          <button
+                            onClick={() => setDeletingEmp(emp)}
+                            style={{ padding: "6px 8px", borderRadius: "6px", display: "inline-flex", alignItems: "center", justifyContent: "center", border: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)", color: "#EF4444", cursor: "pointer" }}
+                            title="Remove Employee"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+>>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
                         </div>
                       </td>
                     </tr>
@@ -578,6 +654,7 @@ export function SkillsMasterPage() {
                 })
               ) : (
                 <tr>
+<<<<<<< HEAD
                   <td colSpan={8} style={{ padding: "40px 16px", textAlign: "center" }}>
                     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px", color: "var(--text-muted)" }}>
                       <AlertCircle size={28} color="var(--text-muted)" />
@@ -588,6 +665,14 @@ export function SkillsMasterPage() {
                           : "No staff records found in database. Click '+ Onboard Employee & Skills' to add staff."}
                       </div>
                     </div>
+=======
+                  <td colSpan={8} style={{ padding: "48px 24px", textAlign: "center", color: "var(--text-muted)", fontSize: "13px" }}>
+                    <Users size={36} style={{ margin: "0 auto 12px", opacity: 0.35, display: "block" }} />
+                    <div style={{ fontWeight: 700, color: "var(--text-secondary)", marginBottom: "4px" }}>
+                      No Employee Skill Profiles Found
+                    </div>
+                    <div>Click <strong>+ Onboard Employee & Skills</strong> above to add live records to the database.</div>
+>>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
                   </td>
                 </tr>
               )}
@@ -1195,6 +1280,49 @@ export function SkillsMasterPage() {
                 </Button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* DELETE EMPLOYEE CONFIRM MODAL */}
+      {deletingEmp && (
+        <div className="modal-backdrop" onClick={() => setDeletingEmp(null)}>
+          <div className="modal-content" style={{ maxWidth: "460px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <AlertTriangle size={18} color="#DC2626" />
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>Remove Employee</h2>
+              </div>
+              <button onClick={() => setDeletingEmp(null)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+            <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "12px" }}>
+              <p style={{ fontSize: "13px", color: "var(--text-secondary)", margin: 0, lineHeight: 1.5 }}>
+                Are you sure you want to remove <strong style={{ color: "var(--text-primary)" }}>{deletingEmp.name}</strong> ({deletingEmp.employeeId}) from the Skills Master? This action cannot be undone.
+              </p>
+              <div style={{ padding: "10px 14px", backgroundColor: "rgba(220, 38, 38, 0.06)", border: "1px solid rgba(220, 38, 38, 0.2)", borderRadius: "8px", fontSize: "12px", color: "#DC2626" }}>
+                Warning: Training records and skill certifications linked to this employee will also be removed.
+              </div>
+            </div>
+            <div style={{ padding: "14px 20px", borderTop: "1px solid var(--border-subtle)", display: "flex", justifyContent: "flex-end", gap: "10px", backgroundColor: "var(--bg-card-subtle)" }}>
+              <Button variant="secondary" onClick={() => setDeletingEmp(null)}>Cancel</Button>
+              <Button
+                variant="primary"
+                onClick={async () => {
+                  try {
+                    await deleteEmployee(deletingEmp.employeeId || deletingEmp.id);
+                    addToast(`Employee "${deletingEmp.name}" deleted from database.`, "info");
+                    setDeletingEmp(null);
+                    fetchLiveEmployees();
+                  } catch (err) {
+                    addToast("Failed to delete employee: " + err.message, "error");
+                  }
+                }}
+                style={{ backgroundColor: "#DC2626", borderColor: "#DC2626", color: "#FFFFFF" }}
+              >
+                Remove Employee
+              </Button>
+            </div>
           </div>
         </div>
       )}

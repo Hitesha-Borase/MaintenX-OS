@@ -26,7 +26,7 @@ import dashboardService from "../../services/dashboardService";
 export function SkillsTraining() {
   const { addToast } = useApp();
 
-  const [skills, setSkills] = useState(SKILLS_LIST);
+  const [skills, setSkills] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedLevel, setSelectedLevel] = useState("All");
@@ -38,25 +38,25 @@ export function SkillsTraining() {
   const [newSkill, setNewSkill] = useState({
     skillName: "",
     skillCategory: "Machine Operation",
-    employee: "Elena Rostova",
-    employeeId: "EMP-101",
+    employee: "",
+    employeeId: "",
     skillLevel: "Intermediate",
-    certification: "HACCP Safety L2",
-    expiry: "2027-09-30",
+    certification: "ISO 22000 Operator",
+    expiry: "2027-12-31",
     status: "Active"
   });
 
-  useEffect(() => {
-    async function fetchSkills() {
-      try {
-        const res = await dashboardService.getSupervisorSkills();
-        if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
-          setSkills(res.data);
-        }
-      } catch (err) {
-        console.error("Failed to fetch supervisor skills:", err);
-      }
+  const fetchSkills = async () => {
+    try {
+      const res = await dashboardService.getSupervisorSkills();
+      const list = Array.isArray(res) ? res : (res?.data && Array.isArray(res.data) ? res.data : []);
+      setSkills(list);
+    } catch (err) {
+      console.error("Failed to fetch supervisor skills:", err);
     }
+  };
+
+  useEffect(() => {
     fetchSkills();
   }, []);
 
@@ -78,29 +78,21 @@ export function SkillsTraining() {
 
     try {
       const res = await dashboardService.addSupervisorSkill(newSkill);
-      const added = {
-        id: res.data?.id || `SKL-0${skills.length + 1}`,
-        ...newSkill
-      };
-      setSkills((prev) => [added, ...prev]);
       addToast(res.message || `Skill "${newSkill.skillName}" (${newSkill.skillLevel}) added for ${newSkill.employee}.`, "success");
+      await fetchSkills();
     } catch (err) {
-      const added = {
-        id: `SKL-0${skills.length + 1}`,
-        ...newSkill
-      };
-      setSkills((prev) => [added, ...prev]);
       addToast(`Skill "${newSkill.skillName}" (${newSkill.skillLevel}) added for ${newSkill.employee}.`, "success");
+      await fetchSkills();
     }
     setIsAddSkillModalOpen(false);
     setNewSkill({
       skillName: "",
       skillCategory: "Machine Operation",
-      employee: "Elena Rostova",
-      employeeId: "EMP-101",
+      employee: "",
+      employeeId: "",
       skillLevel: "Intermediate",
-      certification: "HACCP Safety L2",
-      expiry: "2027-09-30",
+      certification: "ISO 22000 Operator",
+      expiry: "2027-12-31",
       status: "Active"
     });
   };
@@ -111,15 +103,11 @@ export function SkillsTraining() {
 
     try {
       const res = await dashboardService.updateSupervisorSkillLevel(editSkill.id, editSkill);
-      setSkills((prev) =>
-        prev.map((s) => (s.id === editSkill.id ? { ...s, ...editSkill } : s))
-      );
       addToast(res.message || `Skill competency level for ${editSkill.employee} updated to ${editSkill.skillLevel}.`, "success");
+      await fetchSkills();
     } catch (err) {
-      setSkills((prev) =>
-        prev.map((s) => (s.id === editSkill.id ? { ...s, ...editSkill } : s))
-      );
       addToast(`Skill competency level for ${editSkill.employee} updated to ${editSkill.skillLevel}.`, "success");
+      await fetchSkills();
     }
     setEditSkill(null);
   };

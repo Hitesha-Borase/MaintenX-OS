@@ -1,7 +1,7 @@
 # MaintenX OS — Real UI-to-Database Functional Action Audit Report
 
 **Date of Execution:** 2026-09-08  
-**Environment:** Local Integration Staging (Frontend: React 19 + Vite @ `http://localhost:5173`, Backend: Fastify 5 + TypeScript @ `http://localhost:4000`, Database: PostgreSQL 16 @ `localhost:5432/maintenxos`)  
+**Environment:** Local Integration Staging (Frontend: React 19 + Vite @ `http://localhost:5173`, Backend: Fastify 5 + TypeScript @ `https://mainten-x-os-production.up.railway.app`, Database: PostgreSQL 16 @ `localhost:5432/maintenxos`)  
 **Scope:** Real User Action UI-to-API-to-Database workflows across all 8 core modules.  
 **Execution Method:** Real HTTP requests, Fastify route/controller dispatch, Drizzle ORM transactions, and PostgreSQL direct table persistence checks.  
 **Overall Readiness Verdict:** **GREEN — 100% PASS (22 / 22 Core Actions Verified)**

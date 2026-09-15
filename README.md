@@ -49,6 +49,6 @@ cd backend
 npm install
 npm run dev
 ```
-Accessible at: **`http://localhost:4000`**  
-Interactive Swagger API Docs: **`http://localhost:4000/docs`**  
-Health Check: **`http://localhost:4000/health`**
+Accessible at: **`https://mainten-x-os-production.up.railway.app`**  
+Interactive Swagger API Docs: **`https://mainten-x-os-production.up.railway.app/docs`**  
+Health Check: **`https://mainten-x-os-production.up.railway.app/health`**

@@ -36,7 +36,15 @@ import maintenanceService from "../../services/maintenanceService";
 export function AssetDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { assets = [], updateAsset, workOrders = [], pmSchedules = [], breakdowns = [], spareParts = [] } = useCMMS();
+  const {
+    assets = [],
+    updateAsset,
+    workOrders = [],
+    pmSchedules = [],
+    breakdowns = [],
+    spareParts = [],
+    iotTelemetry = {}
+  } = useCMMS();
   const { addToast, openQrModal } = useApp();
 
   React.useEffect(() => {
@@ -51,71 +59,79 @@ export function AssetDetail() {
   }, [id]);
 
   // Selected asset state (defaults to URL param or first asset)
-  const initialAsset = assets.find((a) => a.id === id) || assets[0] || {
-    id: "AST-001",
-    name: "Rotary Bottling Filler (Aseptic)",
+  const initialAsset = assets.find((a) => a.id === id || a.assetCode === id) || assets[0] || {
+    id: id || "FM-001",
+    name: "Industrial Asset",
     type: "Packaging & Bottling",
     plant: "Plant 1 - North Facility",
     department: "Packaging",
-    line: "Line 1 (Aseptic Bottling)",
-    location: "Bay 4A - Main Hall",
-    criticality: "Critical",
+    line: "Line 1",
+    location: "Bay 4A",
+    criticality: "High",
     status: "Operational",
-    health: 94,
-    manufacturer: "Krones Synchrobloc",
-    model: "Isobaric Aseptic-36",
-    serialNumber: "KR-2021-8849-B",
-    commissionDate: "2021-03-15",
+    health: 95,
+    manufacturer: "Standard OEM",
+    model: "Series-2026",
+    serialNumber: `SN-${id || "FM-001"}`,
+    commissionDate: new Date().toISOString().substring(0, 10),
     warrantyExpiry: "2027-03-15",
     nameplatePower: "45 kW",
     ratedSpeed: "600 BPM",
-    operatingVoltage: "480V 3-Phase 60Hz",
-    vibration: 1.8,
-    temperature: 52.4,
-    pressure: 5.8,
+    vibration: 1.5,
+    temperature: 55.0,
+    pressure: 6.0,
     oilLevel: 92,
     runtimeHours: 14820,
-    mtbf: 385,
-    mttr: 1.3
+    mtbf: 400,
+    mttr: 1.5
   };
 
-  const [selectedAssetId, setSelectedAssetId] = useState(initialAsset.id);
-  const currentAsset = assets.find((a) => a.id === selectedAssetId) || initialAsset;
+  const [selectedAssetId, setSelectedAssetId] = useState(initialAsset.id || initialAsset.assetCode);
+  const currentAsset = assets.find((a) => a.id === selectedAssetId || a.assetCode === selectedAssetId) || initialAsset;
 
   // Edit Modal State
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editForm, setEditForm] = useState({
-    name: currentAsset.name,
-    location: currentAsset.location,
+    name: currentAsset.name || "",
+    location: currentAsset.location || "",
     criticality: currentAsset.criticality || "High",
-    manufacturer: currentAsset.manufacturer || "Standard OEM",
-    model: currentAsset.model || "Series-2026",
-    serialNumber: currentAsset.serialNumber || `SN-${currentAsset.id}`,
-    nameplatePower: currentAsset.nameplatePower || "45 kW",
-    ratedSpeed: currentAsset.ratedSpeed || "600 BPM"
+    manufacturer: currentAsset.manufacturer || "",
+    model: currentAsset.model || currentAsset.type || "",
+    serialNumber: currentAsset.serialNumber || `SN-${currentAsset.id || currentAsset.assetCode}`,
+    nameplatePower: currentAsset.nameplatePower || "",
+    ratedSpeed: currentAsset.ratedSpeed || "",
+    commissionDate: currentAsset.commissionDate || currentAsset.installedDate || "",
+    warrantyExpiry: currentAsset.warrantyExpiry || "",
+    operatingHours: currentAsset.operatingHours || currentAsset.runtimeHours || 0
   });
+
+  // Keep editForm synced with currentAsset
+  React.useEffect(() => {
+    if (currentAsset) {
+      setEditForm({
+        name: currentAsset.name || "",
+        location: currentAsset.location || "",
+        criticality: currentAsset.criticality || "High",
+        manufacturer: currentAsset.manufacturer || "",
+        model: currentAsset.model || currentAsset.type || "",
+        serialNumber: currentAsset.serialNumber || `SN-${currentAsset.id || currentAsset.assetCode}`,
+        nameplatePower: currentAsset.nameplatePower || "",
+        ratedSpeed: currentAsset.ratedSpeed || "",
+        commissionDate: currentAsset.commissionDate || currentAsset.installedDate || "",
+        warrantyExpiry: currentAsset.warrantyExpiry || "",
+        operatingHours: currentAsset.operatingHours || currentAsset.runtimeHours || 0
+      });
+    }
+  }, [currentAsset.id, currentAsset.updatedAt, isEditModalOpen]);
 
   const handleAssetSwitch = (newId) => {
     setSelectedAssetId(newId);
-    const found = assets.find((a) => a.id === newId);
-    if (found) {
-      setEditForm({
-        name: found.name,
-        location: found.location,
-        criticality: found.criticality || "High",
-        manufacturer: found.manufacturer || "Standard OEM",
-        model: found.model || "Series-2026",
-        serialNumber: found.serialNumber || `SN-${found.id}`,
-        nameplatePower: found.nameplatePower || "45 kW",
-        ratedSpeed: found.ratedSpeed || "600 BPM"
-      });
-    }
   };
 
-  const handleSaveEdit = (e) => {
+  const handleSaveEdit = async (e) => {
     e.preventDefault();
-    updateAsset(currentAsset.id, editForm);
-    addToast(`Asset specifications for ${currentAsset.id} updated!`, "success");
+    await updateAsset(currentAsset.id || currentAsset.assetCode, editForm);
+    addToast(`Asset specifications for ${currentAsset.id || currentAsset.assetCode} saved to database!`, "success");
     setIsEditModalOpen(false);
   };
 
@@ -305,49 +321,49 @@ export function AssetDetail() {
             <div style={{ padding: "12px", borderRadius: "8px", backgroundColor: "var(--bg-surface)", border: "1px solid var(--border-subtle)" }}>
               <span style={{ fontSize: "11px", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 600 }}>OEM Manufacturer</span>
               <div style={{ fontSize: "14px", fontWeight: 700, color: "var(--text-primary)", marginTop: "4px" }}>
-                {currentAsset.manufacturer || "Krones Synchrobloc"}
+                {currentAsset.manufacturer || "—"}
               </div>
             </div>
             <div style={{ padding: "12px", borderRadius: "8px", backgroundColor: "var(--bg-surface)", border: "1px solid var(--border-subtle)" }}>
               <span style={{ fontSize: "11px", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 600 }}>Model / Series</span>
               <div style={{ fontSize: "14px", fontWeight: 700, color: "var(--text-primary)", marginTop: "4px" }}>
-                {currentAsset.model || "Series 2026-X"}
+                {currentAsset.model || currentAsset.type || "—"}
               </div>
             </div>
             <div style={{ padding: "12px", borderRadius: "8px", backgroundColor: "var(--bg-surface)", border: "1px solid var(--border-subtle)" }}>
               <span style={{ fontSize: "11px", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 600 }}>Serial Number</span>
               <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--accent-blue)", fontFamily: "var(--font-mono)", marginTop: "4px" }}>
-                {currentAsset.serialNumber || `SN-${currentAsset.id}`}
+                {currentAsset.serialNumber || `SN-${currentAsset.id || currentAsset.assetCode}`}
               </div>
             </div>
             <div style={{ padding: "12px", borderRadius: "8px", backgroundColor: "var(--bg-surface)", border: "1px solid var(--border-subtle)" }}>
               <span style={{ fontSize: "11px", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 600 }}>Nameplate Power</span>
               <div style={{ fontSize: "14px", fontWeight: 700, color: "var(--text-primary)", marginTop: "4px" }}>
-                {currentAsset.nameplatePower || "45 kW"}
+                {currentAsset.nameplatePower || "—"}
               </div>
             </div>
             <div style={{ padding: "12px", borderRadius: "8px", backgroundColor: "var(--bg-surface)", border: "1px solid var(--border-subtle)" }}>
               <span style={{ fontSize: "11px", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 600 }}>Rated Speed</span>
               <div style={{ fontSize: "14px", fontWeight: 700, color: "var(--text-primary)", marginTop: "4px" }}>
-                {currentAsset.ratedSpeed || "600 BPM"}
+                {currentAsset.ratedSpeed || "—"}
               </div>
             </div>
             <div style={{ padding: "12px", borderRadius: "8px", backgroundColor: "var(--bg-surface)", border: "1px solid var(--border-subtle)" }}>
               <span style={{ fontSize: "11px", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 600 }}>Commission Date</span>
               <div style={{ fontSize: "13px", fontWeight: 600, color: "var(--text-secondary)", marginTop: "4px" }}>
-                {currentAsset.commissionDate || "2021-03-15"}
+                {currentAsset.commissionDate || currentAsset.installedDate || "—"}
               </div>
             </div>
             <div style={{ padding: "12px", borderRadius: "8px", backgroundColor: "var(--bg-surface)", border: "1px solid var(--border-subtle)" }}>
               <span style={{ fontSize: "11px", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 600 }}>Warranty Expiry</span>
               <div style={{ fontSize: "13px", fontWeight: 600, color: "#10B981", marginTop: "4px" }}>
-                {currentAsset.warrantyExpiry || "2027-03-15"}
+                {currentAsset.warrantyExpiry || "—"}
               </div>
             </div>
             <div style={{ padding: "12px", borderRadius: "8px", backgroundColor: "var(--bg-surface)", border: "1px solid var(--border-subtle)" }}>
               <span style={{ fontSize: "11px", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 600 }}>Operating Hours</span>
               <div style={{ fontSize: "14px", fontWeight: 700, color: "var(--text-primary)", fontFamily: "var(--font-mono)", marginTop: "4px" }}>
-                {(currentAsset.runtimeHours || 14820).toLocaleString()} hrs
+                {currentAsset.operatingHours || currentAsset.runtimeHours ? `${Number(currentAsset.operatingHours || currentAsset.runtimeHours).toLocaleString()} hrs` : "—"}
               </div>
             </div>
           </div>
@@ -359,22 +375,22 @@ export function AssetDetail() {
             <h3 style={{ fontSize: "15px", fontWeight: 700, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "8px" }}>
               <Activity size={16} style={{ color: "#10B981" }} /> Real-Time Sensor Telemetry & Health
             </h3>
-            <Badge variant="emerald" dot>LIVE TELEMETRY</Badge>
+            <Badge variant="emerald" dot>LIVE TELEMETRY STREAM</Badge>
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "12px" }}>
             <div style={{ padding: "14px", borderRadius: "8px", backgroundColor: "var(--bg-surface)", border: "1px solid var(--border-subtle)" }}>
               <span style={{ fontSize: "11px", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 600 }}>Bearing Vibration</span>
-              <div style={{ fontSize: "18px", fontWeight: 800, color: (currentAsset.vibration || 1.8) > 3.0 ? "#EF4444" : "#10B981", marginTop: "4px", fontFamily: "var(--font-mono)" }}>
-                {currentAsset.vibration || 1.8} mm/s
+              <div style={{ fontSize: "18px", fontWeight: 800, color: Number(iotTelemetry?.vibration || 0) > 3.0 ? "#EF4444" : "#10B981", marginTop: "4px", fontFamily: "var(--font-mono)" }}>
+                {iotTelemetry?.vibration != null ? `${Number(iotTelemetry.vibration).toFixed(2)} mm/s` : "—"}
               </div>
               <span style={{ fontSize: "10px", color: "var(--text-muted)" }}>ISO-10816 limit: &lt; 3.0 mm/s</span>
             </div>
 
             <div style={{ padding: "14px", borderRadius: "8px", backgroundColor: "var(--bg-surface)", border: "1px solid var(--border-subtle)" }}>
               <span style={{ fontSize: "11px", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 600 }}>Housing Temp</span>
-              <div style={{ fontSize: "18px", fontWeight: 800, color: (currentAsset.temperature || 52.4) > 75 ? "#EF4444" : "#38BDF8", marginTop: "4px", fontFamily: "var(--font-mono)" }}>
-                {currentAsset.temperature || 52.4}°C
+              <div style={{ fontSize: "18px", fontWeight: 800, color: Number(iotTelemetry?.temperature || 0) > 75 ? "#EF4444" : "#38BDF8", marginTop: "4px", fontFamily: "var(--font-mono)" }}>
+                {iotTelemetry?.temperature != null ? `${Number(iotTelemetry.temperature).toFixed(1)}°C` : "—"}
               </div>
               <span style={{ fontSize: "10px", color: "var(--text-muted)" }}>Thermal ceiling: &lt; 80.0°C</span>
             </div>
@@ -382,7 +398,7 @@ export function AssetDetail() {
             <div style={{ padding: "14px", borderRadius: "8px", backgroundColor: "var(--bg-surface)", border: "1px solid var(--border-subtle)" }}>
               <span style={{ fontSize: "11px", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 600 }}>Pneumatic Line Pressure</span>
               <div style={{ fontSize: "18px", fontWeight: 800, color: "#F59E0B", marginTop: "4px", fontFamily: "var(--font-mono)" }}>
-                {currentAsset.pressure || 5.8} Bar
+                {iotTelemetry?.pressure != null ? `${Number(iotTelemetry.pressure).toFixed(2)} Bar` : "—"}
               </div>
               <span style={{ fontSize: "10px", color: "var(--text-muted)" }}>Operating nominal: 6.0 ± 0.5 Bar</span>
             </div>
@@ -390,7 +406,7 @@ export function AssetDetail() {
             <div style={{ padding: "14px", borderRadius: "8px", backgroundColor: "var(--bg-surface)", border: "1px solid var(--border-subtle)" }}>
               <span style={{ fontSize: "11px", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 600 }}>Lubricant Reservoir</span>
               <div style={{ fontSize: "18px", fontWeight: 800, color: "#10B981", marginTop: "4px", fontFamily: "var(--font-mono)" }}>
-                {currentAsset.oilLevel || 92}%
+                {currentAsset.oilLevel != null ? `${currentAsset.oilLevel}%` : "—"}
               </div>
               <span style={{ fontSize: "10px", color: "var(--text-muted)" }}>Synthetic food-grade grease</span>
             </div>
@@ -404,7 +420,7 @@ export function AssetDetail() {
               variant="secondary"
               size="sm"
               icon={ExternalLink}
-              onClick={() => navigate(`/maintenance/asset-360/${currentAsset.id}`)}
+              onClick={() => navigate(`/maintenance/asset-360/${currentAsset.id || currentAsset.assetCode}`)}
               style={{ fontSize: "11px" }}
             >
               View Consolidated Asset 360°
@@ -447,30 +463,55 @@ export function AssetDetail() {
               </tr>
             </thead>
             <tbody>
-              <tr style={{ borderBottom: "1px solid var(--border-subtle)" }}>
-                <td style={{ padding: "10px", fontFamily: "var(--font-mono)", color: "var(--accent-blue)", fontWeight: 600 }}>BRG-6208-2RS</td>
-                <td style={{ padding: "10px", color: "var(--text-primary)", fontWeight: 600 }}>Deep Groove Ceramic Spindle Bearing</td>
-                <td style={{ padding: "10px" }}><Badge variant="rose">Critical</Badge></td>
-                <td style={{ padding: "10px", fontFamily: "var(--font-mono)", color: "#10B981" }}>4 Units in Stock</td>
-                <td style={{ padding: "10px", color: "var(--text-muted)" }}>Every 4,000 hrs</td>
-                <td style={{ padding: "10px", color: "var(--text-muted)" }}>3 Days</td>
-              </tr>
-              <tr style={{ borderBottom: "1px solid var(--border-subtle)" }}>
-                <td style={{ padding: "10px", fontFamily: "var(--font-mono)", color: "var(--accent-blue)", fontWeight: 600 }}>SEAL-VITON-45</td>
-                <td style={{ padding: "10px", color: "var(--text-primary)", fontWeight: 600 }}>Fluoropolymer Viton Shaft Seal Ring</td>
-                <td style={{ padding: "10px" }}><Badge variant="amber">High</Badge></td>
-                <td style={{ padding: "10px", fontFamily: "var(--font-mono)", color: "#10B981" }}>12 Units in Stock</td>
-                <td style={{ padding: "10px", color: "var(--text-muted)" }}>Every 2,000 hrs</td>
-                <td style={{ padding: "10px", color: "var(--text-muted)" }}>1 Day</td>
-              </tr>
-              <tr style={{ borderBottom: "1px solid var(--border-subtle)" }}>
-                <td style={{ padding: "10px", fontFamily: "var(--font-mono)", color: "var(--accent-blue)", fontWeight: 600 }}>VALVE-PNEUM-02</td>
-                <td style={{ padding: "10px", color: "var(--text-primary)", fontWeight: 600 }}>High-Speed Solenoid Actuator Valve</td>
-                <td style={{ padding: "10px" }}><Badge variant="cyan">Standard</Badge></td>
-                <td style={{ padding: "10px", fontFamily: "var(--font-mono)", color: "#F59E0B" }}>2 Units in Stock</td>
-                <td style={{ padding: "10px", color: "var(--text-muted)" }}>Condition Based</td>
-                <td style={{ padding: "10px", color: "var(--text-muted)" }}>5 Days</td>
-              </tr>
+              {(() => {
+                const aid = currentAsset.id || currentAsset.assetCode;
+                const linkedSpares = spareParts.filter((p) => {
+                  if (!p) return false;
+                  const matchesAsset = Array.isArray(p.linkedAssets) && (p.linkedAssets.includes(aid) || p.linkedAssets.includes(currentAsset.assetCode) || p.linkedAssets.includes(currentAsset.id));
+                  const matchesDirect = p.assetId === aid || p.assetId === currentAsset.assetCode;
+                  return matchesAsset || matchesDirect;
+                });
+
+                if (linkedSpares.length === 0) {
+                  return (
+                    <tr>
+                      <td colSpan={6} style={{ padding: "24px", textAlign: "center", color: "var(--text-muted)", fontSize: "13px" }}>
+                        No critical spare parts currently mapped to machine {aid}. Spares can be mapped via Inventory or Work Orders.
+                      </td>
+                    </tr>
+                  );
+                }
+
+                return linkedSpares.map((part) => {
+                  const pNo = part.partNo || part.partNumber || part.id;
+                  const pStock = part.stock ?? part.currentStock ?? 0;
+                  const pCrit = part.criticality || (part.minStock && pStock < part.minStock ? "High" : "Standard");
+                  return (
+                    <tr key={pNo} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+                      <td style={{ padding: "10px", fontFamily: "var(--font-mono)", color: "var(--accent-blue)", fontWeight: 600 }}>
+                        {pNo}
+                      </td>
+                      <td style={{ padding: "10px", color: "var(--text-primary)", fontWeight: 600 }}>
+                        {part.name}
+                      </td>
+                      <td style={{ padding: "10px" }}>
+                        <Badge variant={pCrit === "Critical" ? "rose" : pCrit === "High" ? "amber" : "cyan"}>
+                          {pCrit}
+                        </Badge>
+                      </td>
+                      <td style={{ padding: "10px", fontFamily: "var(--font-mono)", color: pStock > 5 ? "#10B981" : "#F59E0B" }}>
+                        {pStock} Units in Stock
+                      </td>
+                      <td style={{ padding: "10px", color: "var(--text-muted)" }}>
+                        {part.replacementCycle || "Condition Based"}
+                      </td>
+                      <td style={{ padding: "10px", color: "var(--text-muted)" }}>
+                        {part.leadTimeDays ? `${part.leadTimeDays} Days` : "2-3 Days"}
+                      </td>
+                    </tr>
+                  );
+                });
+              })()}
             </tbody>
           </table>
         </div>
@@ -480,8 +521,8 @@ export function AssetDetail() {
       <Modal
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
-        title={`Edit Technical Specifications: ${currentAsset.id}`}
-        subtitle="Update machine identity, OEM information and operating ratings"
+        title={`Edit Technical Specifications: ${currentAsset.id || currentAsset.assetCode}`}
+        subtitle="Update machine identity, OEM information and operating ratings directly in database"
       >
         <form onSubmit={handleSaveEdit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
           <div className="form-group">
@@ -523,7 +564,7 @@ export function AssetDetail() {
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
             <div className="form-group">
-              <label className="form-label">Manufacturer</label>
+              <label className="form-label">OEM Manufacturer</label>
               <input
                 type="text"
                 className="form-input"
@@ -532,7 +573,7 @@ export function AssetDetail() {
               />
             </div>
             <div className="form-group">
-              <label className="form-label">Model</label>
+              <label className="form-label">Model / Series</label>
               <input
                 type="text"
                 className="form-input"
@@ -544,14 +585,27 @@ export function AssetDetail() {
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
             <div className="form-group">
+              <label className="form-label">Serial Number</label>
+              <input
+                type="text"
+                className="form-input"
+                value={editForm.serialNumber}
+                onChange={(e) => setEditForm({ ...editForm, serialNumber: e.target.value })}
+              />
+            </div>
+            <div className="form-group">
               <label className="form-label">Nameplate Power</label>
               <input
                 type="text"
                 className="form-input"
                 value={editForm.nameplatePower}
                 onChange={(e) => setEditForm({ ...editForm, nameplatePower: e.target.value })}
+                placeholder="e.g. 55 kW"
               />
             </div>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
             <div className="form-group">
               <label className="form-label">Rated Speed</label>
               <input
@@ -559,6 +613,37 @@ export function AssetDetail() {
                 className="form-input"
                 value={editForm.ratedSpeed}
                 onChange={(e) => setEditForm({ ...editForm, ratedSpeed: e.target.value })}
+                placeholder="e.g. 720 BPM"
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Commission Date</label>
+              <input
+                type="date"
+                className="form-input"
+                value={editForm.commissionDate}
+                onChange={(e) => setEditForm({ ...editForm, commissionDate: e.target.value })}
+              />
+            </div>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+            <div className="form-group">
+              <label className="form-label">Warranty Expiry</label>
+              <input
+                type="date"
+                className="form-input"
+                value={editForm.warrantyExpiry}
+                onChange={(e) => setEditForm({ ...editForm, warrantyExpiry: e.target.value })}
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Operating Hours (Runtime)</label>
+              <input
+                type="number"
+                className="form-input"
+                value={editForm.operatingHours}
+                onChange={(e) => setEditForm({ ...editForm, operatingHours: Number(e.target.value) || 0 })}
               />
             </div>
           </div>

@@ -38,9 +38,14 @@ import { useNavigate } from "react-router-dom";
 import { adminService } from "../../services/adminService";
 
 export function AdminDashboard() {
+<<<<<<< HEAD
   const { users = [], roles = [], items = [], dataHealthStats = {}, addUser } = useAdmin();
   const { currentRole } = useRole();
   const { addToast } = useApp();
+=======
+  const { users = [], roles = [], items = [], dataHealthStats = {}, addUser } = useAdmin() || {};
+  const { addToast } = (useApp ? useApp() : null) || { addToast: () => {} };
+>>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
   const navigate = useNavigate();
 
   const companyName = (currentRole?.user?.companyName && currentRole?.user?.companyName !== "MaintenX OS")
@@ -61,6 +66,7 @@ export function AdminDashboard() {
     { label: "Now", value: 22 }
   ]);
   const [currentAvgLatency, setCurrentAvgLatency] = useState(22);
+  const [showModalPassword, setShowModalPassword] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",

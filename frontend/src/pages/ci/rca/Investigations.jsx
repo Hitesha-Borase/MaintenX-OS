@@ -25,6 +25,7 @@ import { Button } from "../../../components/common/Button";
 import { Badge } from "../../../components/common/Badge";
 import { StatCard } from "../../../components/common/StatCard";
 import { useCI } from "../../../context/CIContext";
+import { useCMMS } from "../../../context/CMMSContext";
 import { useApp } from "../../../context/AppContext";
 import { ciService } from "../../../services/ciService";
 import { maintenanceService } from "../../../services/maintenanceService";
@@ -32,6 +33,7 @@ import { maintenanceService } from "../../../services/maintenanceService";
 export function Investigations() {
   const navigate = useNavigate();
   const { addToast } = useApp();
+  const { assets = [] } = useCMMS();
   const {
     investigations = [],
     openRcaCount,
@@ -53,6 +55,16 @@ export function Investigations() {
   const [newAssetId, setNewAssetId] = useState("");
   const [newLineId, setNewLineId] = useState("");
   const [newSeverity, setNewSeverity] = useState("High");
+<<<<<<< HEAD
+=======
+
+  useEffect(() => {
+    const list = (assets && assets.length > 0) ? assets : availableAssets;
+    if (list && list.length > 0 && !newAssetId) {
+      setNewAssetId(list[0].assetCode || list[0].id);
+    }
+  }, [assets, availableAssets, newAssetId]);
+>>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
 
   const phases = ["Event", "Evidence", "Hypothesis & Tests", "Occurrence Cause", "Escape Cause", "CAPA", "Verification", "Closed"];
 
@@ -92,7 +104,17 @@ export function Investigations() {
       return;
     }
 
+    const assetPool = [...(assets || []), ...(availableAssets || [])];
+    const selectedAsset = assetPool.find((a) => a.id === newAssetId || a.assetCode === newAssetId) || assetPool[0] || {};
+    const selectedLine = (availableLines || []).find((l) => l.id === newLineId || l.code === newLineId) || {};
+
+    const assetCode = selectedAsset.assetCode || selectedAsset.id || newAssetId || "FM-001";
+    const assetName = selectedAsset.name || selectedAsset.assetName || "Critical Equipment";
+    const lineId = selectedLine.code || selectedLine.id || selectedAsset.lineId || newLineId || "LIN-01";
+    const lineName = selectedLine.name || selectedAsset.lineName || "Line 1 — Production";
+
     try {
+<<<<<<< HEAD
       const selectedAsset = availableAssets.find((a) => a.id === newAssetId || a.assetCode === newAssetId) || {};
       const selectedLine = availableLines.find((l) => l.id === newLineId || l.code === newLineId) || {};
 
@@ -106,6 +128,27 @@ export function Investigations() {
         problemStatement: newTitle.trim()
       });
 
+=======
+      await maintenanceService.createRCAInvestigation({
+        assetId: assetCode,
+        assetName,
+        lineId,
+        lineName,
+        title: newTitle.trim(),
+        severity: newSeverity,
+      }).catch(() => {});
+
+      await initiateRCA({
+        title: newTitle.trim(),
+        assetId: assetCode,
+        assetName,
+        lineId,
+        lineName,
+        severity: newSeverity,
+        problemStatement: newTitle.trim()
+      });
+
+>>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
       setNewTitle("");
       setNewAssetId("");
       setNewLineId("");
@@ -482,6 +525,7 @@ export function Investigations() {
                   style={{ backgroundColor: "#FFFFFF" }}
                 >
                   <option value="">-- Select Target Equipment --</option>
+<<<<<<< HEAD
                   {availableAssets.map((ast) => (
                     <option key={ast.id} value={ast.id}>
                       {ast.name || ast.asset_name || ast.assetName || ast.id} ({ast.asset_code || ast.assetCode || ast.tag || "Asset"})
@@ -489,6 +533,19 @@ export function Investigations() {
                   ))}
                   {availableAssets.length === 0 && (
                     <option value="AST-001">AST-001 — Primary Production Line Asset</option>
+=======
+                  {(availableAssets && availableAssets.length > 0 ? availableAssets : (assets || [])).map((ast) => {
+                    const code = ast.asset_code || ast.assetCode || ast.tag || ast.id;
+                    const name = ast.name || ast.asset_name || ast.assetName || "Asset";
+                    return (
+                      <option key={ast.id || code} value={code}>
+                        {code} — {name} {ast.lineName ? `(${ast.lineName})` : ""}
+                      </option>
+                    );
+                  })}
+                  {(!availableAssets || availableAssets.length === 0) && (!assets || assets.length === 0) && (
+                    <option value="FM-001">FM-001 — Rotary Filling Machine 48-Valve</option>
+>>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
                   )}
                 </select>
               </div>
@@ -502,12 +559,21 @@ export function Investigations() {
                   style={{ backgroundColor: "#FFFFFF" }}
                 >
                   <option value="">-- Select Production Line --</option>
+<<<<<<< HEAD
                   {availableLines.map((line) => (
                     <option key={line.id} value={line.id}>
                       {line.name || line.line_name || line.code || line.id}
                     </option>
                   ))}
                   {availableLines.length === 0 && (
+=======
+                  {(availableLines || []).map((line) => (
+                    <option key={line.id || line.code} value={line.code || line.id}>
+                      {line.name || line.line_name || line.code || line.id}
+                    </option>
+                  ))}
+                  {(!availableLines || availableLines.length === 0) && (
+>>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
                     <option value="Line 1 — Production">Line 1 — Production</option>
                   )}
                 </select>
@@ -616,6 +682,15 @@ export function Investigations() {
                     Go to {selectedRcaDetail.currentPhase}
                   </Button>
                 )}
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setSelectedRcaDetail(null);
+                    navigate("/ci/rca/occurrence");
+                  }}
+                >
+                  Edit 5-Why Answers
+                </Button>
                 <Button variant="primary" onClick={() => { setSelectedRcaDetail(null); navigate("/ci/capa/corrective"); }}>
                   View CAPA Actions
                 </Button>

@@ -621,6 +621,7 @@ export function AppContent() {
           <Route path="/maintenance-labour" element={<RoleProtectedRoute><MaintenanceLabourPage /></RoleProtectedRoute>} />
           <Route path="/repeat-failures" element={<RoleProtectedRoute><RepeatFailures /></RoleProtectedRoute>} />
           <Route path="/verified-solutions" element={<RoleProtectedRoute><MaintenanceVerifiedSolutions /></RoleProtectedRoute>} />
+          <Route path="/troubleshooting" element={<Navigate to="/maintenance/troubleshooting" replace />} />
           <Route path="/work-orders/open" element={<Navigate to="/maintenance/work-orders" replace />} />
           <Route path="/assets/register" element={<Navigate to="/maintenance/assets" replace />} />
           <Route path="/assets/360" element={<Navigate to="/maintenance/asset-360" replace />} />

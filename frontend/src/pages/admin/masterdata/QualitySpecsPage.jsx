@@ -14,7 +14,8 @@ import {
   Eye,
   History,
   FileCheck,
-  AlertTriangle
+  AlertTriangle,
+  Trash2
 } from "lucide-react";
 import { Card } from "../../../components/common/Card";
 import { Badge } from "../../../components/common/Badge";
@@ -27,7 +28,11 @@ import { useApp } from "../../../context/AppContext";
 import masterDataService from "../../../services/masterDataService";
 
 export function QualitySpecsPage() {
+<<<<<<< HEAD
   const { qualitySpecs = [], setQualitySpecs, addQualitySpec, updateQualitySpec, approveQualitySpec, rejectQualitySpec, deleteQualitySpec, skus = [] } = useMasterData();
+=======
+  const { qualitySpecs = [], addQualitySpec, updateQualitySpec, approveQualitySpec, rejectQualitySpec, deleteQualitySpec, skus = [] } = useMasterData();
+>>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
   const { addToast } = useApp();
 
   const fetchLiveSpecs = async () => {
@@ -118,6 +123,7 @@ export function QualitySpecsPage() {
   const [viewingSpec, setViewingSpec] = useState(null);
   const [revisionModalSpec, setRevisionModalSpec] = useState(null);
   const [approvalModalSpec, setApprovalModalSpec] = useState(null);
+  const [deletingSpec, setDeletingSpec] = useState(null);
 
   const blankSpecState = {
     skuId: "",
@@ -171,6 +177,7 @@ export function QualitySpecsPage() {
       return;
     }
 
+<<<<<<< HEAD
     setIsSubmitting(true);
     try {
       const created = await addQualitySpec(newSpec);
@@ -205,6 +212,38 @@ export function QualitySpecsPage() {
     addToast(`Specification ${editingSpec.specId} updated!`, "success");
     setEditingSpec(null);
     fetchLiveSpecs();
+=======
+    try {
+      const created = await addQualitySpec(newSpec);
+      addToast(`Specification ${created?.specId || "spec"} (${created?.parameter || newSpec.parameter}) registered!`, "success");
+      setIsAddModalOpen(false);
+      setNewSpec({
+        skuId: "SKU-001",
+        specificationTitle: "",
+        parameter: "Soluble Solids (Brix)",
+        target: "10.5",
+        min: "10.3",
+        max: "10.7",
+        uom: "°Bx",
+        criticality: "Critical CCP (HACCP-1)",
+        testMethod: "Digital Refractometer"
+      });
+    } catch (err) {
+      addToast(`Failed to create quality spec: ${err.message}`, "error");
+    }
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    if (!editingSpec.parameter.trim()) return;
+    try {
+      await updateQualitySpec(editingSpec.specId || editingSpec.id, editingSpec);
+      addToast(`Specification ${editingSpec.specId} updated!`, "success");
+      setEditingSpec(null);
+    } catch (err) {
+      addToast(`Failed to update quality spec: ${err.message}`, "error");
+    }
+>>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
   };
 
   return (
@@ -488,6 +527,7 @@ export function QualitySpecsPage() {
                             style={{ padding: "6px 8px" }}
                             title="Edit Specification"
                           />
+<<<<<<< HEAD
                           <Button
                             variant="danger"
                             size="sm"
@@ -496,6 +536,15 @@ export function QualitySpecsPage() {
                             style={{ padding: "6px 8px" }}
                             title="Delete Specification"
                           />
+=======
+                          <button
+                            onClick={() => setDeletingSpec(spec)}
+                            style={{ padding: "6px 8px", borderRadius: "6px", display: "inline-flex", alignItems: "center", justifyContent: "center", border: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)", color: "#EF4444", cursor: "pointer" }}
+                            title="Delete Specification"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+>>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
                         </div>
                       </td>
                     </tr>
@@ -935,20 +984,21 @@ export function QualitySpecsPage() {
           entityCode={approvalModalSpec.specId}
           entityTitle={`Quality Spec: ${approvalModalSpec.parameter}`}
           currentStatus={approvalModalSpec.approvalStatus}
-          onSubmitForApproval={() => {
-            updateQualitySpec(approvalModalSpec.specId, { approvalStatus: "Under Review" });
+          onSubmitForApproval={async () => {
+            await updateQualitySpec(approvalModalSpec.specId, { approvalStatus: "Under Review" });
             addToast(`Spec ${approvalModalSpec.specId} submitted for Quality Review!`, "info");
           }}
-          onApprove={() => {
-            approveQualitySpec(approvalModalSpec.specId);
+          onApprove={async () => {
+            await approveQualitySpec(approvalModalSpec.specId);
             addToast(`Spec ${approvalModalSpec.specId} approved!`, "success");
           }}
-          onReject={(reason) => {
-            rejectQualitySpec(approvalModalSpec.specId, reason);
+          onReject={async (reason) => {
+            await rejectQualitySpec(approvalModalSpec.specId, reason);
             addToast(`Spec ${approvalModalSpec.specId} rejected!`, "error");
           }}
         />
       )}
+<<<<<<< HEAD
 
       {/* ADD DEVIATION CATEGORY MODAL */}
       {isCatModalOpen && (
@@ -1045,6 +1095,50 @@ export function QualitySpecsPage() {
                 </Button>
               </div>
             </form>
+=======
+      {/* DELETE SPEC CONFIRM MODAL */}
+      {deletingSpec && (
+        <div className="modal-backdrop" onClick={() => setDeletingSpec(null)}>
+          <div className="modal-content" style={{ maxWidth: "460px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <AlertTriangle size={18} color="#DC2626" />
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>Delete Quality Spec</h2>
+              </div>
+              <button onClick={() => setDeletingSpec(null)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+            <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "12px" }}>
+              <p style={{ fontSize: "13px", color: "var(--text-secondary)", margin: 0, lineHeight: 1.5 }}>
+                Are you sure you want to permanently delete spec <strong style={{ color: "var(--text-primary)" }}>{deletingSpec.specId}</strong> — {deletingSpec.parameter}?
+              </p>
+              <div style={{ padding: "10px 14px", backgroundColor: "rgba(220, 38, 38, 0.06)", border: "1px solid rgba(220, 38, 38, 0.2)", borderRadius: "8px", fontSize: "12px", color: "#DC2626" }}>
+                Warning: This quality specification will be permanently removed from all HACCP and CCP references.
+              </div>
+            </div>
+            <div style={{ padding: "14px 20px", borderTop: "1px solid var(--border-subtle)", display: "flex", justifyContent: "flex-end", gap: "10px", backgroundColor: "var(--bg-card-subtle)" }}>
+              <Button variant="secondary" onClick={() => setDeletingSpec(null)}>Cancel</Button>
+              <Button
+                variant="primary"
+                onClick={async () => {
+                  try {
+                    if (typeof deleteQualitySpec === "function") {
+                      await deleteQualitySpec(deletingSpec.specId || deletingSpec.id);
+                    }
+                    addToast(`Quality spec "${deletingSpec.specId}" deleted.`, "info");
+                  } catch (err) {
+                    addToast(`Failed to delete quality spec: ${err.message}`, "error");
+                  } finally {
+                    setDeletingSpec(null);
+                  }
+                }}
+                style={{ backgroundColor: "#DC2626", borderColor: "#DC2626", color: "#FFFFFF" }}
+              >
+                Delete Spec
+              </Button>
+            </div>
+>>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
           </div>
         </div>
       )}

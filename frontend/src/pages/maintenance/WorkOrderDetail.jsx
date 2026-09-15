@@ -28,6 +28,7 @@ import { maintenanceService } from "../../services/maintenanceService";
 export function WorkOrderDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+<<<<<<< HEAD
   const { currentRole } = useRole();
   const isPlantManager = currentRole?.id === "plant_manager";
   const managerName = currentRole?.user?.name
@@ -35,18 +36,52 @@ export function WorkOrderDetail() {
     : "Arthur Sterling (Plant Manager)";
 
   const { workOrders, updateWorkOrderStatus, startWorkOrder, completeWorkOrder, addVerifiedSolution, issueSparePart, spareParts } = useCMMS();
+=======
+  const {
+    workOrders,
+    updateWorkOrder,
+    refreshWorkOrders,
+    updateWorkOrderStatus,
+    startWorkOrder,
+    completeWorkOrder,
+    addVerifiedSolution,
+    issueSparePart,
+    spareParts
+  } = useCMMS();
+>>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
   const { addToast } = useApp();
 
-  const wo = workOrders.find((w) => w.id === id) || workOrders[0];
+  const wo = workOrders.find((w) => w.id === id || w.woNumber === id || w.dbId === id) || workOrders[0];
 
   const [commentText, setCommentText] = useState("");
-  const [repairActionText, setRepairActionText] = useState(wo.repairAction || "");
-  const [testResultText, setTestResultText] = useState(wo.testResult || "");
+  const [repairActionText, setRepairActionText] = useState(wo?.repairAction || "");
+  const [testResultText, setTestResultText] = useState(wo?.testResult || "");
+  const [actualHoursInput, setActualHoursInput] = useState(
+    wo?.actualHours != null && wo.actualHours !== "" ? String(wo.actualHours) : "0"
+  );
   const [isSignOffModalOpen, setIsSignOffModalOpen] = useState(false);
+<<<<<<< HEAD
   const [supervisorName, setSupervisorName] = useState(managerName);
+=======
+  const [supervisorName, setSupervisorName] = useState("Thomas Sterling (Plant Operations)");
+  const [actualHoursLog, setActualHoursLog] = useState(
+    wo?.actualHours != null && wo.actualHours !== "" ? String(wo.actualHours) : "0"
+  );
+>>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
   const [isIssuePartModalOpen, setIsIssuePartModalOpen] = useState(false);
   const [selectedPartNo, setSelectedPartNo] = useState("");
   const [issueQty, setIssueQty] = useState(1);
+
+  React.useEffect(() => {
+    if (wo) {
+      if (wo.repairAction) setRepairActionText(wo.repairAction);
+      if (wo.testResult) setTestResultText(wo.testResult);
+      if (wo.actualHours != null) {
+        setActualHoursInput(String(wo.actualHours));
+        setActualHoursLog(String(wo.actualHours));
+      }
+    }
+  }, [wo?.id, wo?.actualHours]);
 
   const statuses = [
     "Draft",
@@ -70,7 +105,7 @@ export function WorkOrderDetail() {
         startWorkOrder(wo.id);
         addToast(`Work Order ${wo.id} started. Timer active.`);
     } else if (newStatus === "Completed") {
-        completeWorkOrder(wo.id, { repairAction: repairActionText, testResult: testResultText });
+        completeWorkOrder(wo.id, { repairAction: repairActionText, testResult: testResultText, actualHours: parseFloat(actualHoursInput) || 0 });
         addToast(`Work Order ${wo.id} marked as completed. Duration calculated.`);
     } else {
         updateWorkOrderStatus(wo.id, newStatus, `Transitioned to ${newStatus}`);
@@ -96,30 +131,47 @@ export function WorkOrderDetail() {
   };
 
   const handleSaveRepairNotes = async () => {
+    const hoursNum = parseFloat(actualHoursInput) || 0;
     try {
       await maintenanceService.saveExecutionRecord(wo.id, {
         repairAction: repairActionText,
-        testResult: testResultText
+        testResult: testResultText,
+        actualHours: hoursNum
       });
+      if (updateWorkOrder) {
+        await updateWorkOrder(wo.dbId || wo.id, {
+          actualHours: hoursNum,
+          description: repairActionText ? `${wo.description || ''}\n[Execution Note]: ${repairActionText}` : wo.description
+        });
+      }
     } catch (err) {
       console.warn("Save execution record notice:", err);
     }
-    completeWorkOrder(wo.id, { repairAction: repairActionText, testResult: testResultText });
-    addToast("Repair actions and verification test results saved!");
+    completeWorkOrder(wo.id, { repairAction: repairActionText, testResult: testResultText, actualHours: hoursNum });
+    if (refreshWorkOrders) {
+      await refreshWorkOrders();
+    }
+    addToast(`Repair actions & ${hoursNum}h labour hours saved to database!`, "success");
   };
-
-  const [actualHoursLog, setActualHoursLog] = useState(wo.actualHours || "");
 
   const handleSupervisorSignOff = async (e) => {
     e.preventDefault();
+    const hoursNum = parseFloat(actualHoursLog) || 0;
     try {
       await maintenanceService.signOffWorkOrder(wo.id, {
         supervisorName,
-        actualHours: parseFloat(actualHoursLog)
+        actualHours: hoursNum
       });
+      if (updateWorkOrder) {
+        await updateWorkOrder(wo.dbId || wo.id, {
+          actualHours: hoursNum,
+          status: "Verified"
+        });
+      }
     } catch (err) {
       console.warn("Sign off notice:", err);
     }
+<<<<<<< HEAD
     const signOffNote = isPlantManager
       ? `Managerial sign-off & operational clearance authorized by ${supervisorName}. Labour: ${actualHoursLog || "0"} hrs.`
       : `Supervisor sign-off completed by ${supervisorName}. Labour: ${actualHoursLog || "0"} hrs.`;
@@ -127,6 +179,15 @@ export function WorkOrderDetail() {
     completeWorkOrder(wo.id, { actualHours: parseFloat(actualHoursLog) || 0, status: "Verified" });
     setIsSignOffModalOpen(false);
     addToast(`Work order ${wo.id} verified and signed off by Management!`, "success");
+=======
+    updateWorkOrderStatus(wo.id, "Verified", `Supervisor sign-off completed by ${supervisorName}. Labour: ${hoursNum} hrs.`);
+    completeWorkOrder(wo.id, { actualHours: hoursNum });
+    if (refreshWorkOrders) {
+      await refreshWorkOrders();
+    }
+    setIsSignOffModalOpen(false);
+    addToast(`Work order ${wo.id} verified and ${hoursNum} labour hrs signed off!`, "success");
+>>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
   };
 
   const handleIssuePart = async (e) => {
@@ -280,7 +341,9 @@ export function WorkOrderDetail() {
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 0" }}>
                 <span style={{ color: "var(--text-muted)" }}>Labour Hours:</span>
-                <span style={{ fontWeight: 600, color: "var(--text-primary)" }}>{wo.actualHours || 2.0}h actual / {wo.estimatedHours || 3.5}h est.</span>
+                <span style={{ fontWeight: 600, color: "var(--text-primary)" }}>
+                  {wo.actualHours != null && wo.actualHours !== "" ? `${wo.actualHours}h actual` : "0.0h actual"} / {wo.estimatedHours || 2.0}h est.
+                </span>
               </div>
             </div>
           </Card>
@@ -372,6 +435,26 @@ export function WorkOrderDetail() {
                 />
               </div>
 
+              <div className="form-group">
+                <label className="form-label" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span>Actual Labour Hours Logged (hrs) *</span>
+                  <span style={{ color: "var(--text-muted)", fontSize: "11px" }}>Directly updates DB & Asset 360° MTTR</span>
+                </label>
+                <div style={{ position: "relative" }}>
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    className="form-input"
+                    placeholder="e.g. 2.5"
+                    value={actualHoursInput}
+                    onChange={(e) => setActualHoursInput(e.target.value)}
+                    style={{ fontFamily: "var(--font-mono)", fontWeight: 600, paddingLeft: "36px" }}
+                  />
+                  <Clock size={16} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
+                </div>
+              </div>
+
               <div style={{ display: "flex", justifyContent: "flex-end" }}>
                 <Button variant="primary" size="sm" icon={FileCheck} onClick={handleSaveRepairNotes}>
                   Save Execution Record
@@ -458,12 +541,8 @@ export function WorkOrderDetail() {
               step="0.1"
               min="0"
               className="form-input"
-              value={wo.actualHours || ""}
-              onChange={(e) => {
-                // Update local WO state via completeWorkOrder or context update if we had a setWo function.
-                // Since this is a simple gap closure, we will pass it during handleSupervisorSignOff.
-                setActualHoursLog(e.target.value);
-              }}
+              value={actualHoursLog}
+              onChange={(e) => setActualHoursLog(e.target.value)}
               placeholder="e.g. 2.5"
               required
             />

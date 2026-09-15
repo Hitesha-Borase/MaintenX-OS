@@ -47,12 +47,20 @@ const MODULES_LIST = [
 ];
 
 export function PermissionsMatrixPage() {
-  const { rolePermissions = {}, updatePermissionMatrix } = useMasterData();
+  const { rolePermissions = {}, setRolePermissions, updatePermissionMatrix } = useMasterData();
   const { addToast } = useApp();
 
   useEffect(() => {
-    adminService.getPermissionMatrix().catch((err) => console.warn("Matrix load:", err.message));
-  }, []);
+    adminService.getPermissionMatrix()
+      .then((matrix) => {
+        if (matrix && typeof matrix === "object" && Object.keys(matrix).length > 0) {
+          if (setRolePermissions) {
+            setRolePermissions((prev) => ({ ...prev, ...matrix }));
+          }
+        }
+      })
+      .catch((err) => console.warn("Matrix load:", err.message));
+  }, [setRolePermissions]);
 
   const [selectedRoleKey, setSelectedRoleKey] = useState("plant_manager");
   const [testModule, setTestModule] = useState("BOM / Recipe");
@@ -77,7 +85,11 @@ export function PermissionsMatrixPage() {
         roleKey: selectedRoleKey,
         permissions: currentRoleConfig.permissions
       });
-      addToast(`Permissions matrix updated & synced across all role profiles!`, "success");
+      const refreshed = await adminService.getPermissionMatrix();
+      if (refreshed && setRolePermissions) {
+        setRolePermissions((prev) => ({ ...prev, ...refreshed }));
+      }
+      addToast(`Permissions matrix updated & synced directly with database!`, "success");
     } catch (err) {
       addToast("Failed to save matrix: " + err.message, "error");
     } finally {

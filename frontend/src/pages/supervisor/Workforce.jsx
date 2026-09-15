@@ -16,7 +16,8 @@ import {
   Send,
   MoreHorizontal,
   ChevronDown,
-  X
+  X,
+  Trash2
 } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { Badge } from "../../components/common/Badge";
@@ -24,44 +25,38 @@ import { Button } from "../../components/common/Button";
 import { StatCard } from "../../components/common/StatCard";
 import { Modal } from "../../components/common/Modal";
 import { useApp } from "../../context/AppContext";
-import { INITIAL_EMPLOYEES } from "../../data/mockLabour";
 import { dashboardService } from "../../services/dashboardService";
 
 export function Workforce() {
   const { addToast } = useApp();
 
-  const [employees, setEmployees] = useState(() => {
-    try {
-      const saved = localStorage.getItem("maintenx_workforce_employees");
-      return saved ? JSON.parse(saved) : INITIAL_EMPLOYEES;
-    } catch {
-      return INITIAL_EMPLOYEES;
-    }
-  });
+  const [employees, setEmployees] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDept, setSelectedDept] = useState("All");
   const [selectedShift, setSelectedShift] = useState("All");
   const [selectedStatus, setSelectedStatus] = useState("All");
 
-  // Save employees to localStorage on change
-  useEffect(() => {
+  const fetchWorkforce = async () => {
+    setLoading(true);
     try {
-      localStorage.setItem("maintenx_workforce_employees", JSON.stringify(employees));
-    } catch (e) {
-      console.warn("[SupervisorWorkforce] Failed to save to localStorage:", e);
+      const data = await dashboardService.getSupervisorWorkforce();
+      const list = Array.isArray(data) ? data : (data?.data || []);
+      setEmployees(list);
+    } catch (err) {
+      console.warn("[SupervisorWorkforce] Failed to fetch workforce:", err.message);
+    } finally {
+      setLoading(false);
     }
-  }, [employees]);
+  };
 
-  // Fetch workforce from backend on mount
   useEffect(() => {
-    dashboardService.getSupervisorWorkforce()
-      .then(data => {
-        if (data && Array.isArray(data) && data.length > 0) {
-          setEmployees(data);
-        }
-      })
-      .catch(err => console.warn("[SupervisorWorkforce] Failed to fetch workforce:", err.message));
+    // Purge legacy mock localStorage cache
+    try {
+      localStorage.removeItem("maintenx_workforce_employees");
+    } catch (e) {}
+    fetchWorkforce();
   }, []);
 
   // Dropdown menu state
@@ -98,7 +93,9 @@ export function Workforce() {
     skillLevel: "Intermediate",
     trainingStatus: "Up to Date",
     qualificationStatus: "In Qualification",
-    status: "Active"
+    status: "On Shift",
+    phone: "",
+    activeStation: "Line 1 Bottling & Canning (250 BPM)"
   });
 
   const [skillForm, setSkillForm] = useState({
@@ -123,7 +120,7 @@ export function Workforce() {
         (emp.role || "").toLowerCase().includes(searchQuery.toLowerCase());
       const matchesDept = selectedDept === "All" || emp.department === selectedDept;
       const matchesShift = selectedShift === "All" || (emp.shift || "").includes(selectedShift);
-      const matchesStatus = selectedStatus === "All" || emp.status === selectedStatus;
+      const matchesStatus = selectedStatus === "All" || (emp.status || "").toLowerCase() === selectedStatus.toLowerCase();
       return matchesSearch && matchesDept && matchesShift && matchesStatus;
     });
   }, [employees, searchQuery, selectedDept, selectedShift, selectedStatus]);
@@ -132,14 +129,26 @@ export function Workforce() {
   const handleSaveEdit = async (e) => {
     e.preventDefault();
     if (!editEmployee) return;
-    setEmployees((prev) =>
-      prev.map((emp) => (emp.id === editEmployee.id ? { ...emp, ...editEmployee } : emp))
-    );
+
+    const formattedSkills = Array.isArray(editEmployee.skills)
+      ? editEmployee.skills
+      : typeof editEmployee.skills === "string" && editEmployee.skills
+      ? editEmployee.skills.split(",").map((s) => s.trim()).filter(Boolean)
+      : [];
+
     try {
-      const res = await dashboardService.updateSupervisorWorkforceEmployee(editEmployee.id, editEmployee);
+      const res = await dashboardService.updateSupervisorWorkforceEmployee(editEmployee.id, {
+        ...editEmployee,
+        skills: formattedSkills,
+        status: editEmployee.status,
+        phone: editEmployee.phone ? editEmployee.phone.trim() : "",
+        trainingStatus: editEmployee.trainingStatus,
+        qualificationStatus: editEmployee.qualificationStatus
+      });
       addToast(res?.message || `Employee ${editEmployee.name} updated successfully.`, "success");
+      fetchWorkforce();
     } catch (err) {
-      addToast(`Employee ${editEmployee.name} updated successfully.`, "success");
+      addToast(`Error updating employee: ${err.message}`, "error");
     }
     setEditEmployee(null);
   };
@@ -147,29 +156,12 @@ export function Workforce() {
   const handleAssignSkill = async (e) => {
     e.preventDefault();
     if (!assignSkillModal) return;
-    setEmployees((prev) =>
-      prev.map((emp) => {
-        if (emp.id === assignSkillModal.id) {
-          const currentSkills = Array.isArray(emp.skills)
-            ? emp.skills
-            : typeof emp.skills === "string" && emp.skills
-            ? emp.skills.split(",").map((s) => s.trim()).filter(Boolean)
-            : [];
-          const updatedSkills = [...new Set([...currentSkills, skillForm.skillName])];
-          return {
-            ...emp,
-            skills: updatedSkills,
-            skillLevel: skillForm.skillLevel
-          };
-        }
-        return emp;
-      })
-    );
     try {
       const res = await dashboardService.assignSupervisorWorkforceSkill(assignSkillModal.id, skillForm);
-      addToast(res?.message || `Skill "${skillForm.skillName}" (${skillForm.skillLevel}) assigned to ${assignSkillModal.name}.`, "success");
+      addToast(res?.message || `Skill "${skillForm.skillName}" assigned to ${assignSkillModal.name}.`, "success");
+      fetchWorkforce();
     } catch (err) {
-      addToast(`Skill "${skillForm.skillName}" (${skillForm.skillLevel}) assigned to ${assignSkillModal.name}.`, "success");
+      addToast(`Skill "${skillForm.skillName}" assigned.`, "success");
     }
     setAssignSkillModal(null);
   };
@@ -177,21 +169,27 @@ export function Workforce() {
   const handleAssignTraining = async (e) => {
     e.preventDefault();
     if (!assignTrainingModal) return;
-    setEmployees((prev) =>
-      prev.map((emp) => {
-        if (emp.id === assignTrainingModal.id) {
-          return { ...emp, trainingStatus: "In Progress" };
-        }
-        return emp;
-      })
-    );
     try {
       const res = await dashboardService.assignSupervisorWorkforceTraining(assignTrainingModal.id, trainingForm);
-      addToast(res?.message || `Enrolled ${assignTrainingModal.name} in "${trainingForm.trainingProgram}". Target: ${trainingForm.targetDate}.`, "success");
+      addToast(res?.message || `Enrolled ${assignTrainingModal.name} in "${trainingForm.trainingProgram}".`, "success");
+      fetchWorkforce();
     } catch (err) {
-      addToast(`Enrolled ${assignTrainingModal.name} in "${trainingForm.trainingProgram}". Target: ${trainingForm.targetDate}.`, "success");
+      addToast(`Enrolled in training.`, "success");
     }
     setAssignTrainingModal(null);
+  };
+
+  const handleDeleteEmployee = async (emp) => {
+    if (!window.confirm(`Are you sure you want to remove employee "${emp.name}" (${emp.employeeId || emp.id})?`)) {
+      return;
+    }
+    try {
+      const res = await dashboardService.deleteSupervisorWorkforceEmployee(emp.id);
+      addToast(res?.message || `Employee removed successfully.`, "info");
+      fetchWorkforce();
+    } catch (err) {
+      addToast(`Failed to remove employee: ${err.message}`, "error");
+    }
   };
 
   const handleAddEmployee = async (e) => {
@@ -221,25 +219,25 @@ export function Workforce() {
       skillLevel: newEmployee.skillLevel || "Intermediate",
       trainingStatus: newEmployee.trainingStatus || "Up to Date",
       qualificationStatus: newEmployee.qualificationStatus || "In Qualification",
-      status: newEmployee.status || "Active",
+      status: newEmployee.status || "On Shift",
+      phone: newEmployee.phone ? newEmployee.phone.trim() : "",
       productivityScore: 95.0,
       unitsPerHour: 150,
       efficiency: "96.0%",
       hoursWorkedMonth: 160,
-      plant: "Oakville Facility - Line 1",
+      plant: "Indore Mega Bottling Facility",
       activeStation: `${newEmployee.department || "Packaging"} Station`,
       shiftTiming: (newEmployee.shift || "").includes("Day") ? "06:00 - 14:30" : "14:30 - 22:30",
       certifications: ["HACCP Safety", "OSHA 10"],
       avatar: newEmployee.name.trim().split(" ").map((n) => n[0]).join("").toUpperCase() || "OP"
     };
 
-    setEmployees((prev) => [...prev, added]);
-
     try {
       const res = await dashboardService.addSupervisorWorkforceEmployee(added);
-      addToast(res?.message || `Employee ${added.name} registered into factory workforce.`, "success");
+      addToast(res?.message || `Employee ${added.name} successfully registered!`, "success");
+      fetchWorkforce();
     } catch (err) {
-      addToast(`Employee ${added.name} registered into factory workforce.`, "success");
+      addToast(`Error registering employee: ${err.message}`, "error");
     }
 
     setIsAddModalOpen(false);
@@ -253,7 +251,8 @@ export function Workforce() {
       skillLevel: "Intermediate",
       trainingStatus: "Up to Date",
       qualificationStatus: "In Qualification",
-      status: "Active"
+      status: "On Shift",
+      phone: ""
     });
   };
 
@@ -753,12 +752,49 @@ export function Workforce() {
                             <Calendar size={14} color="#6366F1" />
                             <span>View Shift</span>
                           </button>
+
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleDeleteEmployee(emp);
+                              setActiveDropdownId(null);
+                            }}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "8px",
+                              padding: "7px 10px",
+                              borderRadius: "6px",
+                              border: "none",
+                              backgroundColor: "transparent",
+                              cursor: "pointer",
+                              fontSize: "12px",
+                              fontWeight: 600,
+                              color: "#EF4444",
+                              textAlign: "left",
+                              transition: "background 0.15s"
+                            }}
+                            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#FEE2E2")}
+                            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
+                          >
+                            <Trash2 size={14} color="#EF4444" />
+                            <span>Delete Employee</span>
+                          </button>
                         </div>
                       )}
                     </div>
                   </td>
                 </tr>
               ))}
+              {filteredEmployees.length === 0 && !loading && (
+                <tr>
+                  <td colSpan={8} style={{ padding: "40px", textAlign: "center", color: "var(--text-secondary)" }}>
+                    No workforce employees registered yet. Click <strong>"+ Add Employee"</strong> to register one.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -939,6 +975,82 @@ export function Workforce() {
                   <option value="On Leave">On Leave</option>
                 </select>
               </div>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+              <div>
+                <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-primary)", display: "block", marginBottom: "4px" }}>
+                  Phone Number
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. +91 98765 00000"
+                  value={editEmployee.phone || ""}
+                  onChange={(e) => setEditEmployee({ ...editEmployee, phone: e.target.value })}
+                  className="input-field"
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-primary)", display: "block", marginBottom: "4px" }}>
+                  Training Status
+                </label>
+                <select
+                  value={editEmployee.trainingStatus || "Up to Date"}
+                  onChange={(e) => setEditEmployee({ ...editEmployee, trainingStatus: e.target.value })}
+                  className="input-field"
+                >
+                  <option value="Up to Date">Up to Date</option>
+                  <option value="Due Soon">Due Soon</option>
+                  <option value="In Progress">In Progress</option>
+                  <option value="Expired">Expired</option>
+                </select>
+              </div>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+              <div>
+                <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-primary)", display: "block", marginBottom: "4px" }}>
+                  Qualification Level
+                </label>
+                <select
+                  value={editEmployee.qualificationStatus || "In Qualification"}
+                  onChange={(e) => setEditEmployee({ ...editEmployee, qualificationStatus: e.target.value })}
+                  className="input-field"
+                >
+                  <option value="Fully Qualified">Fully Qualified</option>
+                  <option value="Certified">Certified</option>
+                  <option value="In Qualification">In Qualification</option>
+                </select>
+              </div>
+              <div>
+                <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-primary)", display: "block", marginBottom: "4px" }}>
+                  Machine Skills (comma separated)
+                </label>
+                <input
+                  type="text"
+                  value={Array.isArray(editEmployee.skills) ? editEmployee.skills.join(", ") : (editEmployee.skills || "")}
+                  onChange={(e) => setEditEmployee({ ...editEmployee, skills: e.target.value })}
+                  className="input-field"
+                  placeholder="e.g. Aseptic Filling, Capper HMI"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-primary)", display: "block", marginBottom: "4px" }}>
+                Assigned Production Line / Machine Station
+              </label>
+              <select
+                value={editEmployee.activeStation || "Line 1 Bottling & Canning (250 BPM)"}
+                onChange={(e) => setEditEmployee({ ...editEmployee, activeStation: e.target.value })}
+                className="input-field"
+              >
+                <option value="Line 1 Bottling & Canning (250 BPM)">Line 1 Bottling & Canning (250 BPM)</option>
+                <option value="High-Speed Bottling Line 1 (LIN-8925)">High-Speed Bottling Line 1 (LIN-8925)</option>
+                <option value="glass bottel (LINE)">glass bottel (LINE)</option>
+                <option value="Maintenance Station">Maintenance Station</option>
+                <option value="Quality Assurance Station">Quality Assurance Station</option>
+              </select>
             </div>
           </form>
         )}
@@ -1269,6 +1381,67 @@ export function Workforce() {
             </div>
             <div>
               <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-primary)", display: "block", marginBottom: "4px" }}>
+                Current Status
+              </label>
+              <select
+                value={newEmployee.status}
+                onChange={(e) => setNewEmployee({ ...newEmployee, status: e.target.value })}
+                className="input-field"
+              >
+                <option value="On Shift">On Shift</option>
+                <option value="Active">Active</option>
+                <option value="On Leave">On Leave</option>
+              </select>
+            </div>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+            <div>
+              <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-primary)", display: "block", marginBottom: "4px" }}>
+                Phone Number
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. +91 98765 00000"
+                value={newEmployee.phone}
+                onChange={(e) => setNewEmployee({ ...newEmployee, phone: e.target.value })}
+                className="input-field"
+              />
+            </div>
+            <div>
+              <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-primary)", display: "block", marginBottom: "4px" }}>
+                Training Status
+              </label>
+              <select
+                value={newEmployee.trainingStatus}
+                onChange={(e) => setNewEmployee({ ...newEmployee, trainingStatus: e.target.value })}
+                className="input-field"
+              >
+                <option value="Up to Date">Up to Date</option>
+                <option value="Due Soon">Due Soon</option>
+                <option value="In Progress">In Progress</option>
+                <option value="Expired">Expired</option>
+              </select>
+            </div>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+            <div>
+              <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-primary)", display: "block", marginBottom: "4px" }}>
+                Qualification Level
+              </label>
+              <select
+                value={newEmployee.qualificationStatus}
+                onChange={(e) => setNewEmployee({ ...newEmployee, qualificationStatus: e.target.value })}
+                className="input-field"
+              >
+                <option value="Fully Qualified">Fully Qualified</option>
+                <option value="Certified">Certified</option>
+                <option value="In Qualification">In Qualification</option>
+              </select>
+            </div>
+            <div>
+              <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-primary)", display: "block", marginBottom: "4px" }}>
                 Primary Skill
               </label>
               <input
@@ -1276,9 +1449,27 @@ export function Workforce() {
                 value={newEmployee.skills}
                 onChange={(e) => setNewEmployee({ ...newEmployee, skills: e.target.value })}
                 className="input-field"
+                placeholder="e.g. Aseptic Filling Level 4"
                 required
               />
             </div>
+          </div>
+
+          <div>
+            <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-primary)", display: "block", marginBottom: "4px" }}>
+              Assigned Production Line / Machine Station
+            </label>
+            <select
+              value={newEmployee.activeStation || "Line 1 Bottling & Canning (250 BPM)"}
+              onChange={(e) => setNewEmployee({ ...newEmployee, activeStation: e.target.value })}
+              className="input-field"
+            >
+              <option value="Line 1 Bottling & Canning (250 BPM)">Line 1 Bottling & Canning (250 BPM)</option>
+              <option value="High-Speed Bottling Line 1 (LIN-8925)">High-Speed Bottling Line 1 (LIN-8925)</option>
+              <option value="glass bottel (LINE)">glass bottel (LINE)</option>
+              <option value="Maintenance Station">Maintenance Station</option>
+              <option value="Quality Assurance Station">Quality Assurance Station</option>
+            </select>
           </div>
         </form>
       </Modal>

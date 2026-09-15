@@ -33,15 +33,24 @@ export function LineTargetsPage() {
   const [editingTarget, setEditingTarget] = useState(null);
   const [viewingTarget, setViewingTarget] = useState(null);
 
-  // Live fetch from backend API on mount
-  useEffect(() => {
+  const fetchLiveLineTargets = () => {
+    localStorage.removeItem("mx_master_line_targets");
     masterDataService.getLineTargets().then((res) => {
+<<<<<<< HEAD
       const data = res?.data?.data !== undefined ? res.data.data : (res?.data !== undefined ? res.data : res);
+=======
+      const data = res?.data?.data || res?.data || res;
+>>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
       if (Array.isArray(data) && typeof setLineTargets === "function") {
         setLineTargets(data);
       }
     }).catch((err) => console.warn("LineTargets live load:", err.message));
-  }, [setLineTargets]);
+  };
+
+  // Live fetch from backend API on mount
+  useEffect(() => {
+    fetchLiveLineTargets();
+  }, []);
 
   const finishedSkus = useMemo(() => {
     if (!Array.isArray(skus) || skus.length === 0) return [];
@@ -98,62 +107,76 @@ export function LineTargetsPage() {
     });
   }, [lineTargets, plantFilter, lineFilter, searchQuery]);
 
-  const handleAddSubmit = (e) => {
+  const handleAddSubmit = async (e) => {
     e.preventDefault();
     const selLine = lines.find((l) => (l.lineId || l.id) === newTarget.lineId);
     const selSku = (finishedSkus.length > 0 ? finishedSkus : skus).find((s) => (s.skuId || s.id) === newTarget.skuId) || finishedSkus[0] || skus[0];
 
-    const created = addLineTarget({
-      ...newTarget,
-      lineName: selLine ? selLine.name : "Line 1",
-      skuCode: selSku ? (selSku.skuCode || selSku.code || "SKU-5001") : "SKU-5001",
-      skuName: selSku ? (selSku.name || selSku.skuName || "Beverage") : "Beverage",
-      targetQuantity: Number(newTarget.targetQuantity) || 250000,
-      stdRunRate: Number(newTarget.stdRunRate) || 40000,
-      oeeTargetPct: Number(newTarget.oeeTargetPct) || 88.0
-    });
-
-    addToast(`Target standard registered for ${created.lineName}!`, "success");
-    setIsModalOpen(false);
-    setNewTarget({
-      plantId: activePlantId || "PLT-01",
-      lineId: lines[0]?.lineId || lines[0]?.id || "LIN-01",
-      skuId: finishedSkus[0]?.skuId || finishedSkus[0]?.id || "SKU-001",
-      shift: "Morning Shift (06:00 - 14:00)",
-      targetQuantity: 300000,
-      targetHB: "37,500 Bottles/Hour",
-      stdRunRate: 42000,
-      oeeTargetPct: 88.5
-    });
+    try {
+      const created = await addLineTarget({
+        ...newTarget,
+        lineName: selLine ? selLine.name : "Line 1",
+        skuCode: selSku ? (selSku.skuCode || selSku.code || "SKU-5001") : "SKU-5001",
+        skuName: selSku ? (selSku.name || selSku.skuName || "Beverage") : "Beverage",
+        targetQuantity: Number(newTarget.targetQuantity) || 250000,
+        stdRunRate: Number(newTarget.stdRunRate) || 40000,
+        oeeTargetPct: Number(newTarget.oeeTargetPct) || 88.0
+      });
+      fetchLiveLineTargets();
+      addToast(`Target standard registered for ${created.lineName || "Line"} in database!`, "success");
+      setIsModalOpen(false);
+      setNewTarget({
+        plantId: activePlantId || "PLT-01",
+        lineId: lines[0]?.lineId || lines[0]?.id || "LIN-01",
+        skuId: finishedSkus[0]?.skuId || finishedSkus[0]?.id || "SKU-001",
+        shift: "Morning Shift (06:00 - 14:00)",
+        targetQuantity: 300000,
+        targetHB: "37,500 Bottles/Hour",
+        stdRunRate: 42000,
+        oeeTargetPct: 88.5
+      });
+    } catch (err) {
+      addToast(`Failed to register target: ${err.message}`, "error");
+    }
   };
 
-  const handleEditSubmit = (e) => {
+  const handleEditSubmit = async (e) => {
     e.preventDefault();
     const selLine = lines.find((l) => (l.lineId || l.id) === editingTarget.lineId);
     const selSku = skus.find((s) => (s.skuId || s.id) === editingTarget.skuId);
     const targetKey = editingTarget.targetId || editingTarget.id;
 
-    updateLineTarget(targetKey, {
-      ...editingTarget,
-      lineName: selLine ? selLine.name : editingTarget.lineName,
-      skuCode: selSku ? (selSku.skuCode || selSku.code) : editingTarget.skuCode,
-      skuName: selSku ? (selSku.name || selSku.skuName) : editingTarget.skuName,
-      targetQuantity: Number(editingTarget.targetQuantity) || 250000,
-      stdRunRate: Number(editingTarget.stdRunRate) || 40000,
-      oeeTargetPct: Number(editingTarget.oeeTargetPct) || 88.0
-    });
-
-    addToast(`Line target for ${editingTarget.lineName} updated!`, "success");
-    setEditingTarget(null);
+    try {
+      await updateLineTarget(targetKey, {
+        ...editingTarget,
+        lineName: selLine ? selLine.name : editingTarget.lineName,
+        skuCode: selSku ? (selSku.skuCode || selSku.code) : editingTarget.skuCode,
+        skuName: selSku ? (selSku.name || selSku.skuName) : editingTarget.skuName,
+        targetQuantity: Number(editingTarget.targetQuantity) || 250000,
+        stdRunRate: Number(editingTarget.stdRunRate) || 40000,
+        oeeTargetPct: Number(editingTarget.oeeTargetPct) || 88.0
+      });
+      fetchLiveLineTargets();
+      addToast(`Line target for ${editingTarget.lineName} updated in database!`, "success");
+      setEditingTarget(null);
+    } catch (err) {
+      addToast(`Failed to update target: ${err.message}`, "error");
+    }
   };
 
-  const handleDelete = (targetId, lineName) => {
-    if (window.confirm(`Are you sure you want to delete target standard for "${lineName}"?`)) {
-      deleteLineTarget(targetId);
-      if (viewingTarget && (viewingTarget.targetId === targetId || viewingTarget.id === targetId)) {
-        setViewingTarget(null);
+  const handleDelete = async (targetId, lineName) => {
+    if (!targetId) return;
+    if (window.confirm(`Are you sure you want to permanently delete target standard for "${lineName || targetId}" from PostgreSQL database?`)) {
+      try {
+        await deleteLineTarget(targetId);
+        fetchLiveLineTargets();
+        if (viewingTarget && (viewingTarget.targetId === targetId || viewingTarget.id === targetId)) {
+          setViewingTarget(null);
+        }
+        addToast(`Target standard deleted from database successfully.`, "success");
+      } catch (err) {
+        addToast(`Failed to delete target: ${err.message}`, "error");
       }
-      addToast(`Target standard deleted.`, "info");
     }
   };
 
@@ -197,21 +220,21 @@ export function LineTargetsPage() {
         />
         <StatCard
           title="Average OEE Benchmark"
-          value="88.2%"
+          value={lineTargets.length > 0 ? `${(lineTargets.reduce((sum, t) => sum + (Number(t.plannedOEE || t.oeeTargetPct) || 0), 0) / lineTargets.length).toFixed(1)}%` : "0.0%"}
           unit="Target"
           icon={Percent}
           colorVariant="cyan"
         />
         <StatCard
           title="Total Shift Volume"
-          value="790k"
+          value={lineTargets.length > 0 ? `${Math.round(lineTargets.reduce((sum, t) => sum + (Number(t.targetQuantity) || 0), 0) / 1000)}k` : "0k"}
           unit="Units/Day"
           icon={TrendingUp}
           colorVariant="amber"
         />
         <StatCard
           title="Governance Compliance"
-          value="100%"
+          value={lineTargets.length > 0 ? "100%" : "0%"}
           unit="Locked"
           icon={ShieldCheck}
           colorVariant="emerald"

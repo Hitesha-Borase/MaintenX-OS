@@ -22,6 +22,7 @@ import {
   ArrowRight,
   User,
   Filter,
+  Trash2,
   X
 } from "lucide-react";
 import { Card } from "../../components/common/Card";
@@ -37,10 +38,12 @@ import maintenanceService from "../../services/maintenanceService";
 export function BreakdownList() {
   const {
     breakdowns = [],
+    setBreakdowns,
     reportBreakdown,
     updateBreakdown,
     updateBreakdownStatus,
     resolveBreakdown,
+    deleteBreakdown,
     addWorkOrder,
     assets = []
   } = useCMMS();
@@ -50,13 +53,17 @@ export function BreakdownList() {
   React.useEffect(() => {
     const fetchBDs = async () => {
       try {
-        await maintenanceService.getBreakdowns();
+        const res = await maintenanceService.getBreakdowns();
+        const list = Array.isArray(res) ? res : (res?.data || []);
+        if (Array.isArray(list) && setBreakdowns) {
+          setBreakdowns(list);
+        }
       } catch (err) {
         console.warn("API breakdown fetch notice:", err.message || err);
       }
     };
     fetchBDs();
-  }, []);
+  }, [setBreakdowns]);
 
   // Filters State
   const [statusFilter, setStatusFilter] = useState("ALL");
@@ -81,6 +88,7 @@ export function BreakdownList() {
     severity: "Critical",
     reportedBy: "Operator John Smith",
     technician: "Marcus Vance",
+    durationMinutes: 0,
     productionLossUnits: 3000,
     downtimeCostUSD: 4500
   });
@@ -93,7 +101,8 @@ export function BreakdownList() {
     severity: "Critical",
     status: "Open",
     technician: "Marcus Vance",
-    reportedBy: "Operator"
+    reportedBy: "Operator",
+    durationMinutes: 0
   });
 
   // Assign Tech Form State
@@ -162,15 +171,17 @@ export function BreakdownList() {
     setIsReportModalOpen(true);
   };
 
-  const handleSubmitReport = (e) => {
+  const handleSubmitReport = async (e) => {
     e.preventDefault();
     if (!newForm.symptom.trim()) {
       addToast("Please describe the breakdown symptom", "error");
       return;
     }
-    const asset = assets.find((a) => a.id === newForm.assetId);
-    const newBD = reportBreakdown({
-      assetId: newForm.assetId,
+    const asset = assets.find((a) => a.id === newForm.assetId || a.assetCode === newForm.assetId || a.dbId === newForm.assetId);
+    const resolvedAssetId = asset?.dbId || asset?.assetCode || newForm.assetId;
+
+    const newBD = await reportBreakdown({
+      assetId: resolvedAssetId,
       assetName: asset?.name || newForm.assetId,
       plant: asset?.plant || "Plant 1 - North Facility",
       department: asset?.department || "Packaging",
@@ -182,15 +193,18 @@ export function BreakdownList() {
       status: "Open",
       reportedBy: newForm.reportedBy,
       technician: newForm.technician,
+      durationMinutes: Number(newForm.durationMinutes) || 0,
+      productionLossUnits: parseInt(newForm.productionLossUnits) || 2500,
+      downtimeCostUSD: parseInt(newForm.downtimeCostUSD) || (Number(newForm.durationMinutes) ? Number(newForm.durationMinutes) * 45 : 3500),
       impact: {
         productionLossUnits: parseInt(newForm.productionLossUnits) || 2500,
-        downtimeCostUSD: parseInt(newForm.downtimeCostUSD) || 3500,
+        downtimeCostUSD: parseInt(newForm.downtimeCostUSD) || (Number(newForm.durationMinutes) ? Number(newForm.durationMinutes) * 45 : 3500),
         safetyRisk: newForm.severity,
         scrapRatePercent: 2.5
       }
     });
 
-    addToast(`Breakdown ${newBD.id} reported on ${asset?.line || "Line 1"}. Line halted!`, "warning");
+    addToast(`Breakdown ${newBD?.id || "reported"} saved in database! Line halted.`, "warning");
     setIsReportModalOpen(false);
   };
 
@@ -208,16 +222,20 @@ export function BreakdownList() {
       severity: getSeverity(bd),
       status: bd.status || "Open",
       technician: bd.technician || "Marcus Vance",
-      reportedBy: getReportedBy(bd)
+      reportedBy: getReportedBy(bd),
+      durationMinutes: bd.durationMinutes !== undefined ? bd.durationMinutes : 0
     });
     setIsEditModalOpen(true);
   };
 
-  const handleSaveEdit = (e) => {
+  const handleSaveEdit = async (e) => {
     e.preventDefault();
     if (!selectedBreakdown) return;
-    updateBreakdown(selectedBreakdown.id, editForm);
-    addToast(`Breakdown ${selectedBreakdown.id} updated successfully.`, "success");
+    await updateBreakdown(selectedBreakdown.id, {
+      ...editForm,
+      durationMinutes: Number(editForm.durationMinutes) || 0
+    });
+    addToast(`Breakdown ${selectedBreakdown.id} updated in database.`, "success");
     setIsEditModalOpen(false);
   };
 
@@ -227,14 +245,14 @@ export function BreakdownList() {
     setIsAssignModalOpen(true);
   };
 
-  const handleConfirmAssign = (e) => {
+  const handleConfirmAssign = async (e) => {
     e.preventDefault();
     if (!selectedBreakdown) return;
-    updateBreakdown(selectedBreakdown.id, {
+    await updateBreakdown(selectedBreakdown.id, {
       technician: assignTech,
       status: selectedBreakdown.status === "Open" ? "Assigned" : selectedBreakdown.status
     });
-    addToast(`Technician ${assignTech} dispatched to ${selectedBreakdown.id}.`, "success");
+    addToast(`Technician ${assignTech} dispatched and saved in database.`, "success");
     setIsAssignModalOpen(false);
   };
 
@@ -249,10 +267,10 @@ export function BreakdownList() {
     setIsCreateWOModalOpen(true);
   };
 
-  const handleConfirmCreateWO = (e) => {
+  const handleConfirmCreateWO = async (e) => {
     e.preventDefault();
     if (!selectedBreakdown) return;
-    const createdWO = addWorkOrder({
+    const createdWO = await addWorkOrder({
       title: woForm.title,
       assetId: selectedBreakdown.assetId,
       assetName: selectedBreakdown.assetName,
@@ -263,17 +281,17 @@ export function BreakdownList() {
       description: `Generated from Breakdown ${selectedBreakdown.id}. Symptom: ${selectedBreakdown.symptom}`
     });
 
-    updateBreakdown(selectedBreakdown.id, {
-      linkedWorkOrder: createdWO.id,
+    await updateBreakdown(selectedBreakdown.id, {
+      linkedWorkOrder: createdWO?.woNumber || createdWO?.id,
       status: "In Progress"
     });
 
-    addToast(`Work Order ${createdWO.id} created and linked to ${selectedBreakdown.id}!`, "success");
+    addToast(`Work Order created and linked to ${selectedBreakdown.id}!`, "success");
     setIsCreateWOModalOpen(false);
   };
 
-  const handleStartInvestigation = (bd) => {
-    updateBreakdownStatus(bd.id, "Investigating", "Root cause investigation initiated.");
+  const handleStartInvestigation = async (bd) => {
+    await updateBreakdownStatus(bd.id, "Investigating", "Root cause investigation initiated.");
     addToast(`Investigation started for ${bd.id}. Status changed to 'Investigating'.`, "info");
   };
 
@@ -288,23 +306,28 @@ export function BreakdownList() {
     setIsResolveModalOpen(true);
   };
 
-  const handleConfirmResolve = (e) => {
+  const handleConfirmResolve = async (e) => {
     e.preventDefault();
     if (!selectedBreakdown) return;
-    resolveBreakdown(selectedBreakdown.id, {
+    await resolveBreakdown(selectedBreakdown.id, {
       resolution: resolveForm.resolutionNotes,
       repairAction: resolveForm.resolutionNotes,
       rootCause: resolveForm.rootCause,
       durationMinutes: parseInt(resolveForm.downtimeMinutes) || 45,
       status: "Resolved"
     });
-    addToast(`Breakdown ${selectedBreakdown.id} resolved! Machine returned to Operational state.`, "success");
+    addToast(`Breakdown ${selectedBreakdown.id} resolved in database! Machine returned to Operational state.`, "success");
     setIsResolveModalOpen(false);
   };
 
-  const handleCloseBreakdown = (bd) => {
-    updateBreakdownStatus(bd.id, "Closed", "Verified and closed by shift supervisor.");
-    addToast(`Breakdown ${bd.id} verified and closed.`, "success");
+  const handleCloseBreakdown = async (bd) => {
+    await updateBreakdownStatus(bd.id, "Closed", "Verified and closed by shift supervisor.");
+    addToast(`Breakdown ${bd.id} verified and closed in database.`, "success");
+  };
+
+  const handleDeleteBreakdown = async (bd) => {
+    await deleteBreakdown(bd.id);
+    addToast(`Breakdown ${bd.id} deleted from database.`, "info");
   };
 
   // Severity Badge Helper
@@ -580,6 +603,18 @@ export function BreakdownList() {
                 Closed
               </span>
             )}
+
+            {/* Delete */}
+            <button
+              type="button"
+              className="table-btn table-btn-delete"
+              onClick={() => handleDeleteBreakdown(row)}
+              title="Delete Breakdown Record"
+              style={{ color: "#EF4444" }}
+            >
+              <Trash2 size={13} color="#EF4444" />
+              <span>Delete</span>
+            </button>
           </div>
         );
       }
@@ -826,18 +861,31 @@ export function BreakdownList() {
             />
           </div>
 
-          <div className="form-group">
-            <label className="form-label">Assigned Technician</label>
-            <select
-              className="form-select"
-              value={newForm.technician}
-              onChange={(e) => setNewForm({ ...newForm, technician: e.target.value })}
-            >
-              <option value="Marcus Vance">Marcus Vance (Senior Reliability Tech)</option>
-              <option value="David Kim">David Kim (Hydraulic & Thermal Tech)</option>
-              <option value="Elena Rostova">Elena Rostova (Electrical Specialist)</option>
-              <option value="Carlos Mendez">Carlos Mendez (Mechanical Lead)</option>
-            </select>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+            <div className="form-group">
+              <label className="form-label">Assigned Technician</label>
+              <select
+                className="form-select"
+                value={newForm.technician}
+                onChange={(e) => setNewForm({ ...newForm, technician: e.target.value })}
+              >
+                <option value="Marcus Vance">Marcus Vance (Senior Reliability Tech)</option>
+                <option value="David Kim">David Kim (Hydraulic & Thermal Tech)</option>
+                <option value="Elena Rostova">Elena Rostova (Electrical Specialist)</option>
+                <option value="Carlos Mendez">Carlos Mendez (Mechanical Lead)</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Downtime Duration (Minutes)</label>
+              <input
+                type="number"
+                min="0"
+                className="form-input"
+                placeholder="e.g. 45 (or 0 if just stopped)"
+                value={newForm.durationMinutes}
+                onChange={(e) => setNewForm({ ...newForm, durationMinutes: e.target.value })}
+              />
+            </div>
           </div>
 
           <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px" }}>
@@ -1070,6 +1118,19 @@ export function BreakdownList() {
                   onChange={(e) => setEditForm({ ...editForm, technician: e.target.value })}
                 />
               </div>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Downtime Duration (Minutes) *</label>
+              <input
+                type="number"
+                min="0"
+                className="form-input"
+                placeholder="e.g. 45"
+                value={editForm.durationMinutes}
+                onChange={(e) => setEditForm({ ...editForm, durationMinutes: e.target.value })}
+                required
+              />
             </div>
 
             <div className="form-group">

@@ -51,11 +51,12 @@ export function CalibrationRecordsPage() {
   const targetCal = calibrations.find((c) => c.id === selectedCalId) || calibrations[0];
 
   const filteredCalibrations = calibrations.filter((c) => {
+    const q = searchQuery.toLowerCase();
     return (
-      c.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.instrumentId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.instrumentName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.certificateNumber?.toLowerCase().includes(searchQuery.toLowerCase())
+      (c.id || "").toLowerCase().includes(q) ||
+      (c.instrumentId || "").toLowerCase().includes(q) ||
+      (c.instrumentName || c.name || "").toLowerCase().includes(q) ||
+      (c.certificateNumber || c.certificate || "").toLowerCase().includes(q)
     );
   });
 

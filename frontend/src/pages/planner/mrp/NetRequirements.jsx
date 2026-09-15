@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { usePlanning } from "../../../context/PlanningContext";
 import { useMasterData } from "../../../context/MasterDataContext";
 import { useApp } from "../../../context/AppContext";
@@ -23,7 +23,10 @@ import {
   X,
   Package,
   Calendar,
-  Factory
+  Factory,
+  Eye,
+  Edit2,
+  Trash2
 } from "lucide-react";
 
 export function NetRequirements() {
@@ -32,6 +35,15 @@ export function NetRequirements() {
   const { addToast } = useApp();
   const [searchQuery, setSearchQuery] = useState("");
   const [riskFilter, setRiskFilter] = useState("ALL");
+
+  // Database-backed requirements state
+  const [requirements, setRequirements] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [viewingRequirement, setViewingRequirement] = useState(null);
+  const [editingRequirement, setEditingRequirement] = useState(null);
+  const [deleteConfirmItem, setDeleteConfirmItem] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   const [requisitionModalSku, setRequisitionModalSku] = useState(null);
   const [reqQty, setReqQty] = useState(10000);
@@ -45,23 +57,170 @@ export function NetRequirements() {
   const [isCalculatingMRP, setIsCalculatingMRP] = useState(false);
   const [mrpRunResults, setMrpRunResults] = useState(null);
 
-  // KPIs
-  const totalMaterials = mrpCalculations.length;
-  const criticalItems = mrpCalculations.filter((m) => m.riskLevel === "CRITICAL" || m.riskLevel === "HIGH").length;
-  const totalNetShortage = mrpCalculations.reduce((sum, m) => sum + (m.shortage || 0), 0);
-  const balancedItems = mrpCalculations.filter((m) => m.shortage === 0).length;
+  const loadRequirements = async () => {
+    try {
+      setLoading(true);
+      const data = await planningService.getMrpNetRequirements();
+      if (Array.isArray(data)) {
+        setRequirements(data);
+      } else {
+        setRequirements([]);
+      }
+    } catch (err) {
+      console.warn("Failed to load MRP net requirements:", err.message);
+      setRequirements([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const filtered = mrpCalculations.filter((m) => {
+  useEffect(() => {
+    loadRequirements();
+  }, []);
+
+  const handleGenerateRequirements = async () => {
+    try {
+      setLoading(true);
+      const data = await planningService.generateMrpRequirements();
+      if (Array.isArray(data)) {
+        setRequirements(data);
+        addToast(`Successfully generated ${data.length} material requirements in database!`, "success");
+      }
+    } catch (err) {
+      console.error("Failed to generate MRP requirements:", err);
+      addToast("Failed to generate requirements from database.", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const displayItems = requirements;
+
+  // KPIs
+  const totalMaterials = displayItems.length;
+  const criticalItems = displayItems.filter((m) => m.riskLevel === "CRITICAL" || m.riskLevel === "HIGH").length;
+  const totalNetShortage = displayItems.reduce((sum, m) => sum + (m.shortage || 0), 0);
+  const balancedItems = displayItems.filter((m) => m.shortage === 0).length;
+
+  const filtered = displayItems.filter((m) => {
     const matchesRisk = riskFilter === "ALL" || m.riskLevel === riskFilter;
     const q = searchQuery.toLowerCase().trim();
+    const name = m.name || m.materialName || "";
+    const code = m.skuCode || "";
+    const cat = m.category || "";
     const matchesSearch =
       !q ||
-      m.name.toLowerCase().includes(q) ||
-      m.skuCode.toLowerCase().includes(q) ||
-      m.category.toLowerCase().includes(q);
+      name.toLowerCase().includes(q) ||
+      code.toLowerCase().includes(q) ||
+      cat.toLowerCase().includes(q);
 
     return matchesRisk && matchesSearch;
   });
+
+  const handleDeleteClick = (item) => {
+    setDeleteConfirmItem(item);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteConfirmItem) return;
+    const targetId = deleteConfirmItem.id || deleteConfirmItem.skuId;
+    const skuCode = deleteConfirmItem.skuCode;
+    setIsDeleting(true);
+    try {
+      setRequirements((prev) =>
+        prev.filter((r) => {
+          if (targetId && (r.id === targetId || r.skuId === targetId)) return false;
+          if (skuCode && r.skuCode === skuCode) return false;
+          return true;
+        })
+      );
+      await planningService.deleteMrpNetRequirement(targetId);
+      addToast(`Material requirement "${deleteConfirmItem.name || deleteConfirmItem.skuCode}" deleted from database!`, "success");
+      setDeleteConfirmItem(null);
+    } catch (err) {
+      console.error("Failed to delete requirement:", err);
+      addToast("Failed to delete requirement from database.", "error");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleOpenEdit = (item) => {
+    setEditingRequirement({
+      ...item,
+      grossRequirement: item.grossRequirement ?? item.grossDemand ?? 0,
+      safetyStock: item.safetyStock ?? item.safetyBuffer ?? 0,
+      availableStock: item.availableStock ?? item.availableInventory ?? 0,
+      reservedStock: item.reservedStock ?? item.allocatedInventory ?? 0,
+      scheduledReceipts: item.scheduledReceipts ?? item.inboundSupply ?? 0,
+      riskLevel: item.riskLevel || (item.shortage > 0 ? "HIGH" : "LOW"),
+      suggestedAction: item.suggestedAction || "Safety Stock Buffer Sufficient"
+    });
+  };
+
+  const handleSaveEdit = async (e) => {
+    e.preventDefault();
+    if (!editingRequirement) return;
+
+    setIsUpdating(true);
+    try {
+      const gross = Number(editingRequirement.grossRequirement) || 0;
+      const safety = Number(editingRequirement.safetyStock) || 0;
+      const available = Number(editingRequirement.availableStock) || 0;
+      const allocated = Number(editingRequirement.reservedStock) || 0;
+      const inbound = Number(editingRequirement.scheduledReceipts) || 0;
+      const effective = available - allocated + inbound;
+      const net = Math.max(0, (gross + safety) - effective);
+      const shortage = net;
+      const risk = shortage > 8000 ? "CRITICAL" : shortage > 0 ? "HIGH" : "LOW";
+      const suggested = shortage > 0
+        ? `Raise Expedited Purchase Order for ${shortage.toLocaleString()} ${editingRequirement.uom || "Units"}`
+        : "Safety Stock Buffer Sufficient";
+
+      const payload = {
+        grossRequirement: gross,
+        safetyStock: safety,
+        availableStock: available,
+        reservedStock: allocated,
+        scheduledReceipts: inbound,
+        netShortage: shortage,
+        status: editingRequirement.riskLevel || risk,
+        suggestedAction: editingRequirement.suggestedAction || suggested
+      };
+
+      setRequirements((prev) =>
+        prev.map((r) => {
+          if ((r.id && r.id === editingRequirement.id) || r.skuId === editingRequirement.skuId) {
+            return {
+              ...r,
+              ...payload,
+              grossDemand: gross,
+              safetyBuffer: safety,
+              availableInventory: available,
+              allocatedInventory: allocated,
+              inboundSupply: inbound,
+              netRequirement: net,
+              shortage,
+              riskLevel: editingRequirement.riskLevel || risk,
+              suggestedAction: editingRequirement.suggestedAction || suggested
+            };
+          }
+          return r;
+        })
+      );
+
+      const targetId = editingRequirement.id || editingRequirement.skuId;
+      await planningService.updateMrpNetRequirement(targetId, payload);
+      addToast(`Material "${editingRequirement.name || editingRequirement.skuCode}" updated in database!`, "success");
+      setEditingRequirement(null);
+      loadRequirements();
+    } catch (err) {
+      console.error("Failed to update requirement:", err);
+      addToast("Failed to update requirement in database.", "error");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
 
   const handleExecuteMRPRun = async () => {
     setIsCalculatingMRP(true);
@@ -175,6 +334,15 @@ export function NetRequirements() {
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+          <Button
+            variant="secondary"
+            icon={Sparkles}
+            onClick={handleGenerateRequirements}
+            disabled={loading}
+            style={{ fontSize: "12px", padding: "7px 12px" }}
+          >
+            {loading ? "Generating..." : "Generate Requirements"}
+          </Button>
           <Button variant="secondary" icon={Download} onClick={handleExportCSV} style={{ fontSize: "12px", padding: "7px 12px" }}>
             Export MRP Data
           </Button>
@@ -306,13 +474,43 @@ export function NetRequirements() {
                 <th>Shortage</th>
                 <th>Service Risk</th>
                 <th>Suggested Action</th>
-                <th style={{ textAlign: "right" }}>Action</th>
+                <th style={{ textAlign: "right", position: "sticky", right: 0, backgroundColor: "#FAF8F5", zIndex: 2, boxShadow: "-2px 0 6px rgba(0,0,0,0.05)" }}>Action</th>
               </tr>
             </thead>
             <tbody>
-              {filtered.map((m) => (
-                <tr
-                  key={m.skuId}
+              {loading ? (
+                <tr>
+                  <td colSpan={12} style={{ textAlign: "center", padding: "40px 20px", color: "var(--text-muted)", fontSize: "13px" }}>
+                    Loading material requirements from database...
+                  </td>
+                </tr>
+              ) : filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={12} style={{ textAlign: "center", padding: "50px 20px" }}>
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px" }}>
+                      <Package size={40} color="#B27E33" strokeWidth={1.5} />
+                      <span style={{ fontSize: "15px", fontWeight: 700, color: "var(--text-primary)" }}>
+                        No Material Requirements Found
+                      </span>
+                      <span style={{ fontSize: "13px", color: "var(--text-muted)", maxWidth: "440px", lineHeight: 1.5 }}>
+                        All material requirements have been cleared or deleted from the database. Click below to recalculate or generate fresh requirements from current demand orders and BOMs.
+                      </span>
+                      <Button
+                        variant="primary"
+                        icon={Sparkles}
+                        onClick={handleGenerateRequirements}
+                        disabled={loading}
+                        style={{ marginTop: "10px", fontSize: "12px", padding: "8px 18px", fontWeight: 700 }}
+                      >
+                        {loading ? "Generating..." : "Generate Requirements from Demand & BOMs"}
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                filtered.map((m) => (
+                  <tr
+                    key={m.id || m.skuId || m.skuCode}
                   style={{
                     borderBottom: "1px solid var(--border-subtle)",
                     transition: "background-color 0.12s ease"
@@ -387,26 +585,114 @@ export function NetRequirements() {
                     <span style={{ fontSize: "11px", color: "var(--text-secondary)", fontWeight: 500 }}>{m.suggestedAction}</span>
                   </td>
 
-                  <td style={{ padding: "12px 14px", textAlign: "right", whiteSpace: "nowrap" }}>
-                    {m.shortage > 0 ? (
-                      <Button
-                        variant="primary"
-                        size="sm"
-                        icon={Plus}
-                        onClick={() => {
-                          setRequisitionModalSku(m);
-                          setReqQty(m.shortage);
+                  <td style={{ padding: "10px 14px", textAlign: "right", whiteSpace: "nowrap", position: "sticky", right: 0, backgroundColor: "#FAF8F5", zIndex: 1, boxShadow: "-2px 0 6px rgba(0,0,0,0.05)" }}>
+                    <div style={{ display: "inline-flex", gap: "6px", alignItems: "center", justifyContent: "flex-end" }}>
+                      {m.shortage > 0 && (
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          icon={Plus}
+                          onClick={() => {
+                            setRequisitionModalSku(m);
+                            setReqQty(m.shortage);
+                          }}
+                          style={{ fontSize: "11px", padding: "4px 8px" }}
+                        >
+                          Raise PO
+                        </Button>
+                      )}
+
+                      {/* View Action Button */}
+                      <button
+                        onClick={() => setViewingRequirement(m)}
+                        title="View Requirement Details"
+                        style={{
+                          width: "28px",
+                          height: "28px",
+                          borderRadius: "6px",
+                          border: "1px solid #E8DDCF",
+                          backgroundColor: "#FAF8F5",
+                          color: "#261603",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          cursor: "pointer",
+                          transition: "all 0.15s ease",
                         }}
-                        style={{ fontSize: "11px", padding: "4px 8px" }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = "#E2B670";
+                          e.currentTarget.style.borderColor = "#C89547";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = "#FAF8F5";
+                          e.currentTarget.style.borderColor = "#E8DDCF";
+                        }}
                       >
-                        Raise PO
-                      </Button>
-                    ) : (
-                      <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>Balanced</span>
-                    )}
+                        <Eye size={13} />
+                      </button>
+
+                      {/* Edit Action Button */}
+                      <button
+                        onClick={() => handleOpenEdit(m)}
+                        title="Edit Requirement in Database"
+                        style={{
+                          width: "28px",
+                          height: "28px",
+                          borderRadius: "6px",
+                          border: "1px solid #E8DDCF",
+                          backgroundColor: "#FAF8F5",
+                          color: "#261603",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          cursor: "pointer",
+                          transition: "all 0.15s ease",
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = "#E2B670";
+                          e.currentTarget.style.borderColor = "#C89547";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = "#FAF8F5";
+                          e.currentTarget.style.borderColor = "#E8DDCF";
+                        }}
+                      >
+                        <Edit2 size={13} />
+                      </button>
+
+                      {/* Delete Action Button */}
+                      <button
+                        onClick={() => handleDeleteClick(m)}
+                        title="Delete Requirement from Database"
+                        style={{
+                          width: "28px",
+                          height: "28px",
+                          borderRadius: "6px",
+                          border: "1px solid rgba(220, 38, 38, 0.25)",
+                          backgroundColor: "#FAF8F5",
+                          color: "#DC2626",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          cursor: "pointer",
+                          transition: "all 0.15s ease",
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = "#FEE2E2";
+                          e.currentTarget.style.borderColor = "#DC2626";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = "#FAF8F5";
+                          e.currentTarget.style.borderColor = "rgba(220, 38, 38, 0.25)";
+                        }}
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
-              ))}
+              ))
+            )}
             </tbody>
           </table>
         </div>
@@ -610,6 +896,325 @@ export function NetRequirements() {
               <Button variant="secondary" onClick={() => setIsMRPRunModalOpen(false)}>
                 Close
               </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* VIEW REQUIREMENT DETAILS MODAL */}
+      {viewingRequirement && (
+        <div className="modal-backdrop" onClick={() => setViewingRequirement(null)}>
+          <div className="modal-content" style={{ maxWidth: "640px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Eye size={18} color="#B27E33" />
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                  MRP Material Requirement Details
+                </h2>
+              </div>
+              <button onClick={() => setViewingRequirement(null)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
+              <div style={{ padding: "14px", backgroundColor: "#FAF8F5", borderRadius: "8px", border: "1px solid #E8DDCF" }}>
+                <div style={{ fontSize: "15px", fontWeight: 800, color: "var(--text-primary)" }}>
+                  {viewingRequirement.name || viewingRequirement.materialName}
+                </div>
+                <div style={{ display: "flex", gap: "12px", marginTop: "6px", alignItems: "center", flexWrap: "wrap" }}>
+                  <span style={{ fontSize: "12px", color: "#8C5B23", fontFamily: "var(--font-mono)", fontWeight: 700 }}>
+                    SKU: {viewingRequirement.skuCode}
+                  </span>
+                  <Badge variant="cyan">{viewingRequirement.category}</Badge>
+                  <Badge variant={viewingRequirement.riskLevel === "CRITICAL" ? "rose" : viewingRequirement.riskLevel === "HIGH" ? "amber" : "emerald"}>
+                    {viewingRequirement.riskLevel} Risk
+                  </Badge>
+                </div>
+              </div>
+
+              {/* Requirement Breakdown Metrics Grid */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "10px" }}>
+                <div style={{ padding: "12px", backgroundColor: "#FAF8F5", borderRadius: "8px", border: "1px solid #E8DDCF" }}>
+                  <div style={{ fontSize: "11px", color: "var(--text-secondary)", fontWeight: 600 }}>Gross Requirement</div>
+                  <div style={{ fontSize: "16px", fontWeight: 800, fontFamily: "var(--font-mono)", color: "var(--text-primary)", marginTop: "4px" }}>
+                    {(viewingRequirement.grossRequirement || viewingRequirement.grossDemand || 0).toLocaleString()} {viewingRequirement.uom}
+                  </div>
+                </div>
+
+                <div style={{ padding: "12px", backgroundColor: "#FAF8F5", borderRadius: "8px", border: "1px solid #E8DDCF" }}>
+                  <div style={{ fontSize: "11px", color: "var(--text-secondary)", fontWeight: 600 }}>Safety Buffer</div>
+                  <div style={{ fontSize: "16px", fontWeight: 800, fontFamily: "var(--font-mono)", color: "var(--text-muted)", marginTop: "4px" }}>
+                    {(viewingRequirement.safetyStock || viewingRequirement.safetyBuffer || 0).toLocaleString()} {viewingRequirement.uom}
+                  </div>
+                </div>
+
+                <div style={{ padding: "12px", backgroundColor: "#FAF8F5", borderRadius: "8px", border: "1px solid #E8DDCF" }}>
+                  <div style={{ fontSize: "11px", color: "var(--text-secondary)", fontWeight: 600 }}>On-Hand Stock</div>
+                  <div style={{ fontSize: "16px", fontWeight: 800, fontFamily: "var(--font-mono)", color: "#059669", marginTop: "4px" }}>
+                    {(viewingRequirement.availableStock || viewingRequirement.availableInventory || 0).toLocaleString()} {viewingRequirement.uom}
+                  </div>
+                </div>
+
+                <div style={{ padding: "12px", backgroundColor: "#FAF8F5", borderRadius: "8px", border: "1px solid #E8DDCF" }}>
+                  <div style={{ fontSize: "11px", color: "var(--text-secondary)", fontWeight: 600 }}>Allocated (Reserved)</div>
+                  <div style={{ fontSize: "16px", fontWeight: 800, fontFamily: "var(--font-mono)", color: "#D97706", marginTop: "4px" }}>
+                    {(viewingRequirement.reservedStock || viewingRequirement.allocatedInventory || 0).toLocaleString()} {viewingRequirement.uom}
+                  </div>
+                </div>
+
+                <div style={{ padding: "12px", backgroundColor: "#FAF8F5", borderRadius: "8px", border: "1px solid #E8DDCF" }}>
+                  <div style={{ fontSize: "11px", color: "var(--text-secondary)", fontWeight: 600 }}>Inbound PO Supply</div>
+                  <div style={{ fontSize: "16px", fontWeight: 800, fontFamily: "var(--font-mono)", color: "#059669", marginTop: "4px" }}>
+                    +{(viewingRequirement.scheduledReceipts || viewingRequirement.inboundSupply || 0).toLocaleString()} {viewingRequirement.uom}
+                  </div>
+                </div>
+
+                <div style={{ padding: "12px", backgroundColor: viewingRequirement.shortage > 0 ? "rgba(220, 38, 38, 0.08)" : "#FAF8F5", borderRadius: "8px", border: viewingRequirement.shortage > 0 ? "1px solid #DC2626" : "1px solid #E8DDCF" }}>
+                  <div style={{ fontSize: "11px", color: viewingRequirement.shortage > 0 ? "#DC2626" : "var(--text-secondary)", fontWeight: 700 }}>Projected Shortage</div>
+                  <div style={{ fontSize: "16px", fontWeight: 900, fontFamily: "var(--font-mono)", color: viewingRequirement.shortage > 0 ? "#DC2626" : "#059669", marginTop: "4px" }}>
+                    {viewingRequirement.shortage > 0 ? `▲ ${viewingRequirement.shortage.toLocaleString()} ${viewingRequirement.uom}` : "✓ Covered"}
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Banner */}
+              <div style={{ padding: "12px 14px", borderRadius: "8px", backgroundColor: "rgba(200, 149, 71, 0.12)", border: "1px solid rgba(200, 149, 71, 0.3)" }}>
+                <div style={{ fontSize: "11px", fontWeight: 700, color: "#8C5B23" }}>MRP Suggested Action</div>
+                <div style={{ fontSize: "13px", fontWeight: 600, color: "var(--text-primary)", marginTop: "2px" }}>
+                  {viewingRequirement.suggestedAction || "Safety Stock Buffer Sufficient"}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", padding: "14px 20px", borderTop: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+              <Button variant="secondary" onClick={() => setViewingRequirement(null)}>
+                Close
+              </Button>
+              {viewingRequirement.shortage > 0 && (
+                <Button
+                  variant="primary"
+                  icon={Plus}
+                  onClick={() => {
+                    const target = viewingRequirement;
+                    setViewingRequirement(null);
+                    setRequisitionModalSku(target);
+                    setReqQty(target.shortage);
+                  }}
+                >
+                  Raise Purchase Order
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT REQUIREMENT MODAL */}
+      {editingRequirement && (
+        <div className="modal-backdrop" onClick={() => setEditingRequirement(null)}>
+          <div className="modal-content" style={{ maxWidth: "600px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Edit2 size={18} color="#B27E33" />
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                  Edit Material Requirement (Database Record)
+                </h2>
+              </div>
+              <button onClick={() => setEditingRequirement(null)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEdit} style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div>
+                <label className="form-label" style={{ fontSize: "12px", fontWeight: 600, display: "block", marginBottom: "4px" }}>Material Name / SKU Code</label>
+                <input
+                  type="text"
+                  disabled
+                  value={`${editingRequirement.name || editingRequirement.materialName} (${editingRequirement.skuCode})`}
+                  className="form-input"
+                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #D1C7BA", backgroundColor: "#F5EFE6" }}
+                />
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div>
+                  <label className="form-label" style={{ fontSize: "12px", fontWeight: 600, display: "block", marginBottom: "4px" }}>Gross Requirement ({editingRequirement.uom})</label>
+                  <input
+                    type="number"
+                    min="0"
+                    required
+                    value={editingRequirement.grossRequirement}
+                    onChange={(e) => setEditingRequirement({ ...editingRequirement, grossRequirement: Number(e.target.value) })}
+                    className="form-input"
+                    style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #D1C7BA", backgroundColor: "#FAF8F5" }}
+                  />
+                </div>
+
+                <div>
+                  <label className="form-label" style={{ fontSize: "12px", fontWeight: 600, display: "block", marginBottom: "4px" }}>Safety Stock Buffer ({editingRequirement.uom})</label>
+                  <input
+                    type="number"
+                    min="0"
+                    required
+                    value={editingRequirement.safetyStock}
+                    onChange={(e) => setEditingRequirement({ ...editingRequirement, safetyStock: Number(e.target.value) })}
+                    className="form-input"
+                    style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #D1C7BA", backgroundColor: "#FAF8F5" }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "12px" }}>
+                <div>
+                  <label className="form-label" style={{ fontSize: "12px", fontWeight: 600, display: "block", marginBottom: "4px" }}>On-Hand Stock</label>
+                  <input
+                    type="number"
+                    min="0"
+                    required
+                    value={editingRequirement.availableStock}
+                    onChange={(e) => setEditingRequirement({ ...editingRequirement, availableStock: Number(e.target.value) })}
+                    className="form-input"
+                    style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #D1C7BA", backgroundColor: "#FAF8F5" }}
+                  />
+                </div>
+
+                <div>
+                  <label className="form-label" style={{ fontSize: "12px", fontWeight: 600, display: "block", marginBottom: "4px" }}>Allocated (Reserved)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    required
+                    value={editingRequirement.reservedStock}
+                    onChange={(e) => setEditingRequirement({ ...editingRequirement, reservedStock: Number(e.target.value) })}
+                    className="form-input"
+                    style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #D1C7BA", backgroundColor: "#FAF8F5" }}
+                  />
+                </div>
+
+                <div>
+                  <label className="form-label" style={{ fontSize: "12px", fontWeight: 600, display: "block", marginBottom: "4px" }}>Inbound PO Supply</label>
+                  <input
+                    type="number"
+                    min="0"
+                    required
+                    value={editingRequirement.scheduledReceipts}
+                    onChange={(e) => setEditingRequirement({ ...editingRequirement, scheduledReceipts: Number(e.target.value) })}
+                    className="form-input"
+                    style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #D1C7BA", backgroundColor: "#FAF8F5" }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div>
+                  <label className="form-label" style={{ fontSize: "12px", fontWeight: 600, display: "block", marginBottom: "4px" }}>Service Risk / Status</label>
+                  <select
+                    value={editingRequirement.riskLevel}
+                    onChange={(e) => setEditingRequirement({ ...editingRequirement, riskLevel: e.target.value })}
+                    className="form-input"
+                    style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #D1C7BA", backgroundColor: "#FAF8F5" }}
+                  >
+                    <option value="LOW">LOW (Balanced/Covered)</option>
+                    <option value="HIGH">HIGH (Deficit Risk)</option>
+                    <option value="CRITICAL">CRITICAL (Stockout Risk)</option>
+                    <option value="COVERED">COVERED</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="form-label" style={{ fontSize: "12px", fontWeight: 600, display: "block", marginBottom: "4px" }}>Suggested Action</label>
+                  <input
+                    type="text"
+                    value={editingRequirement.suggestedAction}
+                    onChange={(e) => setEditingRequirement({ ...editingRequirement, suggestedAction: e.target.value })}
+                    className="form-input"
+                    style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #D1C7BA", backgroundColor: "#FAF8F5" }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px" }}>
+                <Button variant="secondary" onClick={() => setEditingRequirement(null)}>
+                  Cancel
+                </Button>
+                <button
+                  type="submit"
+                  disabled={isUpdating}
+                  style={{
+                    padding: "8px 18px",
+                    borderRadius: "8px",
+                    border: "none",
+                    background: "linear-gradient(135deg, #E2B670 0%, #C89547 50%, #B27E33 100%)",
+                    color: "#261603",
+                    fontSize: "13px",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    boxShadow: "0 2px 6px rgba(200, 149, 71, 0.3)"
+                  }}
+                >
+                  {isUpdating ? "Saving..." : "Save & Update in Database"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* DELETE CONFIRMATION MODAL */}
+      {deleteConfirmItem && (
+        <div className="modal-backdrop" onClick={() => setDeleteConfirmItem(null)}>
+          <div className="modal-content" style={{ maxWidth: "460px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Trash2 size={18} color="#DC2626" />
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                  Confirm Requirement Deletion
+                </h2>
+              </div>
+              <button onClick={() => setDeleteConfirmItem(null)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ padding: "20px" }}>
+              <p style={{ fontSize: "13px", color: "var(--text-primary)", lineHeight: 1.5, margin: 0 }}>
+                Are you sure you want to delete material requirement for:
+              </p>
+              <div style={{ marginTop: "10px", padding: "12px", backgroundColor: "#FAF8F5", borderRadius: "8px", border: "1px solid #E8DDCF" }}>
+                <div style={{ fontWeight: 800, color: "var(--text-primary)" }}>
+                  {deleteConfirmItem.name || deleteConfirmItem.materialName}
+                </div>
+                <div style={{ fontSize: "12px", color: "#8C5B23", fontFamily: "var(--font-mono)", marginTop: "2px" }}>
+                  SKU: {deleteConfirmItem.skuCode}
+                </div>
+              </div>
+              <p style={{ fontSize: "12px", color: "#DC2626", marginTop: "12px", fontWeight: 600, margin: "12px 0 0 0" }}>
+                ⚠️ This will permanently delete this requirement row from the PostgreSQL database.
+              </p>
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", padding: "14px 20px", borderTop: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+              <Button variant="secondary" onClick={() => setDeleteConfirmItem(null)}>
+                Cancel
+              </Button>
+              <button
+                onClick={handleConfirmDelete}
+                disabled={isDeleting}
+                style={{
+                  padding: "8px 18px",
+                  borderRadius: "8px",
+                  border: "none",
+                  backgroundColor: "#DC2626",
+                  color: "#FFFFFF",
+                  fontSize: "13px",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
+              >
+                {isDeleting ? "Deleting..." : "Yes, Delete Record"}
+              </button>
             </div>
           </div>
         </div>

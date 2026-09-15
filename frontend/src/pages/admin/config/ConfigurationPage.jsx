@@ -22,10 +22,6 @@ import adminService from "../../../services/adminService";
 export function ConfigurationPage() {
   const { addToast } = useApp();
 
-  useEffect(() => {
-    adminService.getDashboard().catch((err) => console.warn("Config dashboard load:", err.message));
-  }, []);
-
   const [config, setConfig] = useState({
     systemName: "MaintenX-OS Manufacturing Cloud",
     timezone: "America/Chicago (Central Time)",
@@ -37,8 +33,29 @@ export function ConfigurationPage() {
     telemetryPollSeconds: 2
   });
 
-  const handleSave = () => {
-    addToast("Global System Configuration updated and broadcast to all edge nodes!", "success");
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    adminService.getSystemConfig()
+      .then((data) => {
+        if (data && typeof data === "object") {
+          setConfig((prev) => ({ ...prev, ...data }));
+        }
+      })
+      .catch((err) => console.warn("Config load error:", err.message));
+  }, []);
+
+  const handleSave = async () => {
+    try {
+      setIsSaving(true);
+      await adminService.saveSystemConfig(config);
+      addToast("Global System Configuration saved and persisted to database!", "success");
+    } catch (err) {
+      console.error(err);
+      addToast(`Failed to save configuration: ${err.message}`, "error");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -55,8 +72,14 @@ export function ConfigurationPage() {
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-          <Button variant="primary" icon={Save} onClick={handleSave} style={{ fontSize: "12px", padding: "7px 14px" }}>
-            Save Global Config
+          <Button
+            variant="primary"
+            icon={Save}
+            disabled={isSaving}
+            onClick={handleSave}
+            style={{ fontSize: "12px", padding: "7px 14px" }}
+          >
+            {isSaving ? "Saving to DB..." : "Save Global Config"}
           </Button>
         </div>
       </div>
@@ -75,7 +98,7 @@ export function ConfigurationPage() {
         <StatCard
           title="Platform Instance"
           value="Enterprise"
-          unit="MaintenX-OS"
+          unit={config.systemName?.includes("MaintenX") ? "MaintenX-OS" : "Custom"}
           trend={{ value: "Dedicated cloud tenant", isPositive: true, text: "" }}
           icon={Server}
           colorVariant="emerald"
@@ -90,7 +113,7 @@ export function ConfigurationPage() {
         />
         <StatCard
           title="Telemetry Polling"
-          value="2.0s"
+          value={`${config.telemetryPollSeconds || 2}.0s`}
           unit="Real-Time"
           trend={{ value: "Edge gateway cadence", isPositive: true, text: "" }}
           icon={Zap}
@@ -98,11 +121,11 @@ export function ConfigurationPage() {
         />
         <StatCard
           title="AI Edge Engine"
-          value="Active"
+          value={config.enableEdgeAIPredictions ? "Active" : "Paused"}
           unit="Predictive"
-          trend={{ value: "Deep learning models online", isPositive: true, text: "" }}
+          trend={{ value: "Deep learning models online", isPositive: config.enableEdgeAIPredictions, text: "" }}
           icon={Cpu}
-          colorVariant="emerald"
+          colorVariant={config.enableEdgeAIPredictions ? "emerald" : "amber"}
         />
       </div>
 

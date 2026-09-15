@@ -33,41 +33,64 @@ import { useNavigate } from "react-router-dom";
 import maintenanceService from "../../services/maintenanceService";
 
 export function ReliabilityAnalytics() {
-  const { reliabilityMetrics, repeatFailures = [], assets } = useCMMS();
+  const { reliabilityMetrics, repeatFailures = [], refreshReliability } = useCMMS();
   const { addToast } = useApp();
   const navigate = useNavigate();
+  const [reliabilityData, setReliabilityData] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const fetchReliability = React.useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const res = await maintenanceService.getReliabilityMetrics();
+      const data = res?.data || res;
+      if (data && data.plantOverall) {
+        setReliabilityData(data);
+      }
+    } catch (err) {
+      console.warn("API reliability fetch notice:", err.message || err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   React.useEffect(() => {
-    const fetchReliability = async () => {
-      try {
-        await maintenanceService.getReliabilityMetrics();
-      } catch (err) {
-        console.warn("API reliability fetch notice:", err.message || err);
-      }
-    };
     fetchReliability();
-  }, []);
+  }, [fetchReliability]);
+
+  const handleRefresh = async () => {
+    addToast("Synchronizing reliability metrics from database...", "info");
+    await fetchReliability();
+    if (typeof refreshReliability === "function") {
+      await refreshReliability();
+    }
+    addToast("Reliability metrics synchronized with live database.", "success");
+  };
 
   const [activeTab, setActiveTab] = useState("fleet"); // "fleet" | "pareto" | "bad_actors" | "trends"
 
-  // Failure Frequency & Pareto dataset
-  const failureFrequencyData = [
-    { assetId: "HT-105", name: "Plate Heat Exchanger HTST-300", failures: 12, downtimeHrs: 36.5, primaryMode: "Gasket Rupture / Leak", category: "Hydraulic", cumPct: 32 },
-    { assetId: "FM-001", name: "High-Speed Rotary Filler 12-Head", failures: 9, downtimeHrs: 14.8, primaryMode: "Bearing Spindle Fatigue", category: "Mechanical", cumPct: 56 },
-    { assetId: "LB-204", name: "Krones Autocol Rotary Labeler", failures: 8, downtimeHrs: 22.0, primaryMode: "Optical Sensor Drift", category: "Electrical/Sensor", cumPct: 78 },
-    { assetId: "CP-102", name: "Arol Capper Rotary Capping", failures: 4, downtimeHrs: 8.4, primaryMode: "Clutch Torque Slippage", category: "Mechanical", cumPct: 88 },
-    { assetId: "PK-401", name: "Robotic End-of-Line Palletizer", failures: 3, downtimeHrs: 6.2, primaryMode: "Pneumatic Gripper Leak", category: "Pneumatic", cumPct: 96 },
-    { assetId: "AC-505", name: "Rotary Air Compressor Atlas Copco", failures: 1, downtimeHrs: 2.0, primaryMode: "Air Filter Differential", category: "Pneumatic", cumPct: 99 },
-    { assetId: "MX-003", name: "Industrial Double-Cone Blender", failures: 1, downtimeHrs: 4.5, primaryMode: "Drive Belt Deflection", category: "Mechanical", cumPct: 100 }
-  ];
+  const activeMetrics = reliabilityData || reliabilityMetrics || {};
+  const plantOverall = activeMetrics.plantOverall || {
+    mtbfHours: 0,
+    mttrHours: 0,
+    overallAvailability: 100,
+    repeatFailureRate: 0,
+    unplannedDowntimeHoursMonth: 0,
+    totalMaintenanceCostMonth: 0,
+  };
 
-  const failureCategories = [
-    { category: "Mechanical", percentage: 41, events: 14, color: "#38BDF8" },
-    { category: "Electrical & Sensors", percentage: 26, events: 9, color: "#818CF8" },
-    { category: "Hydraulic", percentage: 18, events: 6, color: "#F59E0B" },
-    { category: "Pneumatic", percentage: 12, events: 4, color: "#10B981" },
-    { category: "Process / Thermal", percentage: 3, events: 1, color: "#EF4444" }
-  ];
+  const assetRankingList = activeMetrics.assetRanking || [];
+  const failureFrequencyData = activeMetrics.failurePareto || [];
+  const failureCategories = activeMetrics.failureCategories || [];
+  const chronicRepeatFailures = activeMetrics.repeatFailures || repeatFailures || [];
+  const monthlyTrendData = activeMetrics.monthlyTrend || [];
+  const weibull = activeMetrics.weibull || {
+    beta: 1.00,
+    betaRegime: "Random failure regime (Normal operating zone)",
+    etaHours: plantOverall.mtbfHours || 720,
+    pmComplianceRatio: 100,
+    hazardRatePerHour: plantOverall.mtbfHours > 0 ? Number((1 / plantOverall.mtbfHours).toFixed(4)) : 0.0014
+  };
 
   const rankingColumns = [
     {
@@ -206,7 +229,7 @@ export function ReliabilityAnalytics() {
               Reliability Engineering & Asset Performance
             </h1>
             <Badge variant="cyan">Weibull Distribution Model</Badge>
-            <Badge variant="purple">Failure Rate λ = 0.0026/hr</Badge>
+            <Badge variant="purple">Failure Rate λ = {weibull.hazardRatePerHour}/hr</Badge>
           </div>
           <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>
             Plant-wide MTBF, MTTR, Availability, Failure Pareto, and chronic repeat failure tracking.
@@ -214,6 +237,13 @@ export function ReliabilityAnalytics() {
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+          <Button
+            variant="secondary"
+            icon={RotateCcw}
+            onClick={handleRefresh}
+          >
+            Refresh
+          </Button>
           <Button
             variant="secondary"
             icon={Download}
@@ -242,49 +272,49 @@ export function ReliabilityAnalytics() {
       >
         <StatCard
           title="Plant MTBF"
-          value={`${reliabilityMetrics?.plantOverall?.mtbfHours || 385.4}h`}
+          value={`${plantOverall.mtbfHours || 0}h`}
           unit=""
-          trend={{ value: "Target: 420h", isPositive: false, text: "-34.6h variance" }}
+          trend={{ value: "Target: 420h", isPositive: (plantOverall.mtbfHours || 0) >= 420, text: `${((plantOverall.mtbfHours || 0) - 420).toFixed(1)}h variance` }}
           icon={Activity}
           colorVariant="cyan"
         />
         <StatCard
           title="Plant MTTR"
-          value={`${reliabilityMetrics?.plantOverall?.mttrHours || 1.62}h`}
+          value={`${plantOverall.mttrHours || 0}h`}
           unit=""
-          trend={{ value: "Target: 1.2h", isPositive: false, text: "+25m variance" }}
+          trend={{ value: "Target: 1.2h", isPositive: (plantOverall.mttrHours || 0) <= 1.2, text: "MTTR" }}
           icon={Clock}
           colorVariant="amber"
         />
         <StatCard
           title="Asset Availability"
-          value={`${reliabilityMetrics?.plantOverall?.overallAvailability || 92.4}%`}
+          value={`${plantOverall.overallAvailability || 100}%`}
           unit=""
-          trend={{ value: "Target: 95.0%", isPositive: false, text: "uptime" }}
+          trend={{ value: "Target: 95.0%", isPositive: (plantOverall.overallAvailability || 100) >= 95, text: "uptime" }}
           icon={Gauge}
           colorVariant="blue"
         />
         <StatCard
           title="Repeat Breakdown Rate"
-          value={`${reliabilityMetrics?.plantOverall?.repeatFailureRate || 14.8}%`}
+          value={`${plantOverall.repeatFailureRate || 0}%`}
           unit=""
-          trend={{ value: "3 Chronic Modes", isPositive: false, text: "action required" }}
+          trend={{ value: `${chronicRepeatFailures.length} Chronic Modes`, isPositive: chronicRepeatFailures.length === 0, text: chronicRepeatFailures.length === 0 ? "optimal" : "action required" }}
           icon={RotateCcw}
           colorVariant="rose"
         />
         <StatCard
           title="Unplanned Downtime (Mo)"
-          value={`${reliabilityMetrics?.plantOverall?.unplannedDowntimeHoursMonth || 48.5}h`}
+          value={`${plantOverall.unplannedDowntimeHoursMonth || 0}h`}
           unit=""
-          trend={{ value: "Goal < 40h", isPositive: false, text: "across fleet" }}
+          trend={{ value: "Goal < 40h", isPositive: (plantOverall.unplannedDowntimeHoursMonth || 0) < 40, text: "across fleet" }}
           icon={AlertTriangle}
           colorVariant="amber"
         />
         <StatCard
           title="Maintenance Cost (Mo)"
-          value={`$${(reliabilityMetrics?.plantOverall?.totalMaintenanceCostMonth || 34250).toLocaleString()}`}
+          value={`$${(plantOverall.totalMaintenanceCostMonth || 0).toLocaleString()}`}
           unit="USD"
-          trend={{ value: "Under Budget", isPositive: true, text: "budget $38k" }}
+          trend={{ value: "Completed Jobs", isPositive: true, text: "actual spend" }}
           icon={DollarSign}
           colorVariant="emerald"
         />
@@ -400,7 +430,7 @@ export function ReliabilityAnalytics() {
             <DataTable
               title="Fleet Asset Reliability & Criticality Ranking"
               columns={rankingColumns}
-              data={reliabilityMetrics?.assetRanking || []}
+              data={assetRankingList}
               searchPlaceholder="Search machine name or asset tag..."
               onRowClick={(row) => navigate(`/maintenance/asset-360/${row.assetId}`)}
               exportFilename="maintenx_asset_reliability_ranking.csv"
@@ -412,63 +442,75 @@ export function ReliabilityAnalytics() {
       {/* TAB 2: FAILURE FREQUENCY & PARETO ANALYSIS */}
       {activeTab === "pareto" && (
         <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-          <div className="grid-2" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "16px" }}>
+          {failureFrequencyData.length === 0 ? (
             <Card>
-              <h3 style={{ fontSize: "15px", fontWeight: 700, color: "var(--text-primary)", marginBottom: "14px" }}>
-                Top 80/20 Failure Breakdown Pareto by Machine
-              </h3>
-              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                {failureFrequencyData.map((item) => (
-                  <div key={item.assetId} style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px" }}>
-                      <span style={{ fontWeight: 700, color: "#FFFFFF" }}>{item.name} ({item.assetId})</span>
-                      <span style={{ color: "var(--text-muted)" }}>{item.failures} failures ({item.downtimeHrs}h downtime) • <strong>{item.cumPct}% Cum.</strong></span>
-                    </div>
-                    <div style={{ width: "100%", height: "8px", backgroundColor: "rgba(255,255,255,0.06)", borderRadius: "4px", overflow: "hidden" }}>
-                      <div
-                        style={{
-                          width: `${(item.failures / 12) * 100}%`,
-                          height: "100%",
-                          backgroundColor: item.failures > 8 ? "#EF4444" : item.failures > 4 ? "#F59E0B" : "#10B981",
-                          borderRadius: "4px"
-                        }}
-                      />
-                    </div>
-                  </div>
-                ))}
+              <div style={{ padding: "36px", textAlign: "center", color: "var(--text-secondary)" }}>
+                <CheckCircle2 size={40} color="#10B981" style={{ margin: "0 auto 12px" }} />
+                <h4 style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-primary)" }}>Zero Chronic Failure Modes</h4>
+                <p style={{ fontSize: "13px", marginTop: "4px", color: "var(--text-muted)" }}>
+                  No breakdown failure events recorded in the database. When equipment breakdowns are logged and resolved, the 80/20 Pareto distribution will automatically populate here.
+                </p>
               </div>
             </Card>
-
-            <Card>
-              <h3 style={{ fontSize: "15px", fontWeight: 700, color: "var(--text-primary)", marginBottom: "14px" }}>
-                Failure Mode Distribution by Subsystem
-              </h3>
-              <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-                {failureCategories.map((cat) => (
-                  <div key={cat.category} style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px" }}>
-                      <span style={{ fontWeight: 700, color: "#FFFFFF" }}>{cat.category}</span>
-                      <span style={{ color: cat.color, fontWeight: 700 }}>{cat.percentage}% ({cat.events} outages)</span>
+          ) : (
+            <div className="grid-2" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "16px" }}>
+              <Card>
+                <h3 style={{ fontSize: "15px", fontWeight: 700, color: "var(--text-primary)", marginBottom: "14px" }}>
+                  Top 80/20 Failure Breakdown Pareto by Machine
+                </h3>
+                <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                  {failureFrequencyData.map((item) => (
+                    <div key={item.assetId} style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px" }}>
+                        <span style={{ fontWeight: 700, color: "var(--text-primary)" }}>{item.name} ({item.assetId})</span>
+                        <span style={{ color: "var(--text-muted)" }}>{item.failures} failure(s) ({item.downtimeHrs}h downtime) • <strong>{item.cumPct}% Cum.</strong></span>
+                      </div>
+                      <div style={{ width: "100%", height: "8px", backgroundColor: "rgba(255,255,255,0.06)", borderRadius: "4px", overflow: "hidden" }}>
+                        <div
+                          style={{
+                            width: `${Math.min(100, Math.max(10, item.cumPct))}%`,
+                            height: "100%",
+                            backgroundColor: item.failures > 4 ? "#EF4444" : item.failures > 2 ? "#F59E0B" : "#10B981",
+                            borderRadius: "4px"
+                          }}
+                        />
+                      </div>
                     </div>
-                    <div style={{ width: "100%", height: "8px", backgroundColor: "rgba(255,255,255,0.06)", borderRadius: "4px", overflow: "hidden" }}>
-                      <div
-                        style={{
-                          width: `${cat.percentage}%`,
-                          height: "100%",
-                          backgroundColor: cat.color,
-                          borderRadius: "4px"
-                        }}
-                      />
-                    </div>
-                  </div>
-                ))}
-
-                <div style={{ marginTop: "12px", padding: "12px", borderRadius: "8px", backgroundColor: "rgba(56, 189, 248, 0.08)", border: "1px solid rgba(56, 189, 248, 0.2)", fontSize: "12px", color: "var(--text-secondary)" }}>
-                  <strong style={{ color: "#38BDF8" }}>Pareto Insight:</strong> Mechanical wear (41%) and Electrical/Sensor drift (26%) account for 67% of all plant downtime. Focus PM lubrication and optical lens protection routines to eradicate top downtime drivers.
+                  ))}
                 </div>
-              </div>
-            </Card>
-          </div>
+              </Card>
+
+              <Card>
+                <h3 style={{ fontSize: "15px", fontWeight: 700, color: "var(--text-primary)", marginBottom: "14px" }}>
+                  Failure Mode Distribution by Subsystem
+                </h3>
+                <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                  {failureCategories.map((cat) => (
+                    <div key={cat.category} style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px" }}>
+                        <span style={{ fontWeight: 700, color: "var(--text-primary)" }}>{cat.category}</span>
+                        <span style={{ color: cat.color, fontWeight: 700 }}>{cat.percentage}% ({cat.events} outage{cat.events > 1 ? "s" : ""})</span>
+                      </div>
+                      <div style={{ width: "100%", height: "8px", backgroundColor: "rgba(255,255,255,0.06)", borderRadius: "4px", overflow: "hidden" }}>
+                        <div
+                          style={{
+                            width: `${Math.max(8, cat.percentage)}%`,
+                            height: "100%",
+                            backgroundColor: cat.color,
+                            borderRadius: "4px"
+                          }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+
+                  <div style={{ marginTop: "12px", padding: "12px", borderRadius: "8px", backgroundColor: "rgba(56, 189, 248, 0.08)", border: "1px solid rgba(56, 189, 248, 0.2)", fontSize: "12px", color: "var(--text-secondary)" }}>
+                    <strong style={{ color: "#38BDF8" }}>Live Pareto Analysis:</strong> Real-time breakdown analysis calculated from completed downtime logs in PostgreSQL.
+                  </div>
+                </div>
+              </Card>
+            </div>
+          )}
         </div>
       )}
 
@@ -490,108 +532,120 @@ export function ReliabilityAnalytics() {
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-            {repeatFailures.map((rep) => {
-              const downtime = rep.totalDowntimeHours ?? rep.cumulativeDowntimeHours ?? 0;
-              const cost = rep.cumulativeCostUSD ?? rep.totalFinancialLossUSD ?? 0;
-              const rootCause = rep.rootCauseCandidate ?? rep.suspectedRootCause ?? "Component mechanical wear";
-              const action = rep.actionRecommended ?? rep.recommendedCountermeasure ?? "Preventive component upgrade";
-              const failureMode = rep.failureName ?? rep.failureModeDescription ?? "Recurrent breakdown mode";
+            {chronicRepeatFailures.length === 0 ? (
+              <Card>
+                <div style={{ padding: "36px", textAlign: "center", color: "var(--text-secondary)" }}>
+                  <ShieldAlert size={40} color="#10B981" style={{ margin: "0 auto 12px" }} />
+                  <h4 style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-primary)" }}>Zero Chronic Bad Actors</h4>
+                  <p style={{ fontSize: "13px", marginTop: "4px", color: "var(--text-muted)" }}>
+                    No machines have exceeded the repeat breakdown threshold. All registered equipment in the fleet is operating within normal reliability parameters.
+                  </p>
+                </div>
+              </Card>
+            ) : (
+              chronicRepeatFailures.map((rep) => {
+                const downtime = rep.totalDowntimeHours ?? rep.cumulativeDowntimeHours ?? 0;
+                const cost = rep.cumulativeCostUSD ?? rep.totalFinancialLossUSD ?? 0;
+                const rootCause = rep.rootCauseCandidate ?? rep.suspectedRootCause ?? "Component mechanical wear";
+                const action = rep.actionRecommended ?? rep.recommendedCountermeasure ?? "Preventive component upgrade";
+                const failureMode = rep.failureName ?? rep.failureModeDescription ?? "Recurrent breakdown mode";
 
-              return (
-                <Card
-                  key={rep.id}
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "14px",
-                    borderLeft: "4px solid #DC2626",
-                    padding: "18px",
-                    boxSizing: "border-box"
-                  }}
-                >
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "10px" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
-                      <div style={{ padding: "8px", borderRadius: "8px", backgroundColor: "rgba(220, 38, 38, 0.1)", color: "#DC2626" }}>
-                        <ShieldAlert size={20} />
-                      </div>
-                      <div>
-                        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                          <span style={{ fontWeight: 800, fontSize: "15px", color: "var(--text-primary)" }}>
-                            {rep.assetName} ({rep.assetId})
-                          </span>
-                          <Badge variant="rose">{rep.failureCode}</Badge>
-                          <span style={{ fontSize: "11px", color: "#DC2626", fontWeight: 800, fontFamily: "var(--font-mono)" }}>
-                            {rep.occurrencesCount || 3} RECURRENCES
-                          </span>
-                        </div>
-                        <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "4px" }}>
-                          {failureMode}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div style={{ display: "flex", gap: "8px" }}>
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => navigate(`/maintenance/asset-360/${rep.assetId}`)}
-                      >
-                        Asset 360°
-                      </Button>
-                      <button
-                        onClick={() => handleStartRCA(rep.assetId, rep.failureCode)}
-                        style={{
-                          padding: "6px 14px",
-                          borderRadius: "8px",
-                          fontSize: "12px",
-                          fontWeight: 700,
-                          background: "linear-gradient(180deg, #E2B670 0%, #C89547 100%)",
-                          color: "#261603",
-                          border: "1px solid #E8C182",
-                          cursor: "pointer",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: "6px"
-                        }}
-                      >
-                        <span>Initiate 8D / 5-Why RCA</span>
-                        <ArrowRight size={13} />
-                      </button>
-                    </div>
-                  </div>
-
-                  <div
+                return (
+                  <Card
+                    key={rep.id}
                     style={{
-                      display: "grid",
-                      gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-                      gap: "10px",
-                      padding: "12px",
-                      backgroundColor: "var(--bg-card-subtle)",
-                      borderRadius: "8px",
-                      border: "1px solid var(--border-subtle)",
-                      fontSize: "12px"
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "14px",
+                      borderLeft: "4px solid #DC2626",
+                      padding: "18px",
+                      boxSizing: "border-box"
                     }}
                   >
-                    <div>
-                      <span style={{ color: "var(--text-muted)" }}>Total Downtime: </span>
-                      <strong style={{ color: "#DC2626" }}>{downtime} hours</strong>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "10px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+                        <div style={{ padding: "8px", borderRadius: "8px", backgroundColor: "rgba(220, 38, 38, 0.1)", color: "#DC2626" }}>
+                          <ShieldAlert size={20} />
+                        </div>
+                        <div>
+                          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                            <span style={{ fontWeight: 800, fontSize: "15px", color: "var(--text-primary)" }}>
+                              {rep.assetName} ({rep.assetId})
+                            </span>
+                            <Badge variant="rose">{rep.failureCode}</Badge>
+                            <span style={{ fontSize: "11px", color: "#DC2626", fontWeight: 800, fontFamily: "var(--font-mono)" }}>
+                              {rep.occurrencesCount || 2} RECURRENCES
+                            </span>
+                          </div>
+                          <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "4px" }}>
+                            {failureMode}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={{ display: "flex", gap: "8px" }}>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => navigate(`/maintenance/asset-360/${rep.assetId}`)}
+                        >
+                          Asset 360°
+                        </Button>
+                        <button
+                          onClick={() => handleStartRCA(rep.assetId, rep.failureCode)}
+                          style={{
+                            padding: "6px 14px",
+                            borderRadius: "8px",
+                            fontSize: "12px",
+                            fontWeight: 700,
+                            background: "linear-gradient(180deg, #E2B670 0%, #C89547 100%)",
+                            color: "#261603",
+                            border: "1px solid #E8C182",
+                            cursor: "pointer",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "6px"
+                          }}
+                        >
+                          <span>Initiate 8D / 5-Why RCA</span>
+                          <ArrowRight size={13} />
+                        </button>
+                      </div>
                     </div>
-                    <div>
-                      <span style={{ color: "var(--text-muted)" }}>Financial Loss: </span>
-                      <strong style={{ color: "#DC2626" }}>${cost.toLocaleString()} USD</strong>
+
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+                        gap: "10px",
+                        padding: "12px",
+                        backgroundColor: "var(--bg-card-subtle)",
+                        borderRadius: "8px",
+                        border: "1px solid var(--border-subtle)",
+                        fontSize: "12px"
+                      }}
+                    >
+                      <div>
+                        <span style={{ color: "var(--text-muted)" }}>Total Downtime: </span>
+                        <strong style={{ color: "#DC2626" }}>{downtime} hours</strong>
+                      </div>
+                      <div>
+                        <span style={{ color: "var(--text-muted)" }}>Financial Loss: </span>
+                        <strong style={{ color: "#DC2626" }}>${cost.toLocaleString()} USD</strong>
+                      </div>
+                      <div>
+                        <span style={{ color: "var(--text-muted)" }}>Suspected Root Cause: </span>
+                        <strong style={{ color: "var(--text-primary)" }}>{rootCause}</strong>
+                      </div>
+                      <div>
+                        <span style={{ color: "var(--text-muted)" }}>Action Recommended: </span>
+                        <strong style={{ color: "#059669" }}>{action}</strong>
+                      </div>
                     </div>
-                    <div>
-                      <span style={{ color: "var(--text-muted)" }}>Suspected Root Cause: </span>
-                      <strong style={{ color: "var(--text-primary)" }}>{rootCause}</strong>
-                    </div>
-                    <div>
-                      <span style={{ color: "var(--text-muted)" }}>Action Recommended: </span>
-                      <strong style={{ color: "#059669" }}>{action}</strong>
-                    </div>
-                  </div>
-                </Card>
-              );
-            })}
+                  </Card>
+                );
+              })
+            )}
           </div>
         </div>
       )}
@@ -604,15 +658,15 @@ export function ReliabilityAnalytics() {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
                 <div>
                   <h3 style={{ fontSize: "15px", fontWeight: 700, color: "var(--text-primary)" }}>
-                    Monthly MTBF Growth Trend (6-Months)
+                    Monthly MTBF Trend
                   </h3>
                   <p style={{ fontSize: "12px", color: "var(--text-muted)" }}>Mean Time Between Failures progression</p>
                 </div>
-                <Badge variant="emerald">+24.2% Growth</Badge>
+                <Badge variant="emerald">Live Tracking</Badge>
               </div>
 
               <AreaChart
-                data={reliabilityMetrics?.monthlyTrend?.map((m) => ({ label: m.month, value: m.mtbf })) || []}
+                data={monthlyTrendData.map((m) => ({ label: m.month, value: m.mtbf }))}
                 height={200}
                 color="#38BDF8"
                 unit=" hrs"
@@ -631,7 +685,7 @@ export function ReliabilityAnalytics() {
               </div>
 
               <BarChart
-                data={reliabilityMetrics?.monthlyTrend?.map((m) => ({ label: m.month, actual: m.cost, target: 38000 })) || []}
+                data={monthlyTrendData.map((m) => ({ label: m.month, actual: m.cost, target: 38000 }))}
                 height={200}
                 barColor="#0284C7"
                 targetColor="#F59E0B"
@@ -647,22 +701,22 @@ export function ReliabilityAnalytics() {
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "12px" }}>
               <div style={{ padding: "14px", borderRadius: "8px", backgroundColor: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)" }}>
                 <div style={{ fontSize: "12px", color: "var(--text-muted)" }}>Weibull Beta (β) Shape Factor</div>
-                <div style={{ fontSize: "18px", fontWeight: 800, color: "#38BDF8", marginTop: "4px" }}>β = 1.42</div>
-                <div style={{ fontSize: "11px", color: "var(--text-secondary)", marginTop: "2px" }}>Wear-out failure regime (Early fatigue warning)</div>
+                <div style={{ fontSize: "18px", fontWeight: 800, color: "#38BDF8", marginTop: "4px" }}>β = {weibull.beta}</div>
+                <div style={{ fontSize: "11px", color: "var(--text-secondary)", marginTop: "2px" }}>{weibull.betaRegime}</div>
               </div>
               <div style={{ padding: "14px", borderRadius: "8px", backgroundColor: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)" }}>
                 <div style={{ fontSize: "12px", color: "var(--text-muted)" }}>Weibull Eta (η) Scale Metric</div>
-                <div style={{ fontSize: "18px", fontWeight: 800, color: "#10B981", marginTop: "4px" }}>η = 412.5 hrs</div>
+                <div style={{ fontSize: "18px", fontWeight: 800, color: "#10B981", marginTop: "4px" }}>η = {weibull.etaHours} hrs</div>
                 <div style={{ fontSize: "11px", color: "var(--text-secondary)", marginTop: "2px" }}>Characteristic life interval (63.2% failure mark)</div>
               </div>
               <div style={{ padding: "14px", borderRadius: "8px", backgroundColor: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)" }}>
                 <div style={{ fontSize: "12px", color: "var(--text-muted)" }}>PM Compliance Ratio</div>
-                <div style={{ fontSize: "18px", fontWeight: 800, color: "#10B981", marginTop: "4px" }}>96.2%</div>
+                <div style={{ fontSize: "18px", fontWeight: 800, color: "#10B981", marginTop: "4px" }}>{weibull.pmComplianceRatio}%</div>
                 <div style={{ fontSize: "11px", color: "var(--text-secondary)", marginTop: "2px" }}>Schedule adherence within 10% interval window</div>
               </div>
               <div style={{ padding: "14px", borderRadius: "8px", backgroundColor: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)" }}>
                 <div style={{ fontSize: "12px", color: "var(--text-muted)" }}>Fleet Failure Hazard Rate (λ)</div>
-                <div style={{ fontSize: "18px", fontWeight: 800, color: "#F59E0B", marginTop: "4px" }}>0.0026 /hr</div>
+                <div style={{ fontSize: "18px", fontWeight: 800, color: "#F59E0B", marginTop: "4px" }}>{weibull.hazardRatePerHour} /hr</div>
                 <div style={{ fontSize: "11px", color: "var(--text-secondary)", marginTop: "2px" }}>Instantaneous operational probability of outage</div>
               </div>
             </div>

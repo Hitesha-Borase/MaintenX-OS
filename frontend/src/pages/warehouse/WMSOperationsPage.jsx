@@ -15,7 +15,9 @@ import {
   Barcode,
   X,
   MapPin,
-  Download
+  Download,
+  Edit2,
+  Trash2
 } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { Badge } from "../../components/common/Badge";
@@ -30,19 +32,20 @@ export function WMSOperationsPage() {
   const [activeTab, setActiveTab] = useState("receiving"); // receiving, putaway, movement, transfer, picking, staging, dispatch
 
   // Modal State for Dock Check-In
-  const [isDockCheckInModalOpen, setIsDockCheckInModalOpen] = useState(false);
-  const [dockForm, setDockForm] = useState({
-    poNumber: "PO-SUP-2026-445",
-    supplier: "Citrus Valley Farms Co.",
-    item: "Valencia Orange Concentrate",
-    qty: "4,500 kg (6 Plts)",
+  const initialDockFormState = {
+    poNumber: "",
+    supplier: "",
+    item: "",
+    qty: "",
     dock: "Dock Bay 01",
-    carrier: "Titan Freight Lines",
-    trailerNo: "TR-9420",
-    tempCheck: "3.2°C",
-    bolNumber: "BOL-88491",
+    carrier: "",
+    trailerNo: "",
+    tempCheck: "",
+    bolNumber: "",
     status: "Dock Arrived"
-  });
+  };
+  const [isDockCheckInModalOpen, setIsDockCheckInModalOpen] = useState(false);
+  const [dockForm, setDockForm] = useState(initialDockFormState);
 
   const pendingPOs = [
     { po: "PO-SUP-2026-445", supplier: "Citrus Valley Farms Co.", item: "Valencia Orange Concentrate", defaultQty: "4,500 kg (6 Plts)", dock: "Dock Bay 01", temp: "3.2°C" },
@@ -52,12 +55,8 @@ export function WMSOperationsPage() {
     { po: "PO-SUP-2026-449", supplier: "Krones OEM Spare Parts", item: "Filling Valve Seal Overhaul Kit", defaultQty: "8 kits", dock: "Dock Bay 03", temp: "Ambient" }
   ];
 
-  // Tab 1: Receiving Data
-  const [receivingTasks, setReceivingTasks] = useState([
-    { id: "RCV-2026-901", poNumber: "PO-SUP-2026-441", supplier: "Citrus Valley Farms Co.", item: "Valencia Orange Concentrate", qty: "6,000 kg", dock: "Dock Bay 01", status: "Dock Arrived", tempCheck: "3.4°C" },
-    { id: "RCV-2026-902", poNumber: "PO-SUP-2026-438", supplier: "Alfa Laval Parts Global", item: "High-Temp Gasket Pack", qty: "5 packs", dock: "Dock Bay 03", status: "Inspected", tempCheck: "Ambient" },
-    { id: "RCV-2026-903", poNumber: "PO-SUP-2026-429", supplier: "Amcor Rigid Packaging", item: "500ml PET Bottles", qty: "100,000 units", dock: "Dock Bay 04", status: "Pending Arrival", tempCheck: "Dry Clean" }
-  ]);
+  // Tab 1: Receiving Data (Connected directly to PostgreSQL table wms_receiving)
+  const [receivingTasks, setReceivingTasks] = useState([]);
 
   // Tab 2: Put Away Data
   const [putAwayTasks, setPutAwayTasks] = useState([
@@ -112,12 +111,12 @@ export function WMSOperationsPage() {
     { id: "dispatch", label: "7. Dispatch", icon: Send, count: dispatchOrders.length }
   ];
 
-  // Sync with Fastify WMS Backend on mount
-  useEffect(() => {
-    let isMounted = true;
-    warehouseService.getWmsOperations().then((res) => {
+  // Fetch live WMS operations from PostgreSQL via Fastify Backend
+  const fetchWmsOperations = async () => {
+    try {
+      const res = await warehouseService.getWmsOperations();
       const data = res?.data || res;
-      if (isMounted && data) {
+      if (data) {
         if (Array.isArray(data.receivingTasks)) setReceivingTasks(data.receivingTasks);
         if (Array.isArray(data.putAwayTasks)) setPutAwayTasks(data.putAwayTasks);
         if (Array.isArray(data.movementLogs)) setMovementLogs(data.movementLogs);
@@ -126,11 +125,45 @@ export function WMSOperationsPage() {
         if (Array.isArray(data.stagingBays)) setStagingBays(data.stagingBays);
         if (Array.isArray(data.dispatchOrders)) setDispatchOrders(data.dispatchOrders);
       }
-    }).catch((err) => {
+    } catch (err) {
       console.warn("Backend WMS sync fallback:", err.message);
-    });
-    return () => { isMounted = false; };
+    }
+  };
+
+  useEffect(() => {
+    fetchWmsOperations();
   }, []);
+
+  // Edit Receiving Modal State
+  const [isEditReceivingModalOpen, setIsEditReceivingModalOpen] = useState(false);
+  const [editingReceivingTask, setEditingReceivingTask] = useState(null);
+
+  const handleUpdateReceivingTask = async (e) => {
+    e.preventDefault();
+    if (!editingReceivingTask) return;
+    try {
+      await warehouseService.updateWmsReceiving(editingReceivingTask.id, editingReceivingTask);
+      await fetchWmsOperations();
+      addToast(`Receiving task ${editingReceivingTask.id} updated in database!`, "success");
+      setIsEditReceivingModalOpen(false);
+      setEditingReceivingTask(null);
+    } catch (err) {
+      console.error("Failed to update receiving task:", err);
+      addToast("Failed to update receiving task in database", "error");
+    }
+  };
+
+  const handleDeleteReceivingTask = async (task) => {
+    if (!window.confirm(`Are you sure you want to delete inbound receiving record ${task.id}?`)) return;
+    try {
+      await warehouseService.deleteWmsReceiving(task.id);
+      await fetchWmsOperations();
+      addToast(`Inbound record ${task.id} deleted from database!`, "success");
+    } catch (err) {
+      console.error("Failed to delete receiving record:", err);
+      addToast("Failed to delete receiving record from database", "error");
+    }
+  };
 
   // Actions
   const handleSaveDockCheckIn = async (e) => {
@@ -140,7 +173,7 @@ export function WMSOperationsPage() {
       return;
     }
 
-    const newId = `RCV-2026-${Math.floor(904 + receivingTasks.length)}`;
+    const newId = `RCV-2026-${Math.floor(904 + Math.random() * 900)}`;
     const newTask = {
       id: newId,
       poNumber: dockForm.poNumber,
@@ -148,36 +181,24 @@ export function WMSOperationsPage() {
       item: dockForm.item,
       qty: dockForm.qty || "1,000 units",
       dock: dockForm.dock,
-      status: dockForm.status || "Dock Arrived",
-      tempCheck: dockForm.tempCheck || "Ambient"
+      carrier: dockForm.carrier || "Titan Freight Lines",
+      trailerNo: dockForm.trailerNo || `TR-${Math.floor(1000 + Math.random() * 9000)}`,
+      tempCheck: dockForm.tempCheck || "Ambient",
+      bolNumber: dockForm.bolNumber || `BOL-${Math.floor(10000 + Math.random() * 90000)}`,
+      status: dockForm.status || "Dock Arrived"
     };
 
     try {
-      const res = await warehouseService.dockCheckIn(newTask);
-      const savedTask = res?.data || newTask;
-      setReceivingTasks((prev) => [savedTask, ...prev.filter(t => t.id !== savedTask.id)]);
+      await warehouseService.dockCheckIn(newTask);
+      await fetchWmsOperations();
+      addToast(`Inbound shipment ${newId} (PO ${dockForm.poNumber}) checked into database!`, "success");
     } catch (apiErr) {
       console.warn("Backend dockCheckIn sync:", apiErr);
-      setReceivingTasks((prev) => [newTask, ...prev]);
+      await fetchWmsOperations();
     }
 
     setIsDockCheckInModalOpen(false);
-    addToast(`Inbound shipment ${newId} (PO ${dockForm.poNumber}) checked into ${dockForm.dock}!`, "success");
-
-    // Cycle to next sample PO
-    const nextPO = pendingPOs[(receivingTasks.length + 1) % pendingPOs.length] || pendingPOs[0];
-    setDockForm({
-      poNumber: nextPO.po,
-      supplier: nextPO.supplier,
-      item: nextPO.item,
-      qty: nextPO.defaultQty,
-      dock: nextPO.dock,
-      carrier: "Titan Freight Lines",
-      trailerNo: `TR-${Math.floor(1000 + Math.random() * 9000)}`,
-      tempCheck: nextPO.temp,
-      bolNumber: `BOL-${Math.floor(10000 + Math.random() * 90000)}`,
-      status: "Dock Arrived"
-    });
+    setDockForm(initialDockFormState);
   };
 
   const handleInspectAndAccept = async (task) => {
@@ -383,14 +404,16 @@ export function WMSOperationsPage() {
                 Verify incoming bill of lading, temperature SLAs, and scan material barcode labels.
               </span>
             </div>
-            <Button
-              variant="primary"
-              icon={Plus}
-              size="sm"
-              onClick={() => setIsDockCheckInModalOpen(true)}
-            >
-              Dock Check-In
-            </Button>
+            <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+              <Button
+                variant="primary"
+                icon={Plus}
+                size="sm"
+                onClick={() => setIsDockCheckInModalOpen(true)}
+              >
+                + Add Inbound Receiving (Form)
+              </Button>
+            </div>
           </div>
 
           <div className="data-table-container" style={{ width: "100%", overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
@@ -409,29 +432,77 @@ export function WMSOperationsPage() {
                 </tr>
               </thead>
               <tbody>
-                {receivingTasks.map((task) => (
-                  <tr key={task.id}>
-                    <td style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "#8C5B23" }}>{task.id}</td>
-                    <td style={{ fontFamily: "var(--font-mono)" }}>{task.poNumber}</td>
-                    <td style={{ fontWeight: 600 }}>{task.supplier}</td>
-                    <td>{task.item}</td>
-                    <td style={{ fontWeight: 700 }}>{task.qty}</td>
-                    <td><Badge variant="blue">{task.dock}</Badge></td>
-                    <td><span style={{ color: "#10B981", fontWeight: 600 }}>{task.tempCheck}</span></td>
-                    <td><Badge variant={task.status === "Inspected" ? "emerald" : "amber"}>{task.status}</Badge></td>
-                    <td style={{ textAlign: "center" }}>
-                      <Button
-                        variant={task.status === "Inspected" ? "ghost" : "secondary"}
-                        size="sm"
-                        disabled={task.status === "Inspected"}
-                        onClick={() => handleInspectAndAccept(task)}
-                        style={{ fontSize: "11px", padding: "4px 8px" }}
-                      >
-                        {task.status === "Inspected" ? "Inspected ✓" : "Inspect & Accept"}
-                      </Button>
+                {receivingTasks.length === 0 ? (
+                  <tr>
+                    <td colSpan={9} style={{ textAlign: "center", padding: "40px 16px", color: "var(--text-secondary)" }}>
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px" }}>
+                        <Truck size={36} style={{ opacity: 0.35, color: "var(--brand-primary, #C88A2E)" }} />
+                        <div style={{ fontWeight: 700, fontSize: "15px", color: "var(--text-primary)" }}>
+                          No Inbound Shipments Found in Database
+                        </div>
+                        <div style={{ fontSize: "13px", maxWidth: "420px", lineHeight: "1.5" }}>
+                          Database table <code>wms_receiving</code> is completely empty. Click below to open the form and add your first inbound receiving record.
+                        </div>
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          icon={Plus}
+                          onClick={() => setIsDockCheckInModalOpen(true)}
+                          style={{ marginTop: "10px" }}
+                        >
+                          + Open Form to Add Inbound Data
+                        </Button>
+                      </div>
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  receivingTasks.map((task) => (
+                    <tr key={task.id}>
+                      <td style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "#8C5B23" }}>{task.id}</td>
+                      <td style={{ fontFamily: "var(--font-mono)" }}>{task.poNumber}</td>
+                      <td style={{ fontWeight: 600 }}>{task.supplier}</td>
+                      <td>{task.item}</td>
+                      <td style={{ fontWeight: 700 }}>{task.qty}</td>
+                      <td><Badge variant="blue">{task.dock}</Badge></td>
+                      <td><span style={{ color: "#10B981", fontWeight: 600 }}>{task.tempCheck}</span></td>
+                      <td><Badge variant={task.status === "Inspected" ? "emerald" : "amber"}>{task.status}</Badge></td>
+                      <td style={{ textAlign: "center" }}>
+                        <div style={{ display: "inline-flex", gap: "6px", alignItems: "center" }}>
+                          <Button
+                            variant={task.status === "Inspected" ? "ghost" : "secondary"}
+                            size="sm"
+                            disabled={task.status === "Inspected"}
+                            onClick={() => handleInspectAndAccept(task)}
+                            style={{ fontSize: "11px", padding: "4px 8px" }}
+                          >
+                            {task.status === "Inspected" ? "Inspected ✓" : "Inspect & Accept"}
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            icon={Edit2}
+                            onClick={() => {
+                              setEditingReceivingTask({ ...task });
+                              setIsEditReceivingModalOpen(true);
+                            }}
+                            style={{ fontSize: "11px", padding: "4px 8px", color: "#8C5B23" }}
+                          >
+                            Edit
+                          </Button>
+                          <Button
+                            variant="danger"
+                            size="sm"
+                            icon={Trash2}
+                            onClick={() => handleDeleteReceivingTask(task)}
+                            style={{ fontSize: "11px", padding: "4px 8px" }}
+                          >
+                            Delete
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -796,40 +867,52 @@ export function WMSOperationsPage() {
       <Modal
         isOpen={isDockCheckInModalOpen}
         onClose={() => setIsDockCheckInModalOpen(false)}
-        title="Inbound Dock Check-In & Gate Receipt"
-        subtitle="Register incoming carrier shipment, verify PO & assign unloading dock bay."
-        maxWidth="680px"
+        title="Inbound Receiving & Dock Check-In Form (Add to Database)"
+        subtitle="Fill this form to register and insert a new inbound shipment into PostgreSQL table wms_receiving."
+        maxWidth="720px"
         footer={
           <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", width: "100%" }}>
             <Button variant="ghost" onClick={() => setIsDockCheckInModalOpen(false)}>
               Cancel
             </Button>
-            <Button variant="primary" icon={Plus} onClick={handleSaveDockCheckIn}>
-              Confirm Dock Check-In
+            <Button
+              variant="primary"
+              icon={Plus}
+              onClick={handleSaveDockCheckIn}
+              style={{ padding: "8px 18px", fontWeight: 700 }}
+            >
+              Confirm & Save to Database
             </Button>
           </div>
         }
       >
-        <form onSubmit={handleSaveDockCheckIn} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-          {/* Quick Select PO Preset */}
-          <div style={{ padding: "12px", borderRadius: "8px", background: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)" }}>
+        <form onSubmit={handleSaveDockCheckIn} style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+          {/* Quick preset selector */}
+          <div style={{ padding: "12px 16px", borderRadius: "8px", background: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)" }}>
             <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)", display: "block", marginBottom: "6px" }}>
-              Quick Select Inbound PO Preset
+              Quick Preset (Optional: Load sample data or enter manually below)
             </label>
             <select
-              value={dockForm.poNumber}
+              value={dockForm.poNumber || ""}
               onChange={(e) => {
+                if (!e.target.value) {
+                  setDockForm(initialDockFormState);
+                  return;
+                }
                 const selected = pendingPOs.find((p) => p.po === e.target.value);
                 if (selected) {
-                  setDockForm((prev) => ({
-                    ...prev,
+                  setDockForm({
                     poNumber: selected.po,
                     supplier: selected.supplier,
                     item: selected.item,
                     qty: selected.defaultQty,
                     dock: selected.dock,
-                    tempCheck: selected.temp
-                  }));
+                    carrier: "Titan Freight Lines",
+                    trailerNo: "TR-9420",
+                    tempCheck: selected.temp,
+                    bolNumber: "BOL-88491",
+                    status: "Dock Arrived"
+                  });
                 }
               }}
               style={{
@@ -842,6 +925,7 @@ export function WMSOperationsPage() {
                 fontSize: "13px"
               }}
             >
+              <option value="">-- Manual Entry (Type Details Manually) --</option>
               {pendingPOs.map((p) => (
                 <option key={p.po} value={p.po}>
                   {p.po} — {p.supplier} ({p.item})
@@ -850,218 +934,421 @@ export function WMSOperationsPage() {
             </select>
           </div>
 
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-              gap: "14px"
-            }}
-          >
-            <div>
-              <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
-                PO Number *
-              </label>
-              <input
-                type="text"
-                required
-                value={dockForm.poNumber}
-                onChange={(e) => setDockForm({ ...dockForm, poNumber: e.target.value })}
-                placeholder="e.g. PO-SUP-2026-445"
-                style={{
-                  width: "100%",
-                  padding: "8px 12px",
-                  borderRadius: "6px",
-                  border: "1px solid var(--border-color)",
-                  background: "var(--bg-input, #fff)",
-                  color: "var(--text-primary)",
-                  fontSize: "13px",
-                  boxSizing: "border-box"
-                }}
-              />
+          {/* Section 1: Shipment & Material Details */}
+          <div>
+            <div style={{ fontSize: "13px", fontWeight: 800, color: "var(--brand-primary, #C88A2E)", marginBottom: "12px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+              1. Shipment & Material Details
             </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+              <div>
+                <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)", display: "block", marginBottom: "6px" }}>
+                  PO Number *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={dockForm.poNumber}
+                  onChange={(e) => setDockForm({ ...dockForm, poNumber: e.target.value })}
+                  placeholder="e.g. PO-SUP-2026-445"
+                  style={{
+                    width: "100%",
+                    padding: "9px 12px",
+                    borderRadius: "6px",
+                    border: "1px solid var(--border-color)",
+                    background: "var(--bg-input, #fff)",
+                    color: "var(--text-primary)",
+                    fontSize: "13px",
+                    boxSizing: "border-box"
+                  }}
+                />
+              </div>
 
-            <div>
-              <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
-                Supplier / Vendor *
-              </label>
-              <input
-                type="text"
-                required
-                value={dockForm.supplier}
-                onChange={(e) => setDockForm({ ...dockForm, supplier: e.target.value })}
-                placeholder="e.g. Citrus Valley Farms Co."
-                style={{
-                  width: "100%",
-                  padding: "8px 12px",
-                  borderRadius: "6px",
-                  border: "1px solid var(--border-color)",
-                  background: "var(--bg-input, #fff)",
-                  color: "var(--text-primary)",
-                  fontSize: "13px",
-                  boxSizing: "border-box"
-                }}
-              />
+              <div>
+                <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)", display: "block", marginBottom: "6px" }}>
+                  Supplier / Vendor Name *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={dockForm.supplier}
+                  onChange={(e) => setDockForm({ ...dockForm, supplier: e.target.value })}
+                  placeholder="e.g. Citrus Valley Farms Co."
+                  style={{
+                    width: "100%",
+                    padding: "9px 12px",
+                    borderRadius: "6px",
+                    border: "1px solid var(--border-color)",
+                    background: "var(--bg-input, #fff)",
+                    color: "var(--text-primary)",
+                    fontSize: "13px",
+                    boxSizing: "border-box"
+                  }}
+                />
+              </div>
+
+              <div style={{ gridColumn: "span 2" }}>
+                <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)", display: "block", marginBottom: "6px" }}>
+                  Material / Item Description *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={dockForm.item}
+                  onChange={(e) => setDockForm({ ...dockForm, item: e.target.value })}
+                  placeholder="e.g. Valencia Orange Concentrate"
+                  style={{
+                    width: "100%",
+                    padding: "9px 12px",
+                    borderRadius: "6px",
+                    border: "1px solid var(--border-color)",
+                    background: "var(--bg-input, #fff)",
+                    color: "var(--text-primary)",
+                    fontSize: "13px",
+                    boxSizing: "border-box"
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)", display: "block", marginBottom: "6px" }}>
+                  Quantity *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={dockForm.qty}
+                  onChange={(e) => setDockForm({ ...dockForm, qty: e.target.value })}
+                  placeholder="e.g. 4,500 kg (6 Plts)"
+                  style={{
+                    width: "100%",
+                    padding: "9px 12px",
+                    borderRadius: "6px",
+                    border: "1px solid var(--border-color)",
+                    background: "var(--bg-input, #fff)",
+                    color: "var(--text-primary)",
+                    fontSize: "13px",
+                    boxSizing: "border-box"
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)", display: "block", marginBottom: "6px" }}>
+                  Dock Bay Assignment
+                </label>
+                <select
+                  value={dockForm.dock}
+                  onChange={(e) => setDockForm({ ...dockForm, dock: e.target.value })}
+                  style={{
+                    width: "100%",
+                    padding: "9px 12px",
+                    borderRadius: "6px",
+                    border: "1px solid var(--border-color)",
+                    background: "var(--bg-input, #fff)",
+                    color: "var(--text-primary)",
+                    fontSize: "13px",
+                    boxSizing: "border-box"
+                  }}
+                >
+                  <option value="Dock Bay 01">Dock Bay 01 (Refrigerated)</option>
+                  <option value="Dock Bay 02">Dock Bay 02 (Dry Bulk / Liquids)</option>
+                  <option value="Dock Bay 03">Dock Bay 03 (Packaging Materials)</option>
+                  <option value="Dock Bay 04">Dock Bay 04 (General Inbound)</option>
+                </select>
+              </div>
             </div>
+          </div>
 
-            <div style={{ gridColumn: "1 / -1" }}>
-              <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
-                Material / Commodity Description *
-              </label>
-              <input
-                type="text"
-                required
-                value={dockForm.item}
-                onChange={(e) => setDockForm({ ...dockForm, item: e.target.value })}
-                placeholder="e.g. Valencia Orange Concentrate"
-                style={{
-                  width: "100%",
-                  padding: "8px 12px",
-                  borderRadius: "6px",
-                  border: "1px solid var(--border-color)",
-                  background: "var(--bg-input, #fff)",
-                  color: "var(--text-primary)",
-                  fontSize: "13px",
-                  boxSizing: "border-box"
-                }}
-              />
+          {/* Section 2: Logistics & Inspection Details */}
+          <div>
+            <div style={{ fontSize: "13px", fontWeight: 800, color: "var(--brand-primary, #C88A2E)", marginBottom: "12px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+              2. Logistics & Inspection Details
             </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+              <div>
+                <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)", display: "block", marginBottom: "6px" }}>
+                  Freight Carrier Name
+                </label>
+                <input
+                  type="text"
+                  value={dockForm.carrier}
+                  onChange={(e) => setDockForm({ ...dockForm, carrier: e.target.value })}
+                  placeholder="e.g. Titan Freight Lines"
+                  style={{
+                    width: "100%",
+                    padding: "9px 12px",
+                    borderRadius: "6px",
+                    border: "1px solid var(--border-color)",
+                    background: "var(--bg-input, #fff)",
+                    color: "var(--text-primary)",
+                    fontSize: "13px",
+                    boxSizing: "border-box"
+                  }}
+                />
+              </div>
 
-            <div>
-              <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
-                Shipment Quantity / Units
-              </label>
-              <input
-                type="text"
-                value={dockForm.qty}
-                onChange={(e) => setDockForm({ ...dockForm, qty: e.target.value })}
-                placeholder="e.g. 4,500 kg (6 Plts)"
-                style={{
-                  width: "100%",
-                  padding: "8px 12px",
-                  borderRadius: "6px",
-                  border: "1px solid var(--border-color)",
-                  background: "var(--bg-input, #fff)",
-                  color: "var(--text-primary)",
-                  fontSize: "13px",
-                  boxSizing: "border-box"
-                }}
-              />
-            </div>
+              <div>
+                <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)", display: "block", marginBottom: "6px" }}>
+                  Trailer / Truck Plate No.
+                </label>
+                <input
+                  type="text"
+                  value={dockForm.trailerNo}
+                  onChange={(e) => setDockForm({ ...dockForm, trailerNo: e.target.value })}
+                  placeholder="e.g. TR-9420"
+                  style={{
+                    width: "100%",
+                    padding: "9px 12px",
+                    borderRadius: "6px",
+                    border: "1px solid var(--border-color)",
+                    background: "var(--bg-input, #fff)",
+                    color: "var(--text-primary)",
+                    fontSize: "13px",
+                    boxSizing: "border-box"
+                  }}
+                />
+              </div>
 
-            <div>
-              <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
-                Dock Bay Assignment
-              </label>
-              <select
-                value={dockForm.dock}
-                onChange={(e) => setDockForm({ ...dockForm, dock: e.target.value })}
-                style={{
-                  width: "100%",
-                  padding: "8px 12px",
-                  borderRadius: "6px",
-                  border: "1px solid var(--border-color)",
-                  background: "var(--bg-input, #fff)",
-                  color: "var(--text-primary)",
-                  fontSize: "13px",
-                  boxSizing: "border-box"
-                }}
-              >
-                <option value="Dock Bay 01">Dock Bay 01 (Refrigerated)</option>
-                <option value="Dock Bay 02">Dock Bay 02 (Dry Bulk / Liquids)</option>
-                <option value="Dock Bay 03">Dock Bay 03 (Packaging Materials)</option>
-                <option value="Dock Bay 04">Dock Bay 04 (General Inbound)</option>
-              </select>
-            </div>
+              <div>
+                <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)", display: "block", marginBottom: "6px" }}>
+                  Initial Temp SLA Check
+                </label>
+                <input
+                  type="text"
+                  value={dockForm.tempCheck}
+                  onChange={(e) => setDockForm({ ...dockForm, tempCheck: e.target.value })}
+                  placeholder="e.g. 3.2°C or Ambient"
+                  style={{
+                    width: "100%",
+                    padding: "9px 12px",
+                    borderRadius: "6px",
+                    border: "1px solid var(--border-color)",
+                    background: "var(--bg-input, #fff)",
+                    color: "var(--text-primary)",
+                    fontSize: "13px",
+                    boxSizing: "border-box"
+                  }}
+                />
+              </div>
 
-            <div>
-              <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
-                Freight Carrier Name
-              </label>
-              <input
-                type="text"
-                value={dockForm.carrier}
-                onChange={(e) => setDockForm({ ...dockForm, carrier: e.target.value })}
-                placeholder="e.g. Titan Freight Lines"
-                style={{
-                  width: "100%",
-                  padding: "8px 12px",
-                  borderRadius: "6px",
-                  border: "1px solid var(--border-color)",
-                  background: "var(--bg-input, #fff)",
-                  color: "var(--text-primary)",
-                  fontSize: "13px",
-                  boxSizing: "border-box"
-                }}
-              />
-            </div>
-
-            <div>
-              <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
-                Trailer / Truck Plate No.
-              </label>
-              <input
-                type="text"
-                value={dockForm.trailerNo}
-                onChange={(e) => setDockForm({ ...dockForm, trailerNo: e.target.value })}
-                placeholder="e.g. TR-9420"
-                style={{
-                  width: "100%",
-                  padding: "8px 12px",
-                  borderRadius: "6px",
-                  border: "1px solid var(--border-color)",
-                  background: "var(--bg-input, #fff)",
-                  color: "var(--text-primary)",
-                  fontSize: "13px",
-                  boxSizing: "border-box"
-                }}
-              />
-            </div>
-
-            <div>
-              <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
-                Initial Temp SLA Check
-              </label>
-              <input
-                type="text"
-                value={dockForm.tempCheck}
-                onChange={(e) => setDockForm({ ...dockForm, tempCheck: e.target.value })}
-                placeholder="e.g. 3.2°C or Ambient"
-                style={{
-                  width: "100%",
-                  padding: "8px 12px",
-                  borderRadius: "6px",
-                  border: "1px solid var(--border-color)",
-                  background: "var(--bg-input, #fff)",
-                  color: "var(--text-primary)",
-                  fontSize: "13px",
-                  boxSizing: "border-box"
-                }}
-              />
-            </div>
-
-            <div>
-              <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
-                Bill of Lading (BOL) #
-              </label>
-              <input
-                type="text"
-                value={dockForm.bolNumber}
-                onChange={(e) => setDockForm({ ...dockForm, bolNumber: e.target.value })}
-                placeholder="e.g. BOL-88491"
-                style={{
-                  width: "100%",
-                  padding: "8px 12px",
-                  borderRadius: "6px",
-                  border: "1px solid var(--border-color)",
-                  background: "var(--bg-input, #fff)",
-                  color: "var(--text-primary)",
-                  fontSize: "13px",
-                  boxSizing: "border-box"
-                }}
-              />
+              <div>
+                <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)", display: "block", marginBottom: "6px" }}>
+                  Bill of Lading (BOL) #
+                </label>
+                <input
+                  type="text"
+                  value={dockForm.bolNumber}
+                  onChange={(e) => setDockForm({ ...dockForm, bolNumber: e.target.value })}
+                  placeholder="e.g. BOL-88491"
+                  style={{
+                    width: "100%",
+                    padding: "9px 12px",
+                    borderRadius: "6px",
+                    border: "1px solid var(--border-color)",
+                    background: "var(--bg-input, #fff)",
+                    color: "var(--text-primary)",
+                    fontSize: "13px",
+                    boxSizing: "border-box"
+                  }}
+                />
+              </div>
             </div>
           </div>
         </form>
+      </Modal>
+
+      {/* Edit Inbound Receiving Task Modal */}
+      <Modal
+        isOpen={isEditReceivingModalOpen}
+        onClose={() => {
+          setIsEditReceivingModalOpen(false);
+          setEditingReceivingTask(null);
+        }}
+        title={`Edit Inbound Receiving (${editingReceivingTask?.id || ""})`}
+        maxWidth="720px"
+        footer={
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", width: "100%" }}>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setIsEditReceivingModalOpen(false);
+                setEditingReceivingTask(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleUpdateReceivingTask}
+            >
+              Update Record
+            </Button>
+          </div>
+        }
+      >
+        {editingReceivingTask && (
+          <form onSubmit={handleUpdateReceivingTask}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+              <div>
+                <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
+                  PO Number
+                </label>
+                <input
+                  type="text"
+                  value={editingReceivingTask.poNumber || ""}
+                  onChange={(e) => setEditingReceivingTask({ ...editingReceivingTask, poNumber: e.target.value })}
+                  style={{
+                    width: "100%",
+                    padding: "8px 12px",
+                    borderRadius: "6px",
+                    border: "1px solid var(--border-color)",
+                    background: "var(--bg-input, #fff)",
+                    color: "var(--text-primary)",
+                    fontSize: "13px",
+                    boxSizing: "border-box"
+                  }}
+                  required
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
+                  Supplier Name
+                </label>
+                <input
+                  type="text"
+                  value={editingReceivingTask.supplier || ""}
+                  onChange={(e) => setEditingReceivingTask({ ...editingReceivingTask, supplier: e.target.value })}
+                  style={{
+                    width: "100%",
+                    padding: "8px 12px",
+                    borderRadius: "6px",
+                    border: "1px solid var(--border-color)",
+                    background: "var(--bg-input, #fff)",
+                    color: "var(--text-primary)",
+                    fontSize: "13px",
+                    boxSizing: "border-box"
+                  }}
+                  required
+                />
+              </div>
+
+              <div style={{ gridColumn: "span 2" }}>
+                <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
+                  Material Description / Item
+                </label>
+                <input
+                  type="text"
+                  value={editingReceivingTask.item || ""}
+                  onChange={(e) => setEditingReceivingTask({ ...editingReceivingTask, item: e.target.value })}
+                  style={{
+                    width: "100%",
+                    padding: "8px 12px",
+                    borderRadius: "6px",
+                    border: "1px solid var(--border-color)",
+                    background: "var(--bg-input, #fff)",
+                    color: "var(--text-primary)",
+                    fontSize: "13px",
+                    boxSizing: "border-box"
+                  }}
+                  required
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
+                  Quantity
+                </label>
+                <input
+                  type="text"
+                  value={editingReceivingTask.qty || ""}
+                  onChange={(e) => setEditingReceivingTask({ ...editingReceivingTask, qty: e.target.value })}
+                  style={{
+                    width: "100%",
+                    padding: "8px 12px",
+                    borderRadius: "6px",
+                    border: "1px solid var(--border-color)",
+                    background: "var(--bg-input, #fff)",
+                    color: "var(--text-primary)",
+                    fontSize: "13px",
+                    boxSizing: "border-box"
+                  }}
+                  required
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
+                  Dock Location
+                </label>
+                <select
+                  value={editingReceivingTask.dock || ""}
+                  onChange={(e) => setEditingReceivingTask({ ...editingReceivingTask, dock: e.target.value })}
+                  style={{
+                    width: "100%",
+                    padding: "8px 12px",
+                    borderRadius: "6px",
+                    border: "1px solid var(--border-color)",
+                    background: "var(--bg-input, #fff)",
+                    color: "var(--text-primary)",
+                    fontSize: "13px",
+                    boxSizing: "border-box"
+                  }}
+                >
+                  <option value="Dock Bay 01">Dock Bay 01 (Refrigerated)</option>
+                  <option value="Dock Bay 02">Dock Bay 02 (Dry Bulk)</option>
+                  <option value="Dock Bay 03">Dock Bay 03 (General / Spares)</option>
+                  <option value="Dock Bay 04">Dock Bay 04 (Packaging Materials)</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
+                  Temp Check / SLA
+                </label>
+                <input
+                  type="text"
+                  value={editingReceivingTask.tempCheck || ""}
+                  onChange={(e) => setEditingReceivingTask({ ...editingReceivingTask, tempCheck: e.target.value })}
+                  style={{
+                    width: "100%",
+                    padding: "8px 12px",
+                    borderRadius: "6px",
+                    border: "1px solid var(--border-color)",
+                    background: "var(--bg-input, #fff)",
+                    color: "var(--text-primary)",
+                    fontSize: "13px",
+                    boxSizing: "border-box"
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
+                  Status
+                </label>
+                <select
+                  value={editingReceivingTask.status || "Dock Arrived"}
+                  onChange={(e) => setEditingReceivingTask({ ...editingReceivingTask, status: e.target.value })}
+                  style={{
+                    width: "100%",
+                    padding: "8px 12px",
+                    borderRadius: "6px",
+                    border: "1px solid var(--border-color)",
+                    background: "var(--bg-input, #fff)",
+                    color: "var(--text-primary)",
+                    fontSize: "13px",
+                    boxSizing: "border-box"
+                  }}
+                >
+                  <option value="Dock Arrived">Dock Arrived</option>
+                  <option value="Pending Arrival">Pending Arrival</option>
+                  <option value="Inspected">Inspected</option>
+                </select>
+              </div>
+            </div>
+          </form>
+        )}
       </Modal>
     </div>
   );

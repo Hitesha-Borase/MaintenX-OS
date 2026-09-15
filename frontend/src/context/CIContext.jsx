@@ -259,6 +259,7 @@ export function CIProvider({ children }) {
   // 1. RCA: Initiate
   const initiateRCA = async (assetOrId, sourceBreakdownId, customProblem, extraFields = {}) => {
     let payload = {};
+<<<<<<< HEAD
     if (typeof assetOrId === "object" && assetOrId !== null) {
       payload = {
         title: assetOrId.title || "Critical Component Failure Investigation",
@@ -312,6 +313,79 @@ export function CIProvider({ children }) {
           d1Team: currentUser,
           d2Problem: customProblem || "Equipment failure event logged.",
         }
+      };
+    }
+=======
+    const defaultWhyTree = [
+      { id: "W1", question: "Why did the equipment fail during operation?", answer: "" },
+      { id: "W2", question: "Why did the sub-component experience premature wear?", answer: "" },
+      { id: "W3", question: "Why was the condition not detected during routine PM?", answer: "" },
+      { id: "W4", question: "Why did the existing sensor/alarm fail to trigger?", answer: "" },
+      { id: "W5", question: "Why was the standard maintenance procedure not followed?", answer: "" }
+    ];
+    const defaultEightD = {
+      d1Team: currentUser,
+      d2Problem: customProblem || "Equipment failure event logged.",
+      d3Containment: "Line stopped; parts inspected; standard cleanout performed.",
+      d4RootCause: "",
+      d5CorrectiveAction: "",
+      d6Implementation: "",
+      d7Prevention: "",
+      d8Closure: ""
+    };
+>>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
+
+    if (typeof assetOrId === "object" && assetOrId !== null) {
+      payload = {
+        title: assetOrId.title || customProblem || "Critical Component Failure Investigation",
+        assetId: assetOrId.assetId || "AST-001",
+        assetName: assetOrId.assetName || "Production Asset",
+        lineId: assetOrId.lineId || "LIN-01",
+        lineName: assetOrId.lineName || "Line 1 — Production",
+        plantId: assetOrId.plantId || activePlantId,
+        sourceBreakdownId: assetOrId.sourceBreakdownId || sourceBreakdownId || null,
+        sourceWorkOrderId: assetOrId.sourceWorkOrderId || null,
+        severity: assetOrId.severity || "High",
+        status: "Open",
+        currentPhase: "Event",
+        problemStatement: assetOrId.problemStatement || assetOrId.description || customProblem || "Investigation initiated to determine root cause and implement permanent CAPA.",
+        leadInvestigator: currentUser,
+        teamMembers: [currentUser, "Marcus Vance (Maintenance Lead)", "Elena Rostova (QA)"],
+        eventDate: new Date().toISOString().substring(0, 10),
+        daysActive: 1,
+        whyTree: assetOrId.whyTree && assetOrId.whyTree.length > 0 ? assetOrId.whyTree : defaultWhyTree,
+        eightD: assetOrId.eightD || defaultEightD,
+      };
+    } else {
+      const assetId = assetOrId;
+      const asset = reliabilityRecords.find((r) => r.assetId === assetId) ||
+                    (typeof availableAssets !== "undefined" && availableAssets.find((a) => a.id === assetId || a.assetId === assetId || a.assetCode === assetId)) ||
+                    (typeof masterAssets !== "undefined" && masterAssets.find((a) => a.assetId === assetId || a.id === assetId)) || {
+                      assetName: "Production Machine",
+                      lineId: "LIN-01",
+                      lineName: "Line 1 — Production",
+                      plantId: activePlantId
+                    };
+
+      payload = {
+        title: customProblem || extraFields.title || `Investigation — ${asset.assetName || asset.name || "Equipment"} Breakdown`,
+        assetId: asset.assetId || asset.assetCode || asset.id || assetId || "AST-001",
+        assetName: asset.assetName || asset.name || "Critical Equipment",
+        lineId: asset.lineId || extraFields.lineId || "LIN-01",
+        lineName: asset.lineName || extraFields.lineName || "Line 1 — Production",
+        plantId: asset.plantId || extraFields.plantId || activePlantId,
+        sourceBreakdownId: sourceBreakdownId || null,
+        sourceWorkOrderId: null,
+        severity: extraFields.severity || "High",
+        status: "Open",
+        currentPhase: "Event",
+        problemStatement: customProblem || extraFields.problemStatement || `Systematic failure detected on ${asset.assetName || asset.name || "equipment"}. Investigation initiated to determine root cause and implement permanent CAPA.`,
+        leadInvestigator: currentUser,
+        teamMembers: [currentUser, "Marcus Vance (Maintenance Lead)", "Elena Rostova (QA)"],
+        eventDate: new Date().toISOString().substring(0, 10),
+        daysActive: 1,
+        whyTree: defaultWhyTree,
+        eightD: defaultEightD,
       };
     }
 

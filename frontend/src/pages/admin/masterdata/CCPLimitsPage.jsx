@@ -6,6 +6,7 @@ import {
   X,
   Edit2,
   Trash2,
+  Eye,
   AlertTriangle,
   Flame,
   ShieldCheck,
@@ -21,22 +22,24 @@ import { useApp } from "../../../context/AppContext";
 import masterDataService from "../../../services/masterDataService";
 
 export function CCPLimitsPage() {
-  const { qualitySpecs = [], operations = [], plants = [], activePlantId } = useMasterData();
+  const {
+    ccpLimits = [],
+    addCCPLimit,
+    updateCCPLimit,
+    deleteCCPLimit,
+    qualitySpecs = [],
+    operations = [],
+    plants = [],
+    activePlantId
+  } = useMasterData();
   const { addToast } = useApp();
 
-  useEffect(() => {
-    masterDataService.getQualitySpecs().catch((err) => console.warn("Quality specs load:", err.message));
-  }, []);
-
-  const [ccps, setCcps] = useState([
-    { ccpNumber: "CCP-1", processStep: "Thermal Pasteurization Hold", hazard: "Pathogen Survival (Microbial)", criticalLimit: "≥ 72.0°C for ≥ 15.0 seconds", autoDivertAction: "Automatic Flow Divert Valve to Balance Tank", status: "Critical Mandatory" },
-    { ccpNumber: "CCP-2", processStep: "Aseptic Cleanroom Positive Pressure", hazard: "Airborne Contamination", criticalLimit: "≥ 25 Pa Differential", autoDivertAction: "Line Immediate Stop & Alarm", status: "Critical Mandatory" },
-    { ccpNumber: "CCP-3", processStep: "In-Line X-Ray / Metal Detection", hazard: "Physical Metal/Glass Shards", criticalLimit: "Ferrous 1.0mm / SS 1.5mm", autoDivertAction: "Automatic Pneumatic Reject Chute", status: "Critical Mandatory" }
-  ]);
+  const ccps = ccpLimits;
 
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCCP, setEditingCCP] = useState(null);
+  const [viewingCCP, setViewingCCP] = useState(null);
   const [newCCP, setNewCCP] = useState({
     processStep: "Thermal Pasteurization Hold",
     hazard: "Pathogen Survival (Microbial)",
@@ -49,23 +52,23 @@ export function CCPLimitsPage() {
       const q = searchQuery.toLowerCase().trim();
       return (
         !q ||
-        c.processStep.toLowerCase().includes(q) ||
-        c.ccpNumber.toLowerCase().includes(q) ||
-        c.hazard.toLowerCase().includes(q) ||
-        c.criticalLimit.toLowerCase().includes(q) ||
-        c.autoDivertAction.toLowerCase().includes(q)
+        c.processStep?.toLowerCase().includes(q) ||
+        c.ccpNumber?.toLowerCase().includes(q) ||
+        c.hazard?.toLowerCase().includes(q) ||
+        c.criticalLimit?.toLowerCase().includes(q) ||
+        c.autoDivertAction?.toLowerCase().includes(q)
       );
     });
   }, [ccps, searchQuery]);
 
-  const handleAddSubmit = (e) => {
+  const handleAddSubmit = async (e) => {
     e.preventDefault();
     if (!newCCP.processStep.trim() || !newCCP.criticalLimit.trim()) {
       addToast("Please provide process step and critical limit specification.", "warning");
       return;
     }
 
-    const created = {
+    const payload = {
       ccpNumber: `CCP-${ccps.length + 1}`,
       processStep: newCCP.processStep,
       hazard: newCCP.hazard || "Cross-contamination risk",
@@ -74,33 +77,47 @@ export function CCPLimitsPage() {
       status: "Critical Mandatory"
     };
 
-    setCcps([...ccps, created]);
-    addToast(`Critical Control Point "${created.ccpNumber}" registered!`, "success");
-    setIsModalOpen(false);
-    setNewCCP({
-      processStep: "Thermal Pasteurization Hold",
-      hazard: "Pathogen Survival (Microbial)",
-      criticalLimit: "≥ 72.0°C for ≥ 15.0 seconds",
-      autoDivertAction: "Automatic Flow Divert Valve to Balance Tank"
-    });
+    try {
+      const created = await addCCPLimit(payload);
+      addToast(`Critical Control Point "${created?.ccpNumber || payload.ccpNumber}" registered!`, "success");
+      setIsModalOpen(false);
+      setNewCCP({
+        processStep: "Thermal Pasteurization Hold",
+        hazard: "Pathogen Survival (Microbial)",
+        criticalLimit: "≥ 72.0°C for ≥ 15.0 seconds",
+        autoDivertAction: "Automatic Flow Divert Valve to Balance Tank"
+      });
+    } catch (err) {
+      addToast(`Failed to register CCP: ${err.message}`, "error");
+    }
   };
 
-  const handleEditSubmit = (e) => {
+  const handleEditSubmit = async (e) => {
     e.preventDefault();
     if (!editingCCP.processStep.trim() || !editingCCP.criticalLimit.trim()) {
       addToast("Please provide process step and critical limit specification.", "warning");
       return;
     }
 
-    setCcps(ccps.map((c) => (c.ccpNumber === editingCCP.ccpNumber ? editingCCP : c)));
-    addToast(`Critical Control Point ${editingCCP.ccpNumber} updated successfully!`, "success");
-    setEditingCCP(null);
+    try {
+      await updateCCPLimit(editingCCP.id || editingCCP.ccpNumber, editingCCP);
+      addToast(`Critical Control Point ${editingCCP.ccpNumber} updated successfully!`, "success");
+      setEditingCCP(null);
+    } catch (err) {
+      addToast(`Failed to update CCP: ${err.message}`, "error");
+    }
   };
 
-  const handleDelete = (ccpNumber) => {
-    if (window.confirm(`Are you sure you want to delete ${ccpNumber}?`)) {
-      setCcps(ccps.filter((c) => c.ccpNumber !== ccpNumber));
-      addToast(`${ccpNumber} removed.`, "info");
+  const handleDelete = async (targetCCP) => {
+    const ccpId = typeof targetCCP === "object" ? (targetCCP.id || targetCCP.ccpNumber) : targetCCP;
+    const ccpLabel = typeof targetCCP === "object" ? (targetCCP.ccpNumber || targetCCP.id) : targetCCP;
+    if (window.confirm(`Are you sure you want to delete ${ccpLabel}?`)) {
+      try {
+        await deleteCCPLimit(ccpId);
+        addToast(`${ccpLabel} removed.`, "info");
+      } catch (err) {
+        addToast(`Failed to delete CCP: ${err.message}`, "error");
+      }
     }
   };
 
@@ -252,6 +269,13 @@ export function CCPLimitsPage() {
                   <td style={{ padding: "12px 16px", textAlign: "right" }}>
                     <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
                       <button
+                        onClick={() => setViewingCCP(c)}
+                        title="View CCP Details"
+                        style={{ width: "30px", height: "30px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", color: "#0284C7", border: "1px solid var(--border-subtle)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+                      >
+                        <Eye size={13} />
+                      </button>
+                      <button
                         onClick={() => setEditingCCP({ ...c })}
                         title="Edit CCP"
                         style={{ width: "30px", height: "30px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", color: "var(--text-primary)", border: "1px solid var(--border-subtle)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
@@ -259,7 +283,7 @@ export function CCPLimitsPage() {
                         <Edit2 size={13} />
                       </button>
                       <button
-                        onClick={() => handleDelete(c.ccpNumber)}
+                        onClick={() => handleDelete(c)}
                         title="Delete CCP"
                         style={{ width: "30px", height: "30px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", color: "#EF4444", border: "1px solid var(--border-subtle)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
                       >
@@ -426,6 +450,48 @@ export function CCPLimitsPage() {
                 </Button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* VIEW CCP MODAL */}
+      {viewingCCP && (
+        <div className="modal-backdrop" onClick={() => setViewingCCP(null)}>
+          <div className="modal-content" style={{ maxWidth: "520px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <ShieldAlert size={18} color="#DC2626" />
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>CCP Details</h2>
+              </div>
+              <button onClick={() => setViewingCCP(null)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+            <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 16px", backgroundColor: "var(--bg-card-subtle)", borderRadius: "8px" }}>
+                <div style={{ fontSize: "20px", fontWeight: 900, color: "#EF4444", fontFamily: "var(--font-mono)" }}>{viewingCCP.ccpNumber}</div>
+                <Badge variant="rose">{viewingCCP.status}</Badge>
+              </div>
+              <div>
+                <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Process Step</div>
+                <div style={{ fontSize: "13px", fontWeight: 800, color: "var(--text-primary)", marginTop: "4px" }}>{viewingCCP.processStep}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Target Hazard</div>
+                <div style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>{viewingCCP.hazard}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Critical Limit</div>
+                <div style={{ fontSize: "13px", fontWeight: 800, color: "#8C5B23", fontFamily: "var(--font-mono)", marginTop: "4px" }}>{viewingCCP.criticalLimit}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>PLC Automated Divert Action</div>
+                <div style={{ fontSize: "13px", fontWeight: 600, color: "var(--text-primary)", marginTop: "4px" }}>{viewingCCP.autoDivertAction}</div>
+              </div>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "12px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
+                <Button variant="secondary" onClick={() => setViewingCCP(null)}>Close</Button>
+                <Button variant="primary" onClick={() => { const e = { ...viewingCCP }; setViewingCCP(null); setEditingCCP(e); }}>Edit CCP</Button>
+              </div>
+            </div>
           </div>
         </div>
       )}

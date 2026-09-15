@@ -26,14 +26,28 @@ export function UOMPage() {
   const { uoms = [], setUoms, addUOM, updateUOM, toggleUOMStatus, deleteUOM } = useMasterData();
   const { addToast } = useApp();
 
+<<<<<<< HEAD
   useEffect(() => {
     masterDataService.getUoms().then((res) => {
       const data = res?.data !== undefined ? res.data : res;
+=======
+  const fetchUoms = React.useCallback(async () => {
+    try {
+      localStorage.removeItem("mx_master_uoms");
+      const res = await masterDataService.getUoms();
+      const data = res?.data || res;
+>>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
       if (Array.isArray(data) && typeof setUoms === "function") {
         setUoms(data);
       }
-    }).catch((err) => console.warn("UOMs load:", err.message));
-  }, []);
+    } catch (err) {
+      console.warn("UOMs load:", err.message);
+    }
+  }, [setUoms]);
+
+  useEffect(() => {
+    fetchUoms();
+  }, [fetchUoms]);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("ALL");
@@ -68,7 +82,7 @@ export function UOMPage() {
     });
   }, [uoms, typeFilter, statusFilter, searchQuery]);
 
-  const handleAddSubmit = (e) => {
+  const handleAddSubmit = async (e) => {
     e.preventDefault();
     const codeVal = (newUOM.uomCode || "").trim().toUpperCase();
     if (!codeVal || !newUOM.name.trim()) {
@@ -81,12 +95,21 @@ export function UOMPage() {
       return;
     }
 
-    const created = addUOM({
+    const payload = {
       ...newUOM,
       uomCode: codeVal,
+      code: codeVal,
       conversionFactor: Number(newUOM.conversionFactor) || 1.0
-    });
-    addToast(`UOM "${created.uomCode}" registered in Master Data!`, "success");
+    };
+
+    try {
+      await masterDataService.createUom(payload);
+      addToast(`UOM "${codeVal}" registered in database!`, "success");
+      await fetchUoms();
+    } catch (err) {
+      console.warn("Add UOM error:", err);
+      addUOM(payload);
+    }
     setIsModalOpen(false);
     setNewUOM({
       uomCode: "",
@@ -99,26 +122,45 @@ export function UOMPage() {
     });
   };
 
-  const handleEditSubmit = (e) => {
+  const handleEditSubmit = async (e) => {
     e.preventDefault();
     if (!editingUOM.name.trim()) {
       addToast("Please provide description.", "warning");
       return;
     }
 
-    updateUOM(editingUOM.uomId, {
+    const targetId = editingUOM.uomId || editingUOM.id || editingUOM.code || editingUOM.uomCode;
+    const payload = {
       ...editingUOM,
       uomCode: (editingUOM.uomCode || editingUOM.code || "").toUpperCase(),
+      code: (editingUOM.uomCode || editingUOM.code || "").toUpperCase(),
       conversionFactor: Number(editingUOM.conversionFactor || editingUOM.factor) || 1.0
-    });
-    addToast(`UOM "${editingUOM.uomCode || editingUOM.code}" updated successfully!`, "success");
+    };
+
+    try {
+      await masterDataService.updateUom(targetId, payload);
+      addToast(`UOM "${payload.uomCode}" updated in database!`, "success");
+      await fetchUoms();
+    } catch (err) {
+      console.warn("Update UOM error:", err);
+      updateUOM(targetId, payload);
+    }
     setEditingUOM(null);
   };
 
-  const handleDelete = (uomId, code) => {
+  const handleDelete = async (uomId, code) => {
     if (window.confirm(`Are you sure you want to delete UOM "${code}"?`)) {
-      deleteUOM(uomId);
-      addToast(`UOM "${code}" deleted.`, "info");
+      const targetId = uomId || code;
+      try {
+        await masterDataService.deleteUom(targetId);
+        if (typeof deleteUOM === "function") deleteUOM(targetId);
+        addToast(`UOM "${code}" deleted from database.`, "info");
+        await fetchUoms();
+      } catch (err) {
+        console.warn("Delete UOM error:", err);
+        if (typeof deleteUOM === "function") deleteUOM(targetId);
+        addToast(`UOM "${code}" deleted.`, "info");
+      }
       if (viewingUOM && (viewingUOM.uomId === uomId || viewingUOM.id === uomId || viewingUOM.uomCode === code || viewingUOM.code === code)) {
         setViewingUOM(null);
       }

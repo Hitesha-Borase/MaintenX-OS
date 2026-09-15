@@ -24,7 +24,9 @@ import {
   Sparkles,
   ArrowRight,
   SlidersHorizontal,
-  Flame
+  Flame,
+  Edit2,
+  Trash2
 } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { StatCard } from "../../components/common/StatCard";
@@ -35,118 +37,20 @@ import { useCMMS } from "../../context/CMMSContext";
 import { useApp } from "../../context/AppContext";
 import { maintenanceService } from "../../services/maintenanceService";
 
-// Rich catalog of realistic industrial PM schedule templates for calendar mapping
-const MASTER_PM_LIBRARY = [
-  {
-    templateId: "PM-LUB-01",
-    title: "Aseptic Filler Spindle Bearing Lubrication",
-    assetName: "Rotary Bottling Filler (Aseptic)",
-    assetId: "ASSET-001",
-    frequency: "Weekly",
-    priority: "P1 - Critical",
-    duration: "45m",
-    assignedTo: "Marcus Vance (Senior Tech)",
-    status: "Due Today",
-    checklistId: "CHK-FM-WEEKLY",
-    spareParts: "Food-Grade H1 Synthetic Grease (150ml)",
-    lotoRequired: true,
-    dayOffset: 1 // Mondays
-  },
-  {
-    templateId: "PM-SEAL-02",
-    title: "RF Sealing Coil Thermal Profile & Air Gap Test",
-    assetName: "Induction Cap Sealer",
-    assetId: "ASSET-002",
-    frequency: "Bi-Weekly",
-    priority: "P2 - High",
-    duration: "30m",
-    assignedTo: "Elena Rostova",
-    status: "Upcoming",
-    checklistId: "CHK-CP-QTR",
-    spareParts: "Thermal Sensor Pad #CP-08",
-    lotoRequired: true,
-    dayOffset: 3 // Wednesdays
-  },
-  {
-    templateId: "PM-CIP-03",
-    title: "Monthly Thermal Pasteurizer Gasket & Pressure Check",
-    assetName: "HTST Flash Pasteurizer",
-    assetId: "ASSET-003",
-    frequency: "Monthly",
-    priority: "P1 - Critical",
-    duration: "120m",
-    assignedTo: "David Kim (Process Lead)",
-    status: "Overdue",
-    checklistId: "CHK-HT-MONTHLY",
-    spareParts: "EPDM Food-Grade Gasket Kit Set-A",
-    lotoRequired: true,
-    dayOffset: 15 // Mid-month
-  },
-  {
-    templateId: "PM-CUT-04",
-    title: "Rotary Vacuum Drum & Labeler Blade Sharpening",
-    assetName: "Sleeve Rotary Labeler",
-    assetId: "ASSET-004",
-    frequency: "Weekly",
-    priority: "P2 - High",
-    duration: "35m",
-    assignedTo: "Carlos Mendez",
-    status: "Upcoming",
-    checklistId: "CHK-LBL-01",
-    spareParts: "Carbide Rotary Blade Tip (1x)",
-    lotoRequired: false,
-    dayOffset: 4 // Thursdays
-  },
-  {
-    templateId: "PM-PNEUM-05",
-    title: "Pneumatic Cylinder Seal Rebuild & Pressure Drop Test",
-    assetName: "Case Packer (High-Speed)",
-    assetId: "ASSET-005",
-    frequency: "Monthly",
-    priority: "P2 - High",
-    duration: "60m",
-    assignedTo: "Marcus Vance",
-    status: "Completed",
-    checklistId: "CHK-CPK-02",
-    spareParts: "Festo Pneumatic Seal Kit PK-4",
-    lotoRequired: true,
-    dayOffset: 22 // 4th week
-  },
-  {
-    templateId: "PM-MET-06",
-    title: "Metal Detector Multi-Frequency Sensitivity Calibration",
-    assetName: "End-of-Line Checkweigher & Metal Detector",
-    assetId: "ASSET-006",
-    frequency: "Weekly",
-    priority: "P1 - Critical",
-    duration: "25m",
-    assignedTo: "QA Specialist (Dave Miller)",
-    status: "Upcoming",
-    checklistId: "CHK-MD-WEEKLY",
-    spareParts: "Certified Test Wands (Fe, Non-Fe, SS)",
-    lotoRequired: false,
-    dayOffset: 5 // Fridays
-  },
-  {
-    templateId: "PM-LASER-07",
-    title: "Conveyor Drive Chain Laser Alignment & Tensioning",
-    assetName: "Main Infeed Bottling Conveyor",
-    assetId: "ASSET-007",
-    frequency: "Bi-Weekly",
-    priority: "P3 - Standard",
-    duration: "40m",
-    assignedTo: "Carlos Mendez",
-    status: "Upcoming",
-    checklistId: "CHK-CNV-03",
-    spareParts: "Roller Chain Links #50SS (2x)",
-    lotoRequired: true,
-    dayOffset: 2 // Tuesdays
-  }
-];
+
 
 export function PMScheduleList({ initialViewMode }) {
   const navigate = useNavigate();
-  const { pmSchedules, addPMSchedule, addWorkOrder, updatePMScheduleStatus } = useCMMS();
+  const {
+    pmSchedules = [],
+    addPMSchedule,
+    updatePMSchedule,
+    deletePMSchedule,
+    refreshPMSchedules,
+    assets = [],
+    addWorkOrder,
+    updatePMScheduleStatus
+  } = useCMMS();
   const { addToast } = useApp();
 
   // View Mode: 'calendar' | 'list'
@@ -159,29 +63,18 @@ export function PMScheduleList({ initialViewMode }) {
   }, [initialViewMode]);
 
   React.useEffect(() => {
-    const fetchSchedules = async () => {
-      try {
-        if (viewMode === "calendar") {
-          await maintenanceService.getCalendar();
-        } else {
-          await maintenanceService.getPM();
-        }
-      } catch (err) {
-        console.warn("API PM schedules fetch notice:", err.message || err);
-      }
-    };
-    fetchSchedules();
-  }, [initialViewMode, viewMode]);
+    if (refreshPMSchedules) {
+      refreshPMSchedules();
+    }
+  }, [initialViewMode, viewMode, refreshPMSchedules]);
 
   const handleSyncTelemetry = async () => {
     try {
       addToast("Synchronizing PM schedule with SCADA line runtime telemetry...", "info");
-      if (viewMode === "calendar") {
-        await maintenanceService.getCalendar();
-      } else {
-        await maintenanceService.getPM();
+      if (refreshPMSchedules) {
+        await refreshPMSchedules();
       }
-      addToast("PM schedule synchronized with SCADA line runtime hours.", "success");
+      addToast("PM schedule synchronized with database & SCADA runtime hours.", "success");
     } catch (err) {
       addToast("PM schedule synchronized (SCADA active)", "info");
     }
@@ -199,17 +92,25 @@ export function PMScheduleList({ initialViewMode }) {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newSchedule, setNewSchedule] = useState({
     title: "",
-    assetName: "Rotary Bottling Filler (Aseptic)",
-    assetId: "ASSET-001",
+    assetName: "",
+    assetId: "",
     frequency: "Weekly",
-    assignedTo: "Marcus Vance (Senior Tech)",
-    dueDate: "2026-09-05",
+    status: "Upcoming",
+    assignedTo: "Marcus Vance",
+    dueDate: new Date().toISOString().substring(0, 10),
     templateId: "CHK-001"
   });
 
-  const dueTodayCount = pmSchedules.filter((s) => s.status.includes("Due Today")).length;
-  const overdueCount = pmSchedules.filter((s) => s.status.includes("Overdue")).length;
-  const upcomingCount = pmSchedules.filter((s) => s.status.includes("Upcoming")).length;
+  // Modal Edit Plan
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingPm, setEditingPm] = useState(null);
+
+  // Modal Delete Plan
+  const [deleteConfirmPm, setDeleteConfirmPm] = useState(null);
+
+  const dueTodayCount = pmSchedules.filter((s) => (s.status || "").toLowerCase().includes("due today") || s.status === "DUE_TODAY").length;
+  const overdueCount = pmSchedules.filter((s) => (s.status || "").toLowerCase().includes("overdue") || s.status === "OVERDUE").length;
+  const upcomingCount = pmSchedules.filter((s) => (s.status || "").toLowerCase().includes("upcoming") || s.status === "SCHEDULED").length;
 
   const handleAddSubmit = async (e) => {
     e.preventDefault();
@@ -218,21 +119,72 @@ export function PMScheduleList({ initialViewMode }) {
       return;
     }
     try {
-      await maintenanceService.createPMSchedule({
-        title: newSchedule.title,
-        assetId: newSchedule.assetId,
-        frequency: newSchedule.frequency,
-        assignedTo: newSchedule.assignedTo,
-        dueDate: newSchedule.dueDate,
+      if (addPMSchedule) {
+        await addPMSchedule(newSchedule);
+      }
+      if (refreshPMSchedules) {
+        await refreshPMSchedules();
+      }
+      addToast(`PM Plan "${newSchedule.title}" created successfully!`, "success");
+      setIsAddModalOpen(false);
+      setNewSchedule({
+        title: "",
+        assetName: assets[0]?.name || "",
+        assetId: assets[0]?.id || "",
+        frequency: "Weekly",
+        status: "Upcoming",
+        assignedTo: "Marcus Vance",
+        dueDate: new Date().toISOString().substring(0, 10),
+        templateId: "CHK-001"
       });
     } catch (err) {
-      console.warn("[PMScheduleList] createPMSchedule API warning:", err?.message);
+      addToast(err?.message || "Failed to create PM plan", "error");
     }
-    if (addPMSchedule) {
-      addPMSchedule(newSchedule);
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    if (!editingPm?.title?.trim()) {
+      addToast("Please provide schedule title.", "warning");
+      return;
     }
-    addToast(`PM Plan "${newSchedule.title}" created successfully!`, "success");
-    setIsAddModalOpen(false);
+    try {
+      const targetId = editingPm.dbId || editingPm.id || editingPm.scheduleCode;
+      if (updatePMSchedule) {
+        await updatePMSchedule(targetId, {
+          title: editingPm.title,
+          frequency: editingPm.frequency,
+          dueDate: editingPm.dueDate,
+          status: editingPm.status,
+          assignedTo: editingPm.assignedTo,
+        });
+      }
+      if (refreshPMSchedules) {
+        await refreshPMSchedules();
+      }
+      addToast(`PM Schedule "${editingPm.title}" updated successfully!`, "success");
+      setIsEditModalOpen(false);
+      setEditingPm(null);
+    } catch (err) {
+      addToast(err?.message || "Failed to update PM schedule", "error");
+    }
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteConfirmPm) return;
+    try {
+      const targetId = deleteConfirmPm.dbId || deleteConfirmPm.id || deleteConfirmPm.scheduleCode;
+      if (deletePMSchedule) {
+        await deletePMSchedule(targetId);
+      }
+      if (refreshPMSchedules) {
+        await refreshPMSchedules();
+      }
+      addToast(`PM Schedule "${deleteConfirmPm.title}" deleted successfully!`, "success");
+      setDeleteConfirmPm(null);
+    } catch (err) {
+      addToast(err?.message || "Failed to delete PM schedule", "error");
+    }
   };
 
   const getStatusBadge = (status) => {
@@ -273,70 +225,60 @@ export function PMScheduleList({ initialViewMode }) {
     setCalendarDate(new Date(2026, 8, 1));
   };
 
-  // Rich, non-repetitive schedule mapping per day
+  // Pure database schedule mapping per day
   const pmsByDay = useMemo(() => {
     const map = {};
     for (let day = 1; day <= daysInMonth; day++) {
       const dayTasks = [];
       const dayOfWeek = (firstDayOfWeek + day - 1) % 7; // 0 = Mon, 6 = Sun
-
-      // 1. Match from context pmSchedules if dueDate falls on this day
       const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+
+      // Match ONLY from real database pmSchedules
       pmSchedules.forEach((pm) => {
-        if (pm.dueDate === dateStr) {
+        if (!pm.dueDate) return;
+        const pmDueStr = String(pm.dueDate).substring(0, 10);
+        let isMatch = false;
+
+        if (pmDueStr === dateStr) {
+          isMatch = true;
+        } else if (pm.frequency) {
+          const freq = String(pm.frequency).toUpperCase();
+          const pmDate = new Date(pmDueStr);
+          const pmWeekday = (pmDate.getDay() + 6) % 7;
+          const isAfterStart = new Date(year, month, day, 23, 59, 59) >= pmDate;
+
+          if (freq === "DAILY" && isAfterStart) {
+            isMatch = true;
+          } else if (freq === "WEEKLY" && isAfterStart && dayOfWeek === pmWeekday) {
+            isMatch = true;
+          } else if ((freq === "BI-WEEKLY" || freq === "BI_WEEKLY") && isAfterStart) {
+            const diffDays = Math.round((new Date(year, month, day) - pmDate) / (1000 * 60 * 60 * 24));
+            if (diffDays >= 0 && diffDays % 14 === 0) {
+              isMatch = true;
+            }
+          } else if (freq === "MONTHLY" && day === pmDate.getDate()) {
+            isMatch = true;
+          }
+        }
+
+        if (isMatch) {
           dayTasks.push({
-            id: pm.id,
+            id: pm.id || pm.scheduleCode,
+            dbId: pm.dbId,
+            scheduleCode: pm.scheduleCode,
             title: pm.title,
             assetName: pm.assetName,
             assetId: pm.assetId,
             frequency: pm.frequency,
-            priority: pm.status.includes("Overdue") ? "P1 - Critical" : "P2 - High",
-            duration: "45m",
-            assignedTo: pm.assignedTo,
-            status: pm.status,
+            priority: (pm.status || "").includes("Overdue") ? "P1 - Critical" : (pm.priority || "P2 - High"),
+            duration: pm.estimatedMinutes ? `${pm.estimatedMinutes}m` : "45m",
+            assignedTo: pm.assignedTo || pm.assignedTechnician || "Marcus Vance",
+            status: pm.status || "Upcoming",
             checklistId: pm.templateId || "CHK-001",
             spareParts: "OEM Specified Service Parts",
-            lotoRequired: true
-          });
-        }
-      });
-
-      // 2. Realistic diverse distribution across the calendar
-      MASTER_PM_LIBRARY.forEach((item, idx) => {
-        let shouldInclude = false;
-
-        // Scheduled based on recurring days
-        if (item.frequency === "Weekly" && dayOfWeek === item.dayOffset) {
-          shouldInclude = true;
-        } else if (item.frequency === "Bi-Weekly" && dayOfWeek === item.dayOffset && (Math.floor(day / 7) % 2 === 0)) {
-          shouldInclude = true;
-        } else if (item.frequency === "Monthly" && day === item.dayOffset) {
-          shouldInclude = true;
-        }
-
-        if (shouldInclude) {
-          let dynamicStatus = item.status;
-          // Contextualize for current date: 5 Sep 2026
-          if (year === 2026 && month === 8) {
-            if (day < 5) dynamicStatus = "Completed";
-            else if (day === 5) dynamicStatus = "Due Today";
-            else if (day === 8 && idx === 2) dynamicStatus = "Overdue";
-            else dynamicStatus = "Upcoming";
-          }
-
-          dayTasks.push({
-            id: `PM-CAL-${day}-${idx}`,
-            title: item.title,
-            assetName: item.assetName,
-            assetId: item.assetId,
-            frequency: item.frequency,
-            priority: item.priority,
-            duration: item.duration,
-            assignedTo: item.assignedTo,
-            status: dynamicStatus,
-            checklistId: item.checklistId,
-            spareParts: item.spareParts,
-            lotoRequired: item.lotoRequired
+            lotoRequired: true,
+            dueDate: pm.dueDate,
+            dueNext: pm.dueNext,
           });
         }
       });
@@ -344,11 +286,11 @@ export function PMScheduleList({ initialViewMode }) {
       // Filter by selected category pill
       let filtered = dayTasks;
       if (calendarFilter === "CRITICAL") {
-        filtered = dayTasks.filter((t) => t.status === "Overdue" || t.status === "Due Today" || t.priority.includes("P1"));
+        filtered = dayTasks.filter((t) => (t.status || "").toLowerCase().includes("overdue") || (t.status || "").toLowerCase().includes("due today") || (t.priority || "").includes("P1"));
       } else if (calendarFilter === "WEEKLY") {
-        filtered = dayTasks.filter((t) => t.frequency === "Weekly" || t.frequency === "Bi-Weekly");
+        filtered = dayTasks.filter((t) => (t.frequency || "").toLowerCase().includes("weekly"));
       } else if (calendarFilter === "COMPLETED") {
-        filtered = dayTasks.filter((t) => t.status === "Completed");
+        filtered = dayTasks.filter((t) => (t.status || "").toLowerCase() === "completed");
       }
 
       map[day] = filtered;
@@ -431,17 +373,45 @@ export function PMScheduleList({ initialViewMode }) {
       header: "Action",
       accessor: "actions",
       sortable: false,
-      headerStyle: { minWidth: "130px", textAlign: "right", paddingRight: "20px", whiteSpace: "nowrap" },
-      cellStyle: { minWidth: "130px", textAlign: "right", paddingRight: "20px", whiteSpace: "nowrap" },
+      headerStyle: { minWidth: "170px", textAlign: "right", paddingRight: "20px", whiteSpace: "nowrap" },
+      cellStyle: { minWidth: "170px", textAlign: "right", paddingRight: "20px", whiteSpace: "nowrap" },
       render: (_, row) => (
-        <Button
-          variant="primary"
-          size="sm"
-          icon={Play}
-          onClick={() => navigate(`/maintenance/pm-checklists/execute/${row.templateId || "CHK-001"}?asset=${row.assetId}`)}
-        >
-          Start PM
-        </Button>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "6px" }}>
+          <Button
+            variant="ghost"
+            size="sm"
+            icon={Edit2}
+            title="Edit PM Schedule"
+            onClick={() => {
+              setEditingPm({
+                ...row,
+                id: row.id || row.scheduleCode,
+                title: row.title || "",
+                frequency: row.frequency || "Weekly",
+                dueDate: row.dueDate || (row.dueNext ? row.dueNext.substring(0, 10) : new Date().toISOString().substring(0, 10)),
+                assignedTo: row.assignedTo || row.assignedTechnician || "Marcus Vance",
+                status: row.status || "Upcoming",
+              });
+              setIsEditModalOpen(true);
+            }}
+          />
+          <Button
+            variant="ghost"
+            size="sm"
+            icon={Trash2}
+            title="Delete PM Schedule"
+            style={{ color: "#DC2626" }}
+            onClick={() => setDeleteConfirmPm(row)}
+          />
+          <Button
+            variant="primary"
+            size="sm"
+            icon={Play}
+            onClick={() => navigate(`/maintenance/pm-checklists/execute/${row.templateId || "CHK-001"}?asset=${row.assetId || ""}&scheduleId=${row.dbId || row.id || row.scheduleCode || ""}&returnUrl=/maintenance/pm`)}
+          >
+            Start PM
+          </Button>
+        </div>
       )
     }
   ];
@@ -1188,7 +1158,7 @@ export function PMScheduleList({ initialViewMode }) {
                   variant="primary"
                   icon={Play}
                   onClick={() => {
-                    navigate(`/maintenance/pm-checklists/execute/${selectedPmForModal.checklistId || "CHK-001"}?asset=${selectedPmForModal.assetId}`);
+                    navigate(`/maintenance/pm-checklists/execute/${selectedPmForModal.checklistId || selectedPmForModal.templateId || "CHK-001"}?asset=${selectedPmForModal.assetId || ""}&scheduleId=${selectedPmForModal.dbId || selectedPmForModal.id || selectedPmForModal.scheduleCode || ""}&returnUrl=/maintenance/pm`);
                   }}
                 >
                   Start PM Checklist
@@ -1238,25 +1208,42 @@ export function PMScheduleList({ initialViewMode }) {
                 />
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "12px" }}>
-                <div>
-                  <label className="form-label">Target Asset</label>
+              <div>
+                <label className="form-label">Target Asset</label>
                   <select
                     className="form-select"
-                    value={newSchedule.assetName}
-                    onChange={(e) => setNewSchedule({ ...newSchedule, assetName: e.target.value })}
+                    value={newSchedule.assetId || ""}
+                    onChange={(e) => {
+                      const selectedAsset = assets.find(a => String(a.id) === e.target.value || String(a.assetCode) === e.target.value);
+                      setNewSchedule({
+                        ...newSchedule,
+                        assetId: e.target.value,
+                        assetName: selectedAsset ? `${selectedAsset.assetCode || ""} ${selectedAsset.name || ""}`.trim() : e.target.value
+                      });
+                    }}
                     style={{ backgroundColor: "#FFFFFF" }}
                   >
-                    <option value="Rotary Bottling Filler (Aseptic)">Rotary Bottling Filler (Aseptic)</option>
-                    <option value="Induction Cap Sealer">Induction Cap Sealer</option>
-                    <option value="HTST Flash Pasteurizer">HTST Flash Pasteurizer</option>
-                    <option value="Sleeve Rotary Labeler">Sleeve Rotary Labeler</option>
-                    <option value="Case Packer (High-Speed)">Case Packer (High-Speed)</option>
+                    <option value="">-- Select Target Asset --</option>
+                    {assets.map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.assetCode ? `${a.assetCode} - ${a.name}` : a.name}
+                      </option>
+                    ))}
+                    {assets.length === 0 && (
+                      <>
+                        <option value="FM-001">FM-001 - High-Speed Rotary Filler 12-Head</option>
+                        <option value="HT-105">HT-105 - Plate Heat Exchanger HTST-300</option>
+                        <option value="CP-102">CP-102 - Arol Rotary Capper</option>
+                        <option value="AC-505">AC-505 - Rotary Air Compressor GA 75</option>
+                        <option value="CV-301">CV-301 - Incline Belt Conveyor</option>
+                      </>
+                    )}
                   </select>
                 </div>
 
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px" }}>
                 <div>
-                  <label className="form-label">Recurrence Frequency</label>
+                  <label className="form-label">Recurrence</label>
                   <select
                     className="form-select"
                     value={newSchedule.frequency}
@@ -1268,20 +1255,24 @@ export function PMScheduleList({ initialViewMode }) {
                     <option value="Bi-Weekly">Bi-Weekly</option>
                     <option value="Monthly">Monthly</option>
                     <option value="Quarterly">Quarterly</option>
+                    <option value="Annual">Annual</option>
                   </select>
                 </div>
-              </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "12px" }}>
                 <div>
-                  <label className="form-label">Assigned Technician</label>
-                  <input
-                    type="text"
-                    value={newSchedule.assignedTo}
-                    onChange={(e) => setNewSchedule({ ...newSchedule, assignedTo: e.target.value })}
-                    className="form-input"
+                  <label className="form-label">Status</label>
+                  <select
+                    className="form-select"
+                    value={newSchedule.status || "Upcoming"}
+                    onChange={(e) => setNewSchedule({ ...newSchedule, status: e.target.value })}
                     style={{ backgroundColor: "#FFFFFF" }}
-                  />
+                  >
+                    <option value="Upcoming">Upcoming</option>
+                    <option value="Due Today">Due Today</option>
+                    <option value="Overdue">Overdue</option>
+                    <option value="Completed">Completed</option>
+                    <option value="Paused">Paused</option>
+                  </select>
                 </div>
 
                 <div>
@@ -1296,6 +1287,17 @@ export function PMScheduleList({ initialViewMode }) {
                 </div>
               </div>
 
+              <div>
+                <label className="form-label">Assigned Technician</label>
+                <input
+                  type="text"
+                  value={newSchedule.assignedTo}
+                  onChange={(e) => setNewSchedule({ ...newSchedule, assignedTo: e.target.value })}
+                  className="form-input"
+                  style={{ backgroundColor: "#FFFFFF" }}
+                />
+              </div>
+
               <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px", borderTop: "1px solid var(--border-subtle)", paddingTop: "16px" }}>
                 <Button variant="secondary" onClick={() => setIsAddModalOpen(false)}>
                   Cancel
@@ -1308,6 +1310,168 @@ export function PMScheduleList({ initialViewMode }) {
           </div>
         </div>
       )}
+
+      {/* EDIT PM SCHEDULE MODAL */}
+      {isEditModalOpen && editingPm && (
+        <div className="modal-backdrop" onClick={() => { setIsEditModalOpen(false); setEditingPm(null); }}>
+          <div
+            className="modal-content"
+            style={{ maxWidth: "560px", margin: "16px", borderRadius: "14px", overflow: "hidden" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <div style={{ padding: "8px", borderRadius: "8px", backgroundColor: "rgba(200, 149, 71, 0.15)", color: "#8C5B23" }}>
+                  <Edit2 size={18} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: "16px", fontWeight: 700, color: "var(--text-primary)" }}>
+                    Edit PM Schedule
+                  </h3>
+                  <p style={{ margin: "2px 0 0", fontSize: "12px", color: "var(--text-secondary)" }}>
+                    Update parameters for {editingPm.scheduleCode || editingPm.id}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => { setIsEditModalOpen(false); setEditingPm(null); }}
+                style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditSubmit} style={{ padding: "24px", display: "flex", flexDirection: "column", gap: "16px" }}>
+              <div>
+                <label className="form-label">PM Schedule Title *</label>
+                <input
+                  type="text"
+                  required
+                  value={editingPm.title || ""}
+                  onChange={(e) => setEditingPm({ ...editingPm, title: e.target.value })}
+                  className="form-input"
+                  style={{ backgroundColor: "#FFFFFF" }}
+                />
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "12px" }}>
+                <div>
+                  <label className="form-label">Recurrence Frequency</label>
+                  <select
+                    className="form-select"
+                    value={editingPm.frequency || "Weekly"}
+                    onChange={(e) => setEditingPm({ ...editingPm, frequency: e.target.value })}
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  >
+                    <option value="Daily">Daily</option>
+                    <option value="Weekly">Weekly</option>
+                    <option value="Bi-Weekly">Bi-Weekly</option>
+                    <option value="Monthly">Monthly</option>
+                    <option value="Quarterly">Quarterly</option>
+                    <option value="Annual">Annual</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="form-label">Status</label>
+                  <select
+                    className="form-select"
+                    value={editingPm.status || "Upcoming"}
+                    onChange={(e) => setEditingPm({ ...editingPm, status: e.target.value })}
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  >
+                    <option value="Upcoming">Upcoming</option>
+                    <option value="Due Today">Due Today</option>
+                    <option value="Overdue">Overdue</option>
+                    <option value="Completed">Completed</option>
+                    <option value="Paused">Paused</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "12px" }}>
+                <div>
+                  <label className="form-label">Assigned Technician</label>
+                  <input
+                    type="text"
+                    value={editingPm.assignedTo || ""}
+                    onChange={(e) => setEditingPm({ ...editingPm, assignedTo: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+
+                <div>
+                  <label className="form-label">Due Date</label>
+                  <input
+                    type="date"
+                    value={editingPm.dueDate || ""}
+                    onChange={(e) => setEditingPm({ ...editingPm, dueDate: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px", borderTop: "1px solid var(--border-subtle)", paddingTop: "16px" }}>
+                <Button variant="secondary" onClick={() => { setIsEditModalOpen(false); setEditingPm(null); }}>
+                  Cancel
+                </Button>
+                <Button variant="primary" type="submit">
+                  Save Changes
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* DELETE CONFIRMATION MODAL */}
+      {deleteConfirmPm && (
+        <div className="modal-backdrop" onClick={() => setDeleteConfirmPm(null)}>
+          <div
+            className="modal-content"
+            style={{ maxWidth: "480px", margin: "16px", borderRadius: "14px", overflow: "hidden" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ padding: "20px 24px", borderBottom: "1px solid var(--border-subtle)", display: "flex", alignItems: "center", gap: "12px" }}>
+              <div style={{ padding: "8px", borderRadius: "8px", backgroundColor: "#FEE2E2", color: "#DC2626" }}>
+                <Trash2 size={20} />
+              </div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: "16px", fontWeight: 700, color: "var(--text-primary)" }}>
+                  Delete PM Schedule
+                </h3>
+                <p style={{ margin: "2px 0 0", fontSize: "12px", color: "var(--text-muted)" }}>
+                  Permanent Database Action
+                </p>
+              </div>
+            </div>
+
+            <div style={{ padding: "20px 24px" }}>
+              <p style={{ margin: "0 0 12px", fontSize: "14px", color: "var(--text-primary)", lineHeight: 1.5 }}>
+                Are you sure you want to delete this schedule from the database?
+              </p>
+              <div style={{ padding: "12px 14px", borderRadius: "8px", backgroundColor: "var(--bg-subtle)", border: "1px solid var(--border-subtle)" }}>
+                <div style={{ fontWeight: 700, fontSize: "13px", color: "var(--text-primary)" }}>{deleteConfirmPm.title}</div>
+                <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "4px", fontFamily: "var(--font-mono)" }}>
+                  ID: {deleteConfirmPm.scheduleCode || deleteConfirmPm.id} • Asset: {deleteConfirmPm.assetName || deleteConfirmPm.assetId}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", padding: "16px 24px", borderTop: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-subtle)" }}>
+              <Button variant="secondary" onClick={() => setDeleteConfirmPm(null)}>
+                Cancel
+              </Button>
+              <Button variant="danger" onClick={handleDeleteConfirm}>
+                Delete Schedule
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+

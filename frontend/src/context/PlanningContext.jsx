@@ -383,9 +383,43 @@ export function PlanningProvider({ children }) {
           }
         }
         if (remoteForecasts.status === "fulfilled") {
+<<<<<<< HEAD
           const items = remoteForecasts.value?.data || remoteForecasts.value;
           if (Array.isArray(items)) {
             setForecasts(items);
+=======
+          const rawFc = remoteForecasts.value?.data || remoteForecasts.value;
+          if (Array.isArray(rawFc)) {
+            if (rawFc.length > 0) {
+              const mappedFc = rawFc.map((f) => {
+                const matchedSku = skus.find((s) => s.id === f.skuId || s.skuId === f.skuId || s.skuCode === f.skuId);
+                return {
+                  id: f.id,
+                  period: f.period,
+                  plantId: f.plantId,
+                  skuId: matchedSku?.skuId || f.skuId,
+                  productCode: f.productCode || matchedSku?.skuCode || (f.skuId === "277c3fb7-a86d-45fd-86e8-6b813882becf" ? "PKG-CAN-330" : f.skuId === "b68145a8-825a-472c-a7f0-843061897493" ? "RM-ORG-101" : "SKU-VAL-8870"),
+                  productName: f.productName || matchedSku?.name || (f.skuId === "277c3fb7-a86d-45fd-86e8-6b813882becf" ? "330ml Slimline Aluminum Beverage Cans" : f.skuId === "b68145a8-825a-472c-a7f0-843061897493" ? "Valencia Organic Orange Juice Concentrate 65° Brix" : "Sparkling Citrus Cooler 500ml"),
+                  uom: f.uom || matchedSku?.uom || (f.skuId === "277c3fb7-a86d-45fd-86e8-6b813882becf" ? "Can" : f.skuId === "b68145a8-825a-472c-a7f0-843061897493" ? "Liters" : "Units"),
+                  historicalDemand: f.historicalDemand || Math.round(Number(f.baselineDemand || f.baselineForecast || 0) * 0.95),
+                  baselineForecast: Number(f.baselineForecast || f.baselineDemand || 0),
+                  overrideQuantity: Number(f.overrideQuantity || f.promoUplift || 0),
+                  finalForecast: Number(f.finalForecast || f.baselineDemand || 0),
+                  mapeAccuracy: Number(f.mapeAccuracy || 94.6),
+                  method: f.method || f.modelType || "Exponential Smoothing",
+                  status: f.status || "Approved",
+                  owner: f.owner || "Elena Rostova",
+                  reason: f.reason || f.justification || "",
+                  justification: f.justification || f.reason || "",
+                  createdDate: f.createdDate || (f.createdAt ? new Date(f.createdAt).toISOString().substring(0, 10) : ""),
+                  lastUpdated: f.lastUpdated || (f.createdAt ? new Date(f.createdAt).toISOString().substring(0, 10) : ""),
+                };
+              });
+              setForecasts(mappedFc);
+            } else {
+              setForecasts([]);
+            }
+>>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
           }
         }
         if (remoteSchedules.status === "fulfilled") {
@@ -540,9 +574,9 @@ export function PlanningProvider({ children }) {
     const identifier = targetOrder?.id || targetOrder?.orderNumber || id;
 
     try {
-      await planningService.deleteDemandOrder(identifier);
+      await planningService.updateDemandOrder(identifier, { status: "Cancelled" });
     } catch (err) {
-      console.warn("Backend deleteDemandOrder fallback:", err.message);
+      console.warn("Backend cancelDemandOrder fallback:", err.message);
     }
 
     if (logAudit) {
@@ -583,40 +617,33 @@ export function PlanningProvider({ children }) {
   // ==========================================
   // 2. FORECAST WORKFLOW & OVERRIDES
   // ==========================================
-  const addForecast = async (fcData) => {
-    const targetSku = skus.find((s) => s.skuId === fcData.skuId || s.id === fcData.skuId || s.skuCode === fcData.skuId) || skus[0];
-    const baseline = Number(fcData.baselineForecast) || 10000;
-    const override = Number(fcData.overrideQuantity) || 0;
-
-    try {
-      await planningService.runForecast({
-        skuId: targetSku?.id || targetSku?.skuId || "SKU-001",
-        period: fcData.period || "2026-W39",
-        alpha: fcData.alpha || 0.35,
-        promoUpliftPercent: override > 0 && baseline > 0 ? Math.round((override / baseline) * 100) : 10,
-        method: fcData.method || "Moving Average (4-Week Rolling)",
-      });
-    } catch (err) {
-      console.warn("Backend runForecast API sync warning:", err.message);
-    }
+  const addForecast = (fcData) => {
+    const targetSku = skus.find((s) => s.skuId === fcData.skuId || s.id === fcData.skuId || s.skuCode === fcData.skuId || s.skuCode === fcData.productCode) || skus[0];
+    const baseline = Number(fcData.baselineForecast || fcData.baselineDemand || fcData.baselineQty) || 0;
+    const override = Number(fcData.overrideQuantity || fcData.overrideQty) || 0;
+    const final = Number(fcData.finalForecast || fcData.finalQty) || (baseline + override);
 
     const newRecord = {
-      id: `FC-2026-${Math.floor(100 + Math.random() * 900)}`,
+      id: fcData.id || `FC-2026-${Math.floor(100 + Math.random() * 900)}`,
       period: fcData.period || "2026-W39",
       plantId: fcData.plantId || "PLT-01",
-      skuId: targetSku?.skuId || "SKU-001",
-      productCode: targetSku?.skuCode || "SKU-5001",
-      productName: targetSku?.name || "Finished Beverage",
-      uom: targetSku?.uom || "Bottles",
+      skuId: targetSku?.skuId || targetSku?.id || "SKU-001",
+      productCode: fcData.productCode || targetSku?.skuCode || "SKU-5001",
+      productName: fcData.productName || targetSku?.name || "Finished Beverage",
+      uom: fcData.uom || targetSku?.uom || "Bottles",
       historicalDemand: Number(fcData.historicalDemand) || Math.round(baseline * 0.95),
       baselineForecast: baseline,
+      baselineDemand: baseline,
+      baselineQty: baseline,
       overrideQuantity: override,
-      finalForecast: baseline + override,
-      method: fcData.method || "Historical Moving Average",
-      reason: fcData.reason || "Baseline Forecast generation",
-      owner: "Alexander Vance",
-      status: "Draft",
-      createdDate: new Date().toISOString().substring(0, 10),
+      overrideQty: override,
+      finalForecast: final,
+      finalQty: final,
+      method: fcData.method || fcData.modelType || "Historical Moving Average",
+      reason: fcData.reason || fcData.justification || "Baseline Forecast generation",
+      owner: fcData.owner || "Alexander Vance",
+      status: fcData.status || "Draft",
+      createdDate: fcData.createdDate || new Date().toISOString().substring(0, 10),
       lastUpdated: new Date().toISOString().substring(0, 10)
     };
 
@@ -692,6 +719,24 @@ export function PlanningProvider({ children }) {
           : f
       )
     );
+  };
+
+  const deleteForecast = async (id) => {
+    setForecasts((prev) => prev.filter((f) => f.id !== id));
+    try {
+      await planningService.deleteForecast(id);
+      if (logAudit) {
+        logAudit({
+          entityId: id,
+          entityType: "Forecast",
+          action: "Deleted",
+          newValue: "Deleted",
+          notes: "Forecast record deleted from database"
+        });
+      }
+    } catch (err) {
+      console.warn("Backend deleteForecast fallback:", err.message);
+    }
   };
 
   // ==========================================
@@ -1109,6 +1154,7 @@ export function PlanningProvider({ children }) {
         applyForecastOverride,
         approveForecast,
         rejectForecast,
+        deleteForecast,
 
         // MRP
         mrpCalculations,

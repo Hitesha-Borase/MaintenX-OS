@@ -7,6 +7,7 @@ const MasterDataContext = createContext();
 // INITIAL MOCK MASTER DATASETS (ENTERPRISE-GRADE STABLE ID ARCHITECTURE)
 // ============================================================================
 
+<<<<<<< HEAD
 export const INITIAL_COMPANIES = [];
 export const INITIAL_PLANTS = [];
 export const INITIAL_DEPARTMENTS = [];
@@ -35,6 +36,306 @@ export const INITIAL_STORAGE_RESOURCES = [];
 export const INITIAL_USERS = [];
 export const INITIAL_USER_INVITATIONS = [];
 export const INITIAL_AUDIT_LOGS = [];
+=======
+export const INITIAL_COMPANIES = [
+  { id: "CMP-01", name: "ABC Manufacturing Global", code: "ABCMFG", currency: "USD", taxId: "US-9842109-K", headquarters: "Austin, TX", status: "Active" }
+];
+
+export const INITIAL_PLANTS = [
+  {
+    id: "PLT-01",
+    companyId: "CMP-01",
+    code: "PLT-IND",
+    name: "Indore Plant - Processing & Bottling",
+    location: "Sector 3 Industrial Corridor, Indore, MP",
+    city: "Indore",
+    state: "MP",
+    country: "India",
+    capacity: "350,000 Units/Day",
+    operatingShifts: 3,
+    status: "Active",
+    effectiveFrom: "2024-01-01",
+    effectiveTo: "2030-12-31"
+  },
+  {
+    id: "PLT-02",
+    companyId: "CMP-01",
+    code: "PLT-AUST",
+    name: "Austin Facility - Canning & Logistics",
+    location: "7400 Metropolis Dr, Austin, TX",
+    city: "Austin",
+    state: "TX",
+    country: "USA",
+    capacity: "280,000 Units/Day",
+    operatingShifts: 2,
+    status: "Active",
+    effectiveFrom: "2024-03-01",
+    effectiveTo: "2030-12-31"
+  }
+];
+
+export const INITIAL_DEPARTMENTS = [
+  { id: "DEP-01", plantId: "PLT-01", code: "PROD", name: "Production & Bottling", managerId: "EMP-002", managerName: "Robert Thorne", costCenter: "CC-101", status: "Active" },
+  { id: "DEP-02", plantId: "PLT-01", code: "MAINT", name: "Maintenance & Reliability", managerId: "EMP-004", managerName: "Marcus Vance", costCenter: "CC-102", status: "Active" },
+  { id: "DEP-03", plantId: "PLT-01", code: "QAQC", name: "Quality Assurance & Lab", managerId: "EMP-003", managerName: "Sarah Jenkins", costCenter: "CC-103", status: "Active" },
+  { id: "DEP-04", plantId: "PLT-01", code: "WHSE", name: "Warehouse & Materials", managerId: "EMP-005", managerName: "David Kim", costCenter: "CC-104", status: "Active" },
+  { id: "DEP-05", plantId: "PLT-01", code: "CI-ENG", name: "Continuous Improvement & Engineering", managerId: "EMP-001", managerName: "Alexander Vance", costCenter: "CC-105", status: "Active" }
+];
+
+export const INITIAL_WORK_CENTERS = [];
+
+export const INITIAL_PRODUCT_FAMILIES = [];
+
+export const INITIAL_UOMS = [];
+
+export const INITIAL_SKUS = [];
+
+export const INITIAL_PACK_CONFIGS = [];
+
+export const INITIAL_SHELF_LIFE = [
+  {
+    shelfLifeId: "SLF-01",
+    skuId: "SKU-001",
+    skuCode: "SKU-5001",
+    skuName: "500ml Sparkling Citrus Soda",
+    shelfLifeValue: 365,
+    shelfLifeUom: "Days",
+    storageCondition: "Ambient Dry (15°C - 25°C)",
+    minTempC: 4,
+    maxTempC: 28,
+    lightSensitivity: "Avoid Direct Sunlight",
+    quarantineDays: 1,
+    status: "Active",
+    effectiveFrom: "2025-01-01",
+    effectiveTo: "2030-12-31"
+  },
+  {
+    shelfLifeId: "SLF-02",
+    skuId: "SKU-002",
+    skuCode: "SKU-5002",
+    skuName: "1L Tonic Water Natural Quinine",
+    shelfLifeValue: 540,
+    shelfLifeUom: "Days",
+    storageCondition: "Ambient Dry (15°C - 25°C)",
+    minTempC: 4,
+    maxTempC: 28,
+    lightSensitivity: "UV-Resistant Amber Glass",
+    quarantineDays: 1,
+    status: "Active",
+    effectiveFrom: "2025-01-01",
+    effectiveTo: "2030-12-31"
+  },
+  {
+    shelfLifeId: "SLF-03",
+    skuId: "SKU-003",
+    skuCode: "SKU-5003",
+    skuName: "330ml Organic Ginger Beer",
+    shelfLifeValue: 270,
+    shelfLifeUom: "Days",
+    storageCondition: "Cool Ambient (10°C - 20°C)",
+    minTempC: 2,
+    maxTempC: 22,
+    lightSensitivity: "Hermetic Can Sealed",
+    quarantineDays: 2,
+    status: "Active",
+    effectiveFrom: "2025-01-01",
+    effectiveTo: "2030-12-31"
+  }
+];
+
+export const INITIAL_CUSTOMERS = [
+  { customerId: "CUST-001", name: "Costco Wholesale EMEA", code: "COSTCO-EU", region: "Europe", rating: "Tier 1 Priority", status: "Active" },
+  { customerId: "CUST-002", name: "Walmart Supply Chain NA", code: "WMT-US", region: "North America", rating: "Tier 1 Priority", status: "Active" },
+  { customerId: "CUST-003", name: "Tesco Retail Stores UK", code: "TSCO-UK", region: "UK & Ireland", rating: "Tier 2 Standard", status: "Active" },
+  { customerId: "CUST-004", name: "Metro Cash & Carry India", code: "METRO-IN", region: "South Asia", rating: "Tier 1 Priority", status: "Active" }
+];
+
+export const INITIAL_CUSTOMER_SKU_MAPPINGS = [
+  {
+    mappingId: "CSM-01",
+    customerId: "CUST-001",
+    customerName: "Costco Wholesale EMEA",
+    skuId: "SKU-001",
+    internalSkuCode: "SKU-5001",
+    internalSkuName: "500ml Sparkling Citrus Soda",
+    customerSkuCode: "CST-CITRUS-500",
+    customerSkuName: "Kirkland Signature Citrus Soda 500ml 24pk",
+    customerUom: "CASE-24",
+    barcodeUPC: "890123450012",
+    status: "Active",
+    effectiveFrom: "2025-01-01",
+    effectiveTo: "2030-12-31"
+  },
+  {
+    mappingId: "CSM-02",
+    customerId: "CUST-002",
+    customerName: "Walmart Supply Chain NA",
+    skuId: "SKU-001",
+    internalSkuCode: "SKU-5001",
+    internalSkuName: "500ml Sparkling Citrus Soda",
+    customerSkuCode: "WMT-SODA-5001",
+    customerSkuName: "Great Value Sparkling Citrus 500ml",
+    customerUom: "CASE-24",
+    barcodeUPC: "890123450013",
+    status: "Active",
+    effectiveFrom: "2025-01-01",
+    effectiveTo: "2030-12-31"
+  },
+  {
+    mappingId: "CSM-03",
+    customerId: "CUST-001",
+    customerName: "Costco Wholesale EMEA",
+    skuId: "SKU-002",
+    internalSkuCode: "SKU-5002",
+    internalSkuName: "1L Tonic Water Natural Quinine",
+    customerSkuCode: "CST-TONIC-1L",
+    customerSkuName: "Kirkland Botanical Tonic Water 1L 12pk",
+    customerUom: "CASE-12",
+    barcodeUPC: "890123450024",
+    status: "Active",
+    effectiveFrom: "2025-01-01",
+    effectiveTo: "2030-12-31"
+  }
+];
+
+export const INITIAL_BOMS = [];
+
+export const INITIAL_OPERATIONS = [
+  { operationId: "OP-01", operationCode: "OP-SYR-MIX", name: "Syrup Batch Blending & Brix Adjustment", sequence: 10, department: "Processing", stdDurationMin: 45, setupDurationMin: 20, status: "Active" },
+  { operationId: "OP-02", operationCode: "OP-CARB-CHL", name: "Chilling & Inline Carbonation Injection", sequence: 20, department: "Processing", stdDurationMin: 30, setupDurationMin: 15, status: "Active" },
+  { operationId: "OP-03", operationCode: "OP-BLOW-MOLD", name: "PET Bottle Blow Molding SBO", sequence: 30, department: "Packaging", stdDurationMin: 60, setupDurationMin: 25, status: "Active" },
+  { operationId: "OP-04", operationCode: "OP-ISO-FILL", name: "Isobaric Rotary Bottle Filling & Capping", sequence: 40, department: "Packaging", stdDurationMin: 60, setupDurationMin: 30, status: "Active" },
+  { operationId: "OP-05", operationCode: "OP-LBL-PCK", name: "Hot-Melt Labeling, Case Packing & Palletizing", sequence: 50, department: "Packaging", stdDurationMin: 60, setupDurationMin: 15, status: "Active" }
+];
+
+export const INITIAL_ROUTINGS = [];
+
+export const INITIAL_LINES = [];
+
+export const INITIAL_LINE_TARGETS = [];
+
+export const INITIAL_CHANGEOVER_MATRIX = [];
+
+export const INITIAL_SANITATION_CLASSES = [];
+
+export const INITIAL_ALLERGEN_RULES = [];
+
+export const INITIAL_LABOUR_STANDARDS = [];
+
+
+export const INITIAL_ASSETS = [];
+
+export const INITIAL_EMPLOYEES = [];
+
+export const INITIAL_TRAINING_RECORDS = [
+  {
+    trainingId: "TRN-01",
+    employeeId: "EMP-005",
+    employeeName: "David Kim",
+    courseTitle: "Autonomous Maintenance Level 2 (TPM Pillar)",
+    trainer: "Alexander Vance",
+    completionDate: "2026-06-15",
+    expiryDate: "2027-06-15",
+    score: "98%",
+    status: "Certified Valid"
+  },
+  {
+    trainingId: "TRN-02",
+    employeeId: "EMP-004",
+    employeeName: "Marcus Vance",
+    courseTitle: "High-Voltage LOTO & Arc Flash Safety",
+    trainer: "Industrial Safety Institute",
+    completionDate: "2025-08-10",
+    expiryDate: "2026-08-10",
+    score: "100%",
+    status: "Expired / Needs Renewal"
+  }
+];
+
+export const INITIAL_QUALITY_SPECS = [];
+
+export const INITIAL_STORAGE_RESOURCES = [];
+
+export const INITIAL_CCP_LIMITS = [];
+
+export const INITIAL_USERS = [
+  { id: "USR-001", name: "Alexander Vance", email: "alexander.vance@flowstate.io", role: "System Administrator", roleKey: "admin", department: "IT & Digital Ops", plantId: "PLT-01", status: "Active", lastLogin: "Just now" },
+  { id: "USR-002", name: "Robert Thorne", email: "robert.thorne@flowstate.io", role: "Plant Manager", roleKey: "plant_manager", department: "Operations", plantId: "PLT-01", status: "Active", lastLogin: "10 mins ago" },
+  { id: "USR-003", name: "Sarah Jenkins", email: "sarah.jenkins@flowstate.io", role: "QA Manager", roleKey: "qa_manager", department: "Quality Assurance", plantId: "PLT-01", status: "Active", lastLogin: "1 hour ago" },
+  { id: "USR-004", name: "Marcus Vance", email: "marcus.vance@flowstate.io", role: "Maintenance Lead", roleKey: "maintenance", department: "Maintenance", plantId: "PLT-01", status: "Active", lastLogin: "3 hours ago" },
+  { id: "USR-005", name: "David Kim", email: "david.kim@flowstate.io", role: "Production Supervisor", roleKey: "operator", department: "Production", plantId: "PLT-01", status: "Active", lastLogin: "3 days ago" }
+];
+
+export const INITIAL_USER_INVITATIONS = [];
+
+export const INITIAL_AUDIT_LOGS = [
+  {
+    auditId: "AUD-9901",
+    timestamp: "02 Sep 2026 10:15:30",
+    user: "Alexander Vance",
+    userRole: "System Administrator",
+    entityId: "SKU-001",
+    entityType: "SKU Master",
+    action: "Updated",
+    field: "Standard Cost",
+    oldValue: "stdCost = $0.40",
+    newValue: "stdCost = $0.42",
+    notes: "Annual raw ingredient index re-costing applied"
+  },
+  {
+    auditId: "AUD-9902",
+    timestamp: "02 Sep 2026 09:40:12",
+    user: "Sarah Jenkins",
+    userRole: "QA Manager",
+    entityId: "QSP-001",
+    entityType: "Quality Specification",
+    action: "Approved",
+    field: "Approval Status",
+    oldValue: "approvalStatus = Submitted",
+    newValue: "approvalStatus = Approved",
+    notes: "Revision R2 Brix range locked following trial audit"
+  },
+  {
+    auditId: "AUD-9903",
+    timestamp: "01 Sep 2026 16:22:05",
+    user: "Marcus Vance",
+    userRole: "Maintenance Lead",
+    entityId: "AST-001",
+    entityType: "Machine Asset",
+    action: "Updated",
+    field: "Maintenance Cycle",
+    oldValue: "cycleHours = 200",
+    newValue: "cycleHours = 250",
+    notes: "PM interval extended per OEM reliability advisory"
+  },
+  {
+    auditId: "AUD-9904",
+    timestamp: "01 Sep 2026 14:10:44",
+    user: "Robert Thorne",
+    userRole: "Plant Manager",
+    entityId: "BOM-001",
+    entityType: "BOM Recipe",
+    action: "Approved",
+    field: "Revision Status",
+    oldValue: "status = Under Review",
+    newValue: "status = Active",
+    notes: "Sign-off on R3 Citrus formulation recipe"
+  },
+  {
+    auditId: "AUD-9905",
+    timestamp: "31 Aug 2026 11:05:18",
+    user: "Alexander Vance",
+    userRole: "System Administrator",
+    entityId: "LIN-01",
+    entityType: "Work Center Line",
+    action: "Updated",
+    field: "Rated Capacity",
+    oldValue: "capacity = 40,000 BPH",
+    newValue: "capacity = 42,000 BPH",
+    notes: "Line speed test post-de-bottlenecking Kaizen project"
+  }
+];
+>>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
 
 export const INITIAL_ROLE_PERMISSIONS = {
   admin: {
@@ -178,49 +479,60 @@ export function MasterDataProvider({ children }) {
   });
   const [plants, setPlants] = useState(() => {
     const saved = localStorage.getItem("mx_master_plants");
-    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch(e) {} }
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
     return INITIAL_PLANTS;
   });
   const [activePlantId, setActivePlantId] = useState("");
   const [departments, setDepartments] = useState(() => {
     const saved = localStorage.getItem("mx_master_departments");
-    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch(e) {} }
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
     return INITIAL_DEPARTMENTS;
   });
+<<<<<<< HEAD
   const [workCenters, setWorkCenters] = useState(() => {
     const saved = localStorage.getItem("mx_master_workcenters");
-    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch(e) {} }
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
     return INITIAL_WORK_CENTERS;
   });
 
   // 1. Core Master Datasets with Cache Initialization
   const [productFamilies, setProductFamilies] = useState(() => {
     const saved = localStorage.getItem("mx_master_families");
-    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch(e) {} }
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
     return INITIAL_PRODUCT_FAMILIES;
   });
 
   const [uoms, setUoms] = useState(() => {
     const saved = localStorage.getItem("mx_master_uoms");
-    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch(e) {} }
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
     return INITIAL_UOMS;
   });
 
   const [skus, setSkus] = useState(() => {
     const saved = localStorage.getItem("mx_master_skus");
-    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch(e) {} }
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
     return INITIAL_SKUS;
   });
 
   const [packConfigs, setpackConfigs] = useState(() => {
     const saved = localStorage.getItem("mx_master_pack_configs");
-    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch(e) {} }
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
     return INITIAL_PACK_CONFIGS;
   });
+=======
+  const [workCenters, setWorkCenters] = useState([]);
+
+  // 1. Core Master Datasets with Live Database Synchronization
+  const [productFamilies, setProductFamilies] = useState([]);
+  const [uoms, setUoms] = useState([]);
+  const [skus, setSkus] = useState([]);
+
+  const [packConfigs, setPackConfigs] = useState([]);
+>>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
 
   const [shelfLifeRecords, setShelfLifeRecords] = useState(() => {
     const saved = localStorage.getItem("mx_master_shelflife");
-    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch(e) {} }
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
     return INITIAL_SHELF_LIFE;
   });
 
@@ -228,43 +540,48 @@ export function MasterDataProvider({ children }) {
 
   const [customerSkuMappings, setCustomerSkuMappings] = useState(() => {
     const saved = localStorage.getItem("mx_master_csm");
-    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch(e) {} }
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
     return INITIAL_CUSTOMER_SKU_MAPPINGS;
   });
 
+<<<<<<< HEAD
   const [boms, setBoms] = useState(() => {
     const saved = localStorage.getItem("mx_master_boms");
-    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch(e) {} }
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
     return INITIAL_BOMS;
   });
+=======
+  const [boms, setBoms] = useState([]);
+>>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
 
   const [operations, setOperations] = useState(() => {
     const saved = localStorage.getItem("mx_master_operations");
-    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch(e) {} }
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
     return INITIAL_OPERATIONS;
   });
 
+<<<<<<< HEAD
   const [routings, setRoutings] = useState(() => {
     const saved = localStorage.getItem("mx_master_routings");
-    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch(e) {} }
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
     return INITIAL_ROUTINGS;
   });
 
   const [lines, setLines] = useState(() => {
     const saved = localStorage.getItem("mx_master_lines");
-    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch(e) {} }
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
     return INITIAL_LINES;
   });
 
   const [lineTargets, setLineTargets] = useState(() => {
     const saved = localStorage.getItem("mx_master_line_targets");
-    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch(e) {} }
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
     return INITIAL_LINE_TARGETS;
   });
 
   const [changeoverMatrix, setChangeoverMatrix] = useState(() => {
     const saved = localStorage.getItem("mx_master_changeovers");
-    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch(e) {} }
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
     return INITIAL_CHANGEOVER_MATRIX;
   });
 
@@ -276,7 +593,7 @@ export function MasterDataProvider({ children }) {
         if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].sanitationClass) {
           return parsed;
         }
-      } catch (_) {}
+      } catch (_) { }
     }
     return INITIAL_SANITATION_CLASSES;
   });
@@ -289,7 +606,7 @@ export function MasterDataProvider({ children }) {
         if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].allergenName) {
           return parsed;
         }
-      } catch (_) {}
+      } catch (_) { }
     }
     return INITIAL_ALLERGEN_RULES;
   });
@@ -300,44 +617,67 @@ export function MasterDataProvider({ children }) {
       try {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      } catch (_) {}
+      } catch (_) { }
     }
     return INITIAL_LABOUR_STANDARDS;
   });
 
   const [assets, setAssets] = useState(() => {
     const saved = localStorage.getItem("mx_master_assets");
-    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch(e) {} }
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
     return INITIAL_ASSETS;
   });
 
   const [employees, setEmployees] = useState(() => {
     const saved = localStorage.getItem("mx_master_employees");
-    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch(e) {} }
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
     return INITIAL_EMPLOYEES;
   });
+=======
+  const [routings, setRoutings] = useState([]);
+
+  const [lines, setLines] = useState([]);
+
+  const [lineTargets, setLineTargets] = useState([]);
+  const [changeoverMatrix, setChangeoverMatrix] = useState([]);
+  const [sanitationClasses, setSanitationClasses] = useState([]);
+  const [allergenRules, setAllergenRules] = useState([]);
+  const [labourStandards, setLabourStandards] = useState([]);
+
+  const [assets, setAssets] = useState([]);
+
+  const [employees, setEmployees] = useState([]);
+>>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
 
   const [trainingRecords, setTrainingRecords] = useState(() => {
     const saved = localStorage.getItem("mx_master_training");
-    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch(e) {} }
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
     return INITIAL_TRAINING_RECORDS;
   });
 
+<<<<<<< HEAD
   const [qualitySpecs, setQualitySpecs] = useState(() => {
     const saved = localStorage.getItem("mx_master_quality_specs");
-    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch(e) {} }
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
     return INITIAL_QUALITY_SPECS;
   });
 
   const [storageResources, setStorageResources] = useState(() => {
     const saved = localStorage.getItem("mx_master_storage");
-    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch(e) {} }
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
     return INITIAL_STORAGE_RESOURCES;
   });
+=======
+  const [qualitySpecs, setQualitySpecs] = useState([]);
+
+  const [storageResources, setStorageResources] = useState([]);
+
+  const [ccpLimits, setCcpLimits] = useState([]);
+>>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
 
   const [users, setUsers] = useState(() => {
     const saved = localStorage.getItem("mx_admin_users");
-    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch(e) {} }
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
     return INITIAL_USERS;
   });
 
@@ -345,13 +685,17 @@ export function MasterDataProvider({ children }) {
 
   const [auditLogs, setAuditLogs] = useState(() => {
     const saved = localStorage.getItem("mx_master_audit_logs");
-    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch(e) {} }
+<<<<<<< HEAD
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
     return INITIAL_AUDIT_LOGS;
+=======
+    return saved ? JSON.parse(saved) : [];
+>>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
   });
 
   const [rolePermissions, setRolePermissions] = useState(() => {
     const saved = localStorage.getItem("mx_master_permissions");
-    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch(e) {} }
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
     return INITIAL_ROLE_PERMISSIONS;
   });
 
@@ -385,6 +729,7 @@ export function MasterDataProvider({ children }) {
   useEffect(() => { localStorage.setItem("mx_master_training", JSON.stringify(trainingRecords)); }, [trainingRecords]);
   useEffect(() => { localStorage.setItem("mx_master_quality_specs", JSON.stringify(qualitySpecs)); }, [qualitySpecs]);
   useEffect(() => { localStorage.setItem("mx_master_storage", JSON.stringify(storageResources)); }, [storageResources]);
+  useEffect(() => { localStorage.setItem("mx_master_ccp_limits", JSON.stringify(ccpLimits)); }, [ccpLimits]);
   useEffect(() => { localStorage.setItem("mx_admin_users", JSON.stringify(users)); }, [users]);
   useEffect(() => { localStorage.setItem("mx_master_audit_logs", JSON.stringify(auditLogs)); }, [auditLogs]);
   useEffect(() => { localStorage.setItem("mx_master_permissions", JSON.stringify(rolePermissions)); }, [rolePermissions]);
@@ -409,17 +754,26 @@ export function MasterDataProvider({ children }) {
           liveSanitations,
           liveAllergens,
           liveLabourStandards,
+<<<<<<< HEAD
+=======
+          liveEmployees,
+>>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
           liveSkus,
           liveBoms,
           liveAssets,
           liveSpecs,
+<<<<<<< HEAD
           liveStaff,
+=======
+          liveCCPs,
+          liveStorage,
+>>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
         ] = await Promise.allSettled([
           masterDataService.getCompanies(),
           masterDataService.getPlants(),
           masterDataService.getDepartments(activePlantId),
-          masterDataService.getLines(activePlantId),
-          masterDataService.getWorkCenters(activePlantId),
+          masterDataService.getLines(),
+          masterDataService.getWorkCenters(),
           masterDataService.getOperations(),
           masterDataService.getRoutings(),
           masterDataService.getProductFamilies(),
@@ -430,10 +784,12 @@ export function MasterDataProvider({ children }) {
           masterDataService.getSanitationClasses(),
           masterDataService.getAllergenRules(),
           masterDataService.getLabourStandards(),
+          masterDataService.getEmployeeSkills(activePlantId),
           masterDataService.getSkus(),
           masterDataService.getBoms(),
           masterDataService.getAssets(activePlantId),
           masterDataService.getQualitySpecs(),
+<<<<<<< HEAD
           masterDataService.getStaff(activePlantId),
         ]);
 
@@ -476,6 +832,43 @@ export function MasterDataProvider({ children }) {
         const packArr = safeArr(livePackConfigs);
         if (packArr) {
           setPackConfigs(packArr.map((p) => ({
+=======
+          masterDataService.getCCPLimits(),
+          masterDataService.getStorageResources(activePlantId),
+        ]);
+
+        if (liveCompanies.status === "fulfilled" && Array.isArray(liveCompanies.value?.data || liveCompanies.value) && (liveCompanies.value?.data || liveCompanies.value).length > 0) {
+          setCompanies(liveCompanies.value?.data || liveCompanies.value);
+        }
+        if (livePlants.status === "fulfilled" && Array.isArray(livePlants.value?.data || livePlants.value) && (livePlants.value?.data || livePlants.value).length > 0) {
+          setPlants(livePlants.value?.data || livePlants.value);
+        }
+        if (liveDepts.status === "fulfilled" && Array.isArray(liveDepts.value?.data || liveDepts.value) && (liveDepts.value?.data || liveDepts.value).length > 0) {
+          setDepartments(liveDepts.value?.data || liveDepts.value);
+        }
+        if (liveLines.status === "fulfilled" && Array.isArray(liveLines.value?.data || liveLines.value)) {
+          setLines(liveLines.value?.data || liveLines.value);
+        }
+        if (liveWcs.status === "fulfilled" && Array.isArray(liveWcs.value?.data || liveWcs.value)) {
+          setWorkCenters(liveWcs.value?.data || liveWcs.value);
+        }
+        if (liveOperations.status === "fulfilled" && Array.isArray(liveOperations.value?.data || liveOperations.value) && (liveOperations.value?.data || liveOperations.value).length > 0) {
+          setOperations(liveOperations.value?.data || liveOperations.value);
+        }
+        if (liveRoutings.status === "fulfilled" && Array.isArray(liveRoutings.value?.data || liveRoutings.value)) {
+          setRoutings(liveRoutings.value?.data || liveRoutings.value);
+        }
+        if (liveProductFamilies.status === "fulfilled" && Array.isArray(liveProductFamilies.value?.data || liveProductFamilies.value)) {
+          setProductFamilies(liveProductFamilies.value?.data || liveProductFamilies.value);
+        }
+        if (liveUoms.status === "fulfilled" && Array.isArray(liveUoms.value?.data || liveUoms.value)) {
+          setUoms(liveUoms.value?.data || liveUoms.value);
+        }
+        if (livePackConfigs.status === "fulfilled" && Array.isArray(livePackConfigs.value?.data || livePackConfigs.value)) {
+          const raw = livePackConfigs.value?.data || livePackConfigs.value;
+          // Normalize backend field names to frontend's expected field names
+          const normalized = raw.map((p) => ({
+>>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
             ...p,
             packConfigId: p.packConfigId || p.configId || p.id,
             packCode: p.packCode || p.code || p.packConfigCode || p.id,
@@ -489,6 +882,7 @@ export function MasterDataProvider({ children }) {
           })));
         }
 
+<<<<<<< HEAD
         const targetsArr = safeArr(liveLineTargets);
         if (targetsArr) setLineTargets(targetsArr);
 
@@ -498,6 +892,17 @@ export function MasterDataProvider({ children }) {
         const sanArr = safeArr(liveSanitations);
         if (sanArr) {
           setSanitationClasses(sanArr.map((s) => ({
+=======
+        if (liveLineTargets.status === "fulfilled" && Array.isArray(liveLineTargets.value?.data || liveLineTargets.value)) {
+          setLineTargets(liveLineTargets.value?.data || liveLineTargets.value);
+        }
+        if (liveChangeovers.status === "fulfilled" && Array.isArray(liveChangeovers.value?.data || liveChangeovers.value)) {
+          setChangeoverMatrix(liveChangeovers.value?.data || liveChangeovers.value);
+        }
+        if (liveSanitations.status === "fulfilled" && Array.isArray(liveSanitations.value?.data || liveSanitations.value)) {
+          const raw = liveSanitations.value?.data || liveSanitations.value;
+          const normalized = raw.map((s) => ({
+>>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
             ...s,
             id: s.id || s.sanitationId || s.classId,
             sanitationId: s.sanitationId || s.id || s.classId,
@@ -510,10 +915,16 @@ export function MasterDataProvider({ children }) {
             status: s.status || "Active",
           })));
         }
+<<<<<<< HEAD
 
         const algArr = safeArr(liveAllergens);
         if (algArr) {
           setAllergenRules(algArr.map((a) => ({
+=======
+        if (liveAllergens.status === "fulfilled" && Array.isArray(liveAllergens.value?.data || liveAllergens.value)) {
+          const raw = liveAllergens.value?.data || liveAllergens.value;
+          const normalized = raw.map((a) => ({
+>>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
             ...a,
             id: a.id || a.allergenId || a.ruleId,
             allergenId: a.allergenId || a.id || a.ruleId,
@@ -523,6 +934,7 @@ export function MasterDataProvider({ children }) {
             cleaningProtocol: a.cleaningProtocol || a.protocol || "Class A Full CIP + Sensory Swab Verification",
             changeoverRestriction: a.changeoverRestriction || a.verificationTest || "Mandatory QA clearance sign-off",
             status: a.status || "Active",
+<<<<<<< HEAD
           })));
         }
 
@@ -543,6 +955,35 @@ export function MasterDataProvider({ children }) {
 
         const staffArr = safeArr(liveStaff);
         if (staffArr) setEmployees(staffArr);
+=======
+          }));
+          setAllergenRules(normalized);
+        }
+        if (liveLabourStandards.status === "fulfilled" && Array.isArray(liveLabourStandards.value?.data || liveLabourStandards.value)) {
+          setLabourStandards(liveLabourStandards.value?.data || liveLabourStandards.value);
+        }
+        if (liveEmployees.status === "fulfilled" && Array.isArray(liveEmployees.value?.data || liveEmployees.value)) {
+          setEmployees(liveEmployees.value?.data || liveEmployees.value);
+        }
+        if (liveSkus.status === "fulfilled" && Array.isArray(liveSkus.value?.data || liveSkus.value)) {
+          setSkus(liveSkus.value?.data || liveSkus.value);
+        }
+        if (liveBoms.status === "fulfilled" && Array.isArray(liveBoms.value?.data || liveBoms.value)) {
+          setBoms(liveBoms.value?.data || liveBoms.value);
+        }
+        if (liveAssets.status === "fulfilled" && Array.isArray(liveAssets.value?.data || liveAssets.value)) {
+          setAssets(liveAssets.value?.data || liveAssets.value);
+        }
+        if (liveSpecs.status === "fulfilled" && Array.isArray(liveSpecs.value?.data || liveSpecs.value)) {
+          setQualitySpecs(liveSpecs.value?.data || liveSpecs.value);
+        }
+        if (liveCCPs.status === "fulfilled" && Array.isArray(liveCCPs.value?.data || liveCCPs.value)) {
+          setCcpLimits(liveCCPs.value?.data || liveCCPs.value);
+        }
+        if (liveStorage.status === "fulfilled" && Array.isArray(liveStorage.value?.data || liveStorage.value)) {
+          setStorageResources(liveStorage.value?.data || liveStorage.value);
+        }
+>>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
       } catch (err) {
         console.warn("MasterData backend sync fallback:", err.message);
       }
@@ -864,7 +1305,7 @@ export function MasterDataProvider({ children }) {
             const parsed = JSON.parse(profile);
             if (parsed?.name) return parsed.name;
           }
-        } catch {}
+        } catch { }
         return "Admin";
       })(),
       createdDate: new Date().toISOString().substring(0, 10),
@@ -907,40 +1348,50 @@ export function MasterDataProvider({ children }) {
   // ============================================================================
   // 4. PACK CONFIGURATION MUTATIONS
   // ============================================================================
-  const addPackConfig = (pckData) => {
-    const newRecord = {
-      id: `PCK-0${packConfigs.length + 1}`,
-      packConfigId: `PCK-0${packConfigs.length + 1}`,
-      packCode: pckData.packCode || `PCK-${pckData.skuCode || "5000"}-${pckData.unitsPerPack || 24}`,
-      skuId: pckData.skuId,
-      skuCode: pckData.skuCode,
-      skuName: pckData.skuName,
-      unitsPerPack: Number(pckData.unitsPerPack) || 24,
-      packType: pckData.packType || "Corrugated Case",
-      packagingUom: pckData.packagingUom || "CASE-24",
-      caseConfiguration: pckData.caseConfiguration || `${pckData.unitsPerPack} Units per Box`,
-      palletConfiguration: pckData.palletConfiguration || "60 Cases per Pallet",
-      tareWeightKg: Number(pckData.tareWeightKg) || 12.0,
-      status: "Active",
-      effectiveFrom: pckData.effectiveFrom || new Date().toISOString().substring(0, 10),
-      effectiveTo: "2030-12-31"
-    };
-    setPackConfigs((prev) => [newRecord, ...prev]);
-    masterDataService.createPackConfig(newRecord).catch((err) => console.warn("API createPackConfig:", err.message));
-    logAudit({ entityId: newRecord.packCode, entityType: "Pack Configuration", action: "Created", newValue: `${newRecord.packCode} for ${newRecord.skuCode}` });
-    return newRecord;
+  const addPackConfig = async (pckData) => {
+    try {
+      const res = await masterDataService.createPackConfig(pckData);
+      const created = res?.data || res || pckData;
+      const normalized = {
+        ...created,
+        packConfigId: created.packConfigId || created.configId || created.id,
+        packCode: created.packCode || created.code || pckData.packCode,
+        skuName: created.skuName || pckData.skuName,
+        skuCode: created.skuCode || pckData.skuCode,
+        unitsPerPack: Number(created.unitsPerPack || pckData.unitsPerPack) || 24,
+        packType: created.packType || pckData.packType,
+        packagingUom: created.packagingUom || pckData.packagingUom,
+        status: created.status || "Active"
+      };
+      setPackConfigs((prev) => [normalized, ...prev.filter(p => p.packConfigId !== normalized.packConfigId && p.id !== normalized.id)]);
+      logAudit({ entityId: normalized.packCode, entityType: "Pack Configuration", action: "Created", newValue: `${normalized.packCode}` });
+      return normalized;
+    } catch (err) {
+      console.warn("API createPackConfig error:", err);
+      throw err;
+    }
   };
 
-  const updatePackConfig = (packConfigId, updated) => {
-    setPackConfigs((prev) => prev.map((p) => (p.packConfigId === packConfigId || p.id === packConfigId ? { ...p, ...updated } : p)));
-    masterDataService.updatePackConfig(packConfigId, updated).catch((err) => console.warn("API updatePackConfig:", err.message));
-    logAudit({ entityId: packConfigId, entityType: "Pack Configuration", action: "Updated" });
+  const updatePackConfig = async (packConfigId, updated) => {
+    try {
+      await masterDataService.updatePackConfig(packConfigId, updated);
+      setPackConfigs((prev) => prev.map((p) => (p.packConfigId === packConfigId || p.id === packConfigId || p.packCode === packConfigId ? { ...p, ...updated } : p)));
+      logAudit({ entityId: packConfigId, entityType: "Pack Configuration", action: "Updated" });
+    } catch (err) {
+      console.warn("API updatePackConfig error:", err);
+      throw err;
+    }
   };
 
-  const deletePackConfig = (packConfigId) => {
-    setPackConfigs((prev) => prev.filter((p) => p.packConfigId !== packConfigId && p.id !== packConfigId));
-    masterDataService.deletePackConfig(packConfigId).catch((err) => console.warn("API deletePackConfig:", err.message));
-    logAudit({ entityId: packConfigId, entityType: "Pack Configuration", action: "Deleted" });
+  const deletePackConfig = async (packConfigId) => {
+    try {
+      await masterDataService.deletePackConfig(packConfigId);
+      setPackConfigs((prev) => prev.filter((p) => p.packConfigId !== packConfigId && p.id !== packConfigId && p.packCode !== packConfigId));
+      logAudit({ entityId: packConfigId, entityType: "Pack Configuration", action: "Deleted" });
+    } catch (err) {
+      console.warn("API deletePackConfig error:", err);
+      throw err;
+    }
   };
 
   // ============================================================================
@@ -1015,90 +1466,96 @@ export function MasterDataProvider({ children }) {
   // ============================================================================
   // 7. BOM / RECIPE MUTATIONS & APPROVAL GOVERNANCE
   // ============================================================================
-  const addBOM = (bomData) => {
-    const newRecord = {
-      bomId: `BOM-00${boms.length + 1}`,
-      bomNumber: bomData.bomNumber || `BOM-${Math.floor(5000 + Math.random() * 900)}`,
-      finishedSkuId: bomData.finishedSkuId || "SKU-001",
-      finishedSkuCode: bomData.finishedSkuCode || skus.find((s) => s.skuId === bomData.finishedSkuId)?.skuCode || "SKU-5001",
-      finishedSkuName: bomData.finishedSkuName || skus.find((s) => s.skuId === bomData.finishedSkuId)?.name || "Product Recipe",
-      revision: "R1",
-      effectiveDate: new Date().toISOString().substring(0, 10),
-      effectiveFrom: new Date().toISOString().substring(0, 10),
-      effectiveTo: "2030-12-31",
-      status: "Draft",
-      approvalStatus: "Draft",
-      batchSize: bomData.batchSize || "10,000 Liters",
-      yieldTarget: bomData.yieldTarget || "99.0%",
-      expectedYieldPct: Number(bomData.expectedYieldPct) || 99.0,
-      minYieldPct: Number(bomData.minYieldPct) || 98.0,
-      maxYieldPct: Number(bomData.maxYieldPct) || 99.8,
-      scrapFactorPct: Number(bomData.scrapFactorPct) || 0.8,
-      createdBy: "Alexander Vance",
-      lastUpdated: new Date().toISOString().substring(0, 10),
-      components: bomData.components || [],
-      revisionHistory: [
-        { revision: "R1", status: "Draft", createdBy: "Alexander Vance", date: new Date().toISOString().substring(0, 10), changes: "Initial BOM Draft Formulation registered.", approvedBy: "-" }
-      ]
-    };
-    setBoms((prev) => [newRecord, ...prev]);
-    masterDataService.createBom(newRecord).catch((err) => console.warn("API createBom:", err.message));
-    logAudit({ entityId: newRecord.bomNumber, entityType: "BOM Recipe", action: "Created", newValue: `${newRecord.bomNumber} for ${newRecord.finishedSkuName}` });
-    return newRecord;
+  const addBOM = async (bomData) => {
+    try {
+      const res = await masterDataService.createBom(bomData);
+      const created = res?.data || res || bomData;
+      setBoms((prev) => [created, ...prev.filter((b) => (b.bomId || b.id) !== (created.bomId || created.id))]);
+      logAudit({ entityId: created.bomNumber || created.name, entityType: "BOM Recipe", action: "Created", newValue: `${created.bomNumber} for ${created.finishedSkuName}` });
+      return created;
+    } catch (err) {
+      console.warn("API createBom error:", err);
+      throw err;
+    }
   };
 
-  const updateBOM = (bomId, updated) => {
-    setBoms((prev) =>
-      prev.map((b) => (b.bomId === bomId || b.bomNumber === bomId ? { ...b, ...updated, lastUpdated: new Date().toISOString().substring(0, 10) } : b))
-    );
-    masterDataService.updateBom(bomId, updated).catch((err) => console.warn("API updateBom:", err.message));
-    logAudit({ entityId: bomId, entityType: "BOM Recipe", action: "Updated" });
+  const updateBOM = async (bomId, updated) => {
+    try {
+      await masterDataService.updateBom(bomId, updated);
+      setBoms((prev) =>
+        prev.map((b) => (b.bomId === bomId || b.id === bomId || b.bomNumber === bomId ? { ...b, ...updated, lastUpdated: new Date().toISOString().substring(0, 10) } : b))
+      );
+      logAudit({ entityId: bomId, entityType: "BOM Recipe", action: "Updated" });
+    } catch (err) {
+      console.warn("API updateBom error:", err);
+      throw err;
+    }
   };
 
-  const submitBOMForApproval = (bomId) => {
-    setBoms((prev) =>
-      prev.map((b) => {
-        if (b.bomId === bomId || b.bomNumber === bomId) {
-          logAudit({ entityId: b.bomNumber, entityType: "BOM Recipe", action: "Submitted", notes: "Submitted for QA/Plant Manager approval" });
-          return { ...b, status: "Under Review", approvalStatus: "Under Review", lastUpdated: new Date().toISOString().substring(0, 10) };
-        }
-        return b;
-      })
-    );
-    masterDataService.updateBom(bomId, { status: "Under Review", approvalStatus: "Under Review" }).catch((err) => console.warn("API submitBOM:", err.message));
+  const submitBOMForApproval = async (bomId) => {
+    try {
+      await masterDataService.updateBom(bomId, { status: "Under Review", approvalStatus: "Under Review" });
+      setBoms((prev) =>
+        prev.map((b) => {
+          if (b.bomId === bomId || b.id === bomId || b.bomNumber === bomId) {
+            logAudit({ entityId: b.bomNumber || bomId, entityType: "BOM Recipe", action: "Submitted", notes: "Submitted for QA/Plant Manager approval" });
+            return { ...b, status: "Under Review", approvalStatus: "Under Review", lastUpdated: new Date().toISOString().substring(0, 10) };
+          }
+          return b;
+        })
+      );
+    } catch (err) {
+      console.warn("API submitBOM error:", err);
+      throw err;
+    }
   };
 
-  const approveBOM = (bomId, approver = "Sarah Jenkins") => {
-    setBoms((prev) =>
-      prev.map((b) => {
-        if (b.bomId === bomId || b.bomNumber === bomId) {
-          const revs = b.revisionHistory.map((rev, idx) => (idx === 0 ? { ...rev, status: "Approved", approvedBy: approver } : rev));
-          logAudit({ entityId: b.bomNumber, entityType: "BOM Recipe", action: "Approved", notes: `Approved by ${approver}` });
-          return { ...b, status: "Active", approvalStatus: "Approved", revisionHistory: revs, lastUpdated: new Date().toISOString().substring(0, 10) };
-        }
-        return b;
-      })
-    );
-    masterDataService.updateBom(bomId, { status: "Active", approvalStatus: "Approved" }).catch((err) => console.warn("API approveBOM:", err.message));
+  const approveBOM = async (bomId, approver = "Sarah Jenkins") => {
+    try {
+      await masterDataService.updateBom(bomId, { status: "Active", approvalStatus: "Approved" });
+      setBoms((prev) =>
+        prev.map((b) => {
+          if (b.bomId === bomId || b.id === bomId || b.bomNumber === bomId) {
+            const revs = (b.revisionHistory || []).map((rev, idx) => (idx === 0 ? { ...rev, status: "Approved", approvedBy: approver } : rev));
+            logAudit({ entityId: b.bomNumber || bomId, entityType: "BOM Recipe", action: "Approved", notes: `Approved by ${approver}` });
+            return { ...b, status: "Active", approvalStatus: "Approved", revisionHistory: revs, lastUpdated: new Date().toISOString().substring(0, 10) };
+          }
+          return b;
+        })
+      );
+    } catch (err) {
+      console.warn("API approveBOM error:", err);
+      throw err;
+    }
   };
 
-  const rejectBOM = (bomId, reason = "Tolerance out of spec") => {
-    setBoms((prev) =>
-      prev.map((b) => {
-        if (b.bomId === bomId || b.bomNumber === bomId) {
-          logAudit({ entityId: b.bomNumber, entityType: "BOM Recipe", action: "Rejected", notes: `Reason: ${reason}` });
-          return { ...b, status: "Draft", approvalStatus: "Draft", rejectionReason: reason, lastUpdated: new Date().toISOString().substring(0, 10) };
-        }
-        return b;
-      })
-    );
-    masterDataService.updateBom(bomId, { status: "Draft", approvalStatus: "Draft", rejectionReason: reason }).catch((err) => console.warn("API rejectBOM:", err.message));
+  const rejectBOM = async (bomId, reason = "Tolerance out of spec") => {
+    try {
+      await masterDataService.updateBom(bomId, { status: "Draft", approvalStatus: "Draft", rejectionReason: reason });
+      setBoms((prev) =>
+        prev.map((b) => {
+          if (b.bomId === bomId || b.id === bomId || b.bomNumber === bomId) {
+            logAudit({ entityId: b.bomNumber || bomId, entityType: "BOM Recipe", action: "Rejected", notes: `Reason: ${reason}` });
+            return { ...b, status: "Draft", approvalStatus: "Draft", rejectionReason: reason, lastUpdated: new Date().toISOString().substring(0, 10) };
+          }
+          return b;
+        })
+      );
+    } catch (err) {
+      console.warn("API rejectBOM error:", err);
+      throw err;
+    }
   };
 
-  const deleteBOM = (bomId) => {
-    setBoms((prev) => prev.filter((b) => b.bomId !== bomId && b.bomNumber !== bomId));
-    masterDataService.deleteBom(bomId).catch((err) => console.warn("API deleteBom:", err.message));
-    logAudit({ entityId: bomId, entityType: "BOM Recipe", action: "Deleted" });
+  const deleteBOM = async (bomId) => {
+    try {
+      await masterDataService.deleteBom(bomId);
+      setBoms((prev) => prev.filter((b) => b.bomId !== bomId && b.id !== bomId && b.bomNumber !== bomId));
+      logAudit({ entityId: bomId, entityType: "BOM Recipe", action: "Deleted" });
+    } catch (err) {
+      console.warn("API deleteBom error:", err);
+      throw err;
+    }
   };
 
   // ============================================================================
@@ -1138,49 +1595,45 @@ export function MasterDataProvider({ children }) {
     logAudit({ entityId: operationId, entityType: "Operations Master", action: "Deleted" });
   };
 
-  const addRouting = (rtgData) => {
-    const newId = `RTG-00${routings.length + 1}`;
-    const newRecord = {
-      id: newId,
-      routingId: newId,
-      routingCode: (rtgData.routingCode || `RTG-${rtgData.skuCode || "5000"}-L1`).toUpperCase(),
-      skuId: rtgData.skuId,
-      skuCode: rtgData.skuCode || skus.find((s) => s.skuId === rtgData.skuId)?.skuCode || "SKU-5001",
-      skuName: rtgData.skuName || skus.find((s) => s.skuId === rtgData.skuId)?.name || "Product",
-      lineId: rtgData.lineId || "LIN-01",
-      lineCode: rtgData.lineCode || lines.find((l) => l.lineId === rtgData.lineId)?.lineCode || "LINE-1",
-      lineName: rtgData.lineName || lines.find((l) => l.lineId === rtgData.lineId)?.name || "Line 1",
-      revision: "R1",
-      approvalStatus: "Approved",
-      status: "Active",
-      stdRunRateBPH: Number(rtgData.stdRunRateBPH) || 35000,
-      setupDurationMin: Number(rtgData.setupDurationMin) || 30,
-      expectedYieldPct: Number(rtgData.expectedYieldPct) || 99.0,
-      effectiveFrom: rtgData.effectiveFrom || new Date().toISOString().substring(0, 10),
-      effectiveTo: "2030-12-31",
-      steps: rtgData.steps || []
-    };
-    setRoutings((prev) => [newRecord, ...prev]);
-    masterDataService.createRouting(newRecord).catch((err) => console.warn("API createRouting:", err.message));
-    logAudit({ entityId: newRecord.routingCode, entityType: "Routings Master", action: "Created", newValue: `${newRecord.routingCode} for ${newRecord.skuCode}` });
-    return newRecord;
+  const addRouting = async (rtgData) => {
+    try {
+      const res = await masterDataService.createRouting(rtgData);
+      const created = res?.data?.data || res?.data || res || rtgData;
+      setRoutings((prev) => [created, ...prev.filter(r => (r.routingId || r.id) !== (created.routingId || created.id))]);
+      logAudit({ entityId: created.routingCode || created.id, entityType: "Routings Master", action: "Created", newValue: `${created.routingCode}` });
+      return created;
+    } catch (err) {
+      console.warn("API createRouting error:", err);
+      throw err;
+    }
   };
 
-  const updateRouting = (routingId, updated) => {
-    setRoutings((prev) => prev.map((r) => (r.routingId === routingId || r.id === routingId ? { ...r, ...updated } : r)));
-    masterDataService.updateRouting(routingId, updated).catch((err) => console.warn("API updateRouting:", err.message));
-    logAudit({ entityId: routingId, entityType: "Routings Master", action: "Updated" });
+  const updateRouting = async (routingId, updated) => {
+    try {
+      await masterDataService.updateRouting(routingId, updated);
+      setRoutings((prev) => prev.map((r) => (r.routingId === routingId || r.id === routingId || r.routingCode === routingId ? { ...r, ...updated } : r)));
+      logAudit({ entityId: routingId, entityType: "Routings Master", action: "Updated" });
+    } catch (err) {
+      console.warn("API updateRouting error:", err);
+      throw err;
+    }
   };
 
-  const deleteRouting = (routingId) => {
-    setRoutings((prev) => prev.filter((r) => r.routingId !== routingId && r.id !== routingId));
-    masterDataService.deleteRouting(routingId).catch((err) => console.warn("API deleteRouting:", err.message));
-    logAudit({ entityId: routingId, entityType: "Routings Master", action: "Deleted" });
+  const deleteRouting = async (routingId) => {
+    try {
+      await masterDataService.deleteRouting(routingId);
+      setRoutings((prev) => prev.filter((r) => r.routingId !== routingId && r.id !== routingId && r.routingCode !== routingId));
+      logAudit({ entityId: routingId, entityType: "Routings Master", action: "Deleted" });
+    } catch (err) {
+      console.warn("API deleteRouting error:", err);
+      throw err;
+    }
   };
 
   // ============================================================================
   // 9. WORK CENTERS / LINES & LINE TARGETS MUTATIONS
   // ============================================================================
+<<<<<<< HEAD
   const addLine = (lineData) => {
     const newRecord = {
       id: `LIN-0${lines.length + 1}`,
@@ -1209,74 +1662,94 @@ export function MasterDataProvider({ children }) {
     masterDataService.createLine(newRecord).catch((err) => console.warn("API createLine:", err.message));
     logAudit({ entityId: newRecord.lineCode, entityType: "Work Centers / Lines", action: "Created", newValue: newRecord.name });
     return newRecord;
+=======
+  const addLine = async (lineData) => {
+    try {
+      const res = await masterDataService.createLine(lineData);
+      const created = res?.data || res;
+      setLines((prev) => [created, ...prev.filter((l) => l.id !== created.id && l.lineCode !== created.lineCode)]);
+      logAudit({ entityId: created.lineCode || created.code, entityType: "Work Centers / Lines", action: "Created", newValue: created.name });
+      return created;
+    } catch (err) {
+      console.warn("API createLine:", err.message);
+      throw err;
+    }
+>>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
   };
 
-  const updateLine = (lineId, updated) => {
-    setLines((prev) =>
-      prev.map((l) => (l.lineId === lineId || l.id === lineId || l.lineCode === lineId ? { ...l, ...updated } : l))
-    );
-    masterDataService.updateLine(lineId, updated).catch((err) => console.warn("API updateLine:", err.message));
-    logAudit({ entityId: lineId, entityType: "Work Centers / Lines", action: "Updated" });
+  const updateLine = async (lineId, updated) => {
+    try {
+      await masterDataService.updateLine(lineId, updated);
+      setLines((prev) =>
+        prev.map((l) => (l.lineId === lineId || l.id === lineId || l.lineCode === lineId || l.code === lineId ? { ...l, ...updated } : l))
+      );
+      logAudit({ entityId: lineId, entityType: "Work Centers / Lines", action: "Updated" });
+    } catch (err) {
+      console.warn("API updateLine:", err.message);
+      throw err;
+    }
   };
 
-  const toggleLineStatus = (lineId) => {
-    setLines((prev) =>
-      prev.map((l) => {
-        if (l.lineId === lineId || l.id === lineId || l.lineCode === lineId) {
-          const next = l.status === "Active" ? "Inactive" : "Active";
-          masterDataService.updateLine(lineId, { status: next }).catch((err) => console.warn("API toggleLineStatus:", err.message));
-          return { ...l, status: next };
-        }
-        return l;
-      })
-    );
+  const toggleLineStatus = async (lineId) => {
+    const current = lines.find((l) => l.lineId === lineId || l.id === lineId || l.lineCode === lineId || l.code === lineId);
+    const next = current?.status === "Active" ? "Inactive" : "Active";
+    try {
+      await masterDataService.updateLine(lineId, { status: next });
+      setLines((prev) =>
+        prev.map((l) => (l.lineId === lineId || l.id === lineId || l.lineCode === lineId || l.code === lineId ? { ...l, status: next } : l))
+      );
+    } catch (err) {
+      console.warn("API toggleLineStatus:", err.message);
+    }
   };
 
-  const deleteLine = (lineId) => {
-    setLines((prev) => prev.filter((l) => l.lineId !== lineId && l.id !== lineId && l.lineCode !== lineId));
-    masterDataService.deleteLine(lineId).catch((err) => console.warn("API deleteLine:", err.message));
-    logAudit({ entityId: lineId, entityType: "Work Centers / Lines", action: "Deleted" });
+  const deleteLine = async (lineId) => {
+    try {
+      await masterDataService.deleteLine(lineId);
+      setLines((prev) => prev.filter((l) => l.lineId !== lineId && l.id !== lineId && l.lineCode !== lineId && l.code !== lineId));
+      logAudit({ entityId: lineId, entityType: "Work Centers / Lines", action: "Deleted" });
+    } catch (err) {
+      console.warn("API deleteLine:", err.message);
+      throw err;
+    }
   };
 
   // 9.1 WORK CENTERS MUTATIONS
-  const addWorkCenter = (wcData) => {
-    const newId = `WC-${Math.floor(400 + Math.random() * 99)}`;
-    const lineObj = lines.find((l) => l.lineId === wcData.lineId || l.id === wcData.lineId);
-    const newRecord = {
-      id: newId,
-      workCenterId: newId,
-      code: (wcData.code || `WC-0${workCenters.length + 1}`).toUpperCase(),
-      name: wcData.name,
-      lineId: wcData.lineId || lines[0]?.lineId || "LIN-01",
-      lineName: wcData.lineName || (lineObj ? lineObj.name : "Line 1 — Aseptic Bottling"),
-      plantId: wcData.plantId || (lineObj ? lineObj.plantId : "PLT-01"),
-      capacity: wcData.capacity || "38,000 BPH",
-      category: wcData.category || "PACKAGING",
-      status: wcData.status || "Active",
-    };
-    setWorkCenters((prev) => [newRecord, ...prev]);
-    masterDataService.createWorkCenter(newRecord).catch((err) => console.warn("API createWorkCenter:", err.message));
-    logAudit({ entityId: newRecord.code, entityType: "Work Center Cell", action: "Created", newValue: newRecord.name });
-    return newRecord;
+  const addWorkCenter = async (wcData) => {
+    try {
+      const res = await masterDataService.createWorkCenter(wcData);
+      const created = res?.data || res;
+      setWorkCenters((prev) => [created, ...prev.filter((w) => w.id !== created.id && w.code !== created.code)]);
+      logAudit({ entityId: created.code, entityType: "Work Center Cell", action: "Created", newValue: created.name });
+      return created;
+    } catch (err) {
+      console.warn("API createWorkCenter:", err.message);
+      throw err;
+    }
   };
 
-  const updateWorkCenter = (wcId, updated) => {
-    const lineObj = updated.lineId ? lines.find((l) => l.lineId === updated.lineId || l.id === updated.lineId) : undefined;
-    setWorkCenters((prev) =>
-      prev.map((w) =>
-        w.id === wcId || w.workCenterId === wcId || w.code === wcId
-          ? { ...w, ...updated, lineName: lineObj ? lineObj.name : (updated.lineName || w.lineName) }
-          : w
-      )
-    );
-    masterDataService.updateWorkCenter(wcId, updated).catch((err) => console.warn("API updateWorkCenter:", err.message));
-    logAudit({ entityId: wcId, entityType: "Work Center Cell", action: "Updated" });
+  const updateWorkCenter = async (wcId, updated) => {
+    try {
+      await masterDataService.updateWorkCenter(wcId, updated);
+      setWorkCenters((prev) =>
+        prev.map((w) => (w.id === wcId || w.workCenterId === wcId || w.code === wcId ? { ...w, ...updated } : w))
+      );
+      logAudit({ entityId: wcId, entityType: "Work Center Cell", action: "Updated" });
+    } catch (err) {
+      console.warn("API updateWorkCenter:", err.message);
+      throw err;
+    }
   };
 
-  const deleteWorkCenter = (wcId) => {
-    setWorkCenters((prev) => prev.filter((w) => w.id !== wcId && w.workCenterId !== wcId));
-    masterDataService.deleteWorkCenter(wcId).catch((err) => console.warn("API deleteWorkCenter:", err.message));
-    logAudit({ entityId: wcId, entityType: "Work Center Cell", action: "Deleted" });
+  const deleteWorkCenter = async (wcId) => {
+    try {
+      await masterDataService.deleteWorkCenter(wcId);
+      setWorkCenters((prev) => prev.filter((w) => w.id !== wcId && w.workCenterId !== wcId && w.code !== wcId));
+      logAudit({ entityId: wcId, entityType: "Work Center Cell", action: "Deleted" });
+    } catch (err) {
+      console.warn("API deleteWorkCenter:", err.message);
+      throw err;
+    }
   };
 
   const assignAssetToLine = (lineId, assetId) => {
@@ -1290,39 +1763,57 @@ export function MasterDataProvider({ children }) {
     logAudit({ entityId: lineId, entityType: "Work Centers / Lines", action: "Updated", newValue: `Assigned asset ${assetId}` });
   };
 
-  const addLineTarget = (targetData) => {
+  const addLineTarget = async (targetData) => {
+    const selLine = lines.find((l) => l.lineId === targetData.lineId || l.id === targetData.lineId);
+    const selSku = skus.find((s) => s.skuId === targetData.skuId || s.id === targetData.skuId);
     const newRecord = {
-      id: `TGT-0${lineTargets.length + 1}`,
-      targetId: `TGT-0${lineTargets.length + 1}`,
-      plantId: targetData.plantId || activePlantId,
+      id: targetData.id || targetData.targetId || `TGT-0${lineTargets.length + 1}`,
+      targetId: targetData.targetId || targetData.id || `TGT-0${lineTargets.length + 1}`,
+      plantId: targetData.plantId || activePlantId || "PLT-01",
       lineId: targetData.lineId || "LIN-01",
-      lineName: lines.find((l) => l.lineId === targetData.lineId || l.id === targetData.lineId)?.name || "High-Speed Line 1",
+      lineName: selLine?.name || targetData.lineName || "Production Line",
       skuId: targetData.skuId || "SKU-001",
-      skuCode: skus.find((s) => s.skuId === targetData.skuId || s.id === targetData.skuId)?.skuCode || "SKU-5001",
-      skuName: skus.find((s) => s.skuId === targetData.skuId || s.id === targetData.skuId)?.name || "Citrus Soda",
+      skuCode: selSku?.skuCode || targetData.skuCode || "SKU-5001",
+      skuName: selSku?.name || targetData.skuName || "Beverage",
       shift: targetData.shift || "Morning Shift",
       targetQuantity: Number(targetData.targetQuantity) || 250000,
-      targetHB: targetData.targetHB || "35,000 Units/Hour",
+      targetHB: targetData.targetHB || `${(Number(targetData.targetQuantity) || 250000) / 8} Units/Hour`,
       stdRunRate: Number(targetData.stdRunRate) || 40000,
       oeeTargetPct: Number(targetData.oeeTargetPct) || 88.0,
-      status: "Active",
-      effectiveDate: new Date().toISOString().substring(0, 10)
+      status: targetData.status || "Active",
+      effectiveDate: targetData.effectiveDate || new Date().toISOString().substring(0, 10)
     };
-    setLineTargets((prev) => [newRecord, ...prev]);
-    masterDataService.createLineTarget(newRecord).catch((err) => console.warn("API createLineTarget:", err.message));
-    logAudit({ entityId: newRecord.targetId, entityType: "Line Targets", action: "Created", newValue: `${newRecord.lineName} Target: ${newRecord.targetQuantity}` });
-    return newRecord;
+    try {
+      const res = await masterDataService.createLineTarget(newRecord);
+      const created = res?.data?.data || res?.data || res || newRecord;
+      setLineTargets((prev) => [created, ...prev.filter((t) => (t.id !== created.id && t.targetId !== created.targetId))]);
+      logAudit({ entityId: created.targetId || created.id, entityType: "Line Targets", action: "Created", newValue: `${created.lineName} Target: ${created.targetQuantity}` });
+      return created;
+    } catch (err) {
+      console.warn("API createLineTarget error:", err);
+      setLineTargets((prev) => [newRecord, ...prev]);
+      logAudit({ entityId: newRecord.targetId, entityType: "Line Targets", action: "Created", newValue: `${newRecord.lineName} Target: ${newRecord.targetQuantity}` });
+      return newRecord;
+    }
   };
 
-  const updateLineTarget = (targetId, updated) => {
+  const updateLineTarget = async (targetId, updated) => {
     setLineTargets((prev) => prev.map((t) => (t.targetId === targetId || t.id === targetId ? { ...t, ...updated } : t)));
-    masterDataService.updateLineTarget(targetId, updated).catch((err) => console.warn("API updateLineTarget:", err.message));
+    try {
+      await masterDataService.updateLineTarget(targetId, updated);
+    } catch (err) {
+      console.warn("API updateLineTarget error:", err);
+    }
     logAudit({ entityId: targetId, entityType: "Line Targets", action: "Updated" });
   };
 
-  const deleteLineTarget = (targetId) => {
+  const deleteLineTarget = async (targetId) => {
     setLineTargets((prev) => prev.filter((t) => t.targetId !== targetId && t.id !== targetId));
-    masterDataService.deleteLineTarget(targetId).catch((err) => console.warn("API deleteLineTarget:", err.message));
+    try {
+      await masterDataService.deleteLineTarget(targetId);
+    } catch (err) {
+      console.warn("API deleteLineTarget error:", err);
+    }
     logAudit({ entityId: targetId, entityType: "Line Targets", action: "Deleted" });
   };
 
@@ -1381,69 +1872,117 @@ export function MasterDataProvider({ children }) {
     logAudit({ entityId: matrixId, entityType: "Changeover Matrix", action: "Deleted" });
   };
 
-  const addSanitationClass = (data) => {
+  const addSanitationClass = async (data) => {
+    const tempId = data.sanitationId || data.id || data.classId || `SAN-0${Math.floor(1000 + Math.random() * 9000)}`;
     const newRecord = {
-      id: `SAN-0${sanitationClasses.length + 1}`,
-      sanitationId: `SAN-0${sanitationClasses.length + 1}`,
-      sanitationClass: data.sanitationClass,
-      description: data.description,
+      id: data.id || tempId,
+      classId: data.classId || tempId,
+      sanitationId: data.sanitationId || tempId,
+      code: (data.code || tempId).toUpperCase(),
+      name: data.sanitationClass || data.name || "Sanitation Program",
+      sanitationClass: data.sanitationClass || data.name || "Sanitation Program",
+      description: data.description || "",
       durationMin: Number(data.durationMin) || 45,
-      cleaningMethod: data.cleaningMethod || "Automated CIP",
+      washDurationMin: Number(data.durationMin) || 45,
+      cleaningMethod: data.cleaningMethod || "Automated Central CIP Skid",
+      cleaningLevel: data.cleaningLevel || "Intermediate",
       riskLevel: data.riskLevel || "Standard",
       applicableProducts: data.applicableProducts || "All Formulations",
-      status: "Active"
+      chemicalAgent: data.chemicalAgent || "Caustic Solution",
+      validationMethod: data.validationMethod || "Visual & Swab",
+      frequency: data.frequency || "Daily",
+      status: data.status || "Active"
     };
-    setSanitationClasses((prev) => [newRecord, ...prev]);
-    masterDataService.createSanitationClass(newRecord).catch((err) => console.warn("API createSanitationClass:", err.message));
-    logAudit({ entityId: newRecord.sanitationClass, entityType: "Sanitation Master", action: "Created" });
-    return newRecord;
+    try {
+      const res = await masterDataService.createSanitationClass(newRecord);
+      const saved = res?.data?.data || res?.data || res || newRecord;
+      setSanitationClasses((prev) => [saved, ...prev.filter((s) => s.id !== saved.id && s.sanitationId !== saved.sanitationId && s.classId !== saved.classId && s.id !== newRecord.id)]);
+      logAudit({ entityId: saved.sanitationClass || saved.id, entityType: "Sanitation Master", action: "Created" });
+      return saved;
+    } catch (err) {
+      console.warn("API createSanitationClass fallback:", err.message);
+      setSanitationClasses((prev) => [newRecord, ...prev]);
+      logAudit({ entityId: newRecord.sanitationClass, entityType: "Sanitation Master", action: "Created" });
+      return newRecord;
+    }
   };
 
-  const updateSanitationClass = (sanitationId, updated) => {
-    setSanitationClasses((prev) => prev.map((s) => (s.sanitationId === sanitationId || s.id === sanitationId ? { ...s, ...updated } : s)));
-    masterDataService.updateSanitationClass(sanitationId, updated).catch((err) => console.warn("API updateSanitationClass:", err.message));
+  const updateSanitationClass = async (sanitationId, updated) => {
+    setSanitationClasses((prev) => prev.map((s) => (s.sanitationId === sanitationId || s.id === sanitationId || s.classId === sanitationId ? { ...s, ...updated } : s)));
+    try {
+      await masterDataService.updateSanitationClass(sanitationId, updated);
+    } catch (err) {
+      console.warn("API updateSanitationClass error:", err.message);
+    }
     logAudit({ entityId: sanitationId, entityType: "Sanitation Master", action: "Updated" });
   };
 
-  const deleteSanitationClass = (sanitationId) => {
-    setSanitationClasses((prev) => prev.filter((s) => s.sanitationId !== sanitationId && s.id !== sanitationId));
-    masterDataService.deleteSanitationClass(sanitationId).catch((err) => console.warn("API deleteSanitationClass:", err.message));
+  const deleteSanitationClass = async (sanitationId) => {
+    setSanitationClasses((prev) => prev.filter((s) => s.sanitationId !== sanitationId && s.id !== sanitationId && s.classId !== sanitationId));
+    try {
+      await masterDataService.deleteSanitationClass(sanitationId);
+    } catch (err) {
+      console.warn("API deleteSanitationClass error:", err.message);
+    }
     logAudit({ entityId: sanitationId, entityType: "Sanitation Master", action: "Deleted" });
   };
 
-  const addAllergenRule = (data) => {
+  const addAllergenRule = async (data) => {
+    const tempId = data.allergenId || data.ruleId || data.id || `ALG-0${Math.floor(1000 + Math.random() * 9000)}`;
     const newRecord = {
-      id: `ALG-0${allergenRules.length + 1}`,
-      allergenId: `ALG-0${allergenRules.length + 1}`,
+      id: data.id || tempId,
+      ruleId: data.ruleId || tempId,
+      allergenId: data.allergenId || tempId,
       allergenName: data.allergenName,
-      skuId: data.skuId,
-      skuCode: data.skuCode,
+      allergenType: data.allergenType || "Botanical Extracts",
+      skuId: data.skuId || "",
+      skuCode: data.skuCode || "SKU-5001",
       riskLevel: data.riskLevel || "High",
-      cleaningProtocol: data.cleaningProtocol || "Class A Full CIP",
-      changeoverRestriction: data.changeoverRestriction || "Mandatory QA Swab Check",
-      status: "Active"
+      cleaningProtocol: data.cleaningProtocol || "Class A Full CIP + Sensory Swab Verification",
+      protocol: data.cleaningProtocol || "Class A Full CIP + Sensory Swab Verification",
+      changeoverRestriction: data.changeoverRestriction || "Mandatory QA sign-off",
+      verificationTest: data.verificationTest || "ATP Swab < 10 RLU",
+      status: data.status || "Active"
     };
-    setAllergenRules((prev) => [newRecord, ...prev]);
-    masterDataService.createAllergenRule(newRecord).catch((err) => console.warn("API createAllergenRule:", err.message));
-    logAudit({ entityId: newRecord.allergenName, entityType: "Allergen Rules", action: "Created" });
-    return newRecord;
+    try {
+      const res = await masterDataService.createAllergenRule(newRecord);
+      const saved = res?.data?.data || res?.data || res || newRecord;
+      setAllergenRules((prev) => [saved, ...prev.filter((a) => a.id !== saved.id && a.allergenId !== saved.allergenId && a.ruleId !== saved.ruleId && a.id !== newRecord.id)]);
+      logAudit({ entityId: saved.allergenName || saved.id, entityType: "Allergen Rules", action: "Created" });
+      return saved;
+    } catch (err) {
+      console.warn("API createAllergenRule fallback:", err.message);
+      setAllergenRules((prev) => [newRecord, ...prev]);
+      logAudit({ entityId: newRecord.allergenName, entityType: "Allergen Rules", action: "Created" });
+      return newRecord;
+    }
   };
 
-  const updateAllergenRule = (allergenId, updated) => {
-    setAllergenRules((prev) => prev.map((a) => (a.allergenId === allergenId || a.id === allergenId ? { ...a, ...updated } : a)));
-    masterDataService.updateAllergenRule(allergenId, updated).catch((err) => console.warn("API updateAllergenRule:", err.message));
+  const updateAllergenRule = async (allergenId, updated) => {
+    setAllergenRules((prev) => prev.map((a) => (a.allergenId === allergenId || a.id === allergenId || a.ruleId === allergenId ? { ...a, ...updated } : a)));
+    try {
+      await masterDataService.updateAllergenRule(allergenId, updated);
+    } catch (err) {
+      console.warn("API updateAllergenRule error:", err.message);
+    }
     logAudit({ entityId: allergenId, entityType: "Allergen Rules", action: "Updated" });
   };
 
-  const deleteAllergenRule = (allergenId) => {
-    setAllergenRules((prev) => prev.filter((a) => a.allergenId !== allergenId && a.id !== allergenId));
-    masterDataService.deleteAllergenRule(allergenId).catch((err) => console.warn("API deleteAllergenRule:", err.message));
+  const deleteAllergenRule = async (allergenId) => {
+    setAllergenRules((prev) => prev.filter((a) => a.allergenId !== allergenId && a.id !== allergenId && a.ruleId !== allergenId));
+    try {
+      await masterDataService.deleteAllergenRule(allergenId);
+    } catch (err) {
+      console.warn("API deleteAllergenRule error:", err.message);
+    }
     logAudit({ entityId: allergenId, entityType: "Allergen Rules", action: "Deleted" });
   };
 
-  const addLabourStandard = (data) => {
+  const addLabourStandard = async (data) => {
+    const tempId = data.standardId || data.id || `LBR-0${Math.floor(1000 + Math.random() * 9000)}`;
     const newRecord = {
-      id: `LBR-0${labourStandards.length + 1}`,
+      id: data.id || tempId,
+      standardId: data.standardId || tempId,
       lineId: data.lineId || "LIN-01",
       lineName: data.lineName || "Production Line",
       standardCrew: Number(data.standardCrew) || 8,
@@ -1453,115 +1992,150 @@ export function MasterDataProvider({ children }) {
         : `$${Number(data.directCostPerHour || 25).toFixed(2)}`,
       status: data.status || "Active"
     };
-    setLabourStandards((prev) => [newRecord, ...prev]);
-    masterDataService.createLabourStandard(newRecord).catch((err) => console.warn("API createLabourStandard:", err.message));
-    logAudit({ entityId: newRecord.lineName, entityType: "Labour Standard", action: "Created" });
-    return newRecord;
+    try {
+      const res = await masterDataService.createLabourStandard(newRecord);
+      const saved = res?.data?.data || res?.data || res || newRecord;
+      setLabourStandards((prev) => [saved, ...prev.filter((s) => s.id !== saved.id && s.standardId !== saved.standardId && s.id !== newRecord.id)]);
+      logAudit({ entityId: saved.standardId || saved.id, entityType: "Labour Standard", action: "Created", newValue: `${saved.lineName} (${saved.standardCrew} Crew)` });
+      return saved;
+    } catch (err) {
+      console.warn("API createLabourStandard fallback:", err.message);
+      setLabourStandards((prev) => [newRecord, ...prev]);
+      logAudit({ entityId: newRecord.standardId, entityType: "Labour Standard", action: "Created", newValue: `${newRecord.lineName} (${newRecord.standardCrew} Crew)` });
+      return newRecord;
+    }
   };
 
-  const updateLabourStandard = (id, updated) => {
-    setLabourStandards((prev) => prev.map((s) => (s.id === id ? { ...s, ...updated } : s)));
-    masterDataService.updateLabourStandard(id, updated).catch((err) => console.warn("API updateLabourStandard:", err.message));
+  const updateLabourStandard = async (id, updated) => {
+    setLabourStandards((prev) => prev.map((s) => (s.id === id || s.standardId === id ? { ...s, ...updated } : s)));
+    try {
+      await masterDataService.updateLabourStandard(id, updated);
+    } catch (err) {
+      console.warn("API updateLabourStandard error:", err.message);
+    }
     logAudit({ entityId: id, entityType: "Labour Standard", action: "Updated" });
   };
 
-  const deleteLabourStandard = (id) => {
-    setLabourStandards((prev) => prev.filter((s) => s.id !== id));
-    masterDataService.deleteLabourStandard(id).catch((err) => console.warn("API deleteLabourStandard:", err.message));
+  const deleteLabourStandard = async (id) => {
+    setLabourStandards((prev) => prev.filter((s) => s.id !== id && s.standardId !== id));
+    try {
+      await masterDataService.deleteLabourStandard(id);
+    } catch (err) {
+      console.warn("API deleteLabourStandard error:", err.message);
+    }
     logAudit({ entityId: id, entityType: "Labour Standard", action: "Deleted" });
   };
 
   // ============================================================================
   // 11. MACHINE ASSET MUTATIONS
   // ============================================================================
-  const addAsset = (assetData) => {
-    const newRecord = {
-      id: `AST-00${assets.length + 1}`,
-      assetId: `AST-00${assets.length + 1}`,
-      name: assetData.name,
-      type: assetData.type || "Packaging / Filling",
-      lineId: assetData.lineId || "LIN-01",
-      lineName: lines.find((l) => l.lineId === assetData.lineId || l.id === assetData.lineId)?.name || "High-Speed Line 1",
-      plantId: assetData.plantId || activePlantId,
-      status: assetData.status || "Operational",
-      criticality: assetData.criticality || "Critical (Class A)",
-      maintenanceStatus: "Healthy (100% Score)",
-      serialNumber: assetData.serialNumber || `SN-${Math.floor(1000 + Math.random() * 9000)}`,
-      manufacturer: assetData.manufacturer || "Krones AG",
-      installDate: assetData.installDate || new Date().toISOString().substring(0, 10),
-      ratedSpeed: assetData.ratedSpeed || "40,000 BPH",
-      downtimeHistory: [],
-      maintenanceHistory: [],
-      auditHistory: [
-        { date: new Date().toISOString().substring(0, 10), user: "Alexander Vance", action: "Commissioned into Asset Register" }
-      ]
-    };
-    setAssets((prev) => [newRecord, ...prev]);
-    masterDataService.createAsset(newRecord).catch((err) => console.warn("API createAsset:", err.message));
-    logAudit({ entityId: newRecord.assetId, entityType: "Machine Assets", action: "Created", newValue: newRecord.name });
-    return newRecord;
+  const addAsset = async (assetData) => {
+    try {
+      const res = await masterDataService.createAsset(assetData);
+      const created = res?.data || res;
+      setAssets((prev) => [created, ...prev.filter((a) => a.id !== created.id && a.assetId !== created.assetId)]);
+      logAudit({ entityId: created.assetId || created.id, entityType: "Machine Assets", action: "Created", newValue: created.name });
+      return created;
+    } catch (err) {
+      console.warn("API createAsset error:", err.message);
+      throw err;
+    }
   };
 
-  const updateAsset = (assetId, updated) => {
-    setAssets((prev) => prev.map((a) => (a.assetId === assetId || a.id === assetId ? { ...a, ...updated } : a)));
-    masterDataService.updateAsset(assetId, updated).catch((err) => console.warn("API updateAsset:", err.message));
-    logAudit({ entityId: assetId, entityType: "Machine Assets", action: "Updated" });
+  const updateAsset = async (assetId, updated) => {
+    try {
+      await masterDataService.updateAsset(assetId, updated);
+      setAssets((prev) => prev.map((a) => (a.assetId === assetId || a.id === assetId ? { ...a, ...updated } : a)));
+      logAudit({ entityId: assetId, entityType: "Machine Assets", action: "Updated" });
+    } catch (err) {
+      console.warn("API updateAsset error:", err.message);
+      throw err;
+    }
   };
 
-  const toggleAssetStatus = (assetId) => {
-    setAssets((prev) =>
-      prev.map((a) => {
-        if (a.assetId === assetId || a.id === assetId) {
-          const next = a.status === "Operational" ? "Under Maintenance" : "Operational";
-          masterDataService.updateAsset(assetId, { status: next }).catch((err) => console.warn("API toggleAssetStatus:", err.message));
-          return { ...a, status: next };
-        }
-        return a;
-      })
-    );
+  const toggleAssetStatus = async (assetId) => {
+    const current = assets.find((a) => a.assetId === assetId || a.id === assetId);
+    const next = current?.status === "Operational" ? "Under Maintenance" : "Operational";
+    try {
+      await masterDataService.updateAsset(assetId, { status: next });
+      setAssets((prev) =>
+        prev.map((a) => (a.assetId === assetId || a.id === assetId ? { ...a, status: next } : a))
+      );
+    } catch (err) {
+      console.warn("API toggleAssetStatus error:", err.message);
+    }
   };
 
-  const deleteAsset = (assetId) => {
-    setAssets((prev) => prev.filter((a) => a.assetId !== assetId && a.id !== assetId));
-    masterDataService.deleteAsset(assetId).catch((err) => console.warn("API deleteAsset:", err.message));
-    logAudit({ entityId: assetId, entityType: "Machine Assets", action: "Deleted" });
+  const deleteAsset = async (assetId) => {
+    try {
+      await masterDataService.deleteAsset(assetId);
+      setAssets((prev) => prev.filter((a) => a.assetId !== assetId && a.id !== assetId));
+      logAudit({ entityId: assetId, entityType: "Machine Assets", action: "Deleted" });
+    } catch (err) {
+      console.warn("API deleteAsset error:", err.message);
+      throw err;
+    }
   };
 
   // ============================================================================
   // 12. EMPLOYEES & TRAINING MUTATIONS
   // ============================================================================
-  const addEmployee = (empData) => {
+  const addEmployee = async (empData) => {
     const newRecord = {
-      id: `EMP-00${employees.length + 1}`,
-      employeeId: `EMP-00${employees.length + 1}`,
+      id: empData.employeeId || empData.id || `EMP-00${employees.length + 1}`,
+      employeeId: empData.employeeId || empData.id || `EMP-00${employees.length + 1}`,
       name: empData.name,
       email: empData.email || `${empData.name.toLowerCase().replace(/\s+/g, ".")}@flowstate.io`,
-      department: empData.department || "Production",
+      department: empData.department || "Production Operations",
       departmentId: empData.departmentId || "DEP-01",
       role: empData.role || "Line Operator",
       plantId: empData.plantId || activePlantId,
       plantName: plants.find((p) => p.id === (empData.plantId || activePlantId))?.name || "Indore Plant",
-      skills: empData.skills || ["Standard Operating Procedures"],
-      skillLevel: empData.skillLevel || "Level 2 (Autonomous Operator)",
-      certifications: empData.certifications || ["Plant Safety GMP"],
-      assignedLineIds: empData.assignedLineIds || ["LIN-01"],
-      status: "Active"
+      skills: Array.isArray(empData.skills) ? empData.skills : ["Standard Operating Procedures"],
+      skillLevel: empData.skillLevel || "Level 2 (Certified Operator)",
+      certifications: Array.isArray(empData.certifications) ? empData.certifications : ["Plant Safety GMP"],
+      assignedLineIds: Array.isArray(empData.assignedLineIds) ? empData.assignedLineIds : ["LIN-01"],
+      status: empData.status || "Active"
     };
-    setEmployees((prev) => [newRecord, ...prev]);
-    masterDataService.createEmployee(newRecord).catch((err) => console.warn("API createEmployee:", err.message));
-    logAudit({ entityId: newRecord.employeeId, entityType: "Employees & Skills", action: "Created", newValue: newRecord.name });
-    return newRecord;
+    try {
+      const res = await masterDataService.createEmployeeSkill(newRecord);
+      const saved = res?.data?.data || res?.data || res || newRecord;
+      const finalItem = { ...newRecord, ...saved };
+      setEmployees((prev) => [finalItem, ...prev.filter((e) => e.employeeId !== finalItem.employeeId && e.id !== finalItem.id)]);
+      logAudit({ entityId: finalItem.employeeId, entityType: "Employees & Skills", action: "Created", newValue: finalItem.name });
+      return finalItem;
+    } catch (err) {
+      console.warn("API createEmployee error:", err.message);
+      setEmployees((prev) => [newRecord, ...prev]);
+      return newRecord;
+    }
   };
 
-  const updateEmployee = (empId, updated) => {
-    setEmployees((prev) => prev.map((e) => (e.employeeId === empId || e.id === empId ? { ...e, ...updated } : e)));
-    masterDataService.updateEmployee(empId, updated).catch((err) => console.warn("API updateEmployee:", err.message));
+  const updateEmployee = async (empId, updated) => {
+    try {
+      const res = await masterDataService.updateEmployeeSkill(empId, updated);
+      const saved = res?.data?.data || res?.data || res;
+      setEmployees((prev) => prev.map((e) => (e.employeeId === empId || e.id === empId ? { ...e, ...updated, ...(saved || {}) } : e)));
+    } catch (err) {
+      console.warn("API updateEmployee error:", err.message);
+      setEmployees((prev) => prev.map((e) => (e.employeeId === empId || e.id === empId ? { ...e, ...updated } : e)));
+    }
     logAudit({ entityId: empId, entityType: "Employees & Skills", action: "Updated" });
   };
 
+<<<<<<< HEAD
   const deleteEmployee = (empId) => {
     setEmployees((prev) => prev.filter((e) => e.employeeId !== empId && e.id !== empId));
     masterDataService.deleteEmployee(empId).catch((err) => console.warn("API deleteEmployee:", err.message));
+=======
+  const deleteEmployee = async (empId) => {
+    try {
+      await masterDataService.deleteEmployeeSkill(empId);
+    } catch (err) {
+      console.warn("API deleteEmployee error:", err.message);
+    }
+    setEmployees((prev) => prev.filter((e) => e.employeeId !== empId && e.id !== empId));
+>>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
     logAudit({ entityId: empId, entityType: "Employees & Skills", action: "Deleted" });
   };
 
@@ -1587,6 +2161,7 @@ export function MasterDataProvider({ children }) {
   // 13. QUALITY SPECS & CCP LIMITS MUTATIONS
   // ============================================================================
   const addQualitySpec = async (specData) => {
+<<<<<<< HEAD
     const selectedSku = skus.find((s) => s.skuId === specData.skuId || s.id === specData.skuId);
     let createdRecord = null;
     try {
@@ -1635,35 +2210,59 @@ export function MasterDataProvider({ children }) {
       console.warn("API updateQualitySpec:", err.message);
     }
     logAudit({ entityId: specId, entityType: "Quality Specs", action: "Updated" });
+=======
+    try {
+      const res = await masterDataService.createQualitySpec(specData);
+      const created = res?.data || res;
+      setQualitySpecs((prev) => [created, ...prev.filter((q) => q.id !== created.id && q.specId !== created.specId)]);
+      logAudit({ entityId: created.specId || created.id, entityType: "Quality Specs", action: "Created", newValue: `${created.parameter} for ${created.skuCode || created.skuId}` });
+      return created;
+    } catch (err) {
+      console.warn("API createQualitySpec error:", err.message);
+      throw err;
+    }
   };
 
-  const approveQualitySpec = (specId) => {
-    setQualitySpecs((prev) =>
-      prev.map((q) => {
-        if (q.specId === specId || q.id === specId) {
-          logAudit({ entityId: q.specId, entityType: "Quality Specs", action: "Approved" });
-          masterDataService.updateQualitySpec(specId, { approvalStatus: "Approved", status: "Active" }).catch((err) => console.warn("API approveQualitySpec:", err.message));
-          return { ...q, approvalStatus: "Approved", status: "Active" };
-        }
-        return q;
-      })
-    );
+  const updateQualitySpec = async (specId, updated) => {
+    try {
+      await masterDataService.updateQualitySpec(specId, updated);
+      setQualitySpecs((prev) => prev.map((q) => (q.specId === specId || q.id === specId ? { ...q, ...updated } : q)));
+      logAudit({ entityId: specId, entityType: "Quality Specs", action: "Updated" });
+    } catch (err) {
+      console.warn("API updateQualitySpec error:", err.message);
+      throw err;
+    }
+>>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
   };
 
-  const rejectQualitySpec = (specId, reason = "Tolerance out of standard range") => {
-    setQualitySpecs((prev) =>
-      prev.map((q) => {
-        if (q.specId === specId || q.id === specId) {
-          logAudit({ entityId: q.specId, entityType: "Quality Specs", action: "Rejected", notes: `Reason: ${reason}` });
-          masterDataService.updateQualitySpec(specId, { approvalStatus: "Draft", rejectionReason: reason }).catch((err) => console.warn("API rejectQualitySpec:", err.message));
-          return { ...q, approvalStatus: "Draft", rejectionReason: reason };
-        }
-        return q;
-      })
-    );
+  const approveQualitySpec = async (specId) => {
+    try {
+      await masterDataService.updateQualitySpec(specId, { approvalStatus: "Approved", status: "Active" });
+      setQualitySpecs((prev) =>
+        prev.map((q) => (q.specId === specId || q.id === specId ? { ...q, approvalStatus: "Approved", status: "Active" } : q))
+      );
+      logAudit({ entityId: specId, entityType: "Quality Specs", action: "Approved" });
+    } catch (err) {
+      console.warn("API approveQualitySpec error:", err.message);
+      throw err;
+    }
+  };
+
+  const rejectQualitySpec = async (specId, reason = "Tolerance out of standard range") => {
+    try {
+      await masterDataService.updateQualitySpec(specId, { approvalStatus: "Draft", rejectionReason: reason });
+      setQualitySpecs((prev) =>
+        prev.map((q) => (q.specId === specId || q.id === specId ? { ...q, approvalStatus: "Draft", rejectionReason: reason } : q))
+      );
+      logAudit({ entityId: specId, entityType: "Quality Specs", action: "Rejected", notes: `Reason: ${reason}` });
+    } catch (err) {
+      console.warn("API rejectQualitySpec error:", err.message);
+      throw err;
+    }
   };
 
   const deleteQualitySpec = async (specId) => {
+<<<<<<< HEAD
     setQualitySpecs((prev) => prev.filter((q) => q.specId !== specId && q.id !== specId));
     try {
       await masterDataService.deleteQualitySpec(specId);
@@ -1671,75 +2270,107 @@ export function MasterDataProvider({ children }) {
       console.warn("API deleteQualitySpec:", err.message);
     }
     logAudit({ entityId: specId, entityType: "Quality Specs", action: "Deleted" });
+=======
+    try {
+      await masterDataService.deleteQualitySpec(specId);
+      setQualitySpecs((prev) => prev.filter((q) => q.specId !== specId && q.id !== specId));
+      logAudit({ entityId: specId, entityType: "Quality Specs", action: "Deleted" });
+    } catch (err) {
+      console.warn("API deleteQualitySpec error:", err.message);
+      throw err;
+    }
+  };
+
+  // HACCP CCP Limits
+  const addCCPLimit = async (ccpData) => {
+    try {
+      const res = await masterDataService.createCCPLimit(ccpData);
+      const created = res?.data || res;
+      setCcpLimits((prev) => [created, ...prev.filter((c) => c.id !== created.id && c.ccpNumber !== created.ccpNumber)]);
+      logAudit({ entityId: created.ccpNumber || created.id, entityType: "CCP Limits", action: "Created", newValue: created.processStep });
+      return created;
+    } catch (err) {
+      console.warn("API createCCPLimit error:", err.message);
+      throw err;
+    }
+  };
+
+  const updateCCPLimit = async (id, updated) => {
+    try {
+      await masterDataService.updateCCPLimit(id, updated);
+      setCcpLimits((prev) =>
+        prev.map((c) => (c.id === id || c.ccpNumber === id ? { ...c, ...updated } : c))
+      );
+      logAudit({ entityId: id, entityType: "CCP Limits", action: "Updated" });
+    } catch (err) {
+      console.warn("API updateCCPLimit error:", err.message);
+      throw err;
+    }
+  };
+
+  const deleteCCPLimit = async (id) => {
+    try {
+      await masterDataService.deleteCCPLimit(id);
+      setCcpLimits((prev) => prev.filter((c) => c.id !== id && c.ccpNumber !== id));
+      logAudit({ entityId: id, entityType: "CCP Limits", action: "Deleted" });
+    } catch (err) {
+      console.warn("API deleteCCPLimit error:", err.message);
+      throw err;
+    }
+>>>>>>> 5af8411961ffaedde5d11b050f16c0266436a5f2
   };
 
   // ============================================================================
   // 14. STORAGE RESOURCES MUTATIONS
   // ============================================================================
-  const addStorageResource = (strData) => {
-    const code = strData.resourceCode || strData.code || `STR-${(storageResources.length + 1).toString().padStart(2, "0")}`;
-    const id = `STR-0${storageResources.length + 1}`;
-    const newRecord = {
-      id,
-      storageId: id,
-      resourceId: id,
-      resourceCode: code,
-      code,
-      name: strData.name,
-      type: strData.resourceType || strData.type || "Selective Pallet Rack",
-      resourceType: strData.resourceType || strData.type || "Selective Pallet Rack",
-      plantId: strData.plantId || activePlantId,
-      plantName: plants.find((p) => p.id === (strData.plantId || activePlantId))?.name || "Indore Plant",
-      zone: strData.zone || "General Staging",
-      capacityUnit: strData.capacityUnit || "Pallet Positions",
-      totalCapacity: Number(strData.totalCapacity) || 500,
-      capacity: strData.capacity || `${strData.totalCapacity || 500} ${strData.capacityUnit || "Pallet Positions"}`,
-      currentOccupancy: strData.currentOccupancy || "0 Pallets (0%)",
-      temperatureZone: strData.temperatureZone || strData.temperatureRange || "Ambient (18°C - 24°C)",
-      temperatureRange: strData.temperatureZone || strData.temperatureRange || "Ambient (18°C - 24°C)",
-      status: "Active",
-      effectiveFrom: strData.effectiveFrom || new Date().toISOString().substring(0, 10),
-      effectiveTo: "2030-12-31"
-    };
-    setStorageResources((prev) => [newRecord, ...prev]);
-    if (typeof masterDataService.createStorageResource === "function") {
-      masterDataService.createStorageResource(newRecord).catch((err) => console.warn("API createStorageResource:", err.message));
+  const addStorageResource = async (strData) => {
+    try {
+      const res = await masterDataService.createStorageResource(strData);
+      const created = res?.data || res;
+      setStorageResources((prev) => [created, ...prev.filter((s) => s.id !== created.id && s.resourceCode !== created.resourceCode)]);
+      logAudit({ entityId: created.resourceCode || created.id, entityType: "Storage Resources", action: "Created", newValue: created.name });
+      return created;
+    } catch (err) {
+      console.warn("API createStorageResource error:", err.message);
+      throw err;
     }
-    logAudit({ entityId: newRecord.code, entityType: "Storage Resources", action: "Created", newValue: newRecord.name });
-    return newRecord;
   };
 
-  const updateStorageResource = (storageId, updated) => {
-    setStorageResources((prev) =>
-      prev.map((s) => (s.storageId === storageId || s.id === storageId || s.resourceId === storageId ? { ...s, ...updated } : s))
-    );
-    if (typeof masterDataService.updateStorageResource === "function") {
-      masterDataService.updateStorageResource(storageId, updated).catch((err) => console.warn("API updateStorageResource:", err.message));
+  const updateStorageResource = async (storageId, updated) => {
+    try {
+      await masterDataService.updateStorageResource(storageId, updated);
+      setStorageResources((prev) =>
+        prev.map((s) => (s.storageId === storageId || s.id === storageId || s.resourceId === storageId || s.resourceCode === storageId ? { ...s, ...updated } : s))
+      );
+      logAudit({ entityId: storageId, entityType: "Storage Resources", action: "Updated" });
+    } catch (err) {
+      console.warn("API updateStorageResource error:", err.message);
+      throw err;
     }
-    logAudit({ entityId: storageId, entityType: "Storage Resources", action: "Updated" });
   };
 
-  const toggleStorageResourceStatus = (storageId) => {
-    setStorageResources((prev) =>
-      prev.map((s) => {
-        if (s.storageId === storageId || s.id === storageId || s.resourceId === storageId) {
-          const next = s.status === "Active" ? "Inactive" : "Active";
-          if (typeof masterDataService.updateStorageResource === "function") {
-            masterDataService.updateStorageResource(storageId, { status: next }).catch((err) => console.warn("API toggleStorageResourceStatus:", err.message));
-          }
-          return { ...s, status: next };
-        }
-        return s;
-      })
-    );
+  const toggleStorageResourceStatus = async (storageId) => {
+    const current = storageResources.find((s) => s.storageId === storageId || s.id === storageId || s.resourceId === storageId || s.resourceCode === storageId);
+    const next = current?.status === "Active" ? "Inactive" : "Active";
+    try {
+      await masterDataService.updateStorageResource(storageId, { status: next });
+      setStorageResources((prev) =>
+        prev.map((s) => (s.storageId === storageId || s.id === storageId || s.resourceId === storageId || s.resourceCode === storageId ? { ...s, status: next } : s))
+      );
+    } catch (err) {
+      console.warn("API toggleStorageResourceStatus error:", err.message);
+    }
   };
 
-  const deleteStorageResource = (storageId) => {
-    setStorageResources((prev) => prev.filter((s) => s.storageId !== storageId && s.id !== storageId && s.resourceId !== storageId));
-    if (typeof masterDataService.deleteStorageResource === "function") {
-      masterDataService.deleteStorageResource(storageId).catch((err) => console.warn("API deleteStorageResource:", err.message));
+  const deleteStorageResource = async (storageId) => {
+    try {
+      await masterDataService.deleteStorageResource(storageId);
+      setStorageResources((prev) => prev.filter((s) => s.storageId !== storageId && s.id !== storageId && s.resourceId !== storageId && s.resourceCode !== storageId));
+      logAudit({ entityId: storageId, entityType: "Storage Resources", action: "Deleted" });
+    } catch (err) {
+      console.warn("API deleteStorageResource error:", err.message);
+      throw err;
     }
-    logAudit({ entityId: storageId, entityType: "Storage Resources", action: "Deleted" });
   };
 
   // ============================================================================
@@ -1923,10 +2554,12 @@ export function MasterDataProvider({ children }) {
       value={{
         company: companies[0],
         companies,
+        setCompanies,
         addCompany,
         updateCompany,
         deleteCompany,
         plants,
+        setPlants,
         addPlant,
         updatePlant,
         deletePlant,
@@ -2037,12 +2670,14 @@ export function MasterDataProvider({ children }) {
         updateAllergenRule,
         deleteAllergenRule,
         labourStandards,
+        setLabourStandards,
         addLabourStandard,
         updateLabourStandard,
         deleteLabourStandard,
 
         // 11. Assets
         assets,
+        setAssets,
         addAsset,
         updateAsset,
         assignAssetToLine,
@@ -2066,9 +2701,15 @@ export function MasterDataProvider({ children }) {
         approveQualitySpec,
         rejectQualitySpec,
         deleteQualitySpec,
+        ccpLimits,
+        setCcpLimits,
+        addCCPLimit,
+        updateCCPLimit,
+        deleteCCPLimit,
 
         // 14. Storage Resources
         storageResources,
+        setStorageResources,
         addStorageResource,
         updateStorageResource,
         toggleStorageResourceStatus,
@@ -2084,6 +2725,7 @@ export function MasterDataProvider({ children }) {
         addInvitation,
         cancelInvitation,
         rolePermissions,
+        setRolePermissions,
         hasPermission,
         updatePermissionMatrix,
 
