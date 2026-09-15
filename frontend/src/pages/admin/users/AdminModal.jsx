@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Modal } from "../../../components/common/Modal";
 import { Button } from "../../../components/common/Button";
-import { User, Building2, Mail } from "lucide-react";
+import { User, Building2, Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { useMasterAdmin } from "../../../context/MasterAdminContext";
 import { useApp } from "../../../context/AppContext";
 
@@ -9,10 +9,12 @@ export function AdminModal({ isOpen, onClose, adminToEdit = null, availableCompa
   const { addUser, editUser } = useMasterAdmin();
   const { addToast } = useApp();
   const [submitting, setSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   
   const [formData, setFormData] = useState({
     name: "",
     email: "",
+    password: "",
     company: ""
   });
 
@@ -21,20 +23,27 @@ export function AdminModal({ isOpen, onClose, adminToEdit = null, availableCompa
       setFormData({ 
         name: adminToEdit.name, 
         email: adminToEdit.email || "", 
+        password: "",
         company: adminToEdit.company 
       });
     } else {
       setFormData({ 
         name: "", 
         email: "", 
+        password: "",
         company: availableCompanies[0] || "" 
       });
+      setShowPassword(false);
     }
   }, [adminToEdit, isOpen, availableCompanies]);
 
   const handleSubmit = async () => {
     if (!formData.name.trim() || !formData.company) {
       addToast("Please fill in all required fields", "warning");
+      return;
+    }
+    if (!adminToEdit && (!formData.password || formData.password.length < 6)) {
+      addToast("Administrator password is required (min 6 characters)", "warning");
       return;
     }
     
@@ -48,7 +57,8 @@ export function AdminModal({ isOpen, onClose, adminToEdit = null, availableCompa
           name: formData.name.trim(), 
           email: formData.email.trim(), 
           company: formData.company, 
-          role: "Company Admin" 
+          role: "Company Admin",
+          password: formData.password
         });
         addToast(`${formData.name} added as administrator for ${formData.company}`, "success");
       }
@@ -65,7 +75,7 @@ export function AdminModal({ isOpen, onClose, adminToEdit = null, availableCompa
       isOpen={isOpen}
       onClose={onClose}
       title={adminToEdit ? "Edit Administrator" : "Add Administrator"}
-      subtitle="Manage primary admin account for a tenant company"
+      subtitle="Manage administrator accounts for a tenant company"
       footer={
         <>
           <Button variant="outline" onClick={onClose} disabled={submitting}>Cancel</Button>
@@ -105,6 +115,45 @@ export function AdminModal({ isOpen, onClose, adminToEdit = null, availableCompa
               disabled={submitting || !!adminToEdit}
             />
           </div>
+
+          {!adminToEdit && (
+            <div style={{ marginTop: "12px" }}>
+              <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "var(--text-primary)", marginBottom: "6px" }}>
+                <Lock size={12} style={{ display: "inline", marginRight: "4px" }} />
+                Administrator Password *
+              </label>
+              <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                <input 
+                  type={showPassword ? "text" : "password"} 
+                  placeholder="Set login password (min 6 chars)" 
+                  value={formData.password}
+                  onChange={e => setFormData({...formData, password: e.target.value})}
+                  className="form-input"
+                  style={{ paddingRight: "40px", width: "100%" }}
+                  autoComplete="new-password"
+                  disabled={submitting}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(p => !p)}
+                  style={{
+                    position: "absolute",
+                    right: "10px",
+                    background: "transparent",
+                    border: "none",
+                    cursor: "pointer",
+                    color: "var(--text-secondary)",
+                    display: "flex",
+                    alignItems: "center",
+                    padding: "4px"
+                  }}
+                  title={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
         
         <div style={{ padding: "16px", backgroundColor: "var(--bg-main)", borderRadius: "var(--radius-lg)", border: "1px solid var(--border-subtle)", opacity: adminToEdit ? 0.7 : 1, pointerEvents: adminToEdit ? 'none' : 'auto' }}>

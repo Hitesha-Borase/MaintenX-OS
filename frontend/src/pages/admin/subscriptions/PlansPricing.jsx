@@ -24,10 +24,14 @@ export function PlansPricing() {
     addToast(`Plan ${newStatus === "Active" ? "activated" : "deactivated"}`, "success");
   };
 
-  const handleRemovePlan = (id, name) => {
+  const handleRemovePlan = async (id, name) => {
     if (window.confirm(`Delete plan "${name}"? This cannot be undone.`)) {
-      removePlan(id);
-      addToast("Plan removed successfully", "destructive");
+      try {
+        await removePlan(id);
+        addToast("Plan removed successfully", "destructive");
+      } catch (err) {
+        addToast(err?.message || "Failed to remove plan", "destructive");
+      }
     }
   };
 

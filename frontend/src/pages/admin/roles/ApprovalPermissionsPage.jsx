@@ -18,17 +18,20 @@ import adminService from "../../../services/adminService";
 
 export function ApprovalPermissionsPage() {
   const { addToast } = useApp();
+  const isTenant = Boolean(typeof window !== "undefined" && (localStorage.getItem("maintenx_tenant_name") || localStorage.getItem("maintenx_tenant_id")));
 
-  const [approvalRules, setApprovalRules] = useState([
-    { id: "APR-01", event: "Finished Goods QA Batch Release (CoA)", tier: "Dual Sign-off", authorizedRoles: "QA Manager + Plant Manager", compliance: "FDA 21 CFR Part 11" },
-    { id: "APR-02", event: "Master BOM & Recipe Revision Approval", tier: "2-Tier Approval", authorizedRoles: "QA Manager + System Admin", compliance: "ISO 22000" },
-    { id: "APR-03", event: "Capital Asset Decommissioning / Scrap", tier: "Executive Sign-off", authorizedRoles: "Plant Manager + Corporate Ops", compliance: "GAAP Fixed Assets" },
-    { id: "APR-04", event: "Emergency Schedule Override & Overtime", tier: "1-Tier Instant", authorizedRoles: "Plant Manager", compliance: "Internal Ops Policy" }
-  ]);
+  const [approvalRules, setApprovalRules] = useState(() => {
+    return isTenant ? [] : [
+      { id: "APR-01", event: "Finished Goods QA Batch Release (CoA)", tier: "Dual Sign-off", authorizedRoles: "QA Manager + Plant Manager", compliance: "FDA 21 CFR Part 11" },
+      { id: "APR-02", event: "Master BOM & Recipe Revision Approval", tier: "2-Tier Approval", authorizedRoles: "QA Manager + System Admin", compliance: "ISO 22000" },
+      { id: "APR-03", event: "Capital Asset Decommissioning / Scrap", tier: "Executive Sign-off", authorizedRoles: "Plant Manager + Corporate Ops", compliance: "GAAP Fixed Assets" },
+      { id: "APR-04", event: "Emergency Schedule Override & Overtime", tier: "1-Tier Instant", authorizedRoles: "Plant Manager", compliance: "Internal Ops Policy" }
+    ];
+  });
 
   useEffect(() => {
     adminService.getApprovalRules().then((rules) => {
-      if (Array.isArray(rules) && rules.length > 0) {
+      if (Array.isArray(rules)) {
         setApprovalRules(rules);
       }
     });
@@ -44,7 +47,7 @@ export function ApprovalPermissionsPage() {
             <h1 style={{ fontSize: "clamp(18px, 4vw, 24px)", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.3px", lineHeight: 1.2 }}>
               High-Value Electronic Approval Governance
             </h1>
-            <Badge variant="emerald">DUAL E-SIGNATURE RULES</Badge>
+            <Badge variant="emerald">{approvalRules.length} E-SIGNATURE RULES</Badge>
           </div>
         </div>
       </div>
@@ -65,25 +68,25 @@ export function ApprovalPermissionsPage() {
           value={approvalRules.length.toString()}
           unit="Active Gates"
           icon={FileCheck}
-          colorVariant="emerald"
+          colorVariant="cyan"
         />
         <StatCard
           title="Regulatory Standard"
           value="21 CFR Part 11"
           unit="Compliant"
           icon={ShieldCheck}
-          colorVariant="cyan"
+          colorVariant="emerald"
         />
         <StatCard
           title="Dual Sign-offs"
-          value="3"
+          value={approvalRules.filter(r => r.tier?.toLowerCase().includes("dual")).length.toString()}
           unit="High-Value Rules"
           icon={Lock}
           colorVariant="amber"
         />
         <StatCard
           title="Enforcement Rate"
-          value="100%"
+          value={approvalRules.length > 0 ? "100%" : "0%"}
           unit="Strict"
           icon={CheckCircle2}
           colorVariant="emerald"
@@ -104,25 +107,33 @@ export function ApprovalPermissionsPage() {
               </tr>
             </thead>
             <tbody>
-              {approvalRules.map((a) => (
-                <tr key={a.id}>
-                  <td>
-                    <span style={{ fontWeight: 800, color: "#8C5B23", fontFamily: "var(--font-mono)" }}>{a.id}</span>
-                  </td>
-                  <td>
-                    <strong style={{ color: "var(--text-primary)" }}>{a.event}</strong>
-                  </td>
-                  <td>
-                    <Badge variant="amber">{a.tier}</Badge>
-                  </td>
-                  <td style={{ fontSize: "12px", color: "var(--text-secondary)", fontWeight: 600 }}>{a.authorizedRoles}</td>
-                  <td>
-                    <span style={{ fontSize: "11px", backgroundColor: "rgba(5, 150, 105, 0.1)", color: "#059669", padding: "4px 8px", borderRadius: "4px", fontWeight: 700 }}>
-                      {a.compliance}
-                    </span>
+              {approvalRules.length === 0 ? (
+                <tr>
+                  <td colSpan={5} style={{ textAlign: "center", padding: "36px 16px", color: "var(--text-muted)" }}>
+                    No electronic approval governance rules configured for this company yet.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                approvalRules.map((a) => (
+                  <tr key={a.id}>
+                    <td>
+                      <span style={{ fontWeight: 800, color: "#8C5B23", fontFamily: "var(--font-mono)" }}>{a.id}</span>
+                    </td>
+                    <td>
+                      <strong style={{ color: "var(--text-primary)" }}>{a.event}</strong>
+                    </td>
+                    <td>
+                      <Badge variant="amber">{a.tier}</Badge>
+                    </td>
+                    <td style={{ fontSize: "12px", color: "var(--text-secondary)", fontWeight: 600 }}>{a.authorizedRoles}</td>
+                    <td>
+                      <span style={{ fontSize: "11px", backgroundColor: "rgba(5, 150, 105, 0.1)", color: "#059669", padding: "4px 8px", borderRadius: "4px", fontWeight: 700 }}>
+                        {a.compliance}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { 
   AlertTriangle, Plus, Search, Microscope, FileSpreadsheet, 
-  Info, CheckCircle2, ShieldAlert, Clock, RefreshCw, X, ArrowRight, Activity
+  Info, CheckCircle2, ShieldAlert, Clock, RefreshCw, X, ArrowRight, Activity, Trash2
 } from "lucide-react";
 import { Card } from "../../../components/common/Card";
 import { Button } from "../../../components/common/Button";
@@ -24,48 +24,63 @@ export function Deviations() {
   // Form State
   const [formTitle, setFormTitle] = useState("");
   const [formDesc, setFormDesc] = useState("");
-  const [formCategory, setFormCategory] = useState("THERMAL_PROCESS");
+  const [formCategory, setFormCategory] = useState("");
   const [formSeverity, setFormSeverity] = useState("MAJOR");
-  const [formHoldId, setFormHoldId] = useState("HLD-401");
+  const [formHoldId, setFormHoldId] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [showAddCatModal, setShowAddCatModal] = useState(false);
+  const [newCatData, setNewCatData] = useState({ name: "", code: "", description: "" });
+  const [savingCat, setSavingCat] = useState(false);
+
+  const [categories, setCategories] = useState([]);
+
+  const fetchCategories = async () => {
+    try {
+      const res = await qualityService.getDeviationCategories();
+      const list = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
+      setCategories(list);
+      if (list.length > 0) {
+        setFormCategory(prev => prev || list[0].code || list[0].name);
+      } else {
+        setFormCategory("");
+      }
+    } catch (err) {
+      console.warn("Could not load categories:", err);
+    }
+  };
+
+  const handleQuickAddCategory = async (e) => {
+    e.preventDefault();
+    if (!newCatData.name.trim()) {
+      addToast("Please enter category name", "warning");
+      return;
+    }
+    setSavingCat(true);
+    try {
+      await qualityService.saveDeviationCategory(newCatData);
+      addToast(`Category "${newCatData.name}" saved to Database!`, "success");
+      await fetchCategories();
+      const codeToSelect = newCatData.code ? newCatData.code.toUpperCase().replace(/\s+/g, "_") : newCatData.name.trim().toUpperCase().replace(/[^A-Z0-9]+/g, "_");
+      setFormCategory(codeToSelect);
+      setShowAddCatModal(false);
+      setNewCatData({ name: "", code: "", description: "" });
+    } catch (err) {
+      console.error("Failed to add category:", err);
+      addToast("Failed to save category", "error");
+    } finally {
+      setSavingCat(false);
+    }
+  };
 
   const fetchDeviations = async () => {
     setLoading(true);
     try {
       const res = await qualityService.getDeviations();
-      if (res && res.data) {
-        setDeviations(res.data);
-      } else {
-        setDeviations([
-          {
-            id: "DEV-802",
-            deviationNumber: "DEV-802",
-            title: "Pasteurizer Thermal Excursion",
-            description: "Pasteurizer dropped below 83.1C (measured 81.4C for 42s)",
-            category: "THERMAL_PROCESS",
-            severity: "MAJOR",
-            status: "Open",
-            holdId: "HLD-401",
-            createdAt: "2026-09-02 14:15"
-          }
-        ]);
-      }
+      const rawList = Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : Array.isArray(res?.data?.data) ? res.data.data : [];
+      setDeviations(rawList);
     } catch (err) {
       console.error("Failed to load deviations", err);
-      addToast("Loaded local deviation records", "info");
-      setDeviations([
-        {
-          id: "DEV-802",
-          deviationNumber: "DEV-802",
-          title: "Pasteurizer Thermal Excursion",
-          description: "Pasteurizer dropped below 83.1C (measured 81.4C for 42s)",
-          category: "THERMAL_PROCESS",
-          severity: "MAJOR",
-          status: "Open",
-          holdId: "HLD-401",
-          createdAt: "2026-09-02 14:15"
-        }
-      ]);
+      setDeviations([]);
     } finally {
       setLoading(false);
     }
@@ -73,6 +88,7 @@ export function Deviations() {
 
   useEffect(() => {
     fetchDeviations();
+    fetchCategories();
   }, []);
 
   const handleCreate = async (e) => {
@@ -90,11 +106,9 @@ export function Deviations() {
         deviationNumber: `DEV-${Math.floor(800 + Math.random() * 200)}`
       };
 
-      const res = await qualityService.reportDeviation(payload);
-      const newDev = res?.data || payload;
-      setDeviations(prev => [newDev, ...prev]);
-
-      addToast(`Quality deviation ${newDev.deviationNumber || newDev.id} logged.`, "success");
+      await qualityService.reportDeviation(payload);
+      await fetchDeviations();
+      addToast("Quality deviation logged successfully.", "success");
       setFormTitle("");
       setFormDesc("");
       setShowCreateModal(false);
@@ -103,6 +117,19 @@ export function Deviations() {
       addToast("Error reporting deviation to backend.", "error");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleDeleteDeviation = async (id, e) => {
+    e.stopPropagation();
+    if (!window.confirm("Are you sure you want to delete this Quality Deviation?")) return;
+    try {
+      await qualityService.deleteDeviation(id);
+      setDeviations(prev => prev.filter(d => (d.id !== id && d.deviationNumber !== id)));
+      addToast("Quality deviation record deleted successfully.", "info");
+    } catch (err) {
+      console.error("Delete deviation error:", err);
+      addToast("Failed to delete deviation.", "error");
     }
   };
 
@@ -384,7 +411,7 @@ export function Deviations() {
                       </span>
                     </td>
                     <td style={{ padding: "16px 20px", textAlign: "right" }}>
-                      <div style={{ display: "inline-flex", gap: "8px" }}>
+                      <div style={{ display: "inline-flex", gap: "8px", alignItems: "center" }}>
                         <Button 
                           variant="secondary" 
                           size="sm" 
@@ -403,6 +430,14 @@ export function Deviations() {
                             Start Investigation
                           </Button>
                         )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          icon={Trash2}
+                          onClick={(e) => handleDeleteDeviation(d.id || d.deviationNumber, e)}
+                          title="Delete Deviation"
+                          style={{ borderColor: "#FECACA", color: "#EF4444", padding: "6px 10px" }}
+                        />
                       </div>
                     </td>
                   </tr>
@@ -480,19 +515,45 @@ export function Deviations() {
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                 <div>
-                  <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "#2B1D11", marginBottom: "6px" }}>
-                    Category
-                  </label>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                    <label style={{ fontSize: "12px", fontWeight: 700, color: "#2B1D11" }}>
+                      Category
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setShowAddCatModal(true)}
+                      style={{
+                        background: "rgba(140, 91, 35, 0.08)",
+                        border: "1px solid rgba(140, 91, 35, 0.3)",
+                        borderRadius: "5px",
+                        padding: "2px 8px",
+                        fontSize: "11px",
+                        color: "#8C5B23",
+                        fontWeight: 700,
+                        cursor: "pointer"
+                      }}
+                      title="Add a new category directly to Database"
+                    >
+                      + Add Category
+                    </button>
+                  </div>
                   <select
                     value={formCategory}
                     onChange={(e) => setFormCategory(e.target.value)}
                     style={{ width: "100%", padding: "10px 14px", borderRadius: "8px", border: "1px solid #E8DDCF", fontSize: "13px", color: "#2B1D11", backgroundColor: "#FFFFFF", outline: "none", boxSizing: "border-box" }}
                   >
-                    <option value="THERMAL_PROCESS">Thermal Process / CCP</option>
-                    <option value="MECHANICAL_FAILURE">Mechanical / Valve Fault</option>
-                    <option value="PACKAGING_INTEGRITY">Packaging / Seam Defect</option>
-                    <option value="SANITATION_EXCURSION">Sanitation / ATP Swab Fail</option>
-                    <option value="RAW_MATERIAL">Raw Material Spec Variance</option>
+                    {categories.length === 0 ? (
+                      <option value="">No categories configured yet (Click '+ Add Category')</option>
+                    ) : (
+                      <>
+                        <option value="">-- Select Category --</option>
+                        {categories.map((cat) => (
+                          <option key={cat.id || cat.code} value={cat.code || cat.name}>
+                            {cat.name} ({cat.code})
+                          </option>
+                        ))}
+                      </>
+                    )}
                   </select>
                 </div>
 
@@ -646,6 +707,112 @@ export function Deviations() {
                 )}
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* QUICK ADD CATEGORY MODAL */}
+      {showAddCatModal && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(38, 22, 3, 0.65)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 10000,
+            padding: "16px"
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: "#FFFFFF",
+              borderRadius: "14px",
+              width: "100%",
+              maxWidth: "460px",
+              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+              border: "1px solid #E8DDCF",
+              overflow: "hidden"
+            }}
+          >
+            <div style={{ padding: "16px 20px", borderBottom: "1px solid #E8DDCF", display: "flex", justifyContent: "space-between", alignItems: "center", backgroundColor: "#FAF7F2" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <AlertTriangle size={18} color="#B27E33" />
+                <h3 style={{ fontSize: "15px", fontWeight: 800, color: "#2B1D11", margin: 0 }}>
+                  Add Deviation Category
+                </h3>
+              </div>
+              <button 
+                type="button" 
+                onClick={() => setShowAddCatModal(false)} 
+                style={{ background: "transparent", border: "none", cursor: "pointer", color: "#6B5B4E" }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleQuickAddCategory} style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "12px" }}>
+              <div>
+                <label style={{ display: "block", fontSize: "11px", fontWeight: 700, color: "#6B5B4E", marginBottom: "4px", textTransform: "uppercase" }}>
+                  Category Name *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Foreign Material Contamination"
+                  value={newCatData.name}
+                  onChange={(e) => {
+                    const name = e.target.value;
+                    setNewCatData(prev => ({
+                      ...prev,
+                      name,
+                      code: prev.code || name.trim().toUpperCase().replace(/[^A-Z0-9]+/g, '_')
+                    }));
+                  }}
+                  style={{ width: "100%", padding: "8px 12px", borderRadius: "6px", border: "1px solid #E8DDCF", fontSize: "13px", boxSizing: "border-box" }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "11px", fontWeight: 700, color: "#6B5B4E", marginBottom: "4px", textTransform: "uppercase" }}>
+                  Category Code (System ID)
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. FOREIGN_MAT"
+                  value={newCatData.code}
+                  onChange={(e) => setNewCatData({ ...newCatData, code: e.target.value.toUpperCase().replace(/\s+/g, '_') })}
+                  style={{ width: "100%", padding: "8px 12px", borderRadius: "6px", border: "1px solid #E8DDCF", fontSize: "13px", fontFamily: "monospace", boxSizing: "border-box" }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "11px", fontWeight: 700, color: "#6B5B4E", marginBottom: "4px", textTransform: "uppercase" }}>
+                  Description (Optional)
+                </label>
+                <textarea
+                  rows={2}
+                  placeholder="Details regarding this deviation type..."
+                  value={newCatData.description}
+                  onChange={(e) => setNewCatData({ ...newCatData, description: e.target.value })}
+                  style={{ width: "100%", padding: "8px 12px", borderRadius: "6px", border: "1px solid #E8DDCF", fontSize: "12px", boxSizing: "border-box", resize: "vertical" }}
+                />
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "8px" }}>
+                <Button variant="outline" type="button" onClick={() => setShowAddCatModal(false)} style={{ fontSize: "12px" }}>
+                  Cancel
+                </Button>
+                <Button variant="primary" type="submit" disabled={savingCat} style={{ fontSize: "12px" }}>
+                  {savingCat ? "Saving to DB..." : "Save to Database"}
+                </Button>
+              </div>
+            </form>
           </div>
         </div>
       )}

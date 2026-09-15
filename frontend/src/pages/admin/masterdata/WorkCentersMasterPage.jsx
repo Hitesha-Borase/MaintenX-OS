@@ -30,6 +30,7 @@ export function WorkCentersMasterPage() {
   const masterData = useMasterData() || {};
   const {
     lines = [],
+    setLines = () => {},
     addLine = () => {},
     updateLine = () => {},
     assignAssetToLine = () => {},
@@ -41,14 +42,24 @@ export function WorkCentersMasterPage() {
     deleteWorkCenter = () => {},
     assets = [],
     plants = [],
-    employees = []
+    employees = [],
+    setEmployees = () => {}
   } = masterData;
 
   const { addToast = () => {} } = useApp() || {};
 
-  // Trigger live GET /api/v1/master-data/lines and GET /api/v1/master-data/work-centers on mount
+  // Trigger live GET /api/v1/master-data/lines, GET /api/v1/master-data/staff, and GET /api/v1/master-data/work-centers on mount
   React.useEffect(() => {
-    masterDataService.getLines().catch((err) => console.warn("Live lines fetch:", err.message));
+    masterDataService.getLines().then((res) => {
+      const data = res?.data || res;
+      if (Array.isArray(data)) setLines(data);
+    }).catch((err) => console.warn("Live lines fetch:", err.message));
+
+    masterDataService.getStaff().then((res) => {
+      const data = res?.data || res;
+      if (Array.isArray(data)) setEmployees(data);
+    }).catch((err) => console.warn("Live staff fetch:", err.message));
+
     masterDataService.getWorkCenters().catch((err) => console.warn("Live work centers fetch:", err.message));
   }, []);
 
@@ -77,8 +88,8 @@ export function WorkCentersMasterPage() {
     name: "",
     plantId: "PLT-01",
     capacity: "40,000 BPH",
-    supervisorId: "EMP-005",
-    supervisorName: "David Kim",
+    supervisorId: "",
+    supervisorName: "",
     assignedAssetIds: []
   });
 
@@ -175,7 +186,13 @@ export function WorkCentersMasterPage() {
       addToast("Please provide Line / Work Center name.", "warning");
       return;
     }
-    const created = addLine(newLine);
+    const resolvedPlant = safePlants.find((p) => (p.id || p.plantId || p.code) === newLine.plantId) || safePlants[0];
+    const payload = {
+      ...newLine,
+      plantId: resolvedPlant ? (resolvedPlant.id || resolvedPlant.plantId || resolvedPlant.code) : newLine.plantId,
+      plantName: resolvedPlant ? getPlantDisplayName(resolvedPlant) : (newLine.plantName || "")
+    };
+    const created = addLine(payload);
     const code = created?.lineCode || newLine.lineCode || "LINE";
     addToast(`Production Line ${code} created successfully!`, "success");
     setIsAddLineModalOpen(false);
@@ -184,8 +201,8 @@ export function WorkCentersMasterPage() {
       name: "",
       plantId: "PLT-01",
       capacity: "40,000 BPH",
-      supervisorId: "EMP-005",
-      supervisorName: "David Kim",
+      supervisorId: "",
+      supervisorName: "",
       assignedAssetIds: []
     });
   };
@@ -443,9 +460,9 @@ export function WorkCentersMasterPage() {
                     );
                     const lineCode = line.lineCode || line.code || lId;
                     const lineName = line.name || line.lineName || "Production Line";
-                    const plantName = line.plantName || "Indore Plant";
+                    const plantName = line.plantName || line.plant_name || "—";
                     const capacity = line.capacity || line.ratedSpeed || "38,000 BPH";
-                    const supervisorName = line.supervisorName || "David Kim";
+                    const supervisorName = line.supervisorName || line.supervisor_name || "—";
                     const status = line.status || "Active";
 
                     return (
@@ -801,19 +818,21 @@ export function WorkCentersMasterPage() {
               <div>
                 <label style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase" }}>Assigned Shift Supervisor</label>
                 <select
-                  value={newLine.supervisorId}
+                  value={newLine.supervisorId || ""}
                   onChange={(e) => {
-                    const sup = safeEmployees.find((emp) => (emp.employeeId || emp.id) === e.target.value);
-                    setNewLine({ ...newLine, supervisorId: e.target.value, supervisorName: sup?.name || "David Kim" });
+                    const selectedId = e.target.value;
+                    const sup = safeEmployees.find((emp) => (emp.employeeId || emp.id) === selectedId);
+                    setNewLine({ ...newLine, supervisorId: selectedId, supervisorName: sup ? sup.name : "" });
                   }}
                   className="form-input"
                   style={{ height: "36px", fontSize: "12px", marginTop: "4px" }}
                 >
+                  <option value="">-- Select Shift Supervisor --</option>
                   {safeEmployees.map((emp) => {
-                    const empId = emp.employeeId || emp.id || `EMP-${Math.random()}`;
+                    const empId = emp.employeeId || emp.id;
                     return (
                       <option key={empId} value={empId}>
-                        {emp.name || "Employee"} ({emp.role || "Lead"})
+                        {emp.name} {emp.role ? `(${emp.role})` : ""}
                       </option>
                     );
                   })}
@@ -941,17 +960,22 @@ export function WorkCentersMasterPage() {
                 <select
                   value={editingLine.supervisorId || ""}
                   onChange={(e) => {
-                    const sup = safeEmployees.find((emp) => (emp.employeeId || emp.id) === e.target.value);
-                    setEditingLine({ ...editingLine, supervisorId: e.target.value, supervisorName: sup?.name || "David Kim" });
+                    const selectedId = e.target.value;
+                    const sup = safeEmployees.find((emp) => (emp.employeeId || emp.id) === selectedId);
+                    setEditingLine({ ...editingLine, supervisorId: selectedId, supervisorName: sup ? sup.name : "" });
                   }}
                   className="form-input"
                   style={{ height: "36px", fontSize: "12px", marginTop: "4px" }}
                 >
+                  <option value="">-- Select Shift Supervisor --</option>
+                  {editingLine.supervisorId && !safeEmployees.some((emp) => (emp.employeeId || emp.id) === editingLine.supervisorId) && (
+                    <option value={editingLine.supervisorId}>{editingLine.supervisorName || editingLine.supervisorId}</option>
+                  )}
                   {safeEmployees.map((emp) => {
-                    const empId = emp.employeeId || emp.id || `EMP-${Math.random()}`;
+                    const empId = emp.employeeId || emp.id;
                     return (
                       <option key={empId} value={empId}>
-                        {emp.name || "Employee"} ({emp.role || "Lead"})
+                        {emp.name} {emp.role ? `(${emp.role})` : ""}
                       </option>
                     );
                   })}

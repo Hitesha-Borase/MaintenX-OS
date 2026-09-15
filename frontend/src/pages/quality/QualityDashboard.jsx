@@ -20,13 +20,13 @@ export function QualityDashboard() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [summary, setSummary] = useState({
-    pendingChecks: 2,
+    pendingChecks: 0,
     failedChecks: 0,
-    activeHolds: 1,
-    openDeviations: 1,
-    pendingReleases: 1,
-    openInvestigations: 1,
-    lastCcpCheck: "14:00 (PASSED)",
+    activeHolds: 0,
+    openDeviations: 0,
+    pendingReleases: 0,
+    openInvestigations: 0,
+    lastCcpCheck: "—",
     line1PreOp: "PASSED"
   });
 
@@ -34,9 +34,9 @@ export function QualityDashboard() {
     try {
       setLoading(true);
       const res = await qualityService.getQualityDashboard();
-      const data = res.data?.data || res.data;
-      if (data) {
-        setSummary(data);
+      const data = res?.data !== undefined ? (res.data?.data !== undefined ? res.data.data : res.data) : res;
+      if (data && typeof data === "object") {
+        setSummary(prev => ({ ...prev, ...data }));
       }
     } catch (err) {
       console.warn("Quality dashboard fallback:", err.message);

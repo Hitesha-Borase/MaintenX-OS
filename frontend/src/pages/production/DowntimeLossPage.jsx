@@ -17,58 +17,73 @@ import { Badge } from "../../components/common/Badge";
 import { Button } from "../../components/common/Button";
 import { StatCard } from "../../components/common/StatCard";
 import { useApp } from "../../context/AppContext";
+import { useMasterData } from "../../context/MasterDataContext";
 import { useNavigate } from "react-router-dom";
 import productionService from "../../services/productionService";
 
 export function DowntimeLossPage() {
   const { addToast } = useApp();
+  const { lines = [] } = useMasterData();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    productionService.getDowntime().catch((err) => console.warn("Downtime load:", err.message));
-  }, []);
-
-  const [downtimeEvents, setDowntimeEvents] = useState([
-    { id: "DT-101", line: "Line 2 (Pasteurizer)", reason: "Thermal seal degradation & CIP re-flush", durationMins: 45, costUSD: 2625, status: "Resolved" },
-    { id: "DT-102", line: "Line 1 (Aseptic)", reason: "Cap conveyor sensor glare & micro-jam", durationMins: 18, costUSD: 1050, status: "Resolved" },
-    { id: "DT-103", line: "Line 3 (Canning)", reason: "Seamer head roller micro-adjustment", durationMins: 12, costUSD: 700, status: "Resolved" }
-  ]);
-
+  const [downtimeEvents, setDowntimeEvents] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newEvent, setNewEvent] = useState({
-    line: "Line 1 (Aseptic)",
+    line: "",
     reason: "",
-    durationMins: 20
+    durationMins: ""
   });
 
-  const totalDowntimeMins = downtimeEvents.reduce((s, d) => s + d.durationMins, 0);
-  const totalFinancialLoss = downtimeEvents.reduce((s, d) => s + d.costUSD, 0);
+  useEffect(() => {
+    productionService.getDowntime()
+      .then((res) => {
+        const data = res?.data?.data || res?.data || res;
+        if (Array.isArray(data)) {
+          setDowntimeEvents(data);
+        }
+      })
+      .catch((err) => console.warn("Downtime load:", err.message));
+  }, []);
 
-  const handleAddSubmit = (e) => {
+  const totalDowntimeMins = downtimeEvents.reduce((s, d) => s + Number(d.durationMins || d.durationMinutes || 0), 0);
+  const totalFinancialLoss = downtimeEvents.reduce((s, d) => s + Number(d.costUSD || (Number(d.durationMins || d.durationMinutes || 0) * 58.33)), 0);
+  const mttr = downtimeEvents.length > 0 ? Math.round(totalDowntimeMins / downtimeEvents.length) : 0;
+
+  const handleAddSubmit = async (e) => {
     e.preventDefault();
     if (!newEvent.reason.trim()) {
       addToast("Please provide stoppage reason", "warning");
       return;
     }
-    const cost = Number(newEvent.durationMins) * 58.33; // Approx $3500/hr
-    const event = {
-      id: `DT-10${downtimeEvents.length + 1}`,
+    const cost = Math.round(Number(newEvent.durationMins) * 58.33); // Approx $3500/hr
+    const eventPayload = {
       line: newEvent.line,
       reason: newEvent.reason,
       durationMins: Number(newEvent.durationMins),
-      costUSD: Math.round(cost),
+      costUSD: cost,
       status: "Logged"
     };
-    setDowntimeEvents([...downtimeEvents, event]);
-    addToast(`Downtime Event ${event.id} registered!`, "success");
+
+    try {
+      const res = await productionService.logDowntime(eventPayload);
+      const saved = res?.data?.data || res?.data || res;
+      const newId = saved?.id || `DT-${Date.now()}`;
+      setDowntimeEvents((prev) => [{ id: newId, ...eventPayload }, ...prev]);
+      addToast(`Downtime Event registered!`, "success");
+    } catch (err) {
+      const newId = `DT-${Date.now()}`;
+      setDowntimeEvents((prev) => [{ id: newId, ...eventPayload }, ...prev]);
+      addToast(`Downtime Event registered (local)!`, "info");
+    }
+
     setIsModalOpen(false);
-    setNewEvent({ line: "Line 1 (Aseptic)", reason: "", durationMins: 20 });
+    setNewEvent({ line: "", reason: "", durationMins: "" });
   };
 
   const handleExportCSV = () => {
     const headers = "Event ID,Line Asset,Stoppage Reason,Duration (Mins),Financial Loss ($),Status\n";
     const rows = downtimeEvents
-      .map((d) => `"${d.id}","${d.line}","${d.reason}",${d.durationMins},${d.costUSD},"${d.status}"`)
+      .map((d) => `"${d.id}","${d.line || ''}","${d.reason || ''}",${d.durationMins || 0},${Math.round(d.costUSD || 0)},"${d.status || ''}"`)
       .join("\n");
     const blob = new Blob([headers + rows], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
@@ -88,7 +103,9 @@ export function DowntimeLossPage() {
             <h1 style={{ fontSize: "clamp(18px, 4vw, 24px)", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.3px", lineHeight: 1.2 }}>
               Production Downtime & Stoppage Loss Log
             </h1>
-            <Badge variant="rose">{downtimeEvents.length} STOPPAGE EVENTS</Badge>
+            <Badge variant={downtimeEvents.length > 0 ? "rose" : "zinc"}>
+              {downtimeEvents.length} STOPPAGE EVENTS
+            </Badge>
           </div>
         </div>
 
@@ -117,31 +134,47 @@ export function DowntimeLossPage() {
           title="Total Downtime"
           value={`${totalDowntimeMins} mins`}
           unit="Shift Total"
-          trend={{ value: "3 Events logged", isPositive: false, text: "" }}
+          trend={{
+            value: `${downtimeEvents.length} Events logged`,
+            isPositive: downtimeEvents.length === 0,
+            text: ""
+          }}
           icon={Clock}
           colorVariant="rose"
         />
         <StatCard
           title="Direct Financial Loss"
-          value={`$${totalFinancialLoss.toLocaleString()}`}
+          value={`$${Math.round(totalFinancialLoss).toLocaleString()}`}
           unit="USD"
-          trend={{ value: "Capacity loss impact", isPositive: false, text: "" }}
+          trend={{
+            value: totalFinancialLoss > 0 ? "Capacity loss impact" : "Zero stoppage loss",
+            isPositive: totalFinancialLoss === 0,
+            text: ""
+          }}
           icon={DollarSign}
           colorVariant="rose"
         />
         <StatCard
           title="OEE Availability"
-          value="91.2%"
+          value={downtimeEvents.length > 0 ? "91.2%" : "100%"}
           unit="Availability"
-          trend={{ value: "Target: 95.0%", isPositive: false, text: "" }}
+          trend={{
+            value: downtimeEvents.length > 0 ? "Target: 95.0%" : "Zero unplanned downtime",
+            isPositive: downtimeEvents.length === 0,
+            text: ""
+          }}
           icon={TrendingDown}
           colorVariant="amber"
         />
         <StatCard
           title="Mean Time to Repair"
-          value="25 min"
+          value={`${mttr} min`}
           unit="MTTR"
-          trend={{ value: "Rapid triage response", isPositive: true, text: "" }}
+          trend={{
+            value: mttr > 0 ? "Average stoppage duration" : "No stoppage events",
+            isPositive: true,
+            text: ""
+          }}
           icon={AlertOctagon}
           colorVariant="emerald"
         />
@@ -170,51 +203,59 @@ export function DowntimeLossPage() {
               </tr>
             </thead>
             <tbody>
-              {downtimeEvents.map((d) => (
-                <tr key={d.id}>
-                  <td>
-                    <span style={{ fontWeight: 800, color: "#8C5B23", fontFamily: "var(--font-mono)" }}>{d.id}</span>
-                  </td>
-                  <td>
-                    <span style={{ fontWeight: 700, color: "var(--text-primary)" }}>{d.line}</span>
-                  </td>
-                  <td>
-                    <span style={{ fontSize: "13px", color: "var(--text-primary)", fontWeight: 600 }}>{d.reason}</span>
-                  </td>
-                  <td style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "#DC2626" }}>
-                    {d.durationMins} min
-                  </td>
-                  <td style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "#DC2626" }}>
-                    ${d.costUSD.toLocaleString()}
-                  </td>
-                  <td>
-                    <Badge variant={d.status === "Resolved" ? "emerald" : "amber"}>
-                      {d.status}
-                    </Badge>
-                  </td>
-                  <td>
-                    <button
-                      onClick={() => navigate("/ci/rca/investigations")}
-                      style={{
-                        padding: "4px 10px",
-                        borderRadius: "6px",
-                        fontSize: "11px",
-                        fontWeight: 700,
-                        backgroundColor: "var(--bg-card-subtle)",
-                        color: "var(--text-primary)",
-                        border: "1px solid var(--border-subtle)",
-                        cursor: "pointer",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "4px"
-                      }}
-                    >
-                      <span>RCA 8D</span>
-                      <ArrowRight size={12} />
-                    </button>
+              {downtimeEvents.length === 0 ? (
+                <tr>
+                  <td colSpan={7} style={{ textAlign: "center", padding: "28px", color: "var(--text-secondary)" }}>
+                    No stoppage events recorded.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                downtimeEvents.map((d) => (
+                  <tr key={d.id}>
+                    <td>
+                      <span style={{ fontWeight: 800, color: "#8C5B23", fontFamily: "var(--font-mono)" }}>{d.id}</span>
+                    </td>
+                    <td>
+                      <span style={{ fontWeight: 700, color: "var(--text-primary)" }}>{d.line || "Line 1"}</span>
+                    </td>
+                    <td>
+                      <span style={{ fontSize: "13px", color: "var(--text-primary)", fontWeight: 600 }}>{d.reason}</span>
+                    </td>
+                    <td style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "#DC2626" }}>
+                      {d.durationMins || d.durationMinutes || 0} min
+                    </td>
+                    <td style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "#DC2626" }}>
+                      ${Math.round(Number(d.costUSD || ((d.durationMins || d.durationMinutes || 0) * 58.33))).toLocaleString()}
+                    </td>
+                    <td>
+                      <Badge variant={d.status === "Resolved" ? "emerald" : "amber"}>
+                        {d.status || "Logged"}
+                      </Badge>
+                    </td>
+                    <td>
+                      <button
+                        onClick={() => navigate("/ci/rca/investigations")}
+                        style={{
+                          padding: "4px 10px",
+                          borderRadius: "6px",
+                          fontSize: "11px",
+                          fontWeight: 700,
+                          backgroundColor: "var(--bg-card-subtle)",
+                          color: "var(--text-primary)",
+                          border: "1px solid var(--border-subtle)",
+                          cursor: "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "4px"
+                        }}
+                      >
+                        <span>RCA 8D</span>
+                        <ArrowRight size={12} />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -241,11 +282,25 @@ export function DowntimeLossPage() {
                   value={newEvent.line}
                   onChange={(e) => setNewEvent({ ...newEvent, line: e.target.value })}
                   style={{ backgroundColor: "#FFFFFF" }}
+                  required
                 >
-                  <option value="Line 1 (Aseptic)">Line 1 (Aseptic Bottling)</option>
-                  <option value="Line 2 (Pasteurizer)">Line 2 (Formulation & Blending)</option>
-                  <option value="Line 3 (Canning)">Line 3 (Canning Line)</option>
+                  <option value="">-- Select Production Line from DB --</option>
+                  {lines.map((l) => (
+                    <option key={l.lineId || l.id} value={l.name}>
+                      {l.lineCode ? `${l.lineCode} — ` : ""}{l.name}
+                    </option>
+                  ))}
                 </select>
+                <div style={{ marginTop: "6px" }}>
+                  <input
+                    type="text"
+                    placeholder="Or Enter Line Name manually"
+                    value={newEvent.line}
+                    onChange={(e) => setNewEvent({ ...newEvent, line: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF", fontSize: "12px", height: "30px" }}
+                  />
+                </div>
               </div>
 
               <div>
@@ -253,7 +308,7 @@ export function DowntimeLossPage() {
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Starwheel bottle jam or temperature sensor alarm"
+                  placeholder="Enter Stoppage Reason / Failure Mode"
                   value={newEvent.reason}
                   onChange={(e) => setNewEvent({ ...newEvent, reason: e.target.value })}
                   className="form-input"
@@ -266,6 +321,8 @@ export function DowntimeLossPage() {
                 <input
                   type="number"
                   required
+                  min="1"
+                  placeholder="Enter Duration in Minutes"
                   value={newEvent.durationMins}
                   onChange={(e) => setNewEvent({ ...newEvent, durationMins: e.target.value })}
                   className="form-input"

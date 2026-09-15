@@ -8,12 +8,14 @@ import { ciService } from "../services/ciService";
 const CIContext = createContext();
 
 export function CIProvider({ children }) {
-  const { currentPlant, logAuditEvent, masterAssets = [] } = useMasterData();
+  const { currentPlant, logAuditEvent, masterAssets = [], assets = [], lines = [] } = useMasterData();
   const { currentRole } = useRole();
   const { addToast } = useApp();
 
-  const currentUser = currentRole?.name || "David Kim (Lead CI)";
-  const activePlantId = currentPlant || "PLT-01";
+  const currentUser = currentRole?.user?.name || currentRole?.name || "Lead CI Engineer";
+  const activePlantId = currentPlant?.id || currentPlant || "PLT-01";
+  const availableAssets = (assets && assets.length > 0) ? assets : masterAssets;
+  const availableLines = lines || [];
 
   // State collections connected to live DB
   const [reliabilityRecords, setReliabilityRecords] = useState([]);
@@ -199,16 +201,16 @@ export function CIProvider({ children }) {
 
   // Dynamic KPIs (fallback to calculated if dashboard summary pending)
   const fleetMTBF = useMemo(() => {
-    if (dashboardSummary?.reliability?.avgMtbfHrs) return dashboardSummary.reliability.avgMtbfHrs;
-    if (!plantFilteredReliability.length) return 120;
-    const sum = plantFilteredReliability.reduce((acc, r) => acc + (Number(r.mtbfHrs) || 100), 0);
+    if (dashboardSummary?.reliability?.avgMtbfHrs !== undefined) return dashboardSummary.reliability.avgMtbfHrs;
+    if (!plantFilteredReliability.length) return 0;
+    const sum = plantFilteredReliability.reduce((acc, r) => acc + (Number(r.mtbfHrs) || 0), 0);
     return Math.round(sum / plantFilteredReliability.length);
   }, [dashboardSummary, plantFilteredReliability]);
 
   const fleetMTTR = useMemo(() => {
-    if (dashboardSummary?.reliability?.avgMttrMin) return dashboardSummary.reliability.avgMttrMin;
-    if (!plantFilteredReliability.length) return 32;
-    const sum = plantFilteredReliability.reduce((acc, r) => acc + (Number(r.mttrMin) || 30), 0);
+    if (dashboardSummary?.reliability?.avgMttrMin !== undefined) return dashboardSummary.reliability.avgMttrMin;
+    if (!plantFilteredReliability.length) return 0;
+    const sum = plantFilteredReliability.reduce((acc, r) => acc + (Number(r.mttrMin) || 0), 0);
     return Math.round(sum / plantFilteredReliability.length);
   }, [dashboardSummary, plantFilteredReliability]);
 
@@ -242,8 +244,9 @@ export function CIProvider({ children }) {
   }, [capaActions]);
 
   const openCapexCount = useMemo(() => {
+    if (dashboardSummary?.capex?.open !== undefined) return dashboardSummary.capex.open;
     return plantFilteredCapex.filter((c) => c.status !== "Closed" && c.status !== "Commissioned").length;
-  }, [plantFilteredCapex]);
+  }, [dashboardSummary, plantFilteredCapex]);
 
   const pendingBenefitsCount = useMemo(() => {
     return plantFilteredProjects.filter((p) => p.benefitStatus === "Pending Verification").length;
@@ -254,54 +257,67 @@ export function CIProvider({ children }) {
   // ==========================================
 
   // 1. RCA: Initiate
-  const initiateRCA = async (assetId, sourceBreakdownId, customProblem) => {
-    const asset = reliabilityRecords.find((r) => r.assetId === assetId) ||
-                  masterAssets.find((a) => a.assetId === assetId) || {
-                    assetName: "Production Machine",
-                    lineId: "LIN-01",
-                    lineName: "Line 1",
-                    plantId: activePlantId
-                  };
+  const initiateRCA = async (assetOrId, sourceBreakdownId, customProblem, extraFields = {}) => {
+    let payload = {};
+    if (typeof assetOrId === "object" && assetOrId !== null) {
+      payload = {
+        title: assetOrId.title || "Critical Component Failure Investigation",
+        assetId: assetOrId.assetId || "AST-001",
+        assetName: assetOrId.assetName || "Production Asset",
+        lineId: assetOrId.lineId || "LIN-01",
+        lineName: assetOrId.lineName || "Line 1 — Production",
+        plantId: assetOrId.plantId || activePlantId,
+        sourceBreakdownId: assetOrId.sourceBreakdownId || null,
+        sourceWorkOrderId: assetOrId.sourceWorkOrderId || null,
+        severity: assetOrId.severity || "High",
+        status: "Open",
+        currentPhase: "Event",
+        problemStatement: assetOrId.problemStatement || assetOrId.description || "Investigation initiated to determine root cause and implement permanent CAPA.",
+        leadInvestigator: currentUser,
+        teamMembers: [currentUser],
+        eventDate: new Date().toISOString().substring(0, 10),
+        daysActive: 1,
+        whyTree: assetOrId.whyTree || [],
+        eightD: assetOrId.eightD || { d1Team: currentUser, d2Problem: assetOrId.title },
+      };
+    } else {
+      const assetId = assetOrId;
+      const asset = reliabilityRecords.find((r) => r.assetId === assetId) ||
+                    availableAssets.find((a) => a.id === assetId || a.assetId === assetId || a.assetCode === assetId) || {
+                      assetName: "Production Machine",
+                      lineId: "LIN-01",
+                      lineName: "Line 1 — Production",
+                      plantId: activePlantId
+                    };
 
-    const newRcaPayload = {
-      title: customProblem || `Investigation — ${asset.assetName || asset.name || "Equipment"} Breakdown`,
-      assetId: asset.assetId || assetId,
-      assetName: asset.assetName || asset.name || "Critical Equipment",
-      lineId: asset.lineId || "LIN-01",
-      lineName: asset.lineName || "Line 1 — Production",
-      plantId: asset.plantId || activePlantId,
-      sourceBreakdownId: sourceBreakdownId || null,
-      sourceWorkOrderId: null,
-      severity: "High",
-      status: "Open",
-      currentPhase: "Event",
-      problemStatement: customProblem || `Systematic failure detected on ${asset.assetName || asset.name}. Investigation initiated to determine root cause and implement permanent CAPA.`,
-      leadInvestigator: currentUser,
-      teamMembers: [currentUser, "Marcus Vance (Maintenance Lead)", "Elena Rostova (QA)"],
-      eventDate: new Date().toISOString().substring(0, 10),
-      daysActive: 1,
-      whyTree: [
-        { id: "W1", question: "Why did the equipment fail during operation?", answer: "" },
-        { id: "W2", question: "Why did the sub-component experience premature wear?", answer: "" },
-        { id: "W3", question: "Why was the condition not detected during routine PM?", answer: "" },
-        { id: "W4", question: "Why did the existing sensor/alarm fail to trigger?", answer: "" },
-        { id: "W5", question: "Why was the standard maintenance procedure not followed?", answer: "" }
-      ],
-      eightD: {
-        d1Team: currentUser,
-        d2Problem: customProblem || "Equipment failure event logged.",
-        d3Containment: "Line stopped; parts inspected; standard cleanout performed.",
-        d4RootCause: "",
-        d5CorrectiveAction: "",
-        d6Implementation: "",
-        d7Prevention: "",
-        d8Closure: ""
-      }
-    };
+      payload = {
+        title: customProblem || extraFields.title || `Investigation — ${asset.assetName || asset.name || "Equipment"} Breakdown`,
+        assetId: asset.assetId || asset.assetCode || asset.id || assetId || "AST-001",
+        assetName: asset.assetName || asset.name || "Critical Equipment",
+        lineId: asset.lineId || extraFields.lineId || "LIN-01",
+        lineName: asset.lineName || extraFields.lineName || "Line 1 — Production",
+        plantId: asset.plantId || extraFields.plantId || activePlantId,
+        sourceBreakdownId: sourceBreakdownId || null,
+        sourceWorkOrderId: null,
+        severity: extraFields.severity || "High",
+        status: "Open",
+        currentPhase: "Event",
+        problemStatement: customProblem || extraFields.problemStatement || `Systematic failure detected on ${asset.assetName || asset.name || "equipment"}. Investigation initiated to determine root cause.`,
+        leadInvestigator: currentUser,
+        teamMembers: [currentUser],
+        eventDate: new Date().toISOString().substring(0, 10),
+        daysActive: 1,
+        whyTree: [],
+        eightD: {
+          d1Team: currentUser,
+          d2Problem: customProblem || "Equipment failure event logged.",
+        }
+      };
+    }
 
     let createdRecord = null;
     try {
-      const res = await ciService.createInvestigation(newRcaPayload);
+      const res = await ciService.createInvestigation(payload);
       createdRecord = res?.data || res;
     } catch (err) {
       console.error("API createInvestigation error:", err.message);
@@ -312,7 +328,7 @@ export function CIProvider({ children }) {
     if (createdRecord) {
       setInvestigations((prev) => [createdRecord, ...prev]);
       if (logAuditEvent) {
-        logAuditEvent("CI_RCA_INITIATED", "RCA Investigation", createdRecord.id, null, createdRecord.title, `RCA launched for asset ${assetId}`);
+        logAuditEvent("CI_RCA_INITIATED", "RCA Investigation", createdRecord.id, null, createdRecord.title, `RCA launched for asset ${payload.assetId}`);
       }
       addToast(`RCA Investigation ${createdRecord.id} initiated successfully!`, "success");
       await refreshInvestigations();
@@ -841,6 +857,9 @@ export function CIProvider({ children }) {
         createCapexProject,
         deleteCapexProject,
         launchRcaFromBadActor,
+        availableAssets,
+        availableLines,
+        currentUser,
       }}
     >
       {children}

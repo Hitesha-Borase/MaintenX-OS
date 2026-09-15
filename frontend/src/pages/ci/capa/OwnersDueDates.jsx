@@ -76,6 +76,12 @@ export function OwnersDueDates() {
     });
   }, [capaActions, selectedOwnerFilter, selectedStatusFilter, searchQuery]);
 
+  const slaCompliance = useMemo(() => {
+    if (capaActions.length === 0) return "100%";
+    const onTime = capaActions.filter((a) => a.status === "Completed" || a.status === "Verified" || a.status === "Closed" || a.dueDate >= new Date().toISOString().substring(0, 10)).length;
+    return `${Math.round((onTime / capaActions.length) * 100)}%`;
+  }, [capaActions]);
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%", maxWidth: "1600px", margin: "0 auto", minWidth: 0 }}>
       {/* Header */}
@@ -136,7 +142,7 @@ export function OwnersDueDates() {
         />
         <StatCard
           title="SLA Compliance"
-          value="96.2%"
+          value={slaCompliance}
           unit="On-Time Delivery"
           icon={Clock}
           colorVariant="emerald"
@@ -223,10 +229,17 @@ export function OwnersDueDates() {
               </tr>
             </thead>
             <tbody>
-              {filteredItems.map((a) => {
-                const isOverdue = a.status !== "Completed" && a.status !== "Verified" && a.status !== "Closed" && a.dueDate < new Date().toISOString().substring(0, 10);
-                return (
-                  <tr key={a.id} style={{ borderBottom: "1px solid var(--border-subtle)", backgroundColor: isOverdue ? "rgba(239, 68, 68, 0.02)" : "transparent" }}>
+              {filteredItems.length === 0 ? (
+                <tr>
+                  <td colSpan={7} style={{ padding: "36px 16px", textAlign: "center", color: "var(--text-muted)", fontSize: "13px" }}>
+                    No assigned CAPA actions found for the specified criteria.
+                  </td>
+                </tr>
+              ) : (
+                filteredItems.map((a) => {
+                  const isOverdue = a.status !== "Completed" && a.status !== "Verified" && a.status !== "Closed" && a.dueDate < new Date().toISOString().substring(0, 10);
+                  return (
+                    <tr key={a.id} style={{ borderBottom: "1px solid var(--border-subtle)", backgroundColor: isOverdue ? "rgba(239, 68, 68, 0.02)" : "transparent" }}>
                     <td style={{ padding: "12px 16px" }}>
                       <div style={{ fontWeight: 800, color: "var(--text-primary)", fontSize: "13px" }}>{a.description}</div>
                       <div style={{ fontSize: "11px", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>{a.id}</div>
@@ -277,7 +290,7 @@ export function OwnersDueDates() {
                     </td>
                   </tr>
                 );
-              })}
+              }))}
             </tbody>
           </table>
         </div>

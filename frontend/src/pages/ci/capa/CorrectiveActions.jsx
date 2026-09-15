@@ -38,7 +38,8 @@ export function CorrectiveActions() {
     createCapaAction,
     updateCapaStatus,
     investigations = [],
-    overdueCapaCount
+    overdueCapaCount,
+    currentUser
   } = useCI();
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -47,13 +48,19 @@ export function CorrectiveActions() {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const [newAction, setNewAction] = useState({
-    rcaId: investigations[0]?.id || "RCA-2026-001",
+    rcaId: investigations[0]?.id || "",
     description: "",
     actionType: "Corrective",
-    owner: "Marcus Vance (Maintenance Lead)",
+    owner: currentUser?.name || currentUser?.email || "Maintenance Engineer",
     dueDate: new Date(Date.now() + 7 * 86400000).toISOString().substring(0, 10),
     priority: "High"
   });
+
+  React.useEffect(() => {
+    if (!newAction.rcaId && investigations.length > 0) {
+      setNewAction((prev) => ({ ...prev, rcaId: investigations[0].id }));
+    }
+  }, [investigations]);
 
   const correctiveList = useMemo(() => {
     return capaActions.filter((c) => c.actionType === "Corrective");
@@ -61,6 +68,10 @@ export function CorrectiveActions() {
 
   const handleAdd = (e) => {
     e.preventDefault();
+    if (!newAction.rcaId) {
+      addToast("Please select an active RCA investigation.", "warning");
+      return;
+    }
     if (!newAction.description.trim()) {
       addToast("Please provide a corrective action description.", "warning");
       return;
@@ -69,10 +80,10 @@ export function CorrectiveActions() {
     createCapaAction(newAction);
     setIsModalOpen(false);
     setNewAction({
-      rcaId: investigations[0]?.id || "RCA-2026-001",
+      rcaId: investigations[0]?.id || "",
       description: "",
       actionType: "Corrective",
-      owner: "Marcus Vance (Maintenance Lead)",
+      owner: currentUser?.name || currentUser?.email || "Maintenance Engineer",
       dueDate: new Date(Date.now() + 7 * 86400000).toISOString().substring(0, 10),
       priority: "High"
     });
@@ -272,10 +283,17 @@ export function CorrectiveActions() {
               </tr>
             </thead>
             <tbody>
-              {filteredActions.map((a) => {
-                const isOverdue = a.status !== "Completed" && a.status !== "Verified" && a.status !== "Closed" && a.dueDate < new Date().toISOString().substring(0, 10);
-                return (
-                  <tr key={a.id} style={{ borderBottom: "1px solid var(--border-subtle)", backgroundColor: isOverdue ? "rgba(239, 68, 68, 0.02)" : "transparent" }}>
+              {filteredActions.length === 0 ? (
+                <tr>
+                  <td colSpan={7} style={{ padding: "36px 16px", textAlign: "center", color: "var(--text-muted)", fontSize: "13px" }}>
+                    No corrective actions recorded. Click <strong>"Create Corrective Action"</strong> to assign an action item.
+                  </td>
+                </tr>
+              ) : (
+                filteredActions.map((a) => {
+                  const isOverdue = a.status !== "Completed" && a.status !== "Verified" && a.status !== "Closed" && a.dueDate < new Date().toISOString().substring(0, 10);
+                  return (
+                    <tr key={a.id} style={{ borderBottom: "1px solid var(--border-subtle)", backgroundColor: isOverdue ? "rgba(239, 68, 68, 0.02)" : "transparent" }}>
                     <td style={{ padding: "12px 16px" }}>
                       <div style={{ fontWeight: 800, color: "var(--text-primary)", fontSize: "13px" }}>{a.description}</div>
                       <div style={{ fontSize: "11px", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>{a.id}</div>
@@ -344,7 +362,7 @@ export function CorrectiveActions() {
                     </td>
                   </tr>
                 );
-              })}
+              }))}
             </tbody>
           </table>
         </div>
@@ -375,6 +393,7 @@ export function CorrectiveActions() {
                   className="form-input"
                   style={{ backgroundColor: "#FFFFFF" }}
                 >
+                  <option value="">-- Select RCA Investigation --</option>
                   {investigations.map((inv) => (
                     <option key={inv.id} value={inv.id}>{inv.id} — {inv.title.substring(0, 30)}...</option>
                   ))}

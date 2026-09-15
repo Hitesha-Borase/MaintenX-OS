@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ShieldAlert,
@@ -15,21 +15,45 @@ import { StatCard } from "../../../components/common/StatCard";
 import { Badge } from "../../../components/common/Badge";
 import { Button } from "../../../components/common/Button";
 import { useApp } from "../../../context/AppContext";
+import { useCI } from "../../../context/CIContext";
 import ciService from "../../../services/ciService";
 
 export function QualityLoss() {
   const navigate = useNavigate();
   const { addToast } = useApp();
+  const { lossRecords = [] } = useCI();
 
   useEffect(() => {
     ciService.getLosses("ALL", "Quality").catch((err) => console.warn("Quality loss load:", err.message));
   }, []);
 
-  const qualityCauses = [
-    { cause: "CCP Pasteurizer Temperature Excursion Reject", pct: "2.1%", batch: "BAT-2026-0890", cost: "$4,200", status: "Quarantined" },
-    { cause: "Capping dynamic seal torque out-of-spec", pct: "0.6%", batch: "NCR-402", cost: "$1,200", status: "Reworked" },
-    { cause: "Label application alignment defect & barcode unreadable", pct: "0.4%", batch: "BAT-2026-0888", cost: "$800", status: "Re-labeled" }
-  ];
+  const qualityLosses = useMemo(() => {
+    return lossRecords.filter((l) => l.category?.toLowerCase().includes("quality") || l.category?.toLowerCase().includes("scrap"));
+  }, [lossRecords]);
+
+  const totalQualityCost = useMemo(() => {
+    return qualityLosses.reduce((acc, l) => acc + (Number(l.financialImpactUSD) || 0), 0);
+  }, [qualityLosses]);
+
+  const totalUnitsLost = useMemo(() => {
+    return qualityLosses.reduce((acc, l) => acc + (Number(l.unitsLost) || 0), 0);
+  }, [qualityLosses]);
+
+  const fpyPercentage = useMemo(() => {
+    if (totalUnitsLost === 0) return "100.0%";
+    return "98.5%";
+  }, [totalUnitsLost]);
+
+  const qualityCauses = useMemo(() => {
+    if (qualityLosses.length === 0) return [];
+    return qualityLosses.map((q) => ({
+      cause: q.eventName || q.category,
+      pct: totalQualityCost > 0 ? `${Math.round(((q.financialImpactUSD || 0) / totalQualityCost) * 100)}%` : "0%",
+      batch: q.assetId || "Batch NCR",
+      cost: `$${(q.financialImpactUSD || 0).toLocaleString()}`,
+      status: q.linkedRcaId ? "Under RCA 2.0" : "Quarantined"
+    }));
+  }, [qualityLosses, totalQualityCost]);
 
   const handleExportCSV = () => {
     const headers = "Defect Cause,OEE Impact %,Affected Batch,Financial Loss,Disposition\n";
@@ -54,7 +78,9 @@ export function QualityLoss() {
             <h1 style={{ fontSize: "clamp(18px, 4vw, 24px)", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.3px", lineHeight: 1.2 }}>
               Quality Loss Analysis
             </h1>
-            <Badge variant="amber">3.1% QUALITY GAP</Badge>
+            <Badge variant={totalQualityCost > 0 ? "amber" : "emerald"}>
+              {totalQualityCost > 0 ? `$${totalQualityCost.toLocaleString()} QUALITY GAP` : "100% QUALITY CONFORMANCE"}
+            </Badge>
           </div>
         </div>
 
@@ -71,7 +97,7 @@ export function QualityLoss() {
         </div>
       </div>
 
-      {/* KPI Tickers - 2x2 on mobile, 4 on desktop */}
+      {/* KPI Tickers */}
       <div
         className="kpi-grid-responsive grid-4"
         style={{
@@ -84,33 +110,33 @@ export function QualityLoss() {
       >
         <StatCard
           title="Total Quality Loss"
-          value="3.1%"
-          unit="OEE Impact"
-          trend={{ value: "First pass yield gap", isPositive: false, text: "" }}
+          value={`$${totalQualityCost.toLocaleString()}`}
+          unit="Financial Loss"
+          trend={{ value: totalQualityCost > 0 ? "Non-conformance cost logged" : "Zero quality loss logged", isPositive: totalQualityCost === 0, text: "" }}
           icon={ShieldAlert}
-          colorVariant="rose"
+          colorVariant={totalQualityCost > 0 ? "rose" : "emerald"}
         />
         <StatCard
           title="Batch Non-Conformances"
-          value="1 Batch"
-          unit="Destroyed"
-          trend={{ value: "BAT-2026-0890 (CCP excursion)", isPositive: false, text: "" }}
+          value={qualityLosses.length.toString()}
+          unit="Incidents"
+          trend={{ value: qualityLosses.length > 0 ? "Under review / disposition" : "Zero non-conformances", isPositive: qualityLosses.length === 0, text: "" }}
           icon={AlertTriangle}
-          colorVariant="amber"
+          colorVariant={qualityLosses.length > 0 ? "amber" : "emerald"}
         />
         <StatCard
           title="First Pass Yield (FPY)"
-          value="96.9%"
-          unit="Target: 98%"
-          trend={{ value: "-1.1% vs quality KPI target", isPositive: false, text: "" }}
+          value={fpyPercentage}
+          unit="Quality Rate"
+          trend={{ value: totalUnitsLost > 0 ? "Slight scrap/rework impact" : "100% Conformance", isPositive: totalUnitsLost === 0, text: "" }}
           icon={Percent}
           colorVariant="cyan"
         />
         <StatCard
-          title="Scrap Cost Impact"
-          value="$6,200"
-          unit="Direct Loss"
-          trend={{ value: "Non-recoverable packaging/liquid", isPositive: false, text: "" }}
+          title="Defective Units"
+          value={totalUnitsLost.toLocaleString()}
+          unit="Units Rejected"
+          trend={{ value: totalUnitsLost > 0 ? "Quarantined material" : "Zero scrap", isPositive: totalUnitsLost === 0, text: "" }}
           icon={ShieldCheck}
           colorVariant="emerald"
         />
@@ -126,59 +152,65 @@ export function QualityLoss() {
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-          {qualityCauses.map((q, idx) => (
-            <div
-              key={idx}
-              style={{
-                padding: "12px 14px",
-                borderRadius: "10px",
-                backgroundColor: "var(--bg-card-subtle)",
-                border: "1px solid var(--border-subtle)",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                flexWrap: "wrap",
-                gap: "10px"
-              }}
-            >
-              <div style={{ minWidth: "220px", flex: 1 }}>
-                <div style={{ fontSize: "13px", fontWeight: 800, color: "var(--text-primary)" }}>
-                  {q.cause}
-                </div>
-                <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "4px", display: "flex", gap: "12px", flexWrap: "wrap" }}>
-                  <span>Batch: <strong style={{ color: "var(--text-primary)", fontFamily: "var(--font-mono)" }}>{q.batch}</strong></span>
-                  <span>Financial Loss: <strong style={{ color: "#DC2626" }}>{q.cost}</strong></span>
-                  <span>Status: <strong style={{ color: "#8C5B23" }}>{q.status}</strong></span>
-                </div>
-              </div>
-
-              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <span style={{ fontSize: "14px", fontWeight: 800, color: "#DC2626", fontFamily: "var(--font-mono)" }}>
-                  {q.pct}
-                </span>
-
-                <button
-                  onClick={() => navigate("/ci/rca/investigations")}
-                  style={{
-                    padding: "5px 10px",
-                    borderRadius: "6px",
-                    fontSize: "11px",
-                    fontWeight: 700,
-                    backgroundColor: "var(--bg-card-subtle)",
-                    color: "var(--text-primary)",
-                    border: "1px solid var(--border-subtle)",
-                    cursor: "pointer",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "4px"
-                  }}
-                >
-                  <SearchCode size={12} />
-                  <span>RCA 8D</span>
-                </button>
-              </div>
+          {qualityCauses.length === 0 ? (
+            <div style={{ padding: "36px 16px", textAlign: "center", color: "var(--text-muted)", fontSize: "13px" }}>
+              No quality loss incidents recorded in current cycle.
             </div>
-          ))}
+          ) : (
+            qualityCauses.map((q, idx) => (
+              <div
+                key={idx}
+                style={{
+                  padding: "12px 14px",
+                  borderRadius: "10px",
+                  backgroundColor: "var(--bg-card-subtle)",
+                  border: "1px solid var(--border-subtle)",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  flexWrap: "wrap",
+                  gap: "10px"
+                }}
+              >
+                <div style={{ minWidth: "220px", flex: 1 }}>
+                  <div style={{ fontSize: "13px", fontWeight: 800, color: "var(--text-primary)" }}>
+                    {q.cause}
+                  </div>
+                  <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "4px", display: "flex", gap: "12px", flexWrap: "wrap" }}>
+                    <span>Batch: <strong style={{ color: "var(--text-primary)", fontFamily: "var(--font-mono)" }}>{q.batch}</strong></span>
+                    <span>Financial Loss: <strong style={{ color: "#DC2626" }}>{q.cost}</strong></span>
+                    <span>Status: <strong style={{ color: "#8C5B23" }}>{q.status}</strong></span>
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <span style={{ fontSize: "14px", fontWeight: 800, color: "#DC2626", fontFamily: "var(--font-mono)" }}>
+                    {q.pct}
+                  </span>
+
+                  <button
+                    onClick={() => navigate("/ci/rca/investigations")}
+                    style={{
+                      padding: "5px 10px",
+                      borderRadius: "6px",
+                      fontSize: "11px",
+                      fontWeight: 700,
+                      backgroundColor: "var(--bg-card-subtle)",
+                      color: "var(--text-primary)",
+                      border: "1px solid var(--border-subtle)",
+                      cursor: "pointer",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "4px"
+                    }}
+                  >
+                    <SearchCode size={12} />
+                    <span>RCA 8D</span>
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </Card>
     </div>

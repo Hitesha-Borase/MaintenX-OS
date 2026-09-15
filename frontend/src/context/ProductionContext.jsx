@@ -1,53 +1,51 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { INITIAL_PRODUCTION_ORDERS, INITIAL_BATCHES } from "../data/mockProduction";
 import productionService from "../services/productionService";
 
 const ProductionContext = createContext();
 
 export function ProductionProvider({ children }) {
-  const [productionOrders, setProductionOrders] = useState(() => {
-    const saved = localStorage.getItem("flowstate_production_orders");
-    return saved ? JSON.parse(saved) : INITIAL_PRODUCTION_ORDERS;
-  });
-
-  const [batches, setBatches] = useState(() => {
-    const saved = localStorage.getItem("flowstate_batches");
-    return saved ? JSON.parse(saved) : INITIAL_BATCHES;
-  });
-
-  const [shiftHandoffs, setShiftHandoffs] = useState([
-    {
-      id: "HO-2026-0831",
-      shiftFrom: "Shift C (Night)",
-      shiftTo: "Shift A (Day)",
-      handedOverBy: "Carlos Mendez",
-      receivedBy: "Elena Rostova",
-      timestamp: "2026-08-31 05:55",
-      notes: "Line 1 running at 580 BPM. Clean in Place (CIP) passed at 04:30. Filler head #7 seal replaced.",
-      status: "Signed Off"
-    }
-  ]);
-
+  const [productionOrders, setProductionOrders] = useState([]);
+  const [batches, setBatches] = useState([]);
+  const [shiftHandoffs, setShiftHandoffs] = useState([]);
+  const [machines, setMachines] = useState([]);
+  const [downtimeEvents, setDowntimeEvents] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
 
   // Sync state with backend on mount
   const syncWithBackend = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [remoteOrders, remoteBatches] = await Promise.allSettled([
+      const [remoteOrders, remoteBatches, remoteMachines, remoteDowntime, remoteHandoffs] = await Promise.allSettled([
         productionService.getOrders(),
         productionService.getBatches(),
+        productionService.getMachines(),
+        productionService.getDowntime(),
+        productionService.getShiftHandoffs(),
       ]);
 
-      const ordersList = Array.isArray(remoteOrders.value) ? remoteOrders.value : (Array.isArray(remoteOrders.value?.data) ? remoteOrders.value.data : null);
-      if (remoteOrders.status === "fulfilled" && ordersList && ordersList.length > 0) {
-        setProductionOrders(ordersList);
-      }
+      const extract = (res) => {
+        if (res.status !== "fulfilled") return null;
+        const val = res.value;
+        if (Array.isArray(val)) return val;
+        if (Array.isArray(val?.data)) return val.data;
+        if (Array.isArray(val?.data?.data)) return val.data.data;
+        return null;
+      };
 
-      const batchesList = Array.isArray(remoteBatches.value) ? remoteBatches.value : (Array.isArray(remoteBatches.value?.data) ? remoteBatches.value.data : null);
-      if (remoteBatches.status === "fulfilled" && batchesList && batchesList.length > 0) {
-        setBatches(batchesList);
-      }
+      const ordersList = extract(remoteOrders);
+      if (ordersList !== null) setProductionOrders(ordersList);
+
+      const batchesList = extract(remoteBatches);
+      if (batchesList !== null) setBatches(batchesList);
+
+      const machinesList = extract(remoteMachines);
+      if (machinesList !== null) setMachines(machinesList);
+
+      const downtimeList = extract(remoteDowntime);
+      if (downtimeList !== null) setDowntimeEvents(downtimeList);
+
+      const handoffsList = extract(remoteHandoffs);
+      if (handoffsList !== null) setShiftHandoffs(handoffsList);
     } catch (err) {
       console.warn("Production backend sync fallback:", err.message);
     } finally {
@@ -60,6 +58,18 @@ export function ProductionProvider({ children }) {
   }, [syncWithBackend]);
 
   useEffect(() => {
+    const handleTenantChanged = () => {
+      setProductionOrders([]);
+      setBatches([]);
+      setShiftHandoffs([]);
+      localStorage.removeItem("flowstate_production_orders");
+      localStorage.removeItem("flowstate_batches");
+    };
+    window.addEventListener("maintenx:tenant_changed", handleTenantChanged);
+    return () => window.removeEventListener("maintenx:tenant_changed", handleTenantChanged);
+  }, []);
+
+  useEffect(() => {
     localStorage.setItem("flowstate_production_orders", JSON.stringify(productionOrders));
   }, [productionOrders]);
 
@@ -70,7 +80,20 @@ export function ProductionProvider({ children }) {
   const updateOrderStatus = async (orderId, status) => {
     // 1. Optimistic local update
     setProductionOrders((prev) =>
-      prev.map((o) => (o.id === orderId ? { ...o, status } : o))
+      prev.map((o) => {
+        if (o.id === orderId || o.orderNumber === orderId) {
+          const tgt = Number(o.targetQuantity ?? o.targetQty ?? 0);
+          let prod = Number(o.producedQuantity ?? o.producedQty ?? 0);
+          const st = String(status || "").toLowerCase();
+          if (st.includes("comp") || st.includes("qa")) {
+            if (tgt > 0) prod = tgt;
+          } else if (st.includes("run") && prod === 0 && tgt > 0) {
+            prod = Math.round(tgt * 0.45);
+          }
+          return { ...o, status, producedQuantity: prod };
+        }
+        return o;
+      })
     );
 
     // 2. Persist to PostgreSQL backend
@@ -81,6 +104,32 @@ export function ProductionProvider({ children }) {
     }
   };
 
+  const deleteProductionOrder = async (orderId) => {
+    setProductionOrders((prev) =>
+      prev.filter((o) => o.id !== orderId && o.orderNumber !== orderId)
+    );
+    try {
+      await productionService.deleteOrder(orderId);
+    } catch (err) {
+      console.warn("Failed to delete order from backend:", err.message);
+    }
+  };
+
+  const updateOrderQuantity = async (orderId, producedQuantity, scrapQuantity = 0) => {
+    setProductionOrders((prev) =>
+      prev.map((o) => (o.id === orderId ? { ...o, producedQuantity: Number(producedQuantity) || 0, scrapQuantity: Number(scrapQuantity) || 0 } : o))
+    );
+    try {
+      await productionService.recordOperatorEntry({
+        orderId,
+        goodUnitsIncrement: Number(producedQuantity) || 0,
+        scrapUnitsIncrement: Number(scrapQuantity) || 0
+      });
+    } catch (err) {
+      console.warn("Failed to persist order quantity to backend:", err.message);
+    }
+  };
+
   const createProductionOrder = async (orderData) => {
     const tempId = `PO-${Date.now()}`;
     const newOrder = { id: tempId, ...orderData, status: orderData.status || "PLANNED" };
@@ -88,10 +137,30 @@ export function ProductionProvider({ children }) {
 
     try {
       const created = await productionService.createOrder(orderData);
-      if (created?.id) {
-        setProductionOrders((prev) => prev.map((o) => (o.id === tempId ? created : o)));
+      const actualOrder = created?.order || created;
+      
+      // Pull fresh orders from backend so state is 100% in sync with database
+      try {
+        const remote = await productionService.getOrders();
+        const list = Array.isArray(remote) ? remote : (Array.isArray(remote?.data) ? remote.data : (Array.isArray(remote?.data?.data) ? remote.data.data : null));
+        if (Array.isArray(list) && list.length > 0) {
+          setProductionOrders(list);
+          return actualOrder || newOrder;
+        }
+      } catch (syncErr) {
+        console.warn("Backend orders resync failed:", syncErr.message);
       }
-      return created || newOrder;
+
+      if (actualOrder?.id) {
+        setProductionOrders((prev) =>
+          prev.map((o) =>
+            o.id === tempId
+              ? { ...newOrder, ...actualOrder, id: actualOrder.id, orderNumber: actualOrder.orderNumber || newOrder.orderNumber }
+              : o
+          )
+        );
+      }
+      return actualOrder || newOrder;
     } catch (err) {
       console.warn("Created order offline/fallback:", err.message);
       return newOrder;
@@ -138,7 +207,18 @@ export function ProductionProvider({ children }) {
     }
   };
 
-  const addShiftHandoff = (handoff) => {
+  const updateMachineStatus = async (machineId, newStatus) => {
+    setMachines((prev) =>
+      prev.map((m) => (m.id === machineId || m.machineCode === machineId ? { ...m, status: newStatus } : m))
+    );
+    try {
+      await productionService.updateMachineStatus(machineId, newStatus);
+    } catch (err) {
+      console.warn("Machine status update fallback:", err.message);
+    }
+  };
+
+  const addShiftHandoff = async (handoff) => {
     const id = `HO-2026-${Math.floor(1000 + Math.random() * 9000)}`;
     const newH = {
       ...handoff,
@@ -147,6 +227,16 @@ export function ProductionProvider({ children }) {
       status: "Signed Off"
     };
     setShiftHandoffs((prev) => [newH, ...prev]);
+
+    try {
+      const res = await productionService.createShiftHandoff(handoff);
+      const saved = res?.data?.data || res?.data || res;
+      if (saved?.id) {
+        setShiftHandoffs((prev) => prev.map((h) => (h.id === id ? { ...newH, ...saved } : h)));
+      }
+    } catch (err) {
+      console.warn("Shift handoff creation fallback:", err.message);
+    }
     return newH;
   };
 
@@ -156,6 +246,8 @@ export function ProductionProvider({ children }) {
         productionOrders,
         setProductionOrders,
         updateOrderStatus,
+        deleteProductionOrder,
+        updateOrderQuantity,
         createProductionOrder,
         batches,
         advanceBatchStep,
@@ -163,6 +255,11 @@ export function ProductionProvider({ children }) {
         logDowntime,
         shiftHandoffs,
         addShiftHandoff,
+        machines,
+        setMachines,
+        updateMachineStatus,
+        downtimeEvents,
+        setDowntimeEvents,
         isLoading,
         syncWithBackend
       }}

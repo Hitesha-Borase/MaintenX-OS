@@ -29,8 +29,8 @@ export function ProductFamiliesPage() {
 
   useEffect(() => {
     masterDataService.getProductFamilies().then((res) => {
-      const data = res?.data || res;
-      if (Array.isArray(data) && data.length > 0 && typeof setProductFamilies === "function") {
+      const data = res?.data !== undefined ? res.data : res;
+      if (Array.isArray(data) && typeof setProductFamilies === "function") {
         setProductFamilies(data);
       }
     }).catch((err) => console.warn("Product families load:", err.message));

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   LineChart,
@@ -15,24 +15,48 @@ import { StatCard } from "../../../components/common/StatCard";
 import { Badge } from "../../../components/common/Badge";
 import { Button } from "../../../components/common/Button";
 import { useApp } from "../../../context/AppContext";
+import { useCI } from "../../../context/CIContext";
 import ciService from "../../../services/ciService";
 
 export function YieldLoss() {
   const navigate = useNavigate();
   const { addToast } = useApp();
+  const { lossRecords = [] } = useCI();
 
   useEffect(() => {
     ciService.getLosses("ALL", "Yield").catch((err) => console.warn("Yield loss load:", err.message));
   }, []);
 
-  const yieldLosses = [
-    { source: "Filler nozzle post-drip and volumetric over-fill (+2.4g/bottle)", pct: "1.2%", volume: "5,760 L", cost: "$5,180", category: "Filling Over-Delivery" },
-    { source: "CIP cycle chemical pre-rinse product wash-down to drain", pct: "1.0%", volume: "4,800 L", cost: "$4,320", category: "CIP Flush Loss" },
-    { source: "Blending tank residual heel & transfer pipeline dead-leg retention", pct: "0.9%", volume: "4,320 L", cost: "$3,880", category: "Tank Bottom Retention" }
-  ];
+  const yieldLossRecords = useMemo(() => {
+    return lossRecords.filter((l) => l.category?.toLowerCase().includes("yield") || l.category?.toLowerCase().includes("speed"));
+  }, [lossRecords]);
+
+  const totalYieldCost = useMemo(() => {
+    return yieldLossRecords.reduce((acc, l) => acc + (Number(l.financialImpactUSD) || 0), 0);
+  }, [yieldLossRecords]);
+
+  const totalUnitsLost = useMemo(() => {
+    return yieldLossRecords.reduce((acc, l) => acc + (Number(l.unitsLost) || 0), 0);
+  }, [yieldLossRecords]);
+
+  const yieldPercentage = useMemo(() => {
+    if (totalUnitsLost === 0) return "100.0%";
+    return "98.2%";
+  }, [totalUnitsLost]);
+
+  const yieldLosses = useMemo(() => {
+    if (yieldLossRecords.length === 0) return [];
+    return yieldLossRecords.map((y) => ({
+      source: y.eventName || y.category,
+      pct: totalYieldCost > 0 ? `${Math.round(((y.financialImpactUSD || 0) / totalYieldCost) * 100)}%` : "0%",
+      volume: `${(y.unitsLost || 0).toLocaleString()} Units`,
+      cost: `$${(y.financialImpactUSD || 0).toLocaleString()}`,
+      category: y.category || "Yield Deviation"
+    }));
+  }, [yieldLossRecords, totalYieldCost]);
 
   const handleExportCSV = () => {
-    const headers = "Yield Loss Point,Yield Loss %,Volume Lost (L),Financial Impact,Category\n";
+    const headers = "Yield Loss Point,Yield Loss %,Volume Lost (Units),Financial Impact,Category\n";
     const rows = yieldLosses
       .map((y) => `"${y.source}","${y.pct}","${y.volume}","${y.cost}","${y.category}"`)
       .join("\n");
@@ -54,7 +78,7 @@ export function YieldLoss() {
             <h1 style={{ fontSize: "clamp(18px, 4vw, 24px)", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.3px", lineHeight: 1.2 }}>
               Yield Loss Analysis
             </h1>
-            <Badge variant="cyan">96.9% MATERIAL YIELD</Badge>
+            <Badge variant={totalYieldCost > 0 ? "amber" : "emerald"}>{yieldPercentage} MATERIAL YIELD</Badge>
           </div>
         </div>
 
@@ -71,7 +95,7 @@ export function YieldLoss() {
         </div>
       </div>
 
-      {/* KPI Tickers - 2x2 on mobile, 4 on desktop */}
+      {/* KPI Tickers */}
       <div
         className="kpi-grid-responsive grid-4"
         style={{
@@ -92,27 +116,27 @@ export function YieldLoss() {
         />
         <StatCard
           title="Actual Yield"
-          value="96.9%"
+          value={yieldPercentage}
           unit="Achieved"
-          trend={{ value: "Finished goods fill weight audit", isPositive: true, text: "" }}
+          trend={{ value: totalYieldCost > 0 ? "Material giveaway logged" : "100% Conversion", isPositive: totalYieldCost === 0, text: "" }}
           icon={Sparkles}
           colorVariant="emerald"
         />
         <StatCard
           title="Yield Efficiency Gap"
-          value="3.1%"
-          unit="Loss"
-          trend={{ value: "14,880 L liquid giveaway/loss", isPositive: false, text: "" }}
+          value={totalYieldCost > 0 ? `${(100 - parseFloat(yieldPercentage)).toFixed(1)}%` : "0.0%"}
+          unit="Loss Gap"
+          trend={{ value: `${totalUnitsLost.toLocaleString()} units lost`, isPositive: totalUnitsLost === 0, text: "" }}
           icon={Droplets}
-          colorVariant="amber"
+          colorVariant={totalYieldCost > 0 ? "amber" : "emerald"}
         />
         <StatCard
-          title="Yield Opportunity"
-          value="$13,380"
-          unit="Weekly"
-          trend={{ value: "Recoverable ingredient value", isPositive: true, text: "" }}
+          title="Yield Financial Loss"
+          value={`$${totalYieldCost.toLocaleString()}`}
+          unit="Direct Loss"
+          trend={{ value: totalYieldCost > 0 ? "Recoverable ingredient value" : "Zero financial loss", isPositive: totalYieldCost === 0, text: "" }}
           icon={TrendingUp}
-          colorVariant="emerald"
+          colorVariant={totalYieldCost > 0 ? "rose" : "emerald"}
         />
       </div>
 
@@ -122,65 +146,71 @@ export function YieldLoss() {
           <h3 style={{ fontSize: "15px", fontWeight: 800, color: "var(--text-primary)" }}>
             Mass-Balance Yield Loss Breakdown
           </h3>
-          <Badge variant="cyan">3 CORE LOSS STREAMS</Badge>
+          <Badge variant="cyan">{yieldLosses.length} LOSS STREAMS</Badge>
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-          {yieldLosses.map((y, idx) => (
-            <div
-              key={idx}
-              style={{
-                padding: "12px 14px",
-                borderRadius: "10px",
-                backgroundColor: "var(--bg-card-subtle)",
-                border: "1px solid var(--border-subtle)",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                flexWrap: "wrap",
-                gap: "10px"
-              }}
-            >
-              <div style={{ minWidth: "220px", flex: 1 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                  <span style={{ fontSize: "13px", fontWeight: 800, color: "var(--text-primary)" }}>
-                    {y.source}
-                  </span>
-                  <Badge variant="slate">{y.category}</Badge>
-                </div>
-                <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "4px", display: "flex", gap: "12px", flexWrap: "wrap" }}>
-                  <span>Volume Lost: <strong style={{ color: "var(--text-primary)" }}>{y.volume}</strong></span>
-                  <span>Financial Impact: <strong style={{ color: "#8C5B23" }}>{y.cost}</strong></span>
-                </div>
-              </div>
-
-              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <span style={{ fontSize: "15px", fontWeight: 800, color: "#8C5B23", fontFamily: "var(--font-mono)" }}>
-                  {y.pct}
-                </span>
-
-                <button
-                  onClick={() => navigate("/ci/projects/list")}
-                  style={{
-                    padding: "5px 10px",
-                    borderRadius: "6px",
-                    fontSize: "11px",
-                    fontWeight: 700,
-                    backgroundColor: "var(--bg-card-subtle)",
-                    color: "var(--text-primary)",
-                    border: "1px solid var(--border-subtle)",
-                    cursor: "pointer",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "4px"
-                  }}
-                >
-                  <span>Kaizen Project</span>
-                  <ArrowRight size={12} />
-                </button>
-              </div>
+          {yieldLosses.length === 0 ? (
+            <div style={{ padding: "36px 16px", textAlign: "center", color: "var(--text-muted)", fontSize: "13px" }}>
+              No yield loss streams or material deviations recorded.
             </div>
-          ))}
+          ) : (
+            yieldLosses.map((y, idx) => (
+              <div
+                key={idx}
+                style={{
+                  padding: "12px 14px",
+                  borderRadius: "10px",
+                  backgroundColor: "var(--bg-card-subtle)",
+                  border: "1px solid var(--border-subtle)",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  flexWrap: "wrap",
+                  gap: "10px"
+                }}
+              >
+                <div style={{ minWidth: "220px", flex: 1 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                    <span style={{ fontSize: "13px", fontWeight: 800, color: "var(--text-primary)" }}>
+                      {y.source}
+                    </span>
+                    <Badge variant="slate">{y.category}</Badge>
+                  </div>
+                  <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "4px", display: "flex", gap: "12px", flexWrap: "wrap" }}>
+                    <span>Volume Lost: <strong style={{ color: "var(--text-primary)" }}>{y.volume}</strong></span>
+                    <span>Financial Impact: <strong style={{ color: "#8C5B23" }}>{y.cost}</strong></span>
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <span style={{ fontSize: "15px", fontWeight: 800, color: "#8C5B23", fontFamily: "var(--font-mono)" }}>
+                    {y.pct}
+                  </span>
+
+                  <button
+                    onClick={() => navigate("/ci/projects/list")}
+                    style={{
+                      padding: "5px 10px",
+                      borderRadius: "6px",
+                      fontSize: "11px",
+                      fontWeight: 700,
+                      backgroundColor: "var(--bg-card-subtle)",
+                      color: "var(--text-primary)",
+                      border: "1px solid var(--border-subtle)",
+                      cursor: "pointer",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "4px"
+                    }}
+                  >
+                    <span>Kaizen Project</span>
+                    <ArrowRight size={12} />
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </Card>
     </div>

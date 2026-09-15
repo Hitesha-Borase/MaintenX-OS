@@ -36,8 +36,8 @@ export function LineTargetsPage() {
   // Live fetch from backend API on mount
   useEffect(() => {
     masterDataService.getLineTargets().then((res) => {
-      const data = res?.data?.data || res?.data || res;
-      if (Array.isArray(data) && data.length > 0 && typeof setLineTargets === "function") {
+      const data = res?.data?.data !== undefined ? res.data.data : (res?.data !== undefined ? res.data : res);
+      if (Array.isArray(data) && typeof setLineTargets === "function") {
         setLineTargets(data);
       }
     }).catch((err) => console.warn("LineTargets live load:", err.message));

@@ -37,7 +37,8 @@ export function Engineering() {
     deleteCapexProject,
     investigations = [],
     ciProjects = [],
-    openCapexCount
+    openCapexCount,
+    currentUser
   } = useCI();
 
   useEffect(() => {
@@ -50,9 +51,9 @@ export function Engineering() {
 
   const [newProject, setNewProject] = useState({
     name: "",
-    budget: "50000",
-    estimatedCost: "45000",
-    owner: "David Kim (Lead CI)",
+    budget: "25000",
+    estimatedCost: "25000",
+    owner: currentUser?.name || currentUser?.email || "Engineering Lead",
     linkedRcaId: investigations[0]?.id || "",
     linkedProjectId: ciProjects[0]?.id || "",
     engineeringJustification: ""
@@ -76,9 +77,9 @@ export function Engineering() {
     await createCapexProject(newProject);
     setNewProject({
       name: "",
-      budget: "50000",
-      estimatedCost: "45000",
-      owner: "David Kim (Lead CI)",
+      budget: "25000",
+      estimatedCost: "25000",
+      owner: currentUser?.name || currentUser?.email || "Engineering Lead",
       linkedRcaId: investigations[0]?.id || "",
       linkedProjectId: ciProjects[0]?.id || "",
       engineeringJustification: ""
@@ -175,7 +176,7 @@ export function Engineering() {
         />
         <StatCard
           title="P&ID Dossiers"
-          value="100%"
+          value={capexProjects.length > 0 ? "100%" : "0%"}
           unit="Engineering Approved"
           icon={ShieldCheck}
           colorVariant="emerald"
@@ -260,7 +261,22 @@ export function Engineering() {
               </tr>
             </thead>
             <tbody>
-              {filteredProjects.map((p) => (
+              {filteredProjects.length === 0 ? (
+                <tr>
+                  <td colSpan={7} style={{ padding: "40px 16px", textAlign: "center", color: "var(--text-muted)" }}>
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px" }}>
+                      <Zap size={32} style={{ opacity: 0.3 }} />
+                      <div style={{ fontWeight: 600, fontSize: "14px", color: "var(--text-secondary)" }}>
+                        No Engineering Capex Projects Found
+                      </div>
+                      <div style={{ fontSize: "12px", maxWidth: "420px" }}>
+                        There are currently no capital engineering initiatives or permanent redesigns logged. Submit a capex project to eliminate root causes through physical modifications.
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                filteredProjects.map((p) => (
                 <tr key={p.id} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
                   <td style={{ padding: "12px 16px" }}>
                     <div style={{ fontWeight: 800, color: "var(--text-primary)", fontSize: "13px" }}>{p.name}</div>
@@ -312,7 +328,7 @@ export function Engineering() {
                     </button>
                   </td>
                 </tr>
-              ))}
+              )))}
             </tbody>
           </table>
         </div>

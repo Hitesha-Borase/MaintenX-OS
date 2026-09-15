@@ -96,7 +96,7 @@ export function SanitationChecklist() {
     try {
       setLoading(true);
       const res = await qualityService.getSanitationChecklist();
-      const data = res.data?.data || res.data;
+      const data = res?.steps ? res : (res?.data?.steps ? res.data : (res?.data?.data?.steps ? res.data.data : (res?.data || res)));
       if (data) {
         if (Array.isArray(data.steps)) setSteps(data.steps);
         if (data.loop) setSelectedLoop(data.loop);

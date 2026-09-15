@@ -24,43 +24,74 @@ export function ShiftPerformancePage() {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState({
-    shift: "Shift A -> Shift B",
-    supervisor: "David Miller",
-    unitsProduced: 48200,
-    scrapUnits: 380,
+    shiftFrom: "",
+    shiftTo: "",
+    supervisor: "",
+    receivedBy: "",
+    unitsProduced: "",
+    scrapUnits: "",
     notes: ""
   });
 
-  const shiftComparison = [
-    { label: "Shift A (06:00 - 14:30)", output: "48,200 units", scrap: "380 units", oee: "88.4%", supervisor: "Thomas Sterling" },
-    { label: "Shift B (14:30 - 23:00)", output: "46,800 units", scrap: "410 units", oee: "86.1%", supervisor: "Chloe Dupuis" },
-    { label: "Shift C (23:00 - 06:00)", output: "44,500 units", scrap: "520 units", oee: "84.2%", supervisor: "Carlos Mendez" }
-  ];
+  const totalShiftOutput = shiftHandoffs.reduce((sum, s) => sum + Number(s.unitsProduced || 0), 0);
+  const totalShiftScrap = shiftHandoffs.reduce((sum, s) => sum + Number(s.scrapUnits || 0), 0);
+  const avgScrapRate = (totalShiftOutput + totalShiftScrap) > 0
+    ? ((totalShiftScrap / (totalShiftOutput + totalShiftScrap)) * 100).toFixed(1)
+    : "0.0";
 
-  const handleAddSubmit = (e) => {
+  const shiftComparison = shiftHandoffs.map((sh) => {
+    const units = Number(sh.unitsProduced || 0);
+    const scrap = Number(sh.scrapUnits || 0);
+    const scrapPct = (units + scrap) > 0 ? ((scrap / (units + scrap)) * 100).toFixed(1) : "0.0";
+    const qualityRate = (units + scrap) > 0 ? `${((units / (units + scrap)) * 100).toFixed(1)}%` : "—";
+    return {
+      id: sh.id,
+      label: `${sh.shiftFrom || "Shift 1"} ➔ ${sh.shiftTo || "Shift 2"}`,
+      output: `${units.toLocaleString()} units`,
+      scrap: `${scrap.toLocaleString()} units (${scrapPct}%)`,
+      oee: qualityRate,
+      supervisor: sh.handedOverBy || "—",
+      receiver: sh.receivedBy || "—",
+      notes: sh.notes || "—"
+    };
+  });
+
+  const distinctShifts = new Set(shiftHandoffs.map((s) => s.shiftFrom)).size;
+
+  const handleAddSubmit = async (e) => {
     e.preventDefault();
     if (!formData.notes.trim()) {
       addToast("Please provide handoff notes", "warning");
       return;
     }
     if (addShiftHandoff) {
-      addShiftHandoff({
-        shiftFrom: formData.shift.split("->")[0]?.trim() || "Shift A",
-        shiftTo: formData.shift.split("->")[1]?.trim() || "Shift B",
-        handedOverBy: formData.supervisor,
-        receivedBy: "Next Shift Lead",
-        notes: formData.notes
+      await addShiftHandoff({
+        shiftFrom: formData.shiftFrom.trim() || "Shift 1",
+        shiftTo: formData.shiftTo.trim() || "Shift 2",
+        handedOverBy: formData.supervisor.trim() || "Operator",
+        receivedBy: formData.receivedBy.trim() || "Relief Operator",
+        unitsProduced: Number(formData.unitsProduced) || 0,
+        scrapUnits: Number(formData.scrapUnits) || 0,
+        notes: formData.notes.trim()
       });
     }
     addToast("Shift handoff log recorded and digitally signed!", "success");
     setIsModalOpen(false);
-    setFormData({ shift: "Shift A -> Shift B", supervisor: "David Miller", unitsProduced: 48200, scrapUnits: 380, notes: "" });
+    setFormData({
+      shiftFrom: "",
+      shiftTo: "",
+      supervisor: "",
+      receivedBy: "",
+      unitsProduced: "",
+      scrapUnits: "",
+      notes: ""
+    });
   };
 
   const handleExportCSV = () => {
-    const headers = "Shift,Output,Scrap,OEE %,Supervisor\n";
-    const rows = shiftComparison
-      .map((s) => `"${s.label}","${s.output}","${s.scrap}","${s.oee}","${s.supervisor}"`)
+    const headers = "Shift Transition,Output Units,Scrap Units,Outgoing Supervisor,Incoming Lead,Notes\n";
+    const rows = shiftHandoffs
+      .map((s) => `"${s.shiftFrom} -> ${s.shiftTo}",${s.unitsProduced || 0},${s.scrapUnits || 0},"${s.handedOverBy || ''}","${s.receivedBy || ''}","${s.notes || ''}"`)
       .join("\n");
     const blob = new Blob([headers + rows], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
@@ -80,7 +111,9 @@ export function ShiftPerformancePage() {
             <h1 style={{ fontSize: "clamp(18px, 4vw, 24px)", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.3px", lineHeight: 1.2 }}>
               Shift Performance & Digital Handoff Log
             </h1>
-            <Badge variant="cyan">3 SHIFTS ACTIVE</Badge>
+            <Badge variant={distinctShifts > 0 ? "cyan" : "zinc"}>
+              {distinctShifts > 0 ? `${distinctShifts} SHIFTS RECORDED` : "NO SHIFTS RECORDED"}
+            </Badge>
           </div>
         </div>
 
@@ -106,26 +139,38 @@ export function ShiftPerformancePage() {
         }}
       >
         <StatCard
-          title="Shift A Output"
-          value="48,200"
+          title="Total Shift Output"
+          value={totalShiftOutput.toLocaleString()}
           unit="Units"
-          trend={{ value: "100.4% target achieved", isPositive: true, text: "" }}
+          trend={{
+            value: totalShiftOutput > 0 ? "Recorded across shifts" : "No recorded output",
+            isPositive: totalShiftOutput > 0,
+            text: ""
+          }}
           icon={TrendingUp}
           colorVariant="emerald"
         />
         <StatCard
           title="Avg Shift Scrap Rate"
-          value="0.8%"
+          value={`${avgScrapRate}%`}
           unit="Scrap"
-          trend={{ value: "Below 1.0% limit", isPositive: true, text: "" }}
+          trend={{
+            value: Number(avgScrapRate) <= 1.0 ? "Below 1.0% limit" : "Attention needed",
+            isPositive: Number(avgScrapRate) <= 1.0,
+            text: ""
+          }}
           icon={CheckCircle2}
           colorVariant="emerald"
         />
         <StatCard
           title="Handoff Sign-off"
-          value="100%"
+          value={shiftHandoffs.length > 0 ? "100%" : "—"}
           unit="Signed"
-          trend={{ value: "Clean shift transition", isPositive: true, text: "" }}
+          trend={{
+            value: shiftHandoffs.length > 0 ? "Clean shift transition" : "Awaiting shift transitions",
+            isPositive: true,
+            text: ""
+          }}
           icon={Award}
           colorVariant="cyan"
         />
@@ -133,7 +178,11 @@ export function ShiftPerformancePage() {
           title="Logged Transitions"
           value={shiftHandoffs.length.toString()}
           unit="Handoffs"
-          trend={{ value: "Verified digital records", isPositive: true, text: "" }}
+          trend={{
+            value: shiftHandoffs.length > 0 ? "Verified digital records" : "0 logged transitions",
+            isPositive: true,
+            text: ""
+          }}
           icon={Users}
           colorVariant="amber"
         />
@@ -145,42 +194,63 @@ export function ShiftPerformancePage() {
           <h3 style={{ fontSize: "15px", fontWeight: 800, color: "var(--text-primary)" }}>
             Multi-Shift Operational Benchmarking
           </h3>
-          <Badge variant="emerald">24-HOUR RUNTIME</Badge>
+          <Badge variant="emerald">DIGITAL HANDOFF LEDGER</Badge>
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-          {shiftComparison.map((s, idx) => (
-            <div
-              key={idx}
-              style={{
-                padding: "14px 16px",
-                borderRadius: "10px",
-                backgroundColor: "var(--bg-card-subtle)",
-                border: "1px solid var(--border-subtle)",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                flexWrap: "wrap",
-                gap: "12px"
-              }}
-            >
-              <div style={{ minWidth: "220px", flex: 1 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                  <span style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)" }}>
-                    {s.label}
-                  </span>
-                  <Badge variant="cyan">OEE {s.oee}</Badge>
-                </div>
+        {shiftComparison.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "36px 16px", color: "var(--text-secondary)" }}>
+            <Users size={36} style={{ margin: "0 auto 8px", opacity: 0.4 }} />
+            <div style={{ fontWeight: 700, fontSize: "14px", color: "var(--text-primary)" }}>
+              No Shift Transitions Logged Yet
+            </div>
+            <div style={{ fontSize: "12px", marginTop: "4px", maxWidth: "420px", margin: "4px auto 14px" }}>
+              Record digital shift handoffs to track production throughput, scrap, and team handover accountability.
+            </div>
+            <Button variant="primary" icon={Plus} onClick={() => setIsModalOpen(true)} style={{ fontSize: "12px", padding: "6px 12px", margin: "0 auto" }}>
+              Log First Shift Handoff
+            </Button>
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+            {shiftComparison.map((s, idx) => (
+              <div
+                key={s.id || idx}
+                style={{
+                  padding: "14px 16px",
+                  borderRadius: "10px",
+                  backgroundColor: "var(--bg-card-subtle)",
+                  border: "1px solid var(--border-subtle)",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  flexWrap: "wrap",
+                  gap: "12px"
+                }}
+              >
+                <div style={{ minWidth: "220px", flex: 1 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                    <span style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)" }}>
+                      {s.label}
+                    </span>
+                    <Badge variant="cyan">{s.output}</Badge>
+                  </div>
 
-                <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "6px", display: "flex", gap: "14px", flexWrap: "wrap" }}>
-                  <span>Volume: <strong style={{ color: "#059669" }}>{s.output}</strong></span>
-                  <span>Scrap: <strong style={{ color: "var(--text-primary)" }}>{s.scrap}</strong></span>
-                  <span>Supervisor: <strong style={{ color: "var(--text-primary)" }}>{s.supervisor}</strong></span>
+                  <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "6px", display: "flex", gap: "14px", flexWrap: "wrap" }}>
+                    <span>Volume: <strong style={{ color: "#059669" }}>{s.output}</strong></span>
+                    <span>Scrap: <strong style={{ color: "var(--text-primary)" }}>{s.scrap}</strong></span>
+                    <span>Handed Over By: <strong style={{ color: "var(--text-primary)" }}>{s.supervisor}</strong></span>
+                    <span>Receiver: <strong style={{ color: "var(--text-primary)" }}>{s.receiver}</strong></span>
+                  </div>
+                  {s.notes && (
+                    <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "4px", fontStyle: "italic" }}>
+                      "{s.notes}"
+                    </div>
+                  )}
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </Card>
 
       {/* Modal */}
@@ -197,30 +267,84 @@ export function ShiftPerformancePage() {
             </div>
 
             <form onSubmit={handleAddSubmit} style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
-              <div>
-                <label className="form-label">Shift Transition *</label>
-                <select
-                  className="form-select"
-                  value={formData.shift}
-                  onChange={(e) => setFormData({ ...formData, shift: e.target.value })}
-                  style={{ backgroundColor: "#FFFFFF" }}
-                >
-                  <option value="Shift A -> Shift B">Shift A (Day) ➔ Shift B (Evening)</option>
-                  <option value="Shift B -> Shift C">Shift B (Evening) ➔ Shift C (Night)</option>
-                  <option value="Shift C -> Shift A">Shift C (Night) ➔ Shift A (Day)</option>
-                </select>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                <div>
+                  <label className="form-label">Outgoing Shift (From) *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Enter Shift Name"
+                    value={formData.shiftFrom}
+                    onChange={(e) => setFormData({ ...formData, shiftFrom: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+                <div>
+                  <label className="form-label">Incoming Shift (To) *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Enter Shift Name"
+                    value={formData.shiftTo}
+                    onChange={(e) => setFormData({ ...formData, shiftTo: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
               </div>
 
-              <div>
-                <label className="form-label">Outgoing Supervisor *</label>
-                <input
-                  type="text"
-                  required
-                  value={formData.supervisor}
-                  onChange={(e) => setFormData({ ...formData, supervisor: e.target.value })}
-                  className="form-input"
-                  style={{ backgroundColor: "#FFFFFF" }}
-                />
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                <div>
+                  <label className="form-label">Outgoing Supervisor *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Enter Outgoing Supervisor Name"
+                    value={formData.supervisor}
+                    onChange={(e) => setFormData({ ...formData, supervisor: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+                <div>
+                  <label className="form-label">Incoming Lead</label>
+                  <input
+                    type="text"
+                    placeholder="Enter Incoming Lead Name"
+                    value={formData.receivedBy}
+                    onChange={(e) => setFormData({ ...formData, receivedBy: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                <div>
+                  <label className="form-label">Units Produced</label>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="Enter Units Produced"
+                    value={formData.unitsProduced}
+                    onChange={(e) => setFormData({ ...formData, unitsProduced: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+                <div>
+                  <label className="form-label">Scrap Units</label>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="Enter Scrap Units"
+                    value={formData.scrapUnits}
+                    onChange={(e) => setFormData({ ...formData, scrapUnits: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
               </div>
 
               <div>
@@ -228,7 +352,7 @@ export function ShiftPerformancePage() {
                 <textarea
                   rows={4}
                   required
-                  placeholder="e.g. Line 1 runs smoothly at 580 BPM. Material replenishment staged at Bay 3."
+                  placeholder="Enter Operational Notes and Handover Summary"
                   value={formData.notes}
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                   className="form-textarea"

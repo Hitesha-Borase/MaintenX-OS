@@ -10,6 +10,7 @@ import {
   TrendingUp, 
   Clock, 
   Users, 
+  User,
   Award, 
   ArrowRight, 
   CheckCircle2, 
@@ -21,6 +22,9 @@ import {
   Check, 
   Flame, 
   Lock, 
+  Eye,
+  EyeOff,
+  CreditCard,
   Boxes,
   MapPin,
   Phone,
@@ -33,12 +37,13 @@ import { useApp } from "../../context/AppContext";
 import { useRole } from "../../context/RoleContext";
 import { useMasterAdmin } from "../../context/MasterAdminContext";
 import billingService from "../../services/billingService";
+import authService from "../../services/authService";
 
 export function LandingPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { addToast } = useApp();
-  const { isAuthenticated, currentRole, login } = useRole();
+  const { isAuthenticated, currentRole, login, loginWithCredentials } = useRole();
   const { plans } = useMasterAdmin();
 
   // Demo Modal State
@@ -57,9 +62,13 @@ export function LandingPage() {
   const [planForm, setPlanForm] = useState({
     name: "",
     email: "",
+    phone: "",
+    password: "",
     company: "",
     planId: "pilot"
   });
+  const [showPlanPassword, setShowPlanPassword] = useState(false);
+  const [isSubmittingPlan, setIsSubmittingPlan] = useState(false);
 
   // Legal & Compliance Modal State
   const [isLegalModalOpen, setIsLegalModalOpen] = useState(false);
@@ -90,47 +99,67 @@ export function LandingPage() {
 
   const handlePlanSubmit = async (e) => {
     e.preventDefault();
-    const userName = planForm.name.trim() || "Operator";
-    const userEmail = planForm.email.trim();
-    if (!userEmail) return;
+    const companyName = planForm.company.trim();
+    const ownerName = planForm.name.trim();
+    const ownerEmail = planForm.email.trim();
+    const ownerPhone = planForm.phone.trim();
+    const password = planForm.password.trim();
 
-    if (selectedPlan.isFree) {
-      addToast(`Account created for ${userName}! Your 7-day Plant Pilot is now active.`, "success");
+    if (!companyName || !ownerName || !ownerEmail || !password) {
+      addToast("Company name, company owner name, email, and password are required", "warning");
+      return;
+    }
+
+    if (password.length < 6) {
+      addToast("Password must be at least 6 characters", "warning");
+      return;
+    }
+
+    setIsSubmittingPlan(true);
+    try {
+      // 1. Provision Tenant & Company Owner directly in PostgreSQL with hashed password
+      await authService.register({
+        name: companyName,
+        admin: ownerName,
+        adminEmail: ownerEmail,
+        adminPhone: ownerPhone,
+        password: password,
+        subscription: selectedPlan.name,
+      });
+
+      // 2. If it's a paid plan, initiate payment order & verification
+      if (!selectedPlan.isFree) {
+        try {
+          const orderRes = await billingService.createOrder(selectedPlan.id || "standard", "CAD");
+          await billingService.verifyPayment({
+            orderId: orderRes?.orderId || `ord_${Date.now().toString(36)}`,
+            paymentId: `pay_${Date.now().toString(36)}`,
+            signature: `sig_${Date.now().toString(36)}`,
+            planId: selectedPlan.id || "standard"
+          });
+        } catch (billingErr) {
+          console.warn("Billing checkout note:", billingErr.message);
+        }
+      }
+
+      // 3. Log in with newly created credentials
+      if (loginWithCredentials) {
+        await loginWithCredentials(ownerEmail, password);
+      } else if (login) {
+        login("admin");
+      }
+
+      addToast(`Account created for ${ownerName}! Welcome to MaintenX OS.`, "success");
       setIsPlanModalOpen(false);
-      setPlanForm({ name: "", email: "", company: "", planId: "pilot" });
-      if (login) {
-        login("plant_manager");
-      }
-      navigate("/command-center");
-    } else {
-      try {
-        addToast(`Initializing secure Razorpay order for ${selectedPlan.name}...`, "info");
-        const orderRes = await billingService.createOrder(selectedPlan.id || "standard", "INR");
-        
-        // Complete verification with backend
-        const verifyRes = await billingService.verifyPayment({
-          orderId: orderRes.orderId,
-          paymentId: `pay_${Date.now().toString(36)}`,
-          signature: `sim_sig_${orderRes.orderId}_pay_${Date.now().toString(36)}`,
-          planId: selectedPlan.id || "standard"
-        });
-
-        addToast(`Payment verified! ${verifyRes.message || "Subscription activated."}`, "success");
-        setIsPlanModalOpen(false);
-        setPlanForm({ name: "", email: "", company: "", planId: "pilot" });
-        if (login) {
-          login("plant_manager");
-        }
-        navigate("/command-center");
-      } catch (err) {
-        console.warn("Billing checkout error:", err.message);
-        addToast(`Proceeding to demo: ${err.message}`, "warning");
-        setIsPlanModalOpen(false);
-        if (login) {
-          login("plant_manager");
-        }
-        navigate("/command-center");
-      }
+      setPlanForm({ name: "", email: "", phone: "", password: "", company: "", planId: "pilot" });
+      setShowPlanPassword(false);
+      navigate("/admin/console");
+    } catch (err) {
+      console.error("Registration error:", err);
+      const errMsg = err?.response?.data?.message || err?.message || "Failed to register company. Please try again.";
+      addToast(errMsg, "destructive");
+    } finally {
+      setIsSubmittingPlan(false);
     }
   };
 
@@ -969,13 +998,13 @@ export function LandingPage() {
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "14px" }}>
               <div>
                 <span style={{ fontSize: "11px", fontWeight: 800, color: "#B27E33", letterSpacing: "0.08em", textTransform: "uppercase" }}>
-                  MaintenX OS • Subscription Setup
+                  MaintenX OS • Tenant Registration
                 </span>
                 <h3 style={{ fontSize: "20px", fontWeight: 850, color: "#2B1D11", margin: "4px 0 0 0" }}>
-                  Get Started with {selectedPlan.name}
+                  Register Company – {selectedPlan.name}
                 </h3>
               </div>
               <button
@@ -993,115 +1022,254 @@ export function LandingPage() {
               </button>
             </div>
 
-            <p style={{ fontSize: "13px", color: "#6B5B4E", lineHeight: 1.5, marginBottom: "20px" }}>
-              Complete the details below to set up your account and activate your manufacturing cloud access.
+            <p style={{ fontSize: "13px", color: "#6B5B4E", lineHeight: 1.5, marginBottom: "16px" }}>
+              Register your company on MaintenX OS with your chosen subscription plan.
             </p>
 
-            <form onSubmit={handlePlanSubmit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-              {/* Field 1: Name */}
-              <div>
-                <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "#2B1D11", marginBottom: "6px" }}>
-                  Full Name
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Marcus Vance"
-                  value={planForm.name}
-                  onChange={(e) => setPlanForm({ ...planForm, name: e.target.value })}
-                  style={{
-                    width: "100%",
-                    padding: "10px 14px",
-                    borderRadius: "8px",
-                    backgroundColor: "var(--bg-main, #F6F3EE)",
-                    border: "1px solid var(--border-subtle, #E8DDCF)",
-                    color: "#2B1D11",
-                    fontSize: "13px",
-                    boxSizing: "border-box",
-                    outline: "none"
-                  }}
-                />
+            <form onSubmit={handlePlanSubmit} style={{ display: "flex", flexDirection: "column", gap: "12px", maxHeight: "75vh", overflowY: "auto", paddingRight: "4px" }}>
+              {/* Section 1: Company Details */}
+              <div style={{
+                padding: "14px",
+                backgroundColor: "var(--bg-main, #F6F3EE)",
+                borderRadius: "12px",
+                border: "1px solid var(--border-subtle, #E8DDCF)",
+              }}>
+                <div style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  fontSize: "11px",
+                  fontWeight: 700,
+                  color: "#B27E33",
+                  marginBottom: "8px",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                }}>
+                  <Building2 size={14} color="#B27E33" /> Company Details
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "#2B1D11", marginBottom: "4px" }}>
+                    Company Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Acme Manufacturing Ltd"
+                    value={planForm.company}
+                    onChange={(e) => setPlanForm({ ...planForm, company: e.target.value })}
+                    style={{
+                      width: "100%",
+                      padding: "10px 14px",
+                      borderRadius: "8px",
+                      backgroundColor: "#FFFFFF",
+                      border: "1px solid var(--border-subtle, #E8DDCF)",
+                      color: "#2B1D11",
+                      fontSize: "13px",
+                      boxSizing: "border-box",
+                      outline: "none"
+                    }}
+                  />
+                </div>
               </div>
 
-              {/* Field 2: Mail */}
-              <div>
-                <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "#2B1D11", marginBottom: "6px" }}>
-                  Email
-                </label>
-                <input
-                  type="email"
-                  required
-                  placeholder="name@company.com"
-                  value={planForm.email}
-                  onChange={(e) => setPlanForm({ ...planForm, email: e.target.value })}
-                  style={{
-                    width: "100%",
-                    padding: "10px 14px",
-                    borderRadius: "8px",
-                    backgroundColor: "var(--bg-main, #F6F3EE)",
-                    border: "1px solid var(--border-subtle, #E8DDCF)",
-                    color: "#2B1D11",
-                    fontSize: "13px",
-                    boxSizing: "border-box",
-                    outline: "none"
-                  }}
-                />
+              {/* Section 2: Company Owner Details */}
+              <div style={{
+                padding: "14px",
+                backgroundColor: "var(--bg-main, #F6F3EE)",
+                borderRadius: "12px",
+                border: "1px solid var(--border-subtle, #E8DDCF)",
+              }}>
+                <div style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  fontSize: "11px",
+                  fontWeight: 700,
+                  color: "var(--accent-cyan, #0284C7)",
+                  marginBottom: "10px",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                }}>
+                  <User size={14} color="var(--accent-cyan, #0284C7)" /> Company Owner Details
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                  {/* Row 1: Name */}
+                  <div>
+                    <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "#2B1D11", marginBottom: "4px" }}>
+                      Company Owner Name *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Jane Doe"
+                      value={planForm.name}
+                      onChange={(e) => setPlanForm({ ...planForm, name: e.target.value })}
+                      style={{
+                        width: "100%",
+                        padding: "10px 14px",
+                        borderRadius: "8px",
+                        backgroundColor: "#FFFFFF",
+                        border: "1px solid var(--border-subtle, #E8DDCF)",
+                        color: "#2B1D11",
+                        fontSize: "13px",
+                        boxSizing: "border-box",
+                        outline: "none"
+                      }}
+                    />
+                  </div>
+
+                  {/* Row 2: Email + Phone */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                    <div>
+                      <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "#2B1D11", marginBottom: "4px" }}>
+                        <Mail size={12} style={{ display: "inline", marginRight: "4px" }} />
+                        Owner Email *
+                      </label>
+                      <input
+                        type="email"
+                        required
+                        placeholder="jane@example.com"
+                        value={planForm.email}
+                        onChange={(e) => setPlanForm({ ...planForm, email: e.target.value })}
+                        style={{
+                          width: "100%",
+                          padding: "10px 14px",
+                          borderRadius: "8px",
+                          backgroundColor: "#FFFFFF",
+                          border: "1px solid var(--border-subtle, #E8DDCF)",
+                          color: "#2B1D11",
+                          fontSize: "13px",
+                          boxSizing: "border-box",
+                          outline: "none"
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "#2B1D11", marginBottom: "4px" }}>
+                        <Phone size={12} style={{ display: "inline", marginRight: "4px" }} />
+                        Owner Phone
+                      </label>
+                      <input
+                        type="tel"
+                        placeholder="+91 98765 43210"
+                        value={planForm.phone}
+                        onChange={(e) => setPlanForm({ ...planForm, phone: e.target.value })}
+                        style={{
+                          width: "100%",
+                          padding: "10px 14px",
+                          borderRadius: "8px",
+                          backgroundColor: "#FFFFFF",
+                          border: "1px solid var(--border-subtle, #E8DDCF)",
+                          color: "#2B1D11",
+                          fontSize: "13px",
+                          boxSizing: "border-box",
+                          outline: "none"
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Row 3: Password */}
+                  <div>
+                    <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "#2B1D11", marginBottom: "4px" }}>
+                      <Lock size={12} style={{ display: "inline", marginRight: "4px" }} />
+                      Owner Password *
+                    </label>
+                    <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                      <input
+                        type={showPlanPassword ? "text" : "password"}
+                        required
+                        placeholder="Create login password (min 6 chars)"
+                        value={planForm.password}
+                        onChange={(e) => setPlanForm({ ...planForm, password: e.target.value })}
+                        autoComplete="new-password"
+                        style={{
+                          width: "100%",
+                          padding: "10px 40px 10px 14px",
+                          borderRadius: "8px",
+                          backgroundColor: "#FFFFFF",
+                          border: "1px solid var(--border-subtle, #E8DDCF)",
+                          color: "#2B1D11",
+                          fontSize: "13px",
+                          boxSizing: "border-box",
+                          outline: "none"
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPlanPassword((prev) => !prev)}
+                        style={{
+                          position: "absolute",
+                          right: "10px",
+                          background: "transparent",
+                          border: "none",
+                          cursor: "pointer",
+                          color: "#6B5B4E",
+                          display: "flex",
+                          alignItems: "center",
+                          padding: "4px",
+                        }}
+                        title={showPlanPassword ? "Hide password" : "Show password"}
+                      >
+                        {showPlanPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              {/* Field 3: Company Name */}
-              <div>
-                <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "#2B1D11", marginBottom: "6px" }}>
-                  Company / Plant Name
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Austin Bottling Facility 04"
-                  value={planForm.company}
-                  onChange={(e) => setPlanForm({ ...planForm, company: e.target.value })}
-                  style={{
-                    width: "100%",
+              {/* Section 3: Billing & Subscription */}
+              <div style={{
+                padding: "14px",
+                backgroundColor: "var(--bg-main, #F6F3EE)",
+                borderRadius: "12px",
+                border: "1px solid var(--border-subtle, #E8DDCF)",
+              }}>
+                <div style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  fontSize: "11px",
+                  fontWeight: 700,
+                  color: "var(--accent-emerald, #16A34A)",
+                  marginBottom: "8px",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                }}>
+                  <CreditCard size={14} color="var(--accent-emerald, #16A34A)" /> Billing &amp; Subscription
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "#2B1D11", marginBottom: "4px" }}>
+                    Selected Plan (Pre-selected)
+                  </label>
+                  <div style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
                     padding: "10px 14px",
                     borderRadius: "8px",
-                    backgroundColor: "var(--bg-main, #F6F3EE)",
-                    border: "1px solid var(--border-subtle, #E8DDCF)",
-                    color: "#2B1D11",
-                    fontSize: "13px",
-                    boxSizing: "border-box",
-                    outline: "none"
-                  }}
-                />
-              </div>
-
-              {/* Field 4: Selected Plan */}
-              <div>
-                <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "#2B1D11", marginBottom: "6px" }}>
-                  Selected Plan
-                </label>
-                <input
-                  type="text"
-                  readOnly
-                  value={`${selectedPlan.name} • ${selectedPlan.price} ${selectedPlan.period}`}
-                  style={{
-                    width: "100%",
-                    padding: "10px 14px",
-                    borderRadius: "8px",
-                    backgroundColor: "var(--bg-main, #F6F3EE)",
-                    border: "1px solid var(--border-subtle, #E8DDCF)",
-                    color: "#2B1D11",
-                    fontSize: "13px",
-                    fontWeight: 750,
-                    boxSizing: "border-box",
-                    outline: "none",
-                    cursor: "default"
-                  }}
-                />
+                    backgroundColor: "#FFFFFF",
+                    border: "1.5px solid var(--accent-amber, #C89547)",
+                  }}>
+                    <span style={{ fontSize: "14px", fontWeight: 800, color: "#2B1D11" }}>
+                      {selectedPlan.name}
+                    </span>
+                    <span style={{ fontSize: "13px", fontWeight: 700, color: "#B27E33" }}>
+                      {selectedPlan.price} {selectedPlan.period}
+                    </span>
+                  </div>
+                  <p style={{ fontSize: "11px", color: "var(--text-muted, #9C8C7E)", marginTop: "6px", marginBottom: 0 }}>
+                    The company owner will use their email and this password to log in.
+                  </p>
+                </div>
               </div>
 
               {/* Action Buttons */}
-              <div style={{ display: "flex", gap: "10px", marginTop: "12px" }}>
+              <div style={{ display: "flex", gap: "10px", marginTop: "8px" }}>
                 <button
                   type="button"
                   onClick={() => setIsPlanModalOpen(false)}
+                  disabled={isSubmittingPlan}
                   style={{
                     flex: 1,
                     padding: "11px",
@@ -1117,42 +1285,25 @@ export function LandingPage() {
                   Cancel
                 </button>
 
-                {/* Free Plan Button vs Paid Plan Button */}
-                {selectedPlan.isFree ? (
-                  <button
-                    type="submit"
-                    className="landing-btn-login"
-                    style={{
-                      flex: 2,
-                      padding: "11px",
-                      fontSize: "13px",
-                      borderRadius: "8px",
-                      justifyContent: "center",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "6px"
-                    }}
-                  >
-                    Start Free Trial →
-                  </button>
-                ) : (
-                  <button
-                    type="submit"
-                    className="landing-btn-login"
-                    style={{
-                      flex: 2,
-                      padding: "11px",
-                      fontSize: "13px",
-                      borderRadius: "8px",
-                      justifyContent: "center",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "6px"
-                    }}
-                  >
-                    Proceed to Payment →
-                  </button>
-                )}
+                <button
+                  type="submit"
+                  disabled={isSubmittingPlan}
+                  className="landing-btn-login"
+                  style={{
+                    flex: 2,
+                    padding: "11px",
+                    fontSize: "13px",
+                    borderRadius: "8px",
+                    justifyContent: "center",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px"
+                  }}
+                >
+                  {isSubmittingPlan 
+                    ? "Creating Company..." 
+                    : (selectedPlan.isFree ? "Create Company & Start Pilot →" : "Create Company & Activate Plan →")}
+                </button>
               </div>
             </form>
           </div>

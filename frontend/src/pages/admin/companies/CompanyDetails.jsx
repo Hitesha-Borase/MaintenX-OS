@@ -28,6 +28,7 @@ export function CompanyDetails() {
   const navigate = useNavigate();
   const {
     companies,
+    plans,
     updateCompanyStatus,
     updateCompanySubscription,
     toggleCompanyModule,
@@ -383,7 +384,7 @@ export function CompanyDetails() {
                 </Button>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px" }}>
-                {["Plant Pilot", "Individual Modules", "Bundles", "MaintenX OS Complete"].map((plan) => (
+                {(plans && plans.length > 0 ? plans.map(p => p.name || p.plan_name).filter(Boolean) : ["Plant Pilot", "Individual Modules"]).map((plan) => (
                   <div
                     key={plan}
                     onClick={async () => {

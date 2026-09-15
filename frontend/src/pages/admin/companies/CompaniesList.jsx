@@ -3,9 +3,10 @@ import { useMasterAdmin } from "../../../context/MasterAdminContext";
 import { Card } from "../../../components/common/Card";
 import { Badge } from "../../../components/common/Badge";
 import { Button } from "../../../components/common/Button";
-import { Search, Plus, Filter, Eye, Play, Pause, Trash2, Phone } from "lucide-react";
+import { Search, Plus, Filter, Eye, Edit2, Play, Pause, Trash2, Phone } from "lucide-react";
 import { AddCompanyModal } from "./AddCompanyModal";
 import { CompanyDetailsModal } from "./CompanyDetailsModal";
+import { EditCompanyModal } from "./EditCompanyModal";
 
 import { useApp } from "../../../context/AppContext";
 
@@ -17,6 +18,8 @@ export function CompaniesList() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedCompany, setSelectedCompany] = useState(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [selectedCompanyForEdit, setSelectedCompanyForEdit] = useState(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   React.useEffect(() => {
     fetchCompanies?.();
@@ -25,6 +28,11 @@ export function CompaniesList() {
   const handleViewDetails = (company) => {
     setSelectedCompany(company);
     setIsDetailsModalOpen(true);
+  };
+
+  const handleEditCompany = (company) => {
+    setSelectedCompanyForEdit(company);
+    setIsEditModalOpen(true);
   };
 
   const handleDeleteCompany = async (company) => {
@@ -59,13 +67,7 @@ export function CompaniesList() {
 
   const formatPlanName = (planStr) => {
     if (!planStr) return "—";
-    let clean = planStr.replace(/\(.*\)/g, "").trim();
-    const lower = clean.toLowerCase();
-    if (lower.includes("complete")) return "MaintenX OS Complete";
-    if (lower.includes("bundle")) return "Bundles";
-    if (lower.includes("pilot")) return "Plant Pilot";
-    if (lower.includes("individual")) return "Individual Modules";
-    return clean.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+    return planStr.trim();
   };
 
   return (
@@ -139,7 +141,7 @@ export function CompaniesList() {
 
                 <div style={{ marginTop: "6px", display: "flex", flexDirection: "column", gap: "3px" }}>
                   <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-                    <Badge variant={company.subscription?.toLowerCase().includes("complete") ? "indigo" : company.subscription?.toLowerCase().includes("bundle") ? "amber" : company.subscription?.toLowerCase().includes("pilot") ? "cyan" : "slate"} style={{ fontSize: "10px", padding: "1px 5px", textTransform: "none", letterSpacing: "normal" }}>
+                    <Badge variant={company.subscription?.toLowerCase().includes("pilot") ? "cyan" : company.subscription?.toLowerCase().includes("individual") ? "indigo" : company.subscription?.toLowerCase().includes("custom") ? "amber" : "slate"} style={{ fontSize: "10px", padding: "1px 5px", textTransform: "none", letterSpacing: "normal" }}>
                       {formatPlanName(company.subscription)}
                     </Badge>
                     <span style={{ fontSize: "11px", color: "var(--text-secondary)", fontWeight: 600 }}>{company.usersCount} Users</span>
@@ -157,6 +159,7 @@ export function CompaniesList() {
 
               <div style={{ display: "flex", gap: "4px", justifyContent: "flex-end", paddingTop: "8px", borderTop: "1px solid var(--border-subtle)" }}>
                 <Button variant="ghost" size="sm" onClick={() => handleViewDetails(company)} title="View Details" style={{ padding: "4px" }}><Eye size={13} /></Button>
+                <Button variant="ghost" size="sm" onClick={() => handleEditCompany(company)} title="Edit Company & Admin" style={{ padding: "4px" }}><Edit2 size={13} color="var(--accent-cyan, #06B6D4)" /></Button>
                 <Button variant="ghost" size="sm" onClick={() => updateCompanyStatus(company.id, company.status === "Active" ? "Suspended" : "Active")} title={company.status === "Active" ? "Suspend" : "Activate"} style={{ padding: "4px" }}>
                   {company.status === "Active" ? <Pause size={13} color="#EF4444" /> : <Play size={13} color="#10B981" />}
                 </Button>
@@ -230,9 +233,9 @@ export function CompaniesList() {
                   <td style={{ padding: "14px 18px", whiteSpace: "nowrap" }}>
                     <Badge 
                       variant={
-                        company.subscription?.toLowerCase().includes("complete") ? "indigo"
-                        : company.subscription?.toLowerCase().includes("bundle") ? "amber"
-                        : company.subscription?.toLowerCase().includes("pilot") ? "cyan"
+                        company.subscription?.toLowerCase().includes("pilot") ? "cyan"
+                        : company.subscription?.toLowerCase().includes("individual") ? "indigo"
+                        : company.subscription?.toLowerCase().includes("custom") ? "amber"
                         : "slate"
                       }
                       style={{ textTransform: "none", letterSpacing: "normal", fontSize: "12px", padding: "4px 8px" }}
@@ -256,6 +259,7 @@ export function CompaniesList() {
                   <td style={{ padding: "14px 18px", textAlign: "right", whiteSpace: "nowrap" }}>
                     <div style={{ display: "flex", gap: "6px", justifyContent: "flex-end" }}>
                       <Button variant="ghost" size="sm" onClick={() => handleViewDetails(company)} title="View Details"><Eye size={15} /></Button>
+                      <Button variant="ghost" size="sm" onClick={() => handleEditCompany(company)} title="Edit Company & Admin"><Edit2 size={15} color="var(--accent-cyan, #06B6D4)" /></Button>
                       <Button variant="ghost" size="sm" onClick={() => updateCompanyStatus(company.id, company.status === "Active" ? "Suspended" : "Active")} title={company.status === "Active" ? "Suspend Company" : "Activate Company"}>
                         {company.status === "Active" ? <Pause size={15} color="#EF4444" /> : <Play size={15} color="#10B981" />}
                       </Button>
@@ -283,6 +287,12 @@ export function CompaniesList() {
         isOpen={isDetailsModalOpen}
         onClose={() => setIsDetailsModalOpen(false)}
         company={selectedCompany}
+      />
+
+      <EditCompanyModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        company={selectedCompanyForEdit}
       />
     </div>
   );

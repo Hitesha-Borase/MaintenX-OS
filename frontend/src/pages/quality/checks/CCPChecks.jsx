@@ -5,15 +5,11 @@ import {
   Search, 
   X, 
   Clock, 
-  Thermometer, 
-  User, 
-  FileText, 
   CheckCircle2, 
   AlertTriangle,
   Download,
-  Check,
   RotateCcw,
-  Activity
+  Trash2
 } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import qualityService from "../../../services/qualityService";
@@ -21,100 +17,95 @@ import qualityService from "../../../services/qualityService";
 export function CCPChecks() {
   const { addToast } = useApp();
 
-  const [ccps, setCcps] = useState([
-    { 
-      id: 1, 
-      name: "Pasteurizer HTST Critical Limit Temperature", 
-      ccpCode: "CCP-01",
-      target: "≥ 83.1°C", 
-      actual: "83.5°C", 
-      status: "PASS", 
-      time: "14:00",
-      date: "2026-09-08",
-      operator: "Dr. Rachel Thorne",
-      equipment: "Pasteurizer Unit #3 (HTST-03)",
-      location: "Line 1 — Processing Area",
-      method: "Inline RTD Sensor & Digital Data Logger",
-      criticalLimit: "≥ 83.1°C for minimum 15 seconds",
-      corrective: "N/A — Within limits",
-      notes: "Routine hourly CCP verification. Sensor calibration valid until 2026-12-15.",
-      batchId: "BAT-2026-0891"
-    },
-    { 
-      id: 2, 
-      name: "End-of-Line Multi-Frequency Metal Detector", 
-      ccpCode: "CCP-02",
-      target: "Zero detect", 
-      actual: "Pass (Zero Detect)", 
-      status: "PASS", 
-      time: "12:30",
-      date: "2026-09-08",
-      operator: "Marcus Vance",
-      equipment: "Metal Detector MD-07 (Safeline)",
-      location: "Line 1 — End of Line Packaging",
-      method: "Certified Test Wand: Fe 2.0mm / Non-Fe 2.5mm / SS 3.0mm",
-      criticalLimit: "Zero metal contamination above threshold",
-      corrective: "N/A — No detection",
-      notes: "All 3 test wands passed. High-speed pneumatic reject mechanism verified.",
-      batchId: "BAT-2026-0891"
-    },
-    { 
-      id: 3, 
-      name: "Aseptic Chamber Positive Pressure Differential", 
-      ccpCode: "CCP-03",
-      target: "≥ 25 Pa", 
-      actual: "28.4 Pa", 
-      status: "PASS", 
-      time: "11:15",
-      date: "2026-09-08",
-      operator: "Dr. Rachel Thorne",
-      equipment: "Aseptic Enclosure HEPA Isolator",
-      location: "Line 1 — Sterile Filling Zone",
-      method: "Differential Pressure Gauge Magnehelic",
-      criticalLimit: "Maintain ≥ 20 Pa positive pressure vs ambient",
-      corrective: "N/A — Positive pressure verified",
-      notes: "Cleanroom Class 100 sterile isolation integrity verified.",
-      batchId: "BAT-2026-0891"
-    }
-  ]);
-  
+  const [ccps, setCcps] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [newVal, setNewVal] = useState("");
   const [selectedCcpType, setSelectedCcpType] = useState("Pasteurizer HTST Critical Limit Temperature");
-  const [batchNo, setBatchNo] = useState("BAT-2026-0891");
-  const [operator, setOperator] = useState("Dr. Rachel Thorne (QA Lead)");
+  const [batchNo, setBatchNo] = useState("BAT-2026-ORD2511");
+  const [operator, setOperator] = useState("Arthur Sterling (Plant Manager)");
   const [selectedDetail, setSelectedDetail] = useState(null);
+
+  const formatCheckTimeAndDate = (checkedAt) => {
+    if (!checkedAt) {
+      const now = new Date();
+      return {
+        time: now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        date: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`
+      };
+    }
+
+    // Strip trailing 'Z' if backend returned timestamp without timezone to prevent double-offsetting
+    let d;
+    if (typeof checkedAt === "string") {
+      const clean = checkedAt.replace(/Z$/i, "");
+      d = new Date(clean);
+      if (isNaN(d.getTime())) d = new Date(checkedAt);
+    } else {
+      d = new Date(checkedAt);
+    }
+
+    if (isNaN(d.getTime())) d = new Date();
+
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+
+    return {
+      time: d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      date: `${year}-${month}-${day}`
+    };
+  };
 
   const fetchCcps = async () => {
     setIsLoading(true);
     try {
       const res = await qualityService.getCCPChecks();
-      if (res.data?.data && Array.isArray(res.data.data) && res.data.data.length > 0) {
-        const mapped = res.data.data.map((c, idx) => ({
-          id: c.id || idx + 1,
-          name: c.ccpName,
-          ccpCode: c.ccpCode,
-          target: c.targetValue ? `Target: ${c.targetValue} ${c.uom || ''}` : "Standard Limit",
-          actual: `${c.actualValue} ${c.uom || ''}`,
-          status: c.status || "PASS",
-          time: new Date(c.checkedAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          date: new Date(c.checkedAt || Date.now()).toISOString().substring(0, 10),
-          operator: "Dr. Rachel Thorne",
-          equipment: "Line 1 Processing Unit",
-          location: "Line 1",
-          method: "Automated Sensor & QA Titration",
-          criticalLimit: `Critical Threshold: ${c.targetValue} ${c.uom || ''}`,
-          corrective: c.status === "PASS" ? "N/A — Within limits" : "Quarantine & Corrective Action",
-          notes: c.notes || "Recorded via QA Control Center",
-          batchId: "BAT-2026-0891"
-        }));
+      const rawList = Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : Array.isArray(res?.data?.data) ? res.data.data : [];
+      if (rawList.length > 0) {
+        const mapped = rawList.map((c, idx) => {
+          const { time, date } = formatCheckTimeAndDate(c.checkedAt);
+          return {
+            id: c.id || idx + 1,
+            name: c.ccpName || "Pasteurizer HTST Critical Limit",
+            ccpCode: c.ccpCode || `CCP-0${idx + 1}`,
+            target: c.targetValue ? `Target: ${c.targetValue} ${c.uom || '°C'}` : "≥ 83.1°C",
+            actual: `${c.actualValue || ''} ${c.uom || ''}`.trim(),
+            status: c.status || "PASS",
+            time,
+            date,
+            operator: c.operator || "Arthur Sterling",
+            equipment: c.lineName || "LINE-2 (abc)",
+            location: c.lineName ? `${c.lineName} — Processing Area` : "LINE-2 Processing Area",
+            method: "Automated Sensor & QA Titration",
+            criticalLimit: c.targetValue ? `Critical Threshold: ${c.targetValue} ${c.uom || '°C'}` : "≥ 83.1°C",
+            corrective: c.status === "PASS" ? "N/A — Within limits" : "Quarantine & Corrective Action",
+            notes: c.notes || "Recorded via QA Control Center",
+            batchId: c.batchNumber || "BAT-2026-ORD2511"
+          };
+        });
         setCcps(mapped);
+      } else {
+        setCcps([]);
       }
     } catch (err) {
-      console.warn("CCP offline fallback:", err.message);
+      console.warn("CCP fetch error:", err.message);
+      setCcps([]);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleDeleteCcp = async (id, e) => {
+    e.stopPropagation();
+    if (!window.confirm("Are you sure you want to delete this CCP record?")) return;
+    try {
+      await qualityService.deleteCCPCheck(id);
+      setCcps(prev => prev.filter(c => c.id !== id));
+      addToast("CCP check record deleted successfully.", "info");
+    } catch (err) {
+      console.error("Delete CCP error:", err);
+      addToast("Failed to delete CCP record.", "error");
     }
   };
 
@@ -134,39 +125,39 @@ export function CCPChecks() {
     const isPass = isNaN(numericVal) ? true : numericVal >= 83.1;
     const now = new Date();
     
-    const newRecord = { 
-      id: Date.now(), 
-      name: selectedCcpType, 
-      ccpCode: selectedCcpType.includes("Pasteurizer") ? "CCP-01" : "CCP-02",
-      target: selectedCcpType.includes("Pasteurizer") ? "≥ 83.1°C" : "Zero Detect", 
-      actual: selectedCcpType.includes("Pasteurizer") ? `${newVal}°C` : newVal, 
-      status: isPass ? "PASS" : "FAIL",
-      time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      date: now.toISOString().split('T')[0],
-      operator: operator,
-      equipment: selectedCcpType.includes("Pasteurizer") ? "Pasteurizer Unit #3 (HTST-03)" : "Metal Detector MD-07",
-      location: "Line 1 — Processing Area",
-      method: "Manual Calibrated QA Verification",
-      criticalLimit: selectedCcpType.includes("Pasteurizer") ? "≥ 83.1°C for minimum 15 seconds" : "Zero metal contamination",
-      corrective: isPass ? "N/A — Within limits" : "Production halted. Batch quarantined for QA root cause review.",
-      notes: isPass ? "Manual CCP verification recorded and compliant." : "CRITICAL CCP LIMIT BREACH. Deviation ticket initiated.",
-      batchId: batchNo
-    };
-
     try {
       await qualityService.submitCCPCheck({
-        ccpCode: newRecord.ccpCode,
-        ccpName: newRecord.name,
+        ccpCode: selectedCcpType.includes("Pasteurizer") ? "CCP-01" : "CCP-02",
+        ccpName: selectedCcpType,
         targetValue: 83.1,
         actualValue: isNaN(numericVal) ? 100 : numericVal,
         uom: selectedCcpType.includes("Pasteurizer") ? "°C" : "unit",
         notes: `Recorded by ${operator}. Batch: ${batchNo}`
-      }).catch(err => console.warn("CCP sync fallback:", err.message));
+      });
+      await fetchCcps();
     } catch (err) {
-      console.warn("CCP save error:", err);
+      console.warn("CCP save fallback:", err);
+      const newRecord = { 
+        id: Date.now(), 
+        name: selectedCcpType, 
+        ccpCode: selectedCcpType.includes("Pasteurizer") ? "CCP-01" : "CCP-02",
+        target: selectedCcpType.includes("Pasteurizer") ? "≥ 83.1°C" : "Zero Detect", 
+        actual: selectedCcpType.includes("Pasteurizer") ? `${newVal}°C` : newVal, 
+        status: isPass ? "PASS" : "FAIL",
+        time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        date: now.toISOString().split('T')[0],
+        operator: operator,
+        equipment: "LINE-2 (abc)",
+        location: "LINE-2 — Processing Area",
+        method: "Manual Calibrated QA Verification",
+        criticalLimit: selectedCcpType.includes("Pasteurizer") ? "≥ 83.1°C for minimum 15 seconds" : "Zero metal contamination",
+        corrective: isPass ? "N/A — Within limits" : "Production halted. Batch quarantined for QA root cause review.",
+        notes: isPass ? "Manual CCP verification recorded and compliant." : "CRITICAL CCP LIMIT BREACH. Deviation ticket initiated.",
+        batchId: batchNo
+      };
+      setCcps(prev => [newRecord, ...prev]);
     }
     
-    setCcps([newRecord, ...ccps]);
     setShowModal(false);
     setNewVal("");
     
@@ -330,7 +321,7 @@ export function CCPChecks() {
             </div>
           </div>
           <div style={{ fontSize: "20px", fontWeight: 900, color: "#B27E33", marginTop: "2px" }}>Hourly Routine</div>
-          <div style={{ fontSize: "11px", color: "#6B5B4E", fontWeight: 700, marginTop: "4px" }}>Next: 15:00 CST</div>
+          <div style={{ fontSize: "11px", color: "#6B5B4E", fontWeight: 700, marginTop: "4px" }}>24/7 Active Monitoring</div>
         </div>
       </div>
 
@@ -362,98 +353,136 @@ export function CCPChecks() {
               </tr>
             </thead>
             <tbody>
-              {ccps.map((c) => {
-                const isPass = c.status === "PASS";
+              {ccps.length === 0 ? (
+                <tr>
+                  <td colSpan={5} style={{ padding: "40px 20px", textAlign: "center", color: "#6B5B4E" }}>
+                    <ShieldCheck size={36} color="#B27E33" style={{ marginBottom: "8px" }} />
+                    <div style={{ fontWeight: 800, fontSize: "14px", color: "#2B1D11" }}>No CCP checks recorded yet</div>
+                    <div style={{ fontSize: "12px", marginTop: "4px" }}>Record an in-process thermal or metal detection check to begin live monitoring.</div>
+                    <button
+                      type="button"
+                      onClick={() => setShowModal(true)}
+                      style={{ marginTop: "12px", padding: "8px 16px", borderRadius: "8px", background: "linear-gradient(135deg, #E2B670 0%, #C89547 50%, #B27E33 100%)", border: "none", color: "#261603", fontWeight: 800, cursor: "pointer", fontSize: "12px" }}
+                    >
+                      + Record First CCP Check
+                    </button>
+                  </td>
+                </tr>
+              ) : (
+                ccps.map((c) => {
+                  const isPass = c.status === "PASS";
 
-                return (
-                  <tr 
-                    key={c.id}
-                    style={{ 
-                      borderBottom: "1px solid #F0E8DD",
-                      backgroundColor: isPass ? "rgba(200, 149, 71, 0.04)" : "#FFFFFF",
-                      transition: "background-color 0.15s ease"
-                    }}
-                  >
-                    {/* CCP Name & Equipment */}
-                    <td style={{ padding: "16px 18px", verticalAlign: "middle" }}>
-                      <div style={{ fontWeight: 800, color: "#2B1D11", fontSize: "13.5px" }}>
-                        {c.name}
-                      </div>
-                      <div style={{ fontSize: "11.5px", color: "#6B5B4E", marginTop: "3px" }}>
-                        <span style={{ fontWeight: 800, color: "#B27E33", marginRight: "6px" }}>[{c.ccpCode}]</span>
-                        {c.equipment}
-                      </div>
-                    </td>
+                  return (
+                    <tr 
+                      key={c.id}
+                      style={{ 
+                        borderBottom: "1px solid #F0E8DD",
+                        backgroundColor: isPass ? "rgba(200, 149, 71, 0.04)" : "#FFFFFF",
+                        transition: "background-color 0.15s ease"
+                      }}
+                    >
+                      {/* CCP Name & Equipment */}
+                      <td style={{ padding: "16px 18px", verticalAlign: "middle" }}>
+                        <div style={{ fontWeight: 800, color: "#2B1D11", fontSize: "13.5px" }}>
+                          {c.name}
+                        </div>
+                        <div style={{ fontSize: "11.5px", color: "#6B5B4E", marginTop: "3px" }}>
+                          <span style={{ fontWeight: 800, color: "#B27E33", marginRight: "6px" }}>[{c.ccpCode}]</span>
+                          {c.equipment}
+                        </div>
+                      </td>
 
-                    {/* Target Critical Limit */}
-                    <td style={{ padding: "16px 18px", verticalAlign: "middle" }}>
-                      <div style={{ padding: "8px 12px", backgroundColor: "#F8F5F0", borderRadius: "8px", border: "1px solid #E8DDCF", fontSize: "12px", color: "#2B1D11", fontWeight: 650 }}>
-                        {c.target}
-                      </div>
-                    </td>
+                      {/* Target Critical Limit */}
+                      <td style={{ padding: "16px 18px", verticalAlign: "middle" }}>
+                        <div style={{ padding: "8px 12px", backgroundColor: "#F8F5F0", borderRadius: "8px", border: "1px solid #E8DDCF", fontSize: "12px", color: "#2B1D11", fontWeight: 650 }}>
+                          {c.target}
+                        </div>
+                      </td>
 
-                    {/* Recorded Value */}
-                    <td style={{ padding: "16px 18px", verticalAlign: "middle" }}>
-                      <div style={{ 
-                        display: "inline-block", 
-                        padding: "6px 12px", 
-                        borderRadius: "8px", 
-                        backgroundColor: "rgba(200, 149, 71, 0.12)", 
-                        color: "#8B6914", 
-                        border: "1px solid rgba(200, 149, 71, 0.3)", 
-                        fontSize: "12.5px", 
-                        fontWeight: 800 
-                      }}>
-                        {c.actual}
-                      </div>
-                    </td>
-
-                    {/* Status & Time */}
-                    <td style={{ padding: "16px 18px", verticalAlign: "middle" }}>
-                      <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                        <span style={{ 
-                          padding: "4px 8px", 
-                          borderRadius: "5px", 
-                          backgroundColor: isPass ? "rgba(200, 149, 71, 0.18)" : "rgba(239, 68, 68, 0.15)", 
-                          color: isPass ? "#8B6914" : "#DC2626", 
-                          border: isPass ? "1px solid #B27E33" : "1px solid #F87171",
-                          fontSize: "11px", 
-                          fontWeight: 850,
-                          width: "fit-content"
+                      {/* Recorded Value */}
+                      <td style={{ padding: "16px 18px", verticalAlign: "middle" }}>
+                        <div style={{ 
+                          display: "inline-block", 
+                          padding: "6px 12px", 
+                          borderRadius: "8px", 
+                          backgroundColor: "rgba(200, 149, 71, 0.12)", 
+                          color: "#8B6914", 
+                          border: "1px solid rgba(200, 149, 71, 0.3)", 
+                          fontSize: "12.5px", 
+                          fontWeight: 800 
                         }}>
-                          {c.status}
-                        </span>
-                        <span style={{ fontSize: "11.5px", color: "#6B5B4E" }}>@{c.time} CST</span>
-                      </div>
-                    </td>
+                          {c.actual}
+                        </div>
+                      </td>
 
-                    {/* Action Button */}
-                    <td style={{ padding: "16px 18px", textAlign: "center", verticalAlign: "middle" }}>
-                      <button
-                        type="button"
-                        onClick={() => setSelectedDetail(c)}
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          gap: "6px",
-                          padding: "8px 14px",
-                          borderRadius: "8px",
-                          border: "1px solid #E8DDCF",
-                          backgroundColor: "#FFFFFF",
-                          color: "#261603",
-                          fontSize: "12px",
-                          fontWeight: 750,
-                          cursor: "pointer",
-                          boxShadow: "0 1px 3px rgba(40, 25, 10, 0.04)"
-                        }}
-                      >
-                        <Search size={14} color="#B27E33" /> View Full Dossier
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
+                      {/* Status & Time */}
+                      <td style={{ padding: "16px 18px", verticalAlign: "middle" }}>
+                        <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                          <span style={{ 
+                            padding: "4px 8px", 
+                            borderRadius: "5px", 
+                            backgroundColor: isPass ? "rgba(200, 149, 71, 0.18)" : "rgba(239, 68, 68, 0.15)", 
+                            color: isPass ? "#8B6914" : "#DC2626", 
+                            border: isPass ? "1px solid #B27E33" : "1px solid #F87171",
+                            fontSize: "11px", 
+                            fontWeight: 850,
+                            width: "fit-content"
+                          }}>
+                            {c.status}
+                          </span>
+                          <span style={{ fontSize: "11.5px", color: "#6B5B4E" }}>@{c.time}</span>
+                        </div>
+                      </td>
+
+                      {/* Action Buttons */}
+                      <td style={{ padding: "16px 18px", textAlign: "center", verticalAlign: "middle" }}>
+                        <div style={{ display: "inline-flex", gap: "6px", alignItems: "center" }}>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedDetail(c)}
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              gap: "6px",
+                              padding: "8px 14px",
+                              borderRadius: "8px",
+                              border: "1px solid #E8DDCF",
+                              backgroundColor: "#FFFFFF",
+                              color: "#261603",
+                              fontSize: "12px",
+                              fontWeight: 750,
+                              cursor: "pointer",
+                              boxShadow: "0 1px 3px rgba(40, 25, 10, 0.04)"
+                            }}
+                          >
+                            <Search size={14} color="#B27E33" /> View Full Dossier
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => handleDeleteCcp(c.id, e)}
+                            title="Delete CCP Record"
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              padding: "8px 10px",
+                              borderRadius: "8px",
+                              border: "1px solid #FECACA",
+                              backgroundColor: "#FEF2F2",
+                              color: "#EF4444",
+                              fontSize: "12px",
+                              cursor: "pointer"
+                            }}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import authService from "../services/authService";
+import apiClient from "../services/apiClient";
 
 export const ROLES = [
   {
@@ -515,10 +516,22 @@ export const NAVIGATION_CONFIG = {
         { label: "Production Orders", path: "/production/orders", icon: "Layers" },
         { label: "Batches (eBR)", path: "/production/batches", icon: "Boxes" },
         { label: "Downtime & Loss", path: "/production/downtime-loss", icon: "AlertTriangle" },
+        { label: "Shift Performance", path: "/production/shift-performance", icon: "Users" },
         { label: "OEE Performance", path: "/performance/oee", icon: "Gauge" }
       ]
     },
-    { label: "Quality", path: "/quality", icon: "ShieldCheck" },
+    {
+      group: "Quality",
+      items: [
+        { label: "QA Dashboard", path: "/quality", icon: "LayoutDashboard" },
+        { label: "Quarantine Holds", path: "/quality/events/holds", icon: "AlertOctagon" },
+        { label: "CCP Checks", path: "/quality/checks/ccp", icon: "Clock" },
+        { label: "Product Checks", path: "/quality/checks/product", icon: "Package" },
+        { label: "Pre-Op Checklist", path: "/quality/sanitation/preop", icon: "CheckSquare" },
+        { label: "Deviations", path: "/quality/events/deviations", icon: "AlertTriangle" },
+        { label: "Release Queue", path: "/quality/release/queue", icon: "FileCheck" }
+      ]
+    },
     { label: "Inventory", path: "/inventory", icon: "Package" },
     { label: "Labour", path: "/labour", icon: "Users" },
     { label: "CMMS Dashboard", path: "/maintenance", icon: "Wrench" },
@@ -603,17 +616,23 @@ export function RoleProvider({ children }) {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        const exists = ROLES.find((r) => r.id === parsed.id);
-        if (exists) return exists;
+        if (parsed && parsed.id) {
+          const base = ROLES.find((r) => r.id === parsed.id) || ROLES[1];
+          return {
+            ...base,
+            ...parsed,
+            user: parsed.user || base.user,
+          };
+        }
       } catch (err) {
         console.warn("Could not parse saved role:", err);
       }
     }
-    return ROLES.find((r) => r.id === "plant_manager") || ROLES[10]; // Default: Plant Manager
+    return ROLES.find((r) => r.id === "admin") || ROLES[1]; // Default: admin
   });
 
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    return sessionStorage.getItem("flowstate_auth") === "true";
+    return sessionStorage.getItem("flowstate_auth") === "true" || localStorage.getItem("flowstate_auth") === "true";
   });
 
   useEffect(() => {
@@ -625,16 +644,6 @@ export function RoleProvider({ children }) {
     }
   }, [currentRole]);
 
-  // Ensure active valid JWT session token on mount
-  useEffect(() => {
-    const token = localStorage.getItem("maintenx_auth_token") || localStorage.getItem("flowstate_token");
-    if (!token && currentRole?.user?.email) {
-      authService.login(currentRole.user.email, "Password@123").catch((err) => {
-        console.warn("Auto-token acquisition on mount:", err.message);
-      });
-    }
-  }, []);
-
   const setRoleById = (roleId) => {
     const found = ROLES.find((r) => r.id === roleId);
     if (found) {
@@ -642,39 +651,19 @@ export function RoleProvider({ children }) {
       localStorage.setItem("flowstate_current_role", JSON.stringify(found));
       if (found.user) {
         localStorage.setItem("flowstate_user_profile", JSON.stringify(found.user));
-        // Keep JWT token in sync with active role perspective
-        authService.login(found.user.email, "Password@123").catch((err) => {
-          console.warn(`Role sync login error for ${found.user.email}:`, err.message);
-        });
       }
     }
   };
 
-  // Sync JWT token with backend on mount & role change
-  useEffect(() => {
-    if (isAuthenticated && currentRole?.user?.email) {
-      authService.login(currentRole.user.email, "Password@123").then(() => {
-        window.dispatchEvent(new CustomEvent("maintenx:auth_ready"));
-      }).catch((e) => {
-        console.warn("Auto-token acquisition on startup:", e.message);
-      });
-    }
-  }, [isAuthenticated, currentRole?.id, currentRole?.user?.email]);
-
   const login = (roleId) => {
-    const found = ROLES.find((r) => r.id === roleId) || ROLES.find((r) => r.id === "plant_manager") || ROLES[10];
+    const found = ROLES.find((r) => r.id === roleId) || ROLES.find((r) => r.id === "admin") || ROLES[1];
     setCurrentRole(found);
     setIsAuthenticated(true);
     sessionStorage.setItem("flowstate_auth", "true");
+    localStorage.setItem("flowstate_auth", "true");
     localStorage.setItem("flowstate_current_role", JSON.stringify(found));
     if (found.user) {
       localStorage.setItem("flowstate_user_profile", JSON.stringify(found.user));
-      // Auto-authenticate with Fastify backend to obtain real JWT
-      if (found.user.email) {
-        authService.login(found.user.email, "Password@123").catch((err) => {
-          console.warn(`[RoleContext] Auto-auth for ${found.user.email}:`, err.message);
-        });
-      }
     }
     return found;
   };
@@ -684,21 +673,83 @@ export function RoleProvider({ children }) {
       const response = await authService.login(email, password);
       setIsAuthenticated(true);
       sessionStorage.setItem("flowstate_auth", "true");
+      localStorage.setItem("flowstate_auth", "true");
+
+      const authData = (response?.data && response?.data?.user) ? response.data : response;
+      const userObj = authData?.user;
+      const tenantObj = authData?.tenant;
+      const tokenVal = authData?.token || response?.token;
+
+      if (tokenVal) {
+        apiClient.setToken(tokenVal);
+        localStorage.setItem("maintenx_auth_token", tokenVal);
+        localStorage.setItem("flowstate_token", tokenVal);
+      }
+
+      // Wipe stale demo/tenant cache keys from localStorage
+      const staleKeys = [
+        "admin_users",
+        "mx_admin_users",
+        "mx_master_companies",
+        "mx_master_plants",
+        "mx_master_departments",
+        "mx_master_workcenters",
+        "mx_master_lines",
+        "mx_master_skus",
+        "mx_master_boms",
+        "mx_master_assets",
+        "mx_master_audit_logs",
+        "mx_master_families",
+        "mx_master_uoms",
+        "mx_master_pack_configs",
+        "mx_master_shelflife",
+        "mx_master_csm",
+        "mx_master_operations",
+        "mx_master_routings",
+        "mx_master_line_targets",
+        "mx_master_changeovers",
+        "mx_master_sanitation",
+        "mx_master_allergens",
+        "mx_master_labour_standards",
+        "mx_master_employees",
+        "mx_master_training",
+        "mx_master_quality_specs",
+        "mx_master_storage",
+        "mx_master_permissions"
+      ];
+      staleKeys.forEach(k => localStorage.removeItem(k));
+
+      if (tenantObj?.name) {
+        localStorage.setItem("maintenx_tenant_name", tenantObj.name);
+        if (tenantObj.id) localStorage.setItem("maintenx_tenant_id", tenantObj.id);
+        localStorage.setItem("mx_current_company_name", tenantObj.name);
+      } else {
+        localStorage.removeItem("maintenx_tenant_name");
+        localStorage.removeItem("maintenx_tenant_id");
+        localStorage.removeItem("mx_current_company_name");
+      }
+
+      window.dispatchEvent(new CustomEvent("maintenx:tenant_changed", { detail: tenantObj }));
 
       // Prioritize the role assigned in PostgreSQL
-      const backendRoleCode = response?.user?.role;
-      const targetRoleId = backendRoleCode || requestedRoleId || "plant_manager";
-      const found = ROLES.find((r) => r.id === targetRoleId) || ROLES.find((r) => r.id === backendRoleCode) || ROLES[10];
+      const backendRoleCode = userObj?.role;
+      const targetRoleId = backendRoleCode || (requestedRoleId !== "plant_manager" ? requestedRoleId : null) || "admin";
+      const found = ROLES.find((r) => r.id === targetRoleId) || ROLES.find((r) => r.id === backendRoleCode) || ROLES.find((r) => r.id === "admin") || ROLES[1];
+
+      const tenantName = tenantObj?.name || localStorage.getItem("maintenx_tenant_name") || found.user?.company || "";
 
       const mergedRole = {
         ...found,
-        user: response?.user ? {
-          id: response.user.id,
-          name: `${response.user.firstName || ""} ${response.user.lastName || ""}`.trim() || found.user?.name,
-          email: response.user.email || found.user?.email,
-          role: found.label,
-          avatar: `${response.user.firstName?.charAt(0) || ""}${response.user.lastName?.charAt(0) || ""}` || found.user?.avatar,
-          plant: found.user?.plant || "Indore Mega Facility"
+        user: userObj ? {
+          id: userObj.id,
+          name: `${userObj.firstName || ""} ${userObj.lastName || ""}`.trim() || userObj.name || found.user?.name,
+          email: userObj.email || found.user?.email,
+          role: found.label || userObj.roleName || "Company Administrator",
+          avatar: `${userObj.firstName?.charAt(0) || ""}${userObj.lastName?.charAt(0) || ""}`.toUpperCase() || found.user?.avatar || "GA",
+          plant: found.user?.plant || (tenantName ? `${tenantName} Facility` : "Main Facility"),
+          company: tenantName || found.user?.company || "MaintenX OS",
+          companyName: tenantName || found.user?.company || "MaintenX OS",
+          tenant: tenantObj,
         } : found.user
       };
 
@@ -707,7 +758,7 @@ export function RoleProvider({ children }) {
       if (mergedRole.user) {
         localStorage.setItem("flowstate_user_profile", JSON.stringify(mergedRole.user));
       }
-      return { success: true, user: response?.user || mergedRole.user, role: mergedRole };
+      return { success: true, user: mergedRole.user, role: mergedRole };
     } catch (err) {
       console.warn("Backend authentication failed:", err.message);
       // Re-throw so Login page can catch and show explicit error without granting dashboard access
@@ -732,6 +783,47 @@ export function RoleProvider({ children }) {
     } finally {
       setIsAuthenticated(false);
       sessionStorage.removeItem("flowstate_auth");
+      localStorage.removeItem("flowstate_auth");
+      localStorage.removeItem("flowstate_current_role");
+      localStorage.removeItem("flowstate_user_profile");
+      localStorage.removeItem("maintenx_auth_token");
+      localStorage.removeItem("flowstate_token");
+      setCurrentRole(ROLES.find((r) => r.id === "admin") || ROLES[1]);
+      const staleKeys = [
+        "admin_users",
+        "mx_admin_users",
+        "maintenx_tenant_name",
+        "maintenx_tenant_id",
+        "mx_current_company_name",
+        "mx_master_companies",
+        "mx_master_plants",
+        "mx_master_departments",
+        "mx_master_workcenters",
+        "mx_master_lines",
+        "mx_master_skus",
+        "mx_master_boms",
+        "mx_master_assets",
+        "mx_master_audit_logs",
+        "mx_master_families",
+        "mx_master_uoms",
+        "mx_master_pack_configs",
+        "mx_master_shelflife",
+        "mx_master_csm",
+        "mx_master_operations",
+        "mx_master_routings",
+        "mx_master_line_targets",
+        "mx_master_changeovers",
+        "mx_master_sanitation",
+        "mx_master_allergens",
+        "mx_master_labour_standards",
+        "mx_master_employees",
+        "mx_master_training",
+        "mx_master_quality_specs",
+        "mx_master_storage",
+        "mx_master_permissions"
+      ];
+      staleKeys.forEach(k => localStorage.removeItem(k));
+      window.dispatchEvent(new CustomEvent("maintenx:tenant_changed", { detail: null }));
     }
   };
 
@@ -768,21 +860,21 @@ export function RoleProvider({ children }) {
     if (currentRole.id === "maintenance") {
       allowedPaths.push("/work-orders", "/assets", "/breakdowns", "/pm", "/spare-parts", "/calibration", "/troubleshooting", "/cmms", "/ci", "/maintenance");
     } else if (currentRole.id === "plant_manager") {
-      allowedPaths.push("/work-orders", "/assets", "/breakdowns", "/pm", "/spare-parts", "/calibration", "/troubleshooting", "/planning", "/production", "/quality", "/inventory", "/labour", "/maintenance", "/performance", "/cmms", "/master-data", "/reports", "/governance", "/migration", "/supervisor", "/people", "/command-center");
+      allowedPaths.push("/work-orders", "/assets", "/breakdowns", "/pm", "/spare-parts", "/calibration", "/troubleshooting", "/planning", "/production", "/quality", "/inventory", "/labour", "/maintenance", "/performance", "/cmms", "/master-data", "/reports", "/governance", "/migration", "/supervisor", "/people", "/command-center", "/traceability", "/warehouse", "/ci", "/rca", "/capa", "/rca-capa", "/costing", "/executive", "/organization");
     } else if (currentRole.id === "ci_engineer") {
-      allowedPaths.push("/ci", "/quality", "/rca", "/capa");
+      allowedPaths.push("/ci", "/quality", "/rca", "/capa", "/traceability");
     } else if (currentRole.id === "executive") {
-      allowedPaths.push("/production", "/ci/reliability", "/ci/projects/savings", "/quality", "/ci/reports", "/costing", "/executive");
+      allowedPaths.push("/production", "/ci/reliability", "/ci/projects/savings", "/quality", "/ci/reports", "/costing", "/executive", "/traceability");
     } else if (currentRole.id === "planner") {
-      allowedPaths.push("/planner", "/planning");
+      allowedPaths.push("/planner", "/planning", "/traceability");
     } else if (currentRole.id === "warehouse") {
-      allowedPaths.push("/warehouse", "/inventory");
+      allowedPaths.push("/warehouse", "/inventory", "/traceability");
     } else if (currentRole.id === "quality") {
-      allowedPaths.push("/quality");
+      allowedPaths.push("/quality", "/traceability");
     } else if (currentRole.id === "supervisor") {
-      allowedPaths.push("/supervisor", "/labour");
+      allowedPaths.push("/supervisor", "/labour", "/traceability", "/production");
     } else if (currentRole.id === "line_lead") {
-      allowedPaths.push("/linelead");
+      allowedPaths.push("/linelead", "/traceability");
     } else if (currentRole.id === "operator") {
       allowedPaths.push("/operator");
     }
