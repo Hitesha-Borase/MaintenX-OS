@@ -25,6 +25,7 @@ import masterDataService from "../../../services/masterDataService";
 export function LabourStandardsPage() {
   const {
     labourStandards = [],
+    setLabourStandards,
     addLabourStandard,
     updateLabourStandard,
     deleteLabourStandard,
@@ -35,18 +36,40 @@ export function LabourStandardsPage() {
   } = useMasterData();
   const { addToast } = useApp();
 
+  const fetchLiveLabourStandards = async () => {
+    try {
+      localStorage.removeItem("mx_master_labour_standards");
+      const res = await masterDataService.getLabourStandards();
+      const data = res?.data?.data || res?.data || res;
+      if (Array.isArray(data) && typeof setLabourStandards === "function") {
+        setLabourStandards(data);
+      }
+    } catch (err) {
+      console.warn("Labour standards load:", err.message);
+    }
+  };
+
   useEffect(() => {
-    masterDataService.getLabourStandards().catch((err) => console.warn("Labour standards load:", err.message));
+    fetchLiveLabourStandards();
   }, []);
 
   const standards = labourStandards;
+
+  const availableLines = useMemo(() => {
+    if (Array.isArray(lines) && lines.length > 0) return lines;
+    return [
+      { lineId: "LIN-01", lineCode: "LIN-01", name: "High-Speed Bottling Line 1" },
+      { lineId: "LIN-02", lineCode: "LIN-02", name: "Aseptic Canning Line 2" },
+      { lineId: "LIN-03", lineCode: "LIN-03", name: "Secondary Packaging Line 3" }
+    ];
+  }, [lines]);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingStandard, setEditingStandard] = useState(null);
   const [viewingStandard, setViewingStandard] = useState(null);
   const [newStandard, setNewStandard] = useState({
-    lineId: lines[0]?.lineId || "LIN-01",
+    lineId: "LIN-01",
     standardCrew: 8,
     stdLaborHoursPer1kUnits: 2.0,
     directCostPerHour: "$25.00"
@@ -68,37 +91,42 @@ export function LabourStandardsPage() {
       const q = searchQuery.toLowerCase().trim();
       return (
         !q ||
-        s.lineName.toLowerCase().includes(q) ||
-        s.id.toLowerCase().includes(q) ||
-        s.directCostPerHour.toLowerCase().includes(q)
+        (s.lineName || "").toLowerCase().includes(q) ||
+        (s.standardId || s.id || "").toLowerCase().includes(q) ||
+        (s.directCostPerHour || "").toLowerCase().includes(q)
       );
     });
   }, [standards, searchQuery]);
 
-  const handleAddSubmit = (e) => {
+  const handleAddSubmit = async (e) => {
     e.preventDefault();
-    const selLine = lines.find((l) => l.lineId === newStandard.lineId || l.id === newStandard.lineId);
+    const selLine = availableLines.find((l) => l.lineId === newStandard.lineId || l.id === newStandard.lineId);
     const created = {
-      lineId: newStandard.lineId,
-      lineName: selLine ? selLine.name : "Production Line",
+      lineId: newStandard.lineId || availableLines[0].lineId,
+      lineName: selLine ? (selLine.name || selLine.lineCode) : "High-Speed Bottling Line 1",
       standardCrew: Number(newStandard.standardCrew) || 8,
       stdLaborHoursPer1kUnits: Number(newStandard.stdLaborHoursPer1kUnits) || 2.0,
       directCostPerHour: newStandard.directCostPerHour || "$25.00",
       status: "Active"
     };
 
-    addLabourStandard(created);
-    addToast(`Labour standard created for ${created.lineName}!`, "success");
-    setIsModalOpen(false);
-    setNewStandard({
-      lineId: lines[0]?.lineId || "LIN-01",
-      standardCrew: 8,
-      stdLaborHoursPer1kUnits: 2.0,
-      directCostPerHour: "$25.00"
-    });
+    try {
+      await addLabourStandard(created);
+      addToast(`Labour standard created for ${created.lineName}!`, "success");
+      setIsModalOpen(false);
+      setNewStandard({
+        lineId: availableLines[0]?.lineId || "LIN-01",
+        standardCrew: 8,
+        stdLaborHoursPer1kUnits: 2.0,
+        directCostPerHour: "$25.00"
+      });
+      fetchLiveLabourStandards();
+    } catch (err) {
+      addToast("Failed to create labour standard: " + err.message, "error");
+    }
   };
 
-  const handleEditSubmit = (e) => {
+  const handleEditSubmit = async (e) => {
     e.preventDefault();
     const selLine = lines.find((l) => l.lineId === editingStandard.lineId || l.id === editingStandard.lineId);
     const updated = {
@@ -108,15 +136,25 @@ export function LabourStandardsPage() {
       stdLaborHoursPer1kUnits: Number(editingStandard.stdLaborHoursPer1kUnits) || 2.0,
       directCostPerHour: editingStandard.directCostPerHour || "$25.00"
     };
-    updateLabourStandard(editingStandard.id, updated);
-    addToast(`Labour standard for ${updated.lineName} updated!`, "success");
-    setEditingStandard(null);
+    try {
+      await updateLabourStandard(editingStandard.id || editingStandard.standardId, updated);
+      addToast(`Labour standard for ${updated.lineName} updated!`, "success");
+      setEditingStandard(null);
+      fetchLiveLabourStandards();
+    } catch (err) {
+      addToast("Failed to update labour standard: " + err.message, "error");
+    }
   };
 
-  const handleDelete = (id, lineName) => {
+  const handleDelete = async (id, lineName) => {
     if (window.confirm(`Are you sure you want to delete labour standard for ${lineName}?`)) {
-      deleteLabourStandard(id);
-      addToast(`Labour standard removed for ${lineName}`, "info");
+      try {
+        await deleteLabourStandard(id);
+        addToast(`Labour standard removed for ${lineName}`, "info");
+        fetchLiveLabourStandards();
+      } catch (err) {
+        addToast("Failed to delete labour standard: " + err.message, "error");
+      }
     }
   };
 
@@ -244,11 +282,18 @@ export function LabourStandardsPage() {
               </tr>
             </thead>
             <tbody>
-              {filteredStandards.map((s) => (
-                <tr key={s.id} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+              {filteredStandards.length === 0 ? (
+                <tr>
+                  <td colSpan={6} style={{ padding: "36px 16px", textAlign: "center", color: "var(--text-muted)", fontSize: "13px" }}>
+                    No labour standards found. Click "+ Add Labour Standard" to create a new profile.
+                  </td>
+                </tr>
+              ) : (
+                filteredStandards.map((s) => (
+                <tr key={s.id || s.standardId} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
                   <td style={{ padding: "12px 16px" }}>
                     <div style={{ fontWeight: 800, color: "var(--text-primary)", fontSize: "13px" }}>{s.lineName}</div>
-                    <div style={{ fontSize: "11px", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>{s.id}</div>
+                    <div style={{ fontSize: "11px", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>{s.standardId || s.id}</div>
                   </td>
                   <td style={{ padding: "12px 16px" }}>
                     <Badge variant="cyan">{s.standardCrew} Crew Members</Badge>
@@ -279,7 +324,7 @@ export function LabourStandardsPage() {
                         <Edit2 size={13} />
                       </button>
                       <button
-                        onClick={() => handleDelete(s.id, s.lineName)}
+                        onClick={() => handleDelete(s.id || s.standardId, s.lineName)}
                         title="Delete Standard"
                         style={{ width: "30px", height: "30px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", color: "#EF4444", border: "1px solid var(--border-subtle)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
                       >
@@ -288,7 +333,7 @@ export function LabourStandardsPage() {
                     </div>
                   </td>
                 </tr>
-              ))}
+              )))}
             </tbody>
           </table>
         </div>
@@ -319,8 +364,8 @@ export function LabourStandardsPage() {
                   className="form-input"
                   style={{ backgroundColor: "#FFFFFF" }}
                 >
-                  {lines.map((l) => (
-                    <option key={l.lineId} value={l.lineId}>{l.lineCode} — {l.name}</option>
+                  {availableLines.map((l) => (
+                    <option key={l.lineId || l.id} value={l.lineId || l.id}>{l.lineCode || l.lineId} — {l.name}</option>
                   ))}
                 </select>
               </div>

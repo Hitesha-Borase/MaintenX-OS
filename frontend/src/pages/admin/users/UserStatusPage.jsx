@@ -22,12 +22,19 @@ import { useApp } from "../../../context/AppContext";
 import adminService from "../../../services/adminService";
 
 export function UserStatusPage() {
-  const { users = [], updateUserStatus, deleteUser, bulkUpdateStatus } = useAdmin() || {};
+  const { users = [], setUsers, updateUserStatus, deleteUser, bulkUpdateStatus } = useAdmin() || {};
   const { addToast } = useApp ? useApp() : { addToast: () => {} };
 
   useEffect(() => {
-    adminService.getUsers().catch((err) => console.warn("Users load:", err.message));
-  }, []);
+    adminService
+      .getUsers()
+      .then((data) => {
+        if (Array.isArray(data) && setUsers) {
+          setUsers(data);
+        }
+      })
+      .catch((err) => console.warn("Users load:", err.message));
+  }, [setUsers]);
 
   const [filterState, setFilterState] = useState("ALL");
   const [isProcessing, setIsProcessing] = useState(false);

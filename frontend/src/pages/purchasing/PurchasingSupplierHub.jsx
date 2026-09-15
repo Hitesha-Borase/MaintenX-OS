@@ -59,14 +59,34 @@ export function PurchasingSupplierHub() {
         warehouseService.getPurchaseOrders().catch(() => null),
         warehouseService.getSuppliers().catch(() => null)
       ]);
-      if (posRes?.data?.purchaseOrders?.length) {
-        setPurchaseOrders(posRes.data.purchaseOrders);
+
+      const poList = Array.isArray(posRes?.purchaseOrders)
+        ? posRes.purchaseOrders
+        : Array.isArray(posRes?.data?.purchaseOrders)
+        ? posRes.data.purchaseOrders
+        : Array.isArray(posRes?.data)
+        ? posRes.data
+        : Array.isArray(posRes)
+        ? posRes
+        : null;
+      if (poList?.length) {
+        setPurchaseOrders(poList);
       }
-      const supsList = supsRes?.data?.suppliers !== undefined ? supsRes.data.suppliers : supsRes?.data?.data?.suppliers;
-      if (Array.isArray(supsList)) {
+
+      const supsList = Array.isArray(supsRes?.suppliers)
+        ? supsRes.suppliers
+        : Array.isArray(supsRes?.data?.suppliers)
+        ? supsRes.data.suppliers
+        : Array.isArray(supsRes?.data)
+        ? supsRes.data
+        : Array.isArray(supsRes)
+        ? supsRes
+        : [];
+      if (Array.isArray(supsList) && supsList.length >= 0) {
         setSuppliers(supsList);
       }
-      const metrics = supsRes?.data?.metrics || supsRes?.data?.data?.metrics;
+
+      const metrics = supsRes?.metrics || supsRes?.data?.metrics;
       if (metrics) {
         setSupplierMetrics(metrics);
       }
@@ -253,9 +273,9 @@ export function PurchasingSupplierHub() {
 
     try {
       const res = await warehouseService.createSupplier(created);
-      const saved = res?.data?.data || res?.data || created;
-      fetchPurchasingData();
-      addToast(`Approved Supplier ${saved.name} (${saved.supplierCode}) registered!`, "success");
+      const saved = res?.data?.data || res?.data || res || created;
+      await fetchPurchasingData();
+      addToast(`Approved Supplier ${saved.name || newSupplier.name} (${saved.supplierCode || supCode}) registered!`, "success");
     } catch (err) {
       setSuppliers((prev) => [created, ...prev]);
       addToast(`Approved Supplier ${created.name} (${created.supplierCode}) registered!`, "success");
@@ -280,7 +300,7 @@ export function PurchasingSupplierHub() {
     if (!editingSupplier) return;
     try {
       await warehouseService.updateSupplier(editingSupplier.id, editingSupplier);
-      fetchPurchasingData();
+      await fetchPurchasingData();
       addToast(`Supplier ${editingSupplier.name} profile updated.`, "success");
     } catch (err) {
       setSuppliers((prev) =>
@@ -297,7 +317,7 @@ export function PurchasingSupplierHub() {
     const nextStatus = supplier.status === "Active" ? "Inactive" : "Active";
     try {
       await warehouseService.toggleSupplierStatus(supplier.id);
-      fetchPurchasingData();
+      await fetchPurchasingData();
       addToast(`Supplier ${supplier.name} is now ${nextStatus}.`, nextStatus === "Active" ? "success" : "warning");
     } catch (err) {
       setSuppliers((prev) =>
@@ -313,7 +333,7 @@ export function PurchasingSupplierHub() {
     try {
       await warehouseService.deleteSupplier(supplier.id);
       setSuppliers((prev) => prev.filter((s) => s.id !== supplier.id));
-      fetchPurchasingData();
+      await fetchPurchasingData();
       addToast(`Supplier ${supplier.name} removed from database.`, "success");
     } catch (err) {
       console.error("Failed to delete supplier:", err);
@@ -1310,6 +1330,18 @@ export function PurchasingSupplierHub() {
 
               <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "12px" }}>
                 <div>
+                  <label className="form-label">Supplier Code (Optional)</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    placeholder="e.g. VND-APX-07 (auto if blank)"
+                    value={newSupplier.supplierCode}
+                    onChange={(e) => setNewSupplier({ ...newSupplier, supplierCode: e.target.value })}
+                    style={{ backgroundColor: "var(--bg-card)" }}
+                  />
+                </div>
+
+                <div>
                   <label className="form-label">Category *</label>
                   <select
                     className="form-select"
@@ -1320,11 +1352,27 @@ export function PurchasingSupplierHub() {
                     <option value="Raw Material Concentrate">Raw Material Concentrate</option>
                     <option value="Packaging Containers">Packaging Containers</option>
                     <option value="Specialty Flavors & Extracts">Specialty Flavors & Extracts</option>
+                    <option value="Sweeteners & Sugars">Sweeteners & Sugars</option>
+                    <option value="Packaging Cans">Packaging Cans</option>
                     <option value="Sanitation Chemicals">Sanitation Chemicals</option>
                     <option value="Spare Parts & Tooling">Spare Parts & Tooling</option>
                   </select>
                 </div>
+              </div>
 
+              <div>
+                <label className="form-label">Materials Supplied</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="e.g. 500ml PET Bottles, 28mm Caps, Secondary Films"
+                  value={newSupplier.materialsSupplied}
+                  onChange={(e) => setNewSupplier({ ...newSupplier, materialsSupplied: e.target.value })}
+                  style={{ backgroundColor: "var(--bg-card)" }}
+                />
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "12px" }}>
                 <div>
                   <label className="form-label">Risk Rating *</label>
                   <select
@@ -1338,13 +1386,13 @@ export function PurchasingSupplierHub() {
                     <option value="High Risk">High Risk (Audit Pending)</option>
                   </select>
                 </div>
-              </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "12px" }}>
                 <div>
                   <label className="form-label">Average Lead Time (Days) *</label>
                   <input
                     type="number"
+                    step="0.5"
+                    min="1"
                     className="form-input"
                     required
                     value={newSupplier.avgLeadTimeDays}
@@ -1352,7 +1400,9 @@ export function PurchasingSupplierHub() {
                     style={{ backgroundColor: "var(--bg-card)" }}
                   />
                 </div>
+              </div>
 
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "12px" }}>
                 <div>
                   <label className="form-label">Procurement Contact Email *</label>
                   <input
@@ -1362,6 +1412,18 @@ export function PurchasingSupplierHub() {
                     placeholder="orders@vendor.com"
                     value={newSupplier.contactEmail}
                     onChange={(e) => setNewSupplier({ ...newSupplier, contactEmail: e.target.value })}
+                    style={{ backgroundColor: "var(--bg-card)" }}
+                  />
+                </div>
+
+                <div>
+                  <label className="form-label">Contact Phone</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    placeholder="+1 (555) 012-3456"
+                    value={newSupplier.contactPhone}
+                    onChange={(e) => setNewSupplier({ ...newSupplier, contactPhone: e.target.value })}
                     style={{ backgroundColor: "var(--bg-card)" }}
                   />
                 </div>

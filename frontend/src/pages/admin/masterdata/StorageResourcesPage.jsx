@@ -27,8 +27,8 @@ export function StorageResourcesPage() {
   const { addToast } = useApp();
 
   useEffect(() => {
-    masterDataService.getWorkCenters().catch((err) => console.warn("Storage resources load:", err.message));
-  }, []);
+    masterDataService.getStorageResources(activePlantId).catch((err) => console.warn("Storage resources load:", err.message));
+  }, [activePlantId]);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [plantFilter, setPlantFilter] = useState("ALL");
@@ -63,52 +63,64 @@ export function StorageResourcesPage() {
     });
   }, [storageResources, plantFilter, typeFilter, searchQuery]);
 
-  const handleAddSubmit = (e) => {
+  const handleAddSubmit = async (e) => {
     e.preventDefault();
     if (!newRes.name.trim()) {
       addToast("Please provide storage resource name.", "warning");
       return;
     }
 
-    const created = addStorageResource({
-      ...newRes,
-      resourceCode: newRes.resourceCode || `STR-${(storageResources.length + 1).toString().padStart(2, "0")}`,
-      totalCapacity: Number(newRes.totalCapacity) || 400
-    });
+    try {
+      const created = await addStorageResource({
+        ...newRes,
+        resourceCode: newRes.resourceCode || `STR-${(storageResources.length + 1).toString().padStart(2, "0")}`,
+        totalCapacity: Number(newRes.totalCapacity) || 400
+      });
 
-    addToast(`Storage Resource "${created.resourceCode}" registered!`, "success");
-    setIsModalOpen(false);
-    setNewRes({
-      plantId: activePlantId || "PLT-01",
-      resourceType: "Selective Pallet Rack",
-      resourceCode: "",
-      name: "",
-      capacityUnit: "Pallet Positions",
-      totalCapacity: 500,
-      temperatureZone: "Ambient (18°C - 24°C)"
-    });
+      addToast(`Storage Resource "${created?.resourceCode || newRes.resourceCode}" registered!`, "success");
+      setIsModalOpen(false);
+      setNewRes({
+        plantId: activePlantId || "PLT-01",
+        resourceType: "Selective Pallet Rack",
+        resourceCode: "",
+        name: "",
+        capacityUnit: "Pallet Positions",
+        totalCapacity: 500,
+        temperatureZone: "Ambient (18°C - 24°C)"
+      });
+    } catch (err) {
+      addToast(`Failed to register storage resource: ${err.message}`, "error");
+    }
   };
 
-  const handleEditSubmit = (e) => {
+  const handleEditSubmit = async (e) => {
     e.preventDefault();
     if (!editingRes.name.trim()) {
       addToast("Please provide storage resource name.", "warning");
       return;
     }
 
-    updateStorageResource(editingRes.resourceId, {
-      ...editingRes,
-      totalCapacity: Number(editingRes.totalCapacity) || 400
-    });
+    try {
+      await updateStorageResource(editingRes.resourceId || editingRes.id || editingRes.resourceCode, {
+        ...editingRes,
+        totalCapacity: Number(editingRes.totalCapacity) || 400
+      });
 
-    addToast(`Storage Resource ${editingRes.resourceCode || editingRes.id} updated!`, "success");
-    setEditingRes(null);
+      addToast(`Storage Resource ${editingRes.resourceCode || editingRes.id} updated!`, "success");
+      setEditingRes(null);
+    } catch (err) {
+      addToast(`Failed to update storage resource: ${err.message}`, "error");
+    }
   };
 
-  const handleDelete = (resourceId, code) => {
+  const handleDelete = async (resourceId, code) => {
     if (window.confirm(`Are you sure you want to delete Storage Resource "${code}"?`)) {
-      deleteStorageResource(resourceId);
-      addToast(`Storage Resource "${code}" deleted.`, "info");
+      try {
+        await deleteStorageResource(resourceId);
+        addToast(`Storage Resource "${code}" deleted.`, "info");
+      } catch (err) {
+        addToast(`Failed to delete storage resource: ${err.message}`, "error");
+      }
     }
   };
 

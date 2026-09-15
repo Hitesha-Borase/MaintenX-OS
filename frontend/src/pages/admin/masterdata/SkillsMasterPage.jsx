@@ -25,12 +25,25 @@ import { useApp } from "../../../context/AppContext";
 import masterDataService from "../../../services/masterDataService";
 
 export function SkillsMasterPage() {
-  const { employees = [], addEmployee, updateEmployee, lines = [], plants = [] } = useMasterData();
+  const { employees = [], setEmployees, addEmployee, updateEmployee, deleteEmployee, lines = [], plants = [], activePlantId } = useMasterData();
   const { addToast } = useApp();
 
+  const fetchLiveEmployees = async () => {
+    try {
+      localStorage.removeItem("mx_master_employees");
+      const res = await masterDataService.getEmployeeSkills(activePlantId);
+      const data = res?.data?.data || res?.data || res;
+      if (Array.isArray(data) && typeof setEmployees === "function") {
+        setEmployees(data);
+      }
+    } catch (err) {
+      console.warn("Employees load:", err.message);
+    }
+  };
+
   useEffect(() => {
-    masterDataService.getStaff().catch((err) => console.warn("Staff load:", err.message));
-  }, []);
+    fetchLiveEmployees();
+  }, [activePlantId]);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [deptFilter, setDeptFilter] = useState("ALL");
@@ -75,34 +88,44 @@ export function SkillsMasterPage() {
     });
   }, [employees, deptFilter, skillLevelFilter, searchQuery]);
 
-  const handleAddSubmit = (e) => {
+  const handleAddSubmit = async (e) => {
     e.preventDefault();
     if (!newEmp.name.trim()) {
       addToast("Please provide Employee Name.", "warning");
       return;
     }
-    const created = addEmployee(newEmp);
-    addToast(`Employee ${created.employeeId} (${created.name}) onboarded with certified skills!`, "success");
-    setIsAddModalOpen(false);
-    setNewEmp({
-      name: "",
-      email: "",
-      department: "Maintenance & Reliability",
-      role: "Maintenance Technician",
-      plantId: "PLT-01",
-      skillLevel: "Level 3 (Senior Technician)",
-      skills: ["Precision Shaft Alignment", "Vibration Analysis"],
-      certifications: ["OSHA 30-Hour Safety"],
-      assignedLineIds: ["LIN-01"]
-    });
+    try {
+      const created = await addEmployee(newEmp);
+      addToast(`Employee ${created.employeeId || ""} (${created.name}) onboarded with certified skills!`, "success");
+      setIsAddModalOpen(false);
+      setNewEmp({
+        name: "",
+        email: "",
+        department: "Maintenance & Reliability",
+        role: "Maintenance Technician",
+        plantId: "PLT-01",
+        skillLevel: "Level 3 (Senior Technician)",
+        skills: ["Precision Shaft Alignment", "Vibration Analysis"],
+        certifications: ["OSHA 30-Hour Safety"],
+        assignedLineIds: ["LIN-01"]
+      });
+      fetchLiveEmployees();
+    } catch (err) {
+      addToast("Failed to onboard employee: " + err.message, "error");
+    }
   };
 
-  const handleEditSubmit = (e) => {
+  const handleEditSubmit = async (e) => {
     e.preventDefault();
     if (!editingEmp.name.trim()) return;
-    updateEmployee(editingEmp.employeeId, editingEmp);
-    addToast(`Employee ${editingEmp.employeeId} skills & profile updated!`, "success");
-    setEditingEmp(null);
+    try {
+      await updateEmployee(editingEmp.employeeId || editingEmp.id, editingEmp);
+      addToast(`Employee ${editingEmp.employeeId || editingEmp.id} skills & profile updated!`, "success");
+      setEditingEmp(null);
+      fetchLiveEmployees();
+    } catch (err) {
+      addToast("Failed to update employee: " + err.message, "error");
+    }
   };
 
   return (
@@ -332,8 +355,12 @@ export function SkillsMasterPage() {
                 })
               ) : (
                 <tr>
-                  <td colSpan={8} style={{ padding: "32px", textAlign: "center", color: "var(--text-muted)", fontSize: "13px" }}>
-                    No employee records match the department or skill level filter.
+                  <td colSpan={8} style={{ padding: "48px 24px", textAlign: "center", color: "var(--text-muted)", fontSize: "13px" }}>
+                    <Users size={36} style={{ margin: "0 auto 12px", opacity: 0.35, display: "block" }} />
+                    <div style={{ fontWeight: 700, color: "var(--text-secondary)", marginBottom: "4px" }}>
+                      No Employee Skill Profiles Found
+                    </div>
+                    <div>Click <strong>+ Onboard Employee & Skills</strong> above to add live records to the database.</div>
                   </td>
                 </tr>
               )}
@@ -730,9 +757,15 @@ export function SkillsMasterPage() {
               <Button variant="secondary" onClick={() => setDeletingEmp(null)}>Cancel</Button>
               <Button
                 variant="primary"
-                onClick={() => {
-                  addToast(`Employee "${deletingEmp.name}" removed from Skills Master.`, "info");
-                  setDeletingEmp(null);
+                onClick={async () => {
+                  try {
+                    await deleteEmployee(deletingEmp.employeeId || deletingEmp.id);
+                    addToast(`Employee "${deletingEmp.name}" deleted from database.`, "info");
+                    setDeletingEmp(null);
+                    fetchLiveEmployees();
+                  } catch (err) {
+                    addToast("Failed to delete employee: " + err.message, "error");
+                  }
                 }}
                 style={{ backgroundColor: "#DC2626", borderColor: "#DC2626", color: "#FFFFFF" }}
               >

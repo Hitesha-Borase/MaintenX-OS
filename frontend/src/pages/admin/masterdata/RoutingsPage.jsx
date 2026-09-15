@@ -43,6 +43,7 @@ export function RoutingsPage() {
   // Live fetch from backend on mount
   const fetchLiveRoutings = () => {
     setIsLoading(true);
+    localStorage.removeItem("mx_master_routings");
     masterDataService.getRoutings()
       .then((res) => {
         const data = res?.data?.data || res?.data || res;
@@ -221,14 +222,16 @@ export function RoutingsPage() {
   };
 
   const handleDelete = async (routingId, code) => {
-    if (window.confirm(`Are you sure you want to delete Routing Master "${code}" from PostgreSQL?`)) {
+    if (!routingId) return;
+    const confirmCode = code || routingId;
+    if (window.confirm(`Are you sure you want to permanently delete Routing Master "${confirmCode}" from PostgreSQL database?`)) {
       try {
         await masterDataService.deleteRouting(routingId);
         if (typeof deleteRouting === "function") {
-          deleteRouting(routingId);
+          await deleteRouting(routingId);
         }
         fetchLiveRoutings();
-        addToast(`Routing "${code}" deleted.`, "info");
+        addToast(`Routing "${confirmCode}" deleted from database successfully.`, "success");
       } catch (err) {
         addToast(`Failed to delete routing: ${err.message}`, "error");
       }
@@ -302,14 +305,14 @@ export function RoutingsPage() {
         />
         <StatCard
           title="Avg Standard Speed"
-          value="35,000 BPH"
+          value={routings.length > 0 ? `${Math.round(routings.reduce((sum, r) => sum + (Number(r.stdRunRateBPH) || 0), 0) / routings.length).toLocaleString()} BPH` : "0 BPH"}
           unit="Rated Pace"
           icon={Cpu}
           colorVariant="amber"
         />
         <StatCard
           title="Expected Yield Standard"
-          value="99.2%"
+          value={routings.length > 0 ? `${(routings.reduce((sum, r) => sum + (Number(r.expectedYieldPct) || 0), 0) / routings.length).toFixed(1)}%` : "0.0%"}
           unit="Quality Target"
           icon={ShieldCheck}
           colorVariant="emerald"
@@ -416,8 +419,12 @@ export function RoutingsPage() {
               ) : (
                 filteredRoutings.map((r) => {
                   const code = r.routingCode || r.id;
-                  const skuTitle = r.skuName || r.name || "500ml Sparkling Citrus Soda";
-                  const lineTitle = r.lineName || r.line || "Bottling Line 1";
+                  const matchedSku = skus.find(s => (s.skuId || s.id) === r.skuId);
+                  const matchedLine = lines.find(l => (l.lineId || l.id) === r.lineId);
+                  const skuTitle = r.skuName || r.name || matchedSku?.name || "—";
+                  const lineTitle = r.lineName || r.line || matchedLine?.name || "—";
+                  const skuCodeVal = r.skuCode || matchedSku?.skuCode || "—";
+                  const lineCodeVal = r.lineCode || matchedLine?.lineCode || matchedLine?.code || "—";
                   const stepsCount = Array.isArray(r.steps) ? r.steps.length : 0;
                   const isApproved = (r.approvalStatus || "Approved") === "Approved";
 
@@ -433,11 +440,11 @@ export function RoutingsPage() {
                       </td>
                       <td style={{ padding: "12px 16px" }}>
                         <div style={{ fontWeight: 800, color: "var(--text-primary)", fontSize: "13px" }}>{skuTitle}</div>
-                        <div style={{ fontSize: "11px", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>{r.skuCode || "SKU-5001"}</div>
+                        <div style={{ fontSize: "11px", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>{skuCodeVal}</div>
                       </td>
                       <td style={{ padding: "12px 16px", fontSize: "12px", color: "var(--text-primary)" }}>
                         <div style={{ fontWeight: 700 }}>{lineTitle}</div>
-                        <div style={{ fontSize: "10px", color: "var(--text-muted)" }}>{r.lineCode || "LINE-1"}</div>
+                        <div style={{ fontSize: "10px", color: "var(--text-muted)" }}>{lineCodeVal}</div>
                       </td>
                       <td style={{ padding: "12px 16px" }}>
                         <button
@@ -461,10 +468,10 @@ export function RoutingsPage() {
                         </button>
                       </td>
                       <td style={{ padding: "12px 16px", fontFamily: "var(--font-mono)", fontWeight: 800, color: "#D97706", fontSize: "12px" }}>
-                        {(Number(r.stdRunRateBPH) || 35000).toLocaleString()} BPH
+                        {r.stdRunRateBPH ? `${Number(r.stdRunRateBPH).toLocaleString()} BPH` : "—"}
                       </td>
                       <td style={{ padding: "12px 16px", fontFamily: "var(--font-mono)", fontWeight: 700, color: "#059669", fontSize: "12px" }}>
-                        {r.expectedYieldPct || 99.2}%
+                        {r.expectedYieldPct != null ? `${r.expectedYieldPct}%` : "—"}
                       </td>
                       <td style={{ padding: "12px 16px" }}>
                         <span

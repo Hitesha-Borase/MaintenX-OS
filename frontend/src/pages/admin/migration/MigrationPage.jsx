@@ -21,7 +21,8 @@ import {
   AlertOctagon,
   Copy,
   Eye,
-  Trash2
+  Trash2,
+  Edit2
 } from "lucide-react";
 import { Card } from "../../../components/common/Card";
 import { Badge } from "../../../components/common/Badge";
@@ -36,18 +37,25 @@ export function MigrationPage() {
   const { migrationStats = {}, executeMigration, auditLogs = [], skus = [] } = useMasterData();
   const { addToast } = useApp();
 
-  const [batches, setBatches] = useState([
-    { id: "RUN-2026-0819-01", target: "Item & SKU Master Tables", connector: "FlowState ERP SQL Connector", transferred: "1,420 / 1,420 rows", conformity: "98.6%", status: "Committed & Verified" },
-    { id: "RUN-2026-0818-04", target: "Bill of Materials (BOM) Multi-Level", connector: "CSV Bulk File Staging", transferred: "640 / 650 rows", conformity: "98.4%", status: "Committed & Verified" },
-    { id: "RUN-2026-0817-02", target: "Machine Asset Register & Line Mappings", connector: "SAP Plant Maintenance Export", transferred: "390 / 390 rows", conformity: "100.0%", status: "Committed & Verified" }
-  ]);
+  const [batches, setBatches] = useState([]);
   const [viewingBatch, setViewingBatch] = useState(null);
+  const [editingBatch, setEditingBatch] = useState(null);
   const [deletingBatch, setDeletingBatch] = useState(null);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isActioning, setIsActioning] = useState(false);
+
+  const [newBatch, setNewBatch] = useState({
+    target: "Item & SKU Master Tables",
+    connector: "FlowState ERP SQL Connector",
+    transferred: "500 / 500 rows",
+    conformity: "99.0%",
+    status: "Committed & Verified",
+    recordsCount: 500,
+  });
 
   const fetchBatches = () => {
     adminService.getMigrationBatches().then((data) => {
-      if (Array.isArray(data) && data.length > 0) setBatches(data);
+      if (Array.isArray(data)) setBatches(data);
     }).catch((err) => console.warn("Migration batches load:", err.message));
   };
 
@@ -55,6 +63,48 @@ export function MigrationPage() {
     masterDataService.getSkus().catch((err) => console.warn("Migration SKUs load:", err.message));
     fetchBatches();
   }, []);
+
+  const handleSaveEdit = async (e) => {
+    e.preventDefault();
+    if (!editingBatch) return;
+    try {
+      setIsActioning(true);
+      await adminService.updateMigrationBatch(editingBatch.id, editingBatch);
+      addToast(`Batch ${editingBatch.id} successfully updated in database!`, "success");
+      setEditingBatch(null);
+      fetchBatches();
+    } catch (err) {
+      console.error(err);
+      addToast(`Update error: ${err.message}`, "error");
+    } finally {
+      setIsActioning(false);
+    }
+  };
+
+  const handleAddBatchSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      setIsActioning(true);
+      await adminService.createMigrationBatch(newBatch);
+      addToast("New Migration Batch created and committed to database!", "success");
+      setIsAddModalOpen(false);
+      setNewBatch({
+        target: "Item & SKU Master Tables",
+        connector: "FlowState ERP SQL Connector",
+        transferred: "500 / 500 rows",
+        conformity: "99.0%",
+        status: "Committed & Verified",
+        recordsCount: 500,
+      });
+      fetchBatches();
+    } catch (err) {
+      console.error(err);
+      addToast(`Create batch error: ${err.message}`, "error");
+    } finally {
+      setIsActioning(false);
+    }
+  };
+
 
   // Wizard active state: 0 = Dashboard, 1 = Source, 2 = Mapping, 3 = Validation, 4 = Duplicate Review, 5 = Summary
   const [wizardStep, setWizardStep] = useState(0);
@@ -161,9 +211,9 @@ export function MigrationPage() {
     try {
       setIsActioning(true);
       await adminService.deleteMigrationBatch(deletingBatch.id);
-      setBatches((prev) => prev.filter((b) => b.id !== deletingBatch.id));
       addToast(`Migration batch record ${deletingBatch.id} deleted from database!`, "success");
       setDeletingBatch(null);
+      fetchBatches();
     } catch (err) {
       console.error(err);
       addToast(`Error deleting batch: ${err.message}`, "error");
@@ -187,14 +237,24 @@ export function MigrationPage() {
 
         <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
           {wizardStep === 0 ? (
-            <Button
-              variant="primary"
-              icon={UploadCloud}
-              onClick={() => setWizardStep(1)}
-              style={{ fontSize: "12px", padding: "7px 12px" }}
-            >
-              + Launch Migration Wizard
-            </Button>
+            <>
+              <Button
+                variant="secondary"
+                icon={Plus}
+                onClick={() => setIsAddModalOpen(true)}
+                style={{ fontSize: "12px", padding: "7px 12px" }}
+              >
+                + Add Batch Record
+              </Button>
+              <Button
+                variant="primary"
+                icon={UploadCloud}
+                onClick={() => setWizardStep(1)}
+                style={{ fontSize: "12px", padding: "7px 12px" }}
+              >
+                + Launch Migration Wizard
+              </Button>
+            </>
           ) : (
             <Button
               variant="secondary"
@@ -354,6 +414,26 @@ export function MigrationPage() {
                               <Eye size={13} />
                             </button>
 
+                            {/* Edit Button */}
+                            <button
+                              onClick={() => setEditingBatch({ ...b })}
+                              title="Edit Migration Batch"
+                              style={{
+                                width: "30px",
+                                height: "30px",
+                                borderRadius: "6px",
+                                backgroundColor: "var(--bg-card-subtle)",
+                                color: "#D97706",
+                                border: "1px solid var(--border-subtle)",
+                                cursor: "pointer",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                justifyContent: "center"
+                              }}
+                            >
+                              <Edit2 size={13} />
+                            </button>
+
                             {/* Delete Button */}
                             <button
                               onClick={() => setDeletingBatch(b)}
@@ -373,6 +453,7 @@ export function MigrationPage() {
                             >
                               <Trash2 size={13} />
                             </button>
+
                           </div>
                         </td>
                       </tr>
@@ -822,6 +903,254 @@ export function MigrationPage() {
           </div>
         </div>
       )}
+
+      {/* Edit Batch Modal */}
+      {editingBatch && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.5)",
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px"
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: "#FFFFFF",
+              borderRadius: "16px",
+              maxWidth: "500px",
+              width: "100%",
+              padding: "24px",
+              boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)"
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Edit2 size={18} color="#C89547" />
+                <h3 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                  Edit Migration Batch ({editingBatch.id})
+                </h3>
+              </div>
+              <button
+                onClick={() => setEditingBatch(null)}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)" }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEdit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div>
+                <label style={{ display: "block", fontSize: "12px", fontWeight: 700, marginBottom: "4px", color: "var(--text-secondary)" }}>
+                  Dataset Target
+                </label>
+                <input
+                  type="text"
+                  value={editingBatch.target || ""}
+                  onChange={(e) => setEditingBatch({ ...editingBatch, target: e.target.value })}
+                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--border-subtle)", fontSize: "13px", boxSizing: "border-box" }}
+                  required
+                />
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "12px", fontWeight: 700, marginBottom: "4px", color: "var(--text-secondary)" }}>
+                  Source Connector
+                </label>
+                <input
+                  type="text"
+                  value={editingBatch.connector || ""}
+                  onChange={(e) => setEditingBatch({ ...editingBatch, connector: e.target.value })}
+                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--border-subtle)", fontSize: "13px", boxSizing: "border-box" }}
+                  required
+                />
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div>
+                  <label style={{ display: "block", fontSize: "12px", fontWeight: 700, marginBottom: "4px", color: "var(--text-secondary)" }}>
+                    Transferred Rows
+                  </label>
+                  <input
+                    type="text"
+                    value={editingBatch.transferred || ""}
+                    onChange={(e) => setEditingBatch({ ...editingBatch, transferred: e.target.value })}
+                    style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--border-subtle)", fontSize: "13px", boxSizing: "border-box" }}
+                    required
+                  />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: "12px", fontWeight: 700, marginBottom: "4px", color: "var(--text-secondary)" }}>
+                    Conformity %
+                  </label>
+                  <input
+                    type="text"
+                    value={editingBatch.conformity || ""}
+                    onChange={(e) => setEditingBatch({ ...editingBatch, conformity: e.target.value })}
+                    style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--border-subtle)", fontSize: "13px", boxSizing: "border-box" }}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "12px", fontWeight: 700, marginBottom: "4px", color: "var(--text-secondary)" }}>
+                  Status
+                </label>
+                <select
+                  value={editingBatch.status || "Committed & Verified"}
+                  onChange={(e) => setEditingBatch({ ...editingBatch, status: e.target.value })}
+                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--border-subtle)", fontSize: "13px", boxSizing: "border-box" }}
+                >
+                  <option value="Committed & Verified">Committed & Verified</option>
+                  <option value="Staged / Pending Review">Staged / Pending Review</option>
+                  <option value="In Progress">In Progress</option>
+                  <option value="Failed / Rolled Back">Failed / Rolled Back</option>
+                </select>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "10px" }}>
+                <Button variant="secondary" type="button" onClick={() => setEditingBatch(null)} disabled={isActioning} style={{ fontSize: "12px", padding: "7px 14px" }}>
+                  Cancel
+                </Button>
+                <Button variant="primary" type="submit" disabled={isActioning} style={{ fontSize: "12px", padding: "7px 14px" }}>
+                  {isActioning ? "Saving..." : "Save in Database"}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Add Batch Modal */}
+      {isAddModalOpen && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.5)",
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px"
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: "#FFFFFF",
+              borderRadius: "16px",
+              maxWidth: "500px",
+              width: "100%",
+              padding: "24px",
+              boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)"
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Plus size={18} color="#C89547" />
+                <h3 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                  Add Ingestion Batch Record
+                </h3>
+              </div>
+              <button
+                onClick={() => setIsAddModalOpen(false)}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)" }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddBatchSubmit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div>
+                <label style={{ display: "block", fontSize: "12px", fontWeight: 700, marginBottom: "4px", color: "var(--text-secondary)" }}>
+                  Dataset Target
+                </label>
+                <input
+                  type="text"
+                  value={newBatch.target}
+                  onChange={(e) => setNewBatch({ ...newBatch, target: e.target.value })}
+                  placeholder="e.g. Item & SKU Master Tables"
+                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--border-subtle)", fontSize: "13px", boxSizing: "border-box" }}
+                  required
+                />
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "12px", fontWeight: 700, marginBottom: "4px", color: "var(--text-secondary)" }}>
+                  Source Connector
+                </label>
+                <input
+                  type="text"
+                  value={newBatch.connector}
+                  onChange={(e) => setNewBatch({ ...newBatch, connector: e.target.value })}
+                  placeholder="e.g. FlowState ERP SQL Connector"
+                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--border-subtle)", fontSize: "13px", boxSizing: "border-box" }}
+                  required
+                />
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div>
+                  <label style={{ display: "block", fontSize: "12px", fontWeight: 700, marginBottom: "4px", color: "var(--text-secondary)" }}>
+                    Transferred Rows
+                  </label>
+                  <input
+                    type="text"
+                    value={newBatch.transferred}
+                    onChange={(e) => setNewBatch({ ...newBatch, transferred: e.target.value })}
+                    placeholder="e.g. 500 / 500 rows"
+                    style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--border-subtle)", fontSize: "13px", boxSizing: "border-box" }}
+                    required
+                  />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: "12px", fontWeight: 700, marginBottom: "4px", color: "var(--text-secondary)" }}>
+                    Conformity %
+                  </label>
+                  <input
+                    type="text"
+                    value={newBatch.conformity}
+                    onChange={(e) => setNewBatch({ ...newBatch, conformity: e.target.value })}
+                    placeholder="e.g. 99.0%"
+                    style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--border-subtle)", fontSize: "13px", boxSizing: "border-box" }}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "12px", fontWeight: 700, marginBottom: "4px", color: "var(--text-secondary)" }}>
+                  Status
+                </label>
+                <select
+                  value={newBatch.status}
+                  onChange={(e) => setNewBatch({ ...newBatch, status: e.target.value })}
+                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--border-subtle)", fontSize: "13px", boxSizing: "border-box" }}
+                >
+                  <option value="Committed & Verified">Committed & Verified</option>
+                  <option value="Staged / Pending Review">Staged / Pending Review</option>
+                  <option value="In Progress">In Progress</option>
+                </select>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "10px" }}>
+                <Button variant="secondary" type="button" onClick={() => setIsAddModalOpen(false)} disabled={isActioning} style={{ fontSize: "12px", padding: "7px 14px" }}>
+                  Cancel
+                </Button>
+                <Button variant="primary" type="submit" disabled={isActioning} style={{ fontSize: "12px", padding: "7px 14px" }}>
+                  {isActioning ? "Saving..." : "Save in Database"}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+

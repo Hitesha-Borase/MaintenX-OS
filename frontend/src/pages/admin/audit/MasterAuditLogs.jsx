@@ -6,12 +6,14 @@ import { Search, Download, Filter, Eye, Trash2, X, AlertTriangle, ShieldCheck } 
 import { useApp } from "../../../context/AppContext";
 
 export function MasterAuditLogs() {
-  const { auditLogs, fetchAuditLogs, deleteAuditLog } = useMasterAdmin();
+  const { auditLogs, fetchAuditLogs, deleteAuditLog, clearAllAuditLogs } = useMasterAdmin();
   const [searchTerm, setSearchTerm] = useState("");
   const [eventFilter, setEventFilter] = useState("All");
   const [viewingLog, setViewingLog] = useState(null);
   const [deletingLog, setDeletingLog] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isClearModalOpen, setIsClearModalOpen] = useState(false);
+  const [isClearingAll, setIsClearingAll] = useState(false);
   const { addToast } = useApp();
 
   React.useEffect(() => {
@@ -70,6 +72,22 @@ export function MasterAuditLogs() {
     }
   };
 
+  const handleConfirmClearAll = async () => {
+    try {
+      setIsClearingAll(true);
+      if (clearAllAuditLogs) {
+        await clearAllAuditLogs();
+      }
+      addToast("All dummy audit logs removed from database!", "success");
+      setIsClearModalOpen(false);
+    } catch (err) {
+      console.error(err);
+      addToast(`Failed to clear logs: ${err.message}`, "error");
+    } finally {
+      setIsClearingAll(false);
+    }
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "100%" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
@@ -78,9 +96,27 @@ export function MasterAuditLogs() {
             Activity & Audit Logs
           </h1>
         </div>
-        <Button variant="outline" icon={Download} onClick={handleExport} style={{ fontSize: "13px", padding: "8px 14px", fontWeight: 600 }}>
-          Export Logs
-        </Button>
+        <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+          <Button 
+            variant="ghost" 
+            icon={Trash2} 
+            onClick={() => setIsClearModalOpen(true)} 
+            disabled={auditLogs.length === 0}
+            style={{ 
+              fontSize: "13px", 
+              padding: "8px 14px", 
+              fontWeight: 600, 
+              color: "#DC2626", 
+              border: "1px solid rgba(220, 38, 38, 0.3)",
+              backgroundColor: "rgba(220, 38, 38, 0.05)"
+            }}
+          >
+            Clear All Logs
+          </Button>
+          <Button variant="outline" icon={Download} onClick={handleExport} style={{ fontSize: "13px", padding: "8px 14px", fontWeight: 600 }}>
+            Export Logs
+          </Button>
+        </div>
       </div>
 
       <Card style={{ padding: "0", overflow: "hidden", borderRadius: "14px" }}>
@@ -397,6 +433,74 @@ export function MasterAuditLogs() {
                 style={{ backgroundColor: "#DC2626", borderColor: "#DC2626", color: "#FFFFFF", fontSize: "12px" }}
               >
                 {isDeleting ? "Deleting..." : "Delete Record"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CLEAR ALL AUDIT LOGS MODAL */}
+      {isClearModalOpen && (
+        <div 
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+            padding: "16px"
+          }}
+          onClick={() => setIsClearModalOpen(false)}
+        >
+          <div 
+            style={{
+              backgroundColor: "#FFFFFF",
+              borderRadius: "14px",
+              width: "100%",
+              maxWidth: "460px",
+              boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
+              border: "1px solid var(--border-subtle)",
+              overflow: "hidden"
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ padding: "18px 20px", borderBottom: "1px solid var(--border-subtle)", display: "flex", justifyContent: "space-between", alignItems: "center", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <AlertTriangle size={18} color="#DC2626" />
+                <h3 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                  Clear All Audit Logs
+                </h3>
+              </div>
+              <button onClick={() => setIsClearModalOpen(false)} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-muted)" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "12px" }}>
+              <p style={{ fontSize: "13px", color: "var(--text-secondary)", margin: 0, lineHeight: 1.5 }}>
+                Are you sure you want to permanently delete all <strong style={{ color: "var(--text-primary)" }}>{auditLogs.length} audit logs / demo data</strong> from the database?
+              </p>
+              <div style={{ padding: "10px 14px", backgroundColor: "rgba(220, 38, 38, 0.06)", border: "1px solid rgba(220, 38, 38, 0.2)", borderRadius: "8px", fontSize: "12px", color: "#DC2626" }}>
+                Warning: This action cannot be undone. All demo activity records will be deleted from the database.
+              </div>
+            </div>
+
+            <div style={{ padding: "14px 20px", borderTop: "1px solid var(--border-subtle)", display: "flex", justifyContent: "flex-end", gap: "10px", backgroundColor: "var(--bg-card-subtle)" }}>
+              <Button variant="secondary" onClick={() => setIsClearModalOpen(false)} style={{ fontSize: "12px" }}>
+                Cancel
+              </Button>
+              <Button 
+                variant="primary" 
+                onClick={handleConfirmClearAll} 
+                disabled={isClearingAll}
+                style={{ backgroundColor: "#DC2626", borderColor: "#DC2626", color: "#FFFFFF", fontSize: "12px" }}
+              >
+                {isClearingAll ? "Clearing..." : "Clear All Logs"}
               </Button>
             </div>
           </div>

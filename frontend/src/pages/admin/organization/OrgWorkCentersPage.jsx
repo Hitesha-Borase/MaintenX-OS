@@ -25,14 +25,24 @@ export function OrgWorkCentersPage() {
   const { workCenters = [], setWorkCenters, addWorkCenter, updateWorkCenter, deleteWorkCenter, lines = [], assets = [], plants = [] } = useMasterData();
   const { addToast } = useApp();
 
-  // Trigger live GET /api/v1/master-data/work-centers on mount
-  React.useEffect(() => {
-    masterDataService.getWorkCenters().then((res) => {
+  const fetchWorkCenters = async () => {
+    try {
+      const res = await masterDataService.getWorkCenters();
       const data = res?.data || res;
-      if (Array.isArray(data) && data.length > 0 && typeof setWorkCenters === "function") {
+      if (Array.isArray(data)) {
         setWorkCenters(data);
       }
-    }).catch((err) => console.warn("Live work centers fetch:", err.message));
+    } catch (err) {
+      console.warn("Live work centers fetch:", err.message);
+    }
+  };
+
+  // Trigger live GET /api/v1/master-data/work-centers on mount and clear demo cache
+  React.useEffect(() => {
+    try {
+      localStorage.removeItem("mx_master_workcenters");
+    } catch (_) {}
+    fetchWorkCenters();
   }, []);
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -44,7 +54,7 @@ export function OrgWorkCentersPage() {
   const [newWC, setNewWC] = useState({
     code: "",
     name: "",
-    lineId: lines[0]?.lineId || "LIN-01",
+    lineId: lines[0]?.lineId || lines[0]?.id || "",
     capacity: "35,000 BPH"
   });
 
@@ -62,40 +72,56 @@ export function OrgWorkCentersPage() {
     });
   }, [workCenters, lineFilter, searchQuery]);
 
-  const handleAddSubmit = (e) => {
+  const handleAddSubmit = async (e) => {
     e.preventDefault();
     if (!newWC.code.trim() || !newWC.name.trim()) {
       addToast("Please provide work center code and name.", "warning");
       return;
     }
 
-    const created = addWorkCenter(newWC);
-    addToast(`Work Center "${created.name}" created!`, "success");
-    setIsModalOpen(false);
-    setNewWC({ code: "", name: "", lineId: lines[0]?.lineId || "LIN-01", capacity: "35,000 BPH" });
+    try {
+      const created = await addWorkCenter(newWC);
+      addToast(`Work Center "${created?.name || newWC.name}" created in database!`, "success");
+      setIsModalOpen(false);
+      setNewWC({ code: "", name: "", lineId: lines[0]?.lineId || lines[0]?.id || "", capacity: "35,000 BPH" });
+      await fetchWorkCenters();
+    } catch (err) {
+      addToast(`Failed to create work center: ${err.message}`, "error");
+    }
   };
 
-  const handleEditSubmit = (e) => {
+  const handleEditSubmit = async (e) => {
     e.preventDefault();
     if (!editingWC.name.trim()) {
       addToast("Please provide work center name.", "warning");
       return;
     }
 
-    updateWorkCenter(editingWC.id || editingWC.workCenterId, editingWC);
-    addToast(`Work Center "${editingWC.name}" updated!`, "success");
-    setEditingWC(null);
+    try {
+      const idToUpdate = editingWC.id || editingWC.workCenterId || editingWC.code;
+      await updateWorkCenter(idToUpdate, editingWC);
+      addToast(`Work Center "${editingWC.name}" updated in database!`, "success");
+      setEditingWC(null);
+      await fetchWorkCenters();
+    } catch (err) {
+      addToast(`Failed to update work center: ${err.message}`, "error");
+    }
   };
 
-  const handleDelete = (id, name) => {
-    if (window.confirm(`Are you sure you want to delete Work Center "${name}"?`)) {
-      deleteWorkCenter(id);
-      addToast(`Work Center "${name}" deleted.`, "info");
-      if (viewingWC && (viewingWC.id === id || viewingWC.workCenterId === id || viewingWC.code === id)) {
-        setViewingWC(null);
-      }
-      if (editingWC && (editingWC.id === id || editingWC.workCenterId === id || editingWC.code === id)) {
-        setEditingWC(null);
+  const handleDelete = async (id, name) => {
+    if (window.confirm(`Are you sure you want to delete Work Center "${name}" from database?`)) {
+      try {
+        await deleteWorkCenter(id);
+        addToast(`Work Center "${name}" deleted from database.`, "info");
+        if (viewingWC && (viewingWC.id === id || viewingWC.workCenterId === id || viewingWC.code === id)) {
+          setViewingWC(null);
+        }
+        if (editingWC && (editingWC.id === id || editingWC.workCenterId === id || editingWC.code === id)) {
+          setEditingWC(null);
+        }
+        await fetchWorkCenters();
+      } catch (err) {
+        addToast(`Failed to delete work center: ${err.message}`, "error");
       }
     }
   };

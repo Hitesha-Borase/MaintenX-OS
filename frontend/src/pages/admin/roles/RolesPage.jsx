@@ -11,6 +11,7 @@ import {
   Settings,
   ArrowRight,
   Eye,
+  Pencil,
   Trash2,
   AlertTriangle
 } from "lucide-react";
@@ -24,18 +25,26 @@ import { useNavigate } from "react-router-dom";
 import { adminService } from "../../../services/adminService";
 
 export function RolesPage() {
-  const { roles = [], addRole, deleteRole } = useAdmin() || {};
+  const { roles = [], setRoles, addRole, updateRole, deleteRole } = useAdmin() || {};
   const { addToast } = (useApp ? useApp() : null) || { addToast: () => {} };
   const navigate = useNavigate();
 
   // Trigger live GET /api/v1/admin/roles on mount
   React.useEffect(() => {
-    adminService.getRoles().catch((err) => console.warn("Live roles fetch:", err.message));
+    adminService.getRoles()
+      .then((data) => {
+        if (Array.isArray(data) && setRoles) {
+          setRoles(data);
+        }
+      })
+      .catch((err) => console.warn("Live roles fetch:", err.message));
   }, []);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [viewingRole, setViewingRole] = useState(null);
   const [deletingRole, setDeletingRole] = useState(null);
+  const [editingRole, setEditingRole] = useState(null);
+  const [editFormData, setEditFormData] = useState({ name: "", description: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [newRole, setNewRole] = useState({
     name: "",
@@ -43,12 +52,41 @@ export function RolesPage() {
     isSystem: false
   });
 
+  const handleStartEdit = (r) => {
+    setEditingRole(r);
+    setEditFormData({
+      name: r.name || "",
+      description: r.description || "",
+    });
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    if (!editFormData.name.trim()) {
+      addToast("Please provide a role title.", "warning");
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      if (updateRole) {
+        await updateRole(editingRole.dbId || editingRole.id || editingRole.code, editFormData);
+      }
+      addToast(`Role "${editFormData.name}" updated successfully!`, "success");
+      setEditingRole(null);
+    } catch (err) {
+      addToast("Failed to update role: " + err.message, "error");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleConfirmDelete = async () => {
     if (!deletingRole) return;
     try {
       setIsSubmitting(true);
       if (deleteRole) {
-        await deleteRole(deletingRole.id || deletingRole.code);
+        await deleteRole(deletingRole.dbId || deletingRole.id || deletingRole.code);
       }
       addToast(`Role "${deletingRole.name}" deleted successfully.`, "success");
       setDeletingRole(null);
@@ -194,6 +232,24 @@ export function RolesPage() {
                   <Eye size={13} />
                 </button>
                 <button
+                  onClick={() => handleStartEdit(r)}
+                  title="Edit Role"
+                  style={{
+                    width: "28px",
+                    height: "28px",
+                    borderRadius: "6px",
+                    backgroundColor: "rgba(217, 119, 6, 0.1)",
+                    color: "#D97706",
+                    border: "1px solid var(--border-subtle)",
+                    cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center"
+                  }}
+                >
+                  <Pencil size={13} />
+                </button>
+                <button
                   onClick={() => navigate("/roles/permissions")}
                   title="Edit Granular Permissions"
                   style={{
@@ -236,6 +292,59 @@ export function RolesPage() {
           </Card>
         ))}
       </div>
+
+      {/* EDIT ROLE MODAL */}
+      {editingRole && (
+        <div className="modal-backdrop" onClick={() => setEditingRole(null)}>
+          <div className="modal-content" style={{ maxWidth: "480px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Pencil size={18} color="#D97706" />
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)" }}>
+                  Edit RBAC Role Profile
+                </h2>
+              </div>
+              <button onClick={() => setEditingRole(null)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditSubmit} style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div>
+                <label className="form-label">Role Title *</label>
+                <input
+                  type="text"
+                  required
+                  value={editFormData.name}
+                  onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                  className="form-input"
+                  style={{ backgroundColor: "#FFFFFF" }}
+                />
+              </div>
+
+              <div>
+                <label className="form-label">Role Scope / Description</label>
+                <textarea
+                  rows={3}
+                  value={editFormData.description}
+                  onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
+                  className="form-textarea"
+                  style={{ backgroundColor: "#FFFFFF" }}
+                />
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
+                <Button variant="secondary" onClick={() => setEditingRole(null)}>
+                  Cancel
+                </Button>
+                <Button variant="primary" type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? "Saving..." : "Update Role"}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* VIEW ROLE DETAILS MODAL */}
       {viewingRole && (

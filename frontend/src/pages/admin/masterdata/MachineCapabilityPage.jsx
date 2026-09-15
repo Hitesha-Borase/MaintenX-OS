@@ -71,32 +71,40 @@ export function MachineCapabilityPage() {
     });
   }, [assets, criticalityFilter, lineFilter, searchQuery]);
 
-  const handleAddSubmit = (e) => {
+  const handleAddSubmit = async (e) => {
     e.preventDefault();
     if (!newAsset.name.trim()) {
       addToast("Please provide asset name.", "warning");
       return;
     }
-    const created = addAsset(newAsset);
-    addToast(`Asset ${created.assetId} (${created.name}) commissioned!`, "success");
-    setIsAddModalOpen(false);
-    setNewAsset({
-      name: "",
-      type: "Packaging / Filling",
-      lineId: "LIN-01",
-      plantId: "PLT-01",
-      criticality: "Critical (Class A)",
-      manufacturer: "Krones AG",
-      serialNumber: ""
-    });
+    try {
+      const created = await addAsset(newAsset);
+      addToast(`Asset ${created?.assetId || "asset"} (${created?.name || newAsset.name}) commissioned!`, "success");
+      setIsAddModalOpen(false);
+      setNewAsset({
+        name: "",
+        type: "Packaging / Filling",
+        lineId: "LIN-01",
+        plantId: "PLT-01",
+        criticality: "Critical (Class A)",
+        manufacturer: "Krones AG",
+        serialNumber: ""
+      });
+    } catch (err) {
+      addToast(`Failed to register asset: ${err.message}`, "error");
+    }
   };
 
-  const handleEditSubmit = (e) => {
+  const handleEditSubmit = async (e) => {
     e.preventDefault();
     if (!editingAsset.name.trim()) return;
-    updateAsset(editingAsset.assetId, editingAsset);
-    addToast(`Asset ${editingAsset.assetId} updated successfully!`, "success");
-    setEditingAsset(null);
+    try {
+      await updateAsset(editingAsset.assetId || editingAsset.id, editingAsset);
+      addToast(`Asset ${editingAsset.name || editingAsset.assetId} updated successfully!`, "success");
+      setEditingAsset(null);
+    } catch (err) {
+      addToast(`Failed to update asset: ${err.message}`, "error");
+    }
   };
 
   return (
@@ -839,12 +847,17 @@ export function MachineCapabilityPage() {
               <Button variant="secondary" onClick={() => setDeletingAsset(null)}>Cancel</Button>
               <Button
                 variant="primary"
-                onClick={() => {
-                  if (typeof deleteAsset === "function") {
-                    deleteAsset(deletingAsset.assetId || deletingAsset.id);
+                onClick={async () => {
+                  try {
+                    if (typeof deleteAsset === "function") {
+                      await deleteAsset(deletingAsset.assetId || deletingAsset.id);
+                    }
+                    addToast(`Asset "${deletingAsset.name}" deleted.`, "info");
+                  } catch (err) {
+                    addToast(`Failed to delete asset: ${err.message}`, "error");
+                  } finally {
+                    setDeletingAsset(null);
                   }
-                  addToast(`Asset "${deletingAsset.name}" deleted.`, "info");
-                  setDeletingAsset(null);
                 }}
                 style={{ backgroundColor: "#DC2626", borderColor: "#DC2626", color: "#FFFFFF" }}
               >

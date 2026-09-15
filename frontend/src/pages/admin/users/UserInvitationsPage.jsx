@@ -72,8 +72,20 @@ export function UserInvitationsPage() {
     if (!editingInvite) return;
     try {
       setIsSubmitting(true);
+      const targetId = editingInvite.id || editingInvite.email;
       if (updateInvitation) {
-        await updateInvitation(editingInvite.id || editingInvite.email, editForm);
+        await updateInvitation(targetId, editForm);
+      } else {
+        await adminService.updateInvitation(targetId, editForm);
+      }
+      if (setInvitations) {
+        setInvitations((prev) =>
+          prev.map((i) =>
+            i.id === editingInvite.id || i.email?.toLowerCase() === editingInvite.email?.toLowerCase()
+              ? { ...i, ...editForm }
+              : i
+          )
+        );
       }
       addToast(`Invitation for ${editForm.email} successfully updated in database!`, "success");
       setEditingInvite(null);
@@ -88,6 +100,8 @@ export function UserInvitationsPage() {
     try {
       if (resendInvitation) {
         await resendInvitation(id || email);
+      } else {
+        await adminService.resendInvitation(id || email);
       }
       addToast(`Magic sign-up link re-dispatched to ${email}.`, "info");
     } catch (err) {
@@ -98,13 +112,29 @@ export function UserInvitationsPage() {
   const handleConfirmRevoke = async () => {
     if (!deletingInvite) return;
     try {
+      setIsSubmitting(true);
+      const targetId = deletingInvite.id || deletingInvite.email;
       if (deleteInvitation) {
-        await deleteInvitation(deletingInvite.id || deletingInvite.email);
+        await deleteInvitation(targetId);
+      } else {
+        await adminService.deleteInvitation(targetId);
       }
-      addToast(`Invitation for ${deletingInvite.email} revoked.`, "warning");
+      if (setInvitations) {
+        setInvitations((prev) =>
+          prev.filter(
+            (i) =>
+              i.id !== deletingInvite.id &&
+              i.id?.replace(/\s+/g, "") !== deletingInvite.id?.replace(/\s+/g, "") &&
+              i.email?.toLowerCase() !== deletingInvite.email?.toLowerCase()
+          )
+        );
+      }
+      addToast(`Invitation for ${deletingInvite.email} successfully deleted from database!`, "success");
       setDeletingInvite(null);
     } catch (err) {
       addToast("Failed to revoke invite: " + err.message, "error");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -117,10 +147,23 @@ export function UserInvitationsPage() {
 
     try {
       setIsSubmitting(true);
+      let created;
       if (addInvitation) {
-        await addInvitation(newInvite);
+        created = await addInvitation(newInvite);
+      } else {
+        created = await adminService.createInvitation(newInvite);
       }
-      addToast(`Invitation sent to ${newInvite.email}!`, "success");
+      if (created && setInvitations) {
+        setInvitations((prev) => [
+          created,
+          ...prev.filter(
+            (i) =>
+              i.id !== created.id &&
+              i.email?.toLowerCase() !== created.email?.toLowerCase()
+          ),
+        ]);
+      }
+      addToast(`Invitation sent to ${newInvite.email} and saved in database!`, "success");
       setIsModalOpen(false);
       setNewInvite({ email: "", role: "Quality Analyst", department: "Quality" });
     } catch (err) {

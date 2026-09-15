@@ -52,308 +52,15 @@ export const INITIAL_DEPARTMENTS = [
   { id: "DEP-05", plantId: "PLT-01", code: "CI-ENG", name: "Continuous Improvement & Engineering", managerId: "EMP-001", managerName: "Alexander Vance", costCenter: "CC-105", status: "Active" }
 ];
 
-export const INITIAL_WORK_CENTERS = [
-  { id: "WC-101", workCenterId: "WC-101", code: "FILL-01", name: "Rotary Isobaric Filler", lineId: "LIN-01", lineName: "Line 1 — Aseptic Bottling", plantId: "PLT-01", capacity: "38,000 BPH", category: "PACKAGING", status: "Active" },
-  { id: "WC-102", workCenterId: "WC-102", code: "CAPP-01", name: "Induction Cap Sealer", lineId: "LIN-01", lineName: "Line 1 — Aseptic Bottling", plantId: "PLT-01", capacity: "38,000 BPH", category: "PACKAGING", status: "Active" },
-  { id: "WC-103", workCenterId: "WC-103", code: "LABL-01", name: "Sleeve Rotary Labeler", lineId: "LIN-01", lineName: "Line 1 — Aseptic Bottling", plantId: "PLT-01", capacity: "40,000 BPH", category: "PACKAGING", status: "Active" },
-  { id: "WC-201", workCenterId: "WC-201", code: "PAST-02", name: "HTST Flash Pasteurizer", lineId: "LIN-02", lineName: "Line 2 — Formulation & Pasteurizer", plantId: "PLT-01", capacity: "30,000 L/hr", category: "PROCESSING", status: "Active" },
-  { id: "WC-301", workCenterId: "WC-301", code: "SEAM-03", name: "Can Seamer Station", lineId: "LIN-03", lineName: "Line 3 — Canning Line", plantId: "PLT-02", capacity: "45,000 CPH", category: "PACKAGING", status: "Active" }
-];
+export const INITIAL_WORK_CENTERS = [];
 
-export const INITIAL_PRODUCT_FAMILIES = [
-  {
-    familyId: "FAM-01",
-    code: "SPK-BEV",
-    name: "Sparkling Flavored Beverages",
-    category: "Finished Goods",
-    description: "Carbonated fruit and citrus flavored canned and bottled sodas.",
-    plantId: "PLT-01",
-    allergenRisk: "None",
-    standardMargin: "58.4%",
-    status: "Active",
-    effectiveFrom: "2025-01-01",
-    effectiveTo: "2030-12-31"
-  },
-  {
-    familyId: "FAM-02",
-    code: "TON-MIX",
-    name: "Tonics & Mixers Premium",
-    category: "Finished Goods",
-    description: "Botanical tonic waters with natural quinine and premium club sodas.",
-    plantId: "PLT-01",
-    allergenRisk: "None",
-    standardMargin: "62.1%",
-    status: "Active",
-    effectiveFrom: "2025-01-01",
-    effectiveTo: "2030-12-31"
-  },
-  {
-    familyId: "FAM-03",
-    code: "GNG-BREW",
-    name: "Organic Ginger Brews",
-    category: "Finished Goods",
-    description: "Naturally fermented cloudy organic ginger beer with cane sugar.",
-    plantId: "PLT-02",
-    allergenRisk: "Ginger Extract",
-    standardMargin: "54.0%",
-    status: "Active",
-    effectiveFrom: "2025-01-01",
-    effectiveTo: "2030-12-31"
-  },
-  {
-    familyId: "FAM-04",
-    code: "RAW-SWT",
-    name: "Liquid Sweeteners & Syrups",
-    category: "Raw Ingredients",
-    description: "Non-GMO certified bulk liquid sucrose and concentrated flavor bases.",
-    plantId: "PLT-01",
-    allergenRisk: "None",
-    standardMargin: "N/A",
-    status: "Active",
-    effectiveFrom: "2025-01-01",
-    effectiveTo: "2030-12-31"
-  },
-  {
-    familyId: "FAM-05",
-    code: "PKG-CLOS",
-    name: "Caps, Closures & Primary Packaging",
-    category: "Packaging",
-    description: "Tamper-evident closures, sleek aluminum cans, and corrugated cartons.",
-    plantId: "PLT-01",
-    allergenRisk: "None",
-    standardMargin: "N/A",
-    status: "Active",
-    effectiveFrom: "2025-01-01",
-    effectiveTo: "2030-12-31"
-  }
-];
+export const INITIAL_PRODUCT_FAMILIES = [];
 
-export const INITIAL_UOMS = [
-  { uomId: "UOM-01", uomCode: "BOTTLES", name: "Bottles (Individual Units)", type: "Discrete Unit", baseUom: "BOTTLES", conversionFactor: 1.0, status: "Active", effectiveFrom: "2024-01-01", effectiveTo: "2030-12-31" },
-  { uomId: "UOM-02", uomCode: "CANS", name: "Aluminum Cans (Individual Units)", type: "Discrete Unit", baseUom: "CANS", conversionFactor: 1.0, status: "Active", effectiveFrom: "2024-01-01", effectiveTo: "2030-12-31" },
-  { uomId: "UOM-03", uomCode: "LITERS", name: "Liters (Metric Liquid Volume)", type: "Liquid Measure", baseUom: "LITERS", conversionFactor: 1.0, status: "Active", effectiveFrom: "2024-01-01", effectiveTo: "2030-12-31" },
-  { uomId: "UOM-04", uomCode: "KG", name: "Kilograms (Mass / Weight)", type: "Mass Measure", baseUom: "KG", conversionFactor: 1.0, status: "Active", effectiveFrom: "2024-01-01", effectiveTo: "2030-12-31" },
-  { uomId: "UOM-05", uomCode: "UNITS", name: "Units (Generic Discrete Item)", type: "Discrete Unit", baseUom: "UNITS", conversionFactor: 1.0, status: "Active", effectiveFrom: "2024-01-01", effectiveTo: "2030-12-31" },
-  { uomId: "UOM-06", uomCode: "CASE-24", name: "Case of 24 Units", type: "Packaging", baseUom: "UNITS", conversionFactor: 24.0, status: "Active", effectiveFrom: "2024-01-01", effectiveTo: "2030-12-31" },
-  { uomId: "UOM-07", uomCode: "CASE-12", name: "Case of 12 Units", type: "Packaging", baseUom: "UNITS", conversionFactor: 12.0, status: "Active", effectiveFrom: "2024-01-01", effectiveTo: "2030-12-31" },
-  { uomId: "UOM-08", uomCode: "PALLET-60", name: "Standard 48x40 Wood Pallet (60 Cases)", type: "Logistics", baseUom: "CASE-24", conversionFactor: 60.0, status: "Active", effectiveFrom: "2024-01-01", effectiveTo: "2030-12-31" }
-];
+export const INITIAL_UOMS = [];
 
-export const INITIAL_SKUS = [
-  {
-    skuId: "SKU-001",
-    skuCode: "SKU-5001",
-    name: "500ml Sparkling Citrus Soda",
-    category: "Finished Goods",
-    itemType: "Finished Good",
-    familyId: "FAM-01",
-    family: "Sparkling Flavors",
-    uom: "Bottles",
-    plantId: "PLT-01",
-    stdCost: "$0.42",
-    revision: "R3",
-    status: "Active",
-    approvalStatus: "Approved",
-    shelfLifeDays: 365,
-    packConfigCode: "PCK-5001-24",
-    packSize: "24 x 500ml",
-    eligibleLineIds: ["LIN-01", "LIN-02"],
-    stdRunRateBPH: 42000,
-    expectedYieldPct: 99.4,
-    effectiveFrom: "2025-01-01",
-    effectiveTo: "2030-12-31",
-    description: "Premium carbonated citrus beverage with natural lime & lemon essences.",
-    createdBy: "Alexander Vance",
-    createdDate: "2026-06-15",
-    lastUpdated: "2026-08-30"
-  },
-  {
-    skuId: "SKU-002",
-    skuCode: "SKU-5002",
-    name: "1L Tonic Water Natural Quinine",
-    category: "Finished Goods",
-    itemType: "Finished Good",
-    familyId: "FAM-02",
-    family: "Tonics & Mixers",
-    uom: "Bottles",
-    plantId: "PLT-01",
-    stdCost: "$0.68",
-    revision: "R2",
-    status: "Active",
-    approvalStatus: "Approved",
-    shelfLifeDays: 540,
-    packConfigCode: "PCK-5002-12",
-    packSize: "12 x 1L",
-    eligibleLineIds: ["LIN-01", "LIN-02"],
-    stdRunRateBPH: 28000,
-    expectedYieldPct: 99.2,
-    effectiveFrom: "2025-01-01",
-    effectiveTo: "2030-12-31",
-    description: "Artisanal botanical tonic water with natural cinchona bark quinine.",
-    createdBy: "Sarah Jenkins",
-    createdDate: "2026-07-02",
-    lastUpdated: "2026-08-28"
-  },
-  {
-    skuId: "SKU-003",
-    skuCode: "SKU-5003",
-    name: "330ml Organic Ginger Beer",
-    category: "Finished Goods",
-    itemType: "Finished Good",
-    familyId: "FAM-03",
-    family: "Ginger Beers",
-    uom: "Cans",
-    plantId: "PLT-02",
-    stdCost: "$0.38",
-    revision: "R4",
-    status: "Active",
-    approvalStatus: "Approved",
-    shelfLifeDays: 270,
-    packConfigCode: "PCK-5003-24",
-    packSize: "24 x 330ml",
-    eligibleLineIds: ["LIN-03"],
-    stdRunRateBPH: 55000,
-    expectedYieldPct: 99.0,
-    effectiveFrom: "2025-01-01",
-    effectiveTo: "2030-12-31",
-    description: "Naturally fermented cloudy organic ginger beer with cane sugar.",
-    createdBy: "Alexander Vance",
-    createdDate: "2026-05-18",
-    lastUpdated: "2026-08-29"
-  },
-  {
-    skuId: "SKU-101",
-    skuCode: "ING-1001",
-    name: "Liquid Cane Sugar 67°Bx",
-    category: "Raw Ingredients",
-    itemType: "Raw Material",
-    familyId: "FAM-04",
-    family: "Sweeteners",
-    uom: "Liters",
-    plantId: "PLT-01",
-    stdCost: "$1.20",
-    revision: "R1",
-    status: "Active",
-    approvalStatus: "Approved",
-    shelfLifeDays: 180,
-    packConfigCode: "BULK-TNK",
-    packSize: "Bulk Tanker (10,000L)",
-    eligibleLineIds: ["LIN-01", "LIN-02"],
-    stdRunRateBPH: 0,
-    expectedYieldPct: 99.8,
-    effectiveFrom: "2025-01-01",
-    effectiveTo: "2030-12-31",
-    description: "Refined liquid sucrose solution certified non-GMO food grade.",
-    createdBy: "Marcus Vance",
-    createdDate: "2026-04-10",
-    lastUpdated: "2026-08-15"
-  },
-  {
-    skuId: "SKU-102",
-    skuCode: "ING-1002",
-    name: "Natural Citrus Essential Oil Compound",
-    category: "Raw Ingredients",
-    itemType: "Raw Material",
-    familyId: "FAM-04",
-    family: "Flavorings",
-    uom: "Kg",
-    plantId: "PLT-01",
-    stdCost: "$18.50",
-    revision: "R2",
-    status: "Active",
-    approvalStatus: "Approved",
-    shelfLifeDays: 365,
-    packConfigCode: "DRUM-25KG",
-    packSize: "25kg Stainless Drum",
-    eligibleLineIds: ["LIN-01"],
-    stdRunRateBPH: 0,
-    expectedYieldPct: 99.9,
-    effectiveFrom: "2025-01-01",
-    effectiveTo: "2030-12-31",
-    description: "Cold-pressed lemon and lime terpene flavor concentrate.",
-    createdBy: "Sarah Jenkins",
-    createdDate: "2026-04-12",
-    lastUpdated: "2026-08-20"
-  },
-  {
-    skuId: "SKU-201",
-    skuCode: "PKG-2001",
-    name: "28mm Tamper-Evident HDPE Bottle Cap",
-    category: "Packaging",
-    itemType: "Packaging Component",
-    familyId: "FAM-05",
-    family: "Caps & Closures",
-    uom: "Units",
-    plantId: "PLT-01",
-    stdCost: "$0.025",
-    revision: "R1",
-    status: "Active",
-    approvalStatus: "Approved",
-    shelfLifeDays: 730,
-    packConfigCode: "BOX-5000",
-    packSize: "5,000 Units / Corrugated Box",
-    eligibleLineIds: ["LIN-01", "LIN-02"],
-    stdRunRateBPH: 0,
-    expectedYieldPct: 99.0,
-    effectiveFrom: "2025-01-01",
-    effectiveTo: "2030-12-31",
-    description: "High-density polyethylene closure with gas-retention seal liner.",
-    createdBy: "Robert Thorne",
-    createdDate: "2026-05-01",
-    lastUpdated: "2026-08-10"
-  }
-];
+export const INITIAL_SKUS = [];
 
-export const INITIAL_PACK_CONFIGS = [
-  {
-    packConfigId: "PCK-01",
-    packCode: "PCK-5001-24",
-    skuId: "SKU-001",
-    skuCode: "SKU-5001",
-    skuName: "500ml Sparkling Citrus Soda",
-    unitsPerPack: 24,
-    packType: "Corrugated Tray & Shrink Wrap",
-    packagingUom: "CASE-24",
-    caseConfiguration: "4x6 Bottles (24 Count)",
-    palletConfiguration: "60 Cases / 1,440 Bottles per Pallet",
-    tareWeightKg: 12.8,
-    status: "Active",
-    effectiveFrom: "2025-01-01",
-    effectiveTo: "2030-12-31"
-  },
-  {
-    packConfigId: "PCK-02",
-    packCode: "PCK-5002-12",
-    skuId: "SKU-002",
-    skuCode: "SKU-5002",
-    skuName: "1L Tonic Water Natural Quinine",
-    unitsPerPack: 12,
-    packType: "Partitioned Cardboard Case",
-    packagingUom: "CASE-12",
-    caseConfiguration: "3x4 Bottles (12 Count)",
-    palletConfiguration: "75 Cases / 900 Bottles per Pallet",
-    tareWeightKg: 13.2,
-    status: "Active",
-    effectiveFrom: "2025-01-01",
-    effectiveTo: "2030-12-31"
-  },
-  {
-    packConfigId: "PCK-03",
-    packCode: "PCK-5003-24",
-    skuId: "SKU-003",
-    skuCode: "SKU-5003",
-    skuName: "330ml Organic Ginger Beer",
-    unitsPerPack: 24,
-    packType: "Carton Board Multipack 4x6",
-    packagingUom: "CASE-24",
-    caseConfiguration: "4x6 Cans (24 Count)",
-    palletConfiguration: "90 Cases / 2,160 Cans per Pallet",
-    tareWeightKg: 8.9,
-    status: "Active",
-    effectiveFrom: "2025-01-01",
-    effectiveTo: "2030-12-31"
-  }
-];
+export const INITIAL_PACK_CONFIGS = [];
 
 export const INITIAL_SHELF_LIFE = [
   {
@@ -461,95 +168,7 @@ export const INITIAL_CUSTOMER_SKU_MAPPINGS = [
   }
 ];
 
-export const INITIAL_BOMS = [
-  {
-    bomId: "BOM-001",
-    bomNumber: "BOM-5001",
-    finishedSkuId: "SKU-001",
-    finishedSkuCode: "SKU-5001",
-    finishedSkuName: "500ml Sparkling Citrus Soda",
-    revision: "R3",
-    effectiveDate: "2026-08-01",
-    effectiveFrom: "2026-08-01",
-    effectiveTo: "2030-12-31",
-    status: "Active",
-    approvalStatus: "Approved",
-    batchSize: "10,000 Liters",
-    yieldTarget: "99.4%",
-    expectedYieldPct: 99.4,
-    minYieldPct: 98.5,
-    maxYieldPct: 99.9,
-    scrapFactorPct: 0.6,
-    createdBy: "Alexander Vance",
-    lastUpdated: "2026-08-30",
-    components: [
-      { id: "CMP-01", skuId: "SKU-101", skuCode: "ING-1001", name: "Liquid Cane Sugar 67°Bx", quantity: 850, uom: "Liters", scrapFactor: "0.5%", type: "Ingredient" },
-      { id: "CMP-02", skuId: "SKU-102", skuCode: "ING-1002", name: "Natural Citrus Essential Oil Compound", quantity: 18.5, uom: "Kg", scrapFactor: "0.2%", type: "Ingredient" },
-      { id: "CMP-03", skuId: "SKU-201", skuCode: "PKG-2001", name: "28mm Tamper-Evident HDPE Bottle Cap", quantity: 20000, uom: "Units", scrapFactor: "1.0%", type: "Packaging" }
-    ],
-    revisionHistory: [
-      { revision: "R3", status: "Approved", createdBy: "Alexander Vance", date: "2026-08-30", changes: "Optimized citrus flavor dosage for higher shelf stability (+0.5 kg).", approvedBy: "Sarah Jenkins" },
-      { revision: "R2", status: "Superseded", createdBy: "Sarah Jenkins", date: "2026-07-15", changes: "Switched sugar standard to 67°Bx non-GMO supplier.", approvedBy: "Robert Thorne" },
-      { revision: "R1", status: "Superseded", createdBy: "Marcus Vance", date: "2026-06-01", changes: "Initial production formulation baseline.", approvedBy: "Robert Thorne" }
-    ]
-  },
-  {
-    bomId: "BOM-002",
-    bomNumber: "BOM-5002",
-    finishedSkuId: "SKU-002",
-    finishedSkuCode: "SKU-5002",
-    finishedSkuName: "1L Tonic Water Natural Quinine",
-    revision: "R2",
-    effectiveDate: "2026-07-15",
-    effectiveFrom: "2026-07-15",
-    effectiveTo: "2030-12-31",
-    status: "Active",
-    approvalStatus: "Approved",
-    batchSize: "8,000 Liters",
-    yieldTarget: "99.2%",
-    expectedYieldPct: 99.2,
-    minYieldPct: 98.0,
-    maxYieldPct: 99.8,
-    scrapFactorPct: 0.8,
-    createdBy: "Sarah Jenkins",
-    lastUpdated: "2026-08-28",
-    components: [
-      { id: "CMP-11", skuId: "SKU-101", skuCode: "ING-1001", name: "Liquid Cane Sugar 67°Bx", quantity: 560, uom: "Liters", scrapFactor: "0.5%", type: "Ingredient" },
-      { id: "CMP-12", skuId: "SKU-201", skuCode: "PKG-2001", name: "28mm Tamper-Evident HDPE Bottle Cap", quantity: 8000, uom: "Units", scrapFactor: "1.2%", type: "Packaging" }
-    ],
-    revisionHistory: [
-      { revision: "R2", status: "Approved", createdBy: "Sarah Jenkins", date: "2026-08-28", changes: "Carbonation pressure standard aligned to 4.2 bar.", approvedBy: "Robert Thorne" },
-      { revision: "R1", status: "Superseded", createdBy: "Alexander Vance", date: "2026-06-10", changes: "Initial trial specification.", approvedBy: "Sarah Jenkins" }
-    ]
-  },
-  {
-    bomId: "BOM-003",
-    bomNumber: "BOM-5003",
-    finishedSkuId: "SKU-003",
-    finishedSkuCode: "SKU-5003",
-    finishedSkuName: "330ml Organic Ginger Beer",
-    revision: "R4",
-    effectiveDate: "2026-08-20",
-    effectiveFrom: "2026-08-20",
-    effectiveTo: "2030-12-31",
-    status: "Active",
-    approvalStatus: "Approved",
-    batchSize: "12,000 Liters",
-    yieldTarget: "99.0%",
-    expectedYieldPct: 99.0,
-    minYieldPct: 97.5,
-    maxYieldPct: 99.6,
-    scrapFactorPct: 1.0,
-    createdBy: "Alexander Vance",
-    lastUpdated: "2026-08-29",
-    components: [
-      { id: "CMP-21", skuId: "SKU-101", skuCode: "ING-1001", name: "Liquid Cane Sugar 67°Bx", quantity: 1100, uom: "Liters", scrapFactor: "0.4%", type: "Ingredient" }
-    ],
-    revisionHistory: [
-      { revision: "R4", status: "Approved", createdBy: "Alexander Vance", date: "2026-08-29", changes: "Ginger root infusion duration extended to 4.5 hours.", approvedBy: "Sarah Jenkins" }
-    ]
-  }
-];
+export const INITIAL_BOMS = [];
 
 export const INITIAL_OPERATIONS = [
   { operationId: "OP-01", operationCode: "OP-SYR-MIX", name: "Syrup Batch Blending & Brix Adjustment", sequence: 10, department: "Processing", stdDurationMin: 45, setupDurationMin: 20, status: "Active" },
@@ -559,473 +178,24 @@ export const INITIAL_OPERATIONS = [
   { operationId: "OP-05", operationCode: "OP-LBL-PCK", name: "Hot-Melt Labeling, Case Packing & Palletizing", sequence: 50, department: "Packaging", stdDurationMin: 60, setupDurationMin: 15, status: "Active" }
 ];
 
-export const INITIAL_ROUTINGS = [
-  {
-    routingId: "RTG-001",
-    routingCode: "RTG-5001-L1",
-    skuId: "SKU-001",
-    skuCode: "SKU-5001",
-    skuName: "500ml Sparkling Citrus Soda",
-    lineId: "LIN-01",
-    lineCode: "LINE-1",
-    lineName: "High-Speed Bottling Line 1",
-    revision: "R2",
-    approvalStatus: "Approved",
-    status: "Active",
-    stdRunRateBPH: 42000,
-    setupDurationMin: 35,
-    expectedYieldPct: 99.4,
-    effectiveFrom: "2025-01-01",
-    effectiveTo: "2030-12-31",
-    steps: [
-      { sequence: 10, operationId: "OP-01", operationName: "Syrup Batch Blending & Brix Adjustment", workCenter: "Blend Tank 1", stdRate: "10,000 L/hr" },
-      { sequence: 20, operationId: "OP-02", operationName: "Chilling & Inline Carbonation Injection", workCenter: "CarboQC Skid", stdRate: "12,000 L/hr" },
-      { sequence: 30, operationId: "OP-03", operationName: "PET Bottle Blow Molding SBO", workCenter: "Sidel Matrix Blow Molder", stdRate: "42,000 BPH" },
-      { sequence: 40, operationId: "OP-04", operationName: "Isobaric Rotary Bottle Filling & Capping", workCenter: "Krones Isobaric Filler", stdRate: "42,000 BPH" },
-      { sequence: 50, operationId: "OP-05", operationName: "Hot-Melt Labeling, Case Packing & Palletizing", workCenter: "Krones Multimodul Labeler", stdRate: "42,000 BPH" }
-    ]
-  },
-  {
-    routingId: "RTG-002",
-    routingCode: "RTG-5002-L2",
-    skuId: "SKU-002",
-    skuCode: "SKU-5002",
-    skuName: "1L Tonic Water Natural Quinine",
-    lineId: "LIN-02",
-    lineCode: "LINE-2",
-    lineName: "Medium-Speed Glass Bottling Line 2",
-    revision: "R1",
-    approvalStatus: "Approved",
-    status: "Active",
-    stdRunRateBPH: 28000,
-    setupDurationMin: 45,
-    expectedYieldPct: 99.2,
-    effectiveFrom: "2025-01-01",
-    effectiveTo: "2030-12-31",
-    steps: [
-      { sequence: 10, operationId: "OP-01", operationName: "Syrup Batch Blending & Brix Adjustment", workCenter: "Blend Tank 2", stdRate: "8,000 L/hr" },
-      { sequence: 20, operationId: "OP-04", operationName: "Isobaric Rotary Bottle Filling & Capping", workCenter: "KHS Innofill Glass Filler", stdRate: "28,000 BPH" }
-    ]
-  }
-];
+export const INITIAL_ROUTINGS = [];
 
-export const INITIAL_LINES = [
-  {
-    lineId: "LIN-01",
-    lineCode: "LINE-1",
-    name: "High-Speed Bottling Line 1",
-    plantId: "PLT-01",
-    plantName: "Indore Plant - Processing & Bottling",
-    departmentId: "DEP-01",
-    capacity: "42,000 BPH (Bottles/Hour)",
-    ratedSpeedBPH: 42000,
-    status: "Active",
-    supervisorId: "EMP-005",
-    supervisorName: "David Kim",
-    assignedAssetIds: ["AST-001", "AST-002", "AST-003", "AST-004"],
-    eligibleSkuIds: ["SKU-001", "SKU-002"],
-    ratedOEE: "88.5%",
-    currentRunningSku: "SKU-5001"
-  },
-  {
-    lineId: "LIN-02",
-    lineCode: "LINE-2",
-    name: "Medium-Speed Glass Bottling Line 2",
-    plantId: "PLT-01",
-    plantName: "Indore Plant - Processing & Bottling",
-    departmentId: "DEP-01",
-    capacity: "28,000 BPH",
-    ratedSpeedBPH: 28000,
-    status: "Active",
-    supervisorId: "EMP-005",
-    supervisorName: "David Kim",
-    assignedAssetIds: ["AST-005"],
-    eligibleSkuIds: ["SKU-001", "SKU-002"],
-    ratedOEE: "84.2%",
-    currentRunningSku: "SKU-5002"
-  },
-  {
-    lineId: "LIN-03",
-    lineCode: "LINE-3",
-    name: "Automated Sleek Canning Line 3",
-    plantId: "PLT-02",
-    plantName: "Austin Facility - Canning & Logistics",
-    departmentId: "DEP-01",
-    capacity: "55,000 CPH (Cans/Hour)",
-    ratedSpeedBPH: 55000,
-    status: "Active",
-    supervisorId: "EMP-001",
-    supervisorName: "Alexander Vance",
-    assignedAssetIds: ["AST-006"],
-    eligibleSkuIds: ["SKU-003"],
-    ratedOEE: "91.0%",
-    currentRunningSku: "SKU-5003"
-  }
-];
+export const INITIAL_LINES = [];
 
-export const INITIAL_LINE_TARGETS = [
-  {
-    targetId: "TGT-01",
-    plantId: "PLT-01",
-    lineId: "LIN-01",
-    lineName: "High-Speed Bottling Line 1",
-    skuId: "SKU-001",
-    skuCode: "SKU-5001",
-    skuName: "500ml Sparkling Citrus Soda",
-    shift: "Morning Shift (06:00 - 14:00)",
-    targetQuantity: 300000,
-    targetHB: "37,500 Bottles/Hour",
-    stdRunRate: 42000,
-    oeeTargetPct: 89.2,
-    status: "Active",
-    effectiveDate: "2026-09-01"
-  },
-  {
-    targetId: "TGT-02",
-    plantId: "PLT-01",
-    lineId: "LIN-01",
-    lineName: "High-Speed Bottling Line 1",
-    skuId: "SKU-001",
-    skuCode: "SKU-5001",
-    skuName: "500ml Sparkling Citrus Soda",
-    shift: "Evening Shift (14:00 - 22:00)",
-    targetQuantity: 290000,
-    targetHB: "36,250 Bottles/Hour",
-    stdRunRate: 42000,
-    oeeTargetPct: 86.3,
-    status: "Active",
-    effectiveDate: "2026-09-01"
-  },
-  {
-    targetId: "TGT-03",
-    plantId: "PLT-01",
-    lineId: "LIN-02",
-    lineName: "Medium-Speed Glass Bottling Line 2",
-    skuId: "SKU-002",
-    skuCode: "SKU-5002",
-    skuName: "1L Tonic Water Natural Quinine",
-    shift: "General Day Shift",
-    targetQuantity: 200000,
-    targetHB: "25,000 Bottles/Hour",
-    stdRunRate: 28000,
-    oeeTargetPct: 89.0,
-    status: "Active",
-    effectiveDate: "2026-09-01"
-  }
-];
+export const INITIAL_LINE_TARGETS = [];
 
-export const INITIAL_CHANGEOVER_MATRIX = [
-  {
-    matrixId: "CO-01",
-    fromSkuId: "SKU-001",
-    fromSkuCode: "SKU-5001",
-    fromFamily: "Sparkling Flavors",
-    toSkuId: "SKU-001",
-    toSkuCode: "SKU-5001",
-    toFamily: "Sparkling Flavors",
-    changeoverDurationMin: 0,
-    sanitationClass: "None (Same SKU Continuous)",
-    allergenCleaningRequired: false,
-    notes: "No changeover downtime required for identical formulation batch continuation.",
-    status: "Active"
-  },
-  {
-    matrixId: "CO-02",
-    fromSkuId: "SKU-001",
-    fromSkuCode: "SKU-5001",
-    fromFamily: "Sparkling Flavors",
-    toSkuId: "SKU-002",
-    toSkuCode: "SKU-5002",
-    toFamily: "Tonics & Mixers",
-    changeoverDurationMin: 45,
-    sanitationClass: "Class B - Warm Water Flush & Syrup Line Rinse",
-    allergenCleaningRequired: false,
-    notes: "Requires syrup manifold rinse and bottle capper starwheel size change from 500ml to 1L.",
-    status: "Active"
-  },
-  {
-    matrixId: "CO-03",
-    fromSkuId: "SKU-002",
-    fromSkuCode: "SKU-5002",
-    fromFamily: "Tonics & Mixers",
-    toSkuId: "SKU-001",
-    toSkuCode: "SKU-5001",
-    toFamily: "Sparkling Flavors",
-    changeoverDurationMin: 60,
-    sanitationClass: "Class A - Full Caustic CIP (Hot CIP 85°C)",
-    allergenCleaningRequired: true,
-    notes: "Quinine botanical essence requires deep caustic CIP wash to eliminate flavor carryover.",
-    status: "Active"
-  }
-];
+export const INITIAL_CHANGEOVER_MATRIX = [];
 
-export const INITIAL_SANITATION_CLASSES = [
-  {
-    sanitationId: "SAN-01",
-    sanitationClass: "Class A - Full Caustic CIP (Hot CIP 85°C)",
-    description: "5-Step full automated clean-in-place: Pre-rinse, Hot Caustic (85°C), Intermediate Rinse, Peracetic Acid Sanitization, Final Sterile Water Rinse.",
-    durationMin: 75,
-    cleaningMethod: "Automated 5-Step Central CIP Skid",
-    riskLevel: "Critical / Allergen Elimination",
-    applicableProducts: "Tonics, Ginger Extract Formulations, Allergen Swaps",
-    status: "Active"
-  },
-  {
-    sanitationId: "SAN-02",
-    sanitationClass: "Class B - Warm Water Flush & Sanitizer Rinse",
-    description: "Warm water flush (55°C) followed by ozone/peracetic acid chemical sanitizer rinse.",
-    durationMin: 35,
-    cleaningMethod: "Inline CIP Circuit Flush",
-    riskLevel: "Medium (Flavor Swap)",
-    applicableProducts: "Citrus to Cola, Clear Soda to Flavored Soda",
-    status: "Active"
-  },
-  {
-    sanitationId: "SAN-03",
-    sanitationClass: "Class C - Dry Line Sanitation & Vacuum",
-    description: "Mechanical dry vacuum, optical sensor lens clean, starwheel sanitization wipe down.",
-    durationMin: 15,
-    cleaningMethod: "Manual Operator Protocol",
-    riskLevel: "Low (Same Product Batch Restart)",
-    applicableProducts: "All Finished Goods",
-    status: "Active"
-  }
-];
+export const INITIAL_SANITATION_CLASSES = [];
 
-export const INITIAL_ALLERGEN_RULES = [
-  {
-    allergenId: "ALG-01",
-    allergenName: "Ginger Extract Botanical Essences",
-    skuId: "SKU-003",
-    skuCode: "SKU-5003",
-    riskLevel: "Medium Allergen / Sensory Carryover",
-    cleaningProtocol: "Class A Full CIP + Sensory Swab Verification",
-    changeoverRestriction: "Must schedule at end of production week prior to weekly deep sanitation.",
-    status: "Active"
-  },
-  {
-    allergenId: "ALG-02",
-    allergenName: "Sulfites (Preservatives in Flavorings)",
-    skuId: "SKU-102",
-    skuCode: "ING-1002",
-    riskLevel: "High Regulatory CCP",
-    cleaningProtocol: "Class A CIP + ATP Swab Validation < 10 RLU",
-    changeoverRestriction: "Mandatory QA clearance sign-off before commencing allergen-free SKU filling.",
-    status: "Active"
-  }
-];
+export const INITIAL_ALLERGEN_RULES = [];
 
-export const INITIAL_LABOUR_STANDARDS = [
-  { id: "LBR-01", lineId: "LIN-01", lineName: "Line 1 — Aseptic Bottling", standardCrew: 10, stdLaborHoursPer1kUnits: 2.38, directCostPerHour: "$24.50", status: "Active" },
-  { id: "LBR-02", lineId: "LIN-02", lineName: "Line 2 — Formulation & Pasteurizer", standardCrew: 6, stdLaborHoursPer1kUnits: 1.85, directCostPerHour: "$28.00", status: "Active" },
-  { id: "LBR-03", lineId: "LIN-03", lineName: "Line 3 — Canning Line", standardCrew: 8, stdLaborHoursPer1kUnits: 2.15, directCostPerHour: "$24.50", status: "Active" }
-];
+export const INITIAL_LABOUR_STANDARDS = [];
 
-export const INITIAL_ASSETS = [
-  {
-    assetId: "AST-001",
-    name: "Krones Isobaric Rotary Filler 60-Valve",
-    type: "Packaging / Filling",
-    lineId: "LIN-01",
-    lineName: "High-Speed Bottling Line 1",
-    plantId: "PLT-01",
-    status: "Operational",
-    criticality: "Critical (Class A)",
-    maintenanceStatus: "Healthy (96% Score)",
-    serialNumber: "KRN-2024-8842",
-    manufacturer: "Krones AG",
-    installDate: "2024-03-15",
-    ratedSpeed: "42,000 BPH",
-    downtimeHistory: [
-      { date: "2026-08-25", durationMin: 22, reason: "Volumetric dosing seal leak", code: "FLR-SEAL-01", technician: "Marcus Vance" },
-      { date: "2026-08-10", durationMin: 15, reason: "Infeed starwheel timing jam", code: "JAM-STR-02", technician: "Marcus Vance" }
-    ],
-    maintenanceHistory: [
-      { woId: "WO-8821", date: "2026-08-28", type: "Preventive", description: "Monthly valve diaphragm lubrication & CIP rinse inspection", status: "Completed" },
-      { woId: "WO-8805", date: "2026-08-01", type: "Calibration", description: "Pressure transducer zero-point calibration (HACCP CCP-1)", status: "Completed" }
-    ],
-    auditHistory: [
-      { date: "2026-08-28", user: "Marcus Vance", action: "Updated maintenance schedule to 250-hour cycle" },
-      { date: "2026-06-12", user: "Alexander Vance", action: "Assigned Class A criticality rating" }
-    ]
-  },
-  {
-    assetId: "AST-002",
-    name: "APV High-Temperature Short-Time (HTST) Pasteurizer",
-    type: "Thermal Processing",
-    lineId: "LIN-01",
-    lineName: "High-Speed Bottling Line 1",
-    plantId: "PLT-01",
-    status: "Operational",
-    criticality: "Critical (Class A)",
-    maintenanceStatus: "Healthy (98% Score)",
-    serialNumber: "APV-HT-9921",
-    manufacturer: "SPX FLOW APV",
-    installDate: "2023-11-20",
-    ratedSpeed: "15,000 L/hr",
-    downtimeHistory: [],
-    maintenanceHistory: [
-      { woId: "WO-8790", date: "2026-08-15", type: "Preventive", description: "Plate heat exchanger chemical wash & gasket integrity test", status: "Completed" }
-    ],
-    auditHistory: [
-      { date: "2026-08-15", user: "Sarah Jenkins", action: "Verified HACCP thermal log validation" }
-    ]
-  },
-  {
-    assetId: "AST-003",
-    name: "Zalkin 12-Head Rotary Capper",
-    type: "Packaging / Capping",
-    lineId: "LIN-01",
-    lineName: "High-Speed Bottling Line 1",
-    plantId: "PLT-01",
-    status: "Operational",
-    criticality: "High (Class B)",
-    maintenanceStatus: "Healthy (92% Score)",
-    serialNumber: "ZLK-CAP-4410",
-    manufacturer: "Zalkin",
-    installDate: "2024-03-20",
-    ratedSpeed: "42,000 BPH",
-    downtimeHistory: [
-      { date: "2026-08-18", durationMin: 18, reason: "Cap sorter chute optical sensor dirt", code: "SNS-OPT-04", technician: "James Holden" }
-    ],
-    maintenanceHistory: [
-      { woId: "WO-8812", date: "2026-08-20", type: "Corrective", description: "Cleaned optical photocell and adjusted magnetic clutch torque", status: "Completed" }
-    ],
-    auditHistory: []
-  },
-  {
-    assetId: "AST-004",
-    name: "Sidel Matrix Blow Molder SBO 14",
-    type: "Forming / Molding",
-    lineId: "LIN-01",
-    lineName: "High-Speed Bottling Line 1",
-    plantId: "PLT-01",
-    status: "Operational",
-    criticality: "Critical (Class A)",
-    maintenanceStatus: "Healthy (94% Score)",
-    serialNumber: "SDL-MX-1402",
-    manufacturer: "Sidel",
-    installDate: "2024-01-10",
-    ratedSpeed: "42,000 BPH",
-    downtimeHistory: [],
-    maintenanceHistory: [],
-    auditHistory: []
-  },
-  {
-    assetId: "AST-005",
-    name: "KHS Innofill Glass Filler",
-    type: "Packaging / Filling",
-    lineId: "LIN-02",
-    lineName: "Medium-Speed Glass Bottling Line 2",
-    plantId: "PLT-01",
-    status: "Operational",
-    criticality: "High (Class B)",
-    maintenanceStatus: "Healthy (91% Score)",
-    serialNumber: "KHS-GL-5520",
-    manufacturer: "KHS Group",
-    installDate: "2023-08-14",
-    ratedSpeed: "28,000 BPH",
-    downtimeHistory: [],
-    maintenanceHistory: [],
-    auditHistory: []
-  },
-  {
-    assetId: "AST-006",
-    name: "Ferrum High-Speed Can Seamer F708",
-    type: "Packaging / Seaming",
-    lineId: "LIN-03",
-    lineName: "Automated Sleek Canning Line 3",
-    plantId: "PLT-02",
-    status: "Operational",
-    criticality: "Critical (Class A)",
-    maintenanceStatus: "Healthy (97% Score)",
-    serialNumber: "FRM-CAN-7080",
-    manufacturer: "Ferrum Packaging",
-    installDate: "2024-05-10",
-    ratedSpeed: "55,000 CPH",
-    downtimeHistory: [],
-    maintenanceHistory: [],
-    auditHistory: []
-  }
-];
 
-export const INITIAL_EMPLOYEES = [
-  {
-    employeeId: "EMP-001",
-    name: "Alexander Vance",
-    email: "alexander.vance@flowstate.io",
-    department: "IT & Continuous Improvement",
-    departmentId: "DEP-05",
-    role: "System Administrator & CI Lead",
-    plantId: "PLT-01",
-    plantName: "Indore Plant",
-    skills: ["5-Why RCA", "DMAIC Six Sigma", "Master Data Governance", "ERP Integration", "SCADA Architecture"],
-    skillLevel: "Level 4 (Master / Trainer)",
-    certifications: ["Six Sigma Black Belt (ASQ)", "ISO 22000 Lead Auditor", "AWS Cloud Architect"],
-    assignedLineIds: ["LIN-01", "LIN-02", "LIN-03"],
-    status: "Active"
-  },
-  {
-    employeeId: "EMP-002",
-    name: "Robert Thorne",
-    email: "robert.thorne@flowstate.io",
-    department: "Plant Operations",
-    departmentId: "DEP-01",
-    role: "Plant Manager",
-    plantId: "PLT-01",
-    plantName: "Indore Plant",
-    skills: ["OEE Loss Elimination", "Capacity Planning", "Financial ROI Modeling", "Operational Leadership"],
-    skillLevel: "Level 4 (Master / Trainer)",
-    certifications: ["Lean Bronze Certified (SME)", "CMRP Reliability Professional"],
-    assignedLineIds: ["LIN-01", "LIN-02"],
-    status: "Active"
-  },
-  {
-    employeeId: "EMP-003",
-    name: "Sarah Jenkins",
-    email: "sarah.jenkins@flowstate.io",
-    department: "Quality Assurance",
-    departmentId: "DEP-03",
-    role: "QA / QC Manager",
-    plantId: "PLT-01",
-    plantName: "Indore Plant",
-    skills: ["HACCP CCP Monitoring", "CoA Batch Release", "Sensory Analysis", "Statistical Process Control"],
-    skillLevel: "Level 4 (Master / Trainer)",
-    certifications: ["PCQI Preventive Controls", "ISO 9001 Lead Auditor"],
-    assignedLineIds: ["LIN-01", "LIN-02"],
-    status: "Active"
-  },
-  {
-    employeeId: "EMP-004",
-    name: "Marcus Vance",
-    email: "marcus.vance@flowstate.io",
-    department: "Maintenance & Reliability",
-    departmentId: "DEP-02",
-    role: "Maintenance Lead & Millwright",
-    plantId: "PLT-01",
-    plantName: "Indore Plant",
-    skills: ["Precision Shaft Alignment", "Vibration Analysis", "LOTO Safety Protocol", "Hydraulic & Pneumatics"],
-    skillLevel: "Level 3 (Senior Technician)",
-    certifications: ["Vibration Analyst Cat II", "OSHA 30-Hour Safety"],
-    assignedLineIds: ["LIN-01"],
-    status: "Active"
-  },
-  {
-    employeeId: "EMP-005",
-    name: "David Kim",
-    email: "david.kim@flowstate.io",
-    department: "Production",
-    departmentId: "DEP-01",
-    role: "Production Shift Supervisor",
-    plantId: "PLT-01",
-    plantName: "Indore Plant",
-    skills: ["Line Pacing", "Changeover Optimization", "Labour Dispatch", "Shift Handover"],
-    skillLevel: "Level 3 (Senior Technician)",
-    certifications: ["TPM Autonomous Maintenance", "First Aid & CPR"],
-    assignedLineIds: ["LIN-01", "LIN-02"],
-    status: "Active"
-  }
-];
+export const INITIAL_ASSETS = [];
+
+export const INITIAL_EMPLOYEES = [];
 
 export const INITIAL_TRAINING_RECORDS = [
   {
@@ -1052,168 +222,11 @@ export const INITIAL_TRAINING_RECORDS = [
   }
 ];
 
-export const INITIAL_QUALITY_SPECS = [
-  {
-    specId: "QSP-001",
-    skuId: "SKU-001",
-    skuCode: "SKU-5001",
-    skuName: "500ml Sparkling Citrus Soda",
-    specificationTitle: "Beverage Acidity & Brix Parameter Standard",
-    parameter: "Soluble Solids (Brix)",
-    target: "10.50",
-    min: "10.30",
-    max: "10.70",
-    uom: "°Bx",
-    revision: "R2",
-    status: "Active",
-    approvalStatus: "Approved",
-    criticality: "Critical CCP (HACCP-1)",
-    isCCP: true,
-    criticalLimit: "Must not drop below 10.25°Bx or exceed 10.75°Bx",
-    testMethod: "Digital Refractometer Ref-300",
-    effectiveFrom: "2025-01-01",
-    effectiveTo: "2030-12-31",
-    revisionHistory: [
-      { revision: "R2", status: "Approved", createdBy: "Sarah Jenkins", date: "2026-08-20", changes: "Tightened Brix upper limit from 10.80 to 10.70 to improve sugar consistency.", approvedBy: "Robert Thorne" },
-      { revision: "R1", status: "Superseded", createdBy: "Sarah Jenkins", date: "2026-06-10", changes: "Initial product formulation release.", approvedBy: "Robert Thorne" }
-    ]
-  },
-  {
-    specId: "QSP-002",
-    skuId: "SKU-001",
-    skuCode: "SKU-5001",
-    skuName: "500ml Sparkling Citrus Soda",
-    specificationTitle: "Carbon Dioxide (CO2) Dissolved Volume",
-    parameter: "Dissolved Carbonation",
-    target: "3.80",
-    min: "3.60",
-    max: "4.00",
-    uom: "Vol CO2",
-    revision: "R3",
-    status: "Active",
-    approvalStatus: "Approved",
-    criticality: "Quality Spec",
-    isCCP: false,
-    criticalLimit: "Standard QA tolerance band",
-    testMethod: "CarboQC Piercing Gauge",
-    effectiveFrom: "2025-01-01",
-    effectiveTo: "2030-12-31",
-    revisionHistory: [
-      { revision: "R3", status: "Approved", createdBy: "Sarah Jenkins", date: "2026-08-22", changes: "Calibrated for warm-season ambient temperature variations.", approvedBy: "Alexander Vance" }
-    ]
-  },
-  {
-    specId: "QSP-003",
-    skuId: "SKU-002",
-    skuCode: "SKU-5002",
-    skuName: "1L Tonic Water Natural Quinine",
-    specificationTitle: "Finished Product pH Level Control",
-    parameter: "pH Acidity Level",
-    target: "2.85",
-    min: "2.70",
-    max: "3.00",
-    uom: "pH",
-    revision: "R1",
-    status: "Active",
-    approvalStatus: "Approved",
-    criticality: "Critical CCP (HACCP-2)",
-    isCCP: true,
-    criticalLimit: "pH must remain <= 3.00 for microbial inhibition",
-    testMethod: "Benchtop pH Probe Metrohm 913",
-    effectiveFrom: "2025-01-01",
-    effectiveTo: "2030-12-31",
-    revisionHistory: [
-      { revision: "R1", status: "Approved", createdBy: "Sarah Jenkins", date: "2026-07-02", changes: "Baseline release for natural quinine formula.", approvedBy: "Robert Thorne" }
-    ]
-  },
-  {
-    specId: "QSP-004",
-    skuId: "SKU-001",
-    skuCode: "SKU-5001",
-    skuName: "500ml Sparkling Citrus Soda",
-    specificationTitle: "Net Fill Volume & Headspace Height",
-    parameter: "Net Content Volume",
-    target: "502.0",
-    min: "498.0",
-    max: "506.0",
-    uom: "mL",
-    revision: "R2",
-    status: "Active",
-    approvalStatus: "Approved",
-    criticality: "Legal Metrology / Legal",
-    isCCP: false,
-    criticalLimit: "T1 underfill limit 495 mL (3 allowable per 10,000 batch)",
-    testMethod: "Gravimetric Density Checkweighing",
-    effectiveFrom: "2025-01-01",
-    effectiveTo: "2030-12-31",
-    revisionHistory: [
-      { revision: "R2", status: "Approved", createdBy: "Sarah Jenkins", date: "2026-08-14", changes: "Adjusted target fill from 500 to 502 mL to guarantee 0% underfill.", approvedBy: "Robert Thorne" }
-    ]
-  }
-];
+export const INITIAL_QUALITY_SPECS = [];
 
-export const INITIAL_STORAGE_RESOURCES = [
-  {
-    storageId: "STR-01",
-    code: "WH-RM-01",
-    name: "Raw Material Warehouse Room A",
-    type: "Warehouse Room",
-    plantId: "PLT-01",
-    plantName: "Indore Plant",
-    zone: "Bulk Liquid & Dry Ingredients Zone",
-    capacity: "500 Pallets",
-    currentOccupancy: "380 Pallets (76%)",
-    temperatureRange: "Ambient (18°C - 24°C)",
-    status: "Active",
-    effectiveFrom: "2024-01-01",
-    effectiveTo: "2030-12-31"
-  },
-  {
-    storageId: "STR-02",
-    code: "WH-RCK-101",
-    name: "High-Bay Heavy Rack Array R-101 to R-110",
-    type: "Racks System",
-    plantId: "PLT-01",
-    plantName: "Indore Plant",
-    zone: "Finished Goods Staging Bay 2",
-    capacity: "1,200 Pallets",
-    currentOccupancy: "980 Pallets (81.6%)",
-    temperatureRange: "Ambient",
-    status: "Active",
-    effectiveFrom: "2024-01-01",
-    effectiveTo: "2030-12-31"
-  },
-  {
-    storageId: "STR-03",
-    code: "WH-CRT-05",
-    name: "Mobile Clean CIP Transport Carts (5-Set)",
-    type: "Mobile Carts",
-    plantId: "PLT-01",
-    plantName: "Indore Plant",
-    zone: "Packaging Line Staging",
-    capacity: "25 Carts",
-    currentOccupancy: "18 Carts in Use",
-    temperatureRange: "Clean Room",
-    status: "Active",
-    effectiveFrom: "2024-01-01",
-    effectiveTo: "2030-12-31"
-  },
-  {
-    storageId: "STR-04",
-    code: "WH-AUST-01",
-    name: "Cold Storage Staging Vault 1",
-    type: "Cold Vault",
-    plantId: "PLT-02",
-    plantName: "Austin Facility",
-    zone: "Ginger Beer Cold Conditioning",
-    capacity: "450 Pallets",
-    currentOccupancy: "310 Pallets (68.8%)",
-    temperatureRange: "Cold (2°C - 6°C)",
-    status: "Active",
-    effectiveFrom: "2024-01-01",
-    effectiveTo: "2030-12-31"
-  }
-];
+export const INITIAL_STORAGE_RESOURCES = [];
+
+export const INITIAL_CCP_LIMITS = [];
 
 export const INITIAL_USERS = [
   { id: "USR-001", name: "Alexander Vance", email: "alexander.vance@flowstate.io", role: "System Administrator", roleKey: "admin", department: "IT & Digital Ops", plantId: "PLT-01", status: "Active", lastLogin: "Just now" },
@@ -1414,31 +427,14 @@ export function MasterDataProvider({ children }) {
     const saved = localStorage.getItem("mx_master_departments");
     return saved ? JSON.parse(saved) : INITIAL_DEPARTMENTS;
   });
-  const [workCenters, setWorkCenters] = useState(() => {
-    const saved = localStorage.getItem("mx_master_workcenters");
-    return saved ? JSON.parse(saved) : INITIAL_WORK_CENTERS;
-  });
+  const [workCenters, setWorkCenters] = useState([]);
 
-  // 1. Core Master Datasets with Cache Initialization
-  const [productFamilies, setProductFamilies] = useState(() => {
-    const saved = localStorage.getItem("mx_master_families");
-    return saved ? JSON.parse(saved) : INITIAL_PRODUCT_FAMILIES;
-  });
+  // 1. Core Master Datasets with Live Database Synchronization
+  const [productFamilies, setProductFamilies] = useState([]);
+  const [uoms, setUoms] = useState([]);
+  const [skus, setSkus] = useState([]);
 
-  const [uoms, setUoms] = useState(() => {
-    const saved = localStorage.getItem("mx_master_uoms");
-    return saved ? JSON.parse(saved) : INITIAL_UOMS;
-  });
-
-  const [skus, setSkus] = useState(() => {
-    const saved = localStorage.getItem("mx_master_skus");
-    return saved ? JSON.parse(saved) : INITIAL_SKUS;
-  });
-
-  const [packConfigs, setPackConfigs] = useState(() => {
-    const saved = localStorage.getItem("mx_master_pack_configs");
-    return saved ? JSON.parse(saved) : INITIAL_PACK_CONFIGS;
-  });
+  const [packConfigs, setPackConfigs] = useState([]);
 
   const [shelfLifeRecords, setShelfLifeRecords] = useState(() => {
     const saved = localStorage.getItem("mx_master_shelflife");
@@ -1452,66 +448,37 @@ export function MasterDataProvider({ children }) {
     return saved ? JSON.parse(saved) : INITIAL_CUSTOMER_SKU_MAPPINGS;
   });
 
-  const [boms, setBoms] = useState(() => {
-    const saved = localStorage.getItem("mx_master_boms");
-    return saved ? JSON.parse(saved) : INITIAL_BOMS;
-  });
+  const [boms, setBoms] = useState([]);
 
   const [operations, setOperations] = useState(() => {
     const saved = localStorage.getItem("mx_master_operations");
     return saved ? JSON.parse(saved) : INITIAL_OPERATIONS;
   });
 
-  const [routings, setRoutings] = useState(() => {
-    const saved = localStorage.getItem("mx_master_routings");
-    return saved ? JSON.parse(saved) : INITIAL_ROUTINGS;
-  });
+  const [routings, setRoutings] = useState([]);
 
-  const [lines, setLines] = useState(() => {
-    const saved = localStorage.getItem("mx_master_lines");
-    return saved ? JSON.parse(saved) : INITIAL_LINES;
-  });
+  const [lines, setLines] = useState([]);
 
   const [lineTargets, setLineTargets] = useState([]);
   const [changeoverMatrix, setChangeoverMatrix] = useState([]);
   const [sanitationClasses, setSanitationClasses] = useState([]);
   const [allergenRules, setAllergenRules] = useState([]);
+  const [labourStandards, setLabourStandards] = useState([]);
 
-  const [labourStandards, setLabourStandards] = useState(() => {
-    const saved = localStorage.getItem("mx_master_labour_standards");
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      } catch (_) {}
-    }
-    return INITIAL_LABOUR_STANDARDS;
-  });
+  const [assets, setAssets] = useState([]);
 
-  const [assets, setAssets] = useState(() => {
-    const saved = localStorage.getItem("mx_master_assets");
-    return saved ? JSON.parse(saved) : INITIAL_ASSETS;
-  });
-
-  const [employees, setEmployees] = useState(() => {
-    const saved = localStorage.getItem("mx_master_employees");
-    return saved ? JSON.parse(saved) : INITIAL_EMPLOYEES;
-  });
+  const [employees, setEmployees] = useState([]);
 
   const [trainingRecords, setTrainingRecords] = useState(() => {
     const saved = localStorage.getItem("mx_master_training");
     return saved ? JSON.parse(saved) : INITIAL_TRAINING_RECORDS;
   });
 
-  const [qualitySpecs, setQualitySpecs] = useState(() => {
-    const saved = localStorage.getItem("mx_master_quality_specs");
-    return saved ? JSON.parse(saved) : INITIAL_QUALITY_SPECS;
-  });
+  const [qualitySpecs, setQualitySpecs] = useState([]);
 
-  const [storageResources, setStorageResources] = useState(() => {
-    const saved = localStorage.getItem("mx_master_storage");
-    return saved ? JSON.parse(saved) : INITIAL_STORAGE_RESOURCES;
-  });
+  const [storageResources, setStorageResources] = useState([]);
+
+  const [ccpLimits, setCcpLimits] = useState([]);
 
   const [users, setUsers] = useState(() => {
     const saved = localStorage.getItem("mx_admin_users");
@@ -1555,6 +522,7 @@ export function MasterDataProvider({ children }) {
   useEffect(() => { localStorage.setItem("mx_master_training", JSON.stringify(trainingRecords)); }, [trainingRecords]);
   useEffect(() => { localStorage.setItem("mx_master_quality_specs", JSON.stringify(qualitySpecs)); }, [qualitySpecs]);
   useEffect(() => { localStorage.setItem("mx_master_storage", JSON.stringify(storageResources)); }, [storageResources]);
+  useEffect(() => { localStorage.setItem("mx_master_ccp_limits", JSON.stringify(ccpLimits)); }, [ccpLimits]);
   useEffect(() => { localStorage.setItem("mx_admin_users", JSON.stringify(users)); }, [users]);
   useEffect(() => { localStorage.setItem("mx_master_audit_logs", JSON.stringify(auditLogs)); }, [auditLogs]);
   useEffect(() => { localStorage.setItem("mx_master_permissions", JSON.stringify(rolePermissions)); }, [rolePermissions]);
@@ -1578,16 +546,20 @@ export function MasterDataProvider({ children }) {
           liveChangeovers,
           liveSanitations,
           liveAllergens,
+          liveLabourStandards,
+          liveEmployees,
           liveSkus,
           liveBoms,
           liveAssets,
           liveSpecs,
+          liveCCPs,
+          liveStorage,
         ] = await Promise.allSettled([
           masterDataService.getCompanies(),
           masterDataService.getPlants(),
           masterDataService.getDepartments(activePlantId),
-          masterDataService.getLines(activePlantId),
-          masterDataService.getWorkCenters(activePlantId),
+          masterDataService.getLines(),
+          masterDataService.getWorkCenters(),
           masterDataService.getOperations(),
           masterDataService.getRoutings(),
           masterDataService.getProductFamilies(),
@@ -1598,10 +570,13 @@ export function MasterDataProvider({ children }) {
           masterDataService.getSanitationClasses(),
           masterDataService.getAllergenRules(),
           masterDataService.getLabourStandards(),
+          masterDataService.getEmployeeSkills(activePlantId),
           masterDataService.getSkus(),
           masterDataService.getBoms(),
           masterDataService.getAssets(activePlantId),
           masterDataService.getQualitySpecs(),
+          masterDataService.getCCPLimits(),
+          masterDataService.getStorageResources(activePlantId),
         ]);
 
         if (liveCompanies.status === "fulfilled" && Array.isArray(liveCompanies.value?.data || liveCompanies.value) && (liveCompanies.value?.data || liveCompanies.value).length > 0) {
@@ -1613,25 +588,25 @@ export function MasterDataProvider({ children }) {
         if (liveDepts.status === "fulfilled" && Array.isArray(liveDepts.value?.data || liveDepts.value) && (liveDepts.value?.data || liveDepts.value).length > 0) {
           setDepartments(liveDepts.value?.data || liveDepts.value);
         }
-        if (liveLines.status === "fulfilled" && Array.isArray(liveLines.value?.data || liveLines.value) && (liveLines.value?.data || liveLines.value).length > 0) {
+        if (liveLines.status === "fulfilled" && Array.isArray(liveLines.value?.data || liveLines.value)) {
           setLines(liveLines.value?.data || liveLines.value);
         }
-        if (liveWcs.status === "fulfilled" && Array.isArray(liveWcs.value?.data || liveWcs.value) && (liveWcs.value?.data || liveWcs.value).length > 0) {
+        if (liveWcs.status === "fulfilled" && Array.isArray(liveWcs.value?.data || liveWcs.value)) {
           setWorkCenters(liveWcs.value?.data || liveWcs.value);
         }
         if (liveOperations.status === "fulfilled" && Array.isArray(liveOperations.value?.data || liveOperations.value) && (liveOperations.value?.data || liveOperations.value).length > 0) {
           setOperations(liveOperations.value?.data || liveOperations.value);
         }
-        if (liveRoutings.status === "fulfilled" && Array.isArray(liveRoutings.value?.data || liveRoutings.value) && (liveRoutings.value?.data || liveRoutings.value).length > 0) {
+        if (liveRoutings.status === "fulfilled" && Array.isArray(liveRoutings.value?.data || liveRoutings.value)) {
           setRoutings(liveRoutings.value?.data || liveRoutings.value);
         }
-        if (liveProductFamilies.status === "fulfilled" && Array.isArray(liveProductFamilies.value?.data || liveProductFamilies.value) && (liveProductFamilies.value?.data || liveProductFamilies.value).length > 0) {
+        if (liveProductFamilies.status === "fulfilled" && Array.isArray(liveProductFamilies.value?.data || liveProductFamilies.value)) {
           setProductFamilies(liveProductFamilies.value?.data || liveProductFamilies.value);
         }
-        if (liveUoms.status === "fulfilled" && Array.isArray(liveUoms.value?.data || liveUoms.value) && (liveUoms.value?.data || liveUoms.value).length > 0) {
+        if (liveUoms.status === "fulfilled" && Array.isArray(liveUoms.value?.data || liveUoms.value)) {
           setUoms(liveUoms.value?.data || liveUoms.value);
         }
-        if (livePackConfigs.status === "fulfilled" && Array.isArray(livePackConfigs.value?.data || livePackConfigs.value) && (livePackConfigs.value?.data || livePackConfigs.value).length > 0) {
+        if (livePackConfigs.status === "fulfilled" && Array.isArray(livePackConfigs.value?.data || livePackConfigs.value)) {
           const raw = livePackConfigs.value?.data || livePackConfigs.value;
           // Normalize backend field names to frontend's expected field names
           const normalized = raw.map((p) => ({
@@ -1686,20 +661,29 @@ export function MasterDataProvider({ children }) {
           }));
           setAllergenRules(normalized);
         }
-        if (liveLabourStandards.status === "fulfilled" && Array.isArray(liveLabourStandards.value?.data || liveLabourStandards.value) && (liveLabourStandards.value?.data || liveLabourStandards.value).length > 0) {
+        if (liveLabourStandards.status === "fulfilled" && Array.isArray(liveLabourStandards.value?.data || liveLabourStandards.value)) {
           setLabourStandards(liveLabourStandards.value?.data || liveLabourStandards.value);
         }
-        if (liveSkus.status === "fulfilled" && Array.isArray(liveSkus.value?.data || liveSkus.value) && (liveSkus.value?.data || liveSkus.value).length > 0) {
+        if (liveEmployees.status === "fulfilled" && Array.isArray(liveEmployees.value?.data || liveEmployees.value)) {
+          setEmployees(liveEmployees.value?.data || liveEmployees.value);
+        }
+        if (liveSkus.status === "fulfilled" && Array.isArray(liveSkus.value?.data || liveSkus.value)) {
           setSkus(liveSkus.value?.data || liveSkus.value);
         }
-        if (liveBoms.status === "fulfilled" && Array.isArray(liveBoms.value?.data || liveBoms.value) && (liveBoms.value?.data || liveBoms.value).length > 0) {
+        if (liveBoms.status === "fulfilled" && Array.isArray(liveBoms.value?.data || liveBoms.value)) {
           setBoms(liveBoms.value?.data || liveBoms.value);
         }
-        if (liveAssets.status === "fulfilled" && Array.isArray(liveAssets.value?.data || liveAssets.value) && (liveAssets.value?.data || liveAssets.value).length > 0) {
+        if (liveAssets.status === "fulfilled" && Array.isArray(liveAssets.value?.data || liveAssets.value)) {
           setAssets(liveAssets.value?.data || liveAssets.value);
         }
-        if (liveSpecs.status === "fulfilled" && Array.isArray(liveSpecs.value?.data || liveSpecs.value) && (liveSpecs.value?.data || liveSpecs.value).length > 0) {
+        if (liveSpecs.status === "fulfilled" && Array.isArray(liveSpecs.value?.data || liveSpecs.value)) {
           setQualitySpecs(liveSpecs.value?.data || liveSpecs.value);
+        }
+        if (liveCCPs.status === "fulfilled" && Array.isArray(liveCCPs.value?.data || liveCCPs.value)) {
+          setCcpLimits(liveCCPs.value?.data || liveCCPs.value);
+        }
+        if (liveStorage.status === "fulfilled" && Array.isArray(liveStorage.value?.data || liveStorage.value)) {
+          setStorageResources(liveStorage.value?.data || liveStorage.value);
         }
       } catch (err) {
         console.warn("MasterData backend sync fallback:", err.message);
@@ -2014,40 +998,50 @@ export function MasterDataProvider({ children }) {
   // ============================================================================
   // 4. PACK CONFIGURATION MUTATIONS
   // ============================================================================
-  const addPackConfig = (pckData) => {
-    const newRecord = {
-      id: `PCK-0${packConfigs.length + 1}`,
-      packConfigId: `PCK-0${packConfigs.length + 1}`,
-      packCode: pckData.packCode || `PCK-${pckData.skuCode || "5000"}-${pckData.unitsPerPack || 24}`,
-      skuId: pckData.skuId,
-      skuCode: pckData.skuCode,
-      skuName: pckData.skuName,
-      unitsPerPack: Number(pckData.unitsPerPack) || 24,
-      packType: pckData.packType || "Corrugated Case",
-      packagingUom: pckData.packagingUom || "CASE-24",
-      caseConfiguration: pckData.caseConfiguration || `${pckData.unitsPerPack} Units per Box`,
-      palletConfiguration: pckData.palletConfiguration || "60 Cases per Pallet",
-      tareWeightKg: Number(pckData.tareWeightKg) || 12.0,
-      status: "Active",
-      effectiveFrom: pckData.effectiveFrom || new Date().toISOString().substring(0, 10),
-      effectiveTo: "2030-12-31"
-    };
-    setPackConfigs((prev) => [newRecord, ...prev]);
-    masterDataService.createPackConfig(newRecord).catch((err) => console.warn("API createPackConfig:", err.message));
-    logAudit({ entityId: newRecord.packCode, entityType: "Pack Configuration", action: "Created", newValue: `${newRecord.packCode} for ${newRecord.skuCode}` });
-    return newRecord;
+  const addPackConfig = async (pckData) => {
+    try {
+      const res = await masterDataService.createPackConfig(pckData);
+      const created = res?.data || res || pckData;
+      const normalized = {
+        ...created,
+        packConfigId: created.packConfigId || created.configId || created.id,
+        packCode: created.packCode || created.code || pckData.packCode,
+        skuName: created.skuName || pckData.skuName,
+        skuCode: created.skuCode || pckData.skuCode,
+        unitsPerPack: Number(created.unitsPerPack || pckData.unitsPerPack) || 24,
+        packType: created.packType || pckData.packType,
+        packagingUom: created.packagingUom || pckData.packagingUom,
+        status: created.status || "Active"
+      };
+      setPackConfigs((prev) => [normalized, ...prev.filter(p => p.packConfigId !== normalized.packConfigId && p.id !== normalized.id)]);
+      logAudit({ entityId: normalized.packCode, entityType: "Pack Configuration", action: "Created", newValue: `${normalized.packCode}` });
+      return normalized;
+    } catch (err) {
+      console.warn("API createPackConfig error:", err);
+      throw err;
+    }
   };
 
-  const updatePackConfig = (packConfigId, updated) => {
-    setPackConfigs((prev) => prev.map((p) => (p.packConfigId === packConfigId || p.id === packConfigId ? { ...p, ...updated } : p)));
-    masterDataService.updatePackConfig(packConfigId, updated).catch((err) => console.warn("API updatePackConfig:", err.message));
-    logAudit({ entityId: packConfigId, entityType: "Pack Configuration", action: "Updated" });
+  const updatePackConfig = async (packConfigId, updated) => {
+    try {
+      await masterDataService.updatePackConfig(packConfigId, updated);
+      setPackConfigs((prev) => prev.map((p) => (p.packConfigId === packConfigId || p.id === packConfigId || p.packCode === packConfigId ? { ...p, ...updated } : p)));
+      logAudit({ entityId: packConfigId, entityType: "Pack Configuration", action: "Updated" });
+    } catch (err) {
+      console.warn("API updatePackConfig error:", err);
+      throw err;
+    }
   };
 
-  const deletePackConfig = (packConfigId) => {
-    setPackConfigs((prev) => prev.filter((p) => p.packConfigId !== packConfigId && p.id !== packConfigId));
-    masterDataService.deletePackConfig(packConfigId).catch((err) => console.warn("API deletePackConfig:", err.message));
-    logAudit({ entityId: packConfigId, entityType: "Pack Configuration", action: "Deleted" });
+  const deletePackConfig = async (packConfigId) => {
+    try {
+      await masterDataService.deletePackConfig(packConfigId);
+      setPackConfigs((prev) => prev.filter((p) => p.packConfigId !== packConfigId && p.id !== packConfigId && p.packCode !== packConfigId));
+      logAudit({ entityId: packConfigId, entityType: "Pack Configuration", action: "Deleted" });
+    } catch (err) {
+      console.warn("API deletePackConfig error:", err);
+      throw err;
+    }
   };
 
   // ============================================================================
@@ -2122,90 +1116,96 @@ export function MasterDataProvider({ children }) {
   // ============================================================================
   // 7. BOM / RECIPE MUTATIONS & APPROVAL GOVERNANCE
   // ============================================================================
-  const addBOM = (bomData) => {
-    const newRecord = {
-      bomId: `BOM-00${boms.length + 1}`,
-      bomNumber: bomData.bomNumber || `BOM-${Math.floor(5000 + Math.random() * 900)}`,
-      finishedSkuId: bomData.finishedSkuId || "SKU-001",
-      finishedSkuCode: bomData.finishedSkuCode || skus.find((s) => s.skuId === bomData.finishedSkuId)?.skuCode || "SKU-5001",
-      finishedSkuName: bomData.finishedSkuName || skus.find((s) => s.skuId === bomData.finishedSkuId)?.name || "Product Recipe",
-      revision: "R1",
-      effectiveDate: new Date().toISOString().substring(0, 10),
-      effectiveFrom: new Date().toISOString().substring(0, 10),
-      effectiveTo: "2030-12-31",
-      status: "Draft",
-      approvalStatus: "Draft",
-      batchSize: bomData.batchSize || "10,000 Liters",
-      yieldTarget: bomData.yieldTarget || "99.0%",
-      expectedYieldPct: Number(bomData.expectedYieldPct) || 99.0,
-      minYieldPct: Number(bomData.minYieldPct) || 98.0,
-      maxYieldPct: Number(bomData.maxYieldPct) || 99.8,
-      scrapFactorPct: Number(bomData.scrapFactorPct) || 0.8,
-      createdBy: "Alexander Vance",
-      lastUpdated: new Date().toISOString().substring(0, 10),
-      components: bomData.components || [],
-      revisionHistory: [
-        { revision: "R1", status: "Draft", createdBy: "Alexander Vance", date: new Date().toISOString().substring(0, 10), changes: "Initial BOM Draft Formulation registered.", approvedBy: "-" }
-      ]
-    };
-    setBoms((prev) => [newRecord, ...prev]);
-    masterDataService.createBom(newRecord).catch((err) => console.warn("API createBom:", err.message));
-    logAudit({ entityId: newRecord.bomNumber, entityType: "BOM Recipe", action: "Created", newValue: `${newRecord.bomNumber} for ${newRecord.finishedSkuName}` });
-    return newRecord;
+  const addBOM = async (bomData) => {
+    try {
+      const res = await masterDataService.createBom(bomData);
+      const created = res?.data || res || bomData;
+      setBoms((prev) => [created, ...prev.filter((b) => (b.bomId || b.id) !== (created.bomId || created.id))]);
+      logAudit({ entityId: created.bomNumber || created.name, entityType: "BOM Recipe", action: "Created", newValue: `${created.bomNumber} for ${created.finishedSkuName}` });
+      return created;
+    } catch (err) {
+      console.warn("API createBom error:", err);
+      throw err;
+    }
   };
 
-  const updateBOM = (bomId, updated) => {
-    setBoms((prev) =>
-      prev.map((b) => (b.bomId === bomId || b.bomNumber === bomId ? { ...b, ...updated, lastUpdated: new Date().toISOString().substring(0, 10) } : b))
-    );
-    masterDataService.updateBom(bomId, updated).catch((err) => console.warn("API updateBom:", err.message));
-    logAudit({ entityId: bomId, entityType: "BOM Recipe", action: "Updated" });
+  const updateBOM = async (bomId, updated) => {
+    try {
+      await masterDataService.updateBom(bomId, updated);
+      setBoms((prev) =>
+        prev.map((b) => (b.bomId === bomId || b.id === bomId || b.bomNumber === bomId ? { ...b, ...updated, lastUpdated: new Date().toISOString().substring(0, 10) } : b))
+      );
+      logAudit({ entityId: bomId, entityType: "BOM Recipe", action: "Updated" });
+    } catch (err) {
+      console.warn("API updateBom error:", err);
+      throw err;
+    }
   };
 
-  const submitBOMForApproval = (bomId) => {
-    setBoms((prev) =>
-      prev.map((b) => {
-        if (b.bomId === bomId || b.bomNumber === bomId) {
-          logAudit({ entityId: b.bomNumber, entityType: "BOM Recipe", action: "Submitted", notes: "Submitted for QA/Plant Manager approval" });
-          return { ...b, status: "Under Review", approvalStatus: "Under Review", lastUpdated: new Date().toISOString().substring(0, 10) };
-        }
-        return b;
-      })
-    );
-    masterDataService.updateBom(bomId, { status: "Under Review", approvalStatus: "Under Review" }).catch((err) => console.warn("API submitBOM:", err.message));
+  const submitBOMForApproval = async (bomId) => {
+    try {
+      await masterDataService.updateBom(bomId, { status: "Under Review", approvalStatus: "Under Review" });
+      setBoms((prev) =>
+        prev.map((b) => {
+          if (b.bomId === bomId || b.id === bomId || b.bomNumber === bomId) {
+            logAudit({ entityId: b.bomNumber || bomId, entityType: "BOM Recipe", action: "Submitted", notes: "Submitted for QA/Plant Manager approval" });
+            return { ...b, status: "Under Review", approvalStatus: "Under Review", lastUpdated: new Date().toISOString().substring(0, 10) };
+          }
+          return b;
+        })
+      );
+    } catch (err) {
+      console.warn("API submitBOM error:", err);
+      throw err;
+    }
   };
 
-  const approveBOM = (bomId, approver = "Sarah Jenkins") => {
-    setBoms((prev) =>
-      prev.map((b) => {
-        if (b.bomId === bomId || b.bomNumber === bomId) {
-          const revs = b.revisionHistory.map((rev, idx) => (idx === 0 ? { ...rev, status: "Approved", approvedBy: approver } : rev));
-          logAudit({ entityId: b.bomNumber, entityType: "BOM Recipe", action: "Approved", notes: `Approved by ${approver}` });
-          return { ...b, status: "Active", approvalStatus: "Approved", revisionHistory: revs, lastUpdated: new Date().toISOString().substring(0, 10) };
-        }
-        return b;
-      })
-    );
-    masterDataService.updateBom(bomId, { status: "Active", approvalStatus: "Approved" }).catch((err) => console.warn("API approveBOM:", err.message));
+  const approveBOM = async (bomId, approver = "Sarah Jenkins") => {
+    try {
+      await masterDataService.updateBom(bomId, { status: "Active", approvalStatus: "Approved" });
+      setBoms((prev) =>
+        prev.map((b) => {
+          if (b.bomId === bomId || b.id === bomId || b.bomNumber === bomId) {
+            const revs = (b.revisionHistory || []).map((rev, idx) => (idx === 0 ? { ...rev, status: "Approved", approvedBy: approver } : rev));
+            logAudit({ entityId: b.bomNumber || bomId, entityType: "BOM Recipe", action: "Approved", notes: `Approved by ${approver}` });
+            return { ...b, status: "Active", approvalStatus: "Approved", revisionHistory: revs, lastUpdated: new Date().toISOString().substring(0, 10) };
+          }
+          return b;
+        })
+      );
+    } catch (err) {
+      console.warn("API approveBOM error:", err);
+      throw err;
+    }
   };
 
-  const rejectBOM = (bomId, reason = "Tolerance out of spec") => {
-    setBoms((prev) =>
-      prev.map((b) => {
-        if (b.bomId === bomId || b.bomNumber === bomId) {
-          logAudit({ entityId: b.bomNumber, entityType: "BOM Recipe", action: "Rejected", notes: `Reason: ${reason}` });
-          return { ...b, status: "Draft", approvalStatus: "Draft", rejectionReason: reason, lastUpdated: new Date().toISOString().substring(0, 10) };
-        }
-        return b;
-      })
-    );
-    masterDataService.updateBom(bomId, { status: "Draft", approvalStatus: "Draft", rejectionReason: reason }).catch((err) => console.warn("API rejectBOM:", err.message));
+  const rejectBOM = async (bomId, reason = "Tolerance out of spec") => {
+    try {
+      await masterDataService.updateBom(bomId, { status: "Draft", approvalStatus: "Draft", rejectionReason: reason });
+      setBoms((prev) =>
+        prev.map((b) => {
+          if (b.bomId === bomId || b.id === bomId || b.bomNumber === bomId) {
+            logAudit({ entityId: b.bomNumber || bomId, entityType: "BOM Recipe", action: "Rejected", notes: `Reason: ${reason}` });
+            return { ...b, status: "Draft", approvalStatus: "Draft", rejectionReason: reason, lastUpdated: new Date().toISOString().substring(0, 10) };
+          }
+          return b;
+        })
+      );
+    } catch (err) {
+      console.warn("API rejectBOM error:", err);
+      throw err;
+    }
   };
 
-  const deleteBOM = (bomId) => {
-    setBoms((prev) => prev.filter((b) => b.bomId !== bomId && b.bomNumber !== bomId));
-    masterDataService.deleteBom(bomId).catch((err) => console.warn("API deleteBom:", err.message));
-    logAudit({ entityId: bomId, entityType: "BOM Recipe", action: "Deleted" });
+  const deleteBOM = async (bomId) => {
+    try {
+      await masterDataService.deleteBom(bomId);
+      setBoms((prev) => prev.filter((b) => b.bomId !== bomId && b.id !== bomId && b.bomNumber !== bomId));
+      logAudit({ entityId: bomId, entityType: "BOM Recipe", action: "Deleted" });
+    } catch (err) {
+      console.warn("API deleteBom error:", err);
+      throw err;
+    }
   };
 
   // ============================================================================
@@ -2245,145 +1245,130 @@ export function MasterDataProvider({ children }) {
     logAudit({ entityId: operationId, entityType: "Operations Master", action: "Deleted" });
   };
 
-  const addRouting = (rtgData) => {
-    const newId = `RTG-00${routings.length + 1}`;
-    const newRecord = {
-      id: newId,
-      routingId: newId,
-      routingCode: (rtgData.routingCode || `RTG-${rtgData.skuCode || "5000"}-L1`).toUpperCase(),
-      skuId: rtgData.skuId,
-      skuCode: rtgData.skuCode || skus.find((s) => s.skuId === rtgData.skuId)?.skuCode || "SKU-5001",
-      skuName: rtgData.skuName || skus.find((s) => s.skuId === rtgData.skuId)?.name || "Product",
-      lineId: rtgData.lineId || "LIN-01",
-      lineCode: rtgData.lineCode || lines.find((l) => l.lineId === rtgData.lineId)?.lineCode || "LINE-1",
-      lineName: rtgData.lineName || lines.find((l) => l.lineId === rtgData.lineId)?.name || "Line 1",
-      revision: "R1",
-      approvalStatus: "Approved",
-      status: "Active",
-      stdRunRateBPH: Number(rtgData.stdRunRateBPH) || 35000,
-      setupDurationMin: Number(rtgData.setupDurationMin) || 30,
-      expectedYieldPct: Number(rtgData.expectedYieldPct) || 99.0,
-      effectiveFrom: rtgData.effectiveFrom || new Date().toISOString().substring(0, 10),
-      effectiveTo: "2030-12-31",
-      steps: rtgData.steps || []
-    };
-    setRoutings((prev) => [newRecord, ...prev]);
-    masterDataService.createRouting(newRecord).catch((err) => console.warn("API createRouting:", err.message));
-    logAudit({ entityId: newRecord.routingCode, entityType: "Routings Master", action: "Created", newValue: `${newRecord.routingCode} for ${newRecord.skuCode}` });
-    return newRecord;
+  const addRouting = async (rtgData) => {
+    try {
+      const res = await masterDataService.createRouting(rtgData);
+      const created = res?.data?.data || res?.data || res || rtgData;
+      setRoutings((prev) => [created, ...prev.filter(r => (r.routingId || r.id) !== (created.routingId || created.id))]);
+      logAudit({ entityId: created.routingCode || created.id, entityType: "Routings Master", action: "Created", newValue: `${created.routingCode}` });
+      return created;
+    } catch (err) {
+      console.warn("API createRouting error:", err);
+      throw err;
+    }
   };
 
-  const updateRouting = (routingId, updated) => {
-    setRoutings((prev) => prev.map((r) => (r.routingId === routingId || r.id === routingId ? { ...r, ...updated } : r)));
-    masterDataService.updateRouting(routingId, updated).catch((err) => console.warn("API updateRouting:", err.message));
-    logAudit({ entityId: routingId, entityType: "Routings Master", action: "Updated" });
+  const updateRouting = async (routingId, updated) => {
+    try {
+      await masterDataService.updateRouting(routingId, updated);
+      setRoutings((prev) => prev.map((r) => (r.routingId === routingId || r.id === routingId || r.routingCode === routingId ? { ...r, ...updated } : r)));
+      logAudit({ entityId: routingId, entityType: "Routings Master", action: "Updated" });
+    } catch (err) {
+      console.warn("API updateRouting error:", err);
+      throw err;
+    }
   };
 
-  const deleteRouting = (routingId) => {
-    setRoutings((prev) => prev.filter((r) => r.routingId !== routingId && r.id !== routingId));
-    masterDataService.deleteRouting(routingId).catch((err) => console.warn("API deleteRouting:", err.message));
-    logAudit({ entityId: routingId, entityType: "Routings Master", action: "Deleted" });
+  const deleteRouting = async (routingId) => {
+    try {
+      await masterDataService.deleteRouting(routingId);
+      setRoutings((prev) => prev.filter((r) => r.routingId !== routingId && r.id !== routingId && r.routingCode !== routingId));
+      logAudit({ entityId: routingId, entityType: "Routings Master", action: "Deleted" });
+    } catch (err) {
+      console.warn("API deleteRouting error:", err);
+      throw err;
+    }
   };
 
   // ============================================================================
   // 9. WORK CENTERS / LINES & LINE TARGETS MUTATIONS
   // ============================================================================
-  const addLine = (lineData) => {
-    const newRecord = {
-      id: `LIN-0${lines.length + 1}`,
-      lineId: `LIN-0${lines.length + 1}`,
-      lineCode: (lineData.lineCode || lineData.code || `LINE-${lines.length + 1}`).toUpperCase(),
-      code: (lineData.lineCode || lineData.code || `LINE-${lines.length + 1}`).toUpperCase(),
-      name: lineData.name,
-      plantId: lineData.plantId || activePlantId,
-      plantName: plants.find((p) => p.id === (lineData.plantId || activePlantId) || p.plantId === (lineData.plantId || activePlantId))?.name || "Indore Plant",
-      departmentId: lineData.departmentId || "DEP-01",
-      capacity: lineData.capacity || lineData.ratedSpeed || "38,000 BPH",
-      type: lineData.type || "Continuous Flow",
-      lineType: lineData.lineType || "BOTTLING",
-      ratedSpeed: lineData.ratedSpeed || "38,000 BPH",
-      ratedSpeedBPH: Number(lineData.ratedSpeedBPH) || 38000,
-      status: lineData.status || "Active",
-      supervisorId: lineData.supervisorId || "EMP-005",
-      supervisorName: lineData.supervisorName || "David Kim",
-      assignedAssetIds: lineData.assignedAssetIds || [],
-      eligibleSkuIds: lineData.eligibleSkuIds || ["SKU-001"],
-      ratedOEE: lineData.ratedOEE || "88.0%",
-      currentRunningSku: "SKU-5001",
-      healthScore: 95,
-    };
-    setLines((prev) => [newRecord, ...prev]);
-    masterDataService.createLine(newRecord).catch((err) => console.warn("API createLine:", err.message));
-    logAudit({ entityId: newRecord.lineCode, entityType: "Work Centers / Lines", action: "Created", newValue: newRecord.name });
-    return newRecord;
+  const addLine = async (lineData) => {
+    try {
+      const res = await masterDataService.createLine(lineData);
+      const created = res?.data || res;
+      setLines((prev) => [created, ...prev.filter((l) => l.id !== created.id && l.lineCode !== created.lineCode)]);
+      logAudit({ entityId: created.lineCode || created.code, entityType: "Work Centers / Lines", action: "Created", newValue: created.name });
+      return created;
+    } catch (err) {
+      console.warn("API createLine:", err.message);
+      throw err;
+    }
   };
 
-  const updateLine = (lineId, updated) => {
-    setLines((prev) =>
-      prev.map((l) => (l.lineId === lineId || l.id === lineId || l.lineCode === lineId ? { ...l, ...updated } : l))
-    );
-    masterDataService.updateLine(lineId, updated).catch((err) => console.warn("API updateLine:", err.message));
-    logAudit({ entityId: lineId, entityType: "Work Centers / Lines", action: "Updated" });
+  const updateLine = async (lineId, updated) => {
+    try {
+      await masterDataService.updateLine(lineId, updated);
+      setLines((prev) =>
+        prev.map((l) => (l.lineId === lineId || l.id === lineId || l.lineCode === lineId || l.code === lineId ? { ...l, ...updated } : l))
+      );
+      logAudit({ entityId: lineId, entityType: "Work Centers / Lines", action: "Updated" });
+    } catch (err) {
+      console.warn("API updateLine:", err.message);
+      throw err;
+    }
   };
 
-  const toggleLineStatus = (lineId) => {
-    setLines((prev) =>
-      prev.map((l) => {
-        if (l.lineId === lineId || l.id === lineId || l.lineCode === lineId) {
-          const next = l.status === "Active" ? "Inactive" : "Active";
-          masterDataService.updateLine(lineId, { status: next }).catch((err) => console.warn("API toggleLineStatus:", err.message));
-          return { ...l, status: next };
-        }
-        return l;
-      })
-    );
+  const toggleLineStatus = async (lineId) => {
+    const current = lines.find((l) => l.lineId === lineId || l.id === lineId || l.lineCode === lineId || l.code === lineId);
+    const next = current?.status === "Active" ? "Inactive" : "Active";
+    try {
+      await masterDataService.updateLine(lineId, { status: next });
+      setLines((prev) =>
+        prev.map((l) => (l.lineId === lineId || l.id === lineId || l.lineCode === lineId || l.code === lineId ? { ...l, status: next } : l))
+      );
+    } catch (err) {
+      console.warn("API toggleLineStatus:", err.message);
+    }
   };
 
-  const deleteLine = (lineId) => {
-    setLines((prev) => prev.filter((l) => l.lineId !== lineId && l.id !== lineId && l.lineCode !== lineId));
-    masterDataService.deleteLine(lineId).catch((err) => console.warn("API deleteLine:", err.message));
-    logAudit({ entityId: lineId, entityType: "Work Centers / Lines", action: "Deleted" });
+  const deleteLine = async (lineId) => {
+    try {
+      await masterDataService.deleteLine(lineId);
+      setLines((prev) => prev.filter((l) => l.lineId !== lineId && l.id !== lineId && l.lineCode !== lineId && l.code !== lineId));
+      logAudit({ entityId: lineId, entityType: "Work Centers / Lines", action: "Deleted" });
+    } catch (err) {
+      console.warn("API deleteLine:", err.message);
+      throw err;
+    }
   };
 
   // 9.1 WORK CENTERS MUTATIONS
-  const addWorkCenter = (wcData) => {
-    const newId = `WC-${Math.floor(400 + Math.random() * 99)}`;
-    const lineObj = lines.find((l) => l.lineId === wcData.lineId || l.id === wcData.lineId);
-    const newRecord = {
-      id: newId,
-      workCenterId: newId,
-      code: (wcData.code || `WC-0${workCenters.length + 1}`).toUpperCase(),
-      name: wcData.name,
-      lineId: wcData.lineId || lines[0]?.lineId || "LIN-01",
-      lineName: wcData.lineName || (lineObj ? lineObj.name : "Line 1 — Aseptic Bottling"),
-      plantId: wcData.plantId || (lineObj ? lineObj.plantId : "PLT-01"),
-      capacity: wcData.capacity || "38,000 BPH",
-      category: wcData.category || "PACKAGING",
-      status: wcData.status || "Active",
-    };
-    setWorkCenters((prev) => [newRecord, ...prev]);
-    masterDataService.createWorkCenter(newRecord).catch((err) => console.warn("API createWorkCenter:", err.message));
-    logAudit({ entityId: newRecord.code, entityType: "Work Center Cell", action: "Created", newValue: newRecord.name });
-    return newRecord;
+  const addWorkCenter = async (wcData) => {
+    try {
+      const res = await masterDataService.createWorkCenter(wcData);
+      const created = res?.data || res;
+      setWorkCenters((prev) => [created, ...prev.filter((w) => w.id !== created.id && w.code !== created.code)]);
+      logAudit({ entityId: created.code, entityType: "Work Center Cell", action: "Created", newValue: created.name });
+      return created;
+    } catch (err) {
+      console.warn("API createWorkCenter:", err.message);
+      throw err;
+    }
   };
 
-  const updateWorkCenter = (wcId, updated) => {
-    const lineObj = updated.lineId ? lines.find((l) => l.lineId === updated.lineId || l.id === updated.lineId) : undefined;
-    setWorkCenters((prev) =>
-      prev.map((w) =>
-        w.id === wcId || w.workCenterId === wcId || w.code === wcId
-          ? { ...w, ...updated, lineName: lineObj ? lineObj.name : (updated.lineName || w.lineName) }
-          : w
-      )
-    );
-    masterDataService.updateWorkCenter(wcId, updated).catch((err) => console.warn("API updateWorkCenter:", err.message));
-    logAudit({ entityId: wcId, entityType: "Work Center Cell", action: "Updated" });
+  const updateWorkCenter = async (wcId, updated) => {
+    try {
+      await masterDataService.updateWorkCenter(wcId, updated);
+      setWorkCenters((prev) =>
+        prev.map((w) => (w.id === wcId || w.workCenterId === wcId || w.code === wcId ? { ...w, ...updated } : w))
+      );
+      logAudit({ entityId: wcId, entityType: "Work Center Cell", action: "Updated" });
+    } catch (err) {
+      console.warn("API updateWorkCenter:", err.message);
+      throw err;
+    }
   };
 
-  const deleteWorkCenter = (wcId) => {
-    setWorkCenters((prev) => prev.filter((w) => w.id !== wcId && w.workCenterId !== wcId));
-    masterDataService.deleteWorkCenter(wcId).catch((err) => console.warn("API deleteWorkCenter:", err.message));
-    logAudit({ entityId: wcId, entityType: "Work Center Cell", action: "Deleted" });
+  const deleteWorkCenter = async (wcId) => {
+    try {
+      await masterDataService.deleteWorkCenter(wcId);
+      setWorkCenters((prev) => prev.filter((w) => w.id !== wcId && w.workCenterId !== wcId && w.code !== wcId));
+      logAudit({ entityId: wcId, entityType: "Work Center Cell", action: "Deleted" });
+    } catch (err) {
+      console.warn("API deleteWorkCenter:", err.message);
+      throw err;
+    }
   };
 
   const assignAssetToLine = (lineId, assetId) => {
@@ -2396,39 +1381,57 @@ export function MasterDataProvider({ children }) {
     logAudit({ entityId: lineId, entityType: "Work Centers / Lines", action: "Updated", newValue: `Assigned asset ${assetId}` });
   };
 
-  const addLineTarget = (targetData) => {
+  const addLineTarget = async (targetData) => {
+    const selLine = lines.find((l) => l.lineId === targetData.lineId || l.id === targetData.lineId);
+    const selSku = skus.find((s) => s.skuId === targetData.skuId || s.id === targetData.skuId);
     const newRecord = {
-      id: `TGT-0${lineTargets.length + 1}`,
-      targetId: `TGT-0${lineTargets.length + 1}`,
-      plantId: targetData.plantId || activePlantId,
+      id: targetData.id || targetData.targetId || `TGT-0${lineTargets.length + 1}`,
+      targetId: targetData.targetId || targetData.id || `TGT-0${lineTargets.length + 1}`,
+      plantId: targetData.plantId || activePlantId || "PLT-01",
       lineId: targetData.lineId || "LIN-01",
-      lineName: lines.find((l) => l.lineId === targetData.lineId || l.id === targetData.lineId)?.name || "High-Speed Line 1",
+      lineName: selLine?.name || targetData.lineName || "Production Line",
       skuId: targetData.skuId || "SKU-001",
-      skuCode: skus.find((s) => s.skuId === targetData.skuId || s.id === targetData.skuId)?.skuCode || "SKU-5001",
-      skuName: skus.find((s) => s.skuId === targetData.skuId || s.id === targetData.skuId)?.name || "Citrus Soda",
+      skuCode: selSku?.skuCode || targetData.skuCode || "SKU-5001",
+      skuName: selSku?.name || targetData.skuName || "Beverage",
       shift: targetData.shift || "Morning Shift",
       targetQuantity: Number(targetData.targetQuantity) || 250000,
-      targetHB: targetData.targetHB || "35,000 Units/Hour",
+      targetHB: targetData.targetHB || `${(Number(targetData.targetQuantity) || 250000) / 8} Units/Hour`,
       stdRunRate: Number(targetData.stdRunRate) || 40000,
       oeeTargetPct: Number(targetData.oeeTargetPct) || 88.0,
-      status: "Active",
-      effectiveDate: new Date().toISOString().substring(0, 10)
+      status: targetData.status || "Active",
+      effectiveDate: targetData.effectiveDate || new Date().toISOString().substring(0, 10)
     };
-    setLineTargets((prev) => [newRecord, ...prev]);
-    masterDataService.createLineTarget(newRecord).catch((err) => console.warn("API createLineTarget:", err.message));
-    logAudit({ entityId: newRecord.targetId, entityType: "Line Targets", action: "Created", newValue: `${newRecord.lineName} Target: ${newRecord.targetQuantity}` });
-    return newRecord;
+    try {
+      const res = await masterDataService.createLineTarget(newRecord);
+      const created = res?.data?.data || res?.data || res || newRecord;
+      setLineTargets((prev) => [created, ...prev.filter((t) => (t.id !== created.id && t.targetId !== created.targetId))]);
+      logAudit({ entityId: created.targetId || created.id, entityType: "Line Targets", action: "Created", newValue: `${created.lineName} Target: ${created.targetQuantity}` });
+      return created;
+    } catch (err) {
+      console.warn("API createLineTarget error:", err);
+      setLineTargets((prev) => [newRecord, ...prev]);
+      logAudit({ entityId: newRecord.targetId, entityType: "Line Targets", action: "Created", newValue: `${newRecord.lineName} Target: ${newRecord.targetQuantity}` });
+      return newRecord;
+    }
   };
 
-  const updateLineTarget = (targetId, updated) => {
+  const updateLineTarget = async (targetId, updated) => {
     setLineTargets((prev) => prev.map((t) => (t.targetId === targetId || t.id === targetId ? { ...t, ...updated } : t)));
-    masterDataService.updateLineTarget(targetId, updated).catch((err) => console.warn("API updateLineTarget:", err.message));
+    try {
+      await masterDataService.updateLineTarget(targetId, updated);
+    } catch (err) {
+      console.warn("API updateLineTarget error:", err);
+    }
     logAudit({ entityId: targetId, entityType: "Line Targets", action: "Updated" });
   };
 
-  const deleteLineTarget = (targetId) => {
+  const deleteLineTarget = async (targetId) => {
     setLineTargets((prev) => prev.filter((t) => t.targetId !== targetId && t.id !== targetId));
-    masterDataService.deleteLineTarget(targetId).catch((err) => console.warn("API deleteLineTarget:", err.message));
+    try {
+      await masterDataService.deleteLineTarget(targetId);
+    } catch (err) {
+      console.warn("API deleteLineTarget error:", err);
+    }
     logAudit({ entityId: targetId, entityType: "Line Targets", action: "Deleted" });
   };
 
@@ -2487,69 +1490,117 @@ export function MasterDataProvider({ children }) {
     logAudit({ entityId: matrixId, entityType: "Changeover Matrix", action: "Deleted" });
   };
 
-  const addSanitationClass = (data) => {
+  const addSanitationClass = async (data) => {
+    const tempId = data.sanitationId || data.id || data.classId || `SAN-0${Math.floor(1000 + Math.random() * 9000)}`;
     const newRecord = {
-      id: `SAN-0${sanitationClasses.length + 1}`,
-      sanitationId: `SAN-0${sanitationClasses.length + 1}`,
-      sanitationClass: data.sanitationClass,
-      description: data.description,
+      id: data.id || tempId,
+      classId: data.classId || tempId,
+      sanitationId: data.sanitationId || tempId,
+      code: (data.code || tempId).toUpperCase(),
+      name: data.sanitationClass || data.name || "Sanitation Program",
+      sanitationClass: data.sanitationClass || data.name || "Sanitation Program",
+      description: data.description || "",
       durationMin: Number(data.durationMin) || 45,
-      cleaningMethod: data.cleaningMethod || "Automated CIP",
+      washDurationMin: Number(data.durationMin) || 45,
+      cleaningMethod: data.cleaningMethod || "Automated Central CIP Skid",
+      cleaningLevel: data.cleaningLevel || "Intermediate",
       riskLevel: data.riskLevel || "Standard",
       applicableProducts: data.applicableProducts || "All Formulations",
-      status: "Active"
+      chemicalAgent: data.chemicalAgent || "Caustic Solution",
+      validationMethod: data.validationMethod || "Visual & Swab",
+      frequency: data.frequency || "Daily",
+      status: data.status || "Active"
     };
-    setSanitationClasses((prev) => [newRecord, ...prev]);
-    masterDataService.createSanitationClass(newRecord).catch((err) => console.warn("API createSanitationClass:", err.message));
-    logAudit({ entityId: newRecord.sanitationClass, entityType: "Sanitation Master", action: "Created" });
-    return newRecord;
+    try {
+      const res = await masterDataService.createSanitationClass(newRecord);
+      const saved = res?.data?.data || res?.data || res || newRecord;
+      setSanitationClasses((prev) => [saved, ...prev.filter((s) => s.id !== saved.id && s.sanitationId !== saved.sanitationId && s.classId !== saved.classId && s.id !== newRecord.id)]);
+      logAudit({ entityId: saved.sanitationClass || saved.id, entityType: "Sanitation Master", action: "Created" });
+      return saved;
+    } catch (err) {
+      console.warn("API createSanitationClass fallback:", err.message);
+      setSanitationClasses((prev) => [newRecord, ...prev]);
+      logAudit({ entityId: newRecord.sanitationClass, entityType: "Sanitation Master", action: "Created" });
+      return newRecord;
+    }
   };
 
-  const updateSanitationClass = (sanitationId, updated) => {
-    setSanitationClasses((prev) => prev.map((s) => (s.sanitationId === sanitationId || s.id === sanitationId ? { ...s, ...updated } : s)));
-    masterDataService.updateSanitationClass(sanitationId, updated).catch((err) => console.warn("API updateSanitationClass:", err.message));
+  const updateSanitationClass = async (sanitationId, updated) => {
+    setSanitationClasses((prev) => prev.map((s) => (s.sanitationId === sanitationId || s.id === sanitationId || s.classId === sanitationId ? { ...s, ...updated } : s)));
+    try {
+      await masterDataService.updateSanitationClass(sanitationId, updated);
+    } catch (err) {
+      console.warn("API updateSanitationClass error:", err.message);
+    }
     logAudit({ entityId: sanitationId, entityType: "Sanitation Master", action: "Updated" });
   };
 
-  const deleteSanitationClass = (sanitationId) => {
-    setSanitationClasses((prev) => prev.filter((s) => s.sanitationId !== sanitationId && s.id !== sanitationId));
-    masterDataService.deleteSanitationClass(sanitationId).catch((err) => console.warn("API deleteSanitationClass:", err.message));
+  const deleteSanitationClass = async (sanitationId) => {
+    setSanitationClasses((prev) => prev.filter((s) => s.sanitationId !== sanitationId && s.id !== sanitationId && s.classId !== sanitationId));
+    try {
+      await masterDataService.deleteSanitationClass(sanitationId);
+    } catch (err) {
+      console.warn("API deleteSanitationClass error:", err.message);
+    }
     logAudit({ entityId: sanitationId, entityType: "Sanitation Master", action: "Deleted" });
   };
 
-  const addAllergenRule = (data) => {
+  const addAllergenRule = async (data) => {
+    const tempId = data.allergenId || data.ruleId || data.id || `ALG-0${Math.floor(1000 + Math.random() * 9000)}`;
     const newRecord = {
-      id: `ALG-0${allergenRules.length + 1}`,
-      allergenId: `ALG-0${allergenRules.length + 1}`,
+      id: data.id || tempId,
+      ruleId: data.ruleId || tempId,
+      allergenId: data.allergenId || tempId,
       allergenName: data.allergenName,
-      skuId: data.skuId,
-      skuCode: data.skuCode,
+      allergenType: data.allergenType || "Botanical Extracts",
+      skuId: data.skuId || "",
+      skuCode: data.skuCode || "SKU-5001",
       riskLevel: data.riskLevel || "High",
-      cleaningProtocol: data.cleaningProtocol || "Class A Full CIP",
-      changeoverRestriction: data.changeoverRestriction || "Mandatory QA Swab Check",
-      status: "Active"
+      cleaningProtocol: data.cleaningProtocol || "Class A Full CIP + Sensory Swab Verification",
+      protocol: data.cleaningProtocol || "Class A Full CIP + Sensory Swab Verification",
+      changeoverRestriction: data.changeoverRestriction || "Mandatory QA sign-off",
+      verificationTest: data.verificationTest || "ATP Swab < 10 RLU",
+      status: data.status || "Active"
     };
-    setAllergenRules((prev) => [newRecord, ...prev]);
-    masterDataService.createAllergenRule(newRecord).catch((err) => console.warn("API createAllergenRule:", err.message));
-    logAudit({ entityId: newRecord.allergenName, entityType: "Allergen Rules", action: "Created" });
-    return newRecord;
+    try {
+      const res = await masterDataService.createAllergenRule(newRecord);
+      const saved = res?.data?.data || res?.data || res || newRecord;
+      setAllergenRules((prev) => [saved, ...prev.filter((a) => a.id !== saved.id && a.allergenId !== saved.allergenId && a.ruleId !== saved.ruleId && a.id !== newRecord.id)]);
+      logAudit({ entityId: saved.allergenName || saved.id, entityType: "Allergen Rules", action: "Created" });
+      return saved;
+    } catch (err) {
+      console.warn("API createAllergenRule fallback:", err.message);
+      setAllergenRules((prev) => [newRecord, ...prev]);
+      logAudit({ entityId: newRecord.allergenName, entityType: "Allergen Rules", action: "Created" });
+      return newRecord;
+    }
   };
 
-  const updateAllergenRule = (allergenId, updated) => {
-    setAllergenRules((prev) => prev.map((a) => (a.allergenId === allergenId || a.id === allergenId ? { ...a, ...updated } : a)));
-    masterDataService.updateAllergenRule(allergenId, updated).catch((err) => console.warn("API updateAllergenRule:", err.message));
+  const updateAllergenRule = async (allergenId, updated) => {
+    setAllergenRules((prev) => prev.map((a) => (a.allergenId === allergenId || a.id === allergenId || a.ruleId === allergenId ? { ...a, ...updated } : a)));
+    try {
+      await masterDataService.updateAllergenRule(allergenId, updated);
+    } catch (err) {
+      console.warn("API updateAllergenRule error:", err.message);
+    }
     logAudit({ entityId: allergenId, entityType: "Allergen Rules", action: "Updated" });
   };
 
-  const deleteAllergenRule = (allergenId) => {
-    setAllergenRules((prev) => prev.filter((a) => a.allergenId !== allergenId && a.id !== allergenId));
-    masterDataService.deleteAllergenRule(allergenId).catch((err) => console.warn("API deleteAllergenRule:", err.message));
+  const deleteAllergenRule = async (allergenId) => {
+    setAllergenRules((prev) => prev.filter((a) => a.allergenId !== allergenId && a.id !== allergenId && a.ruleId !== allergenId));
+    try {
+      await masterDataService.deleteAllergenRule(allergenId);
+    } catch (err) {
+      console.warn("API deleteAllergenRule error:", err.message);
+    }
     logAudit({ entityId: allergenId, entityType: "Allergen Rules", action: "Deleted" });
   };
 
-  const addLabourStandard = (data) => {
+  const addLabourStandard = async (data) => {
+    const tempId = data.standardId || data.id || `LBR-0${Math.floor(1000 + Math.random() * 9000)}`;
     const newRecord = {
-      id: `LBR-0${labourStandards.length + 1}`,
+      id: data.id || tempId,
+      standardId: data.standardId || tempId,
       lineId: data.lineId || "LIN-01",
       lineName: data.lineName || "Production Line",
       standardCrew: Number(data.standardCrew) || 8,
@@ -2559,110 +1610,145 @@ export function MasterDataProvider({ children }) {
         : `$${Number(data.directCostPerHour || 25).toFixed(2)}`,
       status: data.status || "Active"
     };
-    setLabourStandards((prev) => [newRecord, ...prev]);
-    masterDataService.createLabourStandard(newRecord).catch((err) => console.warn("API createLabourStandard:", err.message));
-    logAudit({ entityId: newRecord.lineName, entityType: "Labour Standard", action: "Created" });
-    return newRecord;
+    try {
+      const res = await masterDataService.createLabourStandard(newRecord);
+      const saved = res?.data?.data || res?.data || res || newRecord;
+      setLabourStandards((prev) => [saved, ...prev.filter((s) => s.id !== saved.id && s.standardId !== saved.standardId && s.id !== newRecord.id)]);
+      logAudit({ entityId: saved.standardId || saved.id, entityType: "Labour Standard", action: "Created", newValue: `${saved.lineName} (${saved.standardCrew} Crew)` });
+      return saved;
+    } catch (err) {
+      console.warn("API createLabourStandard fallback:", err.message);
+      setLabourStandards((prev) => [newRecord, ...prev]);
+      logAudit({ entityId: newRecord.standardId, entityType: "Labour Standard", action: "Created", newValue: `${newRecord.lineName} (${newRecord.standardCrew} Crew)` });
+      return newRecord;
+    }
   };
 
-  const updateLabourStandard = (id, updated) => {
-    setLabourStandards((prev) => prev.map((s) => (s.id === id ? { ...s, ...updated } : s)));
-    masterDataService.updateLabourStandard(id, updated).catch((err) => console.warn("API updateLabourStandard:", err.message));
+  const updateLabourStandard = async (id, updated) => {
+    setLabourStandards((prev) => prev.map((s) => (s.id === id || s.standardId === id ? { ...s, ...updated } : s)));
+    try {
+      await masterDataService.updateLabourStandard(id, updated);
+    } catch (err) {
+      console.warn("API updateLabourStandard error:", err.message);
+    }
     logAudit({ entityId: id, entityType: "Labour Standard", action: "Updated" });
   };
 
-  const deleteLabourStandard = (id) => {
-    setLabourStandards((prev) => prev.filter((s) => s.id !== id));
-    masterDataService.deleteLabourStandard(id).catch((err) => console.warn("API deleteLabourStandard:", err.message));
+  const deleteLabourStandard = async (id) => {
+    setLabourStandards((prev) => prev.filter((s) => s.id !== id && s.standardId !== id));
+    try {
+      await masterDataService.deleteLabourStandard(id);
+    } catch (err) {
+      console.warn("API deleteLabourStandard error:", err.message);
+    }
     logAudit({ entityId: id, entityType: "Labour Standard", action: "Deleted" });
   };
 
   // ============================================================================
   // 11. MACHINE ASSET MUTATIONS
   // ============================================================================
-  const addAsset = (assetData) => {
-    const newRecord = {
-      id: `AST-00${assets.length + 1}`,
-      assetId: `AST-00${assets.length + 1}`,
-      name: assetData.name,
-      type: assetData.type || "Packaging / Filling",
-      lineId: assetData.lineId || "LIN-01",
-      lineName: lines.find((l) => l.lineId === assetData.lineId || l.id === assetData.lineId)?.name || "High-Speed Line 1",
-      plantId: assetData.plantId || activePlantId,
-      status: assetData.status || "Operational",
-      criticality: assetData.criticality || "Critical (Class A)",
-      maintenanceStatus: "Healthy (100% Score)",
-      serialNumber: assetData.serialNumber || `SN-${Math.floor(1000 + Math.random() * 9000)}`,
-      manufacturer: assetData.manufacturer || "Krones AG",
-      installDate: assetData.installDate || new Date().toISOString().substring(0, 10),
-      ratedSpeed: assetData.ratedSpeed || "40,000 BPH",
-      downtimeHistory: [],
-      maintenanceHistory: [],
-      auditHistory: [
-        { date: new Date().toISOString().substring(0, 10), user: "Alexander Vance", action: "Commissioned into Asset Register" }
-      ]
-    };
-    setAssets((prev) => [newRecord, ...prev]);
-    masterDataService.createAsset(newRecord).catch((err) => console.warn("API createAsset:", err.message));
-    logAudit({ entityId: newRecord.assetId, entityType: "Machine Assets", action: "Created", newValue: newRecord.name });
-    return newRecord;
+  const addAsset = async (assetData) => {
+    try {
+      const res = await masterDataService.createAsset(assetData);
+      const created = res?.data || res;
+      setAssets((prev) => [created, ...prev.filter((a) => a.id !== created.id && a.assetId !== created.assetId)]);
+      logAudit({ entityId: created.assetId || created.id, entityType: "Machine Assets", action: "Created", newValue: created.name });
+      return created;
+    } catch (err) {
+      console.warn("API createAsset error:", err.message);
+      throw err;
+    }
   };
 
-  const updateAsset = (assetId, updated) => {
-    setAssets((prev) => prev.map((a) => (a.assetId === assetId || a.id === assetId ? { ...a, ...updated } : a)));
-    masterDataService.updateAsset(assetId, updated).catch((err) => console.warn("API updateAsset:", err.message));
-    logAudit({ entityId: assetId, entityType: "Machine Assets", action: "Updated" });
+  const updateAsset = async (assetId, updated) => {
+    try {
+      await masterDataService.updateAsset(assetId, updated);
+      setAssets((prev) => prev.map((a) => (a.assetId === assetId || a.id === assetId ? { ...a, ...updated } : a)));
+      logAudit({ entityId: assetId, entityType: "Machine Assets", action: "Updated" });
+    } catch (err) {
+      console.warn("API updateAsset error:", err.message);
+      throw err;
+    }
   };
 
-  const toggleAssetStatus = (assetId) => {
-    setAssets((prev) =>
-      prev.map((a) => {
-        if (a.assetId === assetId || a.id === assetId) {
-          const next = a.status === "Operational" ? "Under Maintenance" : "Operational";
-          masterDataService.updateAsset(assetId, { status: next }).catch((err) => console.warn("API toggleAssetStatus:", err.message));
-          return { ...a, status: next };
-        }
-        return a;
-      })
-    );
+  const toggleAssetStatus = async (assetId) => {
+    const current = assets.find((a) => a.assetId === assetId || a.id === assetId);
+    const next = current?.status === "Operational" ? "Under Maintenance" : "Operational";
+    try {
+      await masterDataService.updateAsset(assetId, { status: next });
+      setAssets((prev) =>
+        prev.map((a) => (a.assetId === assetId || a.id === assetId ? { ...a, status: next } : a))
+      );
+    } catch (err) {
+      console.warn("API toggleAssetStatus error:", err.message);
+    }
   };
 
-  const deleteAsset = (assetId) => {
-    setAssets((prev) => prev.filter((a) => a.assetId !== assetId && a.id !== assetId));
-    masterDataService.deleteAsset(assetId).catch((err) => console.warn("API deleteAsset:", err.message));
-    logAudit({ entityId: assetId, entityType: "Machine Assets", action: "Deleted" });
+  const deleteAsset = async (assetId) => {
+    try {
+      await masterDataService.deleteAsset(assetId);
+      setAssets((prev) => prev.filter((a) => a.assetId !== assetId && a.id !== assetId));
+      logAudit({ entityId: assetId, entityType: "Machine Assets", action: "Deleted" });
+    } catch (err) {
+      console.warn("API deleteAsset error:", err.message);
+      throw err;
+    }
   };
 
   // ============================================================================
   // 12. EMPLOYEES & TRAINING MUTATIONS
   // ============================================================================
-  const addEmployee = (empData) => {
+  const addEmployee = async (empData) => {
     const newRecord = {
-      id: `EMP-00${employees.length + 1}`,
-      employeeId: `EMP-00${employees.length + 1}`,
+      id: empData.employeeId || empData.id || `EMP-00${employees.length + 1}`,
+      employeeId: empData.employeeId || empData.id || `EMP-00${employees.length + 1}`,
       name: empData.name,
       email: empData.email || `${empData.name.toLowerCase().replace(/\s+/g, ".")}@flowstate.io`,
-      department: empData.department || "Production",
+      department: empData.department || "Production Operations",
       departmentId: empData.departmentId || "DEP-01",
       role: empData.role || "Line Operator",
       plantId: empData.plantId || activePlantId,
       plantName: plants.find((p) => p.id === (empData.plantId || activePlantId))?.name || "Indore Plant",
-      skills: empData.skills || ["Standard Operating Procedures"],
-      skillLevel: empData.skillLevel || "Level 2 (Autonomous Operator)",
-      certifications: empData.certifications || ["Plant Safety GMP"],
-      assignedLineIds: empData.assignedLineIds || ["LIN-01"],
-      status: "Active"
+      skills: Array.isArray(empData.skills) ? empData.skills : ["Standard Operating Procedures"],
+      skillLevel: empData.skillLevel || "Level 2 (Certified Operator)",
+      certifications: Array.isArray(empData.certifications) ? empData.certifications : ["Plant Safety GMP"],
+      assignedLineIds: Array.isArray(empData.assignedLineIds) ? empData.assignedLineIds : ["LIN-01"],
+      status: empData.status || "Active"
     };
-    setEmployees((prev) => [newRecord, ...prev]);
-    masterDataService.createEmployee(newRecord).catch((err) => console.warn("API createEmployee:", err.message));
-    logAudit({ entityId: newRecord.employeeId, entityType: "Employees & Skills", action: "Created", newValue: newRecord.name });
-    return newRecord;
+    try {
+      const res = await masterDataService.createEmployeeSkill(newRecord);
+      const saved = res?.data?.data || res?.data || res || newRecord;
+      const finalItem = { ...newRecord, ...saved };
+      setEmployees((prev) => [finalItem, ...prev.filter((e) => e.employeeId !== finalItem.employeeId && e.id !== finalItem.id)]);
+      logAudit({ entityId: finalItem.employeeId, entityType: "Employees & Skills", action: "Created", newValue: finalItem.name });
+      return finalItem;
+    } catch (err) {
+      console.warn("API createEmployee error:", err.message);
+      setEmployees((prev) => [newRecord, ...prev]);
+      return newRecord;
+    }
   };
 
-  const updateEmployee = (empId, updated) => {
-    setEmployees((prev) => prev.map((e) => (e.employeeId === empId || e.id === empId ? { ...e, ...updated } : e)));
-    masterDataService.updateEmployee(empId, updated).catch((err) => console.warn("API updateEmployee:", err.message));
+  const updateEmployee = async (empId, updated) => {
+    try {
+      const res = await masterDataService.updateEmployeeSkill(empId, updated);
+      const saved = res?.data?.data || res?.data || res;
+      setEmployees((prev) => prev.map((e) => (e.employeeId === empId || e.id === empId ? { ...e, ...updated, ...(saved || {}) } : e)));
+    } catch (err) {
+      console.warn("API updateEmployee error:", err.message);
+      setEmployees((prev) => prev.map((e) => (e.employeeId === empId || e.id === empId ? { ...e, ...updated } : e)));
+    }
     logAudit({ entityId: empId, entityType: "Employees & Skills", action: "Updated" });
+  };
+
+  const deleteEmployee = async (empId) => {
+    try {
+      await masterDataService.deleteEmployeeSkill(empId);
+    } catch (err) {
+      console.warn("API deleteEmployee error:", err.message);
+    }
+    setEmployees((prev) => prev.filter((e) => e.employeeId !== empId && e.id !== empId));
+    logAudit({ entityId: empId, entityType: "Employees & Skills", action: "Deleted" });
   };
 
   const addTrainingRecord = (trnData) => {
@@ -2686,143 +1772,156 @@ export function MasterDataProvider({ children }) {
   // ============================================================================
   // 13. QUALITY SPECS & CCP LIMITS MUTATIONS
   // ============================================================================
-  const addQualitySpec = (specData) => {
-    const newRecord = {
-      id: `QSP-00${qualitySpecs.length + 1}`,
-      specId: `QSP-00${qualitySpecs.length + 1}`,
-      skuId: specData.skuId || "SKU-001",
-      skuCode: specData.skuCode || skus.find((s) => s.skuId === specData.skuId)?.skuCode || "SKU-5001",
-      skuName: specData.skuName || skus.find((s) => s.skuId === specData.skuId)?.name || "Beverage",
-      specificationTitle: specData.specificationTitle || "Parameter Spec Standard",
-      parameter: specData.parameter || "Moisture / Concentration",
-      target: String(specData.target || "10.0"),
-      min: String(specData.min || "9.5"),
-      max: String(specData.max || "10.5"),
-      uom: specData.uom || "%",
-      revision: "R1",
-      status: "Active",
-      approvalStatus: "Approved",
-      criticality: specData.criticality || "Quality Spec",
-      isCCP: !!specData.isCCP,
-      criticalLimit: specData.criticalLimit || "Standard QA Boundary",
-      testMethod: specData.testMethod || "Standard QA Digital Gauge",
-      effectiveFrom: specData.effectiveFrom || new Date().toISOString().substring(0, 10),
-      effectiveTo: "2030-12-31",
-      revisionHistory: [
-        { revision: "R1", status: "Approved", createdBy: "Sarah Jenkins", date: new Date().toISOString().substring(0, 10), changes: "Initial spec baseline registered.", approvedBy: "Sarah Jenkins" }
-      ]
-    };
-    setQualitySpecs((prev) => [newRecord, ...prev]);
-    masterDataService.createQualitySpec(newRecord).catch((err) => console.warn("API createQualitySpec:", err.message));
-    logAudit({ entityId: newRecord.specId, entityType: "Quality Specs", action: "Created", newValue: `${newRecord.parameter} for ${newRecord.skuCode}` });
-    return newRecord;
+  const addQualitySpec = async (specData) => {
+    try {
+      const res = await masterDataService.createQualitySpec(specData);
+      const created = res?.data || res;
+      setQualitySpecs((prev) => [created, ...prev.filter((q) => q.id !== created.id && q.specId !== created.specId)]);
+      logAudit({ entityId: created.specId || created.id, entityType: "Quality Specs", action: "Created", newValue: `${created.parameter} for ${created.skuCode || created.skuId}` });
+      return created;
+    } catch (err) {
+      console.warn("API createQualitySpec error:", err.message);
+      throw err;
+    }
   };
 
-  const updateQualitySpec = (specId, updated) => {
-    setQualitySpecs((prev) => prev.map((q) => (q.specId === specId || q.id === specId ? { ...q, ...updated } : q)));
-    masterDataService.updateQualitySpec(specId, updated).catch((err) => console.warn("API updateQualitySpec:", err.message));
-    logAudit({ entityId: specId, entityType: "Quality Specs", action: "Updated" });
+  const updateQualitySpec = async (specId, updated) => {
+    try {
+      await masterDataService.updateQualitySpec(specId, updated);
+      setQualitySpecs((prev) => prev.map((q) => (q.specId === specId || q.id === specId ? { ...q, ...updated } : q)));
+      logAudit({ entityId: specId, entityType: "Quality Specs", action: "Updated" });
+    } catch (err) {
+      console.warn("API updateQualitySpec error:", err.message);
+      throw err;
+    }
   };
 
-  const approveQualitySpec = (specId) => {
-    setQualitySpecs((prev) =>
-      prev.map((q) => {
-        if (q.specId === specId || q.id === specId) {
-          logAudit({ entityId: q.specId, entityType: "Quality Specs", action: "Approved" });
-          masterDataService.updateQualitySpec(specId, { approvalStatus: "Approved", status: "Active" }).catch((err) => console.warn("API approveQualitySpec:", err.message));
-          return { ...q, approvalStatus: "Approved", status: "Active" };
-        }
-        return q;
-      })
-    );
+  const approveQualitySpec = async (specId) => {
+    try {
+      await masterDataService.updateQualitySpec(specId, { approvalStatus: "Approved", status: "Active" });
+      setQualitySpecs((prev) =>
+        prev.map((q) => (q.specId === specId || q.id === specId ? { ...q, approvalStatus: "Approved", status: "Active" } : q))
+      );
+      logAudit({ entityId: specId, entityType: "Quality Specs", action: "Approved" });
+    } catch (err) {
+      console.warn("API approveQualitySpec error:", err.message);
+      throw err;
+    }
   };
 
-  const rejectQualitySpec = (specId, reason = "Tolerance out of standard range") => {
-    setQualitySpecs((prev) =>
-      prev.map((q) => {
-        if (q.specId === specId || q.id === specId) {
-          logAudit({ entityId: q.specId, entityType: "Quality Specs", action: "Rejected", notes: `Reason: ${reason}` });
-          masterDataService.updateQualitySpec(specId, { approvalStatus: "Draft", rejectionReason: reason }).catch((err) => console.warn("API rejectQualitySpec:", err.message));
-          return { ...q, approvalStatus: "Draft", rejectionReason: reason };
-        }
-        return q;
-      })
-    );
+  const rejectQualitySpec = async (specId, reason = "Tolerance out of standard range") => {
+    try {
+      await masterDataService.updateQualitySpec(specId, { approvalStatus: "Draft", rejectionReason: reason });
+      setQualitySpecs((prev) =>
+        prev.map((q) => (q.specId === specId || q.id === specId ? { ...q, approvalStatus: "Draft", rejectionReason: reason } : q))
+      );
+      logAudit({ entityId: specId, entityType: "Quality Specs", action: "Rejected", notes: `Reason: ${reason}` });
+    } catch (err) {
+      console.warn("API rejectQualitySpec error:", err.message);
+      throw err;
+    }
   };
 
-  const deleteQualitySpec = (specId) => {
-    setQualitySpecs((prev) => prev.filter((q) => q.specId !== specId && q.id !== specId));
-    masterDataService.deleteQualitySpec(specId).catch((err) => console.warn("API deleteQualitySpec:", err.message));
-    logAudit({ entityId: specId, entityType: "Quality Specs", action: "Deleted" });
+  const deleteQualitySpec = async (specId) => {
+    try {
+      await masterDataService.deleteQualitySpec(specId);
+      setQualitySpecs((prev) => prev.filter((q) => q.specId !== specId && q.id !== specId));
+      logAudit({ entityId: specId, entityType: "Quality Specs", action: "Deleted" });
+    } catch (err) {
+      console.warn("API deleteQualitySpec error:", err.message);
+      throw err;
+    }
+  };
+
+  // HACCP CCP Limits
+  const addCCPLimit = async (ccpData) => {
+    try {
+      const res = await masterDataService.createCCPLimit(ccpData);
+      const created = res?.data || res;
+      setCcpLimits((prev) => [created, ...prev.filter((c) => c.id !== created.id && c.ccpNumber !== created.ccpNumber)]);
+      logAudit({ entityId: created.ccpNumber || created.id, entityType: "CCP Limits", action: "Created", newValue: created.processStep });
+      return created;
+    } catch (err) {
+      console.warn("API createCCPLimit error:", err.message);
+      throw err;
+    }
+  };
+
+  const updateCCPLimit = async (id, updated) => {
+    try {
+      await masterDataService.updateCCPLimit(id, updated);
+      setCcpLimits((prev) =>
+        prev.map((c) => (c.id === id || c.ccpNumber === id ? { ...c, ...updated } : c))
+      );
+      logAudit({ entityId: id, entityType: "CCP Limits", action: "Updated" });
+    } catch (err) {
+      console.warn("API updateCCPLimit error:", err.message);
+      throw err;
+    }
+  };
+
+  const deleteCCPLimit = async (id) => {
+    try {
+      await masterDataService.deleteCCPLimit(id);
+      setCcpLimits((prev) => prev.filter((c) => c.id !== id && c.ccpNumber !== id));
+      logAudit({ entityId: id, entityType: "CCP Limits", action: "Deleted" });
+    } catch (err) {
+      console.warn("API deleteCCPLimit error:", err.message);
+      throw err;
+    }
   };
 
   // ============================================================================
   // 14. STORAGE RESOURCES MUTATIONS
   // ============================================================================
-  const addStorageResource = (strData) => {
-    const code = strData.resourceCode || strData.code || `STR-${(storageResources.length + 1).toString().padStart(2, "0")}`;
-    const id = `STR-0${storageResources.length + 1}`;
-    const newRecord = {
-      id,
-      storageId: id,
-      resourceId: id,
-      resourceCode: code,
-      code,
-      name: strData.name,
-      type: strData.resourceType || strData.type || "Selective Pallet Rack",
-      resourceType: strData.resourceType || strData.type || "Selective Pallet Rack",
-      plantId: strData.plantId || activePlantId,
-      plantName: plants.find((p) => p.id === (strData.plantId || activePlantId))?.name || "Indore Plant",
-      zone: strData.zone || "General Staging",
-      capacityUnit: strData.capacityUnit || "Pallet Positions",
-      totalCapacity: Number(strData.totalCapacity) || 500,
-      capacity: strData.capacity || `${strData.totalCapacity || 500} ${strData.capacityUnit || "Pallet Positions"}`,
-      currentOccupancy: strData.currentOccupancy || "0 Pallets (0%)",
-      temperatureZone: strData.temperatureZone || strData.temperatureRange || "Ambient (18°C - 24°C)",
-      temperatureRange: strData.temperatureZone || strData.temperatureRange || "Ambient (18°C - 24°C)",
-      status: "Active",
-      effectiveFrom: strData.effectiveFrom || new Date().toISOString().substring(0, 10),
-      effectiveTo: "2030-12-31"
-    };
-    setStorageResources((prev) => [newRecord, ...prev]);
-    if (typeof masterDataService.createStorageResource === "function") {
-      masterDataService.createStorageResource(newRecord).catch((err) => console.warn("API createStorageResource:", err.message));
+  const addStorageResource = async (strData) => {
+    try {
+      const res = await masterDataService.createStorageResource(strData);
+      const created = res?.data || res;
+      setStorageResources((prev) => [created, ...prev.filter((s) => s.id !== created.id && s.resourceCode !== created.resourceCode)]);
+      logAudit({ entityId: created.resourceCode || created.id, entityType: "Storage Resources", action: "Created", newValue: created.name });
+      return created;
+    } catch (err) {
+      console.warn("API createStorageResource error:", err.message);
+      throw err;
     }
-    logAudit({ entityId: newRecord.code, entityType: "Storage Resources", action: "Created", newValue: newRecord.name });
-    return newRecord;
   };
 
-  const updateStorageResource = (storageId, updated) => {
-    setStorageResources((prev) =>
-      prev.map((s) => (s.storageId === storageId || s.id === storageId || s.resourceId === storageId ? { ...s, ...updated } : s))
-    );
-    if (typeof masterDataService.updateStorageResource === "function") {
-      masterDataService.updateStorageResource(storageId, updated).catch((err) => console.warn("API updateStorageResource:", err.message));
+  const updateStorageResource = async (storageId, updated) => {
+    try {
+      await masterDataService.updateStorageResource(storageId, updated);
+      setStorageResources((prev) =>
+        prev.map((s) => (s.storageId === storageId || s.id === storageId || s.resourceId === storageId || s.resourceCode === storageId ? { ...s, ...updated } : s))
+      );
+      logAudit({ entityId: storageId, entityType: "Storage Resources", action: "Updated" });
+    } catch (err) {
+      console.warn("API updateStorageResource error:", err.message);
+      throw err;
     }
-    logAudit({ entityId: storageId, entityType: "Storage Resources", action: "Updated" });
   };
 
-  const toggleStorageResourceStatus = (storageId) => {
-    setStorageResources((prev) =>
-      prev.map((s) => {
-        if (s.storageId === storageId || s.id === storageId || s.resourceId === storageId) {
-          const next = s.status === "Active" ? "Inactive" : "Active";
-          if (typeof masterDataService.updateStorageResource === "function") {
-            masterDataService.updateStorageResource(storageId, { status: next }).catch((err) => console.warn("API toggleStorageResourceStatus:", err.message));
-          }
-          return { ...s, status: next };
-        }
-        return s;
-      })
-    );
+  const toggleStorageResourceStatus = async (storageId) => {
+    const current = storageResources.find((s) => s.storageId === storageId || s.id === storageId || s.resourceId === storageId || s.resourceCode === storageId);
+    const next = current?.status === "Active" ? "Inactive" : "Active";
+    try {
+      await masterDataService.updateStorageResource(storageId, { status: next });
+      setStorageResources((prev) =>
+        prev.map((s) => (s.storageId === storageId || s.id === storageId || s.resourceId === storageId || s.resourceCode === storageId ? { ...s, status: next } : s))
+      );
+    } catch (err) {
+      console.warn("API toggleStorageResourceStatus error:", err.message);
+    }
   };
 
-  const deleteStorageResource = (storageId) => {
-    setStorageResources((prev) => prev.filter((s) => s.storageId !== storageId && s.id !== storageId && s.resourceId !== storageId));
-    if (typeof masterDataService.deleteStorageResource === "function") {
-      masterDataService.deleteStorageResource(storageId).catch((err) => console.warn("API deleteStorageResource:", err.message));
+  const deleteStorageResource = async (storageId) => {
+    try {
+      await masterDataService.deleteStorageResource(storageId);
+      setStorageResources((prev) => prev.filter((s) => s.storageId !== storageId && s.id !== storageId && s.resourceId !== storageId && s.resourceCode !== storageId));
+      logAudit({ entityId: storageId, entityType: "Storage Resources", action: "Deleted" });
+    } catch (err) {
+      console.warn("API deleteStorageResource error:", err.message);
+      throw err;
     }
-    logAudit({ entityId: storageId, entityType: "Storage Resources", action: "Deleted" });
   };
 
   // ============================================================================
@@ -3006,10 +2105,12 @@ export function MasterDataProvider({ children }) {
       value={{
         company: companies[0],
         companies,
+        setCompanies,
         addCompany,
         updateCompany,
         deleteCompany,
         plants,
+        setPlants,
         addPlant,
         updatePlant,
         deletePlant,
@@ -3043,6 +2144,7 @@ export function MasterDataProvider({ children }) {
 
         // 3. SKUs
         skus,
+        setSkus,
         addSKU,
         updateSKU,
         toggleSKUStatus,
@@ -3092,6 +2194,7 @@ export function MasterDataProvider({ children }) {
 
         // 9. Lines & Targets
         lines,
+        setLines,
         addLine,
         updateLine,
         toggleLineStatus,
@@ -3119,12 +2222,14 @@ export function MasterDataProvider({ children }) {
         updateAllergenRule,
         deleteAllergenRule,
         labourStandards,
+        setLabourStandards,
         addLabourStandard,
         updateLabourStandard,
         deleteLabourStandard,
 
         // 11. Assets
         assets,
+        setAssets,
         addAsset,
         updateAsset,
         toggleAssetStatus,
@@ -3132,21 +2237,30 @@ export function MasterDataProvider({ children }) {
 
         // 12. Employees & Training
         employees,
+        setEmployees,
         addEmployee,
         updateEmployee,
+        deleteEmployee,
         trainingRecords,
         addTrainingRecord,
 
         // 13. Quality Specs & CCP
         qualitySpecs,
+        setQualitySpecs,
         addQualitySpec,
         updateQualitySpec,
         approveQualitySpec,
         rejectQualitySpec,
         deleteQualitySpec,
+        ccpLimits,
+        setCcpLimits,
+        addCCPLimit,
+        updateCCPLimit,
+        deleteCCPLimit,
 
         // 14. Storage Resources
         storageResources,
+        setStorageResources,
         addStorageResource,
         updateStorageResource,
         toggleStorageResourceStatus,
@@ -3162,6 +2276,7 @@ export function MasterDataProvider({ children }) {
         addInvitation,
         cancelInvitation,
         rolePermissions,
+        setRolePermissions,
         hasPermission,
         updatePermissionMatrix,
 

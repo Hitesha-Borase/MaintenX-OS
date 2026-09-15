@@ -2,14 +2,12 @@ import React, { useState, useMemo, useEffect } from "react";
 import {
   Clock,
   Archive,
-  CheckCircle2,
   AlertTriangle,
   RotateCcw,
   Search,
-  Zap,
   ShieldCheck,
-  Package,
-  Layers,
+  Plus,
+  Edit2,
   Eye,
   Trash2,
   X
@@ -26,46 +24,106 @@ export function StaleRecordsPage() {
   const { dataHealthStats = {} } = useMasterData();
   const { addToast } = useApp();
 
-  const [staleRecords, setStaleRecords] = useState([
-    { id: "STL-01", table: "Item Master", name: "SKU-4008 (Seasonal Spiced Soda 2024)", lastProduced: "248 Days Ago", inventoryOnHand: 0, status: "Stale / Obsolete" },
-    { id: "STL-02", table: "BOM Master", name: "BOM-4008 (Spiced Formula v1)", lastProduced: "248 Days Ago", inventoryOnHand: 0, status: "Stale / Obsolete" },
-    { id: "STL-03", table: "Vendor Master", name: "VEND-88 (Legacy Glass Supplier)", lastProduced: "310 Days Ago", inventoryOnHand: 0, status: "Inactive Vendor" }
-  ]);
-
+  const [staleRecords, setStaleRecords] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [viewingRecord, setViewingRecord] = useState(null);
   const [archivingRecord, setArchivingRecord] = useState(null);
   const [deletingRecord, setDeletingRecord] = useState(null);
+  const [editingRecord, setEditingRecord] = useState(null);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isActioning, setIsActioning] = useState(false);
 
+  const [newRecord, setNewRecord] = useState({
+    name: "",
+    table: "Item Master",
+    lastProduced: "180 Days Ago",
+    inventoryOnHand: 0,
+    status: "Stale / Obsolete"
+  });
+
   const fetchScan = () => {
+    setLoading(true);
     adminService.getDataHealthScan()
       .then((res) => {
         const data = res?.data?.staleRecords || res?.staleRecords;
-        if (Array.isArray(data) && data.length > 0) setStaleRecords(data);
+        if (Array.isArray(data)) {
+          setStaleRecords(data);
+        }
       })
-      .catch((err) => console.warn("Data health scan (stale):", err.message));
+      .catch((err) => console.warn("Data health scan (stale):", err.message))
+      .finally(() => setLoading(false));
   };
 
   useEffect(() => {
     fetchScan();
   }, []);
 
-  const staleCount = staleRecords.filter((s) => !s.status.includes("Archived")).length;
+  const staleCount = staleRecords.filter((s) => !s.status?.includes("Archived")).length;
+
+  const handleAddSubmit = async (e) => {
+    e.preventDefault();
+    if (!newRecord.name.trim()) {
+      addToast("Please provide stale record name or identifier.", "warning");
+      return;
+    }
+    try {
+      setIsActioning(true);
+      await adminService.createDataHealthRecord("stale-records", {
+        ...newRecord,
+        inventoryOnHand: Number(newRecord.inventoryOnHand) || 0
+      });
+      addToast("Stale record saved into database!", "success");
+      setIsAddModalOpen(false);
+      setNewRecord({
+        name: "",
+        table: "Item Master",
+        lastProduced: "180 Days Ago",
+        inventoryOnHand: 0,
+        status: "Stale / Obsolete"
+      });
+      fetchScan();
+    } catch (err) {
+      console.error(err);
+      addToast(`Error adding stale record: ${err.message}`, "error");
+    } finally {
+      setIsActioning(false);
+    }
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    if (!editingRecord.name.trim()) {
+      addToast("Please provide stale record name or identifier.", "warning");
+      return;
+    }
+    try {
+      setIsActioning(true);
+      await adminService.updateDataHealthRecord("stale-records", editingRecord.id, {
+        ...editingRecord,
+        inventoryOnHand: Number(editingRecord.inventoryOnHand) || 0
+      });
+      addToast(`Record ${editingRecord.id} updated in database!`, "success");
+      setEditingRecord(null);
+      fetchScan();
+    } catch (err) {
+      console.error(err);
+      addToast(`Error updating record: ${err.message}`, "error");
+    } finally {
+      setIsActioning(false);
+    }
+  };
 
   const handleArchive = async (record) => {
     try {
       setIsActioning(true);
-      await adminService.deleteDataHealth({
-        category: "staleRecords",
-        id: record.id,
-        details: record
+      await adminService.updateDataHealthRecord("stale-records", record.id, {
+        ...record,
+        status: "Archived"
       });
-      setStaleRecords((prev) =>
-        prev.map((s) => (s.id === record.id ? { ...s, status: "Archived" } : s))
-      );
-      addToast(`Record ${record.id} archived & recorded in DB!`, "success");
+      addToast(`Record ${record.id} archived & recorded in database!`, "success");
       setArchivingRecord(null);
+      fetchScan();
     } catch (err) {
       console.error(err);
       addToast(`Error archiving record: ${err.message}`, "error");
@@ -77,14 +135,10 @@ export function StaleRecordsPage() {
   const handleDeleteRecord = async (record) => {
     try {
       setIsActioning(true);
-      await adminService.deleteDataHealth({
-        category: "staleRecords",
-        id: record.id,
-        details: record
-      });
-      setStaleRecords((prev) => prev.filter((s) => s.id !== record.id));
-      addToast(`Record ${record.id} deleted from database!`, "success");
+      await adminService.deleteDataHealthRecord("stale-records", record.id);
+      addToast(`Record ${record.id} permanently deleted from database!`, "success");
       setDeletingRecord(null);
+      fetchScan();
     } catch (err) {
       console.error(err);
       addToast(`Error deleting record: ${err.message}`, "error");
@@ -96,15 +150,14 @@ export function StaleRecordsPage() {
   const handleArchiveAll = async () => {
     try {
       setIsActioning(true);
-      for (const s of staleRecords.filter((x) => !x.status.includes("Archived"))) {
-        await adminService.deleteDataHealth({
-          category: "staleRecords",
-          id: s.id,
-          details: s
-        });
+      for (const s of staleRecords.filter((x) => !x.status?.includes("Archived"))) {
+        await adminService.updateDataHealthRecord("stale-records", s.id, {
+          ...s,
+          status: "Archived"
+        }).catch(() => {});
       }
-      setStaleRecords((prev) => prev.map((s) => ({ ...s, status: "Archived" })));
       addToast("All stale & obsolete records archived and persisted in DB!", "success");
+      fetchScan();
     } catch (err) {
       console.error(err);
       addToast(`Error archiving all records: ${err.message}`, "error");
@@ -118,9 +171,9 @@ export function StaleRecordsPage() {
       if (!searchQuery.trim()) return true;
       const q = searchQuery.toLowerCase();
       return (
-        s.name.toLowerCase().includes(q) ||
-        s.table.toLowerCase().includes(q) ||
-        s.id.toLowerCase().includes(q)
+        s.name?.toLowerCase().includes(q) ||
+        s.table?.toLowerCase().includes(q) ||
+        s.id?.toLowerCase().includes(q)
       );
     });
   }, [staleRecords, searchQuery]);
@@ -142,6 +195,14 @@ export function StaleRecordsPage() {
 
         <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
           <Button
+            variant="primary"
+            icon={Plus}
+            onClick={() => setIsAddModalOpen(true)}
+            style={{ fontSize: "12px", padding: "7px 12px" }}
+          >
+            + Add Stale Record
+          </Button>
+          <Button
             variant="secondary"
             icon={RotateCcw}
             onClick={() => {
@@ -154,7 +215,7 @@ export function StaleRecordsPage() {
           </Button>
           {staleCount > 0 && (
             <Button
-              variant="primary"
+              variant="secondary"
               icon={Archive}
               disabled={isActioning}
               onClick={handleArchiveAll}
@@ -270,10 +331,16 @@ export function StaleRecordsPage() {
               </tr>
             </thead>
             <tbody>
-              {filteredRecords.length === 0 ? (
+              {loading ? (
                 <tr>
                   <td colSpan={6} style={{ padding: "32px", textAlign: "center", color: "var(--text-muted)", fontSize: "13px" }}>
-                    No stale records found.
+                    Loading stale records from database...
+                  </td>
+                </tr>
+              ) : filteredRecords.length === 0 ? (
+                <tr>
+                  <td colSpan={6} style={{ padding: "32px", textAlign: "center", color: "var(--text-muted)", fontSize: "13px" }}>
+                    No stale records found in database.
                   </td>
                 </tr>
               ) : (
@@ -293,7 +360,7 @@ export function StaleRecordsPage() {
                       {s.inventoryOnHand} units
                     </td>
                     <td style={{ padding: "12px 16px" }}>
-                      <Badge variant={s.status.includes("Archived") ? "emerald" : "amber"}>
+                      <Badge variant={s.status?.includes("Archived") ? "emerald" : "amber"}>
                         {s.status}
                       </Badge>
                     </td>
@@ -319,8 +386,28 @@ export function StaleRecordsPage() {
                           <Eye size={13} />
                         </button>
 
-                        {/* Archive / Delete Action (Preserved as existing, now wired to DB!) */}
-                        {!s.status.includes("Archived") ? (
+                        {/* Edit Button */}
+                        <button
+                          onClick={() => setEditingRecord({ ...s })}
+                          title="Edit Stale Record"
+                          style={{
+                            width: "30px",
+                            height: "30px",
+                            borderRadius: "6px",
+                            backgroundColor: "var(--bg-card-subtle)",
+                            color: "#3B82F6",
+                            border: "1px solid var(--border-subtle)",
+                            cursor: "pointer",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center"
+                          }}
+                        >
+                          <Edit2 size={13} />
+                        </button>
+
+                        {/* Archive Action */}
+                        {!s.status?.includes("Archived") ? (
                           <button
                             onClick={() => setArchivingRecord(s)}
                             title="Archive / Remove to Cold Storage"
@@ -337,31 +424,31 @@ export function StaleRecordsPage() {
                               justifyContent: "center"
                             }}
                           >
-                              <Archive size={13} />
-                            </button>
-                          ) : (
-                            <span style={{ fontSize: "12px", color: "#059669", fontWeight: 700, padding: "0 4px" }}>Archived</span>
-                          )}
-
-                          {/* Delete Button */}
-                          <button
-                            onClick={() => setDeletingRecord(s)}
-                            title="Delete Record"
-                            style={{
-                              width: "30px",
-                              height: "30px",
-                              borderRadius: "6px",
-                              backgroundColor: "var(--bg-card-subtle)",
-                              color: "#DC2626",
-                              border: "1px solid var(--border-subtle)",
-                              cursor: "pointer",
-                              display: "inline-flex",
-                              alignItems: "center",
-                              justifyContent: "center"
-                            }}
-                          >
-                            <Trash2 size={13} />
+                            <Archive size={13} />
                           </button>
+                        ) : (
+                          <span style={{ fontSize: "12px", color: "#059669", fontWeight: 700, padding: "0 4px" }}>Archived</span>
+                        )}
+
+                        {/* Delete Button */}
+                        <button
+                          onClick={() => setDeletingRecord(s)}
+                          title="Delete Record"
+                          style={{
+                            width: "30px",
+                            height: "30px",
+                            borderRadius: "6px",
+                            backgroundColor: "var(--bg-card-subtle)",
+                            color: "#DC2626",
+                            border: "1px solid var(--border-subtle)",
+                            cursor: "pointer",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center"
+                          }}
+                        >
+                          <Trash2 size={13} />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -371,6 +458,268 @@ export function StaleRecordsPage() {
           </table>
         </div>
       </Card>
+
+      {/* Add Record Modal */}
+      {isAddModalOpen && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.5)",
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px"
+          }}
+          onClick={() => setIsAddModalOpen(false)}
+        >
+          <div
+            style={{
+              backgroundColor: "#FFFFFF",
+              borderRadius: "16px",
+              maxWidth: "520px",
+              width: "100%",
+              padding: "24px",
+              boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)"
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Plus size={18} color="#059669" />
+                <h3 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                  Add Stale / Obsolete Record
+                </h3>
+              </div>
+              <button
+                onClick={() => setIsAddModalOpen(false)}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)" }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddSubmit} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              <div>
+                <label style={{ display: "block", fontSize: "12px", fontWeight: 700, marginBottom: "4px", color: "var(--text-secondary)" }}>
+                  Record Name / Identifier *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. SKU-9002 (Old Lemon Cola 2023)"
+                  value={newRecord.name}
+                  onChange={(e) => setNewRecord({ ...newRecord, name: e.target.value })}
+                  className="form-input"
+                  style={{ width: "100%", padding: "8px 12px", fontSize: "13px" }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "12px", fontWeight: 700, marginBottom: "4px", color: "var(--text-secondary)" }}>
+                  Target Master Domain *
+                </label>
+                <select
+                  value={newRecord.table}
+                  onChange={(e) => setNewRecord({ ...newRecord, table: e.target.value })}
+                  className="form-select"
+                  style={{ width: "100%", padding: "8px 12px", fontSize: "13px" }}
+                >
+                  <option value="Item Master">Item Master</option>
+                  <option value="BOM Master">BOM Master</option>
+                  <option value="Vendor Master">Vendor Master</option>
+                  <option value="Routing Master">Routing Master</option>
+                  <option value="Asset Master">Asset Master</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "12px", fontWeight: 700, marginBottom: "4px", color: "var(--text-secondary)" }}>
+                  Inactivity Duration
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. 210 Days Ago"
+                  value={newRecord.lastProduced}
+                  onChange={(e) => setNewRecord({ ...newRecord, lastProduced: e.target.value })}
+                  className="form-input"
+                  style={{ width: "100%", padding: "8px 12px", fontSize: "13px" }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "12px", fontWeight: 700, marginBottom: "4px", color: "var(--text-secondary)" }}>
+                  Current Inventory Stock (Units)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={newRecord.inventoryOnHand}
+                  onChange={(e) => setNewRecord({ ...newRecord, inventoryOnHand: e.target.value })}
+                  className="form-input"
+                  style={{ width: "100%", padding: "8px 12px", fontSize: "13px" }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "12px", fontWeight: 700, marginBottom: "4px", color: "var(--text-secondary)" }}>
+                  Status
+                </label>
+                <select
+                  value={newRecord.status}
+                  onChange={(e) => setNewRecord({ ...newRecord, status: e.target.value })}
+                  className="form-select"
+                  style={{ width: "100%", padding: "8px 12px", fontSize: "13px" }}
+                >
+                  <option value="Stale / Obsolete">Stale / Obsolete</option>
+                  <option value="Inactive Vendor">Inactive Vendor</option>
+                  <option value="Archived">Archived</option>
+                </select>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "16px" }}>
+                <Button variant="secondary" type="button" onClick={() => setIsAddModalOpen(false)} style={{ fontSize: "12px", padding: "7px 14px" }}>
+                  Cancel
+                </Button>
+                <Button variant="primary" type="submit" disabled={isActioning} style={{ fontSize: "12px", padding: "7px 14px" }}>
+                  {isActioning ? "Saving..." : "Save to Database"}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Record Modal */}
+      {editingRecord && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.5)",
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px"
+          }}
+          onClick={() => setEditingRecord(null)}
+        >
+          <div
+            style={{
+              backgroundColor: "#FFFFFF",
+              borderRadius: "16px",
+              maxWidth: "520px",
+              width: "100%",
+              padding: "24px",
+              boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)"
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Edit2 size={18} color="#3B82F6" />
+                <h3 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                  Edit Stale Record ({editingRecord.id})
+                </h3>
+              </div>
+              <button
+                onClick={() => setEditingRecord(null)}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)" }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditSubmit} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              <div>
+                <label style={{ display: "block", fontSize: "12px", fontWeight: 700, marginBottom: "4px", color: "var(--text-secondary)" }}>
+                  Record Name / Identifier *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editingRecord.name}
+                  onChange={(e) => setEditingRecord({ ...editingRecord, name: e.target.value })}
+                  className="form-input"
+                  style={{ width: "100%", padding: "8px 12px", fontSize: "13px" }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "12px", fontWeight: 700, marginBottom: "4px", color: "var(--text-secondary)" }}>
+                  Target Master Domain *
+                </label>
+                <select
+                  value={editingRecord.table}
+                  onChange={(e) => setEditingRecord({ ...editingRecord, table: e.target.value })}
+                  className="form-select"
+                  style={{ width: "100%", padding: "8px 12px", fontSize: "13px" }}
+                >
+                  <option value="Item Master">Item Master</option>
+                  <option value="BOM Master">BOM Master</option>
+                  <option value="Vendor Master">Vendor Master</option>
+                  <option value="Routing Master">Routing Master</option>
+                  <option value="Asset Master">Asset Master</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "12px", fontWeight: 700, marginBottom: "4px", color: "var(--text-secondary)" }}>
+                  Inactivity Duration
+                </label>
+                <input
+                  type="text"
+                  value={editingRecord.lastProduced}
+                  onChange={(e) => setEditingRecord({ ...editingRecord, lastProduced: e.target.value })}
+                  className="form-input"
+                  style={{ width: "100%", padding: "8px 12px", fontSize: "13px" }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "12px", fontWeight: 700, marginBottom: "4px", color: "var(--text-secondary)" }}>
+                  Current Inventory Stock (Units)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={editingRecord.inventoryOnHand}
+                  onChange={(e) => setEditingRecord({ ...editingRecord, inventoryOnHand: e.target.value })}
+                  className="form-input"
+                  style={{ width: "100%", padding: "8px 12px", fontSize: "13px" }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "12px", fontWeight: 700, marginBottom: "4px", color: "var(--text-secondary)" }}>
+                  Status
+                </label>
+                <select
+                  value={editingRecord.status}
+                  onChange={(e) => setEditingRecord({ ...editingRecord, status: e.target.value })}
+                  className="form-select"
+                  style={{ width: "100%", padding: "8px 12px", fontSize: "13px" }}
+                >
+                  <option value="Stale / Obsolete">Stale / Obsolete</option>
+                  <option value="Inactive Vendor">Inactive Vendor</option>
+                  <option value="Archived">Archived</option>
+                </select>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "16px" }}>
+                <Button variant="secondary" type="button" onClick={() => setEditingRecord(null)} style={{ fontSize: "12px", padding: "7px 14px" }}>
+                  Cancel
+                </Button>
+                <Button variant="primary" type="submit" disabled={isActioning} style={{ fontSize: "12px", padding: "7px 14px" }}>
+                  {isActioning ? "Updating..." : "Update in Database"}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* View Detail Modal */}
       {viewingRecord && (
@@ -385,6 +734,7 @@ export function StaleRecordsPage() {
             justifyContent: "center",
             padding: "20px"
           }}
+          onClick={() => setViewingRecord(null)}
         >
           <div
             style={{
@@ -396,6 +746,7 @@ export function StaleRecordsPage() {
               boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
               position: "relative"
             }}
+            onClick={(e) => e.stopPropagation()}
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
@@ -435,7 +786,7 @@ export function StaleRecordsPage() {
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 12px", backgroundColor: "var(--bg-card-subtle)", borderRadius: "8px" }}>
                 <span style={{ color: "var(--text-muted)", fontWeight: 600 }}>Status:</span>
-                <Badge variant={viewingRecord.status.includes("Archived") ? "emerald" : "amber"}>{viewingRecord.status}</Badge>
+                <Badge variant={viewingRecord.status?.includes("Archived") ? "emerald" : "amber"}>{viewingRecord.status}</Badge>
               </div>
             </div>
 
@@ -448,7 +799,7 @@ export function StaleRecordsPage() {
         </div>
       )}
 
-      {/* Archive / Delete Confirmation Modal */}
+      {/* Archive Confirmation Modal */}
       {archivingRecord && (
         <div
           style={{
@@ -461,6 +812,7 @@ export function StaleRecordsPage() {
             justifyContent: "center",
             padding: "20px"
           }}
+          onClick={() => setArchivingRecord(null)}
         >
           <div
             style={{
@@ -471,6 +823,7 @@ export function StaleRecordsPage() {
               padding: "24px",
               boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)"
             }}
+            onClick={(e) => e.stopPropagation()}
           >
             <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px" }}>
               <div style={{ width: "36px", height: "36px", borderRadius: "50%", backgroundColor: "#FEF3C7", display: "flex", alignItems: "center", justifyContent: "center", color: "#D97706" }}>
@@ -481,7 +834,7 @@ export function StaleRecordsPage() {
               </h3>
             </div>
             <p style={{ fontSize: "13px", color: "var(--text-secondary)", lineHeight: 1.5, margin: "0 0 20px 0" }}>
-              Archive <strong>{archivingRecord.name}</strong> ({archivingRecord.id}) to cold storage? This action will remove it from active planning views and log to the database.
+              Archive <strong>{archivingRecord.name}</strong> ({archivingRecord.id}) to cold storage? This update will be saved into the database.
             </p>
             <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px" }}>
               <Button variant="secondary" onClick={() => setArchivingRecord(null)} disabled={isActioning} style={{ fontSize: "12px", padding: "7px 14px" }}>
@@ -500,6 +853,7 @@ export function StaleRecordsPage() {
           </div>
         </div>
       )}
+
       {/* Delete Record Confirmation Modal */}
       {deletingRecord && (
         <div
@@ -535,7 +889,7 @@ export function StaleRecordsPage() {
               </h3>
             </div>
             <p style={{ fontSize: "13px", color: "var(--text-secondary)", lineHeight: 1.5, margin: "0 0 20px 0" }}>
-              Are you sure you want to permanently delete <strong>{deletingRecord.name}</strong> ({deletingRecord.id})? This will remove the record from the system and database.
+              Are you sure you want to permanently delete <strong>{deletingRecord.name}</strong> ({deletingRecord.id})? This will immediately delete the record from the database.
             </p>
             <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px" }}>
               <Button variant="secondary" onClick={() => setDeletingRecord(null)} disabled={isActioning} style={{ fontSize: "12px", padding: "7px 14px" }}>

@@ -75,7 +75,7 @@ export function QualitySpecsPage() {
     });
   }, [qualitySpecs, skuFilter, approvalFilter, searchQuery]);
 
-  const handleAddSubmit = (e) => {
+  const handleAddSubmit = async (e) => {
     e.preventDefault();
     if (!newSpec.parameter.trim()) {
       addToast("Please provide quality parameter name.", "warning");
@@ -86,28 +86,36 @@ export function QualitySpecsPage() {
       return;
     }
 
-    const created = addQualitySpec(newSpec);
-    addToast(`Specification ${created.specId} (${created.parameter}) registered!`, "success");
-    setIsAddModalOpen(false);
-    setNewSpec({
-      skuId: "SKU-001",
-      specificationTitle: "",
-      parameter: "Soluble Solids (Brix)",
-      target: "10.5",
-      min: "10.3",
-      max: "10.7",
-      uom: "°Bx",
-      criticality: "Critical CCP (HACCP-1)",
-      testMethod: "Digital Refractometer"
-    });
+    try {
+      const created = await addQualitySpec(newSpec);
+      addToast(`Specification ${created?.specId || "spec"} (${created?.parameter || newSpec.parameter}) registered!`, "success");
+      setIsAddModalOpen(false);
+      setNewSpec({
+        skuId: "SKU-001",
+        specificationTitle: "",
+        parameter: "Soluble Solids (Brix)",
+        target: "10.5",
+        min: "10.3",
+        max: "10.7",
+        uom: "°Bx",
+        criticality: "Critical CCP (HACCP-1)",
+        testMethod: "Digital Refractometer"
+      });
+    } catch (err) {
+      addToast(`Failed to create quality spec: ${err.message}`, "error");
+    }
   };
 
-  const handleEditSubmit = (e) => {
+  const handleEditSubmit = async (e) => {
     e.preventDefault();
     if (!editingSpec.parameter.trim()) return;
-    updateQualitySpec(editingSpec.specId, editingSpec);
-    addToast(`Specification ${editingSpec.specId} updated!`, "success");
-    setEditingSpec(null);
+    try {
+      await updateQualitySpec(editingSpec.specId || editingSpec.id, editingSpec);
+      addToast(`Specification ${editingSpec.specId} updated!`, "success");
+      setEditingSpec(null);
+    } catch (err) {
+      addToast(`Failed to update quality spec: ${err.message}`, "error");
+    }
   };
 
   return (
@@ -691,16 +699,16 @@ export function QualitySpecsPage() {
           entityCode={approvalModalSpec.specId}
           entityTitle={`Quality Spec: ${approvalModalSpec.parameter}`}
           currentStatus={approvalModalSpec.approvalStatus}
-          onSubmitForApproval={() => {
-            updateQualitySpec(approvalModalSpec.specId, { approvalStatus: "Under Review" });
+          onSubmitForApproval={async () => {
+            await updateQualitySpec(approvalModalSpec.specId, { approvalStatus: "Under Review" });
             addToast(`Spec ${approvalModalSpec.specId} submitted for Quality Review!`, "info");
           }}
-          onApprove={() => {
-            approveQualitySpec(approvalModalSpec.specId);
+          onApprove={async () => {
+            await approveQualitySpec(approvalModalSpec.specId);
             addToast(`Spec ${approvalModalSpec.specId} approved!`, "success");
           }}
-          onReject={(reason) => {
-            rejectQualitySpec(approvalModalSpec.specId, reason);
+          onReject={async (reason) => {
+            await rejectQualitySpec(approvalModalSpec.specId, reason);
             addToast(`Spec ${approvalModalSpec.specId} rejected!`, "error");
           }}
         />
@@ -730,12 +738,17 @@ export function QualitySpecsPage() {
               <Button variant="secondary" onClick={() => setDeletingSpec(null)}>Cancel</Button>
               <Button
                 variant="primary"
-                onClick={() => {
-                  if (typeof deleteQualitySpec === "function") {
-                    deleteQualitySpec(deletingSpec.specId);
+                onClick={async () => {
+                  try {
+                    if (typeof deleteQualitySpec === "function") {
+                      await deleteQualitySpec(deletingSpec.specId || deletingSpec.id);
+                    }
+                    addToast(`Quality spec "${deletingSpec.specId}" deleted.`, "info");
+                  } catch (err) {
+                    addToast(`Failed to delete quality spec: ${err.message}`, "error");
+                  } finally {
+                    setDeletingSpec(null);
                   }
-                  addToast(`Quality spec "${deletingSpec.specId}" deleted.`, "info");
-                  setDeletingSpec(null);
                 }}
                 style={{ backgroundColor: "#DC2626", borderColor: "#DC2626", color: "#FFFFFF" }}
               >

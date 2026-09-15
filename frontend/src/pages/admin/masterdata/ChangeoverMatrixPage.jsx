@@ -29,9 +29,9 @@ export function ChangeoverMatrixPage() {
 
   const [loading, setLoading] = useState(false);
 
-  // Live fetch from PostgreSQL database on mount
-  useEffect(() => {
+  const fetchLiveChangeover = () => {
     setLoading(true);
+    localStorage.removeItem("mx_master_changeover");
     masterDataService.getChangeoverRules()
       .then((res) => {
         const data = res?.data?.data || res?.data || res;
@@ -41,7 +41,12 @@ export function ChangeoverMatrixPage() {
       })
       .catch((err) => console.warn("Changeover database live load:", err.message))
       .finally(() => setLoading(false));
-  }, [setChangeoverMatrix]);
+  };
+
+  // Live fetch from PostgreSQL database on mount
+  useEffect(() => {
+    fetchLiveChangeover();
+  }, []);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -114,7 +119,8 @@ export function ChangeoverMatrixPage() {
 
     try {
       const created = await addChangeoverRule(rulePayload);
-      addToast(`Changeover rule successfully saved to database (${created.fromSkuCode || "Rule"} → ${created.toSkuCode || ""})!`, "success");
+      fetchLiveChangeover();
+      addToast("Changeover standard rule saved to PostgreSQL database!", "success");
       setIsModalOpen(false);
       setNewRule({
         fromSkuId: finishedSkus[0]?.skuId || finishedSkus[0]?.id || "SKU-001",
@@ -144,7 +150,8 @@ export function ChangeoverMatrixPage() {
         changeoverDurationMin: Number(editingRule.changeoverDurationMin) || 0
       });
 
-      addToast("Changeover rule successfully updated in database!", "success");
+      fetchLiveChangeover();
+      addToast("Changeover rule successfully updated in PostgreSQL database!", "success");
       setEditingRule(null);
     } catch (err) {
       addToast(`Failed to update changeover rule: ${err.message}`, "error");
@@ -152,10 +159,12 @@ export function ChangeoverMatrixPage() {
   };
 
   const handleDelete = async (matrixId) => {
-    if (window.confirm("Are you sure you want to delete this changeover rule from the database?")) {
+    if (!matrixId) return;
+    if (window.confirm("Are you sure you want to permanently delete this changeover rule from the PostgreSQL database?")) {
       try {
         await deleteChangeoverRule(matrixId);
-        addToast("Changeover rule deleted from database.", "info");
+        fetchLiveChangeover();
+        addToast("Changeover rule deleted from PostgreSQL database.", "success");
       } catch (err) {
         addToast(`Failed to delete changeover rule: ${err.message}`, "error");
       }
@@ -202,7 +211,7 @@ export function ChangeoverMatrixPage() {
         />
         <StatCard
           title="Average SMED Time"
-          value="35 mins"
+          value={changeoverMatrix.length > 0 ? `${Math.round(changeoverMatrix.reduce((sum, c) => sum + (Number(c.changeoverDurationMin) || 0), 0) / changeoverMatrix.length)} mins` : "0 mins"}
           unit="Standard Clean"
           icon={Clock}
           colorVariant="cyan"
@@ -216,7 +225,7 @@ export function ChangeoverMatrixPage() {
         />
         <StatCard
           title="Same-Family Optimization"
-          value="0-15m"
+          value={changeoverMatrix.length > 0 ? `${changeoverMatrix.filter(c => (c.fromFamily && c.toFamily && c.fromFamily === c.toFamily) || Number(c.changeoverDurationMin) <= 15).length} Rules` : "0 Rules"}
           unit="Paced"
           icon={Zap}
           colorVariant="emerald"

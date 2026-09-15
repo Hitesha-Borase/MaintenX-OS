@@ -22,18 +22,19 @@ import { useApp } from "../../../context/AppContext";
 import masterDataService from "../../../services/masterDataService";
 
 export function CCPLimitsPage() {
-  const { qualitySpecs = [], operations = [], plants = [], activePlantId } = useMasterData();
+  const {
+    ccpLimits = [],
+    addCCPLimit,
+    updateCCPLimit,
+    deleteCCPLimit,
+    qualitySpecs = [],
+    operations = [],
+    plants = [],
+    activePlantId
+  } = useMasterData();
   const { addToast } = useApp();
 
-  useEffect(() => {
-    masterDataService.getQualitySpecs().catch((err) => console.warn("Quality specs load:", err.message));
-  }, []);
-
-  const [ccps, setCcps] = useState([
-    { ccpNumber: "CCP-1", processStep: "Thermal Pasteurization Hold", hazard: "Pathogen Survival (Microbial)", criticalLimit: "≥ 72.0°C for ≥ 15.0 seconds", autoDivertAction: "Automatic Flow Divert Valve to Balance Tank", status: "Critical Mandatory" },
-    { ccpNumber: "CCP-2", processStep: "Aseptic Cleanroom Positive Pressure", hazard: "Airborne Contamination", criticalLimit: "≥ 25 Pa Differential", autoDivertAction: "Line Immediate Stop & Alarm", status: "Critical Mandatory" },
-    { ccpNumber: "CCP-3", processStep: "In-Line X-Ray / Metal Detection", hazard: "Physical Metal/Glass Shards", criticalLimit: "Ferrous 1.0mm / SS 1.5mm", autoDivertAction: "Automatic Pneumatic Reject Chute", status: "Critical Mandatory" }
-  ]);
+  const ccps = ccpLimits;
 
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -51,23 +52,23 @@ export function CCPLimitsPage() {
       const q = searchQuery.toLowerCase().trim();
       return (
         !q ||
-        c.processStep.toLowerCase().includes(q) ||
-        c.ccpNumber.toLowerCase().includes(q) ||
-        c.hazard.toLowerCase().includes(q) ||
-        c.criticalLimit.toLowerCase().includes(q) ||
-        c.autoDivertAction.toLowerCase().includes(q)
+        c.processStep?.toLowerCase().includes(q) ||
+        c.ccpNumber?.toLowerCase().includes(q) ||
+        c.hazard?.toLowerCase().includes(q) ||
+        c.criticalLimit?.toLowerCase().includes(q) ||
+        c.autoDivertAction?.toLowerCase().includes(q)
       );
     });
   }, [ccps, searchQuery]);
 
-  const handleAddSubmit = (e) => {
+  const handleAddSubmit = async (e) => {
     e.preventDefault();
     if (!newCCP.processStep.trim() || !newCCP.criticalLimit.trim()) {
       addToast("Please provide process step and critical limit specification.", "warning");
       return;
     }
 
-    const created = {
+    const payload = {
       ccpNumber: `CCP-${ccps.length + 1}`,
       processStep: newCCP.processStep,
       hazard: newCCP.hazard || "Cross-contamination risk",
@@ -76,33 +77,47 @@ export function CCPLimitsPage() {
       status: "Critical Mandatory"
     };
 
-    setCcps([...ccps, created]);
-    addToast(`Critical Control Point "${created.ccpNumber}" registered!`, "success");
-    setIsModalOpen(false);
-    setNewCCP({
-      processStep: "Thermal Pasteurization Hold",
-      hazard: "Pathogen Survival (Microbial)",
-      criticalLimit: "≥ 72.0°C for ≥ 15.0 seconds",
-      autoDivertAction: "Automatic Flow Divert Valve to Balance Tank"
-    });
+    try {
+      const created = await addCCPLimit(payload);
+      addToast(`Critical Control Point "${created?.ccpNumber || payload.ccpNumber}" registered!`, "success");
+      setIsModalOpen(false);
+      setNewCCP({
+        processStep: "Thermal Pasteurization Hold",
+        hazard: "Pathogen Survival (Microbial)",
+        criticalLimit: "≥ 72.0°C for ≥ 15.0 seconds",
+        autoDivertAction: "Automatic Flow Divert Valve to Balance Tank"
+      });
+    } catch (err) {
+      addToast(`Failed to register CCP: ${err.message}`, "error");
+    }
   };
 
-  const handleEditSubmit = (e) => {
+  const handleEditSubmit = async (e) => {
     e.preventDefault();
     if (!editingCCP.processStep.trim() || !editingCCP.criticalLimit.trim()) {
       addToast("Please provide process step and critical limit specification.", "warning");
       return;
     }
 
-    setCcps(ccps.map((c) => (c.ccpNumber === editingCCP.ccpNumber ? editingCCP : c)));
-    addToast(`Critical Control Point ${editingCCP.ccpNumber} updated successfully!`, "success");
-    setEditingCCP(null);
+    try {
+      await updateCCPLimit(editingCCP.id || editingCCP.ccpNumber, editingCCP);
+      addToast(`Critical Control Point ${editingCCP.ccpNumber} updated successfully!`, "success");
+      setEditingCCP(null);
+    } catch (err) {
+      addToast(`Failed to update CCP: ${err.message}`, "error");
+    }
   };
 
-  const handleDelete = (ccpNumber) => {
-    if (window.confirm(`Are you sure you want to delete ${ccpNumber}?`)) {
-      setCcps(ccps.filter((c) => c.ccpNumber !== ccpNumber));
-      addToast(`${ccpNumber} removed.`, "info");
+  const handleDelete = async (targetCCP) => {
+    const ccpId = typeof targetCCP === "object" ? (targetCCP.id || targetCCP.ccpNumber) : targetCCP;
+    const ccpLabel = typeof targetCCP === "object" ? (targetCCP.ccpNumber || targetCCP.id) : targetCCP;
+    if (window.confirm(`Are you sure you want to delete ${ccpLabel}?`)) {
+      try {
+        await deleteCCPLimit(ccpId);
+        addToast(`${ccpLabel} removed.`, "info");
+      } catch (err) {
+        addToast(`Failed to delete CCP: ${err.message}`, "error");
+      }
     }
   };
 
@@ -268,7 +283,7 @@ export function CCPLimitsPage() {
                         <Edit2 size={13} />
                       </button>
                       <button
-                        onClick={() => handleDelete(c.ccpNumber)}
+                        onClick={() => handleDelete(c)}
                         title="Delete CCP"
                         style={{ width: "30px", height: "30px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", color: "#EF4444", border: "1px solid var(--border-subtle)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
                       >

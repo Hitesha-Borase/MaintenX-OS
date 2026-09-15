@@ -25,14 +25,24 @@ export function LinesPage() {
   const { lines = [], setLines, addLine, updateLine, deleteLine, plants = [], assets = [] } = useMasterData();
   const { addToast } = useApp();
 
-  // Trigger live GET /api/v1/master-data/lines on mount
-  React.useEffect(() => {
-    masterDataService.getLines().then((res) => {
+  const fetchLines = async () => {
+    try {
+      const res = await masterDataService.getLines();
       const data = res?.data || res;
-      if (Array.isArray(data) && data.length > 0 && typeof setLines === "function") {
+      if (Array.isArray(data)) {
         setLines(data);
       }
-    }).catch((err) => console.warn("Live lines fetch:", err.message));
+    } catch (err) {
+      console.warn("Live lines fetch:", err.message);
+    }
+  };
+
+  // Trigger live GET /api/v1/master-data/lines on mount and clear demo cache
+  React.useEffect(() => {
+    try {
+      localStorage.removeItem("mx_master_lines");
+    } catch (_) {}
+    fetchLines();
   }, []);
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -58,45 +68,61 @@ export function LinesPage() {
   const [newLine, setNewLine] = useState({
     lineCode: "",
     name: "",
-    plantId: "PLT-01",
+    plantId: plants[0]?.id || "",
     ratedSpeed: "40,000 BPH",
-    type: "Rotary Aseptic PET"
+    type: "Continuous Flow"
   });
 
-  const handleAddSubmit = (e) => {
+  const handleAddSubmit = async (e) => {
     e.preventDefault();
     if (!newLine.name.trim() || !newLine.lineCode.trim()) {
       addToast("Please provide line name and code.", "warning");
       return;
     }
 
-    const created = addLine(newLine);
-    addToast(`Line "${created.name}" registered!`, "success");
-    setIsModalOpen(false);
-    setNewLine({ lineCode: "", name: "", plantId: "PLT-01", ratedSpeed: "40,000 BPH", type: "Rotary Aseptic PET" });
+    try {
+      const created = await addLine(newLine);
+      addToast(`Line "${created?.name || newLine.name}" registered in database!`, "success");
+      setIsModalOpen(false);
+      setNewLine({ lineCode: "", name: "", plantId: plants[0]?.id || "", ratedSpeed: "40,000 BPH", type: "Continuous Flow" });
+      await fetchLines();
+    } catch (err) {
+      addToast(`Failed to register line: ${err.message}`, "error");
+    }
   };
 
-  const handleEditSubmit = (e) => {
+  const handleEditSubmit = async (e) => {
     e.preventDefault();
     if (!editingLine.name.trim()) {
       addToast("Please provide line name.", "warning");
       return;
     }
 
-    updateLine(editingLine.lineId || editingLine.id, editingLine);
-    addToast(`Line "${editingLine.name}" updated!`, "success");
-    setEditingLine(null);
+    try {
+      const idToUpdate = editingLine.id || editingLine.lineId || editingLine.code || editingLine.lineCode;
+      await updateLine(idToUpdate, editingLine);
+      addToast(`Line "${editingLine.name}" updated in database!`, "success");
+      setEditingLine(null);
+      await fetchLines();
+    } catch (err) {
+      addToast(`Failed to update line: ${err.message}`, "error");
+    }
   };
 
-  const handleDelete = (lineId, name) => {
-    if (window.confirm(`Are you sure you want to delete Line "${name}"?`)) {
-      deleteLine(lineId);
-      addToast(`Line "${name}" deleted.`, "info");
-      if (viewingLine && (viewingLine.lineId === lineId || viewingLine.id === lineId || viewingLine.lineCode === lineId)) {
-        setViewingLine(null);
-      }
-      if (editingLine && (editingLine.lineId === lineId || editingLine.id === lineId || editingLine.lineCode === lineId)) {
-        setEditingLine(null);
+  const handleDelete = async (lineId, name) => {
+    if (window.confirm(`Are you sure you want to delete Line "${name}" from database?`)) {
+      try {
+        await deleteLine(lineId);
+        addToast(`Line "${name}" deleted from database.`, "info");
+        if (viewingLine && (viewingLine.lineId === lineId || viewingLine.id === lineId || viewingLine.lineCode === lineId || viewingLine.code === lineId)) {
+          setViewingLine(null);
+        }
+        if (editingLine && (editingLine.lineId === lineId || editingLine.id === lineId || editingLine.lineCode === lineId || editingLine.code === lineId)) {
+          setEditingLine(null);
+        }
+        await fetchLines();
+      } catch (err) {
+        addToast(`Failed to delete line: ${err.message}`, "error");
       }
     }
   };

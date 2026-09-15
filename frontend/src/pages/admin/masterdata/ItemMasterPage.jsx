@@ -31,14 +31,22 @@ export function ItemMasterPage() {
   const { addToast } = useApp();
 
   // Trigger live GET /api/v1/master-data/skus on mount
-  React.useEffect(() => {
-    masterDataService.getSkus().then((res) => {
+  const fetchSkus = React.useCallback(async () => {
+    try {
+      localStorage.removeItem("mx_master_skus");
+      const res = await masterDataService.getSkus();
       const data = res?.data || res;
-      if (Array.isArray(data) && data.length > 0 && typeof setSkus === "function") {
+      if (Array.isArray(data) && typeof setSkus === "function") {
         setSkus(data);
       }
-    }).catch((err) => console.warn("Live SKU fetch:", err.message));
-  }, []);
+    } catch (err) {
+      console.warn("Live SKU fetch:", err.message);
+    }
+  }, [setSkus]);
+
+  React.useEffect(() => {
+    fetchSkus();
+  }, [fetchSkus]);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("ALL");
@@ -80,7 +88,7 @@ export function ItemMasterPage() {
     });
   }, [skus, categoryFilter, statusFilter, plantFilter, searchQuery]);
 
-  const handleAddSubmit = (e) => {
+  const handleAddSubmit = async (e) => {
     e.preventDefault();
     if (!newSku.name.trim()) {
       addToast("Please provide SKU Name.", "warning");
@@ -93,8 +101,14 @@ export function ItemMasterPage() {
       return;
     }
 
-    const created = addSKU(newSku);
-    addToast(`SKU ${created.skuCode} (${created.name}) created successfully!`, "success");
+    try {
+      await masterDataService.createSku(newSku);
+      addToast(`SKU ${newSku.skuCode || newSku.name} created successfully in database!`, "success");
+      await fetchSkus();
+    } catch (err) {
+      console.warn("Add SKU error:", err);
+      addSKU(newSku);
+    }
     setIsAddModalOpen(false);
     setNewSku({
       skuCode: "",
@@ -109,21 +123,37 @@ export function ItemMasterPage() {
     });
   };
 
-  const handleEditSubmit = (e) => {
+  const handleEditSubmit = async (e) => {
     e.preventDefault();
     if (!editingSku.name.trim()) {
       addToast("Please provide SKU Name.", "warning");
       return;
     }
-    updateSKU(editingSku.skuId, editingSku);
-    addToast(`SKU ${editingSku.skuCode} updated successfully!`, "success");
+    const targetId = editingSku.id || editingSku.skuId || editingSku.skuCode;
+    try {
+      await masterDataService.updateSku(targetId, editingSku);
+      addToast(`SKU ${editingSku.skuCode} updated successfully in database!`, "success");
+      await fetchSkus();
+    } catch (err) {
+      console.warn("Update SKU error:", err);
+      updateSKU(targetId, editingSku);
+    }
     setEditingSku(null);
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (!deletingSku) return;
-    deleteSKU(deletingSku.skuId || deletingSku.id);
-    addToast(`SKU "${deletingSku.skuCode || deletingSku.name}" deleted successfully!`, "info");
+    const targetId = deletingSku.id || deletingSku.skuId || deletingSku.skuCode;
+    try {
+      await masterDataService.deleteSku(targetId);
+      if (typeof deleteSKU === "function") deleteSKU(targetId);
+      addToast(`SKU "${deletingSku.skuCode || deletingSku.name}" deleted from database!`, "info");
+      await fetchSkus();
+    } catch (err) {
+      console.warn("Delete SKU error:", err);
+      if (typeof deleteSKU === "function") deleteSKU(targetId);
+      addToast(`SKU "${deletingSku.skuCode || deletingSku.name}" deleted.`, "info");
+    }
     setDeletingSku(null);
   };
 

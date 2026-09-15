@@ -33,14 +33,18 @@ export function BarcodeIntegrationPage() {
     { id: "BC-03", standard: "QR Code (ISO/IEC 18004)", useCase: "Maintenance Asset Tagging & SOP Links", aiAppPrefix: "URL Deep Linking", status: "Active" }
   ]);
 
-  useEffect(() => {
+  const loadFormats = () => {
     adminService.getBarcodeFormats()
       .then((data) => {
-        if (Array.isArray(data) && data.length > 0) {
+        if (Array.isArray(data)) {
           setFormats(data);
         }
       })
       .catch((err) => console.warn("Barcode formats load error:", err.message));
+  };
+
+  useEffect(() => {
+    loadFormats();
   }, []);
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -433,7 +437,22 @@ export function BarcodeIntegrationPage() {
             </div>
             <div style={{ padding: "14px 20px", borderTop: "1px solid var(--border-subtle)", display: "flex", justifyContent: "flex-end", gap: "10px", backgroundColor: "var(--bg-card-subtle)" }}>
               <Button variant="secondary" onClick={() => setDeletingFormat(null)}>Cancel</Button>
-              <Button variant="primary" onClick={() => { setFormats((prev) => prev.filter((f) => f.id !== deletingFormat.id)); addToast(`Format "${deletingFormat.standard}" deleted.`, "info"); setDeletingFormat(null); }} style={{ backgroundColor: "#DC2626", borderColor: "#DC2626", color: "#FFFFFF" }}>Delete</Button>
+              <Button
+                variant="primary"
+                onClick={async () => {
+                  try {
+                    await adminService.deleteBarcodeFormat(deletingFormat.id);
+                    setFormats((prev) => prev.filter((f) => f.id !== deletingFormat.id));
+                    addToast(`Format "${deletingFormat.standard}" deleted from database.`, "info");
+                  } catch (err) {
+                    addToast("Failed to delete barcode format: " + err.message, "danger");
+                  }
+                  setDeletingFormat(null);
+                }}
+                style={{ backgroundColor: "#DC2626", borderColor: "#DC2626", color: "#FFFFFF" }}
+              >
+                Delete
+              </Button>
             </div>
           </div>
         </div>

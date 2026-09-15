@@ -1,18 +1,16 @@
 import React, { useState, useMemo, useEffect } from "react";
 import {
-  HeartPulse,
-  CheckCircle2,
-  AlertTriangle,
-  Wrench,
-  RotateCcw,
-  Search,
-  Zap,
-  ShieldCheck,
   Workflow,
   Layers,
-  Link,
+  ShieldCheck,
+  AlertTriangle,
+  RotateCcw,
+  Search,
+  Plus,
+  Edit2,
   Eye,
   Trash2,
+  Wrench,
   X
 } from "lucide-react";
 import { Card } from "../../../components/common/Card";
@@ -27,23 +25,34 @@ export function BrokenRelationshipsPage() {
   const { dataHealthStats = {} } = useMasterData();
   const { addToast } = useApp();
 
-  const [brokenRels, setBrokenRels] = useState([
-    { id: "REL-101", fromEntity: "Production Routing (RTG-02)", toEntity: "Work Center (WC-04)", relationship: "Step 4 Seamer Operation", issue: "Work Center unattached to Line 3", status: "Unlinked" },
-    { id: "REL-102", fromEntity: "SKU-5001 (Citrus Soda)", toEntity: "Changeover Matrix", relationship: "SMED Standard Definition", issue: "Missing cleanout transition row to SKU-5003", status: "Unlinked" }
-  ]);
-
+  const [brokenRels, setBrokenRels] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [viewingRel, setViewingRel] = useState(null);
   const [deletingRel, setDeletingRel] = useState(null);
+  const [editingRel, setEditingRel] = useState(null);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isActioning, setIsActioning] = useState(false);
 
+  const [newRel, setNewRel] = useState({
+    fromEntity: "",
+    toEntity: "",
+    relationship: "Step 4 Seamer Operation",
+    issue: "Work Center unattached to Line",
+    status: "Unlinked"
+  });
+
   const fetchScan = () => {
+    setLoading(true);
     adminService.getDataHealthScan()
       .then((res) => {
         const data = res?.data?.brokenRelationships || res?.brokenRelationships;
-        if (Array.isArray(data) && data.length > 0) setBrokenRels(data);
+        if (Array.isArray(data)) {
+          setBrokenRels(data);
+        }
       })
-      .catch((err) => console.warn("Data health scan (broken rels):", err.message));
+      .catch((err) => console.warn("Data health scan (broken rels):", err.message))
+      .finally(() => setLoading(false));
   };
 
   useEffect(() => {
@@ -51,6 +60,53 @@ export function BrokenRelationshipsPage() {
   }, []);
 
   const unlinkedCount = brokenRels.filter((b) => b.status === "Unlinked").length;
+
+  const handleAddSubmit = async (e) => {
+    e.preventDefault();
+    if (!newRel.fromEntity.trim() || !newRel.toEntity.trim()) {
+      addToast("Please provide both source and target entity.", "warning");
+      return;
+    }
+    try {
+      setIsActioning(true);
+      await adminService.createDataHealthRecord("broken-relationships", newRel);
+      addToast("Broken relationship record saved into database!", "success");
+      setIsAddModalOpen(false);
+      setNewRel({
+        fromEntity: "",
+        toEntity: "",
+        relationship: "Step 4 Seamer Operation",
+        issue: "Work Center unattached to Line",
+        status: "Unlinked"
+      });
+      fetchScan();
+    } catch (err) {
+      console.error(err);
+      addToast(`Error adding relationship: ${err.message}`, "error");
+    } finally {
+      setIsActioning(false);
+    }
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    if (!editingRel.fromEntity.trim() || !editingRel.toEntity.trim()) {
+      addToast("Please provide both source and target entity.", "warning");
+      return;
+    }
+    try {
+      setIsActioning(true);
+      await adminService.updateDataHealthRecord("broken-relationships", editingRel.id, editingRel);
+      addToast(`Relationship ${editingRel.id} updated in database!`, "success");
+      setEditingRel(null);
+      fetchScan();
+    } catch (err) {
+      console.error(err);
+      addToast(`Error updating relationship: ${err.message}`, "error");
+    } finally {
+      setIsActioning(false);
+    }
+  };
 
   const handleFix = async (id) => {
     const target = brokenRels.find((b) => b.id === id);
@@ -63,10 +119,8 @@ export function BrokenRelationshipsPage() {
         toEntity: target?.toEntity,
         actionType: "AUTO_CONNECT_GRAPH_EDGE"
       });
-      setBrokenRels((prev) =>
-        prev.map((b) => (b.id === id ? { ...b, status: "Connected" } : b))
-      );
       addToast(`Relationship ${id} connected & saved to database!`, "success");
+      fetchScan();
     } catch (err) {
       console.error(err);
       addToast(`Error connecting relationship: ${err.message}`, "error");
@@ -85,10 +139,10 @@ export function BrokenRelationshipsPage() {
           fromEntity: b.fromEntity,
           toEntity: b.toEntity,
           actionType: "AUTO_CONNECT_GRAPH_EDGE"
-        });
+        }).catch(() => {});
       }
-      setBrokenRels((prev) => prev.map((b) => ({ ...b, status: "Connected" })));
       addToast("All unlinked entity relationships connected in database!", "success");
+      fetchScan();
     } catch (err) {
       console.error(err);
       addToast(`Error connecting all relationships: ${err.message}`, "error");
@@ -101,14 +155,10 @@ export function BrokenRelationshipsPage() {
     if (!deletingRel) return;
     try {
       setIsActioning(true);
-      await adminService.deleteDataHealth({
-        category: "brokenRelationships",
-        id: deletingRel.id,
-        details: deletingRel
-      });
-      setBrokenRels((prev) => prev.filter((b) => b.id !== deletingRel.id));
-      addToast(`Relationship ${deletingRel.id} removed & recorded in database!`, "success");
+      await adminService.deleteDataHealthRecord("broken-relationships", deletingRel.id);
+      addToast(`Relationship ${deletingRel.id} deleted from database!`, "success");
       setDeletingRel(null);
+      fetchScan();
     } catch (err) {
       console.error(err);
       addToast(`Error deleting relationship: ${err.message}`, "error");
@@ -122,10 +172,10 @@ export function BrokenRelationshipsPage() {
       if (!searchQuery.trim()) return true;
       const q = searchQuery.toLowerCase();
       return (
-        b.fromEntity.toLowerCase().includes(q) ||
-        b.toEntity.toLowerCase().includes(q) ||
-        b.issue.toLowerCase().includes(q) ||
-        b.id.toLowerCase().includes(q)
+        b.fromEntity?.toLowerCase().includes(q) ||
+        b.toEntity?.toLowerCase().includes(q) ||
+        b.issue?.toLowerCase().includes(q) ||
+        b.id?.toLowerCase().includes(q)
       );
     });
   }, [brokenRels, searchQuery]);
@@ -146,6 +196,14 @@ export function BrokenRelationshipsPage() {
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+          <Button
+            variant="primary"
+            icon={Plus}
+            onClick={() => setIsAddModalOpen(true)}
+            style={{ fontSize: "12px", padding: "7px 12px" }}
+          >
+            + Add Broken Relationship
+          </Button>
           <Button
             variant="secondary"
             icon={RotateCcw}
@@ -275,10 +333,16 @@ export function BrokenRelationshipsPage() {
               </tr>
             </thead>
             <tbody>
-              {filteredRels.length === 0 ? (
+              {loading ? (
                 <tr>
                   <td colSpan={6} style={{ padding: "32px", textAlign: "center", color: "var(--text-muted)", fontSize: "13px" }}>
-                    No broken relationships found.
+                    Loading broken relationships from database...
+                  </td>
+                </tr>
+              ) : filteredRels.length === 0 ? (
+                <tr>
+                  <td colSpan={6} style={{ padding: "32px", textAlign: "center", color: "var(--text-muted)", fontSize: "13px" }}>
+                    No broken relationships found in database.
                   </td>
                 </tr>
               ) : (
@@ -322,6 +386,26 @@ export function BrokenRelationshipsPage() {
                           }}
                         >
                           <Eye size={13} />
+                        </button>
+
+                        {/* Edit Button */}
+                        <button
+                          onClick={() => setEditingRel({ ...b })}
+                          title="Edit Relationship"
+                          style={{
+                            width: "30px",
+                            height: "30px",
+                            borderRadius: "6px",
+                            backgroundColor: "var(--bg-card-subtle)",
+                            color: "#3B82F6",
+                            border: "1px solid var(--border-subtle)",
+                            cursor: "pointer",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center"
+                          }}
+                        >
+                          <Edit2 size={13} />
                         </button>
 
                         {/* Auto-Connect Button */}
@@ -378,6 +462,258 @@ export function BrokenRelationshipsPage() {
         </div>
       </Card>
 
+      {/* Add Record Modal */}
+      {isAddModalOpen && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.5)",
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px"
+          }}
+          onClick={() => setIsAddModalOpen(false)}
+        >
+          <div
+            style={{
+              backgroundColor: "#FFFFFF",
+              borderRadius: "16px",
+              maxWidth: "520px",
+              width: "100%",
+              padding: "24px",
+              boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)"
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Plus size={18} color="#059669" />
+                <h3 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                  Add Broken Relationship
+                </h3>
+              </div>
+              <button
+                onClick={() => setIsAddModalOpen(false)}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)" }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddSubmit} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              <div>
+                <label style={{ display: "block", fontSize: "12px", fontWeight: 700, marginBottom: "4px", color: "var(--text-secondary)" }}>
+                  Source Master Entity *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Production Routing (RTG-05)"
+                  value={newRel.fromEntity}
+                  onChange={(e) => setNewRel({ ...newRel, fromEntity: e.target.value })}
+                  className="form-input"
+                  style={{ width: "100%", padding: "8px 12px", fontSize: "13px" }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "12px", fontWeight: 700, marginBottom: "4px", color: "var(--text-secondary)" }}>
+                  Target Master Entity *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Work Center (WC-08)"
+                  value={newRel.toEntity}
+                  onChange={(e) => setNewRel({ ...newRel, toEntity: e.target.value })}
+                  className="form-input"
+                  style={{ width: "100%", padding: "8px 12px", fontSize: "13px" }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "12px", fontWeight: 700, marginBottom: "4px", color: "var(--text-secondary)" }}>
+                  Relationship Scope
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Step 4 Seamer Operation"
+                  value={newRel.relationship}
+                  onChange={(e) => setNewRel({ ...newRel, relationship: e.target.value })}
+                  className="form-input"
+                  style={{ width: "100%", padding: "8px 12px", fontSize: "13px" }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "12px", fontWeight: 700, marginBottom: "4px", color: "var(--text-secondary)" }}>
+                  Detected Gap / Issue
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Work Center unattached to Line 4"
+                  value={newRel.issue}
+                  onChange={(e) => setNewRel({ ...newRel, issue: e.target.value })}
+                  className="form-input"
+                  style={{ width: "100%", padding: "8px 12px", fontSize: "13px" }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "12px", fontWeight: 700, marginBottom: "4px", color: "var(--text-secondary)" }}>
+                  Status
+                </label>
+                <select
+                  value={newRel.status}
+                  onChange={(e) => setNewRel({ ...newRel, status: e.target.value })}
+                  className="form-select"
+                  style={{ width: "100%", padding: "8px 12px", fontSize: "13px" }}
+                >
+                  <option value="Unlinked">Unlinked</option>
+                  <option value="Connected">Connected</option>
+                </select>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "16px" }}>
+                <Button variant="secondary" type="button" onClick={() => setIsAddModalOpen(false)} style={{ fontSize: "12px", padding: "7px 14px" }}>
+                  Cancel
+                </Button>
+                <Button variant="primary" type="submit" disabled={isActioning} style={{ fontSize: "12px", padding: "7px 14px" }}>
+                  {isActioning ? "Saving..." : "Save to Database"}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Record Modal */}
+      {editingRel && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.5)",
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px"
+          }}
+          onClick={() => setEditingRel(null)}
+        >
+          <div
+            style={{
+              backgroundColor: "#FFFFFF",
+              borderRadius: "16px",
+              maxWidth: "520px",
+              width: "100%",
+              padding: "24px",
+              boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)"
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Edit2 size={18} color="#3B82F6" />
+                <h3 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                  Edit Relationship ({editingRel.id})
+                </h3>
+              </div>
+              <button
+                onClick={() => setEditingRel(null)}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)" }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditSubmit} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              <div>
+                <label style={{ display: "block", fontSize: "12px", fontWeight: 700, marginBottom: "4px", color: "var(--text-secondary)" }}>
+                  Source Master Entity *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editingRel.fromEntity}
+                  onChange={(e) => setEditingRel({ ...editingRel, fromEntity: e.target.value })}
+                  className="form-input"
+                  style={{ width: "100%", padding: "8px 12px", fontSize: "13px" }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "12px", fontWeight: 700, marginBottom: "4px", color: "var(--text-secondary)" }}>
+                  Target Master Entity *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editingRel.toEntity}
+                  onChange={(e) => setEditingRel({ ...editingRel, toEntity: e.target.value })}
+                  className="form-input"
+                  style={{ width: "100%", padding: "8px 12px", fontSize: "13px" }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "12px", fontWeight: 700, marginBottom: "4px", color: "var(--text-secondary)" }}>
+                  Relationship Scope
+                </label>
+                <input
+                  type="text"
+                  value={editingRel.relationship}
+                  onChange={(e) => setEditingRel({ ...editingRel, relationship: e.target.value })}
+                  className="form-input"
+                  style={{ width: "100%", padding: "8px 12px", fontSize: "13px" }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "12px", fontWeight: 700, marginBottom: "4px", color: "var(--text-secondary)" }}>
+                  Detected Gap / Issue
+                </label>
+                <input
+                  type="text"
+                  value={editingRel.issue}
+                  onChange={(e) => setEditingRel({ ...editingRel, issue: e.target.value })}
+                  className="form-input"
+                  style={{ width: "100%", padding: "8px 12px", fontSize: "13px" }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "12px", fontWeight: 700, marginBottom: "4px", color: "var(--text-secondary)" }}>
+                  Status
+                </label>
+                <select
+                  value={editingRel.status}
+                  onChange={(e) => setEditingRel({ ...editingRel, status: e.target.value })}
+                  className="form-select"
+                  style={{ width: "100%", padding: "8px 12px", fontSize: "13px" }}
+                >
+                  <option value="Unlinked">Unlinked</option>
+                  <option value="Connected">Connected</option>
+                </select>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "16px" }}>
+                <Button variant="secondary" type="button" onClick={() => setEditingRel(null)} style={{ fontSize: "12px", padding: "7px 14px" }}>
+                  Cancel
+                </Button>
+                <Button variant="primary" type="submit" disabled={isActioning} style={{ fontSize: "12px", padding: "7px 14px" }}>
+                  {isActioning ? "Updating..." : "Update in Database"}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* View Detail Modal */}
       {viewingRel && (
         <div
@@ -391,6 +727,7 @@ export function BrokenRelationshipsPage() {
             justifyContent: "center",
             padding: "20px"
           }}
+          onClick={() => setViewingRel(null)}
         >
           <div
             style={{
@@ -402,6 +739,7 @@ export function BrokenRelationshipsPage() {
               boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
               position: "relative"
             }}
+            onClick={(e) => e.stopPropagation()}
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
@@ -467,6 +805,7 @@ export function BrokenRelationshipsPage() {
             justifyContent: "center",
             padding: "20px"
           }}
+          onClick={() => setDeletingRel(null)}
         >
           <div
             style={{
@@ -477,6 +816,7 @@ export function BrokenRelationshipsPage() {
               padding: "24px",
               boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)"
             }}
+            onClick={(e) => e.stopPropagation()}
           >
             <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px" }}>
               <div style={{ width: "36px", height: "36px", borderRadius: "50%", backgroundColor: "#FEE2E2", display: "flex", alignItems: "center", justifyContent: "center", color: "#EF4444" }}>
@@ -487,7 +827,7 @@ export function BrokenRelationshipsPage() {
               </h3>
             </div>
             <p style={{ fontSize: "13px", color: "var(--text-secondary)", lineHeight: 1.5, margin: "0 0 20px 0" }}>
-              Are you sure you want to remove <strong>{deletingRel.id}</strong> ({deletingRel.fromEntity} &rarr; {deletingRel.toEntity})? This deletion will be persisted in the database audit log.
+              Are you sure you want to permanently remove <strong>{deletingRel.id}</strong> ({deletingRel.fromEntity} &rarr; {deletingRel.toEntity})? This deletion will be immediately applied to the database.
             </p>
             <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px" }}>
               <Button variant="secondary" onClick={() => setDeletingRel(null)} disabled={isActioning} style={{ fontSize: "12px", padding: "7px 14px" }}>

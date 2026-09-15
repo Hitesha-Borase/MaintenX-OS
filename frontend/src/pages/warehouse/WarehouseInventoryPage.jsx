@@ -22,12 +22,19 @@ import { useApp } from "../../context/AppContext";
 import warehouseService from "../../services/warehouseService";
 
 export function WarehouseInventoryPage() {
-  const { lots = [], setLots, zones = [], addLot } = useInventory();
+  const { lots = [], setLots, zones = [], addLot, removeLot } = useInventory();
   const { addToast } = useApp();
 
   useEffect(() => {
-    warehouseService.getLots().catch((err) => console.warn("Warehouse lots load:", err.message));
-  }, []);
+    warehouseService.getLots()
+      .then((res) => {
+        const list = Array.isArray(res) ? res : (res?.data || []);
+        if (list && list.length > 0 && setLots) {
+          setLots(list);
+        }
+      })
+      .catch((err) => console.warn("Warehouse lots load:", err.message));
+  }, [setLots]);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("ALL");
@@ -60,13 +67,13 @@ export function WarehouseInventoryPage() {
   };
   const getName = (l) => {
     if (!l) return "";
-    const val = l.materialName ?? l.material_name ?? l.item ?? l.name ?? l.materialCode ?? "Inventory Item";
+    const val = l.sku?.name ?? l.materialName ?? l.material_name ?? l.item ?? l.name ?? l.materialCode ?? "Inventory Item";
     if (typeof val === "object" && val !== null) return val.name || val.code || "Inventory Item";
     return typeof val === "string" ? val : String(val || "");
   };
   const getCode = (l) => {
     if (!l) return "";
-    const val = l.materialCode ?? l.material_code ?? l.sku ?? l.skuCode ?? l.code ?? "RM-STD-01";
+    const val = l.sku?.skuCode ?? l.sku?.code ?? l.materialCode ?? l.material_code ?? l.sku ?? l.code ?? "RM-STD-01";
     if (typeof val === "object" && val !== null) return val.code || val.sku || val.name || "RM-STD-01";
     return typeof val === "string" ? val : String(val || "");
   };
@@ -101,6 +108,31 @@ export function WarehouseInventoryPage() {
     return matchesSearch && matchesCat;
   });
 
+  const handleDeleteLot = async (lot) => {
+    const lotId = getLotId(lot);
+    const identifier = lot.id || lotId;
+    if (!window.confirm(`Are you sure you want to delete Lot "${lotId}"?`)) return;
+
+    try {
+      await warehouseService.deleteLot(identifier);
+      if (removeLot) {
+        await removeLot(identifier);
+      }
+      if (setLots) {
+        setLots((prev) => prev.filter((l) => getLotId(l) !== lotId && l.id !== identifier));
+      }
+      addToast(`Material Lot ${lotId} successfully deleted from database.`, "success");
+    } catch (err) {
+      console.error("Failed to delete lot:", err);
+      if (removeLot) {
+        removeLot(identifier);
+      } else if (setLots) {
+        setLots((prev) => prev.filter((l) => getLotId(l) !== lotId && l.id !== identifier));
+      }
+      addToast(`Material Lot ${lotId} deleted.`, "info");
+    }
+  };
+
   const handleAdjustSubmit = async (e) => {
     e.preventDefault();
     if (!selectedLotForAdjust) return;
@@ -116,6 +148,16 @@ export function WarehouseInventoryPage() {
       newQty = change;
     }
 
+    if (setLots) {
+      setLots((prev) =>
+        prev.map((l) =>
+          getLotId(l) === getLotId(selectedLotForAdjust)
+            ? { ...l, quantity: newQty, currentQuantity: newQty }
+            : l
+        )
+      );
+    }
+
     try {
       if (warehouseService.recordStockMovement) {
         await warehouseService.recordStockMovement({
@@ -125,19 +167,15 @@ export function WarehouseInventoryPage() {
           uom: getUOM(selectedLotForAdjust),
           notes: adjustData.reason
         }).catch(() => null);
+
+        const res = await warehouseService.getLots();
+        const list = Array.isArray(res) ? res : (res?.data || []);
+        if (list && list.length > 0 && setLots) {
+          setLots(list);
+        }
       }
     } catch {
       // Offline fallback
-    }
-
-    if (setLots) {
-      setLots((prev) =>
-        prev.map((l) =>
-          getLotId(l) === getLotId(selectedLotForAdjust)
-            ? { ...l, quantity: newQty, currentQuantity: newQty }
-            : l
-        )
-      );
     }
 
     addToast(`Inventory for ${getName(selectedLotForAdjust)} adjusted to ${newQty.toLocaleString()} ${getUOM(selectedLotForAdjust)}. Reason: ${adjustData.reason}`, "success");
@@ -179,22 +217,28 @@ export function WarehouseInventoryPage() {
         await warehouseService.createLot({
           skuId: "00000000-0000-0000-0000-000000000001",
           lotNumber,
-          lotType: formData.category === "Packaging" ? "PACKAGING" : "RAW_MATERIAL",
+          lotType: formData.category === "Packaging" ? "PACKAGING" : (formData.category === "Finished Goods" ? "FINISHED_GOODS" : "RAW_MATERIAL"),
           supplierName: formData.supplier,
           supplierLotNumber: `SUP-${lotNumber}`,
           initialQuantity: Number(formData.quantity) || 1000,
+          currentQuantity: Number(formData.quantity) || 1000,
           uom: formData.unit || "kg",
           expiryDate: "2027-12-31T00:00:00.000Z"
-        }).catch(() => null);
+        });
+
+        const res = await warehouseService.getLots();
+        const list = Array.isArray(res) ? res : (res?.data || []);
+        if (list && list.length > 0 && setLots) {
+          setLots(list);
+        } else if (setLots) {
+          setLots((prev) => [newLot, ...prev]);
+        }
+      } else if (setLots) {
+        setLots((prev) => [newLot, ...prev]);
       }
     } catch (apiErr) {
       console.warn("Backend createLot sync:", apiErr);
-    }
-
-    if (addLot) {
-      await addLot(newLot);
-    } else if (setLots) {
-      setLots((prev) => [newLot, ...prev]);
+      if (setLots) setLots((prev) => [newLot, ...prev]);
     }
 
     addToast(`Material Lot ${lotNumber} added to Warehouse Inventory!`, "success");
@@ -429,6 +473,15 @@ export function WarehouseInventoryPage() {
                             style={{ fontSize: "11px", padding: "4px 8px", color: "#8C5B23" }}
                           >
                             Adjust Stock
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteLot(l)}
+                            style={{ fontSize: "11px", padding: "4px 8px", color: "#DC2626", border: "1px solid rgba(220, 38, 38, 0.2)" }}
+                            title="Delete Material Lot"
+                          >
+                            Delete
                           </Button>
                         </div>
                       </td>

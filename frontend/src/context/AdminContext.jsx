@@ -23,6 +23,7 @@ const defaultAdminContext = {
   roles: [],
   setRoles: () => {},
   addRole: async () => {},
+  updateRole: async () => {},
   deleteRole: async () => {},
   items: [],
   setItems: () => {},
@@ -255,10 +256,22 @@ export function AdminProvider({ children }) {
   };
 
   const deleteInvitation = async (invitationId) => {
+    const cleanTargetId = String(invitationId || "").trim().toLowerCase();
+    const cleanTargetIdNoSpace = cleanTargetId.replace(/\s+/g, "");
     try {
       await adminService.deleteInvitation(invitationId);
       // Immediately remove from UI state
-      setInvitations((prev) => prev.filter((i) => i.id !== invitationId && i.email !== invitationId));
+      setInvitations((prev) =>
+        prev.filter((i) => {
+          const iId = String(i.id || "").trim().toLowerCase();
+          const iEmail = String(i.email || "").trim().toLowerCase();
+          return (
+            iId !== cleanTargetId &&
+            iId.replace(/\s+/g, "") !== cleanTargetIdNoSpace &&
+            iEmail !== cleanTargetId
+          );
+        })
+      );
       // Resync from DB to confirm deletion
       const dbInvites = await adminService.getInvitations();
       if (Array.isArray(dbInvites)) {
@@ -267,7 +280,17 @@ export function AdminProvider({ children }) {
       adminService.getActivityLogs().then((logs) => Array.isArray(logs) && setActivityLogs(logs)).catch(() => {});
     } catch (err) {
       console.warn("deleteInvitation error:", err);
-      setInvitations((prev) => prev.filter((i) => i.id !== invitationId && i.email !== invitationId));
+      setInvitations((prev) =>
+        prev.filter((i) => {
+          const iId = String(i.id || "").trim().toLowerCase();
+          const iEmail = String(i.email || "").trim().toLowerCase();
+          return (
+            iId !== cleanTargetId &&
+            iId.replace(/\s+/g, "") !== cleanTargetIdNoSpace &&
+            iEmail !== cleanTargetId
+          );
+        })
+      );
       throw err;
     }
   };
@@ -280,6 +303,41 @@ export function AdminProvider({ children }) {
       console.warn("Failed to fetch activity logs:", err);
     }
   }, []);
+
+  const deleteActivityLog = async (logId) => {
+    try {
+      await adminService.deleteActivityLog(logId);
+      setActivityLogs((prev) => prev.filter((l) => l.id !== logId && l.dbId !== logId));
+      const logs = await adminService.getActivityLogs();
+      if (Array.isArray(logs)) setActivityLogs(logs);
+    } catch (err) {
+      console.warn("deleteActivityLog error:", err);
+      setActivityLogs((prev) => prev.filter((l) => l.id !== logId && l.dbId !== logId));
+    }
+  };
+
+  const createActivityLog = async (data) => {
+    try {
+      const newLog = await adminService.createActivityLog(data);
+      const logs = await adminService.getActivityLogs();
+      if (Array.isArray(logs)) setActivityLogs(logs);
+      return newLog;
+    } catch (err) {
+      console.warn("createActivityLog error:", err);
+      throw err;
+    }
+  };
+
+  const updateActivityLog = async (logId, data) => {
+    try {
+      await adminService.updateActivityLog(logId, data);
+      const logs = await adminService.getActivityLogs();
+      if (Array.isArray(logs)) setActivityLogs(logs);
+    } catch (err) {
+      console.warn("updateActivityLog error:", err);
+      throw err;
+    }
+  };
 
   // Role Actions (Wired directly to backend)
   const addRole = async (roleData) => {
@@ -299,6 +357,25 @@ export function AdminProvider({ children }) {
       };
       setRoles((prev) => [...prev, fallback]);
       return fallback;
+    }
+  };
+
+  const updateRole = async (roleId, roleData) => {
+    try {
+      if (adminService.updateRole) {
+        await adminService.updateRole(roleId, roleData);
+      }
+      setRoles((prev) =>
+        prev.map((r) =>
+          r.id === roleId || r.dbId === roleId || r.code === roleId
+            ? { ...r, ...roleData }
+            : r
+        )
+      );
+      adminService.getActivityLogs().then((logs) => Array.isArray(logs) && setActivityLogs(logs)).catch(() => {});
+    } catch (err) {
+      console.warn("updateRole service error:", err);
+      throw err;
     }
   };
 
@@ -358,11 +435,16 @@ export function AdminProvider({ children }) {
         resendInvitation,
         deleteInvitation,
         activityLogs,
+        setActivityLogs,
         fetchActivityLogs,
+        deleteActivityLog,
+        createActivityLog,
+        updateActivityLog,
         refreshAll,
         roles,
         setRoles,
         addRole,
+        updateRole,
         deleteRole,
         items,
         setItems,

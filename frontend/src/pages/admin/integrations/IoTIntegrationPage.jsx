@@ -33,14 +33,18 @@ export function IoTIntegrationPage() {
     { id: "IOT-03", name: "Plant 2 Modbus-TCP Gateway", protocol: "Modbus TCP (Port 502)", connectedNodes: 64, telemetryRate: "1 Hz", status: "Connected" }
   ]);
 
-  useEffect(() => {
+  const loadBrokers = () => {
     adminService.getIoTGateways()
       .then((data) => {
-        if (Array.isArray(data) && data.length > 0) {
+        if (Array.isArray(data)) {
           setBrokers(data);
         }
       })
       .catch((err) => console.warn("IoT gateways load error:", err.message));
+  };
+
+  useEffect(() => {
+    loadBrokers();
   }, []);
 
   const [searchQuery, setSearchQuery] = useState("");

@@ -426,6 +426,17 @@ export function MasterAdminProvider({ children }) {
     }
   };
 
+  const clearAllAuditLogs = async () => {
+    try {
+      setAuditLogs([]);
+      await masterAdminService.clearAllAuditLogs();
+      await fetchAuditLogs();
+    } catch (err) {
+      console.error("Failed to clear all audit logs:", err);
+      setAuditLogs([]);
+    }
+  };
+
   const addPlan = async (planDetails) => {
     try {
       await masterAdminService.createPlan(planDetails);
@@ -533,6 +544,7 @@ export function MasterAdminProvider({ children }) {
         updateTicketStatus,
         deleteTicket,
         deleteAuditLog,
+        clearAllAuditLogs,
         addPlan,
         editPlan,
         updatePlanStatus,

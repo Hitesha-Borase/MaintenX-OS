@@ -200,6 +200,11 @@ class MasterAdminService {
     return extractData(res);
   }
 
+  async clearAllAuditLogs() {
+    const res = await apiClient.delete("/master/audit-logs");
+    return extractData(res);
+  }
+
   // 11. Support Tickets
   async getSupportTickets(params = {}) {
     const query = new URLSearchParams();

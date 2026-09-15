@@ -127,6 +127,18 @@ export class AdminService {
     }
   }
 
+  async createActivityLog(data) {
+    return await apiClient.post("/admin/activity", data);
+  }
+
+  async updateActivityLog(id, data) {
+    return await apiClient.put(`/admin/activity/${encodeURIComponent(id)}`, data);
+  }
+
+  async deleteActivityLog(id) {
+    return await apiClient.delete(`/admin/activity/${encodeURIComponent(id)}`);
+  }
+
   // Roles & Permissions
   async getRoles() {
     try {
@@ -149,6 +161,24 @@ export class AdminService {
         userCount: 0,
         isSystem: false,
       };
+    }
+  }
+
+  async updateRole(id, roleData) {
+    try {
+      return await apiClient.put(`/admin/roles/${id}`, roleData);
+    } catch (err) {
+      console.warn("Backend updateRole fallback:", err.message);
+      throw err;
+    }
+  }
+
+  async deleteRole(id) {
+    try {
+      return await apiClient.delete(`/admin/roles/${id}`);
+    } catch (err) {
+      console.warn("Backend deleteRole fallback:", err.message);
+      throw err;
     }
   }
 
@@ -202,8 +232,47 @@ export class AdminService {
     }
   }
 
+  async createApprovalRule(data) {
+    try {
+      return await apiClient.post("/admin/approval-rules", data);
+    } catch (err) {
+      console.warn("Backend createApprovalRule fallback:", err.message);
+      throw err;
+    }
+  }
+
+  async updateApprovalRule(id, data) {
+    try {
+      return await apiClient.put(`/admin/approval-rules/${id}`, data);
+    } catch (err) {
+      console.warn("Backend updateApprovalRule fallback:", err.message);
+      throw err;
+    }
+  }
+
+  async deleteApprovalRule(id) {
+    try {
+      return await apiClient.delete(`/admin/approval-rules/${id}`);
+    } catch (err) {
+      console.warn("Backend deleteApprovalRule fallback:", err.message);
+      throw err;
+    }
+  }
+
   async getDataHealthScan() {
     return await apiClient.get("/admin/data-health/scan");
+  }
+
+  async createDataHealthRecord(category, data) {
+    return await apiClient.post(`/admin/data-health/${encodeURIComponent(category)}`, data);
+  }
+
+  async updateDataHealthRecord(category, id, data) {
+    return await apiClient.put(`/admin/data-health/${encodeURIComponent(category)}/${encodeURIComponent(id)}`, data);
+  }
+
+  async deleteDataHealthRecord(category, id) {
+    return await apiClient.delete(`/admin/data-health/${encodeURIComponent(category)}/${encodeURIComponent(id)}`);
   }
 
   async remediateDataHealth(data) {
@@ -296,6 +365,33 @@ export class AdminService {
     }
   }
 
+  async updateERPConfig(data) {
+    try {
+      return await apiClient.put("/admin/integrations/erp", data);
+    } catch (err) {
+      console.warn("Backend updateERPConfig fallback:", err.message);
+      return data;
+    }
+  }
+
+  async getERPEvents() {
+    try {
+      return await apiClient.get("/admin/integrations/erp/events");
+    } catch (err) {
+      console.warn("Backend getERPEvents fallback:", err.message);
+      return [];
+    }
+  }
+
+  async deleteERPEvent(id) {
+    try {
+      return await apiClient.delete(`/admin/integrations/erp/events/${encodeURIComponent(id)}`);
+    } catch (err) {
+      console.warn("Backend deleteERPEvent fallback:", err.message);
+      return { success: true, id };
+    }
+  }
+
   // ── INTEGRATIONS: BARCODE SYMBOLOGY ───────────────────────────────
   async getBarcodeFormats() {
     try {
@@ -363,6 +459,15 @@ export class AdminService {
         created: new Date().toISOString().substring(0, 10),
         status: "Active"
       };
+    }
+  }
+
+  async updateApiKey(id, data) {
+    try {
+      return await apiClient.put(`/admin/integrations/apis/${encodeURIComponent(id)}`, data);
+    } catch (err) {
+      console.warn("Backend updateApiKey fallback:", err.message);
+      return { id, ...data };
     }
   }
 
@@ -461,6 +566,14 @@ export class AdminService {
     return await apiClient.delete(`/admin/data-health/remediation-log/${encodeURIComponent(id)}`);
   }
 
+  async createRemediationLog(data) {
+    return await apiClient.post("/admin/data-health/remediation-log", data);
+  }
+
+  async updateRemediationLog(id, data) {
+    return await apiClient.put(`/admin/data-health/remediation-log/${encodeURIComponent(id)}`, data);
+  }
+
   // ── 11. Data Migration ─────────────────────────────────────────────
   async getMigrationBatches() {
     try {
@@ -469,6 +582,14 @@ export class AdminService {
       console.warn("getMigrationBatches fallback:", err.message);
       return [];
     }
+  }
+
+  async createMigrationBatch(data) {
+    return await apiClient.post("/admin/migration/batches", data);
+  }
+
+  async updateMigrationBatch(id, data) {
+    return await apiClient.put(`/admin/migration/batches/${encodeURIComponent(id)}`, data);
   }
 
   async executeMigrationBatch(batchData) {
@@ -489,14 +610,14 @@ export class AdminService {
         uptime: "99.98%",
         uptimeStatus: "Availability",
         uptimeTarget: "Exceeds 99.9% target",
-        dbStorage: "14.2 GB",
+        dbStorage: "31 MB",
         dbStorageLimit: "50 GB",
-        dbStorageUtilization: "28.4% capacity utilized",
+        dbStorageUtilization: "0.1% capacity utilized",
         apiLatencyMs: 22,
         apiLatencyP99: "45 ms",
-        seatLicensesUsed: 54,
+        seatLicensesUsed: 13,
         seatLicensesTotal: 100,
-        seatLicensesAvailable: 46,
+        seatLicensesAvailable: 87,
         tenantTier: "ENTERPRISE TIER ACTIVE",
         resourceUtilization: [
           { label: "Mar", value: 24 },
@@ -510,14 +631,37 @@ export class AdminService {
         edgeLatency: "1.4 ms",
         pgStorageHealth: "HEALTHY",
         pgCapacityHeadroom: "78% Free",
+        reports: [],
       };
     }
+  }
+
+  async getSystemGovernanceReports() {
+    try {
+      return await apiClient.get("/admin/system-reports/items");
+    } catch (err) {
+      console.warn("getSystemGovernanceReports fallback:", err.message);
+      return [];
+    }
+  }
+
+  async createSystemReport(data) {
+    return await apiClient.post("/admin/system-reports/items", data);
+  }
+
+  async updateSystemReport(id, data) {
+    return await apiClient.put(`/admin/system-reports/items/${encodeURIComponent(id)}`, data);
+  }
+
+  async deleteSystemReport(id) {
+    return await apiClient.delete(`/admin/system-reports/items/${encodeURIComponent(id)}`);
   }
 
   async exportSystemReport() {
     return await apiClient.post("/admin/system-reports/export", {});
   }
 }
+
 
 
 export const adminService = new AdminService();
