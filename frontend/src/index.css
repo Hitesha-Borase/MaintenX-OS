@@ -953,6 +953,18 @@ body {
   color: #2B1D11;
 }
 
+.table-btn-delete {
+  background-color: #FFF5F5;
+  border: 1px solid #FECACA;
+  color: #DC2626;
+  box-shadow: 0 1px 2px rgba(220, 38, 38, 0.05);
+}
+.table-btn-delete:hover {
+  background-color: #FEE2E2;
+  border-color: #EF4444;
+  color: #B91C1C;
+}
+
 .table-btn-start {
   background: linear-gradient(180deg, #E2B670 0%, #C89547 50%, #B27E33 100%);
   border: 1px solid #E8C182;

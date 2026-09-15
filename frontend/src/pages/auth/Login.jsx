@@ -53,9 +53,9 @@ export function Login() {
   const { login, loginWithCredentials, ROLES } = useRole();
   const { addToast } = useApp();
 
-  const [selectedRole, setSelectedRole] = useState("plant_manager");
-  const [username, setUsername] = useState("plant.manager@maintenx.com");
-  const [password, setPassword] = useState("Password@123");
+  const [selectedRole, setSelectedRole] = useState("admin");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [hoveredRole, setHoveredRole] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -106,14 +106,14 @@ export function Login() {
       if (res?.success) {
         const displayName = res.user?.name || (res.user?.firstName ? `${res.user.firstName} ${res.user.lastName || ""}`.trim() : "User");
         addToast(`Authenticated as ${res.role?.label || "User"} (${displayName})! Welcome to MaintenX OS.`, "success");
-        navigate(res.role?.defaultRoute || "/dashboard");
+        navigate(res.role?.defaultRoute || "/admin/console");
         return;
       }
     } catch (err) {
       console.warn("Credential authentication failed:", err.message);
       setAuthError({
         title: "Invalid Corporate Credentials",
-        message: "The username or security password entered does not match our records. Please verify and try again."
+        message: err?.message || "The username or security password entered does not match our records. Please verify and try again."
       });
     } finally {
       setIsSubmitting(false);

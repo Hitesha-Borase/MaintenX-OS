@@ -57,13 +57,16 @@ export function CIDashboard() {
     ciProjects = [],
     standards = [],
     verifiedSolutions = [],
-    initiateRCA
+    initiateRCA,
+    availableAssets = [],
+    availableLines = []
   } = useCI();
 
   const [isCreateRcaOpen, setIsCreateRcaOpen] = useState(false);
   const [rcaForm, setRcaForm] = useState({
     title: "",
-    area: "Aseptic Bottling Line 1",
+    lineId: "",
+    assetId: "",
     severity: "High",
     description: ""
   });
@@ -75,11 +78,24 @@ export function CIDashboard() {
       return;
     }
 
-    const newId = await initiateRCA("AST-002", null, rcaForm.title);
+    const selectedAsset = availableAssets.find((a) => a.id === rcaForm.assetId || a.assetCode === rcaForm.assetId) || availableAssets[0] || {};
+    const selectedLine = availableLines.find((l) => l.id === rcaForm.lineId || l.code === rcaForm.lineId) || availableLines[0] || {};
+
+    await initiateRCA({
+      title: rcaForm.title.trim(),
+      assetId: selectedAsset.assetCode || selectedAsset.id || rcaForm.assetId || "AST-001",
+      assetName: selectedAsset.name || selectedAsset.assetName || "Selected Production Equipment",
+      lineId: selectedLine.code || selectedLine.id || rcaForm.lineId || "LIN-01",
+      lineName: selectedLine.name || "Line 1 — Production",
+      severity: rcaForm.severity,
+      problemStatement: rcaForm.description.trim() || rcaForm.title.trim(),
+    });
+
     setIsCreateRcaOpen(false);
     setRcaForm({
       title: "",
-      area: "Aseptic Bottling Line 1",
+      lineId: "",
+      assetId: "",
       severity: "High",
       description: ""
     });
@@ -149,7 +165,7 @@ export function CIDashboard() {
           title="Fleet MTBF"
           value={`${fleetMTBF} hrs`}
           unit="Mean Time Between Failures"
-          trend={{ value: "+18% vs Last Quarter", isPositive: true, text: "" }}
+          trend={{ value: fleetMTBF > 0 ? "Target: > 120 hrs" : "Zero Failures Logged", isPositive: fleetMTBF >= 100, text: "" }}
           icon={Gauge}
           colorVariant="emerald"
           onClick={() => navigate("/ci/reliability")}
@@ -158,7 +174,7 @@ export function CIDashboard() {
           title="Fleet MTTR"
           value={`${fleetMTTR} min`}
           unit="Mean Time To Repair"
-          trend={{ value: "-12 min benchmark", isPositive: true, text: "" }}
+          trend={{ value: fleetMTTR > 0 ? "Target: < 30 min" : "Zero Repair Downtime", isPositive: fleetMTTR <= 30, text: "" }}
           icon={Clock}
           colorVariant="cyan"
           onClick={() => navigate("/ci/reliability")}
@@ -167,7 +183,7 @@ export function CIDashboard() {
           title="Realized YTD Savings"
           value={`$${realizedSavingsTotal.toLocaleString()}`}
           unit="Verified Benefit"
-          trend={{ value: `$${projectedSavingsTotal.toLocaleString()} Projected`, isPositive: true, text: "" }}
+          trend={{ value: `$${projectedSavingsTotal.toLocaleString()} Projected Target`, isPositive: true, text: "" }}
           icon={DollarSign}
           colorVariant="emerald"
           onClick={() => navigate("/ci/projects/savings")}
@@ -176,7 +192,7 @@ export function CIDashboard() {
           title="Open RCA Investigations"
           value={`${openRcaCount} Active`}
           unit="RCA 2.0"
-          trend={{ value: `${badActorsCount} Bad Actors Identified`, isPositive: false, text: "" }}
+          trend={{ value: `${badActorsCount} Bad Actors Identified`, isPositive: badActorsCount === 0, text: "" }}
           icon={SearchCode}
           colorVariant={openRcaCount > 0 ? "rose" : "emerald"}
           onClick={() => navigate("/ci/rca/investigations")}
@@ -301,28 +317,34 @@ export function CIDashboard() {
             </div>
 
             <div style={{ fontSize: "12px", display: "flex", flexDirection: "column", gap: "8px" }}>
-              {investigations.slice(0, 2).map((inv) => (
-                <div
-                  key={inv.id}
-                  onClick={() => navigate("/ci/rca/investigations")}
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    padding: "8px 10px",
-                    borderRadius: "8px",
-                    backgroundColor: "var(--bg-card-subtle)",
-                    border: "1px solid var(--border-subtle)",
-                    cursor: "pointer"
-                  }}
-                >
-                  <div style={{ minWidth: 0, flex: 1, paddingRight: "8px" }}>
-                    <div style={{ fontWeight: 700, color: "var(--text-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{inv.id} — {inv.title}</div>
-                    <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>{inv.assetName} • Phase: {inv.currentPhase}</div>
+              {investigations.length > 0 ? (
+                investigations.slice(0, 2).map((inv) => (
+                  <div
+                    key={inv.id}
+                    onClick={() => navigate("/ci/rca/investigations")}
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      padding: "8px 10px",
+                      borderRadius: "8px",
+                      backgroundColor: "var(--bg-card-subtle)",
+                      border: "1px solid var(--border-subtle)",
+                      cursor: "pointer"
+                    }}
+                  >
+                    <div style={{ minWidth: 0, flex: 1, paddingRight: "8px" }}>
+                      <div style={{ fontWeight: 700, color: "var(--text-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{inv.id} — {inv.title}</div>
+                      <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>{inv.assetName} • Phase: {inv.currentPhase}</div>
+                    </div>
+                    <Badge variant={inv.severity === "Critical" ? "rose" : "amber"}>{inv.status?.toUpperCase() || "ACTIVE"}</Badge>
                   </div>
-                  <Badge variant={inv.severity === "Critical" ? "rose" : "amber"}>{inv.status.toUpperCase()}</Badge>
+                ))
+              ) : (
+                <div style={{ padding: "16px 10px", textAlign: "center", color: "var(--text-muted)", fontSize: "12px", backgroundColor: "var(--bg-card-subtle)", borderRadius: "8px" }}>
+                  No active root cause investigations logged
                 </div>
-              ))}
+              )}
             </div>
           </div>
 
@@ -361,14 +383,20 @@ export function CIDashboard() {
             </div>
 
             <div style={{ fontSize: "12px", display: "flex", flexDirection: "column", gap: "8px" }}>
-              {lossRecords.map((loss) => (
-                <div key={loss.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 8px", backgroundColor: "var(--bg-card-subtle)", borderRadius: "6px" }}>
-                  <span style={{ color: "var(--text-secondary)", fontSize: "12px" }}>{loss.category}:</span>
-                  <strong style={{ color: loss.category.includes("Downtime") ? "#DC2626" : loss.category.includes("Quality") ? "#D97706" : "#0284C7", fontFamily: "var(--font-mono)", fontSize: "13px" }}>
-                    ${loss.financialImpactUSD?.toLocaleString()} ({loss.hoursLost} hrs)
-                  </strong>
+              {lossRecords.length > 0 ? (
+                lossRecords.map((loss) => (
+                  <div key={loss.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 8px", backgroundColor: "var(--bg-card-subtle)", borderRadius: "6px" }}>
+                    <span style={{ color: "var(--text-secondary)", fontSize: "12px" }}>{loss.category}:</span>
+                    <strong style={{ color: loss.category?.includes("Downtime") ? "#DC2626" : loss.category?.includes("Quality") ? "#D97706" : "#0284C7", fontFamily: "var(--font-mono)", fontSize: "13px" }}>
+                      ${(loss.financialImpactUSD || 0).toLocaleString()} ({loss.hoursLost || 0} hrs)
+                    </strong>
+                  </div>
+                ))
+              ) : (
+                <div style={{ padding: "16px 10px", textAlign: "center", color: "var(--text-muted)", fontSize: "12px", backgroundColor: "var(--bg-card-subtle)", borderRadius: "8px" }}>
+                  No operational loss events recorded
                 </div>
-              ))}
+              )}
             </div>
           </div>
 
@@ -462,7 +490,11 @@ export function CIDashboard() {
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 8px", backgroundColor: "var(--bg-card-subtle)", borderRadius: "6px" }}>
                 <span style={{ color: "var(--text-secondary)" }}>Audited Standards:</span>
-                <strong style={{ color: "#059669", fontSize: "13px" }}>100% Compliant</strong>
+                <strong style={{ color: "#059669", fontSize: "13px" }}>
+                  {standards.length > 0
+                    ? `${Math.round((standards.filter((s) => s.status === "Approved" || s.status === "Active").length / standards.length) * 100)}% Compliant`
+                    : "0% Compliant"}
+                </strong>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 8px", backgroundColor: "var(--bg-card-subtle)", borderRadius: "6px" }}>
                 <span style={{ color: "var(--text-secondary)" }}>Engineering Capex:</span>
@@ -530,29 +562,52 @@ export function CIDashboard() {
                   <label className="form-label">Process Area / Line</label>
                   <select
                     className="form-select"
-                    value={rcaForm.area}
-                    onChange={(e) => setRcaForm({ ...rcaForm, area: e.target.value })}
+                    value={rcaForm.lineId}
+                    onChange={(e) => setRcaForm({ ...rcaForm, lineId: e.target.value })}
                     style={{ backgroundColor: "#FFFFFF" }}
                   >
-                    <option value="Aseptic Bottling Line 1">Line 1 — Aseptic Bottling</option>
-                    <option value="Line 2 — Formulation & Pasteurizer">Line 2 — Formulation & Pasteurizer</option>
-                    <option value="Line 3 — Canning Line">Line 3 — Canning Line</option>
+                    <option value="">-- Select Production Line --</option>
+                    {availableLines.map((line) => (
+                      <option key={line.id} value={line.id}>
+                        {line.name || line.line_name || line.code || line.id}
+                      </option>
+                    ))}
+                    {availableLines.length === 0 && (
+                      <option value="Line 1 — Production">Line 1 — Production</option>
+                    )}
                   </select>
                 </div>
 
                 <div>
-                  <label className="form-label">Severity Level</label>
+                  <label className="form-label">Target Asset / Equipment</label>
                   <select
                     className="form-select"
-                    value={rcaForm.severity}
-                    onChange={(e) => setRcaForm({ ...rcaForm, severity: e.target.value })}
+                    value={rcaForm.assetId}
+                    onChange={(e) => setRcaForm({ ...rcaForm, assetId: e.target.value })}
                     style={{ backgroundColor: "#FFFFFF" }}
                   >
-                    <option value="Critical">Critical (CCP / Quality Impact)</option>
-                    <option value="High">High (High Scrap / Downtime)</option>
-                    <option value="Medium">Medium (Speed Loss)</option>
+                    <option value="">-- Select Asset (Optional) --</option>
+                    {availableAssets.map((ast) => (
+                      <option key={ast.id} value={ast.id}>
+                        {ast.name || ast.asset_name || ast.assetName || ast.id} ({ast.asset_code || ast.assetCode || ast.tag || "Asset"})
+                      </option>
+                    ))}
                   </select>
                 </div>
+              </div>
+
+              <div>
+                <label className="form-label">Severity Level</label>
+                <select
+                  className="form-select"
+                  value={rcaForm.severity}
+                  onChange={(e) => setRcaForm({ ...rcaForm, severity: e.target.value })}
+                  style={{ backgroundColor: "#FFFFFF" }}
+                >
+                  <option value="Critical">Critical (CCP / Quality Impact)</option>
+                  <option value="High">High (High Scrap / Downtime)</option>
+                  <option value="Medium">Medium (Speed Loss)</option>
+                </select>
               </div>
 
               <div>

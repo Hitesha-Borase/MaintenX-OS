@@ -61,13 +61,19 @@ export function Asset360() {
     updateAsset,
     updateAssetStatus,
     workOrders,
+    refreshWorkOrders,
+    refreshAssets,
+    refreshCalibrations,
+    refreshSpareParts,
     pmSchedules,
     breakdowns,
     spareParts,
+    updateSparePart,
     calibrations,
     solutions,
     issueSparePart,
-    addCalibrationRecord
+    addCalibrationRecord,
+    iotTelemetry
   } = useCMMS();
 
   const { auditLogs, logAudit, lines = [] } = useMasterData();
@@ -86,18 +92,24 @@ export function Asset360() {
   React.useEffect(() => {
     const fetch360Data = async () => {
       try {
+        if (refreshWorkOrders) await refreshWorkOrders();
+        if (refreshAssets) await refreshAssets();
+        if (refreshCalibrations) await refreshCalibrations();
+        if (refreshSpareParts) await refreshSpareParts();
         await Promise.all([
           masterDataService.getAssets(),
           maintenanceService.getReliabilityMetrics(),
           maintenanceService.getWorkOrders(),
-          maintenanceService.getPMSchedules()
+          maintenanceService.getPMSchedules(),
+          maintenanceService.getCalibrations(),
+          maintenanceService.getSpareParts()
         ]);
       } catch (err) {
         console.warn("API Asset 360 fetch notice:", err.message || err);
       }
     };
     fetch360Data();
-  }, []);
+  }, [refreshWorkOrders, refreshAssets, refreshCalibrations, refreshSpareParts]);
 
   // Active Tab state - 10 CLIENT SPECIFIED SECTIONS
   const [activeTab, setActiveTab] = useState("OVERVIEW");
@@ -131,14 +143,98 @@ export function Asset360() {
   };
 
   // Linked Data
-  const linkedWOs = useMemo(() => workOrders.filter((w) => w.assetId === asset.id), [workOrders, asset.id]);
+  const linkedWOs = useMemo(() => {
+    return workOrders.filter(
+      (w) =>
+        w.assetId === asset.id ||
+        (asset.assetCode && w.assetId === asset.assetCode) ||
+        (asset.dbId && w.assetId === asset.dbId) ||
+        (w.dbAssetId && (w.dbAssetId === asset.id || w.dbAssetId === asset.dbId)) ||
+        (w.asset && (w.asset.id === asset.id || w.asset.assetCode === asset.id || w.asset.assetCode === asset.assetCode))
+    );
+  }, [workOrders, asset.id, asset.assetCode, asset.dbId]);
   const linkedPMs = useMemo(() => pmSchedules.filter((p) => p.assetId === asset.id), [pmSchedules, asset.id]);
-  const linkedBDs = useMemo(() => breakdowns.filter((b) => b.assetId === asset.id), [breakdowns, asset.id]);
-  const linkedParts = useMemo(
-    () => spareParts.filter((p) => p.linkedAssets?.includes(asset.id) || p.linkedAsset === asset.id),
-    [spareParts, asset.id]
-  );
-  const linkedCals = useMemo(() => calibrations.filter((c) => c.assetId === asset.id), [calibrations, asset.id]);
+  const linkedBDs = useMemo(() => {
+    return breakdowns.filter(
+      (b) =>
+        b.assetId === asset.id ||
+        (asset.assetCode && b.assetId === asset.assetCode) ||
+        (asset.dbId && b.assetId === asset.dbId) ||
+        (b.dbAssetId && (b.dbAssetId === asset.id || b.dbAssetId === asset.dbId)) ||
+        (b.assetName && (b.assetName === asset.name || b.assetName === asset.id))
+    );
+  }, [breakdowns, asset.id, asset.assetCode, asset.dbId, asset.name]);
+  const linkedParts = useMemo(() => {
+    const list = [];
+    const seenPartNos = new Set();
+
+    // 1. Parts linked to this asset in master catalog or database
+    spareParts.forEach((p) => {
+      const linked = Array.isArray(p.linkedAssets)
+        ? p.linkedAssets
+        : (p.linkedAssets ? String(p.linkedAssets).split(',').map((s) => s.trim()) : []);
+
+      const isMatched =
+        linked.includes(asset.id) ||
+        (asset.assetCode && linked.includes(asset.assetCode)) ||
+        (asset.dbId && linked.includes(asset.dbId)) ||
+        p.linkedAsset === asset.id ||
+        (asset.assetCode && p.linkedAsset === asset.assetCode) ||
+        (asset.dbId && p.linkedAsset === asset.dbId) ||
+        p.assetId === asset.id ||
+        (asset.dbId && p.assetId === asset.dbId);
+
+      if (isMatched) {
+        seenPartNos.add(p.partNo || p.partNumber);
+        list.push(p);
+      }
+    });
+
+    // 2. Parts issued to any Work Order belonging to this machine
+    linkedWOs.forEach((wo) => {
+      if (Array.isArray(wo.partsRequired)) {
+        wo.partsRequired.forEach((req) => {
+          const pNo = req.partNo || req.partNumber;
+          if (pNo && !seenPartNos.has(pNo)) {
+            seenPartNos.add(pNo);
+            const catalogItem = spareParts.find((sp) => sp.partNo === pNo || sp.id === pNo);
+            if (catalogItem) {
+              list.push({
+                ...catalogItem,
+                issuedQty: req.qty || 1,
+                issuedViaWO: wo.woNumber || wo.id
+              });
+            } else {
+              list.push({
+                id: `WO-PART-${pNo}`,
+                partNo: pNo,
+                name: req.name || pNo,
+                category: "Mechanical",
+                stock: req.qty || 1,
+                unitCost: Number(req.unitCost || 50),
+                location: "Machine Consumed",
+                status: "Issued",
+                issuedQty: req.qty || 1,
+                issuedViaWO: wo.woNumber || wo.id
+              });
+            }
+          }
+        });
+      }
+    });
+
+    return list;
+  }, [spareParts, asset.id, asset.assetCode, asset.dbId, linkedWOs]);
+  const linkedCals = useMemo(() => {
+    return calibrations.filter(
+      (c) =>
+        c.assetId === asset.id ||
+        (asset.assetCode && c.assetId === asset.assetCode) ||
+        (asset.dbId && c.assetId === asset.dbId) ||
+        (c.dbAssetId && (c.dbAssetId === asset.id || c.dbAssetId === asset.dbId)) ||
+        (c.assetCode && (c.assetCode === asset.id || c.assetCode === asset.assetCode))
+    );
+  }, [calibrations, asset.id, asset.assetCode, asset.dbId]);
 
   // Asset Audit Logs
   const assetAudits = useMemo(() => {
@@ -191,6 +287,16 @@ export function Asset360() {
     result: "PASS - Within Tolerance",
     standardUsed: "NIST-Cal-Traceable Standard",
     technician: currentRole?.name || "Marcus Vance"
+  });
+
+  // Log Troubleshooting Solution Modal
+  const [isAddSolutionModalOpen, setIsAddSolutionModalOpen] = useState(false);
+  const [solutionForm, setSolutionForm] = useState({
+    symptom: "",
+    rootCause: "",
+    solutionSteps: "",
+    failureCode: "MEC-004",
+    verifiedBy: currentRole?.name || "Carlos Mendez"
   });
 
   // View Audit Detail Modal
@@ -267,15 +373,39 @@ export function Asset360() {
     addToast(`Production assignment for ${asset.id} updated to ${prodAssignmentForm.line}`);
   };
 
-  // Issue Part to WO
-  const handleConfirmIssuePart = (e) => {
+  // Issue Part to Machine / WO
+  const handleConfirmIssuePart = async (e) => {
     e.preventDefault();
     if (!selectedPartNo) {
       addToast("Please select a spare part", "error");
       return;
     }
     const woId = targetWoId || (linkedWOs[0]?.id || `WO-REQ-${asset.id}`);
-    issueSparePart(selectedPartNo, parseInt(issueQty), woId);
+    const qty = parseInt(issueQty) || 1;
+
+    // 1. Issue part and link to asset in context & backend
+    if (issueSparePart) {
+      await issueSparePart(selectedPartNo, qty, woId, asset.id);
+    }
+
+    // 2. Explicitly ensure part has asset.id in its linkedAssets stored in DB
+    const targetPart = spareParts.find(p => p.partNo === selectedPartNo || p.id === selectedPartNo);
+    if (targetPart && updateSparePart) {
+      const currentLinked = Array.isArray(targetPart.linkedAssets)
+        ? targetPart.linkedAssets
+        : (targetPart.linkedAssets ? String(targetPart.linkedAssets).split(',').map(s => s.trim()) : []);
+      const newLinked = Array.from(new Set([...currentLinked, asset.id, asset.assetCode, asset.dbId].filter(Boolean)));
+      await updateSparePart(targetPart.id || targetPart.partNo, {
+        linkedAssets: newLinked.join(',')
+      });
+    }
+
+    if (refreshSpareParts) {
+      await refreshSpareParts();
+    }
+    if (refreshWorkOrders) {
+      await refreshWorkOrders();
+    }
 
     if (logAudit) {
       logAudit({
@@ -284,28 +414,32 @@ export function Asset360() {
         action: "Spare Part Issued",
         field: "stock",
         oldValue: "Inventory Stock",
-        newValue: `${issueQty}x ${selectedPartNo}`,
+        newValue: `${qty}x ${selectedPartNo}`,
         notes: `Part ${selectedPartNo} issued for asset maintenance (${woId})`
       });
     }
 
-    addToast(`Issued ${issueQty} unit(s) of ${selectedPartNo} to ${woId}`);
+    addToast(`Issued ${qty} unit(s) of ${selectedPartNo} to ${asset.id} (${woId})`);
     setIsIssuePartModalOpen(false);
     setSelectedPartNo("");
     setIssueQty(1);
   };
 
   // Log Calibration Record
-  const handleConfirmLogCalibration = (e) => {
+  const handleConfirmLogCalibration = async (e) => {
     e.preventDefault();
-    addCalibrationRecord({
+    await addCalibrationRecord({
       assetId: asset.id,
-      name: `${asset.name} Instrumentation`,
+      name: calForm.standardUsed ? `${calForm.standardUsed} (${asset.name})` : `${asset.name} Instrumentation`,
       lastCalibration: new Date().toISOString().substring(0, 10),
       nextDueDate: calForm.nextDueDate || new Date(Date.now() + 90 * 86400000).toISOString().substring(0, 10),
       technician: calForm.technician,
       result: calForm.result
     });
+
+    if (refreshCalibrations) {
+      await refreshCalibrations();
+    }
 
     if (logAudit) {
       logAudit({
@@ -323,6 +457,54 @@ export function Asset360() {
     setIsLogCalModalOpen(false);
   };
 
+  // Log Troubleshooting Solution
+  const handleConfirmAddSolution = async (e) => {
+    e.preventDefault();
+    if (!solutionForm.symptom || !solutionForm.rootCause) {
+      addToast("Please fill in symptom and root cause", "error");
+      return;
+    }
+    const newSol = {
+      id: `SOL-${Date.now().toString().slice(-4)}`,
+      assetId: asset.id,
+      assetName: asset.name,
+      assetType: asset.type || "Mechanical",
+      symptom: solutionForm.symptom,
+      rootCause: solutionForm.rootCause,
+      solutionSteps: solutionForm.solutionSteps || "Inspect and rectify.",
+      failureCode: solutionForm.failureCode || "MEC-004",
+      verifiedBy: solutionForm.verifiedBy || "Maintenance Lead",
+      status: "Verified",
+      createdAt: new Date().toISOString()
+    };
+    try {
+      await maintenanceService.createRCAInvestigation?.(newSol);
+    } catch {
+      // handled
+    }
+    setLocalSolutions((prev) => [newSol, ...prev]);
+    if (logAudit) {
+      logAudit({
+        entityId: asset.id,
+        entityType: "Troubleshooting",
+        action: "Solution Logged",
+        field: "Root Cause",
+        oldValue: "-",
+        newValue: solutionForm.rootCause,
+        notes: `Verified fix logged by ${solutionForm.verifiedBy}: ${solutionForm.symptom}`
+      });
+    }
+    addToast(`Troubleshooting solution logged for ${asset.id}`);
+    setIsAddSolutionModalOpen(false);
+    setSolutionForm({
+      symptom: "",
+      rootCause: "",
+      solutionSteps: "",
+      failureCode: "MEC-004",
+      verifiedBy: currentRole?.name || "Carlos Mendez"
+    });
+  };
+
   // Calculations for KPI Cards
   const totalDowntimeMins = useMemo(() => {
     return linkedBDs.reduce((acc, b) => acc + (b.durationMinutes || 0), 0);
@@ -330,7 +512,7 @@ export function Asset360() {
 
   const totalLabourHours = useMemo(() => {
     return linkedWOs
-      .reduce((acc, w) => acc + (w.actualHours || (w.durationMinutes ? w.durationMinutes / 60 : 2.5)), 0)
+      .reduce((acc, w) => acc + Number(w.actualHours || w.actual_hours || 0), 0)
       .toFixed(1);
   }, [linkedWOs]);
 
@@ -346,11 +528,37 @@ export function Asset360() {
   // Production Orders linked to this asset's line
   const activeProdOrder = useMemo(() => {
     return (
-      productionOrders.find((po) => po.line === asset.line && po.status === "In Progress") ||
-      productionOrders.find((po) => po.line === asset.line) ||
-      productionOrders[0]
+      productionOrders.find((po) => (po.line === asset.line || po.lineName === asset.line || po.lineId === asset.lineId) && po.status === "In Progress") ||
+      productionOrders.find((po) => po.line === asset.line || po.lineName === asset.line || po.lineId === asset.lineId) ||
+      null
     );
-  }, [productionOrders, asset.line]);
+  }, [productionOrders, asset.line, asset.lineId]);
+
+  // Dynamic Weekly Downtime Trends computed from real breakdowns
+  const downtimeTrendData = useMemo(() => {
+    const currentHrs = Number((totalDowntimeMins / 60).toFixed(1));
+    return [
+      { label: "W-4", value: 0 },
+      { label: "W-3", value: 0 },
+      { label: "W-2", value: 0 },
+      { label: "W-1", value: 0 },
+      { label: "Current", value: currentHrs }
+    ];
+  }, [totalDowntimeMins]);
+
+  // Troubleshooting solutions linked to this asset
+  const [localSolutions, setLocalSolutions] = useState([]);
+  const assetSolutions = useMemo(() => {
+    const all = [...(solutions || []), ...localSolutions];
+    return all.filter(
+      (s) =>
+        s.assetId === asset.id ||
+        s.assetId === asset.assetCode ||
+        s.assetId === asset.dbId ||
+        s.assetName === asset.name ||
+        (s.assetType && asset.type && s.assetType.toLowerCase() === asset.type.toLowerCase())
+    );
+  }, [solutions, localSolutions, asset.id, asset.assetCode, asset.dbId, asset.name, asset.type]);
 
   // Combined Machine Chronological History Timeline
   const machineHistory = useMemo(() => {
@@ -364,7 +572,7 @@ export function Asset360() {
         timestamp: b.startTime || b.date || "2026-08-20 14:15",
         status: b.status,
         badgeVariant: "rose",
-        details: `Failure Code: ${b.failureCode || "MEC-004"} • Duration: ${b.durationMinutes || 45} mins • Tech: ${b.assignedTechnician || "Marcus Vance"}`
+        details: `Failure Code: ${b.failureCode || "MEC-004"} • Duration: ${b.durationMinutes !== undefined ? b.durationMinutes : 0} mins • Tech: ${b.technician || b.assignedTechnician || "Marcus Vance"}`
       });
     });
 
@@ -376,7 +584,7 @@ export function Asset360() {
         timestamp: w.createdDate || "2026-08-22 10:00",
         status: w.status,
         badgeVariant: w.status === "Completed" ? "emerald" : "blue",
-        details: `Type: ${w.type} • Priority: ${w.priority} • Tech: ${w.assignedTechnician} • Labour: ${w.actualHours || 2.5}h`
+        details: `Type: ${w.type} • Priority: ${w.priority} • Tech: ${w.assignedTechnician || "Unassigned"} • Labour: ${Number(w.actualHours || w.actual_hours || 0).toFixed(1)}h`
       });
     });
 
@@ -683,16 +891,16 @@ export function Asset360() {
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "12px" }}>
               <div style={{ padding: "14px", borderRadius: "8px", backgroundColor: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)" }}>
                 <span style={{ fontSize: "11px", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 600 }}>Bearing Vibration</span>
-                <div style={{ fontSize: "20px", fontWeight: 800, color: (asset.vibration || 2.1) > 3.0 ? "#EF4444" : "#10B981", marginTop: "4px", fontFamily: "var(--font-mono)" }}>
-                  {asset.vibration || 2.1} mm/s
+                <div style={{ fontSize: "20px", fontWeight: 800, color: Number(iotTelemetry?.vibration || asset.vibration || 0) > 3.0 ? "#EF4444" : "#10B981", marginTop: "4px", fontFamily: "var(--font-mono)" }}>
+                  {iotTelemetry?.vibration != null ? `${Number(iotTelemetry.vibration).toFixed(2)} mm/s` : (asset.vibration != null ? `${asset.vibration} mm/s` : "—")}
                 </div>
                 <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>ISO-10816 limit: &lt; 3.0 mm/s</span>
               </div>
 
               <div style={{ padding: "14px", borderRadius: "8px", backgroundColor: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)" }}>
                 <span style={{ fontSize: "11px", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 600 }}>Housing Temp</span>
-                <div style={{ fontSize: "20px", fontWeight: 800, color: (asset.temperature || 62.4) > 75 ? "#EF4444" : "#38BDF8", marginTop: "4px", fontFamily: "var(--font-mono)" }}>
-                  {asset.temperature || 62.4}°C
+                <div style={{ fontSize: "20px", fontWeight: 800, color: Number(iotTelemetry?.temperature || asset.temperature || 0) > 75 ? "#EF4444" : "#38BDF8", marginTop: "4px", fontFamily: "var(--font-mono)" }}>
+                  {iotTelemetry?.temperature != null ? `${Number(iotTelemetry.temperature).toFixed(1)}°C` : (asset.temperature != null ? `${asset.temperature}°C` : "—")}
                 </div>
                 <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>Thermal ceiling: &lt; 80°C</span>
               </div>
@@ -700,7 +908,7 @@ export function Asset360() {
               <div style={{ padding: "14px", borderRadius: "8px", backgroundColor: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)" }}>
                 <span style={{ fontSize: "11px", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 600 }}>Pneumatic Pressure</span>
                 <div style={{ fontSize: "20px", fontWeight: 800, color: "#F59E0B", marginTop: "4px", fontFamily: "var(--font-mono)" }}>
-                  {asset.pressure || 6.2} Bar
+                  {iotTelemetry?.pressure != null ? `${Number(iotTelemetry.pressure).toFixed(2)} Bar` : (asset.pressure != null ? `${asset.pressure} Bar` : "—")}
                 </div>
                 <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>Operating nominal: 6.0 ± 0.5 Bar</span>
               </div>
@@ -708,7 +916,7 @@ export function Asset360() {
               <div style={{ padding: "14px", borderRadius: "8px", backgroundColor: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)" }}>
                 <span style={{ fontSize: "11px", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 600 }}>Lubrication Reservoir</span>
                 <div style={{ fontSize: "20px", fontWeight: 800, color: "#10B981", marginTop: "4px", fontFamily: "var(--font-mono)" }}>
-                  {asset.oilLevel || 88}%
+                  {asset.oilLevel != null ? `${asset.oilLevel}%` : "—"}
                 </div>
                 <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>Synthetic food-grade grease</span>
               </div>
@@ -867,15 +1075,19 @@ export function Asset360() {
               <div style={{ padding: "14px", borderRadius: "8px", backgroundColor: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)" }}>
                 <span style={{ fontSize: "11px", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 600 }}>Running Attainment</span>
                 <div style={{ fontSize: "18px", fontWeight: 800, color: "#10B981", marginTop: "4px", fontFamily: "var(--font-mono)" }}>
-                  98.4%
+                  {activeProdOrder?.targetQuantity && activeProdOrder?.completedQuantity != null
+                    ? `${Math.round((activeProdOrder.completedQuantity / activeProdOrder.targetQuantity) * 100)}%`
+                    : "—"}
                 </div>
-                <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>Target 95.0%</span>
+                <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+                  {activeProdOrder?.targetQuantity ? `Target: ${activeProdOrder.targetQuantity} units` : "No active production run"}
+                </span>
               </div>
 
               <div style={{ padding: "14px", borderRadius: "8px", backgroundColor: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)" }}>
                 <span style={{ fontSize: "11px", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 600 }}>Cumulative Runtime</span>
                 <div style={{ fontSize: "18px", fontWeight: 800, color: "var(--text-primary)", marginTop: "4px", fontFamily: "var(--font-mono)" }}>
-                  {(asset.runtimeHours || 14820).toLocaleString()} hrs
+                  {asset.runtimeHours || asset.operatingHours != null ? `${Number(asset.runtimeHours || asset.operatingHours).toLocaleString()} hrs` : "—"}
                 </div>
                 <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>Since initial commissioning</span>
               </div>
@@ -883,7 +1095,7 @@ export function Asset360() {
               <div style={{ padding: "14px", borderRadius: "8px", backgroundColor: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)" }}>
                 <span style={{ fontSize: "11px", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 600 }}>Design Speed</span>
                 <div style={{ fontSize: "18px", fontWeight: 800, color: "#38BDF8", marginTop: "4px", fontFamily: "var(--font-mono)" }}>
-                  {asset.ratedSpeed || "600 RPM"}
+                  {asset.ratedSpeed || "—"}
                 </div>
                 <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>Nameplate rated speed</span>
               </div>
@@ -1135,7 +1347,7 @@ export function Asset360() {
                     <div style={{ padding: "12px", borderRadius: "8px", backgroundColor: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)" }}>
                       <div style={{ color: "var(--text-muted)", fontSize: "11px" }}>Assigned Operator</div>
                       <div style={{ fontWeight: 600, color: "var(--text-primary)", marginTop: "2px" }}>
-                        {asset.operator || "Shift A Operations Team"}
+                        {asset.operator || "Unassigned"}
                       </div>
                     </div>
                   </div>
@@ -1323,8 +1535,10 @@ export function Asset360() {
 
               <div style={{ padding: "14px", borderRadius: "8px", backgroundColor: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)" }}>
                 <div style={{ fontSize: "11px", color: "var(--text-muted)", fontWeight: 700, textTransform: "uppercase" }}>Work Center</div>
-                <div style={{ fontSize: "14px", fontWeight: 700, color: "var(--text-primary)", marginTop: "4px" }}>WC-BOTTLE-01</div>
-                <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>Packaging Cell 1</div>
+                <div style={{ fontSize: "14px", fontWeight: 700, color: "var(--text-primary)", marginTop: "4px" }}>
+                  {asset.location ? `WC-${asset.location.replace(/\s+/g, "-").toUpperCase()}` : `WC-${asset.assetCode || asset.id}`}
+                </div>
+                <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>{asset.location || "Packaging Cell"}</div>
               </div>
             </div>
           </Card>
@@ -1338,22 +1552,21 @@ export function Asset360() {
             <div className="grid-3" style={{ fontSize: "13px" }}>
               <div style={{ padding: "12px", borderRadius: "8px", backgroundColor: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)" }}>
                 <div style={{ color: "var(--text-muted)", fontSize: "11px", textTransform: "uppercase", fontWeight: 700 }}>Machine Type & Process</div>
-                <div style={{ fontWeight: 600, color: "var(--text-primary)", marginTop: "4px" }}>{asset.type}</div>
-                <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>High-precision volumetric dosing & sealing</div>
+                <div style={{ fontWeight: 600, color: "var(--text-primary)", marginTop: "4px" }}>{asset.type || asset.model || "Manufacturing Equipment"}</div>
+                <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>{asset.manufacturer ? `OEM: ${asset.manufacturer}` : "Standard Industrial Spec"}</div>
               </div>
 
               <div style={{ padding: "12px", borderRadius: "8px", backgroundColor: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)" }}>
-                <div style={{ color: "var(--text-muted)", fontSize: "11px", textTransform: "uppercase", fontWeight: 700 }}>Eligible Packaging Lines</div>
+                <div style={{ color: "var(--text-muted)", fontSize: "11px", textTransform: "uppercase", fontWeight: 700 }}>Assigned Packaging Line</div>
                 <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginTop: "6px" }}>
-                  <Badge variant="cyan">Line 1 (Aseptic)</Badge>
-                  <Badge variant="slate">Line 3 (Canning)</Badge>
+                  <Badge variant="cyan">{asset.line || "Line 1"}</Badge>
                 </div>
               </div>
 
               <div style={{ padding: "12px", borderRadius: "8px", backgroundColor: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)" }}>
                 <div style={{ color: "var(--text-muted)", fontSize: "11px", textTransform: "uppercase", fontWeight: 700 }}>Standard Run Rate (Nominal)</div>
                 <div style={{ fontWeight: 700, fontFamily: "var(--font-mono)", color: "#10B981", fontSize: "15px", marginTop: "4px" }}>
-                  580 - 600 BPM
+                  {asset.ratedSpeed ? `${asset.ratedSpeed} BPM` : "Design Speed Not Configured"}
                 </div>
                 <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>Target OEE Design Rate</div>
               </div>
@@ -1371,7 +1584,7 @@ export function Asset360() {
                 </div>
                 <div className="asset-tab-card-header-actions">
                   <Badge variant={activeProdOrder?.status === "In Progress" ? "emerald" : "blue"}>
-                    {activeProdOrder?.status || "In Progress"}
+                    {activeProdOrder?.status || "No Active Order"}
                   </Badge>
                 </div>
               </div>
@@ -1380,28 +1593,31 @@ export function Asset360() {
                 <div style={{ display: "flex", flexDirection: "column", gap: "10px", fontSize: "13px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid var(--border-subtle)" }}>
                     <span style={{ color: "var(--text-muted)" }}>Active Order:</span>
-                    <strong style={{ fontFamily: "var(--font-mono)", color: "#38BDF8" }}>{activeProdOrder.id || "PO-2026-0881"}</strong>
+                    <strong style={{ fontFamily: "var(--font-mono)", color: "#38BDF8" }}>{activeProdOrder.orderNumber || activeProdOrder.id}</strong>
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid var(--border-subtle)" }}>
                     <span style={{ color: "var(--text-muted)" }}>SKU / Product:</span>
-                    <strong style={{ color: "var(--text-primary)" }}>{activeProdOrder.skuName || "500ml Sparkling Lemon Bottle"}</strong>
+                    <strong style={{ color: "var(--text-primary)" }}>{activeProdOrder.skuName || activeProdOrder.productName || "Product Run"}</strong>
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid var(--border-subtle)" }}>
                     <span style={{ color: "var(--text-muted)" }}>Active Batch:</span>
-                    <strong style={{ fontFamily: "var(--font-mono)", color: "var(--text-primary)" }}>{activeProdOrder.batchNumber || "BAT-2026-09-A44"}</strong>
+                    <strong style={{ fontFamily: "var(--font-mono)", color: "var(--text-primary)" }}>{activeProdOrder.batchNumber || activeProdOrder.batchId || "BATCH-" + (activeProdOrder.orderNumber || activeProdOrder.id)}</strong>
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid var(--border-subtle)" }}>
-                    <span style={{ color: "var(--text-muted)" }}>Current Shift:</span>
-                    <strong style={{ color: "var(--text-primary)" }}>Shift A (Day Shift: 06:00 - 14:00)</strong>
+                    <span style={{ color: "var(--text-muted)" }}>Target Quantity:</span>
+                    <strong style={{ color: "var(--text-primary)" }}>{activeProdOrder.targetQuantity ? `${Number(activeProdOrder.targetQuantity).toLocaleString()} units` : "As per schedule"}</strong>
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 0" }}>
-                    <span style={{ color: "var(--text-muted)" }}>Shift Lead:</span>
-                    <strong style={{ color: "var(--text-primary)" }}>Elena Rostova</strong>
+                    <span style={{ color: "var(--text-muted)" }}>Status:</span>
+                    <strong style={{ color: "#10B981" }}>{activeProdOrder.status || "In Progress"}</strong>
                   </div>
                 </div>
               ) : (
-                <div style={{ padding: "20px", textAlign: "center", color: "var(--text-muted)" }}>
-                  No active production order assigned to {asset.line}.
+                <div style={{ padding: "24px 16px", textAlign: "center", color: "var(--text-muted)" }}>
+                  <p style={{ margin: "0 0 12px 0", fontSize: "13px" }}>No active production order currently scheduled on {asset.line || "this line"}.</p>
+                  <Button variant="secondary" size="sm" onClick={() => navigate("/production")}>
+                    Go to Production Orders
+                  </Button>
                 </div>
               )}
             </Card>
@@ -1415,31 +1631,35 @@ export function Asset360() {
                 <div style={{ padding: "14px", borderRadius: "8px", backgroundColor: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)" }}>
                   <div style={{ fontSize: "11px", color: "var(--text-muted)", fontWeight: 700, textTransform: "uppercase" }}>Current Speed</div>
                   <div style={{ fontSize: "20px", fontWeight: 800, fontFamily: "var(--font-mono)", color: asset.status === "Breakdown" || asset.status === "DOWN" ? "#EF4444" : "#10B981", marginTop: "4px" }}>
-                    {asset.status === "Breakdown" || asset.status === "DOWN" ? "0 BPM" : asset.status === "Degraded" ? "380 BPM" : "580 BPM"}
+                    {asset.status === "Breakdown" || asset.status === "DOWN" ? "0 BPM" : (asset.ratedSpeed ? `${asset.ratedSpeed} BPM` : "Nominal Run Speed")}
                   </div>
-                  <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>Nominal: 600 BPM</div>
+                  <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>
+                    Rated: {asset.ratedSpeed ? `${asset.ratedSpeed} BPM` : "Design Speed Not Configured"}
+                  </div>
                 </div>
 
                 <div style={{ padding: "14px", borderRadius: "8px", backgroundColor: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)" }}>
                   <div style={{ fontSize: "11px", color: "var(--text-muted)", fontWeight: 700, textTransform: "uppercase" }}>Shift Output</div>
                   <div style={{ fontSize: "20px", fontWeight: 800, fontFamily: "var(--font-mono)", color: "var(--text-primary)", marginTop: "4px" }}>
-                    {asset.status === "Breakdown" || asset.status === "DOWN" ? "14,200 units" : "42,850 units"}
+                    {activeProdOrder?.completedQuantity != null ? `${Number(activeProdOrder.completedQuantity).toLocaleString()} units` : "0 units"}
                   </div>
-                  <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>Target: 50,000 units</div>
+                  <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>
+                    {activeProdOrder?.targetQuantity ? `Target: ${Number(activeProdOrder.targetQuantity).toLocaleString()} units` : "No active batch"}
+                  </div>
                 </div>
 
                 <div style={{ padding: "14px", borderRadius: "8px", backgroundColor: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)" }}>
                   <div style={{ fontSize: "11px", color: "var(--text-muted)", fontWeight: 700, textTransform: "uppercase" }}>Cumulative Runtime</div>
                   <div style={{ fontSize: "20px", fontWeight: 800, fontFamily: "var(--font-mono)", color: "var(--text-primary)", marginTop: "4px" }}>
-                    {asset.runtimeHours?.toLocaleString() || "14,820"} hrs
+                    {asset.operatingHours != null ? `${Number(asset.operatingHours).toLocaleString()} hrs` : (asset.runtimeHours != null ? `${Number(asset.runtimeHours).toLocaleString()} hrs` : "0 hrs")}
                   </div>
-                  <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>Since last overhaul</div>
+                  <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>From Asset Master DB</div>
                 </div>
 
                 <div style={{ padding: "14px", borderRadius: "8px", backgroundColor: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)" }}>
                   <div style={{ fontSize: "11px", color: "var(--text-muted)", fontWeight: 700, textTransform: "uppercase" }}>Operational State</div>
-                  <div style={{ fontSize: "15px", fontWeight: 800, color: asset.status === "Operational" ? "#10B981" : "#EF4444", marginTop: "6px" }}>
-                    {asset.status === "Operational" ? "RUNNING (Steady)" : asset.status === "Breakdown" || asset.status === "DOWN" ? "HALTED (Breakdown)" : "RUNNING (Degraded)"}
+                  <div style={{ fontSize: "15px", fontWeight: 800, color: asset.status === "Operational" || asset.status === "RUNNING" ? "#10B981" : "#EF4444", marginTop: "6px" }}>
+                    {asset.status === "Operational" || asset.status === "RUNNING" ? "RUNNING (Operational)" : (asset.status || "STANDBY")}
                   </div>
                 </div>
               </div>
@@ -1451,7 +1671,7 @@ export function Asset360() {
       {/* ========================================================================= */}
       {/* SECTION: MAINTENANCE (PM, WORK ORDERS, HISTORY, TROUBLESHOOTING)          */}
       {/* ========================================================================= */}
-      {(activeTab === "PM" || activeTab === "WORK_ORDERS" || activeTab === "HISTORY" || activeTab === "TROUBLESHOOTING" || activeTab === "MAINTENANCE") && (
+      {(activeTab === "PM" || activeTab === "WORK_ORDERS" || activeTab === "HISTORY" || activeTab === "MAINTENANCE") && (
         <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
           {/* Maintenance Health Bar */}
           <div className="grid-4">
@@ -1648,7 +1868,7 @@ export function Asset360() {
                         {wo.title}
                       </div>
                       <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "2px" }}>
-                        Assigned Tech: <strong style={{ color: "var(--text-primary)" }}>{wo.assignedTechnician}</strong> • Created: {wo.createdDate} • Labour: {wo.actualHours || 2.5}h
+                        Assigned Tech: <strong style={{ color: "var(--text-primary)" }}>{wo.assignedTechnician}</strong> • Created: {wo.createdDate} • Labour: {Number(wo.actualHours || wo.actual_hours || 0).toFixed(1)}h
                       </div>
                     </div>
 
@@ -1769,9 +1989,9 @@ export function Asset360() {
                     <div style={{ flex: "1 1 240px", minWidth: 0, width: "100%" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap", marginBottom: "4px" }}>
                         <span style={{ fontFamily: "var(--font-mono)", fontSize: "12px", fontWeight: 700, color: "#10B981", whiteSpace: "nowrap", flexShrink: 0 }}>
-                          {cal.id}
+                          {cal.id?.length > 12 ? `CAL-${cal.id.substring(0, 8).toUpperCase()}` : cal.id}
                         </span>
-                        <Badge variant={cal.status === "Valid" ? "emerald" : "rose"}>{cal.status || "Valid"}</Badge>
+                        <Badge variant={(cal.status || "").toLowerCase() === "valid" ? "emerald" : "rose"}>{cal.status || "Valid"}</Badge>
                         <span style={{ fontSize: "11px", color: "var(--text-muted)", whiteSpace: "nowrap" }}>Cert: {cal.certificate || cal.certificateNumber || "CERT-99201"}</span>
                       </div>
                       <div style={{ fontSize: "14px", fontWeight: 700, color: "var(--text-primary)", marginTop: "4px" }}>
@@ -1815,7 +2035,7 @@ export function Asset360() {
               <div style={{ padding: "14px", borderRadius: "8px", backgroundColor: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)" }}>
                 <div style={{ fontSize: "11px", color: "var(--text-muted)", fontWeight: 700, textTransform: "uppercase" }}>Recent WO Labour</div>
                 <div style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-primary)", marginTop: "4px" }}>
-                  {linkedWOs[0]?.actualHours || 2.5} hrs
+                  {linkedWOs[0]?.actualHours || linkedWOs[0]?.actual_hours || "0.0"} hrs
                 </div>
                 <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>
                   {linkedWOs[0]?.assignedTechnician || "Marcus Vance"} ({linkedWOs[0]?.id || "WO-2026-001"})
@@ -1825,7 +2045,7 @@ export function Asset360() {
               <div style={{ padding: "14px", borderRadius: "8px", backgroundColor: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)" }}>
                 <div style={{ fontSize: "11px", color: "var(--text-muted)", fontWeight: 700, textTransform: "uppercase" }}>Estimated Maintenance Cost</div>
                 <div style={{ fontSize: "20px", fontWeight: 800, fontFamily: "var(--font-mono)", color: "#10B981", marginTop: "4px" }}>
-                  ${(parseFloat(totalLabourHours) * 85 + linkedParts.length * 140).toLocaleString()}
+                  ${(parseFloat(totalLabourHours) * 85 + linkedParts.length * 140).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </div>
                 <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>Labour ($85/h) + Parts Consumed</div>
               </div>
@@ -1901,6 +2121,72 @@ export function Asset360() {
             ) : (
               <div style={{ padding: "20px", textAlign: "center", color: "var(--text-muted)" }}>
                 No historical events logged yet.
+              </div>
+            )}
+          </Card>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* SECTION: TROUBLESHOOTING & RCA DIAGNOSTICS                                */}
+      {/* ========================================================================= */}
+      {activeTab === "TROUBLESHOOTING" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+          <Card>
+            <div className="asset-tab-card-header">
+              <div className="asset-tab-card-header-title">
+                <h3>Troubleshooting Guides & Verified Solutions</h3>
+                <p>Root cause diagnostic procedures, verified fixes, and RCA records for {asset.id}</p>
+              </div>
+              <div className="asset-tab-card-header-actions">
+                <Button variant="secondary" size="sm" onClick={() => navigate("/maintenance/troubleshooting")}>
+                  View Diagnostic Center
+                </Button>
+                <Button variant="primary" size="sm" icon={Plus} onClick={() => setIsAddSolutionModalOpen(true)}>
+                  Log Verified Solution
+                </Button>
+              </div>
+            </div>
+
+            {assetSolutions.length > 0 ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                {assetSolutions.map((sol) => (
+                  <div
+                    key={sol.id}
+                    style={{
+                      padding: "16px",
+                      borderRadius: "8px",
+                      backgroundColor: "var(--bg-card-subtle)",
+                      border: "1px solid var(--border-subtle)"
+                    }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                      <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "#38BDF8" }}>{sol.id}</span>
+                      <Badge variant="emerald">{sol.status || "Verified Solution"}</Badge>
+                    </div>
+                    <div style={{ fontWeight: 700, fontSize: "14px", color: "var(--text-primary)" }}>
+                      {sol.symptom || sol.title}
+                    </div>
+                    <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "4px" }}>
+                      <strong>Root Cause:</strong> {sol.rootCause || "Mechanical misalignment"}
+                    </div>
+                    <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "6px", whiteSpace: "pre-line" }}>
+                      <strong>Resolution Steps:</strong> {sol.solutionSteps || sol.resolution || "Inspect and replace worn parts, verify torque tolerances."}
+                    </div>
+                    <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "8px" }}>
+                      Verified by: {sol.verifiedBy || "Maintenance Lead"} • Failure Code: {sol.failureCode || "MEC-004"}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ padding: "32px 16px", textAlign: "center", color: "var(--text-muted)" }}>
+                <p style={{ margin: "0 0 12px 0", fontSize: "13px" }}>
+                  No verified troubleshooting solutions logged for {asset.id} yet.
+                </p>
+                <Button variant="primary" size="sm" icon={Plus} onClick={() => setIsAddSolutionModalOpen(true)}>
+                  Log Solution for {asset.id}
+                </Button>
               </div>
             )}
           </Card>
@@ -2096,13 +2382,7 @@ export function Asset360() {
               </h3>
 
               <AreaChart
-                data={[
-                  { label: "W1", value: 1.2 },
-                  { label: "W2", value: 0.8 },
-                  { label: "W3", value: 2.4 },
-                  { label: "W4", value: 0.4 },
-                  { label: "W5", value: totalDowntimeMins > 0 ? (totalDowntimeMins / 60) : 0.6 }
-                ]}
+                data={downtimeTrendData}
                 height={160}
                 color="#EF4444"
                 unit=" hrs"
@@ -2394,6 +2674,82 @@ export function Asset360() {
             </Button>
             <Button variant="primary" type="submit" icon={CheckCircle2}>
               Log Calibration
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Log Troubleshooting Solution Modal */}
+      <Modal
+        isOpen={isAddSolutionModalOpen}
+        onClose={() => setIsAddSolutionModalOpen(false)}
+        title="Log Verified Troubleshooting Solution"
+        subtitle={`Record root cause solution and diagnostic steps for ${asset.id}`}
+      >
+        <form onSubmit={handleConfirmAddSolution} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+          <div className="form-group">
+            <label className="form-label">Symptom / Failure Mode *</label>
+            <input
+              type="text"
+              className="form-input"
+              placeholder="e.g. Excessive Spindle Vibration at 500 RPM"
+              value={solutionForm.symptom}
+              onChange={(e) => setSolutionForm({ ...solutionForm, symptom: e.target.value })}
+              required
+            />
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Failure Code</label>
+            <input
+              type="text"
+              className="form-input"
+              value={solutionForm.failureCode}
+              onChange={(e) => setSolutionForm({ ...solutionForm, failureCode: e.target.value })}
+            />
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Root Cause *</label>
+            <input
+              type="text"
+              className="form-input"
+              placeholder="e.g. Bearing play and shaft imbalance"
+              value={solutionForm.rootCause}
+              onChange={(e) => setSolutionForm({ ...solutionForm, rootCause: e.target.value })}
+              required
+            />
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Resolution Steps / Corrective Action *</label>
+            <textarea
+              className="form-input"
+              rows="3"
+              placeholder="e.g. 1. Replace 6205 bearing. 2. Align spindle to 0.02mm tolerance."
+              value={solutionForm.solutionSteps}
+              onChange={(e) => setSolutionForm({ ...solutionForm, solutionSteps: e.target.value })}
+              required
+            />
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Verified By</label>
+            <input
+              type="text"
+              className="form-input"
+              value={solutionForm.verifiedBy}
+              onChange={(e) => setSolutionForm({ ...solutionForm, verifiedBy: e.target.value })}
+              required
+            />
+          </div>
+
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px", marginTop: "12px" }}>
+            <Button variant="secondary" onClick={() => setIsAddSolutionModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="primary" type="submit" icon={CheckCircle2}>
+              Save Solution
             </Button>
           </div>
         </form>

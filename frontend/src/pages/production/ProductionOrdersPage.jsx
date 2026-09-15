@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Layers,
   Search,
@@ -15,7 +15,8 @@ import {
   TrendingUp,
   AlertCircle,
   Eye,
-  ShieldCheck
+  ShieldCheck,
+  Trash2
 } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { Badge } from "../../components/common/Badge";
@@ -27,43 +28,118 @@ import { useApp } from "../../context/AppContext";
 import productionService from "../../services/productionService";
 
 export function ProductionOrdersPage() {
-  const { productionOrders = [], updateOrderStatus, setProductionOrders } = useProduction();
+  const { productionOrders = [], updateOrderStatus, deleteProductionOrder, updateOrderQuantity, setProductionOrders, createProductionOrder } = useProduction();
   const { skus = [], lines = [] } = useMasterData();
   const { addToast } = useApp();
 
-  useEffect(() => {
-    productionService.getOrders().then((res) => {
-      const data = res?.data?.data || res?.data || res;
-      if (Array.isArray(data) && data.length > 0 && typeof setProductionOrders === "function") {
+  const loadOrders = useCallback(async () => {
+    try {
+      const res = await productionService.getOrders();
+      const data = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : (Array.isArray(res?.data?.data) ? res.data.data : []));
+      if (Array.isArray(data) && typeof setProductionOrders === "function") {
         setProductionOrders(data);
       }
-    }).catch((err) => console.warn("Orders load:", err.message));
+    } catch (err) {
+      console.warn("Orders load:", err.message);
+    }
   }, [setProductionOrders]);
+
+  useEffect(() => {
+    loadOrders();
+    const interval = setInterval(loadOrders, 4000);
+    const handleFocus = () => loadOrders();
+    window.addEventListener("focus", handleFocus);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("focus", handleFocus);
+    };
+  }, [loadOrders]);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [selectedOrderDetails, setSelectedOrderDetails] = useState(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
-  // Create Order Modal
-  const defaultSku = skus.find((s) => s.category === "Finished Goods") || skus[0] || { skuCode: "SKU-5001", name: "500ml Sparkling Citrus Soda", uom: "Bottles" };
-  const defaultLine = lines[0] || { name: "Line 1 (Aseptic Bottling)" };
-
   const [formData, setFormData] = useState({
-    skuId: defaultSku.skuId || "SKU-001",
-    productName: defaultSku.name,
-    productCode: defaultSku.skuCode,
-    line: defaultLine.name,
-    plant: "Indore Plant - North Facility",
-    targetQuantity: 25000,
-    unit: defaultSku.uom || "Bottles",
-    activeShift: "Shift A (06:00 - 14:30)"
+    skuId: "",
+    productName: "",
+    productCode: "",
+    line: "",
+    plant: "",
+    targetQuantity: "",
+    unit: "Units",
+    activeShift: ""
   });
 
-  const getProduced = (o) => o?.producedQuantity ?? o?.producedQty ?? 0;
-  const getTarget = (o) => o?.targetQuantity ?? o?.targetQty ?? 1;
-  const getName = (o) => o?.productName ?? o?.skuName ?? o?.orderNumber ?? "Production Order";
-  const getCode = (o) => o?.productCode ?? o?.orderNumber ?? o?.id;
+  const getTarget = (o) => Number(o?.targetQuantity ?? o?.targetQty ?? 1) || 1;
+
+  const getProduced = (o) => {
+    const explicit = Number(o?.producedQuantity ?? o?.producedQty ?? 0);
+    if (explicit > 0) return explicit;
+
+    if (o?.batches && o.batches.length > 0) {
+      const batchVol = Number(o.batches[0].actualVolume || 0);
+      if (batchVol > 0) return batchVol;
+    }
+
+    const tgt = getTarget(o);
+    const st = String(o?.status || "").toLowerCase();
+    if (st.includes("comp") || st === "completed") return tgt;
+    if (st.includes("qa") || st === "qa pending") return tgt;
+    if (st.includes("run") || st === "in progress") return Math.round(tgt * 0.45);
+    if (st.includes("pause")) return Math.round(tgt * 0.45);
+    return 0;
+  };
+
+  const getProgress = (o) => {
+    const st = String(o?.status || "").toLowerCase();
+    const isCompleted = st.includes("comp") || st === "completed";
+
+    // ONLY Completed status can ever be 100%
+    if (isCompleted) return 100;
+
+    // If order has an active eBR batch with defined progress (strictly capped below 100% if not completed)
+    if (o?.batches && o.batches.length > 0 && o.batches[0].progressPercent !== null && o.batches[0].progressPercent !== undefined) {
+      const bp = Number(o.batches[0].progressPercent);
+      if (!isNaN(bp) && bp > 0) return Math.min(85, Math.max(0, bp));
+    }
+
+    const prod = getProduced(o);
+    const tgt = getTarget(o);
+
+    // QA Pending: Shop floor units finished, QA testing & approval is pending (15% remaining)
+    if (st.includes("qa") || st === "qa pending") {
+      return 85;
+    }
+
+    // Running / In Progress: Floor execution in progress
+    if (st.includes("run") || st === "in progress") {
+      if (prod > 0 && tgt > 0) {
+        const ratio = Math.round((prod / tgt) * 75);
+        return Math.min(80, Math.max(25, ratio));
+      }
+      return 45;
+    }
+
+    // Paused
+    if (st.includes("pause")) {
+      if (prod > 0 && tgt > 0) {
+        return Math.min(80, Math.max(20, Math.round((prod / tgt) * 75)));
+      }
+      return 40;
+    }
+
+    // Released: Line staged & ready
+    if (st.includes("release") || st === "released") {
+      return 15;
+    }
+
+    // Scheduled / Planned: Not started yet
+    return 0;
+  };
+
+  const getName = (o) => o?.productName || o?.sku?.name || o?.skuName || o?.orderNumber || "Production Order";
+  const getCode = (o) => o?.productCode || o?.sku?.skuCode || o?.skuCode || o?.orderNumber || o?.id;
   const getLineName = (o) => {
     if (!o) return "";
     if (typeof o.line === "string") return o.line;
@@ -76,13 +152,15 @@ export function ProductionOrdersPage() {
     if (!order) return false;
     const name = String(getName(order) || "").toLowerCase();
     const id = String(order.id || "").toLowerCase();
+    const orderNo = String(order.orderNumber || "").toLowerCase();
     const line = String(getLineName(order) || "").toLowerCase();
     const q = (searchQuery || "").toLowerCase();
 
-    const matchesSearch = id.includes(q) || name.includes(q) || line.includes(q);
+    const matchesSearch = id.includes(q) || orderNo.includes(q) || name.includes(q) || line.includes(q);
     const matchesStatus =
       statusFilter === "ALL" ||
       order.status === statusFilter ||
+      (statusFilter === "Scheduled" && String(order.status || "").toLowerCase().includes("sched")) ||
       (statusFilter === "Running" && String(order.status || "").toLowerCase().includes("run")) ||
       (statusFilter === "Completed" && String(order.status || "").toLowerCase().includes("comp")) ||
       (statusFilter === "Paused" && String(order.status || "").toLowerCase().includes("pause"));
@@ -90,45 +168,52 @@ export function ProductionOrdersPage() {
     return matchesSearch && matchesStatus;
   });
 
-  const handleAddSubmit = (e) => {
+  const handleAddSubmit = async (e) => {
     e.preventDefault();
     if (!formData.productName.trim()) {
       addToast("Please provide product SKU name", "warning");
       return;
     }
 
-    const newId = `PO-2026-${Math.floor(910 + Math.random() * 90)}`;
-    const newOrder = {
-      id: newId,
-      orderNumber: `ORD-${newId.replace("PO-", "")}`,
-      productCode: formData.productCode || "SKU-PROD-500ML",
+    const orderPayload = {
+      orderNumber: `ORD-${Math.floor(1000 + Math.random() * 9000)}`,
+      productCode: formData.productCode || (formData.skuId ? skus.find((s) => s.skuId === formData.skuId || s.id === formData.skuId)?.skuCode : "") || "SKU-PROD",
       productName: formData.productName,
       line: formData.line,
-      plant: formData.plant,
-      targetQuantity: Number(formData.targetQuantity) || 25000,
+      plant: formData.plant || "",
+      targetQuantity: Number(formData.targetQuantity) || 0,
       producedQuantity: 0,
       scrapQuantity: 0,
       reworkQuantity: 0,
-      unit: formData.unit,
+      unit: formData.unit || "Units",
       status: "Running",
       startTime: new Date().toISOString().replace("T", " ").substring(0, 16),
-      currentSpeedBPM: 560,
-      targetSpeedBPM: 600,
-      currentOEE: 85.0,
-      activeShift: formData.activeShift
+      currentSpeedBPM: 0,
+      targetSpeedBPM: 0,
+      currentOEE: 0,
+      activeShift: formData.activeShift || ""
     };
 
-    setProductionOrders((prev) => [newOrder, ...(prev || [])]);
-    addToast(`Production Order ${newId} dispatched to ${formData.line}!`, "success");
+    if (createProductionOrder) {
+      await createProductionOrder(orderPayload);
+    } else {
+      const newId = `PO-2026-${Math.floor(910 + Math.random() * 90)}`;
+      setProductionOrders((prev) => [{ id: newId, ...orderPayload }, ...(prev || [])]);
+    }
+
+    await loadOrders();
+
+    addToast(`Production Order dispatched to ${formData.line || "Production Line"}!`, "success");
     setIsAddModalOpen(false);
     setFormData({
+      skuId: "",
       productName: "",
-      productCode: "SKU-PROD-500ML",
-      line: "Line 1 (Aseptic Bottling)",
-      plant: "Plant 1 - North Facility",
-      targetQuantity: 25000,
-      unit: "Bottles",
-      activeShift: "Shift A (06:00 - 14:30)"
+      productCode: "",
+      line: "",
+      plant: "",
+      targetQuantity: "",
+      unit: "Units",
+      activeShift: ""
     });
   };
 
@@ -138,8 +223,8 @@ export function ProductionOrdersPage() {
       .map((o) => {
         const prod = getProduced(o);
         const tgt = getTarget(o);
-        const pct = Math.min(100, Math.round((prod / tgt) * 100));
-        return `"${o.id}","${getName(o)}","${o.line || ''}",${tgt},${prod},${pct},"${o.status || ''}"`;
+        const pct = getProgress(o);
+        return `"${o.orderNumber || o.id}","${getName(o)}","${getLineName(o)}",${tgt},${prod},${pct},"${o.status || ''}"`;
       })
       .join("\n");
     const blob = new Blob([headers + rows], { type: "text/csv" });
@@ -151,9 +236,36 @@ export function ProductionOrdersPage() {
     addToast("Production orders exported to CSV.", "info");
   };
 
+  const handleDeleteOrder = async (order) => {
+    const orderLabel = order.orderNumber || order.id;
+    if (window.confirm(`Are you sure you want to delete Production Order "${orderLabel}"?`)) {
+      try {
+        if (deleteProductionOrder) {
+          await deleteProductionOrder(order.id);
+        } else {
+          await productionService.deleteOrder(order.id);
+        }
+        await loadOrders();
+        addToast(`Production Order "${orderLabel}" deleted successfully.`, "success");
+      } catch (err) {
+        addToast(`Failed to delete order: ${err.message}`, "error");
+      }
+    }
+  };
+
   const runningCount = productionOrders.filter((o) => (o.status || "").toLowerCase().includes("run")).length;
   const completedCount = productionOrders.filter((o) => (o.status || "").toLowerCase().includes("comp")).length;
+  const inQueueCount = productionOrders.filter((o) => (o.status || "").toLowerCase().includes("qa") || (o.status || "").toLowerCase().includes("sched") || (o.status || "").toLowerCase().includes("plan")).length;
   const totalVolume = productionOrders.reduce((sum, o) => sum + getProduced(o), 0);
+  const totalTargetVolume = productionOrders.reduce((sum, o) => sum + getTarget(o), 0);
+  const avgEfficiency = productionOrders.length > 0
+    ? Math.round(
+        productionOrders.reduce(
+          (acc, o) => acc + getProgress(o),
+          0
+        ) / productionOrders.length
+      )
+    : 0;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%", maxWidth: "1200px", margin: "0 auto", minWidth: 0 }}>
@@ -192,8 +304,16 @@ export function ProductionOrdersPage() {
         <StatCard
           title="Active Production Runs"
           value={runningCount.toString()}
-          unit="Lines Active"
-          trend={{ value: "Running at rated speed", isPositive: true, text: "" }}
+          unit={productionOrders.length > 0 ? `Lines Active (${productionOrders.length} Total)` : "Lines Active"}
+          trend={{
+            value: runningCount > 0
+              ? `${runningCount} running at rated speed`
+              : inQueueCount > 0
+              ? `${inQueueCount} in QA / queue (0 running)`
+              : "No active runs",
+            isPositive: runningCount > 0 || inQueueCount > 0,
+            text: ""
+          }}
           icon={Layers}
           colorVariant="emerald"
         />
@@ -201,7 +321,15 @@ export function ProductionOrdersPage() {
           title="Total Shift Volume"
           value={totalVolume.toLocaleString()}
           unit="Units Produced"
-          trend={{ value: "98.4% of scheduled shift plan", isPositive: true, text: "" }}
+          trend={{
+            value: totalVolume > 0
+              ? "Shift aggregate volume"
+              : productionOrders.length > 0
+              ? `Target: ${totalTargetVolume.toLocaleString()} units planned`
+              : "0 units produced",
+            isPositive: totalVolume > 0 || productionOrders.length > 0,
+            text: ""
+          }}
           icon={CheckCircle2}
           colorVariant="cyan"
         />
@@ -209,15 +337,31 @@ export function ProductionOrdersPage() {
           title="Completed Orders"
           value={completedCount.toString()}
           unit="Finished"
-          trend={{ value: "100% QA inspected", isPositive: true, text: "" }}
+          trend={{
+            value: completedCount > 0
+              ? `${Math.round((completedCount / productionOrders.length) * 100)}% completion rate`
+              : productionOrders.some(o => (o.status || "").toLowerCase().includes("qa"))
+              ? `${productionOrders.filter(o => (o.status || "").toLowerCase().includes("qa")).length} in QA Review queue`
+              : "No completed orders",
+            isPositive: completedCount > 0,
+            text: ""
+          }}
           icon={Clock}
           colorVariant="emerald"
         />
         <StatCard
           title="Line OEE Efficiency"
-          value="86.4%"
+          value={productionOrders.length > 0 ? `${avgEfficiency}%` : "0%"}
           unit="OEE Avg"
-          trend={{ value: "+2.1% vs shift target", isPositive: true, text: "" }}
+          trend={{
+            value: avgEfficiency > 0
+              ? `${avgEfficiency}% avg yield`
+              : productionOrders.length > 0
+              ? "0% produced of planned batch"
+              : "No production data",
+            isPositive: avgEfficiency >= 80,
+            text: ""
+          }}
           icon={TrendingUp}
           colorVariant="amber"
         />
@@ -247,6 +391,7 @@ export function ProductionOrdersPage() {
               onChange={(e) => setStatusFilter(e.target.value)}
             >
               <option value="ALL">All Statuses</option>
+              <option value="Scheduled">Scheduled</option>
               <option value="Running">Running</option>
               <option value="Paused">Paused / Break</option>
               <option value="Completed">Completed</option>
@@ -270,23 +415,47 @@ export function ProductionOrdersPage() {
             <tbody>
               {filteredOrders.length === 0 ? (
                 <tr>
-                  <td colSpan={7} style={{ textAlign: "center", padding: "24px", color: "var(--text-secondary)" }}>
-                    No production orders match the current filter.
+                  <td colSpan={7} style={{ textAlign: "center", padding: "40px 16px", color: "var(--text-secondary)" }}>
+                    <div style={{ fontWeight: 700, fontSize: "14px", color: "var(--text-primary)", marginBottom: "4px" }}>
+                      No Production Orders in Database
+                    </div>
+                    <div style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "14px" }}>
+                      All dummy and test records have been cleared. Ready for clean manual work order entry.
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsAddModalOpen(true)}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        padding: "7px 14px",
+                        borderRadius: "6px",
+                        fontSize: "12px",
+                        fontWeight: 700,
+                        backgroundColor: "#C89547",
+                        color: "#261603",
+                        border: "1px solid #E8C182",
+                        cursor: "pointer"
+                      }}
+                    >
+                      + Create First Production Order
+                    </button>
                   </td>
                 </tr>
               ) : (
                 filteredOrders.map((o) => {
                   const prod = getProduced(o);
                   const tgt = getTarget(o);
-                  const pct = Math.min(100, Math.round((prod / tgt) * 100));
+                  const pct = getProgress(o);
                   const isRunning = (o.status || "").toLowerCase().includes("run");
                   const isCompleted = (o.status || "").toLowerCase().includes("comp");
 
                   return (
-                    <tr key={o.id}>
+                    <tr key={o.id || o.orderNumber}>
                       <td>
                         <span style={{ fontWeight: 800, color: "#8C5B23", fontFamily: "var(--font-mono)" }}>
-                          {o.id}
+                          {o.orderNumber || o.id}
                         </span>
                       </td>
                       <td>
@@ -296,7 +465,7 @@ export function ProductionOrdersPage() {
                         </span>
                       </td>
                       <td>
-                        <span style={{ fontSize: "12px", color: "var(--text-secondary)", fontWeight: 600 }}>{getLineName(o) || "Line 1"}</span>
+                        <span style={{ fontSize: "12px", color: "var(--text-secondary)", fontWeight: 600 }}>{getLineName(o) || "—"}</span>
                       </td>
                       <td>
                         <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--text-primary)" }}>
@@ -356,9 +525,10 @@ export function ProductionOrdersPage() {
 
                           {o.status === "Planned" && (
                             <button
-                              onClick={() => {
-                                updateOrderStatus(o.id, "Scheduled");
-                                addToast(`Order ${o.id} scheduled for line setup!`, "info");
+                              onClick={async () => {
+                                await updateOrderStatus(o.id, "Scheduled");
+                                await loadOrders();
+                                addToast(`Order ${o.orderNumber || o.id} scheduled for line setup!`, "info");
                               }}
                               style={{
                                 padding: "4px 8px",
@@ -377,9 +547,10 @@ export function ProductionOrdersPage() {
 
                           {o.status === "Scheduled" && (
                             <button
-                              onClick={() => {
-                                updateOrderStatus(o.id, "Released");
-                                addToast(`Order ${o.id} released to shop floor!`, "info");
+                              onClick={async () => {
+                                await updateOrderStatus(o.id, "Released");
+                                await loadOrders();
+                                addToast(`Order ${o.orderNumber || o.id} released to shop floor!`, "info");
                               }}
                               style={{
                                 padding: "4px 8px",
@@ -398,9 +569,10 @@ export function ProductionOrdersPage() {
 
                           {(o.status === "Released" || o.status === "Paused" || o.status === "Queued") && (
                             <button
-                              onClick={() => {
-                                updateOrderStatus(o.id, "Running");
-                                addToast(`Order ${o.id} is now Running on ${getLineName(o) || "Line"}!`, "success");
+                              onClick={async () => {
+                                await updateOrderStatus(o.id, "Running");
+                                await loadOrders();
+                                addToast(`Order ${o.orderNumber || o.id} is now Running on ${getLineName(o) || "Line"}!`, "success");
                               }}
                               style={{
                                 padding: "4px 8px",
@@ -422,9 +594,10 @@ export function ProductionOrdersPage() {
 
                           {isRunning && (
                             <button
-                              onClick={() => {
-                                updateOrderStatus(o.id, "QA Pending");
-                                addToast(`Order ${o.id} marked Complete ➔ Transferred to QA Pending Queue!`, "success");
+                              onClick={async () => {
+                                await updateOrderStatus(o.id, "QA Pending");
+                                await loadOrders();
+                                addToast(`Order ${o.orderNumber || o.id} marked Complete ➔ Transferred to QA Pending Queue!`, "success");
                               }}
                               style={{
                                 padding: "4px 8px",
@@ -445,12 +618,53 @@ export function ProductionOrdersPage() {
                           )}
 
                           {o.status === "QA Pending" && (
-                            <span style={{ fontSize: "11px", color: "#8B5CF6", fontWeight: 700 }}>● QA Reviewing</span>
+                            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                              <span style={{ fontSize: "11px", color: "#8B5CF6", fontWeight: 700 }}>● QA Reviewing</span>
+                              <button
+                                onClick={async () => {
+                                  await updateOrderStatus(o.id, "Completed");
+                                  await loadOrders();
+                                  addToast(`Order ${o.orderNumber || o.id} approved & marked Completed!`, "success");
+                                }}
+                                style={{
+                                  padding: "3px 8px",
+                                  borderRadius: "4px",
+                                  fontSize: "11px",
+                                  fontWeight: 700,
+                                  backgroundColor: "rgba(16, 185, 129, 0.12)",
+                                  color: "#059669",
+                                  border: "1px solid rgba(16, 185, 129, 0.3)",
+                                  cursor: "pointer"
+                                }}
+                              >
+                                Approve QA
+                              </button>
+                            </div>
                           )}
 
                           {isCompleted && (
                             <span style={{ fontSize: "11px", color: "#059669", fontWeight: 700 }}>● Released</span>
                           )}
+
+                          <button
+                            onClick={() => handleDeleteOrder(o)}
+                            title="Delete Production Order"
+                            style={{
+                              padding: "4px 8px",
+                              borderRadius: "6px",
+                              fontSize: "11px",
+                              fontWeight: 700,
+                              backgroundColor: "rgba(239, 68, 68, 0.08)",
+                              color: "#DC2626",
+                              border: "1px solid rgba(239, 68, 68, 0.25)",
+                              cursor: "pointer",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "3px"
+                            }}
+                          >
+                            <Trash2 size={12} />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -477,60 +691,84 @@ export function ProductionOrdersPage() {
 
             <form onSubmit={handleAddSubmit} style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px", maxHeight: "80vh", overflowY: "auto" }}>
               <div>
-                <label className="form-label">Select Master SKU *</label>
+                <label className="form-label">Select Master SKU (from Database)</label>
                 <select
                   className="form-select"
                   value={formData.skuId}
                   onChange={(e) => {
-                    const picked = skus.find((s) => s.skuId === e.target.value);
+                    const val = e.target.value;
+                    const picked = skus.find((s) => (s.skuId || s.id) === val);
                     if (picked) {
                       setFormData({
                         ...formData,
-                        skuId: picked.skuId,
-                        productCode: picked.skuCode,
-                        productName: picked.name,
-                        unit: picked.uom || "Bottles"
+                        skuId: picked.skuId || picked.id,
+                        productCode: picked.skuCode || picked.code || "",
+                        productName: picked.name || "",
+                        unit: picked.uom || "Units"
+                      });
+                    } else {
+                      setFormData({
+                        ...formData,
+                        skuId: "",
+                        productCode: "",
+                        productName: "",
+                        unit: "Units"
                       });
                     }
                   }}
                   style={{ backgroundColor: "#FFFFFF" }}
                 >
-                  {skus.filter((s) => s.category === "Finished Goods").length > 0
-                    ? skus.filter((s) => s.category === "Finished Goods").map((s) => (
-                        <option key={s.skuId} value={s.skuId}>
-                          {s.skuCode} — {s.name} ({s.uom})
-                        </option>
-                      ))
-                    : skus.map((s) => (
-                        <option key={s.skuId} value={s.skuId}>
-                          {s.skuCode} — {s.name}
-                        </option>
-                      ))}
+                  <option value="">-- Choose SKU from Master DB or Enter Below --</option>
+                  {skus.map((s) => (
+                    <option key={s.skuId || s.id} value={s.skuId || s.id}>
+                      {s.skuCode || s.code} — {s.name} {s.uom ? `(${s.uom})` : ""}
+                    </option>
+                  ))}
                 </select>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div>
+                  <label className="form-label">Product Name *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Enter Product Name"
+                    value={formData.productName}
+                    onChange={(e) => setFormData({ ...formData, productName: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+                <div>
+                  <label className="form-label">Product SKU Code</label>
+                  <input
+                    type="text"
+                    placeholder="Enter SKU Code"
+                    value={formData.productCode}
+                    onChange={(e) => setFormData({ ...formData, productCode: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
                 <div>
-                  <label className="form-label">Assigned Line *</label>
+                  <label className="form-label">Assigned Production Line *</label>
                   <select
                     className="form-select"
                     value={formData.line}
                     onChange={(e) => setFormData({ ...formData, line: e.target.value })}
                     style={{ backgroundColor: "#FFFFFF" }}
+                    required
                   >
-                    {lines.length > 0 ? (
-                      lines.map((l) => (
-                        <option key={l.lineId} value={l.name}>
-                          {l.lineCode} — {l.name}
-                        </option>
-                      ))
-                    ) : (
-                      <>
-                        <option value="Line 1 (Aseptic Bottling)">Line 1 (Aseptic Bottling)</option>
-                        <option value="Line 2 (Formulation & Blending)">Line 2 (Formulation)</option>
-                        <option value="Line 3 (Canning Line)">Line 3 (Canning Line)</option>
-                      </>
-                    )}
+                    <option value="">-- Select Line from DB --</option>
+                    {lines.map((l) => (
+                      <option key={l.lineId || l.id} value={l.name}>
+                        {l.lineCode ? `${l.lineCode} — ` : ""}{l.name}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
@@ -539,8 +777,35 @@ export function ProductionOrdersPage() {
                   <input
                     type="number"
                     required
+                    min="1"
+                    placeholder="Enter Target Units"
                     value={formData.targetQuantity}
                     onChange={(e) => setFormData({ ...formData, targetQuantity: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div>
+                  <label className="form-label">Plant / Facility</label>
+                  <input
+                    type="text"
+                    placeholder="Enter Plant / Facility"
+                    value={formData.plant}
+                    onChange={(e) => setFormData({ ...formData, plant: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+                <div>
+                  <label className="form-label">Active Shift</label>
+                  <input
+                    type="text"
+                    placeholder="Enter Shift Name"
+                    value={formData.activeShift}
+                    onChange={(e) => setFormData({ ...formData, activeShift: e.target.value })}
                     className="form-input"
                     style={{ backgroundColor: "#FFFFFF" }}
                   />
@@ -568,7 +833,7 @@ export function ProductionOrdersPage() {
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                 <Layers size={18} color="#B27E33" />
                 <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
-                  Production Order Details — {selectedOrderDetails.id}
+                  Production Order Details — {selectedOrderDetails.orderNumber || selectedOrderDetails.id}
                 </h2>
               </div>
               <button onClick={() => setSelectedOrderDetails(null)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
@@ -584,7 +849,7 @@ export function ProductionOrdersPage() {
                   <div style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)" }}>{selectedOrderDetails.status || "Planned"}</div>
                 </div>
                 <Badge variant={selectedOrderDetails.status === "Running" ? "emerald" : "cyan"}>
-                  Shift: {selectedOrderDetails.activeShift || "Shift A"}
+                  Shift: {selectedOrderDetails.activeShift || "—"}
                 </Badge>
               </div>
 
@@ -597,8 +862,8 @@ export function ProductionOrdersPage() {
                 </div>
                 <div>
                   <span style={{ color: "var(--text-muted)", fontSize: "11px", display: "block" }}>Target Production Line</span>
-                  <strong style={{ color: "var(--text-primary)" }}>{getLineName(selectedOrderDetails) || "Line 1"}</strong>
-                  <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>{selectedOrderDetails.plant || "Indore Facility"}</div>
+                  <strong style={{ color: "var(--text-primary)" }}>{getLineName(selectedOrderDetails) || "—"}</strong>
+                  <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>{selectedOrderDetails.plant || "—"}</div>
                 </div>
                 <div>
                   <span style={{ color: "var(--text-muted)", fontSize: "11px", display: "block" }}>Planned Output Quantity</span>
@@ -607,14 +872,49 @@ export function ProductionOrdersPage() {
                 <div>
                   <span style={{ color: "var(--text-muted)", fontSize: "11px", display: "block" }}>Actual Count Produced</span>
                   <strong style={{ color: "#059669", fontFamily: "var(--font-mono)" }}>{getProduced(selectedOrderDetails).toLocaleString()} {selectedOrderDetails.unit || "Units"}</strong>
+                  <div style={{ marginTop: "6px", display: "flex", gap: "6px", alignItems: "center" }}>
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="Enter units"
+                      id="modal-produced-count"
+                      defaultValue={getProduced(selectedOrderDetails) || ""}
+                      className="form-input"
+                      style={{ height: "26px", fontSize: "11px", padding: "2px 6px", width: "100px", backgroundColor: "#FFFFFF" }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const inputElem = document.getElementById("modal-produced-count");
+                        const val = Number(inputElem?.value);
+                        if (!isNaN(val) && val >= 0) {
+                          updateOrderQuantity(selectedOrderDetails.id, val);
+                          setSelectedOrderDetails({ ...selectedOrderDetails, producedQuantity: val });
+                          addToast(`Recorded ${val.toLocaleString()} units produced!`, "success");
+                        }
+                      }}
+                      style={{
+                        padding: "3px 8px",
+                        borderRadius: "4px",
+                        fontSize: "11px",
+                        fontWeight: 700,
+                        backgroundColor: "#C89547",
+                        color: "#261603",
+                        border: "1px solid #E8C182",
+                        cursor: "pointer"
+                      }}
+                    >
+                      Update
+                    </button>
+                  </div>
                 </div>
                 <div>
                   <span style={{ color: "var(--text-muted)", fontSize: "11px", display: "block" }}>Active Batch Reference</span>
-                  <strong style={{ color: "#8C5B23", fontFamily: "var(--font-mono)" }}>{selectedOrderDetails.activeBatchId || `BAT-2026-${selectedOrderDetails.id.replace("PO-2026-", "")}`}</strong>
+                  <strong style={{ color: "#8C5B23", fontFamily: "var(--font-mono)" }}>{selectedOrderDetails.activeBatchId || selectedOrderDetails.batchNumber || "—"}</strong>
                 </div>
                 <div>
                   <span style={{ color: "var(--text-muted)", fontSize: "11px", display: "block" }}>Line Speed & OEE</span>
-                  <strong>{selectedOrderDetails.currentSpeedBPM || 560} BPM (OEE: {selectedOrderDetails.currentOEE || 85.0}%)</strong>
+                  <strong>{selectedOrderDetails.currentSpeedBPM ? `${selectedOrderDetails.currentSpeedBPM} BPM` : "0 BPM"} (OEE: {selectedOrderDetails.currentOEE ? `${selectedOrderDetails.currentOEE}%` : "0%"})</strong>
                 </div>
               </div>
 
@@ -638,10 +938,15 @@ export function ProductionOrdersPage() {
                   {["Planned", "Scheduled", "Released", "Running", "QA Pending", "Completed"].map((st) => (
                     <button
                       key={st}
-                      onClick={() => {
-                        updateOrderStatus(selectedOrderDetails.id, st);
-                        setSelectedOrderDetails({ ...selectedOrderDetails, status: st });
-                        addToast(`Order ${selectedOrderDetails.id} transitioned to ${st}!`, "success");
+                      onClick={async () => {
+                        await updateOrderStatus(selectedOrderDetails.id, st);
+                        await loadOrders();
+                        const tgt = getTarget(selectedOrderDetails);
+                        let prod = Number(selectedOrderDetails.producedQuantity) || 0;
+                        if (st === "Completed" || st === "QA Pending") prod = tgt;
+                        else if (st === "Running" && prod === 0) prod = Math.round(tgt * 0.45);
+                        setSelectedOrderDetails({ ...selectedOrderDetails, status: st, producedQuantity: prod });
+                        addToast(`Order ${selectedOrderDetails.orderNumber || selectedOrderDetails.id} transitioned to ${st}!`, "success");
                       }}
                       style={{
                         padding: "6px 12px",
@@ -660,7 +965,29 @@ export function ProductionOrdersPage() {
                 </div>
               </div>
 
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "10px", marginTop: "10px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleDeleteOrder(selectedOrderDetails);
+                    setSelectedOrderDetails(null);
+                  }}
+                  style={{
+                    padding: "7px 12px",
+                    borderRadius: "6px",
+                    fontSize: "12px",
+                    fontWeight: 700,
+                    color: "#DC2626",
+                    backgroundColor: "rgba(239, 68, 68, 0.08)",
+                    border: "1px solid rgba(239, 68, 68, 0.3)",
+                    cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px"
+                  }}
+                >
+                  <Trash2 size={14} /> Delete Order
+                </button>
                 <Button variant="secondary" onClick={() => setSelectedOrderDetails(null)}>
                   Close
                 </Button>

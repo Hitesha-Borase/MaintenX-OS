@@ -31,6 +31,10 @@ export function EditProfileModal({ isOpen, onClose, profileData, onSave }) {
     <Modal isOpen={isOpen} onClose={onClose} title="Edit Profile" subtitle="Update your contact and assignment details" footer={footer}>
       <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
         <div>
+          <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)", display: "block", marginBottom: "6px" }}>Full Name</label>
+          <input className="input-field" value={formData.name || ""} onChange={e => handleChange("name", e.target.value)} />
+        </div>
+        <div>
           <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)", display: "block", marginBottom: "6px" }}>Email Address</label>
           <input className="input-field" value={formData.email || ""} onChange={e => handleChange("email", e.target.value)} />
         </div>

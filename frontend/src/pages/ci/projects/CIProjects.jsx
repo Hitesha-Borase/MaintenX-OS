@@ -42,7 +42,8 @@ export function CIProjects() {
     investigations = [],
     activeProjectsCount,
     realizedSavingsTotal,
-    projectedSavingsTotal
+    projectedSavingsTotal,
+    currentUser
   } = useCI();
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -54,11 +55,11 @@ export function CIProjects() {
     name: "",
     type: "Kaizen Event",
     linkedRcaId: investigations[0]?.id || "",
-    owner: "David Kim (Lead CI)",
-    sponsor: "Plant Operations Director",
-    projectedSavingsAnnual: "25000",
-    baselineMetric: "88 hrs MTBF / 45 min MTTR",
-    targetMetric: "> 180 hrs MTBF / < 20 min MTTR"
+    owner: currentUser?.name || currentUser?.email || "CI Engineer",
+    sponsor: "Plant Operations",
+    projectedSavingsAnnual: "",
+    baselineMetric: "",
+    targetMetric: ""
   });
 
   const handleAdd = (e) => {
@@ -68,14 +69,17 @@ export function CIProjects() {
       return;
     }
 
-    createProject(formData);
+    createProject({
+      ...formData,
+      projectedSavingsAnnual: Number(formData.projectedSavingsAnnual) || 0
+    });
     setFormData({
       name: "",
       type: "Kaizen Event",
       linkedRcaId: investigations[0]?.id || "",
-      owner: "David Kim (Lead CI)",
-      sponsor: "Plant Operations Director",
-      projectedSavingsAnnual: "25000",
+      owner: currentUser?.name || currentUser?.email || "CI Engineer",
+      sponsor: "Plant Operations",
+      projectedSavingsAnnual: "",
       baselineMetric: "",
       targetMetric: ""
     });
@@ -269,8 +273,15 @@ export function CIProjects() {
               </tr>
             </thead>
             <tbody>
-              {filteredProjects.map((p) => (
-                <tr key={p.id} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+              {filteredProjects.length === 0 ? (
+                <tr>
+                  <td colSpan={7} style={{ padding: "36px 16px", textAlign: "center", color: "var(--text-muted)", fontSize: "13px" }}>
+                    No continuous improvement or Kaizen projects found. Click <strong>"Launch CI Project"</strong> to initiate one.
+                  </td>
+                </tr>
+              ) : (
+                filteredProjects.map((p) => (
+                  <tr key={p.id} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
                   <td style={{ padding: "12px 16px" }}>
                     <div style={{ fontWeight: 800, color: "var(--text-primary)", fontSize: "13px" }}>{p.name}</div>
                     <div style={{ fontSize: "11px", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>{p.id} • Target: {p.targetDate}</div>
@@ -321,7 +332,7 @@ export function CIProjects() {
                     </div>
                   </td>
                 </tr>
-              ))}
+              )))}
             </tbody>
           </table>
         </div>

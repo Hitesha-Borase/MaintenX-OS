@@ -21,29 +21,47 @@ export function MaterialShortages() {
   const { mrpCalculations = [] } = usePlanning();
   const { addToast } = useApp();
 
+  const [requirements, setRequirements] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [expeditedItems, setExpeditedItems] = useState({});
   const [loadingExpedite, setLoadingExpedite] = useState({});
 
   useEffect(() => {
-    async function loadExpedited() {
+    async function loadData() {
       try {
-        const res = await planningService.getExpeditedShortages();
-        const data = res?.data || res;
-        if (data && typeof data === "object") {
-          const map = {};
-          Object.keys(data).forEach((k) => {
-            map[k] = true;
-          });
-          setExpeditedItems(map);
+        setLoading(true);
+        const [reqData, resExpedited] = await Promise.allSettled([
+          planningService.getMrpNetRequirements(),
+          planningService.getExpeditedShortages()
+        ]);
+
+        if (reqData.status === "fulfilled" && Array.isArray(reqData.value)) {
+          setRequirements(reqData.value);
+        } else if (mrpCalculations.length > 0) {
+          setRequirements(mrpCalculations);
+        }
+
+        if (resExpedited.status === "fulfilled") {
+          const data = resExpedited.value?.data || resExpedited.value;
+          if (data && typeof data === "object") {
+            const map = {};
+            Object.keys(data).forEach((k) => {
+              map[k] = true;
+            });
+            setExpeditedItems(map);
+          }
         }
       } catch (err) {
-        console.warn("Could not fetch expedited shortages from backend:", err.message);
+        console.warn("Could not fetch shortages from backend:", err.message);
+      } finally {
+        setLoading(false);
       }
     }
-    loadExpedited();
+    loadData();
   }, []);
 
-  const shortages = mrpCalculations.filter((m) => m.shortage > 0);
+  const sourceData = requirements.length > 0 ? requirements : mrpCalculations;
+  const shortages = sourceData.filter((m) => Number(m.shortage ?? m.netShortage ?? 0) > 0);
 
   const handleExpedite = async (skuId, name, skuCode) => {
     setLoadingExpedite((prev) => ({ ...prev, [skuId]: true }));

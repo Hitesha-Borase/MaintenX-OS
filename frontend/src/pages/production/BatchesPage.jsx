@@ -47,21 +47,16 @@ export function BatchesPage() {
 
   // Execution Step State (1: Material Verification, 2: Tare, 3: Mixing/Reaction, 4: In-Process CCP, 5: Packaging, 6: Completed)
   const [executionStep, setExecutionStep] = useState(1);
-  const [verifiedMaterials, setVerifiedMaterials] = useState({
-    "RM-LOT-ORG-4401": true,
-    "RM-LOT-PUR-0092": true,
-    "PKG-LOT-PET-8812": false,
-    "PKG-LOT-CAP-3390": false
-  });
+  const [verifiedMaterials, setVerifiedMaterials] = useState({});
 
-  const [liveTemp, setLiveTemp] = useState("89.4");
-  const [liveBrix, setLiveBrix] = useState("11.8");
-  const [livePH, setLivePH] = useState("3.35");
+  const [liveTemp, setLiveTemp] = useState("");
+  const [liveBrix, setLiveBrix] = useState("");
+  const [livePH, setLivePH] = useState("");
   const [ccpPassed, setCcpPassed] = useState(true);
 
-  const getProductName = (b) => b.productName || b.product || b.recipeId || "Formulation Batch";
-  const getTank = (b) => b.tank || b.vessel || "Blending Tank T-01";
-  const getVolume = (b) => b.volumeLiters || b.targetQuantity || 10000;
+  const getProductName = (b) => b?.productName || b?.product || b?.recipeId || "Formulation Batch";
+  const getTank = (b) => b?.tank || b?.vessel || b?.line || "—";
+  const getVolume = (b) => b?.targetVolume || b?.actualVolume || b?.volumeLiters || b?.targetQuantity || 0;
 
   const filteredBatches = batches.filter((b) => {
     const q = searchQuery.toLowerCase();
@@ -72,9 +67,21 @@ export function BatchesPage() {
     return id.includes(q) || prod.includes(q) || tnk.includes(q);
   });
 
+  const getBatchLots = (batch) => {
+    if (!batch) return [];
+    if (Array.isArray(batch.materials) && batch.materials.length > 0) return batch.materials;
+    return [];
+  };
+
   const handleOpenExecution = (batch) => {
     setSelectedBatchForExecution(batch);
     setExecutionStep(batch.progressPercent > 80 ? 4 : 1);
+    const lots = getBatchLots(batch);
+    const initMap = {};
+    lots.forEach((m) => {
+      initMap[m.lotNo] = false;
+    });
+    setVerifiedMaterials(initMap);
   };
 
   const handleVerifyLot = (lotNo) => {
@@ -84,10 +91,13 @@ export function BatchesPage() {
 
   const handleAdvanceStep = () => {
     if (executionStep === 1) {
-      const allVerified = Object.values(verifiedMaterials).every(Boolean);
-      if (!allVerified) {
-        addToast("Please verify all staged raw material lots before starting dispensing.", "warning");
-        return;
+      const lots = getBatchLots(selectedBatchForExecution);
+      if (lots.length > 0) {
+        const allVerified = Object.values(verifiedMaterials).every(Boolean);
+        if (!allVerified) {
+          addToast("Please verify all staged raw material lots before starting dispensing.", "warning");
+          return;
+        }
       }
       setExecutionStep(2);
       addToast("Step 1 Complete: Staged materials verified. Vessel tare calibrated.", "success");
@@ -116,7 +126,7 @@ export function BatchesPage() {
   const handleExportCSV = () => {
     const headers = "Batch ID,Product Recipe,Vessel Tank,Volume (L),Brix,pH,Status\n";
     const rows = filteredBatches
-      .map((b) => `"${b.id}","${getProductName(b)}","${getTank(b)}",${getVolume(b)},"${b.brix || '10.4°Bx'}","${b.pH || '3.2'}","${b.qaStatus || b.status || 'Active'}"`)
+      .map((b) => `"${b.id}","${getProductName(b)}","${getTank(b)}",${getVolume(b)},"${b.brix || '—'}","${b.pH || '—'}","${b.qaStatus || b.status || 'Active'}"`)
       .join("\n");
     const blob = new Blob([headers + rows], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
@@ -126,6 +136,16 @@ export function BatchesPage() {
     a.click();
     addToast("Batches ledger exported to CSV.", "info");
   };
+
+  const totalVolumeLiters = batches.reduce((sum, b) => sum + Number(b.targetVolume || b.actualVolume || b.volumeLiters || b.targetQuantity || 0), 0);
+  const activeCount = batches.filter((b) => {
+    const s = (b.status || "").toLowerCase();
+    return s.includes("process") || s.includes("run") || s.includes("exec");
+  }).length;
+  const qaHoldCount = batches.filter((b) => {
+    const s = (b.status || "").toLowerCase();
+    return s.includes("hold") || s.includes("qa") || (b.qaStatus || "").toLowerCase().includes("pending");
+  }).length;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%", maxWidth: "1600px", margin: "0 auto", minWidth: 0 }}>
@@ -166,33 +186,49 @@ export function BatchesPage() {
       >
         <StatCard
           title="Active Batches"
-          value={batches.length.toString()}
+          value={activeCount.toString()}
           unit="In-Process"
-          trend={{ value: "Blending tanks active", isPositive: true, text: "" }}
+          trend={{
+            value: activeCount > 0 ? "Blending tanks active" : "No in-process batches",
+            isPositive: activeCount > 0,
+            text: ""
+          }}
           icon={Layers}
           colorVariant="cyan"
         />
         <StatCard
           title="Bulk Liquid Volume"
-          value="34,500 L"
+          value={`${totalVolumeLiters.toLocaleString()} L`}
           unit="Formulated"
-          trend={{ value: "Pasteurization hold verified", isPositive: true, text: "" }}
+          trend={{
+            value: totalVolumeLiters > 0 ? "Pasteurization hold verified" : "0 L formulated",
+            isPositive: totalVolumeLiters > 0,
+            text: ""
+          }}
           icon={CheckCircle2}
           colorVariant="emerald"
         />
         <StatCard
           title="CCP Conformance"
-          value="100%"
-          unit="Passed"
-          trend={{ value: "Thermal limits in spec", isPositive: true, text: "" }}
+          value={batches.length > 0 ? "100%" : "—"}
+          unit={batches.length > 0 ? "Passed" : "No runs"}
+          trend={{
+            value: batches.length > 0 ? "Thermal limits in spec" : "Awaiting batch run",
+            isPositive: true,
+            text: ""
+          }}
           icon={ShieldCheck}
           colorVariant="emerald"
         />
         <StatCard
           title="QA Hold Queue"
-          value="0 Lots"
-          unit="Clear"
-          trend={{ value: "Zero release bottlenecks", isPositive: true, text: "" }}
+          value={`${qaHoldCount} ${qaHoldCount === 1 ? "Lot" : "Lots"}`}
+          unit={qaHoldCount === 0 ? "Clear" : "Pending QA"}
+          trend={{
+            value: qaHoldCount === 0 ? "Zero release bottlenecks" : "Requires QA disposition",
+            isPositive: qaHoldCount === 0,
+            text: ""
+          }}
           icon={Clock}
           colorVariant="amber"
         />
@@ -242,13 +278,13 @@ export function BatchesPage() {
                   return (
                     <tr key={b.id}>
                       <td>
-                        <span style={{ fontWeight: 800, color: "#8C5B23", fontFamily: "var(--font-mono)" }}>{b.id}</span>
-                        <div style={{ fontSize: "10px", color: "var(--text-muted)" }}>Order: {b.productionOrderId || "PO-2026-904"}</div>
+                        <span style={{ fontWeight: 800, color: "#8C5B23", fontFamily: "var(--font-mono)" }}>{b.batchNumber || b.id}</span>
+                        <div style={{ fontSize: "10px", color: "var(--text-muted)" }}>Order: {b.productionOrderId || b.orderId || "—"}</div>
                       </td>
                       <td>
                         <div style={{ fontWeight: 700, color: "var(--text-primary)" }}>{getProductName(b)}</div>
                         <span style={{ fontSize: "11px", color: "#8C5B23", fontFamily: "var(--font-mono)", fontWeight: 700 }}>
-                          {b.recipeId || "REC-ORANGE-ASEPTIC-v4"}
+                          {b.recipeId || "Standard Formulation"}
                         </span>
                       </td>
                       <td>
@@ -259,16 +295,16 @@ export function BatchesPage() {
                       </td>
                       <td>
                         <span style={{ fontSize: "12px", color: "var(--text-primary)", fontWeight: 600 }}>
-                          {b.currentStep || "Thermal Pasteurization & Fill"}
+                          {b.currentStep || (isCompleted ? "Completed" : "Step 1: Material Verification")}
                         </span>
                       </td>
                       <td>
                         <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: "120px" }}>
                           <div style={{ flex: 1, height: "6px", backgroundColor: "var(--bg-card-subtle)", borderRadius: "3px", overflow: "hidden" }}>
-                            <div style={{ width: `${b.progressPercent || 75}%`, height: "100%", background: "linear-gradient(90deg, #E2B670 0%, #059669 100%)" }} />
+                            <div style={{ width: `${b.progressPercent || (isCompleted ? 100 : 0)}%`, height: "100%", background: "linear-gradient(90deg, #E2B670 0%, #059669 100%)" }} />
                           </div>
                           <span style={{ fontSize: "11px", fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--text-primary)" }}>
-                            {b.progressPercent || 75}%
+                            {b.progressPercent || (isCompleted ? 100 : 0)}%
                           </span>
                         </div>
                       </td>
@@ -340,7 +376,7 @@ export function BatchesPage() {
                     Batch Execution Interface — {selectedBatchForExecution.id}
                   </h2>
                   <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>
-                    {getProductName(selectedBatchForExecution)} • Tank T-01
+                    {getProductName(selectedBatchForExecution)} • {getTank(selectedBatchForExecution)}
                   </span>
                 </div>
               </div>
@@ -404,51 +440,54 @@ export function BatchesPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {[
-                          { lotNo: "RM-LOT-ORG-4401", material: "Valencia Orange Concentrate 65°Bx", qty: "1,200 kg" },
-                          { lotNo: "RM-LOT-PUR-0092", material: "Demineralized Water Buffer", qty: "3,800 L" },
-                          { lotNo: "PKG-LOT-PET-8812", material: "500ml PET Barrier Bottles", qty: "24,500 units" },
-                          { lotNo: "PKG-LOT-CAP-3390", material: "38mm HDPE Tamper Evident Caps", qty: "24,500 units" }
-                        ].map((mat) => {
-                          const isVer = verifiedMaterials[mat.lotNo];
+                        {getBatchLots(selectedBatchForExecution).length === 0 ? (
+                          <tr>
+                            <td colSpan={5} style={{ textAlign: "center", padding: "16px", color: "var(--text-secondary)" }}>
+                              No staged material lots configured. Staging clear for manual processing.
+                            </td>
+                          </tr>
+                        ) : (
+                          getBatchLots(selectedBatchForExecution).map((mat) => {
+                            const isVer = verifiedMaterials[mat.lotNo];
 
-                          return (
-                            <tr key={mat.lotNo}>
-                              <td style={{ fontWeight: 700, color: "var(--text-primary)" }}>{mat.material}</td>
-                              <td style={{ fontFamily: "var(--font-mono)", color: "#8C5B23" }}>{mat.lotNo}</td>
-                              <td>{mat.qty}</td>
-                              <td>
-                                <Badge variant={isVer ? "emerald" : "amber"}>
-                                  {isVer ? "Verified" : "Pending Scan"}
-                                </Badge>
-                              </td>
-                              <td>
-                                {!isVer ? (
-                                  <button
-                                    onClick={() => handleVerifyLot(mat.lotNo)}
-                                    style={{
-                                      padding: "4px 8px",
-                                      borderRadius: "4px",
-                                      fontSize: "11px",
-                                      fontWeight: 700,
-                                      backgroundColor: "rgba(200, 149, 71, 0.12)",
-                                      color: "#8C5B23",
-                                      border: "1px solid #C89547",
-                                      cursor: "pointer",
-                                      display: "inline-flex",
-                                      alignItems: "center",
-                                      gap: "4px"
-                                    }}
-                                  >
-                                    <QrCode size={12} /> Scan Lot
-                                  </button>
-                                ) : (
-                                  <span style={{ fontSize: "11px", color: "#059669", fontWeight: 700 }}>✓ Verified</span>
-                                )}
-                              </td>
-                            </tr>
-                          );
-                        })}
+                            return (
+                              <tr key={mat.lotNo}>
+                                <td style={{ fontWeight: 700, color: "var(--text-primary)" }}>{mat.material}</td>
+                                <td style={{ fontFamily: "var(--font-mono)", color: "#8C5B23" }}>{mat.lotNo}</td>
+                                <td>{mat.qty}</td>
+                                <td>
+                                  <Badge variant={isVer ? "emerald" : "amber"}>
+                                    {isVer ? "Verified" : "Pending Scan"}
+                                  </Badge>
+                                </td>
+                                <td>
+                                  {!isVer ? (
+                                    <button
+                                      onClick={() => handleVerifyLot(mat.lotNo)}
+                                      style={{
+                                        padding: "4px 8px",
+                                        borderRadius: "4px",
+                                        fontSize: "11px",
+                                        fontWeight: 700,
+                                        backgroundColor: "rgba(200, 149, 71, 0.12)",
+                                        color: "#8C5B23",
+                                        border: "1px solid #C89547",
+                                        cursor: "pointer",
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        gap: "4px"
+                                      }}
+                                    >
+                                      <QrCode size={12} /> Scan Lot
+                                    </button>
+                                  ) : (
+                                    <span style={{ fontSize: "11px", color: "#059669", fontWeight: 700 }}>✓ Verified</span>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
                       </tbody>
                     </table>
                   </div>
@@ -468,7 +507,7 @@ export function BatchesPage() {
                     </div>
                     <div>
                       <span style={{ fontSize: "11px", color: "var(--text-muted)", display: "block" }}>Load Cell Calibration Status</span>
-                      <Badge variant="emerald">Valid (Calibrated 2026-09-01)</Badge>
+                      <Badge variant="emerald">Valid (Calibrated)</Badge>
                     </div>
                   </div>
                 </div>
@@ -483,21 +522,42 @@ export function BatchesPage() {
 
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px" }}>
                     <div style={{ padding: "14px", backgroundColor: "rgba(200, 149, 71, 0.08)", borderRadius: "10px", border: "1px solid #C89547", textAlign: "center" }}>
-                      <span style={{ fontSize: "11px", color: "var(--text-muted)", display: "block" }}>Pasteurizer Temp</span>
-                      <strong style={{ fontSize: "20px", color: "#059669", fontFamily: "var(--font-mono)" }}>{liveTemp}°C</strong>
-                      <div style={{ fontSize: "10px", color: "var(--text-muted)", marginTop: "2px" }}>Target: 88.0°C - 92.0°C</div>
+                      <span style={{ fontSize: "11px", color: "var(--text-muted)", display: "block" }}>Pasteurizer Temp (°C)</span>
+                      <input
+                        type="text"
+                        placeholder="Enter °C"
+                        value={liveTemp}
+                        onChange={(e) => setLiveTemp(e.target.value)}
+                        className="form-input"
+                        style={{ textAlign: "center", fontSize: "16px", fontWeight: 700, marginTop: "6px", backgroundColor: "#FFFFFF" }}
+                      />
+                      <div style={{ fontSize: "10px", color: "var(--text-muted)", marginTop: "4px" }}>Target: 88.0°C - 92.0°C</div>
                     </div>
 
                     <div style={{ padding: "14px", backgroundColor: "rgba(200, 149, 71, 0.08)", borderRadius: "10px", border: "1px solid #C89547", textAlign: "center" }}>
-                      <span style={{ fontSize: "11px", color: "var(--text-muted)", display: "block" }}>In-Line Refractometer</span>
-                      <strong style={{ fontSize: "20px", color: "#8C5B23", fontFamily: "var(--font-mono)" }}>{liveBrix}°Bx</strong>
-                      <div style={{ fontSize: "10px", color: "var(--text-muted)", marginTop: "2px" }}>Target: 11.5 - 12.0°Bx</div>
+                      <span style={{ fontSize: "11px", color: "var(--text-muted)", display: "block" }}>In-Line Refractometer (°Bx)</span>
+                      <input
+                        type="text"
+                        placeholder="Enter °Bx"
+                        value={liveBrix}
+                        onChange={(e) => setLiveBrix(e.target.value)}
+                        className="form-input"
+                        style={{ textAlign: "center", fontSize: "16px", fontWeight: 700, marginTop: "6px", backgroundColor: "#FFFFFF" }}
+                      />
+                      <div style={{ fontSize: "10px", color: "var(--text-muted)", marginTop: "4px" }}>Target: 11.5 - 12.0°Bx</div>
                     </div>
 
                     <div style={{ padding: "14px", backgroundColor: "rgba(200, 149, 71, 0.08)", borderRadius: "10px", border: "1px solid #C89547", textAlign: "center" }}>
                       <span style={{ fontSize: "11px", color: "var(--text-muted)", display: "block" }}>Acidity (pH)</span>
-                      <strong style={{ fontSize: "20px", color: "var(--text-primary)", fontFamily: "var(--font-mono)" }}>{livePH}</strong>
-                      <div style={{ fontSize: "10px", color: "var(--text-muted)", marginTop: "2px" }}>Target: 3.20 - 3.45</div>
+                      <input
+                        type="text"
+                        placeholder="Enter pH"
+                        value={livePH}
+                        onChange={(e) => setLivePH(e.target.value)}
+                        className="form-input"
+                        style={{ textAlign: "center", fontSize: "16px", fontWeight: 700, marginTop: "6px", backgroundColor: "#FFFFFF" }}
+                      />
+                      <div style={{ fontSize: "10px", color: "var(--text-muted)", marginTop: "4px" }}>Target: 3.20 - 3.45</div>
                     </div>
                   </div>
                 </div>
@@ -516,7 +576,7 @@ export function BatchesPage() {
                       <Badge variant="emerald">PASS</Badge>
                     </div>
                     <div style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-                      Sensor reading: <strong>89.4°C for 16.2 seconds</strong> (Critical threshold: ≥ 83.1°C for 15s). Microbial kill step confirmed.
+                      Sensor reading: <strong>{liveTemp ? `${liveTemp}°C` : "Target hold verified"}</strong>. Microbial kill step confirmed.
                     </div>
                   </div>
 
@@ -622,7 +682,7 @@ export function BatchesPage() {
                 </div>
                 <div>
                   <span style={{ color: "var(--text-muted)", fontSize: "11px", display: "block" }}>Production Order</span>
-                  <strong>{selectedBatchDetails.productionOrderId || "PO-2026-904"}</strong>
+                  <strong>{selectedBatchDetails.productionOrderId || selectedBatchDetails.orderNumber || "—"}</strong>
                 </div>
                 <div>
                   <span style={{ color: "var(--text-muted)", fontSize: "11px", display: "block" }}>Batch Target Output</span>
@@ -637,9 +697,9 @@ export function BatchesPage() {
               <div style={{ padding: "12px", backgroundColor: "var(--bg-card-subtle)", borderRadius: "8px", border: "1px solid var(--border-subtle)" }}>
                 <div style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-primary)", marginBottom: "6px" }}>Critical Quality & CCP Logs</div>
                 <div style={{ fontSize: "11px", color: "var(--text-secondary)", display: "flex", flexDirection: "column", gap: "4px" }}>
-                  <div>• HTST Thermal Sensor RTD-03: 89.4°C (Pass)</div>
-                  <div>• Digital In-Line Refractometer: 11.8° Brix (Pass)</div>
-                  <div>• Headspace Oxygen N2 Purge: 0.8% O2 (Pass)</div>
+                  <div>• HTST Thermal Sensor: {selectedBatchDetails.temperature ? `${selectedBatchDetails.temperature}°C` : "Nominal"} (Pass)</div>
+                  <div>• Digital In-Line Refractometer: {selectedBatchDetails.brix ? `${selectedBatchDetails.brix}° Brix` : "Nominal"} (Pass)</div>
+                  <div>• Acidity: {selectedBatchDetails.pH ? `pH ${selectedBatchDetails.pH}` : "Nominal"} (Pass)</div>
                 </div>
               </div>
 

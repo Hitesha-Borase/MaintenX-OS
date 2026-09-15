@@ -6,20 +6,21 @@ export class AdminService {
       return await apiClient.get("/admin/dashboard");
     } catch (err) {
       console.warn("Backend admin dashboard fetch fallback:", err.message);
+      const isTenant = Boolean(typeof window !== "undefined" && (localStorage.getItem("maintenx_tenant_name") || localStorage.getItem("maintenx_tenant_id")));
       return {
         systemHealth: 99.98,
         status: "OPERATIONAL",
         metrics: {
-          totalUsers: 6,
-          activeUsers: 5,
-          rolesCount: 12,
-          sitesCount: 2,
-          linesCount: 6,
-          skusCount: 5,
-          syncedTablesCount: 17,
-          liveConnectors: 4,
-          totalConnectors: 4,
-          qualityIndex: 96.2,
+          totalUsers: isTenant ? 1 : 6,
+          activeUsers: isTenant ? 1 : 5,
+          rolesCount: isTenant ? 5 : 12,
+          sitesCount: isTenant ? 0 : 2,
+          linesCount: isTenant ? 0 : 6,
+          skusCount: isTenant ? 0 : 5,
+          syncedTablesCount: isTenant ? 0 : 17,
+          liveConnectors: isTenant ? 0 : 4,
+          totalConnectors: isTenant ? 0 : 4,
+          qualityIndex: isTenant ? 99.98 : 96.2,
         },
         latencyTrend: [
           { label: "00:00", value: 18 },

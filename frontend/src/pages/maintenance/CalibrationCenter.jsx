@@ -27,17 +27,17 @@ export function CalibrationCenter() {
   const [isLogModalOpen, setIsLogModalOpen] = useState(false);
   const [calData, setCalData] = useState({ assetId: "", nextDueDate: "", result: "PASS - Within Tolerance" });
 
-  const handleLogCalibration = (e) => {
+  const handleLogCalibration = async (e) => {
     e.preventDefault();
-    addCalibrationRecord(calData);
+    await addCalibrationRecord(calData);
     addToast("Calibration record successfully logged.");
     setIsLogModalOpen(false);
     setCalData({ assetId: "", nextDueDate: "", result: "PASS - Within Tolerance" });
   };
 
-  const validCount = calibrations.filter((c) => c.status === "Valid").length;
-  const dueSoonCount = calibrations.filter((c) => c.status === "Due Soon").length;
-  const overdueCount = calibrations.filter((c) => c.status === "Overdue" || c.status === "Failed").length;
+  const validCount = calibrations.filter((c) => (c.status || "").toLowerCase() === "valid").length;
+  const dueSoonCount = calibrations.filter((c) => (c.status || "").toLowerCase() === "due soon" || (c.status || "").toLowerCase() === "due_soon").length;
+  const overdueCount = calibrations.filter((c) => ["overdue", "failed", "expired"].includes((c.status || "").toLowerCase())).length;
 
   const columns = [
     {

@@ -5,13 +5,21 @@ export function BarChart({
   height = 200,
   barColor = "#8C5B23",
   targetColor = "#D97706",
-  yAxisUnit = "BPM"
+  yAxisUnit,
+  unit = "BPM",
+  color,
+  showLegend = true,
+  actualLabel = "Actual Run Rate",
+  targetLabel = "Target Plan"
 }) {
   const [hoveredIdx, setHoveredIdx] = useState(null);
 
   if (!data || data.length === 0) return null;
 
-  const maxVal = Math.max(...data.map((d) => Math.max(d.actual || 0, d.target || 0))) * 1.15 || 100;
+  const resolvedUnit = yAxisUnit || unit;
+  const defaultBarColor = color || barColor;
+  const hasAnyTarget = data.some((d) => d.target !== undefined && d.target !== null);
+  const maxVal = Math.max(...data.map((d) => Math.max(d.actual ?? d.value ?? 0, d.target || 0))) * 1.15 || 100;
 
   return (
     <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: "10px" }}>
@@ -24,9 +32,11 @@ export function BarChart({
         </div>
 
         {data.map((item, idx) => {
-          const actualHeight = ((item.actual || 0) / maxVal) * (height - 30);
+          const actualVal = item.actual ?? item.value ?? 0;
+          const actualHeight = (actualVal / maxVal) * (height - 35);
           const targetHeight = ((item.target || 0) / maxVal) * (height - 30);
           const isHovered = hoveredIdx === idx;
+          const currentBarColor = item.color || defaultBarColor;
 
           return (
             <div
@@ -65,12 +75,20 @@ export function BarChart({
                   }}
                 >
                   <div style={{ fontWeight: 800, color: "var(--text-primary)" }}>{item.label}</div>
-                  <div style={{ color: barColor, fontWeight: 700, fontFamily: "var(--font-mono)" }}>
-                    Actual: {item.actual} {yAxisUnit}
+                  {item.category && (
+                    <div style={{ fontSize: "10px", color: "var(--text-muted)", fontWeight: 600 }}>{item.category}</div>
+                  )}
+                  <div style={{ color: currentBarColor, fontWeight: 700, fontFamily: "var(--font-mono)" }}>
+                    {actualLabel.replace(/Run Rate/i, "").trim() || "Actual"}: {actualVal} {resolvedUnit}
                   </div>
-                  {item.target && (
+                  {item.durationMins && (
+                    <div style={{ color: "#D97706", fontWeight: 600, fontSize: "11px" }}>
+                      Lost Time: {item.durationMins} mins
+                    </div>
+                  )}
+                  {item.target !== undefined && item.target !== null && (
                     <div style={{ color: targetColor, fontWeight: 700, fontFamily: "var(--font-mono)", fontSize: "11px" }}>
-                      Target: {item.target} {yAxisUnit}
+                      {targetLabel}: {item.target} {resolvedUnit}
                     </div>
                   )}
                 </div>
@@ -78,7 +96,7 @@ export function BarChart({
 
               {/* Bars group */}
               <div style={{ display: "flex", alignItems: "flex-end", gap: "3px", width: "100%", justifyContent: "center" }}>
-                {item.target && (
+                {item.target !== undefined && item.target !== null && (
                   <div
                     style={{
                       width: "35%",
@@ -93,20 +111,41 @@ export function BarChart({
                 <div
                   style={{
                     width: item.target ? "45%" : "70%",
-                    maxWidth: "20px",
-                    height: `${actualHeight}px`,
-                    backgroundColor: isHovered ? "#6F4217" : barColor,
+                    maxWidth: "24px",
+                    height: `${Math.max(actualHeight, 4)}px`,
+                    backgroundColor: isHovered ? currentBarColor : currentBarColor,
+                    opacity: isHovered ? 1 : 0.85,
                     borderRadius: "3px 3px 0 0",
                     transition: "all 0.2s ease"
                   }}
                 />
               </div>
 
-              {/* X Axis Label */}
+              {/* Value indicator above bar on hover or static */}
               <span
                 style={{
                   position: "absolute",
-                  bottom: "-20px",
+                  bottom: `${actualHeight + 4}px`,
+                  fontSize: "9px",
+                  fontWeight: 700,
+                  fontFamily: "var(--font-mono)",
+                  color: isHovered ? currentBarColor : "var(--text-muted)",
+                  transition: "color 0.15s ease",
+                  pointerEvents: "none"
+                }}
+              >
+                {actualVal}{resolvedUnit === "%" ? "%" : ""}
+              </span>
+
+              {/* X Axis Label */}
+              <span
+                title={item.label}
+                style={{
+                  position: "absolute",
+                  bottom: "-22px",
+                  maxWidth: "100%",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
                   fontSize: "10px",
                   fontWeight: "600",
                   color: isHovered ? "var(--text-primary)" : "#786C5E",
@@ -115,23 +154,27 @@ export function BarChart({
                   fontFamily: "var(--font-mono)"
                 }}
               >
-                {item.label}
+                {item.shortLabel || item.label}
               </span>
             </div>
           );
         })}
       </div>
 
-      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", color: "var(--text-secondary)" }}>
-        <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-          <span style={{ width: "8px", height: "8px", borderRadius: "2px", backgroundColor: barColor, display: "inline-block" }} />
-          Actual Run Rate
-        </span>
-        <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-          <span style={{ width: "8px", height: "8px", borderRadius: "2px", backgroundColor: "rgba(217, 119, 6, 0.5)", borderTop: `2px solid ${targetColor}`, display: "inline-block" }} />
-          Target Plan
-        </span>
-      </div>
+      {showLegend && (
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", color: "var(--text-secondary)", flexWrap: "wrap", gap: "8px" }}>
+          <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+            <span style={{ width: "8px", height: "8px", borderRadius: "2px", backgroundColor: defaultBarColor, display: "inline-block" }} />
+            {actualLabel}
+          </span>
+          {hasAnyTarget && (
+            <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <span style={{ width: "8px", height: "8px", borderRadius: "2px", backgroundColor: "rgba(217, 119, 6, 0.5)", borderTop: `2px solid ${targetColor}`, display: "inline-block" }} />
+              {targetLabel}
+            </span>
+          )}
+        </div>
+      )}
     </div>
   );
 }

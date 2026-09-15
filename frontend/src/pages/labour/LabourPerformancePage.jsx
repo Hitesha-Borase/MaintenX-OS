@@ -19,22 +19,51 @@ import { Button } from "../../components/common/Button";
 import { StatCard } from "../../components/common/StatCard";
 import { BarChart } from "../../components/charts/BarChart";
 import { useApp } from "../../context/AppContext";
-import { PRODUCTIVITY_METRICS, INITIAL_EMPLOYEES } from "../../data/mockLabour";
+import { INITIAL_EMPLOYEES } from "../../data/mockLabour";
 import dashboardService from "../../services/dashboardService";
 
 export function LabourPerformancePage() {
   const { addToast } = useApp();
 
-  const [metrics, setMetrics] = useState(PRODUCTIVITY_METRICS);
-  const [employees, setEmployees] = useState(INITIAL_EMPLOYEES);
+  const [metrics, setMetrics] = useState({
+    overallUnitsPerHour: 0,
+    targetUnitsPerHour: 145,
+    averageProductivity: "0%",
+    labourUtilization: "0%",
+    hoursWorkedMTD: 0,
+    totalHoursWorked: 0,
+    grossFactoryOutput: 0,
+    totalOutputUnits: 0,
+    byLine: [],
+    byShift: [],
+    trend: []
+  });
+  const [employees, setEmployees] = useState([]);
   const [selectedShift, setSelectedShift] = useState("All");
 
   useEffect(() => {
     async function fetchProductivityData() {
       try {
         const res = await dashboardService.getSupervisorProductivity();
-        if (res && res.data) {
-          setMetrics((prev) => ({ ...prev, ...res.data }));
+        const data = res?.data !== undefined ? res.data : res;
+        if (data) {
+          setMetrics((prev) => ({
+            ...prev,
+            ...data,
+            totalHoursWorked: data.totalHoursWorked ?? data.hoursWorkedMTD ?? 0,
+            totalOutputUnits: data.totalOutputUnits ?? data.grossFactoryOutput ?? 0,
+            hoursWorkedMTD: data.hoursWorkedMTD ?? data.totalHoursWorked ?? 0,
+            grossFactoryOutput: data.grossFactoryOutput ?? data.totalOutputUnits ?? 0,
+            byShift: Array.isArray(data.byShift) ? data.byShift : [],
+            byLine: Array.isArray(data.byLine) ? data.byLine : [],
+            trend: Array.isArray(data.trend) ? data.trend : []
+          }));
+          if (Array.isArray(data.employees)) {
+            setEmployees(data.employees.map(e => ({
+              ...e,
+              avatar: (e.name || "OP").substring(0, 2).toUpperCase()
+            })));
+          }
         }
       } catch (err) {
         console.error("Failed to fetch productivity data:", err);
@@ -45,12 +74,12 @@ export function LabourPerformancePage() {
 
   const filteredEmployees = employees.filter((e) => {
     if (selectedShift === "All") return true;
-    return e.shift.includes(selectedShift);
+    return (e.shift || "").includes(selectedShift);
   });
 
   const chartData = (metrics.byLine || []).map((l) => ({
-    label: l.line.split("—")[0].trim(),
-    value: l.unitsPerHr
+    label: (l.line || "").split("—")[0].trim(),
+    value: l.unitsPerHr || 0
   }));
 
 
@@ -59,7 +88,7 @@ export function LabourPerformancePage() {
     const rows = employees
       .map(
         (e) =>
-          `"${e.name}","${e.role}","${e.department}","${e.shift}",${e.productivityScore}%,${e.unitsPerHour},${e.hoursWorkedMonth},${(e.unitsPerHour * e.hoursWorkedMonth).toLocaleString()}`
+          `"${e.name || ""}","${e.role || ""}","${e.department || ""}","${e.shift || ""}",${e.productivityScore || 0}%,${e.unitsPerHour || 0},${e.hoursWorkedMonth || 0},${Number((e.monthlyOutput ?? ((e.unitsPerHour || 0) * (e.hoursWorkedMonth || 0))) || 0).toLocaleString()}`
       )
       .join("\n");
     const blob = new Blob([headers + rows], { type: "text/csv" });
@@ -120,7 +149,7 @@ export function LabourPerformancePage() {
         {/* Total Hours Worked */}
         <StatCard
           title="Hours Worked (MTD)"
-          value={metrics.totalHoursWorked.toLocaleString()}
+          value={(metrics.totalHoursWorked ?? metrics.hoursWorkedMTD ?? 0).toLocaleString()}
           unit="Labor Hours"
           trend={{ value: "96.8% nominal shift attendance", isPositive: true, text: "" }}
           icon={Clock}
@@ -130,7 +159,7 @@ export function LabourPerformancePage() {
         {/* Output */}
         <StatCard
           title="Gross Factory Output"
-          value={metrics.totalOutputUnits.toLocaleString()}
+          value={(metrics.totalOutputUnits ?? metrics.grossFactoryOutput ?? 0).toLocaleString()}
           unit="Finished Units"
           trend={{ value: "On pace for monthly target", isPositive: true, text: "" }}
           icon={TrendingUp}
@@ -214,19 +243,19 @@ export function LabourPerformancePage() {
                   <div>
                     <span style={{ fontSize: "11px", color: "var(--text-secondary)", display: "block" }}>Output Units</span>
                     <strong style={{ fontSize: "14px", color: "var(--text-primary)", fontFamily: "var(--font-mono)" }}>
-                      {shift.output.toLocaleString()}
+                      {(shift.output ?? shift.outputUnits ?? 0).toLocaleString()}
                     </strong>
                   </div>
                   <div>
                     <span style={{ fontSize: "11px", color: "var(--text-secondary)", display: "block" }}>Hours Worked</span>
                     <strong style={{ fontSize: "14px", color: "var(--text-primary)", fontFamily: "var(--font-mono)" }}>
-                      {shift.hoursWorked}h
+                      {shift.hoursWorked || 0}h
                     </strong>
                   </div>
                   <div>
                     <span style={{ fontSize: "11px", color: "var(--text-secondary)", display: "block" }}>Pacing vs Target</span>
                     <strong style={{ fontSize: "14px", color: "#059669", fontFamily: "var(--font-mono)" }}>
-                      {shift.targetVsActual}
+                      {shift.targetVsActual ?? shift.pacingVsTarget ?? "On Target"}
                     </strong>
                   </div>
                 </div>
@@ -237,7 +266,7 @@ export function LabourPerformancePage() {
           {/* Productivity Trend Table */}
           <div style={{ marginTop: "16px" }}>
             <h4 style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)", marginBottom: "8px" }}>
-              5-Week Productivity Trend
+              Productivity Trend
             </h4>
             <div style={{ display: "flex", justifyContent: "space-between", gap: "6px", overflowX: "auto" }}>
               {metrics.trend.map((t, idx) => (
@@ -273,9 +302,9 @@ export function LabourPerformancePage() {
               style={{ fontSize: "12px", padding: "6px 10px", height: "34px" }}
             >
               <option value="All">All Shifts</option>
-              <option value="Shift A">Shift A (Day)</option>
-              <option value="Shift B">Shift B (Evening)</option>
-              <option value="Shift C">Shift C (Night)</option>
+              {(metrics.byShift || []).map((s, idx) => (
+                <option key={idx} value={s.shift}>{s.shift}</option>
+              ))}
             </select>
           </div>
         </div>
@@ -348,7 +377,7 @@ export function LabourPerformancePage() {
                   </td>
 
                   <td style={{ padding: "8px 14px", fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--text-primary)", fontSize: "13px", whiteSpace: "nowrap" }}>
-                    {(emp.unitsPerHour * emp.hoursWorkedMonth).toLocaleString()} units
+                    {Number(emp.monthlyOutput ?? ((emp.unitsPerHour || 0) * (emp.hoursWorkedMonth || 0)) || 0).toLocaleString()} units
                   </td>
 
                   <td style={{ padding: "8px 14px", textAlign: "right", whiteSpace: "nowrap" }}>

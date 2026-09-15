@@ -68,15 +68,16 @@ export function CommandCenter() {
         dashboardService.getPlantManagerKPIs(plantId)
       ]);
       if (res.status === "fulfilled" && res.value?.data) {
-        setApiData(res.value.data);
+        const payload = res.value.data.data !== undefined ? res.value.data.data : res.value.data;
+        setApiData(payload);
       }
       if (showToast) {
         addToast("Telemetry and database synced with PostgreSQL live backend!", "success");
       }
     } catch (err) {
-      console.warn("Using offline fallback:", err.message);
+      console.warn("Using live DB sync error:", err.message);
       if (showToast) {
-        addToast("Synced with local telemetry cache.", "info");
+        addToast("Failed to sync live telemetry from database.", "error");
       }
     } finally {
       setIsSyncing(false);
@@ -88,74 +89,74 @@ export function CommandCenter() {
   }, [loadData]);
 
   // ==========================================
-  // REALISTIC MANUFACTURING TRANSACTION ENGINE
+  // REAL MANUFACTURING TRANSACTION ENGINE (LIVE DB)
   // ==========================================
   const hbTransactions = useMemo(() => {
     if (apiData?.hbSummary) {
       return apiData.hbSummary;
     }
-    // Simulated live transaction roll-ups
-    const processing = {
-      target: 12000,
-      actual: 11850,
-      variance: -150,
-      recoveryPace: "+35 units/hr",
-      eodProjection: 23800,
-      status: "Recovering"
+    return {
+      processing: {
+        target: 0,
+        actual: 0,
+        variance: 0,
+        recoveryPace: "0 units/hr",
+        eodProjection: 0,
+        status: "Idle"
+      },
+      packaging: {
+        target: 0,
+        actual: 0,
+        variance: 0,
+        recoveryPace: "0 units/hr",
+        eodProjection: 0,
+        status: "Idle"
+      },
+      total: {
+        target: 0,
+        actual: 0,
+        variance: 0,
+        netVariance: 0,
+        recoveryPace: "0.0% Shift Pace",
+        shiftPacing: "0.0% Shift Pace",
+        eodProjection: 0,
+        status: "Idle"
+      }
     };
-
-    const packaging = {
-      target: 12000,
-      actual: 12050,
-      variance: 50,
-      recoveryPace: "On Pace (0 Delta)",
-      eodProjection: 24100,
-      status: "Ahead"
-    };
-
-    const total = {
-      target: processing.target + packaging.target,
-      actual: processing.actual + packaging.actual,
-      variance: processing.variance + packaging.variance,
-      recoveryPace: "99.6% Shift Pace",
-      eodProjection: 23950,
-      status: "On Track"
-    };
-
-    return { processing, packaging, total };
   }, [apiData]);
 
-  // Hourly pacing table
+  // Hourly pacing table from live DB
   const hourlyPace = useMemo(() => {
-    if (apiData?.hourlyLedger && apiData.hourlyLedger.length > 0) {
+    if (apiData?.hourlyLedger && Array.isArray(apiData.hourlyLedger)) {
       return apiData.hourlyLedger;
     }
-    return [
-      { hour: "06:00 - 07:00", target: 3000, actual: 3050, delta: "+50", status: "Ahead" },
-      { hour: "07:00 - 08:00", target: 3000, actual: 3020, delta: "+20", status: "Ahead" },
-      { hour: "08:00 - 09:00", target: 3000, actual: 2800, delta: "-200", status: "Behind (Micro-jam)" },
-      { hour: "09:00 - 10:00", target: 3000, actual: 3100, delta: "+100", status: "Recovering" },
-      { hour: "10:00 - 11:00", target: 3000, actual: 3050, delta: "+50", status: "On Target" },
-      { hour: "11:00 - 12:00", target: 3000, actual: 2980, delta: "-20", status: "On Target" }
-    ];
+    return [];
   }, [apiData]);
+
+  const chartData = useMemo(() => {
+    if (!hourlyPace || hourlyPace.length === 0) return [];
+    return hourlyPace.map((p) => ({
+      label: p.hour ? (p.hour.includes(" - ") ? p.hour.split(" - ")[0] : p.hour) : (p.pitchId || "Pitch"),
+      value: Number(p.actual) || 0
+    }));
+  }, [hourlyPace]);
 
   const pillarsData = useMemo(() => {
     if (apiData?.pillars) {
       return apiData.pillars;
     }
     return {
-      hbPacing: { value: "23,900", unit: "/ 24,000 units", trend: "Delta: -100 units (99.6% pacing)" },
-      oeeScore: { value: "86.4%", unit: "Overall", trend: "A: 92.1% • P: 95.8% • Q: 98.1%" },
-      productionOutput: { value: "142,500", unit: "Bottles/Day", trend: "Line 1: 98.5% | Line 2: 94.2%" },
-      qualityYield: { value: "99.2%", unit: "Pass Rate", trend: `${holds?.length || 0} active lot holds in DB` },
-      labourStaffing: { value: "100%", unit: "28 / 28 Present", trend: "Shift A: 0 Callouts" },
-      maintenanceMtbf: { value: `${reliabilityMetrics?.plantOverall?.mtbfHours || 412}`, unit: "hrs MTBF", trend: `${activeBDs.length} Active Breakdowns in DB` },
-      materialStockHealth: { value: "98.1%", unit: "Availability", trend: `${materialShortages?.length || 0} Stockout Alerts` },
-      scheduleRecovery: { value: "+45 mins", unit: "Paced", trend: "Catch-up strategy activated" },
+      hbPacing: { value: "0", unit: "/ 0 units", trend: "0 units logged in DB" },
+      oeeScore: { value: "0.0%", unit: "Overall", trend: "A: 0% • P: 0% • Q: 0%" },
+      productionOutput: { value: "0", unit: "Units Produced", trend: "0 units produced in DB" },
+      qualityYield: { value: "100.0%", unit: "Pass Rate", trend: `${holds?.length || 0} active lot holds in DB` },
+      labourStaffing: { value: `${employees.length > 0 ? '100%' : '0%'}`, unit: `${employees.length} / ${employees.length} Present`, trend: `${employees.length} Active Staff in DB` },
+      maintenanceMtbf: { value: "0.0", unit: "hrs MTBF", trend: `${activeBDs.length} Active Breakdowns in DB` },
+      materialStockHealth: { value: "0 Lots", unit: "Active Lots", trend: `${materialShortages?.length || 0} Stockout Alerts` },
+      scheduleRecovery: { value: "On Schedule", unit: "Shift Status", trend: "Pacing nominal" },
       riskRadar: { value: p1Exceptions.length > 0 ? "High Risk" : "Low / Guarded", unit: "Risk Level", trend: `${p1Exceptions.length} P1 Exceptions in DB` }
     };
-  }, [apiData, holds, reliabilityMetrics, activeBDs, materialShortages, p1Exceptions]);
+  }, [apiData, holds, activeBDs, materialShortages, p1Exceptions, employees]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%", maxWidth: "1600px", margin: "0 auto", minWidth: 0 }}>
@@ -449,23 +450,31 @@ export function CommandCenter() {
                 </tr>
               </thead>
               <tbody>
-                {hourlyPace.map((p, idx) => (
-                  <tr key={idx}>
-                    <td style={{ fontWeight: 600, color: "var(--text-primary)" }}>{p.hour}</td>
-                    <td style={{ fontFamily: "var(--font-mono)" }}>{p.target.toLocaleString()}</td>
-                    <td style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--text-primary)" }}>
-                      {p.actual.toLocaleString()}
-                    </td>
-                    <td style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: p.delta.startsWith("+") ? "#059669" : "#DC2626" }}>
-                      {p.delta}
-                    </td>
-                    <td>
-                      <Badge variant={p.delta.startsWith("+") ? "emerald" : "amber"}>
-                        {p.status}
-                      </Badge>
+                {hourlyPace.length > 0 ? (
+                  hourlyPace.map((p, idx) => (
+                    <tr key={idx}>
+                      <td style={{ fontWeight: 600, color: "var(--text-primary)" }}>{p.hour || p.hour_window}</td>
+                      <td style={{ fontFamily: "var(--font-mono)" }}>{Number(p.target || 0).toLocaleString()}</td>
+                      <td style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--text-primary)" }}>
+                        {Number(p.actual || 0).toLocaleString()}
+                      </td>
+                      <td style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: String(p.delta).startsWith("+") || Number(p.delta) >= 0 ? "#059669" : "#DC2626" }}>
+                        {p.delta}
+                      </td>
+                      <td>
+                        <Badge variant={String(p.delta).startsWith("+") || Number(p.delta) >= 0 ? "emerald" : "amber"}>
+                          {p.status || (Number(p.delta) >= 0 ? "Ahead" : "Behind")}
+                        </Badge>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={5} style={{ padding: "36px", textAlign: "center", color: "var(--text-muted)", fontSize: "13px" }}>
+                      No shift time-window pacing records logged in database.
                     </td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </div>
@@ -480,18 +489,18 @@ export function CommandCenter() {
             <Badge variant="cyan">Real-time Stream</Badge>
           </div>
 
-          <AreaChart
-            data={[
-              { label: "06:00", value: 3050 },
-              { label: "07:00", value: 3020 },
-              { label: "08:00", value: 2800 },
-              { label: "09:00", value: 3100 },
-              { label: "10:00", value: 3050 },
-              { label: "11:00", value: 2980 }
-            ]}
-            height={200}
-            color="#C89547"
-          />
+          {chartData.length > 0 ? (
+            <AreaChart
+              data={chartData}
+              height={200}
+              color="#C89547"
+            />
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "190px", color: "var(--text-muted)", fontSize: "13px", gap: "6px" }}>
+              <Activity size={24} color="var(--text-muted)" />
+              <span>No live throughput telemetry recorded in database yet</span>
+            </div>
+          )}
         </Card>
       </div>
     </div>

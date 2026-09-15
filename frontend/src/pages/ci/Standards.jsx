@@ -35,7 +35,8 @@ export function Standards() {
     createStandard,
     deleteStandard,
     ciProjects = [],
-    investigations = []
+    investigations = [],
+    currentUser
   } = useCI();
 
   useEffect(() => {
@@ -54,8 +55,14 @@ export function Standards() {
     type: "Controlled SOP",
     sourceProjectId: ciProjects[0]?.id || "",
     sourceRcaId: investigations[0]?.id || "",
-    owner: "Engineering Quality Committee"
+    owner: currentUser?.name || currentUser?.email || "Quality Committee"
   });
+
+  const auditReadiness = useMemo(() => {
+    if (standards.length === 0) return "0%";
+    const compliant = standards.filter((s) => s.status === "Active" || s.status === "Approved").length;
+    return `${Math.round((compliant / standards.length) * 100)}%`;
+  }, [standards]);
 
   const handlePrint = (doc) => {
     addToast(`Document ${doc.id} prepared for print / controlled export.`, "info");
@@ -79,7 +86,7 @@ export function Standards() {
       type: "Controlled SOP",
       sourceProjectId: ciProjects[0]?.id || "",
       sourceRcaId: investigations[0]?.id || "",
-      owner: "Engineering Quality Committee"
+      owner: currentUser?.name || currentUser?.email || "Quality Committee"
     });
     setIsModalOpen(false);
   };
@@ -174,7 +181,7 @@ export function Standards() {
         />
         <StatCard
           title="Audit Readiness"
-          value="100%"
+          value={auditReadiness}
           unit="Controlled Revision"
           icon={CheckCircle2}
           colorVariant="emerald"
@@ -271,7 +278,22 @@ export function Standards() {
               </tr>
             </thead>
             <tbody>
-              {filteredDocs.map((d) => (
+              {filteredDocs.length === 0 ? (
+                <tr>
+                  <td colSpan={7} style={{ padding: "40px 16px", textAlign: "center", color: "var(--text-muted)" }}>
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px" }}>
+                      <BookOpen size={32} style={{ opacity: 0.3 }} />
+                      <div style={{ fontWeight: 600, fontSize: "14px", color: "var(--text-secondary)" }}>
+                        No Controlled Standards Found
+                      </div>
+                      <div style={{ fontSize: "12px", maxWidth: "420px" }}>
+                        There are currently no active standards or standard operating procedures logged. Register a new standard or verify a CI project solution to publish one.
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                filteredDocs.map((d) => (
                 <tr key={d.id} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
                   <td style={{ padding: "12px 16px" }}>
                     <div style={{ fontWeight: 800, color: "var(--text-primary)", fontSize: "13px" }}>{d.title}</div>
@@ -356,7 +378,7 @@ export function Standards() {
                     </div>
                   </td>
                 </tr>
-              ))}
+              )))}
             </tbody>
           </table>
         </div>

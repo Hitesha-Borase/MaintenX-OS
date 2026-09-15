@@ -32,7 +32,8 @@ export function PreventiveActions() {
     createCapaAction,
     updateCapaStatus,
     investigations = [],
-    overdueCapaCount
+    overdueCapaCount,
+    currentUser
   } = useCI();
 
   useEffect(() => {
@@ -45,13 +46,19 @@ export function PreventiveActions() {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const [newAction, setNewAction] = useState({
-    rcaId: investigations[0]?.id || "RCA-2026-001",
+    rcaId: investigations[0]?.id || "",
     description: "",
     actionType: "Preventive",
-    owner: "David Kim (Lead CI)",
+    owner: currentUser?.name || currentUser?.email || "CI Lead Engineer",
     dueDate: new Date(Date.now() + 14 * 86400000).toISOString().substring(0, 10),
     priority: "High"
   });
+
+  useEffect(() => {
+    if (!newAction.rcaId && investigations.length > 0) {
+      setNewAction((prev) => ({ ...prev, rcaId: investigations[0].id }));
+    }
+  }, [investigations]);
 
   const preventiveList = useMemo(() => {
     return capaActions.filter((c) => c.actionType === "Preventive");
@@ -59,6 +66,10 @@ export function PreventiveActions() {
 
   const handleAdd = (e) => {
     e.preventDefault();
+    if (!newAction.rcaId) {
+      addToast("Please select an active RCA investigation.", "warning");
+      return;
+    }
     if (!newAction.description.trim()) {
       addToast("Please provide a preventive action description.", "warning");
       return;
@@ -67,10 +78,10 @@ export function PreventiveActions() {
     createCapaAction(newAction);
     setIsModalOpen(false);
     setNewAction({
-      rcaId: investigations[0]?.id || "RCA-2026-001",
+      rcaId: investigations[0]?.id || "",
       description: "",
       actionType: "Preventive",
-      owner: "David Kim (Lead CI)",
+      owner: currentUser?.name || currentUser?.email || "CI Lead Engineer",
       dueDate: new Date(Date.now() + 14 * 86400000).toISOString().substring(0, 10),
       priority: "High"
     });
@@ -270,10 +281,17 @@ export function PreventiveActions() {
               </tr>
             </thead>
             <tbody>
-              {filteredActions.map((a) => {
-                const isOverdue = a.status !== "Completed" && a.status !== "Verified" && a.status !== "Closed" && a.dueDate < new Date().toISOString().substring(0, 10);
-                return (
-                  <tr key={a.id} style={{ borderBottom: "1px solid var(--border-subtle)", backgroundColor: isOverdue ? "rgba(239, 68, 68, 0.02)" : "transparent" }}>
+              {filteredActions.length === 0 ? (
+                <tr>
+                  <td colSpan={7} style={{ padding: "36px 16px", textAlign: "center", color: "var(--text-muted)", fontSize: "13px" }}>
+                    No preventive actions recorded. Click <strong>"Create Preventive Action"</strong> to assign an action item.
+                  </td>
+                </tr>
+              ) : (
+                filteredActions.map((a) => {
+                  const isOverdue = a.status !== "Completed" && a.status !== "Verified" && a.status !== "Closed" && a.dueDate < new Date().toISOString().substring(0, 10);
+                  return (
+                    <tr key={a.id} style={{ borderBottom: "1px solid var(--border-subtle)", backgroundColor: isOverdue ? "rgba(239, 68, 68, 0.02)" : "transparent" }}>
                     <td style={{ padding: "12px 16px" }}>
                       <div style={{ fontWeight: 800, color: "var(--text-primary)", fontSize: "13px" }}>{a.description}</div>
                       <div style={{ fontSize: "11px", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>{a.id}</div>
@@ -333,7 +351,7 @@ export function PreventiveActions() {
                     </td>
                   </tr>
                 );
-              })}
+              }))}
             </tbody>
           </table>
         </div>
@@ -364,6 +382,7 @@ export function PreventiveActions() {
                   className="form-input"
                   style={{ backgroundColor: "#FFFFFF" }}
                 >
+                  <option value="">-- Select RCA Investigation --</option>
                   {investigations.map((inv) => (
                     <option key={inv.id} value={inv.id}>{inv.id} — {inv.title.substring(0, 30)}...</option>
                   ))}

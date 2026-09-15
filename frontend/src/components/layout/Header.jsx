@@ -126,11 +126,29 @@ export function Header() {
 
         {/* Branding Title */}
         <div style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
-          <span style={{ fontSize: "14px", fontWeight: 900, letterSpacing: "-0.2px", color: "var(--text-primary, #261603)", lineHeight: 1, marginBottom: "2px", whiteSpace: "nowrap" }}>
-            MaintenX <span style={{ color: "#B27E33" }}>OS</span>
-          </span>
+          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+            <span style={{ fontSize: "14px", fontWeight: 900, letterSpacing: "-0.2px", color: "var(--text-primary, #261603)", lineHeight: 1, marginBottom: "2px", whiteSpace: "nowrap" }}>
+              MaintenX <span style={{ color: "#B27E33" }}>OS</span>
+            </span>
+            {(currentRole?.user?.companyName && currentRole?.user?.companyName !== "MaintenX OS") && (
+              <span style={{ 
+                fontSize: "11px", 
+                fontWeight: 800, 
+                backgroundColor: "rgba(178, 126, 51, 0.15)", 
+                color: "#8C5B23", 
+                padding: "2px 8px", 
+                borderRadius: "6px",
+                border: "1px solid rgba(178, 126, 51, 0.25)",
+                whiteSpace: "nowrap" 
+              }}>
+                {currentRole.user.companyName}
+              </span>
+            )}
+          </div>
           <span className="header-logo-subtext" style={{ fontSize: "8px", color: "var(--text-muted, #8C7B6E)", letterSpacing: "0.08em", textTransform: "uppercase", fontWeight: 700, lineHeight: 1, whiteSpace: "nowrap" }}>
-            MANUFACTURING CLOUD
+            {currentRole?.user?.companyName && currentRole?.user?.companyName !== "MaintenX OS"
+              ? `${currentRole.user.companyName} Dedicated Workspace`
+              : "MANUFACTURING CLOUD"}
           </span>
         </div>
 
@@ -437,7 +455,7 @@ export function Header() {
                     {currentRole?.user?.name || "Authorized User"}
                   </div>
                   <div style={{ fontSize: "11px", color: "#B27E33", fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    {currentRole?.label}
+                    {currentRole?.label}{currentRole?.user?.companyName && currentRole?.user?.companyName !== "MaintenX OS" ? ` · ${currentRole.user.companyName}` : ""}
                   </div>
                 </div>
               </div>

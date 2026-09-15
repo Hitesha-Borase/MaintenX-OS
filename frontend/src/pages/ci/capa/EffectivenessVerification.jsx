@@ -133,7 +133,7 @@ export function EffectivenessVerification() {
         />
         <StatCard
           title="Repeat Prevention"
-          value="100%"
+          value={capaActions.length > 0 ? (capaActions.some((a) => a.status === "Verified" || a.status === "Closed") ? "100%" : "0%") : "0%"}
           unit="Zero Recurrence"
           icon={ShieldCheck}
           colorVariant="emerald"
@@ -216,8 +216,15 @@ export function EffectivenessVerification() {
               </tr>
             </thead>
             <tbody>
-              {filteredActions.map((a) => (
-                <tr key={a.id} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+              {filteredActions.length === 0 ? (
+                <tr>
+                  <td colSpan={6} style={{ padding: "36px 16px", textAlign: "center", color: "var(--text-muted)", fontSize: "13px" }}>
+                    No CAPA actions currently pending or certified for effectiveness verification.
+                  </td>
+                </tr>
+              ) : (
+                filteredActions.map((a) => (
+                  <tr key={a.id} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
                   <td style={{ padding: "12px 16px", fontFamily: "var(--font-mono)", fontWeight: 800, color: "#8C5B23" }}>
                     {a.id}
                   </td>
@@ -260,7 +267,7 @@ export function EffectivenessVerification() {
                     )}
                   </td>
                 </tr>
-              ))}
+              )))}
             </tbody>
           </table>
         </div>

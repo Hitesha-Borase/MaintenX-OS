@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { Plus, Check, X, Edit3, Search, TrendingUp, AlertTriangle, Layers, Database, RefreshCw, Download, Calendar } from "lucide-react";
+import { Plus, Check, X, Edit3, Trash2, Search, TrendingUp, AlertTriangle, Layers, Database, RefreshCw, Download, Calendar } from "lucide-react";
 import { Card } from "../../../components/common/Card";
 import { Badge } from "../../../components/common/Badge";
 import { Button } from "../../../components/common/Button";
@@ -7,10 +7,13 @@ import { StatCard } from "../../../components/common/StatCard";
 import { usePlanning } from "../../../context/PlanningContext";
 import { useMasterData } from "../../../context/MasterDataContext";
 import { useApp } from "../../../context/AppContext";
+import { useRole } from "../../../context/RoleContext";
 import planningService from "../../../services/planningService";
 
 export function ForecastOverrides() {
-  const { forecasts: contextForecasts = [], applyForecastOverride, approveForecast, rejectForecast, addForecast } = usePlanning();
+  const { currentRole } = useRole();
+  const currentUserName = currentRole?.user?.name || "Elena Rostova";
+  const { forecasts: contextForecasts = [], applyForecastOverride, approveForecast, rejectForecast, addForecast, deleteForecast } = usePlanning();
   const { skus = [] } = useMasterData();
   const { addToast } = useApp();
 
@@ -33,9 +36,9 @@ export function ForecastOverrides() {
     baselineQty: 60000,
     uom: "Bottles",
     method: "Historical Average + Promo Uplift",
-    owner: "Alexander Vance",
+    owner: currentUserName,
     overrideQty: 0,
-    justification: "Standard baseline run"
+    justification: ""
   });
 
   const fetchForecasts = async () => {
@@ -43,7 +46,7 @@ export function ForecastOverrides() {
       setLoading(true);
       const res = await planningService.getForecasts();
       const items = res?.data || res;
-      if (Array.isArray(items) && items.length > 0) {
+      if (Array.isArray(items)) {
         setForecastsList(items);
       }
     } catch (err) {
@@ -58,7 +61,7 @@ export function ForecastOverrides() {
   }, []);
 
   useEffect(() => {
-    if (contextForecasts && contextForecasts.length > 0) {
+    if (Array.isArray(contextForecasts)) {
       setForecastsList(contextForecasts);
     }
   }, [contextForecasts]);
@@ -173,6 +176,25 @@ export function ForecastOverrides() {
     }
   };
 
+  const handleDeleteForecast = async (id, period) => {
+    // Immediate optimistic update
+    setForecastsList((prev) => prev.filter((f) => f.id !== id));
+
+    try {
+      await planningService.deleteForecast(id);
+      if (deleteForecast) {
+        deleteForecast(id);
+      }
+      addToast(`Forecast record for period ${period || id} deleted successfully from database.`, "success");
+    } catch (err) {
+      console.warn("Backend delete forecast fallback:", err);
+      if (deleteForecast) {
+        deleteForecast(id);
+      }
+      addToast("Forecast record removed.", "info");
+    }
+  };
+
   const handleCreateSubmit = async (e) => {
     e.preventDefault();
     const base = Number(newRecord.baselineQty) || 0;
@@ -186,8 +208,9 @@ export function ForecastOverrides() {
       overrideQuantity: over,
       finalForecast: final,
       modelType: newRecord.method,
-      reason: newRecord.justification || "Standard baseline run",
-      owner: newRecord.owner,
+      reason: newRecord.justification || "",
+      justification: newRecord.justification || "",
+      owner: newRecord.owner || currentUserName,
       status: "Submitted"
     };
 
@@ -207,14 +230,25 @@ export function ForecastOverrides() {
 
       setForecastsList((prev) => [optimistic, ...prev]);
       if (addForecast) {
-        addForecast(payload);
+        addForecast(optimistic);
       }
-      addToast("New forecast horizon record created successfully in backend.", "success");
+      addToast("New forecast horizon record created successfully in database.", "success");
       setShowCreateModal(false);
     } catch (err) {
       console.warn("Backend create forecast fallback:", err);
+      const fallbackOptimistic = {
+        id: `FC-${Date.now().toString().slice(-4)}`,
+        ...payload,
+        baselineQty: base,
+        overrideQty: over,
+        finalQty: final,
+        productCode: newRecord.skuCode,
+        productName: newRecord.productName,
+        uom: newRecord.uom
+      };
+      setForecastsList((prev) => [fallbackOptimistic, ...prev]);
       if (addForecast) {
-        addForecast(payload);
+        addForecast(fallbackOptimistic);
       }
       addToast("Forecast record created locally.", "success");
       setShowCreateModal(false);
@@ -470,7 +504,7 @@ export function ForecastOverrides() {
                       </td>
 
                       <td style={{ padding: "12px 14px", maxWidth: "220px" }}>
-                        <div style={{ fontSize: "12px", fontWeight: 600, color: "var(--text-primary)" }}>{f.owner || "Alexander Vance"}</div>
+                        <div style={{ fontSize: "12px", fontWeight: 600, color: "var(--text-primary)" }}>{f.owner || currentUserName}</div>
                         <div style={{ fontSize: "11px", color: "var(--text-muted)", fontStyle: "italic", marginTop: "2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                           "{f.justification || f.reason || "No notes provided"}"
                         </div>
@@ -504,6 +538,21 @@ export function ForecastOverrides() {
                             }}
                           >
                             <Edit3 size={13} />
+                          </button>
+
+                          <button
+                            onClick={() => handleDeleteForecast(f.id, f.period)}
+                            title="Delete Forecast"
+                            style={{
+                              backgroundColor: "#FAF8F5",
+                              border: "1px solid #D1C7BA",
+                              borderRadius: "6px",
+                              padding: "6px 8px",
+                              cursor: "pointer",
+                              color: "#DC2626"
+                            }}
+                          >
+                            <Trash2 size={13} />
                           </button>
 
                           {f.status === "Submitted" && (
@@ -760,6 +809,19 @@ export function ForecastOverrides() {
               </div>
 
               <div>
+                <label className="form-label" style={{ fontSize: "12px", fontWeight: 600, display: "block", marginBottom: "4px" }}>Owner / Planner</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Elena Rostova"
+                  value={newRecord.owner}
+                  onChange={(e) => setNewRecord({ ...newRecord, owner: e.target.value })}
+                  className="form-input"
+                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #D1C7BA", backgroundColor: "#FAF8F5" }}
+                />
+              </div>
+
+              <div>
                 <label className="form-label" style={{ fontSize: "12px", fontWeight: 600, display: "block", marginBottom: "4px" }}>Method / Model</label>
                 <input
                   type="text"
@@ -774,6 +836,7 @@ export function ForecastOverrides() {
                 <label className="form-label" style={{ fontSize: "12px", fontWeight: 600, display: "block", marginBottom: "4px" }}>Justification / Notes</label>
                 <textarea
                   rows={2}
+                  placeholder="Enter commercial justification or reason for forecast/override..."
                   value={newRecord.justification}
                   onChange={(e) => setNewRecord({ ...newRecord, justification: e.target.value })}
                   className="form-input"

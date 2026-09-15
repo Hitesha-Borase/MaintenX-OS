@@ -9,37 +9,7 @@ export function AddCompanyModal({ isOpen, onClose }) {
   const { addCompany, plans } = useMasterAdmin();
   const { addToast } = useApp();
 
-  const [formData, setFormData] = useState({
-    name: "",
-    admin: "",
-    adminEmail: "",
-    adminPhone: "",
-    subscription: "MaintenX OS Complete",
-  });
-
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const set = (field) => (e) => setFormData((prev) => ({ ...prev, [field]: e.target.value }));
-
-  const handleCreate = async () => {
-    if (!formData.name || !formData.admin || !formData.adminEmail) {
-      addToast("Company name, admin name and email are required", "warning");
-      return;
-    }
-    setIsSubmitting(true);
-    try {
-      await addCompany(formData);
-      addToast(`${formData.name} created successfully!`, "success");
-      onClose();
-      setFormData({ name: "", admin: "", adminEmail: "", adminPhone: "", subscription: "MaintenX OS Complete" });
-    } catch (err) {
-      addToast(err.message || "Failed to create company", "destructive");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  // Build plan options: use live plans from context if available, else static fallback
+  // Build plan options from live database plans
   const planOptions = plans && plans.length > 0
     ? plans.filter((p) => p.status === "Active" || p.status === "active").map((p) => ({
         value: p.name,
@@ -48,9 +18,44 @@ export function AddCompanyModal({ isOpen, onClose }) {
     : [
         { value: "Plant Pilot", label: "Plant Pilot (Free – 7 Days)" },
         { value: "Individual Modules", label: "Individual Modules ($1,499 CAD/mo)" },
-        { value: "Bundles", label: "Bundles ($3,499 CAD/mo)" },
-        { value: "MaintenX OS Complete", label: "MaintenX OS Complete ($5,499 CAD/mo)" },
       ];
+
+  const [formData, setFormData] = useState({
+    name: "",
+    admin: "",
+    adminEmail: "",
+    adminPhone: "",
+    subscription: planOptions[0]?.value || "Plant Pilot",
+  });
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Sync subscription field with live database plans
+  React.useEffect(() => {
+    if (planOptions.length > 0 && (!formData.subscription || !planOptions.some(p => p.value === formData.subscription))) {
+      setFormData(prev => ({ ...prev, subscription: planOptions[0].value }));
+    }
+  }, [plans]);
+
+  const set = (field) => (e) => setFormData((prev) => ({ ...prev, [field]: e.target.value }));
+
+  const handleCreate = async () => {
+    if (!formData.name || !formData.admin || !formData.adminEmail) {
+      addToast("Company name, company owner name, and email are required", "warning");
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      await addCompany(formData);
+      addToast(`${formData.name} created successfully!`, "success");
+      onClose();
+      setFormData({ name: "", admin: "", adminEmail: "", adminPhone: "", subscription: planOptions[0]?.value || "Plant Pilot" });
+    } catch (err) {
+      addToast(err.message || "Failed to create company", "destructive");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const sectionStyle = {
     padding: "14px",
@@ -113,15 +118,15 @@ export function AddCompanyModal({ isOpen, onClose }) {
           </div>
         </div>
 
-        {/* Administrator Account */}
+        {/* Company Owner Account */}
         <div style={sectionStyle}>
           <div style={sectionLabelStyle}>
-            <User size={14} color="var(--accent-cyan)" /> Administrator Account
+            <User size={14} color="var(--accent-cyan)" /> Company Owner Details
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
             {/* Row 1: Name */}
             <div>
-              <label style={fieldLabelStyle}>Admin Full Name *</label>
+              <label style={fieldLabelStyle}>Company Owner Name *</label>
               <input
                 type="text"
                 placeholder="e.g. Jane Doe"
@@ -135,7 +140,7 @@ export function AddCompanyModal({ isOpen, onClose }) {
               <div>
                 <label style={fieldLabelStyle}>
                   <Mail size={12} style={{ display: "inline", marginRight: "4px" }} />
-                  Admin Email *
+                  Owner Email *
                 </label>
                 <input
                   type="email"
@@ -148,7 +153,7 @@ export function AddCompanyModal({ isOpen, onClose }) {
               <div>
                 <label style={fieldLabelStyle}>
                   <Phone size={12} style={{ display: "inline", marginRight: "4px" }} />
-                  Mobile Number
+                  Owner Phone
                 </label>
                 <input
                   type="tel"
@@ -179,7 +184,7 @@ export function AddCompanyModal({ isOpen, onClose }) {
               ))}
             </select>
             <p style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "6px", marginBottom: 0 }}>
-              Default password <strong>Password@123</strong> will be set for the admin account.
+              The company owner can log in using their email and this password.
             </p>
           </div>
         </div>

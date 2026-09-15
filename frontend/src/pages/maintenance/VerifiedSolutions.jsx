@@ -23,9 +23,15 @@ import { useNavigate } from "react-router-dom";
 import maintenanceService from "../../services/maintenanceService";
 
 export function VerifiedSolutions() {
-  const { solutions = [], addVerifiedSolution, assets = [] } = useCMMS();
+  const { solutions = [], addVerifiedSolution, refreshSolutions, assets = [] } = useCMMS();
   const { addToast } = useApp();
   const navigate = useNavigate();
+
+  React.useEffect(() => {
+    if (refreshSolutions) {
+      refreshSolutions();
+    }
+  }, [refreshSolutions]);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSolution, setSelectedSolution] = useState(null);
@@ -43,6 +49,7 @@ export function VerifiedSolutions() {
     const q = searchQuery.toLowerCase();
     return (
       (sol.problemSymptom && sol.problemSymptom.toLowerCase().includes(q)) ||
+      (sol.symptom && sol.symptom.toLowerCase().includes(q)) ||
       (sol.rootCause && sol.rootCause.toLowerCase().includes(q)) ||
       (sol.failureCode && sol.failureCode.toLowerCase().includes(q)) ||
       (sol.tags && sol.tags.some((t) => t.toLowerCase().includes(q)))
@@ -54,6 +61,7 @@ export function VerifiedSolutions() {
     if (!symptom.trim() || !rootCause.trim()) return;
     const solPayload = {
       problemSymptom: symptom,
+      symptom,
       assetType,
       applicableMachines: ["FM-001", "CP-102"],
       failureCode: "MEC-004",
@@ -68,15 +76,9 @@ export function VerifiedSolutions() {
       tags: ["verified", "preventive", "solution"]
     };
 
-    try {
-      await maintenanceService.createTroubleshootingSolution(solPayload);
-    } catch (err) {
-      console.warn("Publish solution notice:", err);
-    }
+    const newSol = await addVerifiedSolution(solPayload);
 
-    const newSol = addVerifiedSolution(solPayload);
-
-    addToast(`Verified Solution ${newSol?.id || 'VS-101'} published to Knowledge Library!`, "success");
+    addToast(`Verified Solution ${newSol?.id || 'VS-101'} saved to database!`, "success");
     setIsAddModalOpen(false);
     setSymptom("");
     setRootCause("");
@@ -97,7 +99,7 @@ export function VerifiedSolutions() {
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-          <Button variant="secondary" icon={Wrench} onClick={() => navigate("/troubleshooting")} style={{ fontSize: "12px", padding: "7px 12px" }}>
+          <Button variant="secondary" icon={Wrench} onClick={() => navigate("/maintenance/troubleshooting")} style={{ fontSize: "12px", padding: "7px 12px" }}>
             Troubleshooting Wizard
           </Button>
           <Button variant="primary" icon={Plus} onClick={() => setIsAddModalOpen(true)} style={{ fontSize: "12px", padding: "7px 12px" }}>

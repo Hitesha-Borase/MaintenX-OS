@@ -11,7 +11,7 @@ export const dashboardService = {
   },
 
   async getPlantManagerKPIs(plantId) {
-    return apiClient.get(`/plant-manager/command-center/kpis${plantId ? `?plantId=${plantId}` : ""}`);
+    return apiClient.get(`/dashboards/kpis${plantId ? `?plantId=${plantId}` : ""}`);
   },
 
   // ─── Line Lead Dashboard ────────────────────────────────────────────────────
@@ -56,6 +56,10 @@ export const dashboardService = {
     return apiClient.patch(`/dashboards/linelead/hb-logs/${id}`, payload);
   },
 
+  async deleteHbRecord(id) {
+    return apiClient.delete(`/dashboards/linelead/hb-logs/${id}`);
+  },
+
   async recalculateCatchUp(payload = {}) {
     return apiClient.post("/dashboards/linelead/hb-catchup", payload);
   },
@@ -75,6 +79,14 @@ export const dashboardService = {
 
   async acknowledgeDowntime(id) {
     return apiClient.patch(`/dashboards/linelead/downtime-logs/${id}/acknowledge`, {});
+  },
+
+  async resolveDowntime(id) {
+    return apiClient.patch(`/dashboards/linelead/downtime-logs/${id}/resolve`, {});
+  },
+
+  async deleteDowntimeLog(id) {
+    return apiClient.delete(`/dashboards/linelead/downtime-logs/${id}`);
   },
 
   async dispatchTech(id, payload) {
@@ -365,6 +377,10 @@ export const dashboardService = {
     return apiClient.get("/dashboards/supervisor/dept-schedule");
   },
 
+  async createSupervisorDeptSchedule(payload) {
+    return apiClient.post("/dashboards/supervisor/dept-schedule", payload);
+  },
+
   async resequenceSupervisorDeptSchedule() {
     return apiClient.post("/dashboards/supervisor/dept-schedule/resequence", {});
   },
@@ -399,6 +415,10 @@ export const dashboardService = {
 
   async assignSupervisorWorkforceTraining(id, payload) {
     return apiClient.post(`/dashboards/supervisor/workforce/${id}/assign-training`, payload);
+  },
+
+  async deleteSupervisorWorkforceEmployee(id) {
+    return apiClient.delete(`/dashboards/supervisor/workforce/${id}`);
   },
 
   async getSupervisorLabourTime() {
@@ -477,6 +497,10 @@ export const dashboardService = {
     return apiClient.post(`/dashboards/supervisor/labour/staffing/${id}/close-shift`, payload);
   },
 
+  async deleteSupervisorStaffing(id) {
+    return apiClient.delete(`/dashboards/supervisor/labour/staffing/${id}`);
+  },
+
   async setSupervisorProductionSpeedLimit(payload) {
     return apiClient.post("/dashboards/supervisor/production/performance/speed-limit", payload);
   },
@@ -485,8 +509,16 @@ export const dashboardService = {
     return apiClient.get("/dashboards/supervisor/production/performance/downtime-pareto");
   },
 
+  async updateSupervisorProductionRun(payload) {
+    return apiClient.post("/dashboards/supervisor/production/performance/update-run", payload);
+  },
+
   async getSupervisorHolds() {
     return apiClient.get("/dashboards/supervisor/quality/holds");
+  },
+
+  async createSupervisorHold(payload) {
+    return apiClient.post("/dashboards/supervisor/quality/holds", payload);
   },
 
   async addSupervisorHoldNote(id, payload) {
@@ -513,8 +545,16 @@ export const dashboardService = {
     return apiClient.get("/dashboards/supervisor/recovery/countermeasures");
   },
 
+  async createSupervisorRecoveryCountermeasure(data) {
+    return apiClient.post("/dashboards/supervisor/recovery/countermeasures", data);
+  },
+
   async authorizeSupervisorRecoveryCountermeasure(id) {
     return apiClient.post(`/dashboards/supervisor/recovery/countermeasures/${id}/authorize`, {});
+  },
+
+  async deleteSupervisorRecoveryCountermeasure(id) {
+    return apiClient.delete(`/dashboards/supervisor/recovery/countermeasures/${id}`);
   },
 
   async authorizeAllSupervisorRecoveryCountermeasures() {
@@ -523,6 +563,14 @@ export const dashboardService = {
 
   async getSupervisorApprovals() {
     return apiClient.get("/dashboards/supervisor/approvals");
+  },
+
+  async createSupervisorApproval(data) {
+    return apiClient.post("/dashboards/supervisor/approvals", data);
+  },
+
+  async deleteSupervisorApproval(id) {
+    return apiClient.delete(`/dashboards/supervisor/approvals/${id}`);
   },
 
   async approveSupervisorApproval(id, payload = {}) {
@@ -553,12 +601,20 @@ export const dashboardService = {
     return apiClient.post(`/dashboards/supervisor/reports/${id}/print`, {});
   },
 
+  async createSupervisorReport(data) {
+    return apiClient.post("/dashboards/supervisor/reports", data);
+  },
+
   async getSupervisorNotifications() {
     return apiClient.get("/dashboards/supervisor/notifications");
   },
 
   async getSupervisorNotificationsList() {
     return apiClient.get("/dashboards/supervisor/notifications/list");
+  },
+
+  async createSupervisorNotification(payload) {
+    return apiClient.post("/dashboards/supervisor/notifications", payload);
   },
 
   async markSupervisorNotificationRead(id) {

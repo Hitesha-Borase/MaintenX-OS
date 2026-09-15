@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { 
   AlertOctagon, Plus, Search, ShieldAlert, FileSpreadsheet, 
-  RefreshCw, X, Info, CheckCircle2, ShieldCheck, ArrowRight
+  RefreshCw, X, Info, CheckCircle2, ShieldCheck, ArrowRight, Trash2
 } from "lucide-react";
 import { Card } from "../../../components/common/Card";
 import { Button } from "../../../components/common/Button";
@@ -23,8 +23,8 @@ export function QualityHolds() {
   const [showReviewModal, setShowReviewModal] = useState(false);
 
   // Form State
-  const [formBatch, setFormBatch] = useState("");
-  const [formLot, setFormLot] = useState("");
+  const [formBatch, setFormBatch] = useState("BAT-2026-ORD2511");
+  const [formLot, setFormLot] = useState("LOT-ORD2511-01");
   const [formReason, setFormReason] = useState("");
   const [formSeverity, setFormSeverity] = useState("HIGH");
   const [submitting, setSubmitting] = useState(false);
@@ -37,47 +37,11 @@ export function QualityHolds() {
     setLoading(true);
     try {
       const res = await qualityService.getHolds();
-      if (res && res.data && res.data.length > 0) {
-        setHolds(res.data);
-      } else {
-        setHolds([
-          {
-            id: "HLD-401",
-            batch: "BAT-2026-0890",
-            lotNumber: "LOT-ORG-442",
-            reason: "Temperature Deviation (Excursion below 83.1°C)",
-            severity: "HIGH",
-            status: "Active",
-            date: "2026-09-02",
-            holdBy: "Dr. Rachel Thorne"
-          },
-          {
-            id: "HLD-402",
-            batch: "BAT-2026-0888",
-            lotNumber: "LOT-CAN-981",
-            reason: "Seam Inspection Hold",
-            severity: "MEDIUM",
-            status: "RELEASED",
-            date: "2026-08-30",
-            holdBy: "Marcus Vance"
-          }
-        ]);
-      }
+      const rawList = Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : Array.isArray(res?.data?.data) ? res.data.data : [];
+      setHolds(rawList);
     } catch (err) {
       console.error("Failed to load holds", err);
-      addToast("Loaded local hold data", "info");
-      setHolds([
-        {
-          id: "HLD-401",
-          batch: "BAT-2026-0890",
-          lotNumber: "LOT-ORG-442",
-          reason: "Temperature Deviation (Excursion below 83.1°C)",
-          severity: "HIGH",
-          status: "Active",
-          date: "2026-09-02",
-          holdBy: "Dr. Rachel Thorne"
-        }
-      ]);
+      setHolds([]);
     } finally {
       setLoading(false);
     }
@@ -94,28 +58,15 @@ export function QualityHolds() {
     setSubmitting(true);
     try {
       const payload = {
-        lotNumber: formLot || `LOT-${Math.floor(100 + Math.random() * 900)}`,
-        batchId: formBatch || "BAT-2026-0890",
+        lotNumber: formLot || `LOT-ORD2511-${Math.floor(100 + Math.random() * 900)}`,
+        batchId: formBatch || "BAT-2026-ORD2511",
         reason: formReason,
         severity: formSeverity
       };
 
-      const res = await qualityService.placeHold(payload);
-      const newHold = res?.data ? {
-        id: res.data.id || `HLD-${Math.floor(400 + Math.random() * 100)}`,
-        batch: formBatch || "BAT-2026-0890",
-        lotNumber: payload.lotNumber,
-        reason: formReason,
-        severity: formSeverity,
-        status: "Active",
-        date: new Date().toISOString().split('T')[0],
-        holdBy: "Dr. Rachel Thorne"
-      } : payload;
-
-      setHolds(prev => [newHold, ...prev]);
-      addToast(`Quality Quarantine Hold ${newHold.id} created.`, "success");
-      setFormBatch("");
-      setFormLot("");
+      await qualityService.placeHold(payload);
+      await fetchHolds();
+      addToast("Quality Quarantine Hold created.", "success");
       setFormReason("");
       setShowCreateModal(false);
     } catch (err) {
@@ -123,6 +74,19 @@ export function QualityHolds() {
       addToast("Failed to place hold", "error");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleDeleteHold = async (id, e) => {
+    e.stopPropagation();
+    if (!window.confirm("Are you sure you want to delete this Quality Hold?")) return;
+    try {
+      await qualityService.deleteHold(id);
+      setHolds(prev => prev.filter(h => h.id !== id));
+      addToast("Quality hold record deleted successfully.", "info");
+    } catch (err) {
+      console.error("Delete hold error:", err);
+      addToast("Failed to delete quality hold.", "error");
     }
   };
 
@@ -360,8 +324,8 @@ export function QualityHolds() {
                       </div>
                     </td>
                     <td style={{ padding: "16px 20px" }}>
-                      <div style={{ fontWeight: 700, color: "#2B1D11" }}>{h.batch || "BAT-2026-0890"}</div>
-                      <div style={{ fontSize: "12px", color: "#8B6914", fontWeight: 600 }}>Lot: {h.lotNumber || "LOT-ORG-442"}</div>
+                      <div style={{ fontWeight: 700, color: "#2B1D11" }}>{h.batch || "BAT-2026-ORD2511"}</div>
+                      <div style={{ fontSize: "12px", color: "#8B6914", fontWeight: 600 }}>Lot: {h.lotNumber || "LOT-ORD2511-01"}</div>
                     </td>
                     <td style={{ padding: "16px 20px", maxWidth: "300px", color: "#2B1D11", fontWeight: 600 }}>
                       {h.reason}
@@ -379,7 +343,7 @@ export function QualityHolds() {
                       </span>
                     </td>
                     <td style={{ padding: "16px 20px", color: "#6B5B4E", fontSize: "12px" }}>
-                      {h.date || "2026-09-02"}
+                      {h.date ? new Date(h.date).toISOString().split('T')[0] : "Recent"}
                     </td>
                     <td style={{ padding: "16px 20px" }}>
                       <span style={{
@@ -398,7 +362,7 @@ export function QualityHolds() {
                       </span>
                     </td>
                     <td style={{ padding: "16px 20px", textAlign: "right" }}>
-                      <div style={{ display: "inline-flex", gap: "8px" }}>
+                      <div style={{ display: "inline-flex", gap: "8px", alignItems: "center" }}>
                         <Button 
                           variant="secondary" 
                           size="sm" 
@@ -420,6 +384,14 @@ export function QualityHolds() {
                             Review Hold
                           </Button>
                         )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          icon={Trash2}
+                          onClick={(e) => handleDeleteHold(h.id, e)}
+                          title="Delete Hold"
+                          style={{ borderColor: "#FECACA", color: "#EF4444", padding: "6px 10px" }}
+                        />
                       </div>
                     </td>
                   </tr>

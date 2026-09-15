@@ -28,7 +28,7 @@ import ciService from "../../../services/ciService";
 export function Evidence() {
   const navigate = useNavigate();
   const { addToast } = useApp();
-  const { evidenceList = [], investigations = [], addEvidence, deleteEvidence } = useCI();
+  const { evidenceList = [], investigations = [], addEvidence, deleteEvidence, currentUser } = useCI();
 
   const [selectedRcaFilter, setSelectedRcaFilter] = useState("ALL");
   const [searchQuery, setSearchQuery] = useState("");
@@ -39,15 +39,26 @@ export function Evidence() {
   }, [selectedRcaFilter]);
 
   const [newEvidence, setNewEvidence] = useState({
-    rcaId: investigations[0]?.id || "RCA-2026-001",
+    rcaId: investigations[0]?.id || "",
     type: "SCADA Trend",
     title: "",
     details: "",
-    uploadedBy: "David Kim"
+    uploadedBy: currentUser?.name || currentUser?.email || "CI Investigator"
   });
+
+  // Sync default RCA ID if investigations load later
+  useEffect(() => {
+    if (!newEvidence.rcaId && investigations.length > 0) {
+      setNewEvidence((prev) => ({ ...prev, rcaId: investigations[0].id }));
+    }
+  }, [investigations]);
 
   const handleAdd = async (e) => {
     e.preventDefault();
+    if (!newEvidence.rcaId) {
+      addToast("Please select an active RCA investigation.", "warning");
+      return;
+    }
     if (!newEvidence.title.trim() || !newEvidence.details.trim()) {
       addToast("Please provide both title and details.", "warning");
       return;
@@ -58,17 +69,17 @@ export function Evidence() {
       type: newEvidence.type,
       title: newEvidence.title.trim(),
       details: newEvidence.details.trim(),
-      uploadedBy: newEvidence.uploadedBy,
+      uploadedBy: newEvidence.uploadedBy || currentUser?.name || "CI Investigator",
       date: new Date().toISOString().substring(0, 10)
     });
 
     setIsModalOpen(false);
     setNewEvidence({
-      rcaId: investigations[0]?.id || "RCA-2026-001",
+      rcaId: investigations[0]?.id || "",
       type: "SCADA Trend",
       title: "",
       details: "",
-      uploadedBy: "David Kim"
+      uploadedBy: currentUser?.name || currentUser?.email || "CI Investigator"
     });
   };
 
@@ -327,8 +338,9 @@ export function Evidence() {
                     className="form-input"
                     style={{ backgroundColor: "#FFFFFF" }}
                   >
+                    <option value="">-- Select Active RCA --</option>
                     {investigations.map((inv) => (
-                      <option key={inv.id} value={inv.id}>{inv.id} — {inv.title.substring(0, 24)}...</option>
+                      <option key={inv.id} value={inv.id}>{inv.id} — {inv.title.substring(0, 32)}</option>
                     ))}
                   </select>
                 </div>

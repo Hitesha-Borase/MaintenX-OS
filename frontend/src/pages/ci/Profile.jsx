@@ -19,29 +19,43 @@ import { Card } from "../../components/common/Card";
 import { Badge } from "../../components/common/Badge";
 import { Button } from "../../components/common/Button";
 import { useApp } from "../../context/AppContext";
+import { useRole } from "../../context/RoleContext";
+import { useCI } from "../../context/CIContext";
 import ciService from "../../services/ciService";
 
 export function Profile() {
   const navigate = useNavigate();
   const { addToast } = useApp();
+  const { currentRole } = useRole();
+  const { currentUser } = useCI();
+
+  const user = currentUser || currentRole?.user || {};
 
   useEffect(() => {
     ciService.getDashboardSummary().catch((err) => console.warn("Profile sync:", err.message));
   }, []);
 
-  const [profile, setProfile] = useState({
-    name: "Alexander Vance",
-    role: "Lead CI & Manufacturing Engineer",
-    department: "Continuous Improvement & Engineering",
-    email: "alexander.vance@maintenx.internal",
-    phone: "+1 (555) 492-8830",
-    employeeId: "EMP-8842",
-    plant: "Plant 1 — Main Processing Facility",
-    shift: "Day Shift (08:00 - 17:00)",
-    timezone: "UTC-05:00 (Eastern Time)",
-    emailAlerts: true,
-    pushAlerts: true,
-    weeklyDigest: true
+  const [profile, setProfile] = useState(() => {
+    const saved = localStorage.getItem("flowstate_user_profile");
+    let parsed = null;
+    try {
+      parsed = saved ? JSON.parse(saved) : null;
+    } catch (_) {}
+
+    return {
+      name: parsed?.name || user.name || "Continuous Improvement Engineer",
+      role: parsed?.role || currentRole?.label || "Lead CI & Manufacturing Engineer",
+      department: "Continuous Improvement & Engineering",
+      email: parsed?.email || user.email || "ci.engineer@maintenx.internal",
+      phone: parsed?.phone || "+1 (555) 492-8830",
+      employeeId: parsed?.employeeId || "EMP-8842",
+      plant: parsed?.plant || user.plant || "Plant 1 — Main Processing Facility",
+      shift: parsed?.shift || "Day Shift (08:00 - 17:00)",
+      timezone: "UTC-05:00 (Eastern Time)",
+      emailAlerts: true,
+      pushAlerts: true,
+      weeklyDigest: true
+    };
   });
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -50,6 +64,9 @@ export function Profile() {
   const handleEditSubmit = (e) => {
     e.preventDefault();
     setProfile({ ...formData });
+    try {
+      localStorage.setItem("flowstate_user_profile", JSON.stringify({ ...formData }));
+    } catch (_) {}
     addToast("Profile details updated successfully!", "success");
     setIsEditModalOpen(false);
   };
@@ -57,6 +74,9 @@ export function Profile() {
   const handleToggle = (key) => {
     setProfile((prev) => {
       const updated = { ...prev, [key]: !prev[key] };
+      try {
+        localStorage.setItem("flowstate_user_profile", JSON.stringify(updated));
+      } catch (_) {}
       addToast("Notification preference updated.", "info");
       return updated;
     });
@@ -65,6 +85,14 @@ export function Profile() {
   const handlePasswordReset = () => {
     addToast("Password reset link dispatched to your registered email.", "success");
   };
+
+  const initials = (profile.name || "CI")
+    .split(" ")
+    .filter(Boolean)
+    .map((w) => w[0])
+    .join("")
+    .substring(0, 2)
+    .toUpperCase();
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%", maxWidth: "1000px", margin: "0 auto", minWidth: 0 }}>
@@ -105,7 +133,7 @@ export function Profile() {
               flexShrink: 0
             }}
           >
-            AV
+            {initials}
           </div>
 
           <div style={{ flex: 1, minWidth: "220px" }}>

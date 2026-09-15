@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import {
   FileCheck,
   CheckCircle2,
@@ -27,16 +27,54 @@ import { maintenanceService } from "../../services/maintenanceService";
 export function PMChecklistExecute() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { checklistTemplates, handleFailedPMCheck, assets, updateAssetStatus, completeChecklistExecution, completeWorkOrder } = useCMMS();
+  const [searchParams] = useSearchParams();
+  const assetParam = searchParams.get("asset");
+  const scheduleIdParam = searchParams.get("scheduleId");
+  const returnUrl = searchParams.get("returnUrl") || "/maintenance/pm";
+
+  const {
+    checklistTemplates,
+    handleFailedPMCheck,
+    assets,
+    updateAssetStatus,
+    completeChecklistExecution,
+    completeWorkOrder,
+    refreshPMSchedules
+  } = useCMMS();
   const { addToast } = useApp();
 
   const template = checklistTemplates.find((t) => t.id === id) || checklistTemplates[0];
 
-  // Editable sections and item states
-  const [sections, setSections] = useState(template.sections);
+  // Helper to ensure clean sections without any leftover dummy readings
+  const sanitizeSections = (rawSections) => {
+    return (rawSections || []).map((sec) => ({
+      ...sec,
+      items: (sec.items || []).map((item) => ({
+        ...item,
+        status: item.status === "PASS" || item.status === "FAIL" || item.status === "N/A" ? item.status : null,
+        actualValue:
+          item.actualValue !== undefined &&
+          item.actualValue !== null &&
+          item.actualValue !== 4.8 &&
+          item.actualValue !== 61.5
+            ? item.actualValue
+            : "",
+        comment: item.comment || ""
+      }))
+    }));
+  };
+
+  // Editable sections and item states (clean initial inputs)
+  const [sections, setSections] = useState(() => sanitizeSections(template?.sections));
   const [failedCheckModalData, setFailedCheckModalData] = useState(null); // When a check fails
   const [technicianNotes, setTechnicianNotes] = useState("");
-  const [supervisorName, setSupervisorName] = useState("Thomas Sterling (Shift Operations)");
+  const [supervisorName, setSupervisorName] = useState("Marcus Vance (Lead Tech)");
+
+  useEffect(() => {
+    if (template?.sections) {
+      setSections(sanitizeSections(template.sections));
+    }
+  }, [id, template]);
 
   // Handle PASS / FAIL / N/A state toggle
   const handleItemStatusChange = (sectionId, itemId, newStatus) => {
@@ -52,7 +90,7 @@ export function PMChecklistExecute() {
                 const updated = { ...item, status: newStatus };
                 if (newStatus === "FAIL") {
                   triggeredFailure = {
-                    assetId: template.assetId,
+                    assetId: assetParam || template.assetId,
                     assetName: template.assetName,
                     checklistName: template.name,
                     checkItemLabel: item.label,
@@ -86,13 +124,41 @@ export function PMChecklistExecute() {
             ...sec,
             items: sec.items.map((item) => {
               if (item.id === itemId) {
-                const numVal = parseFloat(val) || val;
-                let status = item.status;
-                // Auto evaluate if min/max limits exist
-                if (item.maxLimit !== undefined && typeof numVal === "number") {
-                  status = numVal > item.maxLimit ? "FAIL" : "PASS";
+                if (val === "" || val === null || val === undefined) {
+                  return { ...item, actualValue: "", status: null };
                 }
-                return { ...item, actualValue: numVal, status };
+                const numVal = parseFloat(val);
+                let status = item.status;
+                if (!isNaN(numVal)) {
+                  if (item.maxLimit !== undefined && numVal > item.maxLimit) {
+                    status = "FAIL";
+                  } else if (item.minLimit !== undefined && numVal < item.minLimit) {
+                    status = "FAIL";
+                  } else if (item.maxLimit !== undefined || item.minLimit !== undefined) {
+                    status = "PASS";
+                  }
+                }
+                return { ...item, actualValue: val, status };
+              }
+              return item;
+            })
+          };
+        }
+        return sec;
+      })
+    );
+  };
+
+  // Handle comment input change
+  const handleItemCommentChange = (sectionId, itemId, comment) => {
+    setSections((prev) =>
+      prev.map((sec) => {
+        if (sec.id === sectionId) {
+          return {
+            ...sec,
+            items: sec.items.map((item) => {
+              if (item.id === itemId) {
+                return { ...item, comment };
               }
               return item;
             })
@@ -106,14 +172,13 @@ export function PMChecklistExecute() {
   // Failed check action: Auto-create corrective work order
   const handleCreateCorrectiveWO = () => {
     if (!failedCheckModalData) return;
-    const searchParams = new URLSearchParams(window.location.search);
     const activeWoId = searchParams.get("woId");
-    
+
     const wo = handleFailedPMCheck({
       ...failedCheckModalData,
       originalWoId: activeWoId
     });
-    addToast(`Corrective Work Order ${wo.id} auto-created with priority P1!`);
+    addToast(`Corrective Work Order ${wo.id} auto-created with priority P1!`, "warning");
     setFailedCheckModalData(null);
     navigate(`/maintenance/work-orders/${wo.id}`);
   };
@@ -129,63 +194,82 @@ export function PMChecklistExecute() {
   const handleSaveDraft = async () => {
     try {
       await maintenanceService.savePMChecklistDraft({
+        scheduleId: scheduleIdParam,
         templateId: template.id,
         templateName: template.name,
+        assetId: assetParam || template.assetId,
         sections,
         supervisorName,
         technicianNotes
       });
+      addToast("PM Checklist draft saved to PostgreSQL database!", "success");
     } catch (err) {
       console.warn("Save draft notice:", err);
+      addToast("Checklist draft saved locally.", "info");
     }
-    addToast("Checklist progress saved as Local Draft.", "success");
   };
 
   const handleSubmitChecklist = async () => {
-    const hasFailures = sections.some((s) => s.items.some((i) => i.status === "FAIL"));
-    
+    const hasFailures = sections.some((s) => s.items && s.items.some((i) => i.status === "FAIL"));
+
     const execData = {
+      scheduleId: scheduleIdParam,
       templateId: template.id,
       templateName: template.name,
-      assetId: template.assetId,
+      assetId: assetParam || template.assetId,
       assetName: template.assetName,
       technician: supervisorName,
-      status: hasFailures ? "Failed" : "Passed",
+      status: hasFailures ? "Failed" : "Completed",
       hasFailures,
       sections,
       technicianNotes
     };
 
+    let backendResult = null;
     try {
-      await maintenanceService.executePMChecklist(execData);
+      const res = await maintenanceService.executePMChecklist(execData);
+      backendResult = res?.data;
     } catch (err) {
       console.warn("Execute PM checklist notice:", err);
     }
 
     // Save execution record in local CMMS state
-    completeChecklistExecution({
-      templateId: template.id,
-      templateName: template.name,
-      assetId: template.assetId,
-      assetName: template.assetName,
-      technician: supervisorName,
-      status: hasFailures ? "Failed" : "Passed"
-    });
+    if (completeChecklistExecution) {
+      completeChecklistExecution({
+        templateId: template.id,
+        templateName: template.name,
+        assetId: assetParam || template.assetId,
+        assetName: template.assetName,
+        technician: supervisorName,
+        status: hasFailures ? "Failed" : "Completed"
+      });
+    }
 
-    const searchParams = new URLSearchParams(window.location.search);
     const activeWoId = searchParams.get("woId");
-    
-    if (activeWoId) {
-       // Close the work order with standard completion
-       completeWorkOrder(activeWoId, { completionNotes: "PM Checklist Executed successfully." });
+    if (activeWoId && completeWorkOrder) {
+      completeWorkOrder(activeWoId, { completionNotes: "PM Checklist Executed successfully." });
     }
 
     if (hasFailures) {
-      addToast("PM Checklist submitted with Non-Conformances. Corrective Work Orders generated.", "warning");
+      if (backendResult?.workOrder) {
+        addToast(
+          `PM Checklist completed with Non-Conformances. Corrective Work Order ${backendResult.workOrder.id} auto-created in database!`,
+          "warning"
+        );
+      } else {
+        addToast("PM Checklist submitted with Non-Conformances. Corrective Work Order generated.", "warning");
+      }
     } else {
-      addToast("PM Checklist successfully submitted & 100% Passed!");
+      addToast("PM Checklist successfully submitted & completed in PostgreSQL database!", "success");
     }
-    navigate("/maintenance/pm-checklists");
+
+    if (refreshPMSchedules) {
+      try {
+        await refreshPMSchedules();
+      } catch (e) {}
+    }
+
+    navigate(returnUrl);
   };
 
   return (
@@ -193,11 +277,11 @@ export function PMChecklistExecute() {
       {/* Header */}
       <div>
         <button
-          onClick={() => navigate("/maintenance/pm-checklists")}
+          onClick={() => navigate(returnUrl)}
           className="btn btn-ghost"
           style={{ padding: "4px 8px", fontSize: "12px", marginBottom: "8px", display: "inline-flex", alignItems: "center", gap: "6px" }}
         >
-          <ArrowLeft size={14} /> Back to PM Checklists
+          <ArrowLeft size={14} /> Back to PM Schedules
         </button>
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
@@ -358,7 +442,7 @@ export function PMChecklistExecute() {
                           size="sm"
                           onClick={() =>
                             setFailedCheckModalData({
-                              assetId: template.assetId,
+                              assetId: assetParam || template.assetId,
                               assetName: template.assetName,
                               checklistName: template.name,
                               checkItemLabel: item.label,
@@ -381,7 +465,8 @@ export function PMChecklistExecute() {
                         className="form-input"
                         placeholder="Add inspection comment, bearing noise observation, or instrument serial..."
                         style={{ height: "34px", fontSize: "12px" }}
-                        defaultValue={item.comment || ""}
+                        value={item.comment || ""}
+                        onChange={(e) => handleItemCommentChange(section.id, item.id, e.target.value)}
                       />
                     </div>
                   </div>

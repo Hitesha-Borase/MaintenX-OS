@@ -15,7 +15,8 @@ import {
   Search,
   Send,
   Wand2,
-  ChevronDown
+  ChevronDown,
+  Trash2
 } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { Button } from "../../components/common/Button";
@@ -30,7 +31,7 @@ import dashboardService from "../../services/dashboardService";
 export function Staffing() {
   const { addToast } = useApp();
 
-  const [shifts, setShifts] = useState(SHIFT_SCHEDULES);
+  const [shifts, setShifts] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("All");
 
@@ -38,18 +39,34 @@ export function Staffing() {
   const [activeDropdownId, setActiveDropdownId] = useState(null);
   const dropdownRef = useRef(null);
 
+  const fetchStaffingShifts = async () => {
+    try {
+      const res = await dashboardService.getSupervisorStaffing();
+      const list = Array.isArray(res) ? res : (res?.data && Array.isArray(res.data) ? res.data : []);
+      setShifts(list);
+    } catch (err) {
+      console.error("Failed to fetch staffing shifts:", err);
+    }
+  };
+
+  const [availableEmployees, setAvailableEmployees] = useState([]);
+
   useEffect(() => {
-    async function fetchStaffingShifts() {
+    fetchStaffingShifts();
+    async function loadWorkforce() {
       try {
-        const res = await dashboardService.getSupervisorStaffing();
-        if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
-          setShifts(res.data);
+        const data = await dashboardService.getSupervisorWorkforce();
+        const list = Array.isArray(data) ? data : (data?.data || []);
+        setAvailableEmployees(list);
+        if (list.length > 0) {
+          setSelectedEmployeeToAssign(list[0].name);
+          setOperatorStationForm((prev) => ({ ...prev, operator: list[0].name }));
         }
       } catch (err) {
-        console.error("Failed to fetch staffing shifts:", err);
+        console.warn("Could not load workforce:", err);
       }
     }
-    fetchStaffingShifts();
+    loadWorkforce();
   }, []);
 
   useEffect(() => {
@@ -69,6 +86,8 @@ export function Staffing() {
   const [assignEmployeeModal, setAssignEmployeeModal] = useState(null);
   const [assignOperatorModal, setAssignOperatorModal] = useState(null);
   const [closeShiftModal, setCloseShiftModal] = useState(null);
+  const [deleteShiftModal, setDeleteShiftModal] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Forms
   const [newShift, setNewShift] = useState({
@@ -76,15 +95,15 @@ export function Staffing() {
     shiftTiming: "06:00 - 14:30",
     date: new Date().toISOString().substring(0, 10),
     line: "Line 1 — High-Speed Bottling",
-    supervisor: "Thomas Sterling",
-    plannedHeadcount: 14,
-    actualHeadcount: 14,
+    supervisor: "Operations Supervisor",
+    plannedHeadcount: 1,
+    actualHeadcount: 1,
     shiftStatus: "Scheduled"
   });
 
-  const [selectedEmployeeToAssign, setSelectedEmployeeToAssign] = useState("Elena Rostova");
+  const [selectedEmployeeToAssign, setSelectedEmployeeToAssign] = useState("");
   const [operatorStationForm, setOperatorStationForm] = useState({
-    operator: "Elena Rostova",
+    operator: "",
     station: "Filler HMI Control Pod"
   });
   const [closeShiftNotes, setCloseShiftNotes] = useState("Shift completed with 0 safety incidents and nominal yield.");
@@ -105,25 +124,11 @@ export function Staffing() {
     e.preventDefault();
     try {
       const res = await dashboardService.addSupervisorStaffing(newShift);
-      const created = {
-        id: res.data?.id || `SHF-0${shifts.length + 1}`,
-        ...newShift,
-        operators: ["Elena Rostova", "Marcus Vance"],
-        plannedHeadcount: Number(newShift.plannedHeadcount),
-        actualHeadcount: Number(newShift.actualHeadcount)
-      };
-      setShifts((prev) => [created, ...prev]);
-      addToast(res.message || `Shift "${newShift.shiftName}" scheduled for ${newShift.date}.`, "success");
+      addToast(res.message || `Shift "${newShift.shiftName}" saved successfully.`, "success");
+      await fetchStaffingShifts();
     } catch (err) {
-      const created = {
-        id: `SHF-0${shifts.length + 1}`,
-        ...newShift,
-        operators: ["Elena Rostova", "Marcus Vance"],
-        plannedHeadcount: Number(newShift.plannedHeadcount),
-        actualHeadcount: Number(newShift.actualHeadcount)
-      };
-      setShifts((prev) => [created, ...prev]);
-      addToast(`Shift "${newShift.shiftName}" scheduled for ${newShift.date}.`, "success");
+      addToast(`Shift "${newShift.shiftName}" created.`, "success");
+      await fetchStaffingShifts();
     }
     setIsCreateShiftModalOpen(false);
   };
@@ -134,15 +139,11 @@ export function Staffing() {
 
     try {
       const res = await dashboardService.updateSupervisorStaffing(editShiftModal.id, editShiftModal);
-      setShifts((prev) =>
-        prev.map((s) => (s.id === editShiftModal.id ? { ...s, ...editShiftModal } : s))
-      );
-      addToast(res.message || `Shift details for ${editShiftModal.shiftName} updated.`, "success");
+      addToast(res.message || `Shift details for ${editShiftModal.shiftName} updated successfully.`, "success");
+      await fetchStaffingShifts();
     } catch (err) {
-      setShifts((prev) =>
-        prev.map((s) => (s.id === editShiftModal.id ? { ...s, ...editShiftModal } : s))
-      );
       addToast(`Shift details for ${editShiftModal.shiftName} updated.`, "success");
+      await fetchStaffingShifts();
     }
     setEditShiftModal(null);
   };
@@ -151,39 +152,21 @@ export function Staffing() {
     e.preventDefault();
     if (!assignEmployeeModal) return;
 
+    const empToAssign = selectedEmployeeToAssign || (availableEmployees[0]?.name || "");
+    if (!empToAssign) {
+      addToast("Please select an employee to assign.", "error");
+      return;
+    }
+
     try {
       const res = await dashboardService.assignSupervisorStaffingPersonnel(assignEmployeeModal.id, {
-        employeeName: selectedEmployeeToAssign
+        employeeName: empToAssign
       });
-      setShifts((prev) =>
-        prev.map((s) => {
-          if (s.id === assignEmployeeModal.id) {
-            const updatedOps = [...new Set([...s.operators, selectedEmployeeToAssign])];
-            return {
-              ...s,
-              operators: updatedOps,
-              actualHeadcount: updatedOps.length
-            };
-          }
-          return s;
-        })
-      );
-      addToast(res.message || `Assigned ${selectedEmployeeToAssign} to ${assignEmployeeModal.shiftName}.`, "success");
+      addToast(res.message || `Assigned ${empToAssign} to ${assignEmployeeModal.shiftName}.`, "success");
+      await fetchStaffingShifts();
     } catch (err) {
-      setShifts((prev) =>
-        prev.map((s) => {
-          if (s.id === assignEmployeeModal.id) {
-            const updatedOps = [...new Set([...s.operators, selectedEmployeeToAssign])];
-            return {
-              ...s,
-              operators: updatedOps,
-              actualHeadcount: updatedOps.length
-            };
-          }
-          return s;
-        })
-      );
-      addToast(`Assigned ${selectedEmployeeToAssign} to ${assignEmployeeModal.shiftName}.`, "success");
+      addToast(`Assigned ${empToAssign} to ${assignEmployeeModal.shiftName}.`, "success");
+      await fetchStaffingShifts();
     }
     setAssignEmployeeModal(null);
   };
@@ -192,17 +175,24 @@ export function Staffing() {
     e.preventDefault();
     if (!assignOperatorModal) return;
 
+    const operatorName = operatorStationForm.operator || (assignOperatorModal.operators?.[0] || availableEmployees[0]?.name || "");
+
     try {
-      const res = await dashboardService.assignSupervisorStaffingStation(assignOperatorModal.id, operatorStationForm);
+      const res = await dashboardService.assignSupervisorStaffingStation(assignOperatorModal.id, {
+        ...operatorStationForm,
+        operator: operatorName
+      });
       addToast(
-        res.message || `Operator ${operatorStationForm.operator} assigned to station "${operatorStationForm.station}" on ${assignOperatorModal.line}.`,
+        res.message || `Operator ${operatorName} assigned to station "${operatorStationForm.station}".`,
         "success"
       );
+      await fetchStaffingShifts();
     } catch (err) {
       addToast(
-        `Operator ${operatorStationForm.operator} assigned to station "${operatorStationForm.station}".`,
+        `Operator ${operatorName} assigned to station "${operatorStationForm.station}".`,
         "success"
       );
+      await fetchStaffingShifts();
     }
     setAssignOperatorModal(null);
   };
@@ -215,17 +205,30 @@ export function Staffing() {
       const res = await dashboardService.closeSupervisorStaffingShift(closeShiftModal.id, {
         notes: closeShiftNotes
       });
-      setShifts((prev) =>
-        prev.map((s) => (s.id === closeShiftModal.id ? { ...s, shiftStatus: "Closed" } : s))
-      );
       addToast(res.message || `Shift "${closeShiftModal.shiftName}" closed out and signed off.`, "success");
+      await fetchStaffingShifts();
     } catch (err) {
-      setShifts((prev) =>
-        prev.map((s) => (s.id === closeShiftModal.id ? { ...s, shiftStatus: "Closed" } : s))
-      );
       addToast(`Shift "${closeShiftModal.shiftName}" closed out and signed off.`, "success");
+      await fetchStaffingShifts();
     }
     setCloseShiftModal(null);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteShiftModal) return;
+    setIsDeleting(true);
+    try {
+      const res = await dashboardService.deleteSupervisorStaffing(deleteShiftModal.id);
+      addToast(res.message || `Shift "${deleteShiftModal.shiftName}" deleted successfully.`, "success");
+      await fetchStaffingShifts();
+    } catch (err) {
+      console.error("Failed to delete shift:", err);
+      addToast("Failed to delete shift.", "error");
+      await fetchStaffingShifts();
+    } finally {
+      setIsDeleting(false);
+      setDeleteShiftModal(null);
+    }
   };
 
 
@@ -477,6 +480,16 @@ export function Staffing() {
                         Edit
                       </Button>
                       <Button
+                        variant="ghost"
+                        size="xs"
+                        icon={Trash2}
+                        title="Delete Shift"
+                        onClick={() => setDeleteShiftModal(s)}
+                        style={{ padding: "4px 7px", fontSize: "11px", height: "28px", color: "#DC2626" }}
+                      >
+                        Delete
+                      </Button>
+                      <Button
                         variant="secondary"
                         size="xs"
                         icon={ChevronDown}
@@ -588,6 +601,33 @@ export function Staffing() {
                               <span>Shift Closed</span>
                             </div>
                           )}
+
+                          <div style={{ height: "1px", backgroundColor: "var(--border-subtle)", margin: "4px 0" }} />
+
+                          <button
+                            onClick={() => {
+                              setActiveDropdownId(null);
+                              setDeleteShiftModal(s);
+                            }}
+                            className="btn btn-ghost"
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "8px",
+                              width: "100%",
+                              padding: "6px 8px",
+                              fontSize: "12px",
+                              justifyContent: "flex-start",
+                              borderRadius: "4px",
+                              border: "none",
+                              backgroundColor: "transparent",
+                              cursor: "pointer",
+                              color: "#DC2626"
+                            }}
+                          >
+                            <Trash2 size={14} color="#DC2626" />
+                            <span style={{ fontWeight: 600 }}>Delete Shift</span>
+                          </button>
                         </div>
                       )}
                     </div>
@@ -903,9 +943,9 @@ export function Staffing() {
               onChange={(e) => setSelectedEmployeeToAssign(e.target.value)}
               className="input-field"
             >
-              {INITIAL_EMPLOYEES.map((e, idx) => (
+              {availableEmployees.map((e, idx) => (
                 <option key={idx} value={e.name}>
-                  {e.name} — {e.role} ({e.department})
+                  {e.name} — {e.role} ({e.shift || e.department || "Indore Plant"})
                 </option>
               ))}
             </select>
@@ -941,7 +981,7 @@ export function Staffing() {
               onChange={(e) => setOperatorStationForm({ ...operatorStationForm, operator: e.target.value })}
               className="input-field"
             >
-              {(assignOperatorModal?.operators || ["Elena Rostova", "Marcus Vance"]).map((op, idx) => (
+              {(assignOperatorModal?.operators?.length > 0 ? assignOperatorModal.operators : availableEmployees.map(e => e.name)).map((op, idx) => (
                 <option key={idx} value={op}>{op}</option>
               ))}
             </select>
@@ -1006,6 +1046,49 @@ export function Staffing() {
             />
           </div>
         </form>
+      </Modal>
+
+      {/* 7. DELETE SHIFT CONFIRMATION MODAL */}
+      <Modal
+        isOpen={!!deleteShiftModal}
+        onClose={() => setDeleteShiftModal(null)}
+        title="Delete Shift Schedule"
+        subtitle={`Shift ID: ${deleteShiftModal?.id}`}
+        maxWidth="480px"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setDeleteShiftModal(null)} disabled={isDeleting}>
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              icon={Trash2}
+              onClick={handleConfirmDelete}
+              disabled={isDeleting}
+              style={{ backgroundColor: "#DC2626", color: "#FFFFFF", borderColor: "#DC2626" }}
+            >
+              {isDeleting ? "Deleting..." : "Confirm Delete"}
+            </Button>
+          </>
+        }
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+          <div style={{ padding: "12px 14px", backgroundColor: "rgba(239, 68, 68, 0.08)", borderRadius: "8px", borderLeft: "4px solid #EF4444" }}>
+            <div style={{ fontSize: "13px", fontWeight: 700, color: "#DC2626", marginBottom: "4px" }}>
+              Are you sure you want to delete this shift?
+            </div>
+            <div style={{ fontSize: "12px", color: "var(--text-secondary)", lineHeight: "1.5" }}>
+              This action will permanently delete <strong>{deleteShiftModal?.shiftName}</strong> ({deleteShiftModal?.shiftTiming}). This action cannot be undone.
+            </div>
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: "6px", padding: "10px 14px", backgroundColor: "var(--bg-card)", border: "1px solid var(--border-subtle)", borderRadius: "6px", fontSize: "12px" }}>
+            <div><span style={{ color: "var(--text-muted)" }}>Shift:</span> <strong>{deleteShiftModal?.shiftName}</strong></div>
+            <div><span style={{ color: "var(--text-muted)" }}>Assigned Line:</span> <strong>{deleteShiftModal?.line}</strong></div>
+            <div><span style={{ color: "var(--text-muted)" }}>Timing:</span> <strong>{deleteShiftModal?.shiftTiming}</strong></div>
+            <div><span style={{ color: "var(--text-muted)" }}>Date:</span> <strong>{deleteShiftModal?.date}</strong></div>
+          </div>
+        </div>
       </Modal>
     </div>
   );

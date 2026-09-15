@@ -34,7 +34,8 @@ export function ProjectActions() {
     ciProjects = [],
     createCapaAction,
     updateCapaStatus,
-    overdueCapaCount
+    overdueCapaCount,
+    currentUser
   } = useCI();
 
   useEffect(() => {
@@ -50,13 +51,19 @@ export function ProjectActions() {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const [newAction, setNewAction] = useState({
-    projectId: ciProjects[0]?.id || "PRJ-CI-001",
+    projectId: ciProjects[0]?.id || "",
     description: "",
     actionType: "Corrective",
-    owner: "David Kim (Lead CI)",
+    owner: currentUser?.name || currentUser?.email || "CI Team Member",
     dueDate: new Date(Date.now() + 10 * 86400000).toISOString().substring(0, 10),
     priority: "High"
   });
+
+  useEffect(() => {
+    if (!newAction.projectId && ciProjects.length > 0) {
+      setNewAction((prev) => ({ ...prev, projectId: ciProjects[0].id }));
+    }
+  }, [ciProjects]);
 
   const handleAdd = (e) => {
     e.preventDefault();
@@ -67,10 +74,10 @@ export function ProjectActions() {
 
     createCapaAction(newAction);
     setNewAction({
-      projectId: ciProjects[0]?.id || "PRJ-CI-001",
+      projectId: ciProjects[0]?.id || "",
       description: "",
       actionType: "Corrective",
-      owner: "David Kim (Lead CI)",
+      owner: currentUser?.name || currentUser?.email || "CI Team Member",
       dueDate: new Date(Date.now() + 10 * 86400000).toISOString().substring(0, 10),
       priority: "High"
     });
@@ -269,10 +276,17 @@ export function ProjectActions() {
               </tr>
             </thead>
             <tbody>
-              {filteredActions.map((a) => {
-                const isOverdue = a.status !== "Completed" && a.status !== "Verified" && a.status !== "Closed" && a.dueDate < new Date().toISOString().substring(0, 10);
-                return (
-                  <tr key={a.id} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+              {filteredActions.length === 0 ? (
+                <tr>
+                  <td colSpan={6} style={{ padding: "36px 16px", textAlign: "center", color: "var(--text-muted)", fontSize: "13px" }}>
+                    No project action deliverables found for the selected criteria.
+                  </td>
+                </tr>
+              ) : (
+                filteredActions.map((a) => {
+                  const isOverdue = a.status !== "Completed" && a.status !== "Verified" && a.status !== "Closed" && a.dueDate < new Date().toISOString().substring(0, 10);
+                  return (
+                    <tr key={a.id} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
                     <td style={{ padding: "12px 16px" }}>
                       <div style={{ fontWeight: 800, color: "var(--text-primary)", fontSize: "13px" }}>{a.description}</div>
                       <div style={{ fontSize: "11px", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>{a.id}</div>
@@ -327,7 +341,7 @@ export function ProjectActions() {
                     </td>
                   </tr>
                 );
-              })}
+              }))}
             </tbody>
           </table>
         </div>
@@ -358,6 +372,7 @@ export function ProjectActions() {
                   className="form-input"
                   style={{ backgroundColor: "#FFFFFF" }}
                 >
+                  <option value="">-- Standalone / General Deliverable --</option>
                   {ciProjects.map((p) => (
                     <option key={p.id} value={p.id}>{p.id} — {p.name.substring(0, 30)}...</option>
                   ))}

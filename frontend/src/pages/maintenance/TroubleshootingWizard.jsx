@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Wrench,
   CheckCircle2,
@@ -11,7 +11,8 @@ import {
   AlertTriangle,
   Camera,
   FileCheck,
-  ShieldCheck
+  ShieldCheck,
+  RotateCcw
 } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { Badge } from "../../components/common/Badge";
@@ -23,8 +24,12 @@ import maintenanceService from "../../services/maintenanceService";
 
 export function TroubleshootingWizard() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { assets, failureCodes, addVerifiedSolution } = useCMMS();
   const { addToast } = useApp();
+
+  const paramAsset = searchParams.get("assetId") || assets[0]?.id || "FM-001";
+  const paramSymptom = searchParams.get("symptom") || "";
 
   React.useEffect(() => {
     const fetchTroubleshooting = async () => {
@@ -39,15 +44,38 @@ export function TroubleshootingWizard() {
 
   const [currentStep, setCurrentStep] = useState(0);
 
-  // Wizard state
-  const [selectedAssetId, setSelectedAssetId] = useState("FM-001");
-  const [symptom, setSymptom] = useState("Excessive vibration and acoustic rattling on rotary filler drive spindle at 600 BPM.");
-  const [diagnosticCheck, setDiagnosticCheck] = useState("1. Mount accelerometer on lower bearing hub.\n2. Perform FFT frequency spectrum analysis.\n3. Check shaft runout with dial gauge.");
-  const [actualEvidence, setActualEvidence] = useState("Vibration velocity measured at 4.8 mm/s RMS (limit < 3.0 mm/s). FFT reveals peak harmonic at 1,420 Hz corresponding to bearing outer race defect frequency (BPFO).");
-  const [selectedCause, setSelectedCause] = useState("Bearing race pitting and micro-spalling due to moisture ingress past degraded labyrinth seal.");
-  const [repairProcedure, setRepairProcedure] = useState("1. Lock out main electrical supply.\n2. Use hydraulic puller to remove worn bearing BRG-6208.\n3. Install new SKF bearing with induction heater.\n4. Replace Viton shaft seal and laser align to 0.02mm.");
-  const [testResult, setTestResult] = useState("Conducted 30-min dry run at 300 BPM, followed by 30-min run at 600 BPM. Vibration dropped to 1.1 mm/s RMS. Temperature stable at 54°C.");
-  const [verifiedBy, setVerifiedBy] = useState("Senior Reliability Specialist Marcus Vance");
+  // Wizard state initialized for live data input
+  const [selectedAssetId, setSelectedAssetId] = useState(paramAsset);
+  const [symptom, setSymptom] = useState(paramSymptom);
+  const [diagnosticCheck, setDiagnosticCheck] = useState("");
+  const [actualEvidence, setActualEvidence] = useState("");
+  const [selectedCause, setSelectedCause] = useState("");
+  const [repairProcedure, setRepairProcedure] = useState("");
+  const [testResult, setTestResult] = useState("");
+  const [verifiedBy, setVerifiedBy] = useState("Marcus Vance (Reliability Specialist)");
+
+  const handleLoadSample = () => {
+    setSelectedAssetId(assets[0]?.id || "FM-001");
+    setSymptom("Excessive vibration and acoustic rattling on rotary filler drive spindle at 600 BPM.");
+    setDiagnosticCheck("1. Mount accelerometer on lower bearing hub.\n2. Perform FFT frequency spectrum analysis.\n3. Check shaft runout with dial gauge.");
+    setActualEvidence("Vibration velocity measured at 4.8 mm/s RMS (limit < 3.0 mm/s). FFT reveals peak harmonic at 1,420 Hz corresponding to bearing outer race defect frequency (BPFO).");
+    setSelectedCause("Bearing race pitting and micro-spalling due to moisture ingress past degraded labyrinth seal.");
+    setRepairProcedure("1. Lock out main electrical supply.\n2. Use hydraulic puller to remove worn bearing BRG-6208.\n3. Install new SKF bearing with induction heater.\n4. Replace Viton shaft seal and laser align to 0.02mm.");
+    setTestResult("Conducted 30-min dry run at 300 BPM, followed by 30-min run at 600 BPM. Vibration dropped to 1.1 mm/s RMS. Temperature stable at 54°C.");
+    setVerifiedBy("Senior Reliability Specialist Marcus Vance");
+    addToast("Sample scenario loaded into wizard.", "info");
+  };
+
+  const handleClearAll = () => {
+    setSymptom("");
+    setDiagnosticCheck("");
+    setActualEvidence("");
+    setSelectedCause("");
+    setRepairProcedure("");
+    setTestResult("");
+    setCurrentStep(0);
+    addToast("Wizard cleared. Ready for live input.", "info");
+  };
 
   const steps = [
     { title: "1. Symptom", subtitle: "Define anomaly" },
@@ -128,13 +156,15 @@ export function TroubleshootingWizard() {
   const handleFinishAndSave = async () => {
     const solData = {
       problemSymptom: symptom,
+      symptom,
+      assetId: selectedAssetId,
       assetType: "Packaging & Bottling / Rotary Filler",
       applicableMachines: [selectedAssetId],
       failureCode: "MEC-004",
       failureCategory: "Mechanical",
       rootCause: selectedCause,
-      diagnosticSteps: diagnosticCheck.split("\n"),
-      repairProcedure: repairProcedure.split("\n"),
+      diagnosticSteps: diagnosticCheck ? diagnosticCheck.split("\n") : [],
+      repairProcedure: repairProcedure ? repairProcedure.split("\n") : [],
       partsRequired: [{ partNo: "BRG-6208-2RS", name: "Deep Groove Ball Bearing", qty: 2 }],
       toolsRequired: ["Laser Alignment Kit", "Hydraulic Puller", "Induction Heater"],
       testAndVerification: testResult,
@@ -142,15 +172,9 @@ export function TroubleshootingWizard() {
       tags: ["troubleshooting", "spindle", "vibration"]
     };
 
-    try {
-      await maintenanceService.createTroubleshootingSolution(solData);
-    } catch (err) {
-      console.warn("Solution save notice:", err);
-    }
+    const newSol = await addVerifiedSolution(solData);
 
-    const newSol = addVerifiedSolution(solData);
-
-    addToast(`Troubleshooting flow completed and saved as Verified Solution ${newSol.id}!`, "success");
+    addToast(`Troubleshooting flow completed and saved to database as ${newSol?.id || 'Verified Solution'}!`, "success");
     navigate("/maintenance/verified-solutions");
   };
 
@@ -177,6 +201,20 @@ export function TroubleshootingWizard() {
         <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
           <Button
             variant="secondary"
+            size="sm"
+            onClick={handleClearAll}
+          >
+            Clear Form
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleLoadSample}
+          >
+            Load Sample
+          </Button>
+          <Button
+            variant="primary"
             size="sm"
             icon={Sparkles}
             onClick={() => navigate("/maintenance/verified-solutions")}
@@ -219,7 +257,7 @@ export function TroubleshootingWizard() {
                 rows={4}
                 value={symptom}
                 onChange={(e) => setSymptom(e.target.value)}
-                placeholder="Describe what occurred (e.g. acoustic rattling, temperature rise, torque trip)..."
+                placeholder="e.g. Excessive vibration, acoustic rattling, temperature rise, torque trip, optical sensor fault..."
               />
             </div>
           </div>
@@ -238,6 +276,7 @@ export function TroubleshootingWizard() {
                 rows={5}
                 value={diagnosticCheck}
                 onChange={(e) => setDiagnosticCheck(e.target.value)}
+                placeholder="1. Check input line voltage and phase balance.&#10;2. Mount vibration sensor on drive housing.&#10;3. Inspect shaft alignment with dial gauge."
               />
             </div>
           </div>
@@ -256,6 +295,7 @@ export function TroubleshootingWizard() {
                 rows={5}
                 value={actualEvidence}
                 onChange={(e) => setActualEvidence(e.target.value)}
+                placeholder="e.g. Vibration measured at 4.8 mm/s RMS (limit < 3.0 mm/s). Thermal scan shows bearing drive hub at 78°C."
               />
             </div>
           </div>
@@ -274,6 +314,7 @@ export function TroubleshootingWizard() {
                 rows={4}
                 value={selectedCause}
                 onChange={(e) => setSelectedCause(e.target.value)}
+                placeholder="e.g. Bearing race fatigue spalling caused by moisture ingress past worn lip seal."
               />
             </div>
           </div>
@@ -292,6 +333,7 @@ export function TroubleshootingWizard() {
                 rows={5}
                 value={repairProcedure}
                 onChange={(e) => setRepairProcedure(e.target.value)}
+                placeholder="1. Lockout & tagout electrical drive.&#10;2. Extract worn bearing with hydraulic puller.&#10;3. Mount new bearing using induction heater to 110°C.&#10;4. Laser align shaft to 0.02mm."
               />
             </div>
           </div>
@@ -310,6 +352,7 @@ export function TroubleshootingWizard() {
                 rows={5}
                 value={testResult}
                 onChange={(e) => setTestResult(e.target.value)}
+                placeholder="e.g. Run 30-min trial at 600 BPM. Vibration dropped to 1.1 mm/s RMS. Operating temperature stabilized at 52°C."
               />
             </div>
           </div>

@@ -34,8 +34,8 @@ export function OperationsPage() {
   // Live fetch from backend on mount & filter change to ensure Network visibility
   useEffect(() => {
     masterDataService.getOperations(deptFilter).then((res) => {
-      const data = res?.data?.data || res?.data || res;
-      if (Array.isArray(data) && data.length > 0 && typeof setOperations === "function") {
+      const data = res?.data?.data !== undefined ? res.data.data : (res?.data !== undefined ? res.data : res);
+      if (Array.isArray(data) && typeof setOperations === "function") {
         setOperations(data);
       }
     }).catch((err) => console.warn("Operations load:", err.message));

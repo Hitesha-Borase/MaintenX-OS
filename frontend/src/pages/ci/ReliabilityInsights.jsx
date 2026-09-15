@@ -62,6 +62,12 @@ export function ReliabilityInsights() {
     navigate(`/ci/rca/investigations`);
   };
 
+  const reliabilityRate = useMemo(() => {
+    if (reliabilityRecords.length === 0) return "100%";
+    const healthy = reliabilityRecords.filter((r) => !r.isBadActor).length;
+    return `${Math.round((healthy / reliabilityRecords.length) * 100)}%`;
+  }, [reliabilityRecords]);
+
   const filteredAssets = useMemo(() => {
     return reliabilityRecords.filter((a) => {
       const matchesCriticality = criticalityFilter === "ALL" || a.criticality === criticalityFilter;
@@ -123,7 +129,7 @@ export function ReliabilityInsights() {
           title="Fleet MTBF"
           value={`${fleetMTBF} hrs`}
           unit="Mean Time Between Failures"
-          trend={{ value: "+18% vs benchmark", isPositive: true, text: "" }}
+          trend={reliabilityRecords.length > 0 ? { value: "+18% vs benchmark", isPositive: true, text: "" } : undefined}
           icon={Gauge}
           colorVariant="emerald"
         />
@@ -131,23 +137,23 @@ export function ReliabilityInsights() {
           title="Fleet MTTR"
           value={`${fleetMTTR} min`}
           unit="Mean Time To Repair"
-          trend={{ value: "Target < 30 min", isPositive: true, text: "" }}
+          trend={reliabilityRecords.length > 0 ? { value: "Target < 30 min", isPositive: true, text: "" } : undefined}
           icon={Clock}
           colorVariant="cyan"
         />
         <StatCard
           title="Bad Actor Assets"
           value={`${badActorsCount} Machines`}
-          unit="Threshold: $\ge 2$ Failures"
-          trend={{ value: "RCA Required", isPositive: false, text: "" }}
+          unit="Threshold: >= 2 Failures"
+          trend={badActorsCount > 0 ? { value: "RCA Required", isPositive: false, text: "" } : undefined}
           icon={AlertOctagon}
           colorVariant={badActorsCount > 0 ? "rose" : "emerald"}
         />
         <StatCard
           title="Reliability Rate"
-          value="96.4%"
+          value={reliabilityRate}
           unit="Fleet Availability"
-          trend={{ value: "Continuous Monitoring", isPositive: true, text: "" }}
+          trend={reliabilityRecords.length > 0 ? { value: "Continuous Monitoring", isPositive: true, text: "" } : undefined}
           icon={ShieldCheck}
           colorVariant="emerald"
         />
@@ -209,7 +215,7 @@ export function ReliabilityInsights() {
               style={{ fontSize: "12px", padding: "6px 10px", width: "auto", backgroundColor: "#FFFFFF" }}
             >
               <option value="ALL">All Asset Health</option>
-              <option value="BAD_ACTOR">Bad Actors Only (Failures $\ge 2$)</option>
+              <option value="BAD_ACTOR">Bad Actors Only (Failures &ge; 2)</option>
               <option value="NORMAL">Normal Reliability</option>
             </select>
 
@@ -242,7 +248,22 @@ export function ReliabilityInsights() {
               </tr>
             </thead>
             <tbody>
-              {filteredAssets.map((a) => (
+              {filteredAssets.length === 0 ? (
+                <tr>
+                  <td colSpan={7} style={{ padding: "40px 16px", textAlign: "center", color: "var(--text-muted)" }}>
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px" }}>
+                      <Gauge size={32} style={{ opacity: 0.3 }} />
+                      <div style={{ fontWeight: 600, fontSize: "14px", color: "var(--text-secondary)" }}>
+                        No Reliability Records Logged
+                      </div>
+                      <div style={{ fontSize: "12px", maxWidth: "420px" }}>
+                        There are currently no machine telemetry or failure recurrence logs in the database. Machine breakdowns and work order history will automatically populate MTBF and bad actor insights.
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                filteredAssets.map((a) => (
                 <tr key={a.assetId} style={{ borderBottom: "1px solid var(--border-subtle)", backgroundColor: a.isBadActor ? "rgba(239, 68, 68, 0.02)" : "transparent" }}>
                   <td style={{ padding: "12px 16px" }}>
                     <div style={{ fontWeight: 800, color: "var(--text-primary)", fontSize: "13px" }}>{a.assetName}</div>
@@ -318,7 +339,7 @@ export function ReliabilityInsights() {
                     )}
                   </td>
                 </tr>
-              ))}
+              )))}
             </tbody>
           </table>
         </div>
