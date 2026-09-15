@@ -33,7 +33,9 @@ export function VerifiedSolutions() {
     verifiedSolutions = [],
     createVerifiedSolution,
     deleteVerifiedSolution,
-    investigations = []
+    investigations = [],
+    availableAssets = [],
+    currentUser
   } = useCI();
 
   useEffect(() => {
@@ -43,9 +45,11 @@ export function VerifiedSolutions() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  const defaultAsset = availableAssets[0] || { id: "AST-001", name: "Primary Production Equipment" };
+
   const [newSolution, setNewSolution] = useState({
-    assetId: "AST-002",
-    assetName: "HTST Flash Pasteurizer",
+    assetId: defaultAsset.id,
+    assetName: defaultAsset.name,
     failureMode: "",
     symptom: "",
     rootCause: "",
@@ -61,10 +65,13 @@ export function VerifiedSolutions() {
       return;
     }
 
-    await createVerifiedSolution(newSolution);
+    await createVerifiedSolution({
+      ...newSolution,
+      verifiedBy: currentUser?.name || currentUser?.email || "Quality Engineering"
+    });
     setNewSolution({
-      assetId: "AST-002",
-      assetName: "HTST Flash Pasteurizer",
+      assetId: availableAssets[0]?.id || "AST-001",
+      assetName: availableAssets[0]?.name || "Primary Production Equipment",
       failureMode: "",
       symptom: "",
       rootCause: "",
@@ -150,21 +157,21 @@ export function VerifiedSolutions() {
         />
         <StatCard
           title="First-Time-Fix Rate"
-          value="98.2%"
+          value={verifiedSolutions.length > 0 ? "98.2%" : "0%"}
           unit="Remediation Quality"
           icon={CheckCircle2}
           colorVariant="emerald"
         />
         <StatCard
           title="Mean Time To Diagnose"
-          value="8 min"
+          value={verifiedSolutions.length > 0 ? "8 min" : "0 min"}
           unit="Standardized Flow"
           icon={Clock}
           colorVariant="cyan"
         />
         <StatCard
           title="Knowledge Sharing"
-          value="Active"
+          value={verifiedSolutions.length > 0 ? "Active" : "Standby"}
           unit="Fleet Synchronized"
           icon={BookOpen}
           colorVariant="emerald"
@@ -235,7 +242,22 @@ export function VerifiedSolutions() {
               </tr>
             </thead>
             <tbody>
-              {filteredSolutions.map((s) => (
+              {filteredSolutions.length === 0 ? (
+                <tr>
+                  <td colSpan={7} style={{ padding: "40px 16px", textAlign: "center", color: "var(--text-muted)" }}>
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px" }}>
+                      <FileCheck size={32} style={{ opacity: 0.3 }} />
+                      <div style={{ fontWeight: 600, fontSize: "14px", color: "var(--text-secondary)" }}>
+                        No Verified Troubleshooting Solutions Found
+                      </div>
+                      <div style={{ fontSize: "12px", maxWidth: "420px" }}>
+                        There are no published remedies registered in the database. Publish a verified solution from an RCA investigation or directly to build the knowledge base.
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                filteredSolutions.map((s) => (
                 <tr key={s.id} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
                   <td style={{ padding: "12px 16px" }}>
                     <div style={{ fontWeight: 800, color: "var(--text-primary)", fontSize: "13px" }}>{s.failureMode}</div>
@@ -281,7 +303,7 @@ export function VerifiedSolutions() {
                     </button>
                   </td>
                 </tr>
-              ))}
+              )))}
             </tbody>
           </table>
         </div>
@@ -310,15 +332,25 @@ export function VerifiedSolutions() {
                   <select
                     value={newSolution.assetId}
                     onChange={(e) => {
-                      const name = e.target.value === "AST-002" ? "HTST Flash Pasteurizer" : "Rotary Isobaric Bottle Filler";
-                      setNewSolution({ ...newSolution, assetId: e.target.value, assetName: name });
+                      const sel = availableAssets.find((a) => a.id === e.target.value);
+                      setNewSolution({
+                        ...newSolution,
+                        assetId: e.target.value,
+                        assetName: sel?.name || e.target.value
+                      });
                     }}
                     className="form-input"
                     style={{ backgroundColor: "#FFFFFF" }}
                   >
-                    <option value="AST-002">AST-002 — HTST Flash Pasteurizer</option>
-                    <option value="AST-001">AST-001 — Rotary Isobaric Bottle Filler</option>
-                    <option value="AST-004">AST-004 — Sleeve Rotary Labeler</option>
+                    {availableAssets.length > 0 ? (
+                      availableAssets.map((ast) => (
+                        <option key={ast.id} value={ast.id}>
+                          {ast.id} — {ast.name}
+                        </option>
+                      ))
+                    ) : (
+                      <option value="AST-001">AST-001 — Primary Plant Equipment</option>
+                    )}
                   </select>
                 </div>
 

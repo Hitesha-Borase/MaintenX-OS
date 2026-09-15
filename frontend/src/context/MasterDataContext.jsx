@@ -7,1294 +7,34 @@ const MasterDataContext = createContext();
 // INITIAL MOCK MASTER DATASETS (ENTERPRISE-GRADE STABLE ID ARCHITECTURE)
 // ============================================================================
 
-export const INITIAL_COMPANIES = [
-  { id: "CMP-01", name: "ABC Manufacturing Global", code: "ABCMFG", currency: "USD", taxId: "US-9842109-K", headquarters: "Austin, TX", status: "Active" }
-];
-
-export const INITIAL_PLANTS = [
-  {
-    id: "PLT-01",
-    companyId: "CMP-01",
-    code: "PLT-IND",
-    name: "Indore Plant - Processing & Bottling",
-    location: "Sector 3 Industrial Corridor, Indore, MP",
-    city: "Indore",
-    state: "MP",
-    country: "India",
-    capacity: "350,000 Units/Day",
-    operatingShifts: 3,
-    status: "Active",
-    effectiveFrom: "2024-01-01",
-    effectiveTo: "2030-12-31"
-  },
-  {
-    id: "PLT-02",
-    companyId: "CMP-01",
-    code: "PLT-AUST",
-    name: "Austin Facility - Canning & Logistics",
-    location: "7400 Metropolis Dr, Austin, TX",
-    city: "Austin",
-    state: "TX",
-    country: "USA",
-    capacity: "280,000 Units/Day",
-    operatingShifts: 2,
-    status: "Active",
-    effectiveFrom: "2024-03-01",
-    effectiveTo: "2030-12-31"
-  }
-];
-
-export const INITIAL_DEPARTMENTS = [
-  { id: "DEP-01", plantId: "PLT-01", code: "PROD", name: "Production & Bottling", managerId: "EMP-002", managerName: "Robert Thorne", costCenter: "CC-101", status: "Active" },
-  { id: "DEP-02", plantId: "PLT-01", code: "MAINT", name: "Maintenance & Reliability", managerId: "EMP-004", managerName: "Marcus Vance", costCenter: "CC-102", status: "Active" },
-  { id: "DEP-03", plantId: "PLT-01", code: "QAQC", name: "Quality Assurance & Lab", managerId: "EMP-003", managerName: "Sarah Jenkins", costCenter: "CC-103", status: "Active" },
-  { id: "DEP-04", plantId: "PLT-01", code: "WHSE", name: "Warehouse & Materials", managerId: "EMP-005", managerName: "David Kim", costCenter: "CC-104", status: "Active" },
-  { id: "DEP-05", plantId: "PLT-01", code: "CI-ENG", name: "Continuous Improvement & Engineering", managerId: "EMP-001", managerName: "Alexander Vance", costCenter: "CC-105", status: "Active" }
-];
-
-export const INITIAL_WORK_CENTERS = [
-  { id: "WC-101", workCenterId: "WC-101", code: "FILL-01", name: "Rotary Isobaric Filler", lineId: "LIN-01", lineName: "Line 1 — Aseptic Bottling", plantId: "PLT-01", capacity: "38,000 BPH", category: "PACKAGING", status: "Active" },
-  { id: "WC-102", workCenterId: "WC-102", code: "CAPP-01", name: "Induction Cap Sealer", lineId: "LIN-01", lineName: "Line 1 — Aseptic Bottling", plantId: "PLT-01", capacity: "38,000 BPH", category: "PACKAGING", status: "Active" },
-  { id: "WC-103", workCenterId: "WC-103", code: "LABL-01", name: "Sleeve Rotary Labeler", lineId: "LIN-01", lineName: "Line 1 — Aseptic Bottling", plantId: "PLT-01", capacity: "40,000 BPH", category: "PACKAGING", status: "Active" },
-  { id: "WC-201", workCenterId: "WC-201", code: "PAST-02", name: "HTST Flash Pasteurizer", lineId: "LIN-02", lineName: "Line 2 — Formulation & Pasteurizer", plantId: "PLT-01", capacity: "30,000 L/hr", category: "PROCESSING", status: "Active" },
-  { id: "WC-301", workCenterId: "WC-301", code: "SEAM-03", name: "Can Seamer Station", lineId: "LIN-03", lineName: "Line 3 — Canning Line", plantId: "PLT-02", capacity: "45,000 CPH", category: "PACKAGING", status: "Active" }
-];
-
-export const INITIAL_PRODUCT_FAMILIES = [
-  {
-    familyId: "FAM-01",
-    code: "SPK-BEV",
-    name: "Sparkling Flavored Beverages",
-    category: "Finished Goods",
-    description: "Carbonated fruit and citrus flavored canned and bottled sodas.",
-    plantId: "PLT-01",
-    allergenRisk: "None",
-    standardMargin: "58.4%",
-    status: "Active",
-    effectiveFrom: "2025-01-01",
-    effectiveTo: "2030-12-31"
-  },
-  {
-    familyId: "FAM-02",
-    code: "TON-MIX",
-    name: "Tonics & Mixers Premium",
-    category: "Finished Goods",
-    description: "Botanical tonic waters with natural quinine and premium club sodas.",
-    plantId: "PLT-01",
-    allergenRisk: "None",
-    standardMargin: "62.1%",
-    status: "Active",
-    effectiveFrom: "2025-01-01",
-    effectiveTo: "2030-12-31"
-  },
-  {
-    familyId: "FAM-03",
-    code: "GNG-BREW",
-    name: "Organic Ginger Brews",
-    category: "Finished Goods",
-    description: "Naturally fermented cloudy organic ginger beer with cane sugar.",
-    plantId: "PLT-02",
-    allergenRisk: "Ginger Extract",
-    standardMargin: "54.0%",
-    status: "Active",
-    effectiveFrom: "2025-01-01",
-    effectiveTo: "2030-12-31"
-  },
-  {
-    familyId: "FAM-04",
-    code: "RAW-SWT",
-    name: "Liquid Sweeteners & Syrups",
-    category: "Raw Ingredients",
-    description: "Non-GMO certified bulk liquid sucrose and concentrated flavor bases.",
-    plantId: "PLT-01",
-    allergenRisk: "None",
-    standardMargin: "N/A",
-    status: "Active",
-    effectiveFrom: "2025-01-01",
-    effectiveTo: "2030-12-31"
-  },
-  {
-    familyId: "FAM-05",
-    code: "PKG-CLOS",
-    name: "Caps, Closures & Primary Packaging",
-    category: "Packaging",
-    description: "Tamper-evident closures, sleek aluminum cans, and corrugated cartons.",
-    plantId: "PLT-01",
-    allergenRisk: "None",
-    standardMargin: "N/A",
-    status: "Active",
-    effectiveFrom: "2025-01-01",
-    effectiveTo: "2030-12-31"
-  }
-];
-
-export const INITIAL_UOMS = [
-  { uomId: "UOM-01", uomCode: "BOTTLES", name: "Bottles (Individual Units)", type: "Discrete Unit", baseUom: "BOTTLES", conversionFactor: 1.0, status: "Active", effectiveFrom: "2024-01-01", effectiveTo: "2030-12-31" },
-  { uomId: "UOM-02", uomCode: "CANS", name: "Aluminum Cans (Individual Units)", type: "Discrete Unit", baseUom: "CANS", conversionFactor: 1.0, status: "Active", effectiveFrom: "2024-01-01", effectiveTo: "2030-12-31" },
-  { uomId: "UOM-03", uomCode: "LITERS", name: "Liters (Metric Liquid Volume)", type: "Liquid Measure", baseUom: "LITERS", conversionFactor: 1.0, status: "Active", effectiveFrom: "2024-01-01", effectiveTo: "2030-12-31" },
-  { uomId: "UOM-04", uomCode: "KG", name: "Kilograms (Mass / Weight)", type: "Mass Measure", baseUom: "KG", conversionFactor: 1.0, status: "Active", effectiveFrom: "2024-01-01", effectiveTo: "2030-12-31" },
-  { uomId: "UOM-05", uomCode: "UNITS", name: "Units (Generic Discrete Item)", type: "Discrete Unit", baseUom: "UNITS", conversionFactor: 1.0, status: "Active", effectiveFrom: "2024-01-01", effectiveTo: "2030-12-31" },
-  { uomId: "UOM-06", uomCode: "CASE-24", name: "Case of 24 Units", type: "Packaging", baseUom: "UNITS", conversionFactor: 24.0, status: "Active", effectiveFrom: "2024-01-01", effectiveTo: "2030-12-31" },
-  { uomId: "UOM-07", uomCode: "CASE-12", name: "Case of 12 Units", type: "Packaging", baseUom: "UNITS", conversionFactor: 12.0, status: "Active", effectiveFrom: "2024-01-01", effectiveTo: "2030-12-31" },
-  { uomId: "UOM-08", uomCode: "PALLET-60", name: "Standard 48x40 Wood Pallet (60 Cases)", type: "Logistics", baseUom: "CASE-24", conversionFactor: 60.0, status: "Active", effectiveFrom: "2024-01-01", effectiveTo: "2030-12-31" }
-];
-
-export const INITIAL_SKUS = [
-  {
-    skuId: "SKU-001",
-    skuCode: "SKU-5001",
-    name: "500ml Sparkling Citrus Soda",
-    category: "Finished Goods",
-    itemType: "Finished Good",
-    familyId: "FAM-01",
-    family: "Sparkling Flavors",
-    uom: "Bottles",
-    plantId: "PLT-01",
-    stdCost: "$0.42",
-    revision: "R3",
-    status: "Active",
-    approvalStatus: "Approved",
-    shelfLifeDays: 365,
-    packConfigCode: "PCK-5001-24",
-    packSize: "24 x 500ml",
-    eligibleLineIds: ["LIN-01", "LIN-02"],
-    stdRunRateBPH: 42000,
-    expectedYieldPct: 99.4,
-    effectiveFrom: "2025-01-01",
-    effectiveTo: "2030-12-31",
-    description: "Premium carbonated citrus beverage with natural lime & lemon essences.",
-    createdBy: "Alexander Vance",
-    createdDate: "2026-06-15",
-    lastUpdated: "2026-08-30"
-  },
-  {
-    skuId: "SKU-002",
-    skuCode: "SKU-5002",
-    name: "1L Tonic Water Natural Quinine",
-    category: "Finished Goods",
-    itemType: "Finished Good",
-    familyId: "FAM-02",
-    family: "Tonics & Mixers",
-    uom: "Bottles",
-    plantId: "PLT-01",
-    stdCost: "$0.68",
-    revision: "R2",
-    status: "Active",
-    approvalStatus: "Approved",
-    shelfLifeDays: 540,
-    packConfigCode: "PCK-5002-12",
-    packSize: "12 x 1L",
-    eligibleLineIds: ["LIN-01", "LIN-02"],
-    stdRunRateBPH: 28000,
-    expectedYieldPct: 99.2,
-    effectiveFrom: "2025-01-01",
-    effectiveTo: "2030-12-31",
-    description: "Artisanal botanical tonic water with natural cinchona bark quinine.",
-    createdBy: "Sarah Jenkins",
-    createdDate: "2026-07-02",
-    lastUpdated: "2026-08-28"
-  },
-  {
-    skuId: "SKU-003",
-    skuCode: "SKU-5003",
-    name: "330ml Organic Ginger Beer",
-    category: "Finished Goods",
-    itemType: "Finished Good",
-    familyId: "FAM-03",
-    family: "Ginger Beers",
-    uom: "Cans",
-    plantId: "PLT-02",
-    stdCost: "$0.38",
-    revision: "R4",
-    status: "Active",
-    approvalStatus: "Approved",
-    shelfLifeDays: 270,
-    packConfigCode: "PCK-5003-24",
-    packSize: "24 x 330ml",
-    eligibleLineIds: ["LIN-03"],
-    stdRunRateBPH: 55000,
-    expectedYieldPct: 99.0,
-    effectiveFrom: "2025-01-01",
-    effectiveTo: "2030-12-31",
-    description: "Naturally fermented cloudy organic ginger beer with cane sugar.",
-    createdBy: "Alexander Vance",
-    createdDate: "2026-05-18",
-    lastUpdated: "2026-08-29"
-  },
-  {
-    skuId: "SKU-101",
-    skuCode: "ING-1001",
-    name: "Liquid Cane Sugar 67°Bx",
-    category: "Raw Ingredients",
-    itemType: "Raw Material",
-    familyId: "FAM-04",
-    family: "Sweeteners",
-    uom: "Liters",
-    plantId: "PLT-01",
-    stdCost: "$1.20",
-    revision: "R1",
-    status: "Active",
-    approvalStatus: "Approved",
-    shelfLifeDays: 180,
-    packConfigCode: "BULK-TNK",
-    packSize: "Bulk Tanker (10,000L)",
-    eligibleLineIds: ["LIN-01", "LIN-02"],
-    stdRunRateBPH: 0,
-    expectedYieldPct: 99.8,
-    effectiveFrom: "2025-01-01",
-    effectiveTo: "2030-12-31",
-    description: "Refined liquid sucrose solution certified non-GMO food grade.",
-    createdBy: "Marcus Vance",
-    createdDate: "2026-04-10",
-    lastUpdated: "2026-08-15"
-  },
-  {
-    skuId: "SKU-102",
-    skuCode: "ING-1002",
-    name: "Natural Citrus Essential Oil Compound",
-    category: "Raw Ingredients",
-    itemType: "Raw Material",
-    familyId: "FAM-04",
-    family: "Flavorings",
-    uom: "Kg",
-    plantId: "PLT-01",
-    stdCost: "$18.50",
-    revision: "R2",
-    status: "Active",
-    approvalStatus: "Approved",
-    shelfLifeDays: 365,
-    packConfigCode: "DRUM-25KG",
-    packSize: "25kg Stainless Drum",
-    eligibleLineIds: ["LIN-01"],
-    stdRunRateBPH: 0,
-    expectedYieldPct: 99.9,
-    effectiveFrom: "2025-01-01",
-    effectiveTo: "2030-12-31",
-    description: "Cold-pressed lemon and lime terpene flavor concentrate.",
-    createdBy: "Sarah Jenkins",
-    createdDate: "2026-04-12",
-    lastUpdated: "2026-08-20"
-  },
-  {
-    skuId: "SKU-201",
-    skuCode: "PKG-2001",
-    name: "28mm Tamper-Evident HDPE Bottle Cap",
-    category: "Packaging",
-    itemType: "Packaging Component",
-    familyId: "FAM-05",
-    family: "Caps & Closures",
-    uom: "Units",
-    plantId: "PLT-01",
-    stdCost: "$0.025",
-    revision: "R1",
-    status: "Active",
-    approvalStatus: "Approved",
-    shelfLifeDays: 730,
-    packConfigCode: "BOX-5000",
-    packSize: "5,000 Units / Corrugated Box",
-    eligibleLineIds: ["LIN-01", "LIN-02"],
-    stdRunRateBPH: 0,
-    expectedYieldPct: 99.0,
-    effectiveFrom: "2025-01-01",
-    effectiveTo: "2030-12-31",
-    description: "High-density polyethylene closure with gas-retention seal liner.",
-    createdBy: "Robert Thorne",
-    createdDate: "2026-05-01",
-    lastUpdated: "2026-08-10"
-  }
-];
-
-export const INITIAL_PACK_CONFIGS = [
-  {
-    packConfigId: "PCK-01",
-    packCode: "PCK-5001-24",
-    skuId: "SKU-001",
-    skuCode: "SKU-5001",
-    skuName: "500ml Sparkling Citrus Soda",
-    unitsPerPack: 24,
-    packType: "Corrugated Tray & Shrink Wrap",
-    packagingUom: "CASE-24",
-    caseConfiguration: "4x6 Bottles (24 Count)",
-    palletConfiguration: "60 Cases / 1,440 Bottles per Pallet",
-    tareWeightKg: 12.8,
-    status: "Active",
-    effectiveFrom: "2025-01-01",
-    effectiveTo: "2030-12-31"
-  },
-  {
-    packConfigId: "PCK-02",
-    packCode: "PCK-5002-12",
-    skuId: "SKU-002",
-    skuCode: "SKU-5002",
-    skuName: "1L Tonic Water Natural Quinine",
-    unitsPerPack: 12,
-    packType: "Partitioned Cardboard Case",
-    packagingUom: "CASE-12",
-    caseConfiguration: "3x4 Bottles (12 Count)",
-    palletConfiguration: "75 Cases / 900 Bottles per Pallet",
-    tareWeightKg: 13.2,
-    status: "Active",
-    effectiveFrom: "2025-01-01",
-    effectiveTo: "2030-12-31"
-  },
-  {
-    packConfigId: "PCK-03",
-    packCode: "PCK-5003-24",
-    skuId: "SKU-003",
-    skuCode: "SKU-5003",
-    skuName: "330ml Organic Ginger Beer",
-    unitsPerPack: 24,
-    packType: "Carton Board Multipack 4x6",
-    packagingUom: "CASE-24",
-    caseConfiguration: "4x6 Cans (24 Count)",
-    palletConfiguration: "90 Cases / 2,160 Cans per Pallet",
-    tareWeightKg: 8.9,
-    status: "Active",
-    effectiveFrom: "2025-01-01",
-    effectiveTo: "2030-12-31"
-  }
-];
-
-export const INITIAL_SHELF_LIFE = [
-  {
-    shelfLifeId: "SLF-01",
-    skuId: "SKU-001",
-    skuCode: "SKU-5001",
-    skuName: "500ml Sparkling Citrus Soda",
-    shelfLifeValue: 365,
-    shelfLifeUom: "Days",
-    storageCondition: "Ambient Dry (15°C - 25°C)",
-    minTempC: 4,
-    maxTempC: 28,
-    lightSensitivity: "Avoid Direct Sunlight",
-    quarantineDays: 1,
-    status: "Active",
-    effectiveFrom: "2025-01-01",
-    effectiveTo: "2030-12-31"
-  },
-  {
-    shelfLifeId: "SLF-02",
-    skuId: "SKU-002",
-    skuCode: "SKU-5002",
-    skuName: "1L Tonic Water Natural Quinine",
-    shelfLifeValue: 540,
-    shelfLifeUom: "Days",
-    storageCondition: "Ambient Dry (15°C - 25°C)",
-    minTempC: 4,
-    maxTempC: 28,
-    lightSensitivity: "UV-Resistant Amber Glass",
-    quarantineDays: 1,
-    status: "Active",
-    effectiveFrom: "2025-01-01",
-    effectiveTo: "2030-12-31"
-  },
-  {
-    shelfLifeId: "SLF-03",
-    skuId: "SKU-003",
-    skuCode: "SKU-5003",
-    skuName: "330ml Organic Ginger Beer",
-    shelfLifeValue: 270,
-    shelfLifeUom: "Days",
-    storageCondition: "Cool Ambient (10°C - 20°C)",
-    minTempC: 2,
-    maxTempC: 22,
-    lightSensitivity: "Hermetic Can Sealed",
-    quarantineDays: 2,
-    status: "Active",
-    effectiveFrom: "2025-01-01",
-    effectiveTo: "2030-12-31"
-  }
-];
-
-export const INITIAL_CUSTOMERS = [
-  { customerId: "CUST-001", name: "Costco Wholesale EMEA", code: "COSTCO-EU", region: "Europe", rating: "Tier 1 Priority", status: "Active" },
-  { customerId: "CUST-002", name: "Walmart Supply Chain NA", code: "WMT-US", region: "North America", rating: "Tier 1 Priority", status: "Active" },
-  { customerId: "CUST-003", name: "Tesco Retail Stores UK", code: "TSCO-UK", region: "UK & Ireland", rating: "Tier 2 Standard", status: "Active" },
-  { customerId: "CUST-004", name: "Metro Cash & Carry India", code: "METRO-IN", region: "South Asia", rating: "Tier 1 Priority", status: "Active" }
-];
-
-export const INITIAL_CUSTOMER_SKU_MAPPINGS = [
-  {
-    mappingId: "CSM-01",
-    customerId: "CUST-001",
-    customerName: "Costco Wholesale EMEA",
-    skuId: "SKU-001",
-    internalSkuCode: "SKU-5001",
-    internalSkuName: "500ml Sparkling Citrus Soda",
-    customerSkuCode: "CST-CITRUS-500",
-    customerSkuName: "Kirkland Signature Citrus Soda 500ml 24pk",
-    customerUom: "CASE-24",
-    barcodeUPC: "890123450012",
-    status: "Active",
-    effectiveFrom: "2025-01-01",
-    effectiveTo: "2030-12-31"
-  },
-  {
-    mappingId: "CSM-02",
-    customerId: "CUST-002",
-    customerName: "Walmart Supply Chain NA",
-    skuId: "SKU-001",
-    internalSkuCode: "SKU-5001",
-    internalSkuName: "500ml Sparkling Citrus Soda",
-    customerSkuCode: "WMT-SODA-5001",
-    customerSkuName: "Great Value Sparkling Citrus 500ml",
-    customerUom: "CASE-24",
-    barcodeUPC: "890123450013",
-    status: "Active",
-    effectiveFrom: "2025-01-01",
-    effectiveTo: "2030-12-31"
-  },
-  {
-    mappingId: "CSM-03",
-    customerId: "CUST-001",
-    customerName: "Costco Wholesale EMEA",
-    skuId: "SKU-002",
-    internalSkuCode: "SKU-5002",
-    internalSkuName: "1L Tonic Water Natural Quinine",
-    customerSkuCode: "CST-TONIC-1L",
-    customerSkuName: "Kirkland Botanical Tonic Water 1L 12pk",
-    customerUom: "CASE-12",
-    barcodeUPC: "890123450024",
-    status: "Active",
-    effectiveFrom: "2025-01-01",
-    effectiveTo: "2030-12-31"
-  }
-];
-
-export const INITIAL_BOMS = [
-  {
-    bomId: "BOM-001",
-    bomNumber: "BOM-5001",
-    finishedSkuId: "SKU-001",
-    finishedSkuCode: "SKU-5001",
-    finishedSkuName: "500ml Sparkling Citrus Soda",
-    revision: "R3",
-    effectiveDate: "2026-08-01",
-    effectiveFrom: "2026-08-01",
-    effectiveTo: "2030-12-31",
-    status: "Active",
-    approvalStatus: "Approved",
-    batchSize: "10,000 Liters",
-    yieldTarget: "99.4%",
-    expectedYieldPct: 99.4,
-    minYieldPct: 98.5,
-    maxYieldPct: 99.9,
-    scrapFactorPct: 0.6,
-    createdBy: "Alexander Vance",
-    lastUpdated: "2026-08-30",
-    components: [
-      { id: "CMP-01", skuId: "SKU-101", skuCode: "ING-1001", name: "Liquid Cane Sugar 67°Bx", quantity: 850, uom: "Liters", scrapFactor: "0.5%", type: "Ingredient" },
-      { id: "CMP-02", skuId: "SKU-102", skuCode: "ING-1002", name: "Natural Citrus Essential Oil Compound", quantity: 18.5, uom: "Kg", scrapFactor: "0.2%", type: "Ingredient" },
-      { id: "CMP-03", skuId: "SKU-201", skuCode: "PKG-2001", name: "28mm Tamper-Evident HDPE Bottle Cap", quantity: 20000, uom: "Units", scrapFactor: "1.0%", type: "Packaging" }
-    ],
-    revisionHistory: [
-      { revision: "R3", status: "Approved", createdBy: "Alexander Vance", date: "2026-08-30", changes: "Optimized citrus flavor dosage for higher shelf stability (+0.5 kg).", approvedBy: "Sarah Jenkins" },
-      { revision: "R2", status: "Superseded", createdBy: "Sarah Jenkins", date: "2026-07-15", changes: "Switched sugar standard to 67°Bx non-GMO supplier.", approvedBy: "Robert Thorne" },
-      { revision: "R1", status: "Superseded", createdBy: "Marcus Vance", date: "2026-06-01", changes: "Initial production formulation baseline.", approvedBy: "Robert Thorne" }
-    ]
-  },
-  {
-    bomId: "BOM-002",
-    bomNumber: "BOM-5002",
-    finishedSkuId: "SKU-002",
-    finishedSkuCode: "SKU-5002",
-    finishedSkuName: "1L Tonic Water Natural Quinine",
-    revision: "R2",
-    effectiveDate: "2026-07-15",
-    effectiveFrom: "2026-07-15",
-    effectiveTo: "2030-12-31",
-    status: "Active",
-    approvalStatus: "Approved",
-    batchSize: "8,000 Liters",
-    yieldTarget: "99.2%",
-    expectedYieldPct: 99.2,
-    minYieldPct: 98.0,
-    maxYieldPct: 99.8,
-    scrapFactorPct: 0.8,
-    createdBy: "Sarah Jenkins",
-    lastUpdated: "2026-08-28",
-    components: [
-      { id: "CMP-11", skuId: "SKU-101", skuCode: "ING-1001", name: "Liquid Cane Sugar 67°Bx", quantity: 560, uom: "Liters", scrapFactor: "0.5%", type: "Ingredient" },
-      { id: "CMP-12", skuId: "SKU-201", skuCode: "PKG-2001", name: "28mm Tamper-Evident HDPE Bottle Cap", quantity: 8000, uom: "Units", scrapFactor: "1.2%", type: "Packaging" }
-    ],
-    revisionHistory: [
-      { revision: "R2", status: "Approved", createdBy: "Sarah Jenkins", date: "2026-08-28", changes: "Carbonation pressure standard aligned to 4.2 bar.", approvedBy: "Robert Thorne" },
-      { revision: "R1", status: "Superseded", createdBy: "Alexander Vance", date: "2026-06-10", changes: "Initial trial specification.", approvedBy: "Sarah Jenkins" }
-    ]
-  },
-  {
-    bomId: "BOM-003",
-    bomNumber: "BOM-5003",
-    finishedSkuId: "SKU-003",
-    finishedSkuCode: "SKU-5003",
-    finishedSkuName: "330ml Organic Ginger Beer",
-    revision: "R4",
-    effectiveDate: "2026-08-20",
-    effectiveFrom: "2026-08-20",
-    effectiveTo: "2030-12-31",
-    status: "Active",
-    approvalStatus: "Approved",
-    batchSize: "12,000 Liters",
-    yieldTarget: "99.0%",
-    expectedYieldPct: 99.0,
-    minYieldPct: 97.5,
-    maxYieldPct: 99.6,
-    scrapFactorPct: 1.0,
-    createdBy: "Alexander Vance",
-    lastUpdated: "2026-08-29",
-    components: [
-      { id: "CMP-21", skuId: "SKU-101", skuCode: "ING-1001", name: "Liquid Cane Sugar 67°Bx", quantity: 1100, uom: "Liters", scrapFactor: "0.4%", type: "Ingredient" }
-    ],
-    revisionHistory: [
-      { revision: "R4", status: "Approved", createdBy: "Alexander Vance", date: "2026-08-29", changes: "Ginger root infusion duration extended to 4.5 hours.", approvedBy: "Sarah Jenkins" }
-    ]
-  }
-];
-
-export const INITIAL_OPERATIONS = [
-  { operationId: "OP-01", operationCode: "OP-SYR-MIX", name: "Syrup Batch Blending & Brix Adjustment", sequence: 10, department: "Processing", stdDurationMin: 45, setupDurationMin: 20, status: "Active" },
-  { operationId: "OP-02", operationCode: "OP-CARB-CHL", name: "Chilling & Inline Carbonation Injection", sequence: 20, department: "Processing", stdDurationMin: 30, setupDurationMin: 15, status: "Active" },
-  { operationId: "OP-03", operationCode: "OP-BLOW-MOLD", name: "PET Bottle Blow Molding SBO", sequence: 30, department: "Packaging", stdDurationMin: 60, setupDurationMin: 25, status: "Active" },
-  { operationId: "OP-04", operationCode: "OP-ISO-FILL", name: "Isobaric Rotary Bottle Filling & Capping", sequence: 40, department: "Packaging", stdDurationMin: 60, setupDurationMin: 30, status: "Active" },
-  { operationId: "OP-05", operationCode: "OP-LBL-PCK", name: "Hot-Melt Labeling, Case Packing & Palletizing", sequence: 50, department: "Packaging", stdDurationMin: 60, setupDurationMin: 15, status: "Active" }
-];
-
-export const INITIAL_ROUTINGS = [
-  {
-    routingId: "RTG-001",
-    routingCode: "RTG-5001-L1",
-    skuId: "SKU-001",
-    skuCode: "SKU-5001",
-    skuName: "500ml Sparkling Citrus Soda",
-    lineId: "LIN-01",
-    lineCode: "LINE-1",
-    lineName: "High-Speed Bottling Line 1",
-    revision: "R2",
-    approvalStatus: "Approved",
-    status: "Active",
-    stdRunRateBPH: 42000,
-    setupDurationMin: 35,
-    expectedYieldPct: 99.4,
-    effectiveFrom: "2025-01-01",
-    effectiveTo: "2030-12-31",
-    steps: [
-      { sequence: 10, operationId: "OP-01", operationName: "Syrup Batch Blending & Brix Adjustment", workCenter: "Blend Tank 1", stdRate: "10,000 L/hr" },
-      { sequence: 20, operationId: "OP-02", operationName: "Chilling & Inline Carbonation Injection", workCenter: "CarboQC Skid", stdRate: "12,000 L/hr" },
-      { sequence: 30, operationId: "OP-03", operationName: "PET Bottle Blow Molding SBO", workCenter: "Sidel Matrix Blow Molder", stdRate: "42,000 BPH" },
-      { sequence: 40, operationId: "OP-04", operationName: "Isobaric Rotary Bottle Filling & Capping", workCenter: "Krones Isobaric Filler", stdRate: "42,000 BPH" },
-      { sequence: 50, operationId: "OP-05", operationName: "Hot-Melt Labeling, Case Packing & Palletizing", workCenter: "Krones Multimodul Labeler", stdRate: "42,000 BPH" }
-    ]
-  },
-  {
-    routingId: "RTG-002",
-    routingCode: "RTG-5002-L2",
-    skuId: "SKU-002",
-    skuCode: "SKU-5002",
-    skuName: "1L Tonic Water Natural Quinine",
-    lineId: "LIN-02",
-    lineCode: "LINE-2",
-    lineName: "Medium-Speed Glass Bottling Line 2",
-    revision: "R1",
-    approvalStatus: "Approved",
-    status: "Active",
-    stdRunRateBPH: 28000,
-    setupDurationMin: 45,
-    expectedYieldPct: 99.2,
-    effectiveFrom: "2025-01-01",
-    effectiveTo: "2030-12-31",
-    steps: [
-      { sequence: 10, operationId: "OP-01", operationName: "Syrup Batch Blending & Brix Adjustment", workCenter: "Blend Tank 2", stdRate: "8,000 L/hr" },
-      { sequence: 20, operationId: "OP-04", operationName: "Isobaric Rotary Bottle Filling & Capping", workCenter: "KHS Innofill Glass Filler", stdRate: "28,000 BPH" }
-    ]
-  }
-];
-
-export const INITIAL_LINES = [
-  {
-    lineId: "LIN-01",
-    lineCode: "LINE-1",
-    name: "High-Speed Bottling Line 1",
-    plantId: "PLT-01",
-    plantName: "Indore Plant - Processing & Bottling",
-    departmentId: "DEP-01",
-    capacity: "42,000 BPH (Bottles/Hour)",
-    ratedSpeedBPH: 42000,
-    status: "Active",
-    supervisorId: "EMP-005",
-    supervisorName: "David Kim",
-    assignedAssetIds: ["AST-001", "AST-002", "AST-003", "AST-004"],
-    eligibleSkuIds: ["SKU-001", "SKU-002"],
-    ratedOEE: "88.5%",
-    currentRunningSku: "SKU-5001"
-  },
-  {
-    lineId: "LIN-02",
-    lineCode: "LINE-2",
-    name: "Medium-Speed Glass Bottling Line 2",
-    plantId: "PLT-01",
-    plantName: "Indore Plant - Processing & Bottling",
-    departmentId: "DEP-01",
-    capacity: "28,000 BPH",
-    ratedSpeedBPH: 28000,
-    status: "Active",
-    supervisorId: "EMP-005",
-    supervisorName: "David Kim",
-    assignedAssetIds: ["AST-005"],
-    eligibleSkuIds: ["SKU-001", "SKU-002"],
-    ratedOEE: "84.2%",
-    currentRunningSku: "SKU-5002"
-  },
-  {
-    lineId: "LIN-03",
-    lineCode: "LINE-3",
-    name: "Automated Sleek Canning Line 3",
-    plantId: "PLT-02",
-    plantName: "Austin Facility - Canning & Logistics",
-    departmentId: "DEP-01",
-    capacity: "55,000 CPH (Cans/Hour)",
-    ratedSpeedBPH: 55000,
-    status: "Active",
-    supervisorId: "EMP-001",
-    supervisorName: "Alexander Vance",
-    assignedAssetIds: ["AST-006"],
-    eligibleSkuIds: ["SKU-003"],
-    ratedOEE: "91.0%",
-    currentRunningSku: "SKU-5003"
-  }
-];
-
-export const INITIAL_LINE_TARGETS = [
-  {
-    targetId: "TGT-01",
-    plantId: "PLT-01",
-    lineId: "LIN-01",
-    lineName: "High-Speed Bottling Line 1",
-    skuId: "SKU-001",
-    skuCode: "SKU-5001",
-    skuName: "500ml Sparkling Citrus Soda",
-    shift: "Morning Shift (06:00 - 14:00)",
-    targetQuantity: 300000,
-    targetHB: "37,500 Bottles/Hour",
-    stdRunRate: 42000,
-    oeeTargetPct: 89.2,
-    status: "Active",
-    effectiveDate: "2026-09-01"
-  },
-  {
-    targetId: "TGT-02",
-    plantId: "PLT-01",
-    lineId: "LIN-01",
-    lineName: "High-Speed Bottling Line 1",
-    skuId: "SKU-001",
-    skuCode: "SKU-5001",
-    skuName: "500ml Sparkling Citrus Soda",
-    shift: "Evening Shift (14:00 - 22:00)",
-    targetQuantity: 290000,
-    targetHB: "36,250 Bottles/Hour",
-    stdRunRate: 42000,
-    oeeTargetPct: 86.3,
-    status: "Active",
-    effectiveDate: "2026-09-01"
-  },
-  {
-    targetId: "TGT-03",
-    plantId: "PLT-01",
-    lineId: "LIN-02",
-    lineName: "Medium-Speed Glass Bottling Line 2",
-    skuId: "SKU-002",
-    skuCode: "SKU-5002",
-    skuName: "1L Tonic Water Natural Quinine",
-    shift: "General Day Shift",
-    targetQuantity: 200000,
-    targetHB: "25,000 Bottles/Hour",
-    stdRunRate: 28000,
-    oeeTargetPct: 89.0,
-    status: "Active",
-    effectiveDate: "2026-09-01"
-  }
-];
-
-export const INITIAL_CHANGEOVER_MATRIX = [
-  {
-    matrixId: "CO-01",
-    fromSkuId: "SKU-001",
-    fromSkuCode: "SKU-5001",
-    fromFamily: "Sparkling Flavors",
-    toSkuId: "SKU-001",
-    toSkuCode: "SKU-5001",
-    toFamily: "Sparkling Flavors",
-    changeoverDurationMin: 0,
-    sanitationClass: "None (Same SKU Continuous)",
-    allergenCleaningRequired: false,
-    notes: "No changeover downtime required for identical formulation batch continuation.",
-    status: "Active"
-  },
-  {
-    matrixId: "CO-02",
-    fromSkuId: "SKU-001",
-    fromSkuCode: "SKU-5001",
-    fromFamily: "Sparkling Flavors",
-    toSkuId: "SKU-002",
-    toSkuCode: "SKU-5002",
-    toFamily: "Tonics & Mixers",
-    changeoverDurationMin: 45,
-    sanitationClass: "Class B - Warm Water Flush & Syrup Line Rinse",
-    allergenCleaningRequired: false,
-    notes: "Requires syrup manifold rinse and bottle capper starwheel size change from 500ml to 1L.",
-    status: "Active"
-  },
-  {
-    matrixId: "CO-03",
-    fromSkuId: "SKU-002",
-    fromSkuCode: "SKU-5002",
-    fromFamily: "Tonics & Mixers",
-    toSkuId: "SKU-001",
-    toSkuCode: "SKU-5001",
-    toFamily: "Sparkling Flavors",
-    changeoverDurationMin: 60,
-    sanitationClass: "Class A - Full Caustic CIP (Hot CIP 85°C)",
-    allergenCleaningRequired: true,
-    notes: "Quinine botanical essence requires deep caustic CIP wash to eliminate flavor carryover.",
-    status: "Active"
-  }
-];
-
-export const INITIAL_SANITATION_CLASSES = [
-  {
-    sanitationId: "SAN-01",
-    sanitationClass: "Class A - Full Caustic CIP (Hot CIP 85°C)",
-    description: "5-Step full automated clean-in-place: Pre-rinse, Hot Caustic (85°C), Intermediate Rinse, Peracetic Acid Sanitization, Final Sterile Water Rinse.",
-    durationMin: 75,
-    cleaningMethod: "Automated 5-Step Central CIP Skid",
-    riskLevel: "Critical / Allergen Elimination",
-    applicableProducts: "Tonics, Ginger Extract Formulations, Allergen Swaps",
-    status: "Active"
-  },
-  {
-    sanitationId: "SAN-02",
-    sanitationClass: "Class B - Warm Water Flush & Sanitizer Rinse",
-    description: "Warm water flush (55°C) followed by ozone/peracetic acid chemical sanitizer rinse.",
-    durationMin: 35,
-    cleaningMethod: "Inline CIP Circuit Flush",
-    riskLevel: "Medium (Flavor Swap)",
-    applicableProducts: "Citrus to Cola, Clear Soda to Flavored Soda",
-    status: "Active"
-  },
-  {
-    sanitationId: "SAN-03",
-    sanitationClass: "Class C - Dry Line Sanitation & Vacuum",
-    description: "Mechanical dry vacuum, optical sensor lens clean, starwheel sanitization wipe down.",
-    durationMin: 15,
-    cleaningMethod: "Manual Operator Protocol",
-    riskLevel: "Low (Same Product Batch Restart)",
-    applicableProducts: "All Finished Goods",
-    status: "Active"
-  }
-];
-
-export const INITIAL_ALLERGEN_RULES = [
-  {
-    allergenId: "ALG-01",
-    allergenName: "Ginger Extract Botanical Essences",
-    skuId: "SKU-003",
-    skuCode: "SKU-5003",
-    riskLevel: "Medium Allergen / Sensory Carryover",
-    cleaningProtocol: "Class A Full CIP + Sensory Swab Verification",
-    changeoverRestriction: "Must schedule at end of production week prior to weekly deep sanitation.",
-    status: "Active"
-  },
-  {
-    allergenId: "ALG-02",
-    allergenName: "Sulfites (Preservatives in Flavorings)",
-    skuId: "SKU-102",
-    skuCode: "ING-1002",
-    riskLevel: "High Regulatory CCP",
-    cleaningProtocol: "Class A CIP + ATP Swab Validation < 10 RLU",
-    changeoverRestriction: "Mandatory QA clearance sign-off before commencing allergen-free SKU filling.",
-    status: "Active"
-  }
-];
-
-export const INITIAL_LABOUR_STANDARDS = [
-  { id: "LBR-01", lineId: "LIN-01", lineName: "Line 1 — Aseptic Bottling", standardCrew: 10, stdLaborHoursPer1kUnits: 2.38, directCostPerHour: "$24.50", status: "Active" },
-  { id: "LBR-02", lineId: "LIN-02", lineName: "Line 2 — Formulation & Pasteurizer", standardCrew: 6, stdLaborHoursPer1kUnits: 1.85, directCostPerHour: "$28.00", status: "Active" },
-  { id: "LBR-03", lineId: "LIN-03", lineName: "Line 3 — Canning Line", standardCrew: 8, stdLaborHoursPer1kUnits: 2.15, directCostPerHour: "$24.50", status: "Active" }
-];
-
-export const INITIAL_ASSETS = [
-  {
-    assetId: "AST-001",
-    name: "Krones Isobaric Rotary Filler 60-Valve",
-    type: "Packaging / Filling",
-    lineId: "LIN-01",
-    lineName: "High-Speed Bottling Line 1",
-    plantId: "PLT-01",
-    status: "Operational",
-    criticality: "Critical (Class A)",
-    maintenanceStatus: "Healthy (96% Score)",
-    serialNumber: "KRN-2024-8842",
-    manufacturer: "Krones AG",
-    installDate: "2024-03-15",
-    ratedSpeed: "42,000 BPH",
-    downtimeHistory: [
-      { date: "2026-08-25", durationMin: 22, reason: "Volumetric dosing seal leak", code: "FLR-SEAL-01", technician: "Marcus Vance" },
-      { date: "2026-08-10", durationMin: 15, reason: "Infeed starwheel timing jam", code: "JAM-STR-02", technician: "Marcus Vance" }
-    ],
-    maintenanceHistory: [
-      { woId: "WO-8821", date: "2026-08-28", type: "Preventive", description: "Monthly valve diaphragm lubrication & CIP rinse inspection", status: "Completed" },
-      { woId: "WO-8805", date: "2026-08-01", type: "Calibration", description: "Pressure transducer zero-point calibration (HACCP CCP-1)", status: "Completed" }
-    ],
-    auditHistory: [
-      { date: "2026-08-28", user: "Marcus Vance", action: "Updated maintenance schedule to 250-hour cycle" },
-      { date: "2026-06-12", user: "Alexander Vance", action: "Assigned Class A criticality rating" }
-    ]
-  },
-  {
-    assetId: "AST-002",
-    name: "APV High-Temperature Short-Time (HTST) Pasteurizer",
-    type: "Thermal Processing",
-    lineId: "LIN-01",
-    lineName: "High-Speed Bottling Line 1",
-    plantId: "PLT-01",
-    status: "Operational",
-    criticality: "Critical (Class A)",
-    maintenanceStatus: "Healthy (98% Score)",
-    serialNumber: "APV-HT-9921",
-    manufacturer: "SPX FLOW APV",
-    installDate: "2023-11-20",
-    ratedSpeed: "15,000 L/hr",
-    downtimeHistory: [],
-    maintenanceHistory: [
-      { woId: "WO-8790", date: "2026-08-15", type: "Preventive", description: "Plate heat exchanger chemical wash & gasket integrity test", status: "Completed" }
-    ],
-    auditHistory: [
-      { date: "2026-08-15", user: "Sarah Jenkins", action: "Verified HACCP thermal log validation" }
-    ]
-  },
-  {
-    assetId: "AST-003",
-    name: "Zalkin 12-Head Rotary Capper",
-    type: "Packaging / Capping",
-    lineId: "LIN-01",
-    lineName: "High-Speed Bottling Line 1",
-    plantId: "PLT-01",
-    status: "Operational",
-    criticality: "High (Class B)",
-    maintenanceStatus: "Healthy (92% Score)",
-    serialNumber: "ZLK-CAP-4410",
-    manufacturer: "Zalkin",
-    installDate: "2024-03-20",
-    ratedSpeed: "42,000 BPH",
-    downtimeHistory: [
-      { date: "2026-08-18", durationMin: 18, reason: "Cap sorter chute optical sensor dirt", code: "SNS-OPT-04", technician: "James Holden" }
-    ],
-    maintenanceHistory: [
-      { woId: "WO-8812", date: "2026-08-20", type: "Corrective", description: "Cleaned optical photocell and adjusted magnetic clutch torque", status: "Completed" }
-    ],
-    auditHistory: []
-  },
-  {
-    assetId: "AST-004",
-    name: "Sidel Matrix Blow Molder SBO 14",
-    type: "Forming / Molding",
-    lineId: "LIN-01",
-    lineName: "High-Speed Bottling Line 1",
-    plantId: "PLT-01",
-    status: "Operational",
-    criticality: "Critical (Class A)",
-    maintenanceStatus: "Healthy (94% Score)",
-    serialNumber: "SDL-MX-1402",
-    manufacturer: "Sidel",
-    installDate: "2024-01-10",
-    ratedSpeed: "42,000 BPH",
-    downtimeHistory: [],
-    maintenanceHistory: [],
-    auditHistory: []
-  },
-  {
-    assetId: "AST-005",
-    name: "KHS Innofill Glass Filler",
-    type: "Packaging / Filling",
-    lineId: "LIN-02",
-    lineName: "Medium-Speed Glass Bottling Line 2",
-    plantId: "PLT-01",
-    status: "Operational",
-    criticality: "High (Class B)",
-    maintenanceStatus: "Healthy (91% Score)",
-    serialNumber: "KHS-GL-5520",
-    manufacturer: "KHS Group",
-    installDate: "2023-08-14",
-    ratedSpeed: "28,000 BPH",
-    downtimeHistory: [],
-    maintenanceHistory: [],
-    auditHistory: []
-  },
-  {
-    assetId: "AST-006",
-    name: "Ferrum High-Speed Can Seamer F708",
-    type: "Packaging / Seaming",
-    lineId: "LIN-03",
-    lineName: "Automated Sleek Canning Line 3",
-    plantId: "PLT-02",
-    status: "Operational",
-    criticality: "Critical (Class A)",
-    maintenanceStatus: "Healthy (97% Score)",
-    serialNumber: "FRM-CAN-7080",
-    manufacturer: "Ferrum Packaging",
-    installDate: "2024-05-10",
-    ratedSpeed: "55,000 CPH",
-    downtimeHistory: [],
-    maintenanceHistory: [],
-    auditHistory: []
-  }
-];
-
-export const INITIAL_EMPLOYEES = [
-  {
-    employeeId: "EMP-001",
-    name: "Alexander Vance",
-    email: "alexander.vance@flowstate.io",
-    department: "IT & Continuous Improvement",
-    departmentId: "DEP-05",
-    role: "System Administrator & CI Lead",
-    plantId: "PLT-01",
-    plantName: "Indore Plant",
-    skills: ["5-Why RCA", "DMAIC Six Sigma", "Master Data Governance", "ERP Integration", "SCADA Architecture"],
-    skillLevel: "Level 4 (Master / Trainer)",
-    certifications: ["Six Sigma Black Belt (ASQ)", "ISO 22000 Lead Auditor", "AWS Cloud Architect"],
-    assignedLineIds: ["LIN-01", "LIN-02", "LIN-03"],
-    status: "Active"
-  },
-  {
-    employeeId: "EMP-002",
-    name: "Robert Thorne",
-    email: "robert.thorne@flowstate.io",
-    department: "Plant Operations",
-    departmentId: "DEP-01",
-    role: "Plant Manager",
-    plantId: "PLT-01",
-    plantName: "Indore Plant",
-    skills: ["OEE Loss Elimination", "Capacity Planning", "Financial ROI Modeling", "Operational Leadership"],
-    skillLevel: "Level 4 (Master / Trainer)",
-    certifications: ["Lean Bronze Certified (SME)", "CMRP Reliability Professional"],
-    assignedLineIds: ["LIN-01", "LIN-02"],
-    status: "Active"
-  },
-  {
-    employeeId: "EMP-003",
-    name: "Sarah Jenkins",
-    email: "sarah.jenkins@flowstate.io",
-    department: "Quality Assurance",
-    departmentId: "DEP-03",
-    role: "QA / QC Manager",
-    plantId: "PLT-01",
-    plantName: "Indore Plant",
-    skills: ["HACCP CCP Monitoring", "CoA Batch Release", "Sensory Analysis", "Statistical Process Control"],
-    skillLevel: "Level 4 (Master / Trainer)",
-    certifications: ["PCQI Preventive Controls", "ISO 9001 Lead Auditor"],
-    assignedLineIds: ["LIN-01", "LIN-02"],
-    status: "Active"
-  },
-  {
-    employeeId: "EMP-004",
-    name: "Marcus Vance",
-    email: "marcus.vance@flowstate.io",
-    department: "Maintenance & Reliability",
-    departmentId: "DEP-02",
-    role: "Maintenance Lead & Millwright",
-    plantId: "PLT-01",
-    plantName: "Indore Plant",
-    skills: ["Precision Shaft Alignment", "Vibration Analysis", "LOTO Safety Protocol", "Hydraulic & Pneumatics"],
-    skillLevel: "Level 3 (Senior Technician)",
-    certifications: ["Vibration Analyst Cat II", "OSHA 30-Hour Safety"],
-    assignedLineIds: ["LIN-01"],
-    status: "Active"
-  },
-  {
-    employeeId: "EMP-005",
-    name: "David Kim",
-    email: "david.kim@flowstate.io",
-    department: "Production",
-    departmentId: "DEP-01",
-    role: "Production Shift Supervisor",
-    plantId: "PLT-01",
-    plantName: "Indore Plant",
-    skills: ["Line Pacing", "Changeover Optimization", "Labour Dispatch", "Shift Handover"],
-    skillLevel: "Level 3 (Senior Technician)",
-    certifications: ["TPM Autonomous Maintenance", "First Aid & CPR"],
-    assignedLineIds: ["LIN-01", "LIN-02"],
-    status: "Active"
-  }
-];
-
-export const INITIAL_TRAINING_RECORDS = [
-  {
-    trainingId: "TRN-01",
-    employeeId: "EMP-005",
-    employeeName: "David Kim",
-    courseTitle: "Autonomous Maintenance Level 2 (TPM Pillar)",
-    trainer: "Alexander Vance",
-    completionDate: "2026-06-15",
-    expiryDate: "2027-06-15",
-    score: "98%",
-    status: "Certified Valid"
-  },
-  {
-    trainingId: "TRN-02",
-    employeeId: "EMP-004",
-    employeeName: "Marcus Vance",
-    courseTitle: "High-Voltage LOTO & Arc Flash Safety",
-    trainer: "Industrial Safety Institute",
-    completionDate: "2025-08-10",
-    expiryDate: "2026-08-10",
-    score: "100%",
-    status: "Expired / Needs Renewal"
-  }
-];
-
-export const INITIAL_QUALITY_SPECS = [
-  {
-    specId: "QSP-001",
-    skuId: "SKU-001",
-    skuCode: "SKU-5001",
-    skuName: "500ml Sparkling Citrus Soda",
-    specificationTitle: "Beverage Acidity & Brix Parameter Standard",
-    parameter: "Soluble Solids (Brix)",
-    target: "10.50",
-    min: "10.30",
-    max: "10.70",
-    uom: "°Bx",
-    revision: "R2",
-    status: "Active",
-    approvalStatus: "Approved",
-    criticality: "Critical CCP (HACCP-1)",
-    isCCP: true,
-    criticalLimit: "Must not drop below 10.25°Bx or exceed 10.75°Bx",
-    testMethod: "Digital Refractometer Ref-300",
-    effectiveFrom: "2025-01-01",
-    effectiveTo: "2030-12-31",
-    revisionHistory: [
-      { revision: "R2", status: "Approved", createdBy: "Sarah Jenkins", date: "2026-08-20", changes: "Tightened Brix upper limit from 10.80 to 10.70 to improve sugar consistency.", approvedBy: "Robert Thorne" },
-      { revision: "R1", status: "Superseded", createdBy: "Sarah Jenkins", date: "2026-06-10", changes: "Initial product formulation release.", approvedBy: "Robert Thorne" }
-    ]
-  },
-  {
-    specId: "QSP-002",
-    skuId: "SKU-001",
-    skuCode: "SKU-5001",
-    skuName: "500ml Sparkling Citrus Soda",
-    specificationTitle: "Carbon Dioxide (CO2) Dissolved Volume",
-    parameter: "Dissolved Carbonation",
-    target: "3.80",
-    min: "3.60",
-    max: "4.00",
-    uom: "Vol CO2",
-    revision: "R3",
-    status: "Active",
-    approvalStatus: "Approved",
-    criticality: "Quality Spec",
-    isCCP: false,
-    criticalLimit: "Standard QA tolerance band",
-    testMethod: "CarboQC Piercing Gauge",
-    effectiveFrom: "2025-01-01",
-    effectiveTo: "2030-12-31",
-    revisionHistory: [
-      { revision: "R3", status: "Approved", createdBy: "Sarah Jenkins", date: "2026-08-22", changes: "Calibrated for warm-season ambient temperature variations.", approvedBy: "Alexander Vance" }
-    ]
-  },
-  {
-    specId: "QSP-003",
-    skuId: "SKU-002",
-    skuCode: "SKU-5002",
-    skuName: "1L Tonic Water Natural Quinine",
-    specificationTitle: "Finished Product pH Level Control",
-    parameter: "pH Acidity Level",
-    target: "2.85",
-    min: "2.70",
-    max: "3.00",
-    uom: "pH",
-    revision: "R1",
-    status: "Active",
-    approvalStatus: "Approved",
-    criticality: "Critical CCP (HACCP-2)",
-    isCCP: true,
-    criticalLimit: "pH must remain <= 3.00 for microbial inhibition",
-    testMethod: "Benchtop pH Probe Metrohm 913",
-    effectiveFrom: "2025-01-01",
-    effectiveTo: "2030-12-31",
-    revisionHistory: [
-      { revision: "R1", status: "Approved", createdBy: "Sarah Jenkins", date: "2026-07-02", changes: "Baseline release for natural quinine formula.", approvedBy: "Robert Thorne" }
-    ]
-  },
-  {
-    specId: "QSP-004",
-    skuId: "SKU-001",
-    skuCode: "SKU-5001",
-    skuName: "500ml Sparkling Citrus Soda",
-    specificationTitle: "Net Fill Volume & Headspace Height",
-    parameter: "Net Content Volume",
-    target: "502.0",
-    min: "498.0",
-    max: "506.0",
-    uom: "mL",
-    revision: "R2",
-    status: "Active",
-    approvalStatus: "Approved",
-    criticality: "Legal Metrology / Legal",
-    isCCP: false,
-    criticalLimit: "T1 underfill limit 495 mL (3 allowable per 10,000 batch)",
-    testMethod: "Gravimetric Density Checkweighing",
-    effectiveFrom: "2025-01-01",
-    effectiveTo: "2030-12-31",
-    revisionHistory: [
-      { revision: "R2", status: "Approved", createdBy: "Sarah Jenkins", date: "2026-08-14", changes: "Adjusted target fill from 500 to 502 mL to guarantee 0% underfill.", approvedBy: "Robert Thorne" }
-    ]
-  }
-];
-
-export const INITIAL_STORAGE_RESOURCES = [
-  {
-    storageId: "STR-01",
-    code: "WH-RM-01",
-    name: "Raw Material Warehouse Room A",
-    type: "Warehouse Room",
-    plantId: "PLT-01",
-    plantName: "Indore Plant",
-    zone: "Bulk Liquid & Dry Ingredients Zone",
-    capacity: "500 Pallets",
-    currentOccupancy: "380 Pallets (76%)",
-    temperatureRange: "Ambient (18°C - 24°C)",
-    status: "Active",
-    effectiveFrom: "2024-01-01",
-    effectiveTo: "2030-12-31"
-  },
-  {
-    storageId: "STR-02",
-    code: "WH-RCK-101",
-    name: "High-Bay Heavy Rack Array R-101 to R-110",
-    type: "Racks System",
-    plantId: "PLT-01",
-    plantName: "Indore Plant",
-    zone: "Finished Goods Staging Bay 2",
-    capacity: "1,200 Pallets",
-    currentOccupancy: "980 Pallets (81.6%)",
-    temperatureRange: "Ambient",
-    status: "Active",
-    effectiveFrom: "2024-01-01",
-    effectiveTo: "2030-12-31"
-  },
-  {
-    storageId: "STR-03",
-    code: "WH-CRT-05",
-    name: "Mobile Clean CIP Transport Carts (5-Set)",
-    type: "Mobile Carts",
-    plantId: "PLT-01",
-    plantName: "Indore Plant",
-    zone: "Packaging Line Staging",
-    capacity: "25 Carts",
-    currentOccupancy: "18 Carts in Use",
-    temperatureRange: "Clean Room",
-    status: "Active",
-    effectiveFrom: "2024-01-01",
-    effectiveTo: "2030-12-31"
-  },
-  {
-    storageId: "STR-04",
-    code: "WH-AUST-01",
-    name: "Cold Storage Staging Vault 1",
-    type: "Cold Vault",
-    plantId: "PLT-02",
-    plantName: "Austin Facility",
-    zone: "Ginger Beer Cold Conditioning",
-    capacity: "450 Pallets",
-    currentOccupancy: "310 Pallets (68.8%)",
-    temperatureRange: "Cold (2°C - 6°C)",
-    status: "Active",
-    effectiveFrom: "2024-01-01",
-    effectiveTo: "2030-12-31"
-  }
-];
-
-export const INITIAL_USERS = [
-  { id: "USR-001", name: "Alexander Vance", email: "alexander.vance@flowstate.io", role: "System Administrator", roleKey: "admin", department: "IT & Digital Ops", plantId: "PLT-01", status: "Active", lastLogin: "Just now" },
-  { id: "USR-002", name: "Robert Thorne", email: "robert.thorne@flowstate.io", role: "Plant Manager", roleKey: "plant_manager", department: "Operations", plantId: "PLT-01", status: "Active", lastLogin: "10 mins ago" },
-  { id: "USR-003", name: "Sarah Jenkins", email: "sarah.jenkins@flowstate.io", role: "QA Manager", roleKey: "qa_manager", department: "Quality Assurance", plantId: "PLT-01", status: "Active", lastLogin: "1 hour ago" },
-  { id: "USR-004", name: "Marcus Vance", email: "marcus.vance@flowstate.io", role: "Maintenance Lead", roleKey: "maintenance", department: "Maintenance", plantId: "PLT-01", status: "Active", lastLogin: "3 hours ago" },
-  { id: "USR-005", name: "David Kim", email: "david.kim@flowstate.io", role: "Production Supervisor", roleKey: "operator", department: "Production", plantId: "PLT-01", status: "Active", lastLogin: "3 days ago" }
-];
-
-export const INITIAL_USER_INVITATIONS = [
-  { id: "INV-101", email: "clara.oswald@flowstate.io", role: "Quality Analyst", department: "Quality Assurance", invitedBy: "Alexander Vance", sentDate: "2026-08-30", status: "Pending" },
-  { id: "INV-102", email: "james.holden@flowstate.io", role: "Controls Engineer", department: "Maintenance", invitedBy: "Alexander Vance", sentDate: "2026-08-31", status: "Pending" }
-];
-
-export const INITIAL_AUDIT_LOGS = [
-  {
-    auditId: "AUD-9901",
-    timestamp: "02 Sep 2026 10:15:30",
-    user: "Alexander Vance",
-    userRole: "System Administrator",
-    entityId: "SKU-001",
-    entityType: "SKU Master",
-    action: "Updated",
-    field: "Standard Cost",
-    oldValue: "stdCost = $0.40",
-    newValue: "stdCost = $0.42",
-    notes: "Annual raw ingredient index re-costing applied"
-  },
-  {
-    auditId: "AUD-9902",
-    timestamp: "02 Sep 2026 09:40:12",
-    user: "Sarah Jenkins",
-    userRole: "QA Manager",
-    entityId: "QSP-001",
-    entityType: "Quality Specification",
-    action: "Approved",
-    field: "Approval Status",
-    oldValue: "approvalStatus = Submitted",
-    newValue: "approvalStatus = Approved",
-    notes: "Revision R2 Brix range locked following trial audit"
-  },
-  {
-    auditId: "AUD-9903",
-    timestamp: "01 Sep 2026 16:22:05",
-    user: "Marcus Vance",
-    userRole: "Maintenance Lead",
-    entityId: "AST-001",
-    entityType: "Machine Asset",
-    action: "Updated",
-    field: "Maintenance Cycle",
-    oldValue: "cycleHours = 200",
-    newValue: "cycleHours = 250",
-    notes: "PM interval extended per OEM reliability advisory"
-  },
-  {
-    auditId: "AUD-9904",
-    timestamp: "01 Sep 2026 14:10:44",
-    user: "Robert Thorne",
-    userRole: "Plant Manager",
-    entityId: "BOM-001",
-    entityType: "BOM Recipe",
-    action: "Approved",
-    field: "Revision Status",
-    oldValue: "status = Under Review",
-    newValue: "status = Active",
-    notes: "Sign-off on R3 Citrus formulation recipe"
-  },
-  {
-    auditId: "AUD-9905",
-    timestamp: "31 Aug 2026 11:05:18",
-    user: "Alexander Vance",
-    userRole: "System Administrator",
-    entityId: "LIN-01",
-    entityType: "Work Center Line",
-    action: "Updated",
-    field: "Rated Capacity",
-    oldValue: "capacity = 40,000 BPH",
-    newValue: "capacity = 42,000 BPH",
-    notes: "Line speed test post-de-bottlenecking Kaizen project"
-  }
-];
+export const INITIAL_COMPANIES = [];
+export const INITIAL_PLANTS = [];
+export const INITIAL_DEPARTMENTS = [];
+export const INITIAL_WORK_CENTERS = [];
+export const INITIAL_PRODUCT_FAMILIES = [];
+export const INITIAL_UOMS = [];
+export const INITIAL_SKUS = [];
+export const INITIAL_PACK_CONFIGS = [];
+export const INITIAL_SHELF_LIFE = [];
+export const INITIAL_CUSTOMERS = [];
+export const INITIAL_CUSTOMER_SKU_MAPPINGS = [];
+export const INITIAL_BOMS = [];
+export const INITIAL_OPERATIONS = [];
+export const INITIAL_ROUTINGS = [];
+export const INITIAL_LINES = [];
+export const INITIAL_LINE_TARGETS = [];
+export const INITIAL_CHANGEOVER_MATRIX = [];
+export const INITIAL_SANITATION_CLASSES = [];
+export const INITIAL_ALLERGEN_RULES = [];
+export const INITIAL_LABOUR_STANDARDS = [];
+export const INITIAL_ASSETS = [];
+export const INITIAL_EMPLOYEES = [];
+export const INITIAL_TRAINING_RECORDS = [];
+export const INITIAL_QUALITY_SPECS = [];
+export const INITIAL_STORAGE_RESOURCES = [];
+export const INITIAL_USERS = [];
+export const INITIAL_USER_INVITATIONS = [];
+export const INITIAL_AUDIT_LOGS = [];
 
 export const INITIAL_ROLE_PERMISSIONS = {
   admin: {
@@ -1404,85 +144,128 @@ export const INITIAL_ROLE_PERMISSIONS = {
 // ============================================================================
 
 export function MasterDataProvider({ children }) {
+  // Purge old cached mock/dummy data once so DB truth is displayed
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const cleaned = localStorage.getItem("mx_db_live_v3");
+      if (!cleaned) {
+        const dummyKeys = [
+          "mx_master_companies", "mx_master_plants", "mx_master_departments",
+          "mx_master_workcenters", "mx_master_families", "mx_master_uoms",
+          "mx_master_skus", "mx_master_pack_configs", "mx_master_shelflife",
+          "mx_master_csm", "mx_master_boms", "mx_master_operations",
+          "mx_master_routings", "mx_master_lines", "mx_master_line_targets",
+          "mx_master_changeovers", "mx_master_sanitation", "mx_master_allergens",
+          "mx_master_labour_standards", "mx_master_assets", "mx_master_employees",
+          "mx_master_training", "mx_master_quality_specs", "mx_master_storage"
+        ];
+        dummyKeys.forEach((k) => localStorage.removeItem(k));
+        localStorage.setItem("mx_db_live_v3", "true");
+      }
+    }
+  }, []);
+  const hasAuthToken = Boolean(typeof window !== "undefined" && (localStorage.getItem("maintenx_auth_token") || localStorage.getItem("flowstate_token")));
+  const hasTenant = Boolean(typeof window !== "undefined" && (localStorage.getItem("maintenx_tenant_name") || localStorage.getItem("maintenx_tenant_id")));
+  const isTenantActive = Boolean(hasTenant || hasAuthToken);
+  const tenantName = typeof window !== "undefined" ? (localStorage.getItem("maintenx_tenant_name") || "") : "";
+
   const [companies, setCompanies] = useState(() => {
+    if (isTenantActive) {
+      return [{ id: "CMP-01", companyId: "CMP-01", name: tenantName || "Company", code: "CMP", status: "Active" }];
+    }
     const saved = localStorage.getItem("mx_master_companies");
     return saved ? JSON.parse(saved) : INITIAL_COMPANIES;
   });
   const [plants, setPlants] = useState(() => {
     const saved = localStorage.getItem("mx_master_plants");
-    return saved ? JSON.parse(saved) : INITIAL_PLANTS;
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch(e) {} }
+    return INITIAL_PLANTS;
   });
-  const [activePlantId, setActivePlantId] = useState("PLT-01");
+  const [activePlantId, setActivePlantId] = useState("");
   const [departments, setDepartments] = useState(() => {
     const saved = localStorage.getItem("mx_master_departments");
-    return saved ? JSON.parse(saved) : INITIAL_DEPARTMENTS;
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch(e) {} }
+    return INITIAL_DEPARTMENTS;
   });
   const [workCenters, setWorkCenters] = useState(() => {
     const saved = localStorage.getItem("mx_master_workcenters");
-    return saved ? JSON.parse(saved) : INITIAL_WORK_CENTERS;
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch(e) {} }
+    return INITIAL_WORK_CENTERS;
   });
 
   // 1. Core Master Datasets with Cache Initialization
   const [productFamilies, setProductFamilies] = useState(() => {
     const saved = localStorage.getItem("mx_master_families");
-    return saved ? JSON.parse(saved) : INITIAL_PRODUCT_FAMILIES;
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch(e) {} }
+    return INITIAL_PRODUCT_FAMILIES;
   });
 
   const [uoms, setUoms] = useState(() => {
     const saved = localStorage.getItem("mx_master_uoms");
-    return saved ? JSON.parse(saved) : INITIAL_UOMS;
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch(e) {} }
+    return INITIAL_UOMS;
   });
 
   const [skus, setSkus] = useState(() => {
     const saved = localStorage.getItem("mx_master_skus");
-    return saved ? JSON.parse(saved) : INITIAL_SKUS;
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch(e) {} }
+    return INITIAL_SKUS;
   });
 
-  const [packConfigs, setPackConfigs] = useState(() => {
+  const [packConfigs, setpackConfigs] = useState(() => {
     const saved = localStorage.getItem("mx_master_pack_configs");
-    return saved ? JSON.parse(saved) : INITIAL_PACK_CONFIGS;
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch(e) {} }
+    return INITIAL_PACK_CONFIGS;
   });
 
   const [shelfLifeRecords, setShelfLifeRecords] = useState(() => {
     const saved = localStorage.getItem("mx_master_shelflife");
-    return saved ? JSON.parse(saved) : INITIAL_SHELF_LIFE;
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch(e) {} }
+    return INITIAL_SHELF_LIFE;
   });
 
   const [customers, setCustomers] = useState(INITIAL_CUSTOMERS);
 
   const [customerSkuMappings, setCustomerSkuMappings] = useState(() => {
     const saved = localStorage.getItem("mx_master_csm");
-    return saved ? JSON.parse(saved) : INITIAL_CUSTOMER_SKU_MAPPINGS;
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch(e) {} }
+    return INITIAL_CUSTOMER_SKU_MAPPINGS;
   });
 
   const [boms, setBoms] = useState(() => {
     const saved = localStorage.getItem("mx_master_boms");
-    return saved ? JSON.parse(saved) : INITIAL_BOMS;
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch(e) {} }
+    return INITIAL_BOMS;
   });
 
   const [operations, setOperations] = useState(() => {
     const saved = localStorage.getItem("mx_master_operations");
-    return saved ? JSON.parse(saved) : INITIAL_OPERATIONS;
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch(e) {} }
+    return INITIAL_OPERATIONS;
   });
 
   const [routings, setRoutings] = useState(() => {
     const saved = localStorage.getItem("mx_master_routings");
-    return saved ? JSON.parse(saved) : INITIAL_ROUTINGS;
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch(e) {} }
+    return INITIAL_ROUTINGS;
   });
 
   const [lines, setLines] = useState(() => {
     const saved = localStorage.getItem("mx_master_lines");
-    return saved ? JSON.parse(saved) : INITIAL_LINES;
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch(e) {} }
+    return INITIAL_LINES;
   });
 
   const [lineTargets, setLineTargets] = useState(() => {
     const saved = localStorage.getItem("mx_master_line_targets");
-    return saved ? JSON.parse(saved) : INITIAL_LINE_TARGETS;
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch(e) {} }
+    return INITIAL_LINE_TARGETS;
   });
 
   const [changeoverMatrix, setChangeoverMatrix] = useState(() => {
     const saved = localStorage.getItem("mx_master_changeovers");
-    return saved ? JSON.parse(saved) : INITIAL_CHANGEOVER_MATRIX;
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch(e) {} }
+    return INITIAL_CHANGEOVER_MATRIX;
   });
 
   const [sanitationClasses, setSanitationClasses] = useState(() => {
@@ -1524,44 +307,52 @@ export function MasterDataProvider({ children }) {
 
   const [assets, setAssets] = useState(() => {
     const saved = localStorage.getItem("mx_master_assets");
-    return saved ? JSON.parse(saved) : INITIAL_ASSETS;
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch(e) {} }
+    return INITIAL_ASSETS;
   });
 
   const [employees, setEmployees] = useState(() => {
     const saved = localStorage.getItem("mx_master_employees");
-    return saved ? JSON.parse(saved) : INITIAL_EMPLOYEES;
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch(e) {} }
+    return INITIAL_EMPLOYEES;
   });
 
   const [trainingRecords, setTrainingRecords] = useState(() => {
     const saved = localStorage.getItem("mx_master_training");
-    return saved ? JSON.parse(saved) : INITIAL_TRAINING_RECORDS;
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch(e) {} }
+    return INITIAL_TRAINING_RECORDS;
   });
 
   const [qualitySpecs, setQualitySpecs] = useState(() => {
     const saved = localStorage.getItem("mx_master_quality_specs");
-    return saved ? JSON.parse(saved) : INITIAL_QUALITY_SPECS;
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch(e) {} }
+    return INITIAL_QUALITY_SPECS;
   });
 
   const [storageResources, setStorageResources] = useState(() => {
     const saved = localStorage.getItem("mx_master_storage");
-    return saved ? JSON.parse(saved) : INITIAL_STORAGE_RESOURCES;
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch(e) {} }
+    return INITIAL_STORAGE_RESOURCES;
   });
 
   const [users, setUsers] = useState(() => {
     const saved = localStorage.getItem("mx_admin_users");
-    return saved ? JSON.parse(saved) : INITIAL_USERS;
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch(e) {} }
+    return INITIAL_USERS;
   });
 
   const [userInvitations, setUserInvitations] = useState(INITIAL_USER_INVITATIONS);
 
   const [auditLogs, setAuditLogs] = useState(() => {
     const saved = localStorage.getItem("mx_master_audit_logs");
-    return saved ? JSON.parse(saved) : INITIAL_AUDIT_LOGS;
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch(e) {} }
+    return INITIAL_AUDIT_LOGS;
   });
 
   const [rolePermissions, setRolePermissions] = useState(() => {
     const saved = localStorage.getItem("mx_master_permissions");
-    return saved ? JSON.parse(saved) : INITIAL_ROLE_PERMISSIONS;
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch(e) {} }
+    return INITIAL_ROLE_PERMISSIONS;
   });
 
   // Local Storage Synchronization
@@ -1584,7 +375,12 @@ export function MasterDataProvider({ children }) {
   useEffect(() => { localStorage.setItem("mx_master_sanitation", JSON.stringify(sanitationClasses)); }, [sanitationClasses]);
   useEffect(() => { localStorage.setItem("mx_master_allergens", JSON.stringify(allergenRules)); }, [allergenRules]);
   useEffect(() => { localStorage.setItem("mx_master_labour_standards", JSON.stringify(labourStandards)); }, [labourStandards]);
-  useEffect(() => { localStorage.setItem("mx_master_assets", JSON.stringify(assets)); }, [assets]);
+  useEffect(() => {
+    localStorage.setItem("mx_master_assets", JSON.stringify(assets));
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("maintenx:asset_updated", { detail: assets }));
+    }
+  }, [assets]);
   useEffect(() => { localStorage.setItem("mx_master_employees", JSON.stringify(employees)); }, [employees]);
   useEffect(() => { localStorage.setItem("mx_master_training", JSON.stringify(trainingRecords)); }, [trainingRecords]);
   useEffect(() => { localStorage.setItem("mx_master_quality_specs", JSON.stringify(qualitySpecs)); }, [qualitySpecs]);
@@ -1612,10 +408,12 @@ export function MasterDataProvider({ children }) {
           liveChangeovers,
           liveSanitations,
           liveAllergens,
+          liveLabourStandards,
           liveSkus,
           liveBoms,
           liveAssets,
           liveSpecs,
+          liveStaff,
         ] = await Promise.allSettled([
           masterDataService.getCompanies(),
           masterDataService.getPlants(),
@@ -1636,39 +434,48 @@ export function MasterDataProvider({ children }) {
           masterDataService.getBoms(),
           masterDataService.getAssets(activePlantId),
           masterDataService.getQualitySpecs(),
+          masterDataService.getStaff(activePlantId),
         ]);
 
-        if (liveCompanies.status === "fulfilled" && Array.isArray(liveCompanies.value?.data || liveCompanies.value) && (liveCompanies.value?.data || liveCompanies.value).length > 0) {
-          setCompanies(liveCompanies.value?.data || liveCompanies.value);
-        }
-        if (livePlants.status === "fulfilled" && Array.isArray(livePlants.value?.data || livePlants.value) && (livePlants.value?.data || livePlants.value).length > 0) {
-          setPlants(livePlants.value?.data || livePlants.value);
-        }
-        if (liveDepts.status === "fulfilled" && Array.isArray(liveDepts.value?.data || liveDepts.value) && (liveDepts.value?.data || liveDepts.value).length > 0) {
-          setDepartments(liveDepts.value?.data || liveDepts.value);
-        }
-        if (liveLines.status === "fulfilled" && Array.isArray(liveLines.value?.data || liveLines.value) && (liveLines.value?.data || liveLines.value).length > 0) {
-          setLines(liveLines.value?.data || liveLines.value);
-        }
-        if (liveWcs.status === "fulfilled" && Array.isArray(liveWcs.value?.data || liveWcs.value) && (liveWcs.value?.data || liveWcs.value).length > 0) {
-          setWorkCenters(liveWcs.value?.data || liveWcs.value);
-        }
-        if (liveOperations.status === "fulfilled" && Array.isArray(liveOperations.value?.data || liveOperations.value) && (liveOperations.value?.data || liveOperations.value).length > 0) {
-          setOperations(liveOperations.value?.data || liveOperations.value);
-        }
-        if (liveRoutings.status === "fulfilled" && Array.isArray(liveRoutings.value?.data || liveRoutings.value) && (liveRoutings.value?.data || liveRoutings.value).length > 0) {
-          setRoutings(liveRoutings.value?.data || liveRoutings.value);
-        }
-        if (liveProductFamilies.status === "fulfilled" && Array.isArray(liveProductFamilies.value?.data || liveProductFamilies.value) && (liveProductFamilies.value?.data || liveProductFamilies.value).length > 0) {
-          setProductFamilies(liveProductFamilies.value?.data || liveProductFamilies.value);
-        }
-        if (liveUoms.status === "fulfilled" && Array.isArray(liveUoms.value?.data || liveUoms.value) && (liveUoms.value?.data || liveUoms.value).length > 0) {
-          setUoms(liveUoms.value?.data || liveUoms.value);
-        }
-        if (livePackConfigs.status === "fulfilled" && Array.isArray(livePackConfigs.value?.data || livePackConfigs.value) && (livePackConfigs.value?.data || livePackConfigs.value).length > 0) {
-          const raw = livePackConfigs.value?.data || livePackConfigs.value;
-          // Normalize backend field names to frontend's expected field names
-          const normalized = raw.map((p) => ({
+        const safeArr = (item) => {
+          if (item?.status !== "fulfilled") return null;
+          let v = item.value?.data !== undefined ? item.value.data : item.value;
+          if (v && v.status === "success" && v.data) {
+            v = v.data;
+          }
+          return Array.isArray(v) ? v : null;
+        };
+
+        const compArr = safeArr(liveCompanies);
+        if (compArr) setCompanies(compArr);
+
+        const plantsArr = safeArr(livePlants);
+        if (plantsArr) setPlants(plantsArr);
+
+        const deptsArr = safeArr(liveDepts);
+        if (deptsArr) setDepartments(deptsArr);
+
+        const linesArr = safeArr(liveLines);
+        if (linesArr) setLines(linesArr);
+
+        const wcsArr = safeArr(liveWcs);
+        if (wcsArr) setWorkCenters(wcsArr);
+
+        const opsArr = safeArr(liveOperations);
+        if (opsArr) setOperations(opsArr);
+
+        const rtgArr = safeArr(liveRoutings);
+        if (rtgArr) setRoutings(rtgArr);
+
+        const famArr = safeArr(liveProductFamilies);
+        if (famArr) setProductFamilies(famArr);
+
+        const uomArr = safeArr(liveUoms);
+        if (uomArr) setUoms(uomArr);
+
+        const packArr = safeArr(livePackConfigs);
+        if (packArr) {
+          setPackConfigs(packArr.map((p) => ({
             ...p,
             packConfigId: p.packConfigId || p.configId || p.id,
             packCode: p.packCode || p.code || p.packConfigCode || p.id,
@@ -1679,19 +486,18 @@ export function MasterDataProvider({ children }) {
             caseConfiguration: p.caseConfiguration || p.case_configuration || "",
             palletConfiguration: p.palletConfiguration || p.pallet_configuration || (p.palletCount ? `${p.palletCount} Cases per Pallet` : ""),
             status: p.status || "Active",
-          }));
-          setPackConfigs(normalized);
+          })));
         }
 
-        if (liveLineTargets.status === "fulfilled" && Array.isArray(liveLineTargets.value?.data || liveLineTargets.value)) {
-          setLineTargets(liveLineTargets.value?.data || liveLineTargets.value);
-        }
-        if (liveChangeovers.status === "fulfilled" && Array.isArray(liveChangeovers.value?.data || liveChangeovers.value)) {
-          setChangeoverMatrix(liveChangeovers.value?.data || liveChangeovers.value);
-        }
-        if (liveSanitations.status === "fulfilled" && Array.isArray(liveSanitations.value?.data || liveSanitations.value) && (liveSanitations.value?.data || liveSanitations.value).length > 0) {
-          const raw = liveSanitations.value?.data || liveSanitations.value;
-          const normalized = raw.map((s) => ({
+        const targetsArr = safeArr(liveLineTargets);
+        if (targetsArr) setLineTargets(targetsArr);
+
+        const coArr = safeArr(liveChangeovers);
+        if (coArr) setChangeoverMatrix(coArr);
+
+        const sanArr = safeArr(liveSanitations);
+        if (sanArr) {
+          setSanitationClasses(sanArr.map((s) => ({
             ...s,
             id: s.id || s.sanitationId || s.classId,
             sanitationId: s.sanitationId || s.id || s.classId,
@@ -1702,12 +508,12 @@ export function MasterDataProvider({ children }) {
             riskLevel: s.riskLevel || "Standard",
             applicableProducts: s.applicableProducts || "All Formulations",
             status: s.status || "Active",
-          }));
-          setSanitationClasses(normalized);
+          })));
         }
-        if (liveAllergens.status === "fulfilled" && Array.isArray(liveAllergens.value?.data || liveAllergens.value) && (liveAllergens.value?.data || liveAllergens.value).length > 0) {
-          const raw = liveAllergens.value?.data || liveAllergens.value;
-          const normalized = raw.map((a) => ({
+
+        const algArr = safeArr(liveAllergens);
+        if (algArr) {
+          setAllergenRules(algArr.map((a) => ({
             ...a,
             id: a.id || a.allergenId || a.ruleId,
             allergenId: a.allergenId || a.id || a.ruleId,
@@ -1717,29 +523,73 @@ export function MasterDataProvider({ children }) {
             cleaningProtocol: a.cleaningProtocol || a.protocol || "Class A Full CIP + Sensory Swab Verification",
             changeoverRestriction: a.changeoverRestriction || a.verificationTest || "Mandatory QA clearance sign-off",
             status: a.status || "Active",
-          }));
-          setAllergenRules(normalized);
+          })));
         }
-        if (liveLabourStandards.status === "fulfilled" && Array.isArray(liveLabourStandards.value?.data || liveLabourStandards.value) && (liveLabourStandards.value?.data || liveLabourStandards.value).length > 0) {
-          setLabourStandards(liveLabourStandards.value?.data || liveLabourStandards.value);
-        }
-        if (liveSkus.status === "fulfilled" && Array.isArray(liveSkus.value?.data || liveSkus.value) && (liveSkus.value?.data || liveSkus.value).length > 0) {
-          setSkus(liveSkus.value?.data || liveSkus.value);
-        }
-        if (liveBoms.status === "fulfilled" && Array.isArray(liveBoms.value?.data || liveBoms.value) && (liveBoms.value?.data || liveBoms.value).length > 0) {
-          setBoms(liveBoms.value?.data || liveBoms.value);
-        }
-        if (liveAssets.status === "fulfilled" && Array.isArray(liveAssets.value?.data || liveAssets.value) && (liveAssets.value?.data || liveAssets.value).length > 0) {
-          setAssets(liveAssets.value?.data || liveAssets.value);
-        }
-        if (liveSpecs.status === "fulfilled" && Array.isArray(liveSpecs.value?.data || liveSpecs.value) && (liveSpecs.value?.data || liveSpecs.value).length > 0) {
-          setQualitySpecs(liveSpecs.value?.data || liveSpecs.value);
-        }
+
+        const lbrArr = safeArr(liveLabourStandards);
+        if (lbrArr) setLabourStandards(lbrArr);
+
+        const skuArr = safeArr(liveSkus);
+        if (skuArr) setSkus(skuArr);
+
+        const bomArr = safeArr(liveBoms);
+        if (bomArr) setBoms(bomArr);
+
+        const astArr = safeArr(liveAssets);
+        if (astArr) setAssets(astArr);
+
+        const specArr = safeArr(liveSpecs);
+        if (specArr) setQualitySpecs(specArr);
+
+        const staffArr = safeArr(liveStaff);
+        if (staffArr) setEmployees(staffArr);
       } catch (err) {
         console.warn("MasterData backend sync fallback:", err.message);
       }
     }
     fetchLiveMasterData();
+
+    const onTenantChanged = (evt) => {
+      const tName = evt?.detail?.name || localStorage.getItem("maintenx_tenant_name") || "";
+      if (tName) {
+        setCompanies([{ id: "CMP-01", companyId: "CMP-01", name: tName, code: "CMP", status: "Active" }]);
+      }
+      setPlants([]);
+      setActivePlantId("");
+      setDepartments([]);
+      setWorkCenters([]);
+      setProductFamilies([]);
+      setUoms([]);
+      setSkus([]);
+      setPackConfigs([]);
+      setShelfLifeRecords([]);
+      setCustomers([]);
+      setCustomerSkuMappings([]);
+      setBoms([]);
+      setOperations([]);
+      setRoutings([]);
+      setLines([]);
+      setLineTargets([]);
+      setChangeoverMatrix([]);
+      setSanitationClasses([]);
+      setAllergenRules([]);
+      setLabourStandards([]);
+      setAssets([]);
+      setEmployees([]);
+      setTrainingRecords([]);
+      setQualitySpecs([]);
+      setStorageResources([]);
+      setUsers([]);
+      setUserInvitations([]);
+      setAuditLogs([]);
+      fetchLiveMasterData();
+    };
+    window.addEventListener("maintenx:tenant_changed", onTenantChanged);
+    window.addEventListener("maintenx:auth_ready", onTenantChanged);
+    return () => {
+      window.removeEventListener("maintenx:tenant_changed", onTenantChanged);
+      window.removeEventListener("maintenx:auth_ready", onTenantChanged);
+    };
   }, [activePlantId]);
 
   // ============================================================================
@@ -1809,9 +659,9 @@ export function MasterDataProvider({ children }) {
       companyId: companies[0]?.id || "CMP-01",
       code: (plantData.code || `PLT-${plants.length + 1}`).toUpperCase(),
       name: plantData.name,
-      location: plantData.location || `${plantData.city || "Indore"}, ${plantData.country || "India"}`,
-      city: plantData.city || "Indore",
-      state: plantData.state || "MP",
+      location: plantData.location || `${plantData.city || ""}${plantData.state ? `, ${plantData.state}` : ""}${plantData.country ? `, ${plantData.country}` : ""}`.replace(/^,\s*/, ""),
+      city: plantData.city || "",
+      state: plantData.state || "",
       country: plantData.country || "India",
       capacity: plantData.dailyCapacity || plantData.capacity || "350,000 Units/Day",
       dailyCapacity: plantData.dailyCapacity || plantData.capacity || "350,000 Units/Day",
@@ -2007,7 +857,16 @@ export function MasterDataProvider({ children }) {
       effectiveFrom: skuData.effectiveFrom || new Date().toISOString().substring(0, 10),
       effectiveTo: skuData.effectiveTo || "2030-12-31",
       description: skuData.description || "",
-      createdBy: "Alexander Vance",
+      createdBy: (() => {
+        try {
+          const profile = localStorage.getItem("flowstate_user_profile");
+          if (profile) {
+            const parsed = JSON.parse(profile);
+            if (parsed?.name) return parsed.name;
+          }
+        } catch {}
+        return "Admin";
+      })(),
       createdDate: new Date().toISOString().substring(0, 10),
       lastUpdated: new Date().toISOString().substring(0, 10)
     };
@@ -2330,7 +1189,7 @@ export function MasterDataProvider({ children }) {
       code: (lineData.lineCode || lineData.code || `LINE-${lines.length + 1}`).toUpperCase(),
       name: lineData.name,
       plantId: lineData.plantId || activePlantId,
-      plantName: plants.find((p) => p.id === (lineData.plantId || activePlantId) || p.plantId === (lineData.plantId || activePlantId))?.name || "Indore Plant",
+      plantName: lineData.plantName || plants.find((p) => p.id === (lineData.plantId || activePlantId) || p.plantId === (lineData.plantId || activePlantId))?.name || plants[0]?.name || "Main Facility",
       departmentId: lineData.departmentId || "DEP-01",
       capacity: lineData.capacity || lineData.ratedSpeed || "38,000 BPH",
       type: lineData.type || "Continuous Flow",
@@ -2338,12 +1197,12 @@ export function MasterDataProvider({ children }) {
       ratedSpeed: lineData.ratedSpeed || "38,000 BPH",
       ratedSpeedBPH: Number(lineData.ratedSpeedBPH) || 38000,
       status: lineData.status || "Active",
-      supervisorId: lineData.supervisorId || "EMP-005",
-      supervisorName: lineData.supervisorName || "David Kim",
+      supervisorId: lineData.supervisorId || null,
+      supervisorName: lineData.supervisorName || "",
       assignedAssetIds: lineData.assignedAssetIds || [],
-      eligibleSkuIds: lineData.eligibleSkuIds || ["SKU-001"],
+      eligibleSkuIds: lineData.eligibleSkuIds || [],
       ratedOEE: lineData.ratedOEE || "88.0%",
-      currentRunningSku: "SKU-5001",
+      currentRunningSku: lineData.currentRunningSku || null,
       healthScore: 95,
     };
     setLines((prev) => [newRecord, ...prev]);
@@ -2422,11 +1281,12 @@ export function MasterDataProvider({ children }) {
 
   const assignAssetToLine = (lineId, assetId) => {
     setLines((prev) =>
-      prev.map((l) => (l.lineId === lineId || l.lineCode === lineId ? { ...l, assignedAssetIds: [...new Set([...l.assignedAssetIds, assetId])] } : l))
+      prev.map((l) => (l.lineId === lineId || l.lineCode === lineId ? { ...l, assignedAssetIds: [...new Set([...(l.assignedAssetIds || []), assetId])] } : l))
     );
     setAssets((prev) =>
-      prev.map((a) => (a.assetId === assetId ? { ...a, lineId, lineName: lines.find((l) => l.lineId === lineId)?.name || lineId } : a))
+      prev.map((a) => (a.assetId === assetId || a.id === assetId ? { ...a, lineId, lineName: lines.find((l) => l.lineId === lineId)?.name || lineId } : a))
     );
+    masterDataService.updateAsset(assetId, { lineId }).catch((err) => console.warn("API updateAsset:", err.message));
     logAudit({ entityId: lineId, entityType: "Work Centers / Lines", action: "Updated", newValue: `Assigned asset ${assetId}` });
   };
 
@@ -2699,6 +1559,12 @@ export function MasterDataProvider({ children }) {
     logAudit({ entityId: empId, entityType: "Employees & Skills", action: "Updated" });
   };
 
+  const deleteEmployee = (empId) => {
+    setEmployees((prev) => prev.filter((e) => e.employeeId !== empId && e.id !== empId));
+    masterDataService.deleteEmployee(empId).catch((err) => console.warn("API deleteEmployee:", err.message));
+    logAudit({ entityId: empId, entityType: "Employees & Skills", action: "Deleted" });
+  };
+
   const addTrainingRecord = (trnData) => {
     const newRecord = {
       id: `TRN-0${trainingRecords.length + 1}`,
@@ -2720,41 +1586,54 @@ export function MasterDataProvider({ children }) {
   // ============================================================================
   // 13. QUALITY SPECS & CCP LIMITS MUTATIONS
   // ============================================================================
-  const addQualitySpec = (specData) => {
+  const addQualitySpec = async (specData) => {
+    const selectedSku = skus.find((s) => s.skuId === specData.skuId || s.id === specData.skuId);
+    let createdRecord = null;
+    try {
+      const res = await masterDataService.createQualitySpec({
+        ...specData,
+        skuId: specData.skuId || selectedSku?.id || selectedSku?.skuId || "",
+      });
+      createdRecord = res?.data !== undefined ? res.data : res;
+    } catch (err) {
+      console.warn("API createQualitySpec fallback:", err.message);
+    }
+
     const newRecord = {
-      id: `QSP-00${qualitySpecs.length + 1}`,
-      specId: `QSP-00${qualitySpecs.length + 1}`,
-      skuId: specData.skuId || "SKU-001",
-      skuCode: specData.skuCode || skus.find((s) => s.skuId === specData.skuId)?.skuCode || "SKU-5001",
-      skuName: specData.skuName || skus.find((s) => s.skuId === specData.skuId)?.name || "Beverage",
-      specificationTitle: specData.specificationTitle || "Parameter Spec Standard",
-      parameter: specData.parameter || "Moisture / Concentration",
-      target: String(specData.target || "10.0"),
-      min: String(specData.min || "9.5"),
-      max: String(specData.max || "10.5"),
-      uom: specData.uom || "%",
+      id: createdRecord?.id || `QSP-${Date.now().toString().slice(-4)}`,
+      specId: createdRecord?.specId || createdRecord?.id || `QSP-${Date.now().toString().slice(-4)}`,
+      skuId: specData.skuId || selectedSku?.id || selectedSku?.skuId || "",
+      skuCode: specData.skuCode || selectedSku?.skuCode || selectedSku?.code || "SKU",
+      skuName: specData.skuName || selectedSku?.name || "",
+      specificationTitle: specData.specificationTitle || specData.parameter || "Quality Parameter",
+      parameter: specData.parameter || specData.specificationTitle || "",
+      target: String(specData.target || "0"),
+      min: String(specData.min || "0"),
+      max: String(specData.max || "0"),
+      uom: specData.uom || "",
       revision: "R1",
       status: "Active",
       approvalStatus: "Approved",
-      criticality: specData.criticality || "Quality Spec",
-      isCCP: !!specData.isCCP,
-      criticalLimit: specData.criticalLimit || "Standard QA Boundary",
-      testMethod: specData.testMethod || "Standard QA Digital Gauge",
+      criticality: specData.criticality || (specData.isCCP ? "Critical CCP (HACCP-1)" : "Quality Spec"),
+      isCCP: Boolean(specData.isCCP || (specData.criticality || "").toLowerCase().includes("ccp")),
+      criticalLimit: specData.criticalLimit || "",
+      testMethod: specData.testMethod || "",
       effectiveFrom: specData.effectiveFrom || new Date().toISOString().substring(0, 10),
       effectiveTo: "2030-12-31",
-      revisionHistory: [
-        { revision: "R1", status: "Approved", createdBy: "Sarah Jenkins", date: new Date().toISOString().substring(0, 10), changes: "Initial spec baseline registered.", approvedBy: "Sarah Jenkins" }
-      ]
+      revisionHistory: []
     };
     setQualitySpecs((prev) => [newRecord, ...prev]);
-    masterDataService.createQualitySpec(newRecord).catch((err) => console.warn("API createQualitySpec:", err.message));
     logAudit({ entityId: newRecord.specId, entityType: "Quality Specs", action: "Created", newValue: `${newRecord.parameter} for ${newRecord.skuCode}` });
     return newRecord;
   };
 
-  const updateQualitySpec = (specId, updated) => {
+  const updateQualitySpec = async (specId, updated) => {
     setQualitySpecs((prev) => prev.map((q) => (q.specId === specId || q.id === specId ? { ...q, ...updated } : q)));
-    masterDataService.updateQualitySpec(specId, updated).catch((err) => console.warn("API updateQualitySpec:", err.message));
+    try {
+      await masterDataService.updateQualitySpec(specId, updated);
+    } catch (err) {
+      console.warn("API updateQualitySpec:", err.message);
+    }
     logAudit({ entityId: specId, entityType: "Quality Specs", action: "Updated" });
   };
 
@@ -2784,9 +1663,13 @@ export function MasterDataProvider({ children }) {
     );
   };
 
-  const deleteQualitySpec = (specId) => {
+  const deleteQualitySpec = async (specId) => {
     setQualitySpecs((prev) => prev.filter((q) => q.specId !== specId && q.id !== specId));
-    masterDataService.deleteQualitySpec(specId).catch((err) => console.warn("API deleteQualitySpec:", err.message));
+    try {
+      await masterDataService.deleteQualitySpec(specId);
+    } catch (err) {
+      console.warn("API deleteQualitySpec:", err.message);
+    }
     logAudit({ entityId: specId, entityType: "Quality Specs", action: "Deleted" });
   };
 
@@ -3077,6 +1960,7 @@ export function MasterDataProvider({ children }) {
 
         // 3. SKUs
         skus,
+        setSkus,
         addSKU,
         updateSKU,
         toggleSKUStatus,
@@ -3126,11 +2010,11 @@ export function MasterDataProvider({ children }) {
 
         // 9. Lines & Targets
         lines,
+        setLines,
         addLine,
         updateLine,
         toggleLineStatus,
         deleteLine,
-        assignAssetToLine,
         lineTargets,
         addLineTarget,
         updateLineTarget,
@@ -3161,18 +2045,22 @@ export function MasterDataProvider({ children }) {
         assets,
         addAsset,
         updateAsset,
+        assignAssetToLine,
         toggleAssetStatus,
         deleteAsset,
 
         // 12. Employees & Training
         employees,
+        setEmployees,
         addEmployee,
         updateEmployee,
+        deleteEmployee,
         trainingRecords,
         addTrainingRecord,
 
         // 13. Quality Specs & CCP
         qualitySpecs,
+        setQualitySpecs,
         addQualitySpec,
         updateQualitySpec,
         approveQualitySpec,

@@ -17,57 +17,55 @@ export function ReleaseQueue() {
   const [queue, setQueue] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [metrics, setMetrics] = useState({
+    pendingBatchesCount: 0,
+    ccpClearances: {
+      rate: "0%",
+      badge: "NO CHECKS",
+      subtitle: "Connecting to database..."
+    },
+    qaCycleTime: {
+      time: "--",
+      badge: "TARGET",
+      subtitle: "Standard compliance SLA < 30m"
+    }
+  });
 
   const fetchQueue = async () => {
     setLoading(true);
     try {
-      const res = await qualityService.getReleaseQueue();
-      if (res && res.data && res.data.length > 0) {
-        setQueue(res.data.map(b => ({
-          id: `REL-${b.batchNumber?.replace(/\D/g, "") || "201"}`,
-          batch: b.batchNumber || b.id,
-          sku: b.sku?.name || "Organic Orange Juice 1L Bottle",
-          line: "Line 1 (Aseptic Bottling 580 BPM)",
-          ccp: "83.5°C (PASS)",
-          allergen: "Allergen Clear (0 ppm)",
-          status: "AWAITING QA SIGN-OFF"
-        })));
-      } else {
-        setQueue([
-          {
-            id: "REL-201",
-            batch: "BAT-2026-0889",
-            sku: "Organic Orange Juice 1L Bottle",
-            line: "Line 1 (Aseptic Bottling 580 BPM)",
-            ccp: "83.5°C (PASS)",
-            allergen: "Allergen Clear (0 ppm)",
-            status: "AWAITING QA SIGN-OFF"
-          },
-          {
-            id: "REL-202",
-            batch: "BAT-2026-0890",
-            sku: "Sparkling Citrus Soda 500ml",
-            line: "Line 2 (High-Speed Canner 800 CPM)",
-            ccp: "83.2°C (PASS)",
-            allergen: "Soy-Free Audited",
-            status: "AWAITING QA SIGN-OFF"
-          }
-        ]);
+      const [queueRes, metricsRes] = await Promise.allSettled([
+        qualityService.getReleaseQueue(),
+        qualityService.getReleaseMetrics()
+      ]);
+
+      if (queueRes.status === "fulfilled") {
+        const res = queueRes.value;
+        const rawList = Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : Array.isArray(res?.data?.data) ? res.data.data : [];
+        setQueue(rawList.map((b, idx) => {
+          const ccpCheck = (b.ccpChecks && b.ccpChecks.length > 0) ? b.ccpChecks[0] : null;
+          const ccpText = ccpCheck 
+            ? `${ccpCheck.actualValue} ${ccpCheck.uom || ''} (${ccpCheck.status})` 
+            : (b.ccpStatus || "No CCP Required");
+
+          return {
+            id: `REL-${b.batchNumber?.replace(/\D/g, "") || (idx + 101)}`,
+            batch: b.batchNumber || b.id,
+            sku: b.sku?.name || b.skuName || b.productName || "Standard SKU",
+            line: b.line?.name || b.lineName || "Line 1",
+            ccp: ccpText,
+            allergen: b.allergenStatus || b.allergenCheck || "Pending Inspection",
+            status: b.status === "Completed" ? "AWAITING QA SIGN-OFF" : (b.status || "AWAITING QA SIGN-OFF")
+          };
+        }));
+      }
+
+      if (metricsRes.status === "fulfilled" && metricsRes.value?.data) {
+        setMetrics(metricsRes.value.data);
       }
     } catch (err) {
       console.error("Failed to load release queue", err);
-      addToast("Loaded pending release queue", "info");
-      setQueue([
-        {
-          id: "REL-201",
-          batch: "BAT-2026-0889",
-          sku: "Organic Orange Juice 1L Bottle",
-          line: "Line 1 (Aseptic Bottling 580 BPM)",
-          ccp: "83.5°C (PASS)",
-          allergen: "Allergen Clear (0 ppm)",
-          status: "AWAITING QA SIGN-OFF"
-        }
-      ]);
+      setQueue([]);
     } finally {
       setLoading(false);
     }
@@ -141,23 +139,30 @@ export function ReleaseQueue() {
           <div style={{ fontSize: "28px", fontWeight: 800, color: "#2B1D11", marginTop: "10px" }}>
             {queue.length}
           </div>
-          <div style={{ fontSize: "12px", color: "#8B6914", marginTop: "4px" }}>
-            Awaiting QA Lead authorization
+          <div style={{ fontSize: "12px", color: queue.length > 0 ? "#8B6914" : "#6B5B4E", marginTop: "4px" }}>
+            {queue.length > 0 ? "Awaiting QA Lead authorization" : "All batches cleared / none pending"}
           </div>
         </Card>
 
         <Card style={{ padding: "18px 20px", borderRadius: "14px", border: "1px solid #E8DDCF", backgroundColor: "#FFFFFF" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span style={{ fontSize: "13px", color: "#6B5B4E", fontWeight: 600 }}>CCP Clearances</span>
-            <div style={{ padding: "6px 10px", borderRadius: "8px", backgroundColor: "rgba(200, 149, 71, 0.12)", color: "#8B6914", fontSize: "12px", fontWeight: 700 }}>
-              PASSED
+            <div style={{ 
+              padding: "6px 10px", 
+              borderRadius: "8px", 
+              backgroundColor: metrics.ccpClearances?.badge === "PASSED" ? "rgba(34, 197, 94, 0.12)" : "rgba(200, 149, 71, 0.12)", 
+              color: metrics.ccpClearances?.badge === "PASSED" ? "#15803D" : "#8B6914", 
+              fontSize: "12px", 
+              fontWeight: 700 
+            }}>
+              {metrics.ccpClearances?.badge || "PASSED"}
             </div>
           </div>
           <div style={{ fontSize: "28px", fontWeight: 800, color: "#2B1D11", marginTop: "10px" }}>
-            100%
+            {metrics.ccpClearances?.rate || "0%"}
           </div>
-          <div style={{ fontSize: "12px", color: "#8B6914", marginTop: "4px" }}>
-            All thermal pasteurization logs verified
+          <div style={{ fontSize: "12px", color: "#6B5B4E", marginTop: "4px" }}>
+            {metrics.ccpClearances?.subtitle || "Calculated from database ccp_checks"}
           </div>
         </Card>
 
@@ -165,14 +170,14 @@ export function ReleaseQueue() {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span style={{ fontSize: "13px", color: "#6B5B4E", fontWeight: 600 }}>Avg QA Cycle Time</span>
             <div style={{ padding: "6px 10px", borderRadius: "8px", backgroundColor: "rgba(200, 149, 71, 0.12)", color: "#8B6914", fontSize: "12px", fontWeight: 700 }}>
-              Metric
+              {metrics.qaCycleTime?.badge || "TARGET"}
             </div>
           </div>
           <div style={{ fontSize: "28px", fontWeight: 800, color: "#2B1D11", marginTop: "10px" }}>
-            14 mins
+            {metrics.qaCycleTime?.time || "--"}
           </div>
           <div style={{ fontSize: "12px", color: "#6B5B4E", marginTop: "4px" }}>
-            Standard compliance SLA &lt; 30m
+            {metrics.qaCycleTime?.subtitle || "Standard compliance SLA < 30m"}
           </div>
         </Card>
       </div>
@@ -262,7 +267,7 @@ export function ReleaseQueue() {
                       variant="primary" 
                       size="sm" 
                       icon={FileCheck} 
-                      onClick={() => navigate("/quality/release/review", { state: { releaseId: b.id, batch: b.batch } })}
+                      onClick={() => navigate("/quality/release/review", { state: { releaseId: b.id, batch: b.batch, item: b } })}
                     >
                       Review & Sign-Off
                     </Button>

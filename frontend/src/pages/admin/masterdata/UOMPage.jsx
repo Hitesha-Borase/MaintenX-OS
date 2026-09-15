@@ -28,8 +28,8 @@ export function UOMPage() {
 
   useEffect(() => {
     masterDataService.getUoms().then((res) => {
-      const data = res?.data || res;
-      if (Array.isArray(data) && data.length > 0 && typeof setUoms === "function") {
+      const data = res?.data !== undefined ? res.data : res;
+      if (Array.isArray(data) && typeof setUoms === "function") {
         setUoms(data);
       }
     }).catch((err) => console.warn("UOMs load:", err.message));

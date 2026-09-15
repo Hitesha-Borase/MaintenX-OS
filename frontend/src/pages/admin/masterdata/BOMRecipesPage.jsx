@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   FileText,
   Plus,
@@ -35,8 +35,11 @@ export function BOMRecipesPage() {
   // Trigger live GET /api/v1/master-data/boms on page mount
   React.useEffect(() => {
     masterDataService.getBoms().then((res) => {
-      const data = res?.data || res;
-      if (Array.isArray(data) && data.length > 0 && typeof setBoms === "function") {
+      let data = res?.data !== undefined ? res.data : res;
+      if (data && data.status === "success" && data.data) {
+        data = data.data;
+      }
+      if (Array.isArray(data) && typeof setBoms === "function") {
         setBoms(data);
       }
     }).catch((err) => console.warn("Live BOM fetch:", err.message));
@@ -54,13 +57,21 @@ export function BOMRecipesPage() {
   // Form State for new BOM
   const [newBOM, setNewBOM] = useState({
     bomNumber: "",
-    finishedSkuId: "SKU-001",
+    finishedSkuId: "",
     batchSize: "10,000 Liters",
     yieldTarget: "99.2%",
-    components: [
-      { id: "c1", skuId: "SKU-101", skuCode: "ING-1001", name: "Liquid Cane Sugar 67°Bx", quantity: 800, uom: "Liters" }
-    ]
+    components: []
   });
+
+  // Sync finishedSkuId when real SKUs load
+  useEffect(() => {
+    if (!newBOM.finishedSkuId && skus.length > 0) {
+      const fg = skus.find((s) => s.category === "Finished Goods") || skus[0];
+      if (fg) {
+        setNewBOM((prev) => ({ ...prev, finishedSkuId: fg.skuId }));
+      }
+    }
+  }, [skus]);
 
   const filteredBOMs = useMemo(() => {
     return boms.filter((b) => {
@@ -85,9 +96,9 @@ export function BOMRecipesPage() {
         ...prev.components,
         {
           id: `c_${Date.now()}`,
-          skuId: defaultSku?.skuId || "SKU-101",
-          skuCode: defaultSku?.skuCode || "ING-1001",
-          name: defaultSku?.name || "Liquid Cane Sugar",
+          skuId: defaultSku?.skuId || "",
+          skuCode: defaultSku?.skuCode || "",
+          name: defaultSku?.name || "Recipe Component",
           quantity: 100,
           uom: defaultSku?.uom || "Kg"
         }
@@ -103,7 +114,7 @@ export function BOMRecipesPage() {
   };
 
   const handleCreateSubmit = (status = "Draft") => {
-    const selectedSku = skus.find((s) => s.skuId === newBOM.finishedSkuId);
+    const selectedSku = skus.find((s) => s.skuId === newBOM.finishedSkuId) || skus[0];
     if (!newBOM.components.length) {
       addToast("Please add at least one ingredient component to the recipe BOM.", "warning");
       return;
@@ -111,8 +122,8 @@ export function BOMRecipesPage() {
 
     const created = addBOM({
       bomNumber: newBOM.bomNumber,
-      finishedSkuId: newBOM.finishedSkuId,
-      finishedSkuName: selectedSku?.name || "Finished Beverage",
+      finishedSkuId: selectedSku?.skuId || newBOM.finishedSkuId,
+      finishedSkuName: selectedSku?.name || "",
       batchSize: newBOM.batchSize,
       yieldTarget: newBOM.yieldTarget,
       components: newBOM.components
@@ -400,8 +411,16 @@ export function BOMRecipesPage() {
                 })
               ) : (
                 <tr>
-                  <td colSpan={9} style={{ padding: "32px", textAlign: "center", color: "var(--text-muted)", fontSize: "13px" }}>
-                    No BOM & Recipe records match the search filter.
+                  <td colSpan={9} style={{ padding: "48px 24px", textAlign: "center", color: "var(--text-muted)" }}>
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px" }}>
+                      <Layers size={40} strokeWidth={1.5} color="var(--text-muted)" style={{ opacity: 0.5 }} />
+                      <div style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-primary)" }}>
+                        No BOM Recipes registered yet
+                      </div>
+                      <div style={{ fontSize: "12px", color: "var(--text-muted)", maxWidth: "420px" }}>
+                        Click &quot;+ Create BOM / Recipe&quot; to define ingredients, packaging materials, and yield ratios.
+                      </div>
+                    </div>
                   </td>
                 </tr>
               )}

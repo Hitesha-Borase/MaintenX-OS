@@ -32,10 +32,16 @@ export function AppProvider({ children }) {
   // UI state overlays
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isQuickActionOpen, setIsQuickActionOpen] = useState(false);
+  const [quickActionForm, setQuickActionForm] = useState(null);
   const [qrModalData, setQrModalData] = useState(null); // { title: "Asset QR", code: "FM-001", type: "asset" }
   const [toasts, setToasts] = useState([]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const openQuickAction = (form = null) => {
+    setQuickActionForm(form);
+    setIsQuickActionOpen(true);
+  };
 
   // Keyboard shortcut for Global Search (Cmd+K / Ctrl+K)
   useEffect(() => {
@@ -87,6 +93,9 @@ export function AppProvider({ children }) {
         setIsSearchOpen,
         isQuickActionOpen,
         setIsQuickActionOpen,
+        quickActionForm,
+        setQuickActionForm,
+        openQuickAction,
         qrModalData,
         openQrModal,
         closeQrModal,

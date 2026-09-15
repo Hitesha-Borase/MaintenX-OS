@@ -79,8 +79,8 @@ export function ProductionOrders() {
     setIsLoading(true);
     try {
       const res = await productionService.getOrders();
-      const list = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
-      if (list.length > 0) {
+      const list = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : (Array.isArray(res?.data?.data) ? res.data.data : []));
+      if (Array.isArray(list) && list.length > 0) {
         setOrders(list);
         if (setCtxOrders) setCtxOrders(list);
       } else if (ctxOrders.length > 0) {
@@ -98,7 +98,14 @@ export function ProductionOrders() {
 
   useEffect(() => {
     fetchOrders();
-  }, []);
+    const interval = setInterval(fetchOrders, 4000);
+    const handleFocus = () => fetchOrders();
+    window.addEventListener("focus", handleFocus);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("focus", handleFocus);
+    };
+  }, [fetchOrders]);
 
   // Update order status via API
   const handleUpdateStatus = async (orderId, newStatus) => {

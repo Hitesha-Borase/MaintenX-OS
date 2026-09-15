@@ -15,7 +15,6 @@ import {
   FileSpreadsheet,
   ChevronDown,
   ChevronRight,
-  ChevronLeft,
   Flame,
   ShieldAlert,
   KeyRound,
@@ -67,7 +66,6 @@ import { useRole } from "../../context/RoleContext";
 import { useApp } from "../../context/AppContext";
 import { useCMMS } from "../../context/CMMSContext";
 import { useExceptions } from "../../context/ExceptionContext";
-import { useAdmin } from "../../context/AdminContext";
 import { useMasterData } from "../../context/MasterDataContext";
 
 const iconMap = {
@@ -143,17 +141,14 @@ export function Sidebar() {
     }
   }, [location.pathname]);
 
-  const cmmsContext = useCMMS ? useCMMS() : { workOrders: [], assets: [] };
-  const { workOrders = [], assets = [] } = cmmsContext || {};
+  const cmmsContext = useCMMS();
+  const { workOrders = [] } = cmmsContext || {};
 
-  const masterDataContext = useMasterData ? useMasterData() : {};
+  const masterDataContext = useMasterData();
   const { skus = [], boms = [], lines = [], assets: masterAssets = [], employees = [], qualitySpecs = [] } = masterDataContext || {};
 
-  const exceptionContext = useExceptions ? useExceptions() : { exceptions: [] };
+  const exceptionContext = useExceptions();
   const { exceptions = [] } = exceptionContext || {};
-
-  const adminContext = useAdmin ? useAdmin() : { users: [], invitations: [], dataHealthStats: {} };
-  const { users = [], invitations = [], dataHealthStats = {} } = adminContext || {};
 
   const activeWOCount = workOrders.filter((w) => w.status === "In Progress" || w.status === "Open").length;
   const openP1Count = exceptions.filter((e) => e.severity === "P1" || e.priority === "P1").length;
@@ -208,7 +203,37 @@ export function Sidebar() {
     setOpenGroups((prev) => ({ ...prev, [groupKey]: !prev[groupKey] }));
   };
 
-  const isGroupActive = (paths) => paths.some((p) => location.pathname.startsWith(p));
+  const isGroupActive = (paths) =>
+    paths.some((p) => {
+      if (location.pathname === p) return true;
+      if (p && p !== "/" && p !== "/command-center" && p !== "/dashboard") {
+        return location.pathname.startsWith(p.endsWith("/") ? p : p + "/");
+      }
+      return false;
+    });
+
+  // Auto-expand group when a child route is active
+  React.useEffect(() => {
+    const config = NAVIGATION_CONFIG[currentRole?.id] || [];
+    config.forEach((item) => {
+      if (item.group && item.items) {
+        const groupPaths = item.items.map((i) => i.path);
+        const active = groupPaths.some((p) => {
+          if (location.pathname === p) return true;
+          if (p && p !== "/" && p !== "/command-center" && p !== "/dashboard") {
+            return location.pathname.startsWith(p.endsWith("/") ? p : p + "/");
+          }
+          return false;
+        });
+        if (active) {
+          setOpenGroups((prev) => {
+            if (prev[item.group]) return prev;
+            return { ...prev, [item.group]: true };
+          });
+        }
+      }
+    });
+  }, [location.pathname, currentRole?.id, NAVIGATION_CONFIG]);
 
   const navItemStyle = ({ isActive }) => ({
     display: "flex",
@@ -254,7 +279,8 @@ export function Sidebar() {
     fontSize: "13px",
     fontWeight: active ? 700 : 600,
     color: active ? "#2B1D11" : "var(--text-secondary)",
-    backgroundColor: active ? "rgba(200, 149, 71, 0.08)" : "transparent",
+    backgroundColor: active ? "rgba(200, 149, 71, 0.12)" : "transparent",
+    borderLeft: active ? "3px solid #C99649" : "3px solid transparent",
     cursor: "pointer",
     userSelect: "none",
     transition: "all 0.15s ease",
@@ -286,42 +312,42 @@ export function Sidebar() {
     if (label.includes("SKU")) {
       return (
         <span style={{ fontSize: "10px", backgroundColor: "rgba(2, 132, 199, 0.12)", color: "#0284C7", padding: "1px 6px", borderRadius: "10px", fontWeight: 700 }}>
-          {skus.length || 6}
+          {skus.length}
         </span>
       );
     }
     if (label.includes("BOM")) {
       return (
         <span style={{ fontSize: "10px", backgroundColor: "rgba(5, 150, 105, 0.12)", color: "#059669", padding: "1px 6px", borderRadius: "10px", fontWeight: 700 }}>
-          {boms.length || 3}
+          {boms.length}
         </span>
       );
     }
     if (label.includes("Line")) {
       return (
         <span style={{ fontSize: "10px", backgroundColor: "rgba(139, 92, 246, 0.12)", color: "#8B5CF6", padding: "1px 6px", borderRadius: "10px", fontWeight: 700 }}>
-          {lines.length || 3}
+          {lines.length}
         </span>
       );
     }
     if (label.includes("Asset")) {
       return (
         <span style={{ fontSize: "10px", backgroundColor: "rgba(220, 38, 38, 0.12)", color: "#DC2626", padding: "1px 6px", borderRadius: "10px", fontWeight: 700 }}>
-          {masterAssets.length || 6}
+          {masterAssets.length}
         </span>
       );
     }
     if (label.includes("Staff") || label.includes("Skill")) {
       return (
         <span style={{ fontSize: "10px", backgroundColor: "rgba(200, 149, 71, 0.15)", color: "#8C5B23", padding: "1px 6px", borderRadius: "10px", fontWeight: 700 }}>
-          {employees.length || 5}
+          {employees.length}
         </span>
       );
     }
     if (label.includes("QA Spec") || label.includes("Quality Spec")) {
       return (
         <span style={{ fontSize: "10px", backgroundColor: "rgba(5, 150, 105, 0.12)", color: "#059669", padding: "1px 6px", borderRadius: "10px", fontWeight: 700 }}>
-          {qualitySpecs.length || 4}
+          {qualitySpecs.length}
         </span>
       );
     }
@@ -695,12 +721,21 @@ export function Sidebar() {
                           {item.items.map((subItem) => {
                             const IconComp = iconMap[subItem.icon] || FileText;
                             return (
-                              <NavLink key={subItem.path} to={subItem.path} end style={subNavItemStyle}>
-                                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                                  <IconComp size={14} />
-                                  <span>{subItem.label}</span>
-                                </div>
-                                {renderBadge(subItem.label)}
+                              <NavLink
+                                key={subItem.path}
+                                to={subItem.path}
+                                end
+                                style={subNavItemStyle}
+                              >
+                                {({ isActive }) => (
+                                  <>
+                                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                      <IconComp size={14} color={isActive ? "#1A0F02" : "currentColor"} />
+                                      <span>{subItem.label}</span>
+                                    </div>
+                                    {renderBadge(subItem.label)}
+                                  </>
+                                )}
                               </NavLink>
                             );
                           })}
@@ -712,10 +747,20 @@ export function Sidebar() {
 
                 const IconComp = iconMap[item.icon] || LayoutDashboard;
                 return (
-                  <NavLink key={item.path} to={item.path} end style={navItemStyle} title={item.label}>
-                    <IconComp size={18} style={{ flexShrink: 0 }} />
-                    {!isCollapsed && <span>{item.label}</span>}
-                    {!isCollapsed && renderBadge(item.label)}
+                  <NavLink
+                    key={item.path}
+                    to={item.path}
+                    end
+                    style={navItemStyle}
+                    title={item.label}
+                  >
+                    {({ isActive }) => (
+                      <>
+                        <IconComp size={18} color={isActive ? "#1A0F02" : "currentColor"} style={{ flexShrink: 0 }} />
+                        {!isCollapsed && <span>{item.label}</span>}
+                        {!isCollapsed && renderBadge(item.label)}
+                      </>
+                    )}
                   </NavLink>
                 );
               })

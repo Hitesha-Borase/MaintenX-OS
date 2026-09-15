@@ -12,7 +12,10 @@ import {
   RotateCcw,
   Sparkles,
   Layers,
-  Plus
+  Plus,
+  Trash2,
+  Eye,
+  Edit3
 } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import qualityService from "../../../services/qualityService";
@@ -20,29 +23,58 @@ import qualityService from "../../../services/qualityService";
 export function ProductChecks() {
   const { addToast } = useApp();
 
-  const [checks, setChecks] = useState([
-    { id: "CHK-1001", type: "Hourly CCP Thermal Kill Verification", batch: "BAT-2026-0891", sku: "500ml Sparkling Citrus Soda", line: "Line 1", target: "≥83.1°C", actual: "83.5°C", status: "PASS", time: "14:00" },
-    { id: "CHK-1002", type: "Digital Refractometer Brix Sugar Test", batch: "BAT-2026-0891", sku: "500ml Sparkling Citrus Soda", line: "Line 1", target: "11.6 - 12.2 °Bx", actual: "11.85 °Bx", status: "PASS", time: "15:00" },
-    { id: "CHK-1003", type: "Net Content Fill Volume & Headspace", batch: "BAT-2026-0892", sku: "330ml Sparkling Orange Can", line: "Line 2", target: "330.0 ml ± 2.5ml", actual: "331.2 ml", status: "PASS", time: "15:30" },
-    { id: "CHK-1004", type: "Can Double Seam & Visual Crimp Inspection", batch: "BAT-2026-0892", sku: "330ml Sparkling Orange Can", line: "Line 2", target: "Seam Overlap ≥ 1.1mm", actual: "1.22mm Overlap", status: "PENDING", time: "16:00" }
-  ]);
-
+  const [checks, setChecks] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [newType, setNewType] = useState("Digital Refractometer Brix Sugar Test");
-  const [newBatch, setNewBatch] = useState("BAT-2026-0891 (Sparkling Citrus)");
+  const [newBatch, setNewBatch] = useState("BAT-2026-ORD2511");
   const [newTarget, setNewTarget] = useState("11.6 - 12.2 °Bx");
   const [newActual, setNewActual] = useState("");
+
+  const [selectedCheck, setSelectedCheck] = useState(null);
+  const [editFormData, setEditFormData] = useState({
+    type: "",
+    batch: "",
+    line: "",
+    target: "",
+    actual: "",
+    status: "PASS",
+    notes: ""
+  });
+
+  const formatDisplayTime = (timeVal) => {
+    if (!timeVal) return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    if (/^\d{1,2}:\d{2}\s*(am|pm)$/i.test(timeVal)) return timeVal;
+    const match24 = typeof timeVal === "string" && timeVal.match(/^(\d{1,2}):(\d{2})$/);
+    if (match24) {
+      let hours = parseInt(match24[1], 10);
+      const minutes = match24[2];
+      const ampm = hours >= 12 ? "PM" : "AM";
+      hours = hours % 12 || 12;
+      const strHours = hours < 10 ? `0${hours}` : `${hours}`;
+      return `${strHours}:${minutes} ${ampm}`;
+    }
+    const d = new Date(timeVal);
+    if (!isNaN(d.getTime())) {
+      return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    }
+    return timeVal;
+  };
 
   const fetchChecks = async () => {
     setIsLoading(true);
     try {
       const res = await qualityService.getProductChecks();
-      if (res.data?.data && Array.isArray(res.data.data)) {
-        setChecks(res.data.data);
-      }
+      const rawList = Array.isArray(res) 
+        ? res 
+        : Array.isArray(res?.data) 
+          ? res.data 
+          : Array.isArray(res?.data?.data) 
+            ? res.data.data 
+            : [];
+      setChecks(rawList);
     } catch (err) {
-      console.warn("Product checks offline fallback:", err.message);
+      console.warn("Product checks fetch error:", err.message);
     } finally {
       setIsLoading(false);
     }
@@ -61,15 +93,20 @@ export function ProductChecks() {
 
     try {
       const res = await qualityService.recordProductCheck({ id, status: nextStatus });
-      if (res.data?.data && Array.isArray(res.data.data)) {
-        setChecks(res.data.data);
+      const updatedList = Array.isArray(res?.data?.data)
+        ? res.data.data
+        : Array.isArray(res?.data)
+          ? res.data
+          : null;
+      if (updatedList) {
+        setChecks(updatedList);
       } else {
         setChecks(prev =>
           prev.map(c => c.id === id ? { ...c, status: nextStatus } : c)
         );
       }
     } catch (err) {
-      console.warn("Product check sync fallback:", err.message);
+      console.warn("Product check sync error:", err.message);
       setChecks(prev =>
         prev.map(c => c.id === id ? { ...c, status: nextStatus } : c)
       );
@@ -87,32 +124,95 @@ export function ProductChecks() {
     if (!newActual) return;
 
     const newCheck = {
-      id: `CHK-${Math.floor(1000 + Math.random() * 9000)}`,
       type: newType,
       batch: newBatch,
       sku: "Finished Goods SKU",
-      line: "Line 1",
+      line: "LINE-2 (abc)",
       target: newTarget,
       actual: newActual,
-      status: "PASS",
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      status: "PASS"
     };
 
     try {
       const res = await qualityService.recordProductCheck(newCheck);
-      if (res.data?.data && Array.isArray(res.data.data)) {
-        setChecks(res.data.data);
+      const updatedList = Array.isArray(res?.data?.data)
+        ? res.data.data
+        : Array.isArray(res?.data)
+          ? res.data
+          : null;
+      if (updatedList) {
+        setChecks(updatedList);
       } else {
-        setChecks([newCheck, ...checks]);
+        await fetchChecks();
       }
     } catch (err) {
       console.warn("Save product check error:", err.message);
-      setChecks([newCheck, ...checks]);
+      await fetchChecks();
     }
 
     setShowModal(false);
     setNewActual("");
-    addToast("New product quality check logged and verified.", "success");
+    addToast("New product quality check logged and saved to database.", "success");
+  };
+
+  const handleDeleteCheck = async (id, e) => {
+    e?.stopPropagation?.();
+    if (!window.confirm(`Are you sure you want to delete quality check ${id}?`)) {
+      return;
+    }
+
+    try {
+      await qualityService.deleteProductCheck(id);
+      setChecks(prev => prev.filter(c => c.id !== id && c.dbId !== id));
+      addToast(`Quality check ${id} deleted successfully.`, "success");
+    } catch (err) {
+      console.warn("Delete check error:", err.message);
+      addToast(`Failed to delete check: ${err.message}`, "error");
+    }
+  };
+
+  const handleOpenDetail = (check) => {
+    setSelectedCheck(check);
+    setEditFormData({
+      type: check.type || "",
+      batch: check.batch || "",
+      line: check.line || "",
+      target: check.target || "",
+      actual: check.actual || "",
+      status: check.status || "PASS",
+      notes: check.notes || ""
+    });
+  };
+
+  const handleCloseDetail = () => {
+    setSelectedCheck(null);
+  };
+
+  const handleSaveEdit = async (e) => {
+    e.preventDefault();
+    if (!selectedCheck) return;
+
+    try {
+      const res = await qualityService.recordProductCheck({
+        id: selectedCheck.id,
+        ...editFormData
+      });
+      const updatedList = Array.isArray(res?.data?.data)
+        ? res.data.data
+        : Array.isArray(res?.data)
+          ? res.data
+          : null;
+      if (updatedList) {
+        setChecks(updatedList);
+      } else {
+        await fetchChecks();
+      }
+      setSelectedCheck(null);
+      addToast(`Quality check ${selectedCheck.id} updated successfully.`, "success");
+    } catch (err) {
+      console.warn("Update check error:", err.message);
+      addToast(`Failed to update check: ${err.message}`, "error");
+    }
   };
 
   const handleExportCSV = async () => {
@@ -124,7 +224,7 @@ export function ProductChecks() {
 
     const headers = "Check ID,Check Type,Batch,Line,Target Spec,Measured Actual,Status,Time\n";
     const rows = checks
-      .map(c => `"${c.id}","${c.type}","${c.batch}","${c.line}","${c.target}","${c.actual}","${c.status}","${c.time}"`)
+      .map(c => `"${c.id}","${c.type}","${c.batch}","${c.line}","${c.target}","${c.actual}","${c.status}","${formatDisplayTime(c.time)}"`)
       .join("\n");
 
     const blob = new Blob([headers + rows], { type: "text/csv" });
@@ -314,7 +414,11 @@ export function ProductChecks() {
                   >
                     {/* Check ID & Type */}
                     <td style={{ padding: "16px 18px", verticalAlign: "middle" }}>
-                      <div style={{ fontWeight: 800, color: "#2B1D11", fontSize: "13.5px" }}>
+                      <div 
+                        onClick={() => handleOpenDetail(check)}
+                        style={{ fontWeight: 800, color: "#2B1D11", fontSize: "13.5px", cursor: "pointer" }}
+                        title="Click to view & edit details"
+                      >
                         <span style={{ color: "#B27E33", marginRight: "6px" }}>[{check.id}]</span>
                         {check.type}
                       </div>
@@ -361,35 +465,77 @@ export function ProductChecks() {
                         }}>
                           {check.status}
                         </span>
-                        <span style={{ fontSize: "11.5px", color: "#6B5B4E" }}>@{check.time}</span>
+                        <span style={{ fontSize: "11.5px", color: "#6B5B4E" }}>@{formatDisplayTime(check.time)}</span>
                       </div>
                     </td>
 
                     {/* Action Button */}
                     <td style={{ padding: "16px 18px", textAlign: "center", verticalAlign: "middle" }}>
-                      <button
-                        type="button"
-                        onClick={() => handleToggleCheck(check.id, check.status)}
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          gap: "6px",
-                          width: "135px",
-                          padding: "8px 14px",
-                          borderRadius: "8px",
-                          border: isPass ? "1px solid #B27E33" : "1px solid #E8DDCF",
-                          background: isPass ? "linear-gradient(135deg, #E2B670 0%, #C89547 50%, #B27E33 100%)" : "#FFFFFF",
-                          color: isPass ? "#1A0F02" : "#6B5B4E",
-                          fontSize: "12px",
-                          fontWeight: 800,
-                          cursor: "pointer",
-                          boxShadow: isPass ? "0 2px 8px rgba(200, 149, 71, 0.3)" : "0 1px 3px rgba(40, 25, 10, 0.04)",
-                          transition: "all 0.15s ease"
-                        }}
-                      >
-                        <Check size={14} strokeWidth={isPass ? 3 : 2} /> {isPass ? "PASS" : "Complete Check"}
-                      </button>
+                      <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "6px" }}>
+                        <button
+                          type="button"
+                          onClick={() => handleToggleCheck(check.id, check.status)}
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "6px",
+                            width: "120px",
+                            padding: "8px 12px",
+                            borderRadius: "8px",
+                            border: isPass ? "1px solid #B27E33" : "1px solid #E8DDCF",
+                            background: isPass ? "linear-gradient(135deg, #E2B670 0%, #C89547 50%, #B27E33 100%)" : "#FFFFFF",
+                            color: isPass ? "#1A0F02" : "#6B5B4E",
+                            fontSize: "12px",
+                            fontWeight: 800,
+                            cursor: "pointer",
+                            boxShadow: isPass ? "0 2px 8px rgba(200, 149, 71, 0.3)" : "0 1px 3px rgba(40, 25, 10, 0.04)",
+                            transition: "all 0.15s ease"
+                          }}
+                        >
+                          <Check size={14} strokeWidth={isPass ? 3 : 2} /> {isPass ? "PASS" : "Complete"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenDetail(check)}
+                          title="View & Edit Quality Check"
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            padding: "8px 10px",
+                            borderRadius: "8px",
+                            border: "1px solid #E8DDCF",
+                            backgroundColor: "#FFFFFF",
+                            color: "#6B5B4E",
+                            fontSize: "12px",
+                            cursor: "pointer",
+                            transition: "all 0.15s ease"
+                          }}
+                        >
+                          <Eye size={14} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => handleDeleteCheck(check.id, e)}
+                          title="Delete Quality Check"
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            padding: "8px 10px",
+                            borderRadius: "8px",
+                            border: "1px solid #FECACA",
+                            backgroundColor: "#FEF2F2",
+                            color: "#EF4444",
+                            fontSize: "12px",
+                            cursor: "pointer",
+                            transition: "all 0.15s ease"
+                          }}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -565,6 +711,266 @@ export function ProductChecks() {
                   }}
                 >
                   Save & Pass Check
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {/* View & Edit Quality Check Modal */}
+      {selectedCheck && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: "rgba(30, 20, 10, 0.5)",
+          backdropFilter: "blur(4px)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 9999,
+          padding: "20px"
+        }}>
+          <div style={{
+            backgroundColor: "#FFFFFF",
+            borderRadius: "16px",
+            border: "1px solid #E8DDCF",
+            boxShadow: "0 20px 40px rgba(40, 25, 10, 0.2)",
+            maxWidth: "560px",
+            width: "100%",
+            padding: "24px",
+            boxSizing: "border-box"
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "18px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Eye size={20} color="#B27E33" />
+                <div>
+                  <h3 style={{ margin: 0, fontSize: "17px", fontWeight: 850, color: "#2B1D11" }}>
+                    View & Edit Quality Check
+                  </h3>
+                  <span style={{ fontSize: "11.5px", color: "#6B5B4E" }}>
+                    ID: <strong style={{ color: "#B27E33" }}>[{selectedCheck.id}]</strong> • Recorded @{formatDisplayTime(selectedCheck.time)}
+                  </span>
+                </div>
+              </div>
+              <button 
+                type="button" 
+                onClick={handleCloseDetail}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "#6B5B4E" }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEdit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                <label style={{ fontSize: "11.5px", fontWeight: 800, color: "#6B5B4E", textTransform: "uppercase" }}>
+                  Analytical Parameter / Check Type:
+                </label>
+                <input
+                  type="text"
+                  value={editFormData.type}
+                  onChange={e => setEditFormData({ ...editFormData, type: e.target.value })}
+                  required
+                  style={{
+                    padding: "9px 12px",
+                    borderRadius: "8px",
+                    border: "1px solid #E8DDCF",
+                    backgroundColor: "#F6F3EE",
+                    color: "#261603",
+                    fontSize: "13px",
+                    fontWeight: 700,
+                    outline: "none"
+                  }}
+                />
+              </div>
+
+              <div style={{ display: "flex", gap: "12px" }}>
+                <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "4px" }}>
+                  <label style={{ fontSize: "11.5px", fontWeight: 800, color: "#6B5B4E", textTransform: "uppercase" }}>
+                    Batch Run #:
+                  </label>
+                  <input
+                    type="text"
+                    value={editFormData.batch}
+                    onChange={e => setEditFormData({ ...editFormData, batch: e.target.value })}
+                    style={{
+                      padding: "9px 12px",
+                      borderRadius: "8px",
+                      border: "1px solid #E8DDCF",
+                      backgroundColor: "#F6F3EE",
+                      color: "#261603",
+                      fontSize: "13px",
+                      fontWeight: 700,
+                      outline: "none"
+                    }}
+                  />
+                </div>
+                <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "4px" }}>
+                  <label style={{ fontSize: "11.5px", fontWeight: 800, color: "#6B5B4E", textTransform: "uppercase" }}>
+                    Production Line:
+                  </label>
+                  <input
+                    type="text"
+                    value={editFormData.line}
+                    onChange={e => setEditFormData({ ...editFormData, line: e.target.value })}
+                    style={{
+                      padding: "9px 12px",
+                      borderRadius: "8px",
+                      border: "1px solid #E8DDCF",
+                      backgroundColor: "#F6F3EE",
+                      color: "#261603",
+                      fontSize: "13px",
+                      fontWeight: 700,
+                      outline: "none"
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: "flex", gap: "12px" }}>
+                <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "4px" }}>
+                  <label style={{ fontSize: "11.5px", fontWeight: 800, color: "#6B5B4E", textTransform: "uppercase" }}>
+                    Target Specification:
+                  </label>
+                  <input
+                    type="text"
+                    value={editFormData.target}
+                    onChange={e => setEditFormData({ ...editFormData, target: e.target.value })}
+                    style={{
+                      padding: "9px 12px",
+                      borderRadius: "8px",
+                      border: "1px solid #E8DDCF",
+                      backgroundColor: "#F6F3EE",
+                      color: "#261603",
+                      fontSize: "13px",
+                      fontWeight: 700,
+                      outline: "none"
+                    }}
+                  />
+                </div>
+                <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "4px" }}>
+                  <label style={{ fontSize: "11.5px", fontWeight: 800, color: "#6B5B4E", textTransform: "uppercase" }}>
+                    Measured Assay Result:
+                  </label>
+                  <input
+                    type="text"
+                    value={editFormData.actual}
+                    onChange={e => setEditFormData({ ...editFormData, actual: e.target.value })}
+                    required
+                    style={{
+                      padding: "9px 12px",
+                      borderRadius: "8px",
+                      border: "1px solid #D8CBBA",
+                      backgroundColor: "#FFFFFF",
+                      color: "#261603",
+                      fontSize: "13px",
+                      fontWeight: 700,
+                      outline: "none"
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                <label style={{ fontSize: "11.5px", fontWeight: 800, color: "#6B5B4E", textTransform: "uppercase" }}>
+                  Clearance Status:
+                </label>
+                <div style={{ display: "flex", gap: "12px" }}>
+                  <button
+                    type="button"
+                    onClick={() => setEditFormData({ ...editFormData, status: "PASS" })}
+                    style={{
+                      flex: 1,
+                      padding: "8px 12px",
+                      borderRadius: "8px",
+                      border: editFormData.status === "PASS" ? "1px solid #B27E33" : "1px solid #E8DDCF",
+                      background: editFormData.status === "PASS" ? "linear-gradient(135deg, #E2B670 0%, #C89547 50%, #B27E33 100%)" : "#F6F3EE",
+                      color: editFormData.status === "PASS" ? "#1A0F02" : "#6B5B4E",
+                      fontWeight: 800,
+                      fontSize: "12.5px",
+                      cursor: "pointer"
+                    }}
+                  >
+                    PASS
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditFormData({ ...editFormData, status: "PENDING" })}
+                    style={{
+                      flex: 1,
+                      padding: "8px 12px",
+                      borderRadius: "8px",
+                      border: editFormData.status === "PENDING" ? "1px solid #B27E33" : "1px solid #E8DDCF",
+                      background: editFormData.status === "PENDING" ? "linear-gradient(135deg, #E2B670 0%, #C89547 50%, #B27E33 100%)" : "#F6F3EE",
+                      color: editFormData.status === "PENDING" ? "#1A0F02" : "#6B5B4E",
+                      fontWeight: 800,
+                      fontSize: "12.5px",
+                      cursor: "pointer"
+                    }}
+                  >
+                    PENDING
+                  </button>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                <label style={{ fontSize: "11.5px", fontWeight: 800, color: "#6B5B4E", textTransform: "uppercase" }}>
+                  Notes / Observations:
+                </label>
+                <textarea
+                  value={editFormData.notes}
+                  onChange={e => setEditFormData({ ...editFormData, notes: e.target.value })}
+                  placeholder="Optional assay notes or observation details..."
+                  rows={2}
+                  style={{
+                    padding: "9px 12px",
+                    borderRadius: "8px",
+                    border: "1px solid #E8DDCF",
+                    backgroundColor: "#FFFFFF",
+                    color: "#261603",
+                    fontSize: "12.5px",
+                    outline: "none",
+                    resize: "none",
+                    fontFamily: "inherit"
+                  }}
+                />
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px" }}>
+                <button
+                  type="button"
+                  onClick={handleCloseDetail}
+                  style={{
+                    padding: "9px 16px",
+                    borderRadius: "8px",
+                    border: "1px solid #E8DDCF",
+                    backgroundColor: "#FFFFFF",
+                    color: "#6B5B4E",
+                    fontSize: "13px",
+                    fontWeight: 750,
+                    cursor: "pointer"
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  style={{
+                    padding: "9px 20px",
+                    borderRadius: "8px",
+                    border: "none",
+                    background: "linear-gradient(135deg, #E2B670 0%, #C89547 50%, #B27E33 100%)",
+                    color: "#261603",
+                    fontSize: "13px",
+                    fontWeight: 800,
+                    cursor: "pointer",
+                    boxShadow: "0 3px 10px rgba(200, 149, 71, 0.3)"
+                  }}
+                >
+                  Save Changes
                 </button>
               </div>
             </form>

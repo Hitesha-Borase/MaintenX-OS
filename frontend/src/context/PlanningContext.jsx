@@ -232,6 +232,10 @@ export const INITIAL_APS_SCHEDULES = [
 ];
 
 export function PlanningProvider({ children }) {
+  const hasAuthToken = Boolean(typeof window !== "undefined" && (localStorage.getItem("maintenx_auth_token") || localStorage.getItem("flowstate_token")));
+  const hasTenant = Boolean(typeof window !== "undefined" && (localStorage.getItem("maintenx_tenant_name") || localStorage.getItem("maintenx_tenant_id")));
+  const isTenantActive = Boolean(hasTenant || hasAuthToken);
+
   const { skus = [], boms = [], lines = [], assets = [], logAudit } = useMasterData();
   const { productionOrders = [], setProductionOrders } = useProduction();
   const { addToast } = useApp();
@@ -244,16 +248,19 @@ export function PlanningProvider({ children }) {
   const [forecasts, setForecasts] = useState([]);
 
   const [scheduleVersions, setScheduleVersions] = useState(() => {
+    if (isTenantActive) return [];
     const saved = localStorage.getItem("flowstate_planning_versions");
     return saved ? JSON.parse(saved) : INITIAL_SCHEDULE_VERSIONS;
   });
 
   const [schedules, setSchedules] = useState(() => {
+    if (isTenantActive) return [];
     const saved = localStorage.getItem("flowstate_planning_schedules");
     return saved ? JSON.parse(saved) : INITIAL_APS_SCHEDULES;
   });
 
   const [materialReservations, setMaterialReservations] = useState(() => {
+    if (isTenantActive) return [];
     const saved = localStorage.getItem("flowstate_planning_reservations");
     return saved
       ? JSON.parse(saved)
@@ -377,41 +384,15 @@ export function PlanningProvider({ children }) {
         }
         if (remoteForecasts.status === "fulfilled") {
           const items = remoteForecasts.value?.data || remoteForecasts.value;
-          if (Array.isArray(items) && items.length > 0) {
+          if (Array.isArray(items)) {
             setForecasts(items);
           }
         }
         if (remoteSchedules.status === "fulfilled") {
           const items = remoteSchedules.value?.data || remoteSchedules.value;
-          if (Array.isArray(items) && items.length > 0) {
+          if (Array.isArray(items)) {
             setSchedules(items);
           }
-        }
-        if (remoteForecasts.status === "fulfilled" && Array.isArray(remoteForecasts.value) && remoteForecasts.value.length > 0) {
-          const mappedFc = remoteForecasts.value.map((f) => {
-            const matchedSku = skus.find((s) => s.id === f.skuId || s.skuId === f.skuId || s.skuCode === f.skuId);
-            return {
-              id: f.id,
-              period: f.period,
-              plantId: f.plantId,
-              skuId: matchedSku?.skuId || f.skuId,
-              productCode: matchedSku?.skuCode || (f.skuId === "277c3fb7-a86d-45fd-86e8-6b813882becf" ? "PKG-CAN-330" : f.skuId === "b68145a8-825a-472c-a7f0-843061897493" ? "RM-ORG-101" : "SKU-VAL-8870"),
-              productName: matchedSku?.name || (f.skuId === "277c3fb7-a86d-45fd-86e8-6b813882becf" ? "330ml Slimline Aluminum Beverage Cans" : f.skuId === "b68145a8-825a-472c-a7f0-843061897493" ? "Valencia Organic Orange Juice Concentrate 65° Brix" : "Sparkling Citrus Cooler 500ml"),
-              uom: matchedSku?.uom || (f.skuId === "277c3fb7-a86d-45fd-86e8-6b813882becf" ? "Can" : f.skuId === "b68145a8-825a-472c-a7f0-843061897493" ? "Liters" : "Units"),
-              historicalDemand: Math.round(Number(f.baselineDemand) * 0.95),
-              baselineForecast: Number(f.baselineDemand),
-              overrideQuantity: Number(f.overrideQuantity || f.promoUplift || 0),
-              finalForecast: Number(f.finalForecast),
-              mapeAccuracy: Number(f.mapeAccuracy || 94.6),
-              method: f.modelType || "Exponential Smoothing",
-              status: "Approved",
-              owner: "Alexander Vance",
-              reason: "Statistical Engine Execution",
-              createdDate: f.createdAt ? new Date(f.createdAt).toISOString().substring(0, 10) : "",
-              lastUpdated: f.createdAt ? new Date(f.createdAt).toISOString().substring(0, 10) : "",
-            };
-          });
-          setForecasts(mappedFc);
         }
       } catch (err) {
         console.warn("Planning backend sync fallback:", err.message);
@@ -419,6 +400,20 @@ export function PlanningProvider({ children }) {
     }
     syncPlanningBackend();
   }, [skus]);
+
+  useEffect(() => {
+    const handleTenantChanged = () => {
+      setDemandOrders([]);
+      setForecasts([]);
+      setScheduleVersions([]);
+      setSchedules([]);
+      setMaterialReservations([]);
+      localStorage.removeItem("flowstate_planning_versions");
+      localStorage.removeItem("flowstate_planning_schedules");
+      localStorage.removeItem("flowstate_planning_reservations");
+    };
+    window.addEventListener("maintenx:tenant_changed", handleTenantChanged);
+  }, []);
 
   // ==========================================
   // 1. DEMAND ORDERS CRUD

@@ -31,8 +31,8 @@ export function ItemMasterPage() {
   // Trigger live GET /api/v1/master-data/skus on mount
   React.useEffect(() => {
     masterDataService.getSkus().then((res) => {
-      const data = res?.data || res;
-      if (Array.isArray(data) && data.length > 0 && typeof setSkus === "function") {
+      const data = res?.data !== undefined ? res.data : res;
+      if (Array.isArray(data) && typeof setSkus === "function") {
         setSkus(data);
       }
     }).catch((err) => console.warn("Live SKU fetch:", err.message));
@@ -51,11 +51,11 @@ export function ItemMasterPage() {
     skuCode: "",
     name: "",
     category: "Finished Goods",
-    family: "Sparkling Flavors",
-    uom: "Bottles",
-    plantId: "PLT-01",
+    family: "",
+    uom: "EA",
+    plantId: plants?.[0]?.id || "PLT-01",
     status: "Active",
-    stdCost: "$0.50",
+    stdCost: "",
     description: ""
   });
 
@@ -90,18 +90,25 @@ export function ItemMasterPage() {
       return;
     }
 
-    const created = addSKU(newSku);
-    addToast(`SKU ${created.skuCode} (${created.name}) created successfully!`, "success");
+    // Ensure plantId is valid (not PLT-01) if plants are available
+    let validPlantId = newSku.plantId;
+    if ((!validPlantId || validPlantId === "PLT-01") && plants && plants.length > 0) {
+      validPlantId = plants[0].id;
+    }
+
+    const skuToCreate = { ...newSku, plantId: validPlantId };
+    const created = addSKU(skuToCreate);
+    addToast(`SKU ${created.skuCode || newSku.name} created successfully!`, "success");
     setIsAddModalOpen(false);
     setNewSku({
       skuCode: "",
       name: "",
       category: "Finished Goods",
-      family: "Sparkling Flavors",
-      uom: "Bottles",
-      plantId: "PLT-01",
+      family: "",
+      uom: "EA",
+      plantId: plants?.[0]?.id || "",
       status: "Active",
-      stdCost: "$0.50",
+      stdCost: "",
       description: ""
     });
   };
@@ -112,8 +119,15 @@ export function ItemMasterPage() {
       addToast("Please provide SKU Name.", "warning");
       return;
     }
-    updateSKU(editingSku.skuId, editingSku);
-    addToast(`SKU ${editingSku.skuCode} updated successfully!`, "success");
+    
+    let validPlantId = editingSku.plantId;
+    if ((!validPlantId || validPlantId === "PLT-01") && plants && plants.length > 0) {
+      validPlantId = plants[0].id;
+    }
+    const skuToUpdate = { ...editingSku, plantId: validPlantId };
+    
+    updateSKU(skuToUpdate.skuId, skuToUpdate);
+    addToast(`SKU ${skuToUpdate.skuCode || skuToUpdate.name} updated successfully!`, "success");
     setEditingSku(null);
   };
 
@@ -171,7 +185,7 @@ export function ItemMasterPage() {
           title="Active Master Plants"
           value={plants.length.toString()}
           unit="Facilities"
-          trend={{ value: "Indore & Austin multi-site", isPositive: true, text: "" }}
+          trend={{ value: plants.length > 0 ? "Configured facilities" : "No plants registered yet", isPositive: plants.length > 0, text: "" }}
           icon={Building2}
           colorVariant="amber"
         />
@@ -308,7 +322,7 @@ export function ItemMasterPage() {
 
                       <td style={{ padding: "12px 14px", whiteSpace: "nowrap" }}>
                         <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-                          {plantObj ? plantObj.name.split(" - ")[0] : "Indore Plant"}
+                          {plantObj ? plantObj.name.split(" - ")[0] : (sku.plantName || "—")}
                         </span>
                       </td>
 
@@ -326,10 +340,10 @@ export function ItemMasterPage() {
 
                       <td style={{ padding: "12px 14px", whiteSpace: "nowrap" }}>
                         <div style={{ fontSize: "11px", fontWeight: 600, color: "var(--text-primary)" }}>
-                          {sku.createdBy || "Alexander Vance"}
+                          {sku.createdBy || "Admin"}
                         </div>
                         <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>
-                          {sku.createdDate || "2026-08-01"}
+                          {sku.createdDate || "—"}
                         </div>
                       </td>
 
@@ -378,8 +392,16 @@ export function ItemMasterPage() {
                 })
               ) : (
                 <tr>
-                  <td colSpan={9} style={{ padding: "32px", textAlign: "center", color: "var(--text-muted)", fontSize: "13px" }}>
-                    No SKU items match the selected category, plant or search query.
+                  <td colSpan={9} style={{ padding: "48px 24px", textAlign: "center", color: "var(--text-muted)" }}>
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px" }}>
+                      <Package size={40} strokeWidth={1.5} color="var(--text-muted)" style={{ opacity: 0.5 }} />
+                      <div style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-primary)" }}>
+                        No SKU items registered yet
+                      </div>
+                      <div style={{ fontSize: "12px", color: "var(--text-muted)", maxWidth: "420px" }}>
+                        Click &quot;+ Create New SKU&quot; to register your company&#39;s first product or raw material.
+                      </div>
+                    </div>
                   </td>
                 </tr>
               )}
@@ -491,7 +513,7 @@ export function ItemMasterPage() {
                 <div>
                   <label style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase" }}>Plant Facility</label>
                   <select
-                    value={newSku.plantId}
+                    value={(!newSku.plantId || newSku.plantId === "PLT-01") && plants.length > 0 ? plants[0].id : newSku.plantId}
                     onChange={(e) => setNewSku({ ...newSku, plantId: e.target.value })}
                     className="form-input"
                     style={{ height: "36px", fontSize: "12px", marginTop: "4px" }}
@@ -623,7 +645,7 @@ export function ItemMasterPage() {
                 </div>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "12px" }}>
                 <div>
                   <label style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase" }}>UOM</label>
                   <input
@@ -633,6 +655,21 @@ export function ItemMasterPage() {
                     className="form-input"
                     style={{ height: "36px", fontSize: "12px", marginTop: "4px" }}
                   />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase" }}>Plant Facility</label>
+                  <select
+                    value={(!editingSku.plantId || editingSku.plantId === "PLT-01") && plants.length > 0 ? plants[0].id : editingSku.plantId || ""}
+                    onChange={(e) => setEditingSku({ ...editingSku, plantId: e.target.value })}
+                    className="form-input"
+                    style={{ height: "36px", fontSize: "12px", marginTop: "4px" }}
+                  >
+                    <option value="">Select Plant</option>
+                    {plants.map((p) => (
+                      <option key={p.id} value={p.id}>{p.name.split(" - ")[0]}</option>
+                    ))}
+                  </select>
                 </div>
 
                 <div>

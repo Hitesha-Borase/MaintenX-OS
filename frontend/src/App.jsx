@@ -461,7 +461,7 @@ export function AppContent() {
         <Route path="/contact" element={<LandingPage />} />
 
         {/* Authentication Route */}
-        <Route path="/login" element={!isAuthenticated ? <Login /> : <Navigate to={currentRole?.defaultRoute || "/dashboard"} replace />} />
+        <Route path="/login" element={<Login />} />
 
         <Route element={isAuthenticated ? <AppLayout /> : <Navigate to="/login" replace />}>
           {/* Default Route alias redirects to current role default or /dashboard */}
@@ -473,7 +473,6 @@ export function AppContent() {
           <Route path="/master/dashboard" element={<MasterDashboard />} />
           <Route path="/master/companies" element={<CompaniesList />} />
           <Route path="/master/companies/add" element={<Navigate to="/master/companies" replace />} />
-          <Route path="/master/companies/:id" element={<CompanyDetails />} />
           <Route path="/master/company-admins" element={<CompanyAdmins />} />
           <Route path="/master/plans-pricing" element={<PlansPricing />} />
           <Route path="/master/subscriptions" element={<ManageSubscriptions />} />

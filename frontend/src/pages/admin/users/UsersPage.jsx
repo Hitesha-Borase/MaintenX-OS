@@ -30,7 +30,7 @@ import { useApp } from "../../../context/AppContext";
 import { adminService } from "../../../services/adminService";
 
 export function UsersPage() {
-  const { users = [], addUser, updateUserStatus } = useAdmin();
+  const { users = [], roles = [], addUser, updateUserStatus } = useAdmin();
   const { plants = [], departments = [] } = useMasterData();
   const { addToast } = useApp();
 
@@ -370,11 +370,19 @@ export function UsersPage() {
                     className="form-input"
                     style={{ backgroundColor: "#FFFFFF" }}
                   >
-                    <option value="System Administrator">System Administrator</option>
-                    <option value="Plant Manager">Plant Manager</option>
-                    <option value="Quality Manager">Quality Manager</option>
-                    <option value="Maintenance Lead">Maintenance Lead</option>
-                    <option value="Line Operator">Line Operator</option>
+                    {roles && roles.length > 0 ? (
+                      roles.map((r) => (
+                        <option key={r.id || r.name} value={r.name}>{r.name}</option>
+                      ))
+                    ) : (
+                      <>
+                        <option value="System Administrator">System Administrator</option>
+                        <option value="Plant Manager">Plant Manager</option>
+                        <option value="Quality Manager">Quality Manager</option>
+                        <option value="Maintenance Lead">Maintenance Lead</option>
+                        <option value="Line Operator">Line Operator</option>
+                      </>
+                    )}
                   </select>
                 </div>
                 <div>

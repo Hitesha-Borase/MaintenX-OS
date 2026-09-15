@@ -28,8 +28,8 @@ export function PackagingMasterPage() {
 
   useEffect(() => {
     masterDataService.getPackConfigs().then((res) => {
-      const data = res?.data || res;
-      if (Array.isArray(data) && data.length > 0 && typeof setPackConfigs === "function") {
+      const data = res?.data !== undefined ? res.data : res;
+      if (Array.isArray(data) && typeof setPackConfigs === "function") {
         setPackConfigs(data);
       }
     }).catch((err) => console.warn("Pack configs load:", err.message));

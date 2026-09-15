@@ -50,6 +50,10 @@ export const qualityService = {
     return apiClient.get("/quality/release/queue");
   },
 
+  async getReleaseMetrics() {
+    return apiClient.get("/quality/release/metrics");
+  },
+
   async authorizeRelease(releaseData) {
     return apiClient.post("/quality/release/authorize", releaseData);
   },
@@ -82,6 +86,18 @@ export const qualityService = {
     return apiClient.post("/quality/deviations/export", exportData);
   },
 
+  async getDeviationCategories() {
+    return apiClient.get("/quality/deviation-categories");
+  },
+
+  async saveDeviationCategory(data) {
+    return apiClient.post("/quality/deviation-categories", data);
+  },
+
+  async deleteDeviationCategory(id) {
+    return apiClient.delete(`/quality/deviation-categories/${id}`);
+  },
+
   async getAllergenAudits() {
     return apiClient.get("/quality/sanitation/allergen");
   },
@@ -96,6 +112,42 @@ export const qualityService = {
 
   async exportAllergenAudits(exportData = {}) {
     return apiClient.post("/quality/sanitation/allergen/export", exportData);
+  },
+
+  async getPreOpChecklist() {
+    return apiClient.get("/quality/sanitation/preop");
+  },
+
+  async savePreOpProgress(progressData) {
+    return apiClient.post("/quality/sanitation/preop/save", progressData);
+  },
+
+  async createPreOpItem(itemData) {
+    return apiClient.post("/quality/sanitation/preop/item", itemData);
+  },
+
+  async updatePreOpItem(id, updateData) {
+    return apiClient.put(`/quality/sanitation/preop/item/${id}`, updateData);
+  },
+
+  async deletePreOpItem(id) {
+    return apiClient.delete(`/quality/sanitation/preop/item/${id}`);
+  },
+
+  async markAllPreOpPass(data = {}) {
+    return apiClient.post("/quality/sanitation/preop/mark-all-pass", data);
+  },
+
+  async resetPreOpChecklist(data = {}) {
+    return apiClient.post("/quality/sanitation/preop/reset", data);
+  },
+
+  async seedStandardPreOp(data = {}) {
+    return apiClient.post("/quality/sanitation/preop/seed-standard", data);
+  },
+
+  async submitPreOp(clearanceData) {
+    return apiClient.post("/quality/sanitation/preop", clearanceData);
   },
 
   async getLineReadiness() {
@@ -152,6 +204,30 @@ export const qualityService = {
 
   async recordProductCheck(checkData) {
     return apiClient.post("/quality/checks/product", checkData);
+  },
+
+  async deleteProductCheck(id) {
+    return apiClient.delete(`/quality/checks/product/${id}`);
+  },
+
+  async deleteCCPCheck(id) {
+    return apiClient.delete(`/quality/ccp/${id}`);
+  },
+
+  async updateCCPStatus(id, status) {
+    return apiClient.post("/quality/ccp/status", { id, status });
+  },
+
+  async deleteHold(id) {
+    return apiClient.delete(`/quality/holds/${id}`);
+  },
+
+  async deleteDeviation(id) {
+    return apiClient.delete(`/quality/deviations/${id}`);
+  },
+
+  async updateDeviationStatus(id, status) {
+    return apiClient.post("/quality/deviations/status", { id, status });
   },
 
   async exportProductChecks(exportData = {}) {
@@ -348,6 +424,34 @@ export const qualityService = {
 
   async verifyCert(certData) {
     return apiClient.post("/quality/profile/verify-cert", certData);
+  },
+
+  async getProductChecks() {
+    return apiClient.get("/quality/checks/product");
+  },
+
+  async recordProductCheck(checkData) {
+    return apiClient.post("/quality/checks/product", checkData);
+  },
+
+  async exportProductChecks(exportData = {}) {
+    return apiClient.post("/quality/checks/product/export", exportData);
+  },
+
+  async deleteProductCheck(id) {
+    return apiClient.delete(`/quality/checks/product/${id}`);
+  },
+
+  async getDeviationCategories() {
+    return apiClient.get("/quality/deviation-categories");
+  },
+
+  async saveDeviationCategory(data) {
+    return apiClient.post("/quality/deviation-categories", data);
+  },
+
+  async deleteDeviationCategory(id) {
+    return apiClient.delete(`/quality/deviation-categories/${id}`);
   },
 };
 

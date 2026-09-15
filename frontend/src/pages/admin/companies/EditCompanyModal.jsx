@@ -1,15 +1,14 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Modal } from "../../../components/common/Modal";
 import { Button } from "../../../components/common/Button";
 import { useMasterAdmin } from "../../../context/MasterAdminContext";
 import { useApp } from "../../../context/AppContext";
 import { Building2, User, Mail, Phone, CreditCard } from "lucide-react";
 
-export function AddCompanyModal({ isOpen, onClose }) {
-  const { addCompany, plans } = useMasterAdmin();
+export function EditCompanyModal({ isOpen, onClose, company = null }) {
+  const { updateCompanyDetails, plans } = useMasterAdmin();
   const { addToast } = useApp();
 
-  // Build plan options from live database plans
   const planOptions = plans && plans.length > 0
     ? plans.filter((p) => p.status === "Active" || p.status === "active").map((p) => ({
         value: p.name,
@@ -30,28 +29,39 @@ export function AddCompanyModal({ isOpen, onClose }) {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Sync subscription field with live database plans
-  React.useEffect(() => {
-    if (planOptions.length > 0 && (!formData.subscription || !planOptions.some(p => p.value === formData.subscription))) {
-      setFormData(prev => ({ ...prev, subscription: planOptions[0].value }));
+  useEffect(() => {
+    if (company) {
+      setFormData({
+        name: company.name || "",
+        admin: company.admin || "",
+        adminEmail: company.adminEmail || "",
+        adminPhone: company.adminPhone || "",
+        subscription: company.subscription || planOptions[0]?.value || "Plant Pilot",
+      });
     }
-  }, [plans]);
+  }, [company, isOpen, plans]);
 
   const set = (field) => (e) => setFormData((prev) => ({ ...prev, [field]: e.target.value }));
 
-  const handleCreate = async () => {
-    if (!formData.name || !formData.admin || !formData.adminEmail) {
+  const handleSave = async () => {
+    if (!formData.name.trim() || !formData.admin.trim() || !formData.adminEmail.trim()) {
       addToast("Company name, company owner name, and email are required", "warning");
       return;
     }
+
     setIsSubmitting(true);
     try {
-      await addCompany(formData);
-      addToast(`${formData.name} created successfully!`, "success");
+      await updateCompanyDetails(company.id, {
+        name: formData.name.trim(),
+        adminName: formData.admin.trim(),
+        adminEmail: formData.adminEmail.trim(),
+        adminPhone: formData.adminPhone.trim(),
+        subscription: formData.subscription,
+      });
+      addToast(`Company & company owner updated successfully!`, "success");
       onClose();
-      setFormData({ name: "", admin: "", adminEmail: "", adminPhone: "", subscription: planOptions[0]?.value || "Plant Pilot" });
     } catch (err) {
-      addToast(err.message || "Failed to create company", "destructive");
+      addToast(err?.message || "Failed to update company details", "destructive");
     } finally {
       setIsSubmitting(false);
     }
@@ -88,19 +98,20 @@ export function AddCompanyModal({ isOpen, onClose }) {
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Add New Company"
-      subtitle="Register a new tenant company on the platform"
+      title="Edit Company & Owner"
+      subtitle={company ? `Update profile and company owner for ${company.name}` : "Edit Company"}
       footer={
         <>
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button variant="primary" onClick={handleCreate} disabled={isSubmitting}>
-            {isSubmitting ? "Creating..." : "Create Company"}
+          <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
+            Cancel
+          </Button>
+          <Button variant="primary" onClick={handleSave} disabled={isSubmitting}>
+            {isSubmitting ? "Saving..." : "Save Changes"}
           </Button>
         </>
       }
     >
       <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-
         {/* Company Details */}
         <div style={sectionStyle}>
           <div style={sectionLabelStyle}>
@@ -114,6 +125,7 @@ export function AddCompanyModal({ isOpen, onClose }) {
               value={formData.name}
               onChange={set("name")}
               className="form-input"
+              disabled={isSubmitting}
             />
           </div>
         </div>
@@ -124,7 +136,6 @@ export function AddCompanyModal({ isOpen, onClose }) {
             <User size={14} color="var(--accent-cyan)" /> Company Owner Details
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-            {/* Row 1: Name */}
             <div>
               <label style={fieldLabelStyle}>Company Owner Name *</label>
               <input
@@ -133,9 +144,9 @@ export function AddCompanyModal({ isOpen, onClose }) {
                 value={formData.admin}
                 onChange={set("admin")}
                 className="form-input"
+                disabled={isSubmitting}
               />
             </div>
-            {/* Row 2: Email + Phone side by side */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
               <div>
                 <label style={fieldLabelStyle}>
@@ -148,6 +159,7 @@ export function AddCompanyModal({ isOpen, onClose }) {
                   value={formData.adminEmail}
                   onChange={set("adminEmail")}
                   className="form-input"
+                  disabled={isSubmitting}
                 />
               </div>
               <div>
@@ -161,34 +173,34 @@ export function AddCompanyModal({ isOpen, onClose }) {
                   value={formData.adminPhone}
                   onChange={set("adminPhone")}
                   className="form-input"
+                  disabled={isSubmitting}
                 />
               </div>
             </div>
           </div>
         </div>
 
-        {/* Billing & Subscription */}
+        {/* Subscription Plan */}
         <div style={sectionStyle}>
           <div style={sectionLabelStyle}>
-            <CreditCard size={14} color="var(--accent-emerald)" /> Billing &amp; Subscription
+            <CreditCard size={14} color="var(--accent-indigo)" /> Subscription Plan
           </div>
           <div>
-            <label style={fieldLabelStyle}>Select Plan *</label>
+            <label style={fieldLabelStyle}>Assigned Plan</label>
             <select
               value={formData.subscription}
               onChange={set("subscription")}
-              className="form-select"
+              className="form-input"
+              disabled={isSubmitting}
             >
               {planOptions.map((opt) => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
               ))}
             </select>
-            <p style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "6px", marginBottom: 0 }}>
-              The company owner can log in using their email and this password.
-            </p>
           </div>
         </div>
-
       </div>
     </Modal>
   );

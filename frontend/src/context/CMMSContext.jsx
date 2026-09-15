@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import maintenanceService from "../services/maintenanceService";
+import { masterDataService } from "../services/masterDataService";
 import iotService from "../services/iotService";
 import { INITIAL_ASSETS, ASSET_HIERARCHY_TREE } from "../data/mockAssets";
 import { INITIAL_WORK_ORDERS } from "../data/mockWorkOrders";
@@ -19,85 +20,198 @@ import { DEFAULT_USER_PROFILE } from "../data/mockUserProfile";
 const CMMSContext = createContext();
 
 export function CMMSProvider({ children }) {
-  // 1. Assets State
+  const hasAuthToken = Boolean(typeof window !== "undefined" && (localStorage.getItem("maintenx_auth_token") || localStorage.getItem("flowstate_token")));
+  const hasTenant = Boolean(typeof window !== "undefined" && (localStorage.getItem("maintenx_tenant_name") || localStorage.getItem("maintenx_tenant_id")));
+  const isTenantActive = Boolean(hasTenant || hasAuthToken);
+
+  // 1. Assets State — Unified with MasterDataContext / PostgreSQL Assets
   const [assets, setAssets] = useState(() => {
-    const saved = localStorage.getItem("flowstate_assets");
-    return saved ? JSON.parse(saved) : INITIAL_ASSETS;
+    const masterSaved = typeof window !== "undefined" ? localStorage.getItem("mx_master_assets") : null;
+    if (masterSaved) {
+      try {
+        const parsed = JSON.parse(masterSaved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.map((a) => ({
+            id: a.assetId || a.assetCode || a.id,
+            name: a.name,
+            department: a.department || a.lineName || a.type || "General",
+            line: a.lineName || a.line || "Line 1",
+            status: a.status || "Operational",
+            health: a.health !== undefined ? Number(a.health) : (a.healthPercent !== undefined ? Number(a.healthPercent) : 95),
+            vibration: a.vibration !== undefined ? Number(a.vibration) : 1.5,
+            temperature: a.temperature !== undefined ? Number(a.temperature) : 48,
+            _raw: a,
+          }));
+        }
+      } catch (e) {}
+    }
+    const saved = typeof window !== "undefined" ? localStorage.getItem("flowstate_assets") : null;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          const real = parsed.filter((a) => !["FM-001", "CP-102", "LB-204", "MX-003", "HT-105", "PK-401", "CV-301", "AC-505"].includes(a.id));
+          if (real.length > 0) return real;
+        }
+      } catch (e) {}
+    }
+    return [];
   });
 
   const [assetHierarchy, setAssetHierarchy] = useState(() => {
-    const saved = localStorage.getItem("flowstate_asset_hierarchy");
-    return saved ? JSON.parse(saved) : ASSET_HIERARCHY_TREE;
+    return [];
   });
 
-  // 2. Work Orders State
+  // 2. Work Orders State — Dispatched from Fast Actions or DB
   const [workOrders, setWorkOrders] = useState(() => {
-    const saved = localStorage.getItem("flowstate_work_orders");
-    return saved ? JSON.parse(saved) : INITIAL_WORK_ORDERS;
+    const saved = typeof window !== "undefined" ? localStorage.getItem("flowstate_work_orders") : null;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          return parsed.filter(
+            (w) => !["WO-2026-0891", "WO-2026-0888", "WO-2026-0875", "WO-2026-0860", "WO-2026-0852", "WO-2026-0840"].includes(w.id)
+          );
+        }
+      } catch (e) {}
+    }
+    return [];
   });
 
   // 3. PM Plans & Schedules
   const [pmPlans, setPmPlans] = useState(() => {
-    const saved = localStorage.getItem("flowstate_pm_plans");
-    return saved ? JSON.parse(saved) : INITIAL_PM_PLANS;
+    const saved = typeof window !== "undefined" ? localStorage.getItem("flowstate_pm_plans") : null;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      } catch (e) {}
+    }
+    return [];
   });
 
   const [pmSchedules, setPmSchedules] = useState(() => {
-    const saved = localStorage.getItem("flowstate_pm_schedules");
-    return saved ? JSON.parse(saved) : INITIAL_PM_SCHEDULES;
+    const saved = typeof window !== "undefined" ? localStorage.getItem("flowstate_pm_schedules") : null;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          return parsed.filter(
+            (p) => !["PMS-2026-001", "PMS-2026-002", "PMS-2026-003", "PMS-2026-004", "PMS-2026-005"].includes(p.id)
+          );
+        }
+      } catch (e) {}
+    }
+    return [];
   });
 
   // Checklists
   const [checklistTemplates, setChecklistTemplates] = useState(() => {
-    const saved = localStorage.getItem("flowstate_checklists");
-    return saved ? JSON.parse(saved) : CHECKLIST_TEMPLATES;
+    const saved = typeof window !== "undefined" ? localStorage.getItem("flowstate_checklists") : null;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (e) {}
+    }
+    return CHECKLIST_TEMPLATES;
   });
 
   const [checklistHistory, setChecklistHistory] = useState(() => {
-    const saved = localStorage.getItem("flowstate_checklist_history");
-    return saved ? JSON.parse(saved) : CHECKLIST_HISTORY;
+    const saved = typeof window !== "undefined" ? localStorage.getItem("flowstate_checklist_history") : null;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (e) {}
+    }
+    return CHECKLIST_HISTORY;
   });
 
   // 4. Breakdowns
   const [breakdowns, setBreakdowns] = useState(() => {
-    const saved = localStorage.getItem("flowstate_breakdowns");
-    return saved ? JSON.parse(saved) : INITIAL_BREAKDOWNS;
+    const saved = typeof window !== "undefined" ? localStorage.getItem("flowstate_breakdowns") : null;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          return parsed.filter((b) => !["BD-2026-042", "BD-2026-041", "BD-2026-040", "BD-2026-039"].includes(b.id));
+        }
+      } catch (e) {}
+    }
+    return [];
   });
 
   // 5. Spare Parts & BOM & Requests
   const [spareParts, setSpareParts] = useState(() => {
     const saved = localStorage.getItem("flowstate_spare_parts");
-    return saved ? JSON.parse(saved) : INITIAL_SPARE_PARTS;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (e) {}
+    }
+    return INITIAL_SPARE_PARTS;
   });
 
   const [equipmentBOMs] = useState(EQUIPMENT_BOMS);
 
   const [partsRequests, setPartsRequests] = useState(() => {
     const saved = localStorage.getItem("flowstate_parts_requests");
-    return saved ? JSON.parse(saved) : INITIAL_PARTS_REQUESTS;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (e) {}
+    }
+    return INITIAL_PARTS_REQUESTS;
   });
 
   // 6. Calibrations & History
   const [calibrations, setCalibrations] = useState(() => {
     const saved = localStorage.getItem("flowstate_calibrations");
-    return saved ? JSON.parse(saved) : INITIAL_CALIBRATIONS;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (e) {}
+    }
+    return INITIAL_CALIBRATIONS;
   });
 
   const [calibrationHistory, setCalibrationHistory] = useState(() => {
     const saved = localStorage.getItem("flowstate_calibration_history");
-    return saved ? JSON.parse(saved) : CALIBRATION_HISTORY;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (e) {}
+    }
+    return CALIBRATION_HISTORY;
   });
 
   // 7. Failure Codes
   const [failureCodes, setFailureCodes] = useState(() => {
     const saved = localStorage.getItem("flowstate_failure_codes");
-    return saved ? JSON.parse(saved) : INITIAL_FAILURE_CODES;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (e) {}
+    }
+    return INITIAL_FAILURE_CODES;
   });
 
   // 8. Troubleshooting & Verified Solutions
   const [solutions, setSolutions] = useState(() => {
     const saved = localStorage.getItem("flowstate_solutions");
-    return saved ? JSON.parse(saved) : INITIAL_SOLUTIONS;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (e) {}
+    }
+    return INITIAL_SOLUTIONS;
   });
 
   // 9. Reliability
@@ -179,23 +293,56 @@ export function CMMSProvider({ children }) {
     return saved ? JSON.parse(saved) : DEFAULT_USER_PROFILE;
   });
 
-  // Synchronize CMMS Work Orders & PM Schedules with Fastify backend
+  // Synchronize CMMS Work Orders, Assets & PM Schedules with Fastify backend
   useEffect(() => {
     async function syncCMMSBackend() {
       try {
-        const [remoteWOs, remotePMs, remoteSpares] = await Promise.allSettled([
+        const [remoteWOs, remotePMs, remoteSpares, remoteAssets] = await Promise.allSettled([
           maintenanceService.getWorkOrders(),
           maintenanceService.getPMSchedules(),
           maintenanceService.getSpareParts(),
+          masterDataService.getAssets(),
         ]);
 
-        if (remoteWOs.status === "fulfilled" && Array.isArray(remoteWOs.value) && remoteWOs.value.length > 0) {
-          setWorkOrders(remoteWOs.value);
+        if (remoteAssets.status === "fulfilled" && Array.isArray(remoteAssets.value) && remoteAssets.value.length > 0) {
+          const mapped = remoteAssets.value.map((a) => ({
+            id: a.assetCode || a.assetId || a.id,
+            name: a.name,
+            department: a.department || a.lineName || a.type || "General",
+            line: a.lineName || a.line || "Line 1",
+            status: a.status || "Operational",
+            health: a.healthPercent !== undefined ? Number(a.healthPercent) : 95,
+            vibration: a.vibration !== undefined ? Number(a.vibration) : 1.5,
+            temperature: a.temperature !== undefined ? Number(a.temperature) : 48,
+            _raw: a,
+          }));
+          setAssets(mapped);
+          localStorage.setItem("flowstate_assets", JSON.stringify(mapped));
         }
-        if (remotePMs.status === "fulfilled" && Array.isArray(remotePMs.value) && remotePMs.value.length > 0) {
+
+        if (remoteWOs.status === "fulfilled" && Array.isArray(remoteWOs.value)) {
+          const mappedWOs = remoteWOs.value.map((wo) => ({
+            id: wo.woNumber || wo.id,
+            dbId: wo.id,
+            title: wo.title,
+            description: wo.description || "",
+            type: wo.type || "Corrective",
+            priority: wo.priority === "P1_CRITICAL" ? "P1 - Critical" : wo.priority === "HIGH" ? "P2 - High" : wo.priority === "MEDIUM" ? "P3 - Medium" : "P4 - Low",
+            status: wo.status === "IN_PROGRESS" ? "In Progress" : wo.status === "COMPLETED" ? "Completed" : wo.status === "CLOSED" ? "Closed" : (wo.status === "OPEN" ? "Open" : wo.status || "Open"),
+            assetId: wo.asset?.assetCode || wo.asset?.id || wo.assetId,
+            assetName: wo.asset?.name || wo.assetId,
+            assignedTechnician: wo.assignedUser?.name || "Maintenance Technician",
+            createdDate: wo.createdAt ? new Date(wo.createdAt).toISOString().replace("T", " ").substring(0, 16) : new Date().toISOString().replace("T", " ").substring(0, 16),
+            comments: [],
+            _raw: wo
+          }));
+          setWorkOrders(mappedWOs);
+          localStorage.setItem("flowstate_work_orders", JSON.stringify(mappedWOs));
+        }
+        if (remotePMs.status === "fulfilled" && Array.isArray(remotePMs.value)) {
           setPmSchedules(remotePMs.value);
         }
-        if (remoteSpares.status === "fulfilled" && Array.isArray(remoteSpares.value) && remoteSpares.value.length > 0) {
+        if (remoteSpares.status === "fulfilled" && Array.isArray(remoteSpares.value)) {
           setSpareParts(remoteSpares.value);
         }
       } catch (err) {
@@ -204,6 +351,104 @@ export function CMMSProvider({ children }) {
     }
     syncCMMSBackend();
   }, []);
+
+  // Real-time synchronization with MasterDataContext asset changes
+  useEffect(() => {
+    const handleSyncAssets = (e) => {
+      const incoming = e?.detail;
+      if (Array.isArray(incoming) && incoming.length > 0) {
+        setAssets(
+          incoming.map((a) => ({
+            id: a.assetId || a.assetCode || a.id,
+            name: a.name,
+            department: a.department || a.lineName || a.type || "General",
+            line: a.lineName || a.line || "Line 1",
+            status: a.status || "Operational",
+            health: a.health !== undefined ? Number(a.health) : (a.healthPercent !== undefined ? Number(a.healthPercent) : 95),
+            vibration: a.vibration !== undefined ? Number(a.vibration) : 1.5,
+            temperature: a.temperature !== undefined ? Number(a.temperature) : 48,
+            _raw: a,
+          }))
+        );
+        return;
+      }
+      const saved = localStorage.getItem("mx_master_assets");
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) {
+            setAssets(
+              parsed.map((a) => ({
+                id: a.assetId || a.assetCode || a.id,
+                name: a.name,
+                department: a.department || a.lineName || a.type || "General",
+                line: a.lineName || a.line || "Line 1",
+                status: a.status || "Operational",
+                health: a.health !== undefined ? Number(a.health) : (a.healthPercent !== undefined ? Number(a.healthPercent) : 95),
+                vibration: a.vibration !== undefined ? Number(a.vibration) : 1.5,
+                temperature: a.temperature !== undefined ? Number(a.temperature) : 48,
+                _raw: a,
+              }))
+            );
+          }
+        } catch (_) {}
+      }
+    };
+
+    window.addEventListener("maintenx:asset_updated", handleSyncAssets);
+    window.addEventListener("storage", handleSyncAssets);
+    return () => {
+      window.removeEventListener("maintenx:asset_updated", handleSyncAssets);
+      window.removeEventListener("storage", handleSyncAssets);
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleTenantChanged = () => {
+      setAssets([]);
+      setAssetHierarchy([]);
+      setWorkOrders([]);
+      setPmPlans([]);
+      setPmSchedules([]);
+      setChecklistTemplates([]);
+      setChecklistHistory([]);
+      setBreakdowns([]);
+      setSpareParts([]);
+      setPartsRequests([]);
+      setCalibrations([]);
+      setCalibrationHistory([]);
+      setFailureCodes([]);
+      setSolutions([]);
+      setRepeatFailures([]);
+      setReliabilityMetrics({});
+      const keys = [
+        "flowstate_assets",
+        "flowstate_asset_hierarchy",
+        "flowstate_work_orders",
+        "flowstate_pm_plans",
+        "flowstate_pm_schedules",
+        "flowstate_checklists",
+        "flowstate_checklist_history",
+        "flowstate_breakdowns",
+        "flowstate_spare_parts",
+        "flowstate_parts_requests",
+        "flowstate_calibrations",
+        "flowstate_calibration_history",
+        "flowstate_failure_codes",
+        "flowstate_solutions"
+      ];
+      keys.forEach((k) => localStorage.removeItem(k));
+    };
+    window.addEventListener("maintenx:tenant_changed", handleTenantChanged);
+    return () => window.removeEventListener("maintenx:tenant_changed", handleTenantChanged);
+  }, []);
+
+  // Persist workOrders state across dashboards
+  useEffect(() => {
+    if (workOrders && workOrders.length > 0) {
+      localStorage.setItem("flowstate_work_orders", JSON.stringify(workOrders));
+    }
+  }, [workOrders]);
 
   // Dynamic MTTR / MTBF recalculation based on actual Breakdowns
   useEffect(() => {

@@ -37,7 +37,9 @@ export function Investigations() {
     openRcaCount,
     advanceRcaPhase,
     initiateRCA,
-    refreshInvestigations
+    refreshInvestigations,
+    availableAssets = [],
+    availableLines = []
   } = useCI();
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -48,7 +50,9 @@ export function Investigations() {
   const [summaryData, setSummaryData] = useState(null);
 
   const [newTitle, setNewTitle] = useState("");
-  const [newAssetId, setNewAssetId] = useState("AST-002");
+  const [newAssetId, setNewAssetId] = useState("");
+  const [newLineId, setNewLineId] = useState("");
+  const [newSeverity, setNewSeverity] = useState("High");
 
   const phases = ["Event", "Evidence", "Hypothesis & Tests", "Occurrence Cause", "Escape Cause", "CAPA", "Verification", "Closed"];
 
@@ -89,15 +93,25 @@ export function Investigations() {
     }
 
     try {
-      await maintenanceService.createRCAInvestigation({
-        assetId: newAssetId,
-        title: newTitle.trim()
-      }).catch(() => {});
+      const selectedAsset = availableAssets.find((a) => a.id === newAssetId || a.assetCode === newAssetId) || {};
+      const selectedLine = availableLines.find((l) => l.id === newLineId || l.code === newLineId) || {};
 
-      await initiateRCA(newAssetId, null, newTitle.trim());
+      await initiateRCA({
+        title: newTitle.trim(),
+        assetId: selectedAsset.assetCode || selectedAsset.id || newAssetId || "AST-001",
+        assetName: selectedAsset.name || selectedAsset.assetName || "Production Asset",
+        lineId: selectedLine.code || selectedLine.id || newLineId || "LIN-01",
+        lineName: selectedLine.name || "Main Production Line",
+        severity: newSeverity,
+        problemStatement: newTitle.trim()
+      });
+
       setNewTitle("");
+      setNewAssetId("");
+      setNewLineId("");
       setIsCreateModalOpen(false);
       await loadData();
+      addToast("RCA Investigation successfully initiated.", "success");
     } catch (err) {
       addToast("Failed to initiate RCA investigation.", "error");
     }
@@ -307,8 +321,15 @@ export function Investigations() {
               </tr>
             </thead>
             <tbody>
-              {filteredInvestigations.map((inv) => (
-                <tr key={inv.id} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+              {filteredInvestigations.length === 0 ? (
+                <tr>
+                  <td colSpan={6} style={{ padding: "36px 16px", textAlign: "center", color: "var(--text-muted)", fontSize: "13px" }}>
+                    No Root Cause Investigations recorded. Click <strong>"Initiate RCA 2.0"</strong> to log an incident.
+                  </td>
+                </tr>
+              ) : (
+                filteredInvestigations.map((inv) => (
+                  <tr key={inv.id} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
                   <td style={{ padding: "12px 16px" }}>
                     <div style={{ fontWeight: 800, color: "var(--text-primary)", fontSize: "13px" }}>{inv.title}</div>
                     <div style={{ fontSize: "11px", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>
@@ -416,7 +437,7 @@ export function Investigations() {
                     </div>
                   </td>
                 </tr>
-              ))}
+              )))}
             </tbody>
           </table>
         </div>
@@ -453,17 +474,56 @@ export function Investigations() {
               </div>
 
               <div>
-                <label className="form-label">Source Asset</label>
+                <label className="form-label">Source Asset / Equipment</label>
                 <select
                   value={newAssetId}
                   onChange={(e) => setNewAssetId(e.target.value)}
                   className="form-input"
                   style={{ backgroundColor: "#FFFFFF" }}
                 >
-                  <option value="AST-002">AST-002 — HTST Flash Pasteurizer (Line 2)</option>
-                  <option value="AST-001">AST-001 — Rotary Isobaric Bottle Filler (Line 1)</option>
-                  <option value="AST-004">AST-004 — Sleeve Rotary Labeler (Line 1)</option>
-                  <option value="AST-005">AST-005 — Automated Case Packer (Line 1)</option>
+                  <option value="">-- Select Target Equipment --</option>
+                  {availableAssets.map((ast) => (
+                    <option key={ast.id} value={ast.id}>
+                      {ast.name || ast.asset_name || ast.assetName || ast.id} ({ast.asset_code || ast.assetCode || ast.tag || "Asset"})
+                    </option>
+                  ))}
+                  {availableAssets.length === 0 && (
+                    <option value="AST-001">AST-001 — Primary Production Line Asset</option>
+                  )}
+                </select>
+              </div>
+
+              <div>
+                <label className="form-label">Production Line</label>
+                <select
+                  value={newLineId}
+                  onChange={(e) => setNewLineId(e.target.value)}
+                  className="form-input"
+                  style={{ backgroundColor: "#FFFFFF" }}
+                >
+                  <option value="">-- Select Production Line --</option>
+                  {availableLines.map((line) => (
+                    <option key={line.id} value={line.id}>
+                      {line.name || line.line_name || line.code || line.id}
+                    </option>
+                  ))}
+                  {availableLines.length === 0 && (
+                    <option value="Line 1 — Production">Line 1 — Production</option>
+                  )}
+                </select>
+              </div>
+
+              <div>
+                <label className="form-label">Severity Level</label>
+                <select
+                  value={newSeverity}
+                  onChange={(e) => setNewSeverity(e.target.value)}
+                  className="form-input"
+                  style={{ backgroundColor: "#FFFFFF" }}
+                >
+                  <option value="Critical">Critical (CCP / Safety / Regulatory Impact)</option>
+                  <option value="High">High (Extended Breakdown / High Scrap)</option>
+                  <option value="Medium">Medium (Speed / Performance Degradation)</option>
                 </select>
               </div>
 
