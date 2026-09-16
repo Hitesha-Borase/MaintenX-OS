@@ -17,6 +17,7 @@ export function ReleaseReview() {
 
   const releaseId = location.state?.releaseId || "REL-201";
   const releaseBatch = location.state?.batch || "BAT-2026-0889";
+  const itemData = location.state?.item || {};
 
   const [status, setStatus] = useState("PENDING");
   const [showSignModal, setShowSignModal] = useState(false);
@@ -27,13 +28,13 @@ export function ReleaseReview() {
 
   const [batchInfo, setBatchInfo] = useState({
     id: releaseBatch,
-    recipe: "Organic Orange Juice 1L Bottle",
-    line: "Line 1 (Aseptic Bottling 580 BPM)",
-    ccpTemp: "83.5°C (PASS)",
-    brix: "11.9°Bx (OK)",
-    allergen: "Allergen Clear (0 ppm)",
+    recipe: itemData.sku || "Finished Product SKU",
+    line: itemData.line || "Line 1 (Main Production Line)",
+    ccpTemp: itemData.ccp || "PASSED (100%)",
+    brix: "Standard (OK)",
+    allergen: itemData.allergen || "Allergen Clear (0 ppm)",
     preOp: "PASSED (100% Clean)",
-    deviations: "1 Open (DEV-802)"
+    deviations: "No Open Critical Deviations"
   });
 
   useEffect(() => {

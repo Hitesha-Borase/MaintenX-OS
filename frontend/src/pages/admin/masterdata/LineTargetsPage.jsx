@@ -34,10 +34,9 @@ export function LineTargetsPage() {
   const [viewingTarget, setViewingTarget] = useState(null);
 
   const fetchLiveLineTargets = () => {
-    localStorage.removeItem("mx_master_line_targets");
     masterDataService.getLineTargets().then((res) => {
       const data = res?.data?.data || res?.data || res;
-      if (Array.isArray(data) && typeof setLineTargets === "function") {
+      if (Array.isArray(data) && data.length > 0 && typeof setLineTargets === "function") {
         setLineTargets(data);
       }
     }).catch((err) => console.warn("LineTargets live load:", err.message));

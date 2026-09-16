@@ -29,10 +29,9 @@ export function ProductFamiliesPage() {
 
   const fetchFamilies = React.useCallback(async () => {
     try {
-      localStorage.removeItem("mx_master_families");
       const res = await masterDataService.getProductFamilies();
-      const data = res?.data || res;
-      if (Array.isArray(data) && typeof setProductFamilies === "function") {
+      const data = res?.data !== undefined ? res.data : res;
+      if (Array.isArray(data) && data.length > 0 && typeof setProductFamilies === "function") {
         setProductFamilies(data);
       }
     } catch (err) {

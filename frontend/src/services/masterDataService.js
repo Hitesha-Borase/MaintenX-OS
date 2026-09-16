@@ -286,6 +286,29 @@ export const masterDataService = {
     return apiClient.delete(`/master-data/boms/${enc(id)}`);
   },
 
+  async getAssetTypes() {
+    return apiClient.get("/master-data/asset-types");
+  },
+
+  async createAssetType(data) {
+    return apiClient.post("/master-data/asset-types", data);
+  },
+
+  async deleteAssetType(id) {
+    return apiClient.delete(`/master-data/asset-types/${enc(id)}`);
+  },
+
+  async getCriticalityLevels() {
+    return apiClient.get("/master-data/criticality-levels");
+  },
+
+  async createCriticalityLevel(data) {
+    return apiClient.post("/master-data/criticality-levels", data);
+  },
+
+  async deleteCriticalityLevel(id) {
+    return apiClient.delete(`/master-data/criticality-levels/${enc(id)}`);
+  },
 
   // 13. Assets & Machine Capability
   async getAssets(plantId) {
@@ -313,6 +336,30 @@ export const masterDataService = {
   async getStaff(plantId) {
     const query = plantId && plantId !== "ALL" ? `?plantId=${enc(plantId)}` : "";
     return apiClient.get(`/master-data/staff${query}`);
+  },
+
+  async createEmployee(data) {
+    return apiClient.post("/master-data/staff", data);
+  },
+
+  async createStaff(data) {
+    return apiClient.post("/master-data/staff", data);
+  },
+
+  async updateEmployee(id, data) {
+    return apiClient.put(`/master-data/staff/${enc(id)}`, data);
+  },
+
+  async updateStaff(id, data) {
+    return apiClient.put(`/master-data/staff/${enc(id)}`, data);
+  },
+
+  async deleteEmployee(id) {
+    return apiClient.delete(`/master-data/staff/${enc(id)}`);
+  },
+
+  async deleteStaff(id) {
+    return apiClient.delete(`/master-data/staff/${enc(id)}`);
   },
 
   // 14. Quality Specifications & Parameter Master
@@ -418,7 +465,21 @@ export const masterDataService = {
   async deleteEmployee(id) {
     return this.deleteEmployeeSkill(id);
   },
+
+  // 17. Deviation Categories Master (Stored in DB: public.tenants.settings)
+  async getDeviationCategories() {
+    return apiClient.get("/quality/deviation-categories");
+  },
+
+  async saveDeviationCategory(data) {
+    return apiClient.post("/quality/deviation-categories", data);
+  },
+
+  async deleteDeviationCategory(id) {
+    return apiClient.delete(`/quality/deviation-categories/${enc(id)}`);
+  },
 };
 
+export { masterDataService };
 export default masterDataService;
 

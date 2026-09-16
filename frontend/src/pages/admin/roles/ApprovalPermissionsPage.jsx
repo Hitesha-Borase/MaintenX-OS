@@ -23,8 +23,16 @@ import adminService from "../../../services/adminService";
 
 export function ApprovalPermissionsPage() {
   const { addToast } = useApp();
+  const isTenant = Boolean(typeof window !== "undefined" && (localStorage.getItem("maintenx_tenant_name") || localStorage.getItem("maintenx_tenant_id")));
 
-  const [approvalRules, setApprovalRules] = useState([]);
+  const [approvalRules, setApprovalRules] = useState(() => {
+    return isTenant ? [] : [
+      { id: "APR-01", event: "Finished Goods QA Batch Release (CoA)", tier: "Dual Sign-off", authorizedRoles: "QA Manager + Plant Manager", compliance: "FDA 21 CFR Part 11" },
+      { id: "APR-02", event: "Master BOM & Recipe Revision Approval", tier: "2-Tier Approval", authorizedRoles: "QA Manager + System Admin", compliance: "ISO 22000" },
+      { id: "APR-03", event: "Capital Asset Decommissioning / Scrap", tier: "Executive Sign-off", authorizedRoles: "Plant Manager + Corporate Ops", compliance: "GAAP Fixed Assets" },
+      { id: "APR-04", event: "Emergency Schedule Override & Overtime", tier: "1-Tier Instant", authorizedRoles: "Plant Manager", compliance: "Internal Ops Policy" }
+    ];
+  });
   const [viewingRule, setViewingRule] = useState(null);
   const [deletingRule, setDeletingRule] = useState(null);
   const [editingRule, setEditingRule] = useState(null);
@@ -41,7 +49,7 @@ export function ApprovalPermissionsPage() {
   const fetchRules = async () => {
     try {
       const rules = await adminService.getApprovalRules();
-      if (Array.isArray(rules)) {
+      if (Array.isArray(rules) && rules.length > 0) {
         setApprovalRules(rules);
       }
     } catch (err) {
@@ -126,7 +134,7 @@ export function ApprovalPermissionsPage() {
             <h1 style={{ fontSize: "clamp(18px, 4vw, 24px)", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.3px", lineHeight: 1.2 }}>
               High-Value Electronic Approval Governance
             </h1>
-            <Badge variant="emerald">DUAL E-SIGNATURE RULES</Badge>
+            <Badge variant="emerald">{approvalRules.length} E-SIGNATURE RULES</Badge>
           </div>
           <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>
             Manage and configure regulatory multi-tier sign-offs and approval gates stored in PostgreSQL.
@@ -154,25 +162,25 @@ export function ApprovalPermissionsPage() {
           value={approvalRules.length.toString()}
           unit="Active Gates"
           icon={FileCheck}
-          colorVariant="emerald"
+          colorVariant="cyan"
         />
         <StatCard
           title="Regulatory Standard"
           value="21 CFR Part 11"
           unit="Compliant"
           icon={ShieldCheck}
-          colorVariant="cyan"
+          colorVariant="emerald"
         />
         <StatCard
           title="Dual Sign-offs"
-          value={approvalRules.filter((r) => r.tier?.includes("Dual") || r.tier?.includes("2-Tier")).length.toString()}
+          value={approvalRules.filter((r) => r.tier?.toLowerCase().includes("dual") || r.tier?.toLowerCase().includes("2-tier")).length.toString()}
           unit="High-Value Rules"
           icon={Lock}
           colorVariant="amber"
         />
         <StatCard
           title="Enforcement Rate"
-          value="100%"
+          value={approvalRules.length > 0 ? "100%" : "0%"}
           unit="Strict"
           icon={CheckCircle2}
           colorVariant="emerald"
@@ -197,7 +205,7 @@ export function ApprovalPermissionsPage() {
               {approvalRules.length === 0 ? (
                 <tr>
                   <td colSpan={6} style={{ textAlign: "center", padding: "30px", color: "var(--text-secondary)" }}>
-                    No approval gates found in database. Click "Add Approval Gate" to create one.
+                    No electronic approval governance rules configured for this company yet. Click &quot;Add Approval Gate&quot; to create one.
                   </td>
                 </tr>
               ) : (

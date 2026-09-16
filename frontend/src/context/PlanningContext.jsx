@@ -412,7 +412,7 @@ export function PlanningProvider({ children }) {
               });
               setForecasts(mappedFc);
             } else {
-              setForecasts([]);
+              setForecasts((prev) => (prev.length > 0 ? prev : INITIAL_FORECASTS));
             }
           }
         }

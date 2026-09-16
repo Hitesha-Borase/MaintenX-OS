@@ -27,8 +27,8 @@ export function LinesPage() {
   const fetchLines = async () => {
     try {
       const res = await masterDataService.getLines();
-      const data = res?.data || res;
-      if (Array.isArray(data)) {
+      const data = res?.data !== undefined ? res.data : res;
+      if (Array.isArray(data) && data.length > 0 && typeof setLines === "function") {
         setLines(data);
       }
     } catch (err) {
@@ -36,6 +36,7 @@ export function LinesPage() {
     }
   };
 
+<<<<<<< HEAD
   const fetchPlants = async () => {
     try {
       const res = await masterDataService.getPlants();
@@ -53,6 +54,9 @@ export function LinesPage() {
     try {
       localStorage.removeItem("mx_master_lines");
     } catch (_) {}
+=======
+  React.useEffect(() => {
+>>>>>>> origin/main
     fetchLines();
     fetchPlants();
   }, []);
@@ -356,6 +360,7 @@ export function LinesPage() {
               </tr>
             </thead>
             <tbody>
+<<<<<<< HEAD
               {filteredLines.length === 0 ? (
                 <tr>
                   <td colSpan={7} style={{ padding: "48px 24px", textAlign: "center" }}>
@@ -440,6 +445,76 @@ export function LinesPage() {
                     </tr>
                   );
                 })
+=======
+              {filteredLines.length > 0 ? (
+                filteredLines.map((l) => {
+                  const plantName = plants.find((p) => p.id === l.plantId)?.name?.split(" - ")[0] || l.plantName || "—";
+                  return (
+                    <tr key={l.lineId || l.id || l.lineCode} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+                      <td style={{ padding: "12px 16px", fontFamily: "var(--font-mono)", fontWeight: 800, color: "#8C5B23" }}>
+                        {l.lineCode || l.code || l.lineId}
+                      </td>
+                      <td style={{ padding: "12px 16px", fontWeight: 800, color: "var(--text-primary)", fontSize: "13px" }}>
+                        {l.name}
+                      </td>
+                      <td style={{ padding: "12px 16px", fontSize: "12px", color: "var(--text-secondary)" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                          <Building2 size={12} color="#C89547" />
+                          <span>{plantName}</span>
+                        </div>
+                      </td>
+                      <td style={{ padding: "12px 16px" }}>
+                        <Badge variant="cyan">{l.type || l.lineType || "Continuous Flow"}</Badge>
+                      </td>
+                      <td style={{ padding: "12px 16px", fontFamily: "var(--font-mono)", fontWeight: 800, color: "#D97706" }}>
+                        {l.ratedSpeed || `${l.ratedSpeedBPH ? l.ratedSpeedBPH.toLocaleString() : "—"} BPH`}
+                      </td>
+                      <td style={{ padding: "12px 16px" }}>
+                        <Badge variant="emerald">{l.status || "Active"}</Badge>
+                      </td>
+                      <td style={{ padding: "12px 16px", textAlign: "right" }}>
+                        <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                          <button
+                            onClick={() => setViewingLine({ ...l })}
+                            title="View Line Details"
+                            style={{ width: "30px", height: "30px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", color: "var(--text-primary)", border: "1px solid var(--border-subtle)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+                          >
+                            <Eye size={13} />
+                          </button>
+                          <button
+                            onClick={() => setEditingLine({ ...l })}
+                            title="Edit Line"
+                            style={{ width: "30px", height: "30px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", color: "var(--text-primary)", border: "1px solid var(--border-subtle)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+                          >
+                            <Edit2 size={13} />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(l.lineId || l.id || l.lineCode, l.name)}
+                            title="Delete Line"
+                            style={{ width: "30px", height: "30px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", color: "#EF4444", border: "1px solid var(--border-subtle)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan={7} style={{ padding: "48px 24px", textAlign: "center", color: "var(--text-muted)" }}>
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px" }}>
+                      <Layers size={40} strokeWidth={1.5} color="var(--text-muted)" style={{ opacity: 0.5 }} />
+                      <div style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-primary)" }}>
+                        No Production Lines configured yet
+                      </div>
+                      <div style={{ fontSize: "12px", color: "var(--text-muted)", maxWidth: "420px" }}>
+                        Click &quot;+ Add Line&quot; to configure your production line cells and packaging formats.
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+>>>>>>> origin/main
               )}
             </tbody>
           </table>

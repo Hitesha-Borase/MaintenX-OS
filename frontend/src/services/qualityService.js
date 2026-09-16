@@ -453,8 +453,20 @@ export const qualityService = {
   async deleteProductCheck(id) {
     return apiClient.delete(`/quality/checks/product/${id}`);
   },
+  async getDeviationCategories() {
+    return apiClient.get("/quality/deviation-categories");
+  },
+
+  async saveDeviationCategory(data) {
+    return apiClient.post("/quality/deviation-categories", data);
+  },
+
+  async deleteDeviationCategory(id) {
+    return apiClient.delete(`/quality/deviation-categories/${id}`);
+  },
 };
 
+export { qualityService };
 export default qualityService;
 
 

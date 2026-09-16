@@ -117,6 +117,28 @@ export function Traceability() {
     }
   };
 
+  const [availableLots, setAvailableLots] = useState([]);
+
+  // Load available lots from database for quick reference
+  useEffect(() => {
+    const loadLots = async () => {
+      try {
+        const res = await warehouseService.getLots();
+        const lots = res?.data || res || [];
+        if (Array.isArray(lots) && lots.length > 0) {
+          setAvailableLots(lots.slice(0, 6));
+          const params = new URLSearchParams(location.search);
+          if (!params.get("lot")) {
+            fetchTraceabilityData(lots[0].lotNumber);
+          }
+        }
+      } catch (err) {
+        console.warn("Could not load lots from DB:", err);
+      }
+    };
+    loadLots();
+  }, []);
+
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const lotParam = params.get("lot") || "";

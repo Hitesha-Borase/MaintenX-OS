@@ -1,27 +1,112 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { Drawer } from "./Drawer";
 import { Button } from "./Button";
-import { PlusCircle, Wrench, AlertOctagon, CheckCircle2, Play, FilePlus2 } from "lucide-react";
+import { Wrench, AlertOctagon, CheckCircle2, Play, FilePlus2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useApp } from "../../context/AppContext";
 import { useCMMS } from "../../context/CMMSContext";
+import { useMasterData } from "../../context/MasterDataContext";
+import { useRole } from "../../context/RoleContext";
 import maintenanceService from "../../services/maintenanceService";
 
 export function QuickActionDrawer() {
-  const { isQuickActionOpen, setIsQuickActionOpen, addToast } = useApp();
-  const { assets, addWorkOrder, reportBreakdown } = useCMMS();
+  const { isQuickActionOpen, setIsQuickActionOpen, addToast, quickActionForm, setQuickActionForm } = useApp();
+  const { assets: cmmsAssets, addWorkOrder, reportBreakdown } = useCMMS();
+  const { assets: masterAssets, employees: masterEmployees } = useMasterData();
+  const { currentRole } = useRole();
   const navigate = useNavigate();
 
-  const [activeForm, setActiveForm] = useState(null); // 'work_order' | 'breakdown' | 'batch'
+  const [activeForm, setActiveForm] = useState(null); // 'work_order' | 'breakdown'
 
-  // Form states
-  const [woAssetId, setWoAssetId] = useState("FM-001");
+  React.useEffect(() => {
+    if (isQuickActionOpen && quickActionForm) {
+      setActiveForm(quickActionForm);
+    } else if (!isQuickActionOpen) {
+      setActiveForm(null);
+      if (setQuickActionForm) setQuickActionForm(null);
+    }
+  }, [isQuickActionOpen, quickActionForm, setQuickActionForm]);
+
+  // ─── ASSET SOURCE: Real DB (MasterDataContext) → fallback to CMMSContext mock ───
+  // MasterDataContext loads from PostgreSQL via GET /api/v1/master-data/assets
+  // CMMSContext loads from mockAssets.js (hardcoded fallback)
+  const assets = useMemo(() => {
+    if (masterAssets && masterAssets.length > 0) {
+      // Normalize DB asset shape → consistent { id, name, department, line }
+      return masterAssets.map((a) => ({
+        id: a.assetId || a.assetCode || a.id,
+        name: a.name,
+        department: a.department || a.lineName || a.type || "General",
+        line: a.lineName || a.line || a.department || "",
+        plant: a.plantId || a.plant || "",
+        status: a.status || "Operational",
+        type: a.type || "",
+        _raw: a,
+      }));
+    }
+    // Fallback to CMMSContext mock assets
+    return (cmmsAssets || []);
+  }, [masterAssets, cmmsAssets]);
+
+  // ─── TECHNICIAN SOURCE: Real DB staff/employees ───
+  const technicians = useMemo(() => {
+    if (masterEmployees && masterEmployees.length > 0) {
+      return masterEmployees
+        .filter((e) => e.name) // only those with names
+        .map((e) => ({
+          id: e.employeeId || e.id,
+          name: e.name,
+          label: `${e.name}${e.designation ? ` (${e.designation})` : ""}`,
+        }));
+    }
+    // Fallback: use logged-in user or generic list
+    return [
+      { id: "TECH-01", name: "Maintenance Technician", label: "Maintenance Technician" },
+    ];
+  }, [masterEmployees]);
+
+  // Current logged-in user name for "Reported By" / "Created By"
+  const currentUserName = currentRole?.user?.name || "Plant Manager";
+
+  // ─── FORM STATES ───
+  const [woAssetId, setWoAssetId] = useState("");
   const [woTitle, setWoTitle] = useState("");
   const [woPriority, setWoPriority] = useState("P2 - High");
+  const [woType, setWoType] = useState("Corrective");
+  const [woTechnicianId, setWoTechnicianId] = useState("");
   const [woDescription, setWoDescription] = useState("");
 
-  const [bdAssetId, setBdAssetId] = useState("FM-001");
+  const [bdAssetId, setBdAssetId] = useState("");
   const [bdSymptom, setBdSymptom] = useState("");
+  const [bdTechnicianId, setBdTechnicianId] = useState("");
+  const [bdCategory, setBdCategory] = useState("Mechanical");
+
+  // Sync default IDs when lists load
+  React.useEffect(() => {
+    if (assets?.length > 0) {
+      setWoAssetId((prev) => {
+        const isValid = assets.some((a) => a.id === prev);
+        return isValid ? prev : assets[0].id;
+      });
+      setBdAssetId((prev) => {
+        const isValid = assets.some((a) => a.id === prev);
+        return isValid ? prev : assets[0].id;
+      });
+    }
+  }, [assets]);
+
+  React.useEffect(() => {
+    if (technicians?.length > 0) {
+      setWoTechnicianId((prev) => {
+        const isValid = technicians.some((t) => t.id === prev);
+        return isValid ? prev : technicians[0].id;
+      });
+      setBdTechnicianId((prev) => {
+        const isValid = technicians.some((t) => t.id === prev);
+        return isValid ? prev : technicians[0].id;
+      });
+    }
+  }, [technicians]);
 
   const handleCreateWO = async (e) => {
     e.preventDefault();
@@ -29,35 +114,26 @@ export function QuickActionDrawer() {
       addToast("Please enter a Work Order title", "warning");
       return;
     }
+
     const asset = assets.find((a) => a.id === woAssetId);
+    const technician = technicians.find((t) => t.id === woTechnicianId);
+    const technicianLabel = technician?.label || technician?.name || "Unassigned";
 
-    try {
-      await maintenanceService.createWorkOrder({
-        title: woTitle,
-        assetId: woAssetId,
-        assetName: asset?.name || woAssetId,
-        type: "Corrective",
-        priority: woPriority,
-        department: asset?.department || "Packaging",
-        assignedTechnician: "Marcus Vance (Senior Tech)",
-        description: woDescription || "Quick maintenance dispatch generated from global action hub."
-      });
-    } catch (err) {
-      console.warn("API createWorkOrder notice:", err.message || err);
-    }
-
-    const newWO = addWorkOrder({
+    const woPayload = {
       title: woTitle,
       assetId: woAssetId,
       assetName: asset?.name || woAssetId,
-      type: "Corrective",
+      type: woType,
       priority: woPriority,
-      department: asset?.department || "Packaging",
-      assignedTechnician: "Marcus Vance (Senior Tech)",
-      description: woDescription || "Quick maintenance dispatch generated from global action hub."
-    });
+      department: asset?.department || "General",
+      assignedTechnician: technicianLabel,
+      createdBy: currentUserName,
+      description: woDescription || `${woType} maintenance work order dispatched by ${currentUserName}.`,
+    };
 
-    addToast(`Work Order ${newWO.id} created successfully!`, "success");
+    const newWO = addWorkOrder(woPayload);
+
+    addToast(`✅ Work Order ${newWO.id} created & dispatched to ${technicianLabel}!`, "success");
     setIsQuickActionOpen(false);
     setActiveForm(null);
     setWoTitle("");
@@ -70,21 +146,26 @@ export function QuickActionDrawer() {
       addToast("Please enter the breakdown symptom", "warning");
       return;
     }
+
     const asset = assets.find((a) => a.id === bdAssetId);
+    const technician = technicians.find((t) => t.id === bdTechnicianId);
+    const technicianName = technician?.name || "Unassigned";
+
     const newBD = reportBreakdown({
       assetId: bdAssetId,
       assetName: asset?.name || bdAssetId,
       plant: asset?.plant || "Plant 1",
-      department: asset?.department || "Packaging",
+      department: asset?.department || "General",
       line: asset?.line || "Line 1",
       failureCode: "MEC-004",
-      failureCategory: "Mechanical",
+      failureCategory: bdCategory,
       symptom: bdSymptom,
-      technician: "Marcus Vance",
-      impact: { productionLossUnits: 2500, downtimeCostUSD: 4500, safetyRisk: "Medium", scrapRatePercent: 2.0 }
+      technician: technicianName,
+      reportedBy: currentUserName,
+      impact: { productionLossUnits: 0, downtimeCostUSD: 0, safetyRisk: "Medium", scrapRatePercent: 0 },
     });
 
-    addToast(`Breakdown ${newBD.id} logged! Asset placed in Breakdown status.`);
+    addToast(`🚨 Breakdown ${newBD.id} logged! ${technicianName} has been notified.`);
     setIsQuickActionOpen(false);
     setActiveForm(null);
     setBdSymptom("");
@@ -97,6 +178,7 @@ export function QuickActionDrawer() {
       onClose={() => {
         setIsQuickActionOpen(false);
         setActiveForm(null);
+        if (setQuickActionForm) setQuickActionForm(null);
       }}
       title="Maintenance Fast Actions"
       subtitle="Shop-floor fast dispatch, breakdown logs & diagnostic tools"
@@ -174,26 +256,52 @@ export function QuickActionDrawer() {
             </div>
           </div>
         </div>
+
       ) : activeForm === "work_order" ? (
-        <form onSubmit={handleCreateWO} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+        <form onSubmit={handleCreateWO} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <h4 style={{ fontSize: "15px", fontWeight: 700, color: "var(--accent-blue)" }}>New Work Order</h4>
-            <Button variant="ghost" size="sm" onClick={() => setActiveForm(null)}>
-              Back
-            </Button>
+            <Button variant="ghost" size="sm" onClick={() => setActiveForm(null)}>Back</Button>
           </div>
 
+          {/* Created By — auto-filled from logged-in user */}
+          <div style={{ padding: "8px 12px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", fontSize: "12px", color: "var(--text-secondary)", border: "1px solid var(--border-subtle)" }}>
+            📋 <strong style={{ color: "var(--text-primary)" }}>Created By:</strong> {currentUserName}
+          </div>
+
+          {/* Target Asset — from PostgreSQL DB */}
           <div className="form-group">
             <label className="form-label">Target Asset *</label>
             <select className="form-select" value={woAssetId} onChange={(e) => setWoAssetId(e.target.value)}>
-              {assets.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.id} - {a.name} ({a.department})
-                </option>
-              ))}
+              {assets.length === 0 ? (
+                <option value="">No assets registered — add in Master Data</option>
+              ) : (
+                assets.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.id} — {a.name} ({a.department || a.type || "General"})
+                  </option>
+                ))
+              )}
+            </select>
+            {assets.length === 0 && (
+              <p style={{ fontSize: "11px", color: "#EF4444", marginTop: "4px" }}>
+                ⚠️ Add assets first at: Master Data → Assets Master
+              </p>
+            )}
+          </div>
+
+          {/* WO Type */}
+          <div className="form-group">
+            <label className="form-label">Work Order Type</label>
+            <select className="form-select" value={woType} onChange={(e) => setWoType(e.target.value)}>
+              <option value="Corrective">Corrective (Fix a fault)</option>
+              <option value="Preventive">Preventive (Scheduled PM)</option>
+              <option value="Emergency">Emergency (Immediate halt)</option>
+              <option value="Inspection">Inspection / Condition Check</option>
             </select>
           </div>
 
+          {/* Work Order Title */}
           <div className="form-group">
             <label className="form-label">Work Order Title *</label>
             <input
@@ -206,6 +314,7 @@ export function QuickActionDrawer() {
             />
           </div>
 
+          {/* Priority */}
           <div className="form-group">
             <label className="form-label">Priority</label>
             <select className="form-select" value={woPriority} onChange={(e) => setWoPriority(e.target.value)}>
@@ -216,46 +325,101 @@ export function QuickActionDrawer() {
             </select>
           </div>
 
+          {/* Assign Technician — from PostgreSQL staff table */}
           <div className="form-group">
-            <label className="form-label">Issue Details & Instructions</label>
+            <label className="form-label">Assign Technician</label>
+            <select className="form-select" value={woTechnicianId} onChange={(e) => setWoTechnicianId(e.target.value)}>
+              {technicians.length === 0 ? (
+                <option value="">No staff registered — add in Master Data</option>
+              ) : (
+                technicians.map((t) => (
+                  <option key={t.id} value={t.id}>{t.label}</option>
+                ))
+              )}
+            </select>
+            {technicians.length <= 1 && masterEmployees?.length === 0 && (
+              <p style={{ fontSize: "11px", color: "#F59E0B", marginTop: "4px" }}>
+                ⚠️ Add staff at: Master Data → Staff &amp; Skills
+              </p>
+            )}
+          </div>
+
+          {/* Issue Details */}
+          <div className="form-group">
+            <label className="form-label">Issue Details &amp; Instructions</label>
             <textarea
               className="form-textarea"
-              rows={4}
-              placeholder="Detailed description of symptoms, required parts or special safety notes..."
+              rows={3}
+              placeholder="Describe symptoms, required parts, or special safety notes..."
               value={woDescription}
               onChange={(e) => setWoDescription(e.target.value)}
             />
           </div>
 
-          <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px", marginTop: "12px" }}>
-            <Button variant="secondary" onClick={() => setActiveForm(null)}>
-              Cancel
-            </Button>
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px", marginTop: "4px" }}>
+            <Button variant="secondary" onClick={() => setActiveForm(null)}>Cancel</Button>
             <Button variant="primary" type="submit" icon={FilePlus2}>
-              Create & Dispatch WO
+              Create &amp; Dispatch WO
             </Button>
           </div>
         </form>
+
       ) : (
-        <form onSubmit={handleReportBD} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+        <form onSubmit={handleReportBD} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <h4 style={{ fontSize: "15px", fontWeight: 700, color: "var(--accent-rose)" }}>Report Breakdown</h4>
-            <Button variant="ghost" size="sm" onClick={() => setActiveForm(null)}>
-              Back
-            </Button>
+            <Button variant="ghost" size="sm" onClick={() => setActiveForm(null)}>Back</Button>
           </div>
 
+          {/* Reported By — auto-filled */}
+          <div style={{ padding: "8px 12px", borderRadius: "6px", backgroundColor: "rgba(239,68,68,0.06)", fontSize: "12px", color: "var(--text-secondary)", border: "1px solid rgba(239,68,68,0.2)" }}>
+            🚨 <strong style={{ color: "#EF4444" }}>Reported By:</strong> {currentUserName}
+          </div>
+
+          {/* Asset with Breakdown — from PostgreSQL DB */}
           <div className="form-group">
             <label className="form-label">Asset with Breakdown *</label>
             <select className="form-select" value={bdAssetId} onChange={(e) => setBdAssetId(e.target.value)}>
-              {assets.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.id} - {a.name} ({a.line})
-                </option>
-              ))}
+              {assets.length === 0 ? (
+                <option value="">No assets registered</option>
+              ) : (
+                assets.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.id} — {a.name} ({a.line || a.department})
+                  </option>
+                ))
+              )}
             </select>
           </div>
 
+          {/* Failure Category */}
+          <div className="form-group">
+            <label className="form-label">Failure Category</label>
+            <select className="form-select" value={bdCategory} onChange={(e) => setBdCategory(e.target.value)}>
+              <option value="Mechanical">Mechanical</option>
+              <option value="Electrical">Electrical</option>
+              <option value="Pneumatic">Pneumatic / Hydraulic</option>
+              <option value="Instrumentation">Instrumentation / Sensor</option>
+              <option value="Process">Process / Quality Deviation</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+
+          {/* Assign First Responder Technician — from PostgreSQL staff */}
+          <div className="form-group">
+            <label className="form-label">Assign First Responder</label>
+            <select className="form-select" value={bdTechnicianId} onChange={(e) => setBdTechnicianId(e.target.value)}>
+              {technicians.length === 0 ? (
+                <option value="">No staff available</option>
+              ) : (
+                technicians.map((t) => (
+                  <option key={t.id} value={t.id}>{t.label}</option>
+                ))
+              )}
+            </select>
+          </div>
+
+          {/* Observed Symptom */}
           <div className="form-group">
             <label className="form-label">Observed Symptom / Error Alarm *</label>
             <textarea
@@ -268,12 +432,10 @@ export function QuickActionDrawer() {
             />
           </div>
 
-          <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px", marginTop: "12px" }}>
-            <Button variant="secondary" onClick={() => setActiveForm(null)}>
-              Cancel
-            </Button>
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px", marginTop: "4px" }}>
+            <Button variant="secondary" onClick={() => setActiveForm(null)}>Cancel</Button>
             <Button variant="danger" type="submit" icon={AlertOctagon}>
-              Log Breakdown & Halt Line
+              Log Breakdown &amp; Halt Line
             </Button>
           </div>
         </form>

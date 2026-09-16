@@ -6,6 +6,7 @@ import {
   Search,
   X,
   Edit2,
+  Trash2,
   Activity,
   Percent,
   Sliders,
@@ -27,12 +28,86 @@ import { useApp } from "../../../context/AppContext";
 import masterDataService from "../../../services/masterDataService";
 
 export function QualitySpecsPage() {
-  const { qualitySpecs = [], addQualitySpec, updateQualitySpec, approveQualitySpec, rejectQualitySpec, deleteQualitySpec, skus = [] } = useMasterData();
+  const { qualitySpecs = [], setQualitySpecs, addQualitySpec, updateQualitySpec, approveQualitySpec, rejectQualitySpec, deleteQualitySpec, skus = [] } = useMasterData();
   const { addToast } = useApp();
+  const [deletingSpec, setDeletingSpec] = useState(null);
+
+  const fetchLiveSpecs = async () => {
+    try {
+      const res = await masterDataService.getQualitySpecs();
+      const list = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
+      if (typeof setQualitySpecs === "function") {
+        setQualitySpecs(list);
+      }
+    } catch (err) {
+      console.warn("Quality specs load:", err.message);
+    }
+  };
 
   useEffect(() => {
-    masterDataService.getQualitySpecs().catch((err) => console.warn("Quality specs load:", err.message));
+    fetchLiveSpecs();
+    fetchCategories();
   }, []);
+
+  const [activeTab, setActiveTab] = useState("specs");
+  const [deviationCategories, setDeviationCategories] = useState([]);
+  const [isCatModalOpen, setIsCatModalOpen] = useState(false);
+  const [newCategory, setNewCategory] = useState({ name: "", code: "", description: "" });
+  const [isSavingCat, setIsSavingCat] = useState(false);
+  const [catSearch, setCatSearch] = useState("");
+
+  const fetchCategories = async () => {
+    try {
+      const res = await masterDataService.getDeviationCategories();
+      const list = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
+      setDeviationCategories(list);
+    } catch (err) {
+      console.warn("Deviation categories load:", err.message);
+    }
+  };
+
+  const handleSaveCategory = async (e) => {
+    e.preventDefault();
+    if (!newCategory.name.trim()) {
+      addToast("Please provide category name.", "warning");
+      return;
+    }
+    setIsSavingCat(true);
+    try {
+      await masterDataService.saveDeviationCategory(newCategory);
+      addToast(`Category "${newCategory.name}" saved to Database!`, "success");
+      setIsCatModalOpen(false);
+      setNewCategory({ name: "", code: "", description: "" });
+      fetchCategories();
+    } catch (err) {
+      console.error("Save category error:", err);
+      addToast("Failed to save category", "error");
+    } finally {
+      setIsSavingCat(false);
+    }
+  };
+
+  const handleDeleteCategory = async (idOrCode) => {
+    if (!window.confirm("Are you sure you want to remove this category from Master Data?")) return;
+    try {
+      await masterDataService.deleteDeviationCategory(idOrCode);
+      addToast("Category removed successfully!", "info");
+      fetchCategories();
+    } catch (err) {
+      console.error("Delete category error:", err);
+      addToast("Failed to delete category", "error");
+    }
+  };
+
+  const filteredCategories = useMemo(() => {
+    const q = catSearch.toLowerCase().trim();
+    if (!q) return deviationCategories;
+    return deviationCategories.filter(c => 
+      c.name?.toLowerCase().includes(q) || 
+      c.code?.toLowerCase().includes(q) || 
+      c.description?.toLowerCase().includes(q)
+    );
+  }, [deviationCategories, catSearch]);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [skuFilter, setSkuFilter] = useState("ALL");
@@ -40,23 +115,35 @@ export function QualitySpecsPage() {
 
   // Modals
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingSpec, setEditingSpec] = useState(null);
   const [viewingSpec, setViewingSpec] = useState(null);
   const [revisionModalSpec, setRevisionModalSpec] = useState(null);
   const [approvalModalSpec, setApprovalModalSpec] = useState(null);
   const [deletingSpec, setDeletingSpec] = useState(null);
 
-  const [newSpec, setNewSpec] = useState({
-    skuId: "SKU-001",
+  const blankSpecState = {
+    skuId: "",
     specificationTitle: "",
-    parameter: "Soluble Solids (Brix)",
-    target: "10.5",
-    min: "10.3",
-    max: "10.7",
-    uom: "°Bx",
+    parameter: "",
+    target: "",
+    min: "",
+    max: "",
+    uom: "",
     criticality: "Critical CCP (HACCP-1)",
-    testMethod: "Digital Refractometer"
-  });
+    testMethod: ""
+  };
+
+  const [newSpec, setNewSpec] = useState(blankSpecState);
+
+  useEffect(() => {
+    if (!newSpec.skuId && skus.length > 0) {
+      const fg = skus.find((s) => (s.category || "").toLowerCase() === "finished goods") || skus[0];
+      if (fg) {
+        setNewSpec((prev) => ({ ...prev, skuId: fg.skuId || fg.id }));
+      }
+    }
+  }, [skus]);
 
   const filteredSpecs = useMemo(() => {
     return qualitySpecs.filter((s) => {
@@ -77,6 +164,7 @@ export function QualitySpecsPage() {
 
   const handleAddSubmit = async (e) => {
     e.preventDefault();
+    if (isSubmitting) return;
     if (!newSpec.parameter.trim()) {
       addToast("Please provide quality parameter name.", "warning");
       return;
@@ -86,23 +174,30 @@ export function QualitySpecsPage() {
       return;
     }
 
+    setIsSubmitting(true);
     try {
       const created = await addQualitySpec(newSpec);
-      addToast(`Specification ${created?.specId || "spec"} (${created?.parameter || newSpec.parameter}) registered!`, "success");
+      addToast(`Specification ${created?.specId || created?.id || ""} (${created?.parameter || newSpec.parameter}) registered!`, "success");
       setIsAddModalOpen(false);
+      const defaultSku = skus.length > 0 ? (skus[0].skuId || skus[0].id) : "";
       setNewSpec({
-        skuId: "SKU-001",
-        specificationTitle: "",
-        parameter: "Soluble Solids (Brix)",
-        target: "10.5",
-        min: "10.3",
-        max: "10.7",
-        uom: "°Bx",
-        criticality: "Critical CCP (HACCP-1)",
-        testMethod: "Digital Refractometer"
+        ...blankSpecState,
+        skuId: defaultSku
       });
+      fetchLiveSpecs();
     } catch (err) {
-      addToast(`Failed to create quality spec: ${err.message}`, "error");
+      console.error("Add quality spec error:", err);
+      addToast(`Failed to register quality specification: ${err.message}`, "error");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (window.confirm("Are you sure you want to delete this specification?")) {
+      await deleteQualitySpec(id);
+      addToast("Specification removed successfully!", "info");
+      fetchLiveSpecs();
     }
   };
 
@@ -111,11 +206,11 @@ export function QualitySpecsPage() {
     if (!editingSpec.parameter.trim()) return;
     try {
       await updateQualitySpec(editingSpec.specId || editingSpec.id, editingSpec);
-      addToast(`Specification ${editingSpec.specId} updated!`, "success");
+      addToast(`Specification ${editingSpec.specId || editingSpec.id} updated!`, "success");
       setEditingSpec(null);
+      fetchLiveSpecs();
     } catch (err) {
       addToast(`Failed to update quality spec: ${err.message}`, "error");
-    }
   };
 
   return (
@@ -132,15 +227,70 @@ export function QualitySpecsPage() {
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-          <Button variant="primary" icon={Plus} onClick={() => setIsAddModalOpen(true)} style={{ fontSize: "12px", padding: "7px 12px" }}>
-            + Create Quality Spec
-          </Button>
+          {activeTab === "specs" ? (
+            <Button variant="primary" icon={Plus} onClick={() => setIsAddModalOpen(true)} style={{ fontSize: "12px", padding: "7px 12px" }}>
+              + Create Quality Spec
+            </Button>
+          ) : (
+            <Button variant="primary" icon={Plus} onClick={() => setIsCatModalOpen(true)} style={{ fontSize: "12px", padding: "7px 12px" }}>
+              + Add Deviation Category
+            </Button>
+          )}
         </div>
       </div>
 
-      {/* KPI Tickers - 4 Responsive Cards */}
-      <div
-        className="kpi-grid-responsive grid-4"
+      {/* Sub-Navigation Tabs */}
+      <div style={{ display: "flex", gap: "8px", borderBottom: "1.5px solid var(--border-subtle)", paddingBottom: "8px" }}>
+        <button
+          onClick={() => setActiveTab("specs")}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            padding: "8px 16px",
+            borderRadius: "8px",
+            border: "none",
+            backgroundColor: activeTab === "specs" ? "#8C5B23" : "transparent",
+            color: activeTab === "specs" ? "#FFFFFF" : "var(--text-secondary)",
+            fontWeight: 700,
+            fontSize: "13px",
+            cursor: "pointer",
+            transition: "all 0.15s ease"
+          }}
+        >
+          <FlaskConical size={16} />
+          Quality Parameter Specifications
+          <Badge variant={activeTab === "specs" ? "neutral" : "cyan"}>{qualitySpecs.length}</Badge>
+        </button>
+
+        <button
+          onClick={() => setActiveTab("deviations")}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            padding: "8px 16px",
+            borderRadius: "8px",
+            border: "none",
+            backgroundColor: activeTab === "deviations" ? "#8C5B23" : "transparent",
+            color: activeTab === "deviations" ? "#FFFFFF" : "var(--text-secondary)",
+            fontWeight: 700,
+            fontSize: "13px",
+            cursor: "pointer",
+            transition: "all 0.15s ease"
+          }}
+        >
+          <AlertTriangle size={16} />
+          Deviation Categories Master
+          <Badge variant={activeTab === "deviations" ? "neutral" : "amber"}>{deviationCategories.length}</Badge>
+        </button>
+      </div>
+
+      {activeTab === "specs" && (
+        <>
+          {/* KPI Tickers - 4 Responsive Cards */}
+          <div
+            className="kpi-grid-responsive grid-4"
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
@@ -367,6 +517,91 @@ export function QualitySpecsPage() {
           </table>
         </div>
       </Card>
+        </>
+      )}
+
+      {activeTab === "deviations" && (
+        <Card style={{ padding: "18px", width: "100%", boxSizing: "border-box", minWidth: 0 }}>
+          {/* Deviation Categories Header / Toolbar */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "12px" }}>
+            <div style={{ position: "relative", minWidth: "260px", flex: 1 }}>
+              <Search size={15} color="var(--text-muted)" style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)" }} />
+              <input
+                type="text"
+                placeholder="Search deviation categories..."
+                value={catSearch}
+                onChange={(e) => setCatSearch(e.target.value)}
+                className="form-input"
+                style={{ paddingLeft: "32px", height: "36px", fontSize: "12px", backgroundColor: "#FFFFFF" }}
+              />
+            </div>
+
+            <div style={{ fontSize: "12px", color: "var(--text-muted)", fontWeight: 600 }}>
+              Showing <strong>{filteredCategories.length}</strong> categories (Stored in DB: <code>public.tenants.settings</code>)
+            </div>
+          </div>
+
+          {/* Structured Data Table */}
+          <div className="data-table-container" style={{ overflowX: "auto", border: "1px solid var(--border-subtle)", borderRadius: "10px" }}>
+            <table className="data-table" style={{ width: "100%", borderCollapse: "collapse", minWidth: "750px" }}>
+              <thead>
+                <tr style={{ backgroundColor: "var(--bg-card-subtle)", borderBottom: "1.5px solid var(--border-subtle)" }}>
+                  <th style={{ padding: "12px 14px", textAlign: "left", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Category Code</th>
+                  <th style={{ padding: "12px 14px", textAlign: "left", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Category Name</th>
+                  <th style={{ padding: "12px 14px", textAlign: "left", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Description</th>
+                  <th style={{ padding: "12px 14px", textAlign: "left", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Status</th>
+                  <th style={{ padding: "12px 14px", textAlign: "right", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredCategories.length > 0 ? (
+                  filteredCategories.map((cat) => (
+                    <tr
+                      key={cat.id || cat.code}
+                      style={{ borderBottom: "1px solid var(--border-subtle)", transition: "background-color 0.12s ease" }}
+                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgba(200, 149, 71, 0.04)")}
+                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
+                    >
+                      <td style={{ padding: "12px 14px", whiteSpace: "nowrap" }}>
+                        <span style={{ fontSize: "12px", fontFamily: "var(--font-mono)", fontWeight: 800, color: "#0284C7", backgroundColor: "rgba(2, 132, 199, 0.08)", padding: "4px 8px", borderRadius: "4px" }}>
+                          {cat.code}
+                        </span>
+                      </td>
+                      <td style={{ padding: "12px 14px" }}>
+                        <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)" }}>
+                          {cat.name}
+                        </div>
+                      </td>
+                      <td style={{ padding: "12px 14px", color: "var(--text-secondary)", fontSize: "12px" }}>
+                        {cat.description || "Standard Quality Excursion"}
+                      </td>
+                      <td style={{ padding: "12px 14px", whiteSpace: "nowrap" }}>
+                        <Badge variant="emerald">Active in Dropdown</Badge>
+                      </td>
+                      <td style={{ padding: "12px 14px", textAlign: "right", whiteSpace: "nowrap" }}>
+                        <Button
+                          variant="danger"
+                          size="sm"
+                          icon={Trash2}
+                          onClick={() => handleDeleteCategory(cat.id || cat.code)}
+                          style={{ padding: "6px 8px" }}
+                          title="Delete Category"
+                        />
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={5} style={{ padding: "32px", textAlign: "center", color: "var(--text-muted)", fontSize: "13px" }}>
+                      No categories found. Click "+ Add Deviation Category" to create a new category.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
 
       {/* CREATE NEW QUALITY SPEC MODAL */}
       {isAddModalOpen && (
@@ -418,8 +653,14 @@ export function QualitySpecsPage() {
                   className="form-input"
                   style={{ height: "36px", fontSize: "12px", marginTop: "4px" }}
                 >
-                  {skus.filter((s) => s.category === "Finished Goods").map((s) => (
-                    <option key={s.skuId} value={s.skuId}>{s.skuCode} — {s.name}</option>
+                  {skus.length === 0 && <option value="">No SKUs found. Add SKU in SKUs Master first</option>}
+                  {(skus.filter((s) => (s.category || "").toLowerCase() === "finished goods").length > 0
+                    ? skus.filter((s) => (s.category || "").toLowerCase() === "finished goods")
+                    : skus
+                  ).map((s) => (
+                    <option key={s.skuId || s.id} value={s.skuId || s.id}>
+                      {s.skuCode || s.code} — {s.name}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -430,7 +671,7 @@ export function QualitySpecsPage() {
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Moisture Content / Brix"
+                    placeholder="Enter parameter name (e.g. Moisture, Viscosity)"
                     value={newSpec.parameter}
                     onChange={(e) => setNewSpec({ ...newSpec, parameter: e.target.value })}
                     className="form-input"
@@ -442,7 +683,7 @@ export function QualitySpecsPage() {
                   <label style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase" }}>UOM *</label>
                   <input
                     type="text"
-                    placeholder="e.g. %, °Bx, pH, mL"
+                    placeholder="e.g. %, °Bx, pH, mm, kg"
                     value={newSpec.uom}
                     onChange={(e) => setNewSpec({ ...newSpec, uom: e.target.value })}
                     className="form-input"
@@ -458,7 +699,7 @@ export function QualitySpecsPage() {
                   <input
                     type="text"
                     required
-                    placeholder="5.0"
+                    placeholder="e.g. 10.5"
                     value={newSpec.target}
                     onChange={(e) => setNewSpec({ ...newSpec, target: e.target.value })}
                     className="form-input"
@@ -471,7 +712,7 @@ export function QualitySpecsPage() {
                   <input
                     type="text"
                     required
-                    placeholder="4.0"
+                    placeholder="e.g. 10.3"
                     value={newSpec.min}
                     onChange={(e) => setNewSpec({ ...newSpec, min: e.target.value })}
                     className="form-input"
@@ -484,7 +725,7 @@ export function QualitySpecsPage() {
                   <input
                     type="text"
                     required
-                    placeholder="6.0"
+                    placeholder="e.g. 10.7"
                     value={newSpec.max}
                     onChange={(e) => setNewSpec({ ...newSpec, max: e.target.value })}
                     className="form-input"
@@ -512,7 +753,7 @@ export function QualitySpecsPage() {
                   <label style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase" }}>Test Method / Device</label>
                   <input
                     type="text"
-                    placeholder="Digital Refractometer / pH Probe"
+                    placeholder="e.g. Digital Refractometer, Vernier Caliper"
                     value={newSpec.testMethod}
                     onChange={(e) => setNewSpec({ ...newSpec, testMethod: e.target.value })}
                     className="form-input"
@@ -525,8 +766,8 @@ export function QualitySpecsPage() {
                 <Button variant="secondary" type="button" onClick={() => setIsAddModalOpen(false)} style={{ fontSize: "12px" }}>
                   Cancel
                 </Button>
-                <Button variant="primary" type="submit" style={{ fontSize: "12px" }}>
-                  Save & Lock Specification
+                <Button variant="primary" type="submit" disabled={isSubmitting} style={{ fontSize: "12px" }}>
+                  {isSubmitting ? "Saving..." : "Save & Lock Specification"}
                 </Button>
               </div>
             </form>
@@ -713,6 +954,105 @@ export function QualitySpecsPage() {
           }}
         />
       )}
+      {/* ADD DEVIATION CATEGORY MODAL */}
+      {isCatModalOpen && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(38, 22, 3, 0.55)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+            padding: "16px"
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: "#FFFFFF",
+              borderRadius: "14px",
+              width: "100%",
+              maxWidth: "500px",
+              boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
+              border: "1px solid var(--border-subtle)",
+              overflow: "hidden"
+            }}
+          >
+            <div style={{ padding: "18px 22px", borderBottom: "1px solid var(--border-subtle)", display: "flex", justifyContent: "space-between", alignItems: "center", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <AlertTriangle size={18} color="#B27E33" />
+                <h3 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                  Add Deviation Category
+                </h3>
+              </div>
+              <button onClick={() => setIsCatModalOpen(false)} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-muted)" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveCategory} style={{ padding: "22px", display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div>
+                <label style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase" }}>Category Name *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Foreign Material Contamination"
+                  value={newCategory.name}
+                  onChange={(e) => {
+                    const name = e.target.value;
+                    setNewCategory(prev => ({
+                      ...prev,
+                      name,
+                      code: prev.code || name.trim().toUpperCase().replace(/[^A-Z0-9]+/g, '_')
+                    }));
+                  }}
+                  className="form-input"
+                  style={{ height: "36px", fontSize: "12px", marginTop: "4px" }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase" }}>Category Code (System identifier)</label>
+                <input
+                  type="text"
+                  placeholder="e.g. FOREIGN_MATERIAL"
+                  value={newCategory.code}
+                  onChange={(e) => setNewCategory({ ...newCategory, code: e.target.value.toUpperCase().replace(/\s+/g, '_') })}
+                  className="form-input"
+                  style={{ height: "36px", fontSize: "12px", marginTop: "4px", fontFamily: "var(--font-mono)" }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase" }}>Description</label>
+                <textarea
+                  rows={3}
+                  placeholder="e.g. Particulate or metal detection excursion during packing run"
+                  value={newCategory.description}
+                  onChange={(e) => setNewCategory({ ...newCategory, description: e.target.value })}
+                  className="form-input"
+                  style={{ fontSize: "12px", marginTop: "4px", padding: "8px", resize: "vertical" }}
+                />
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "12px" }}>
+                <Button variant="secondary" type="button" onClick={() => setIsCatModalOpen(false)} style={{ fontSize: "12px" }}>
+                  Cancel
+                </Button>
+                <Button variant="primary" type="submit" disabled={isSavingCat} style={{ fontSize: "12px" }}>
+                  {isSavingCat ? "Saving to DB..." : "Save Category"}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* DELETE SPEC CONFIRM MODAL */}
       {deletingSpec && (
         <div className="modal-backdrop" onClick={() => setDeletingSpec(null)}>
@@ -756,7 +1096,6 @@ export function QualitySpecsPage() {
               </Button>
             </div>
           </div>
-        </div>
       )}
     </div>
   );

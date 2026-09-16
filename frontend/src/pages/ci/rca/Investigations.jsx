@@ -55,7 +55,6 @@ export function Investigations() {
   const [newAssetId, setNewAssetId] = useState("");
   const [newLineId, setNewLineId] = useState("");
   const [newSeverity, setNewSeverity] = useState("High");
-
   useEffect(() => {
     const list = (assets && assets.length > 0) ? assets : availableAssets;
     if (list && list.length > 0 && !newAssetId) {
@@ -129,7 +128,6 @@ export function Investigations() {
         severity: newSeverity,
         problemStatement: newTitle.trim()
       });
-
       setNewTitle("");
       setNewAssetId("");
       setNewLineId("");

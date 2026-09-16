@@ -28,8 +28,8 @@ export function OrgWorkCentersPage() {
   const fetchWorkCenters = async () => {
     try {
       const res = await masterDataService.getWorkCenters();
-      const data = res?.data || res;
-      if (Array.isArray(data)) {
+      const data = res?.data !== undefined ? res.data : res;
+      if (Array.isArray(data) && data.length > 0 && typeof setWorkCenters === "function") {
         setWorkCenters(data);
       }
     } catch (err) {
@@ -37,11 +37,7 @@ export function OrgWorkCentersPage() {
     }
   };
 
-  // Trigger live GET /api/v1/master-data/work-centers on mount and clear demo cache
   React.useEffect(() => {
-    try {
-      localStorage.removeItem("mx_master_workcenters");
-    } catch (_) {}
     fetchWorkCenters();
   }, []);
 
@@ -264,53 +260,69 @@ export function OrgWorkCentersPage() {
               </tr>
             </thead>
             <tbody>
-              {filteredWCs.map((w) => (
-                <tr key={w.id || w.workCenterId || w.code} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
-                  <td style={{ padding: "12px 16px", fontFamily: "var(--font-mono)", fontWeight: 800, color: "#8C5B23" }}>
-                    {w.code}
-                  </td>
-                  <td style={{ padding: "12px 16px", fontWeight: 800, color: "var(--text-primary)", fontSize: "13px" }}>
-                    {w.name}
-                  </td>
-                  <td style={{ padding: "12px 16px", fontSize: "12px", color: "var(--text-secondary)" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                      <Layers size={12} color="#C89547" />
-                      <span>{w.lineName}</span>
-                    </div>
-                  </td>
-                  <td style={{ padding: "12px 16px", fontFamily: "var(--font-mono)", fontWeight: 800, color: "#D97706" }}>
-                    {w.capacity}
-                  </td>
-                  <td style={{ padding: "12px 16px" }}>
-                    <Badge variant="emerald">{w.status}</Badge>
-                  </td>
-                  <td style={{ padding: "12px 16px", textAlign: "right" }}>
-                    <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
-                      <button
-                        onClick={() => setViewingWC({ ...w })}
-                        title="View Work Center Details"
-                        style={{ width: "30px", height: "30px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", color: "var(--text-primary)", border: "1px solid var(--border-subtle)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
-                      >
-                        <Eye size={13} />
-                      </button>
-                      <button
-                        onClick={() => setEditingWC({ ...w })}
-                        title="Edit Work Center"
-                        style={{ width: "30px", height: "30px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", color: "var(--text-primary)", border: "1px solid var(--border-subtle)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
-                      >
-                        <Edit2 size={13} />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(w.id || w.workCenterId, w.name)}
-                        title="Delete Work Center"
-                        style={{ width: "30px", height: "30px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", color: "#EF4444", border: "1px solid var(--border-subtle)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
-                      >
-                        <Trash2 size={13} />
-                      </button>
+              {filteredWCs.length > 0 ? (
+                filteredWCs.map((w) => (
+                  <tr key={w.id || w.workCenterId || w.code} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+                    <td style={{ padding: "12px 16px", fontFamily: "var(--font-mono)", fontWeight: 800, color: "#8C5B23" }}>
+                      {w.code}
+                    </td>
+                    <td style={{ padding: "12px 16px", fontWeight: 800, color: "var(--text-primary)", fontSize: "13px" }}>
+                      {w.name}
+                    </td>
+                    <td style={{ padding: "12px 16px", fontSize: "12px", color: "var(--text-secondary)" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                        <Layers size={12} color="#C89547" />
+                        <span>{w.lineName}</span>
+                      </div>
+                    </td>
+                    <td style={{ padding: "12px 16px", fontFamily: "var(--font-mono)", fontWeight: 800, color: "#D97706" }}>
+                      {w.capacity}
+                    </td>
+                    <td style={{ padding: "12px 16px" }}>
+                      <Badge variant="emerald">{w.status}</Badge>
+                    </td>
+                    <td style={{ padding: "12px 16px", textAlign: "right" }}>
+                      <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                        <button
+                          onClick={() => setViewingWC({ ...w })}
+                          title="View Work Center Details"
+                          style={{ width: "30px", height: "30px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", color: "var(--text-primary)", border: "1px solid var(--border-subtle)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+                        >
+                          <Eye size={13} />
+                        </button>
+                        <button
+                          onClick={() => setEditingWC({ ...w })}
+                          title="Edit Work Center"
+                          style={{ width: "30px", height: "30px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", color: "var(--text-primary)", border: "1px solid var(--border-subtle)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+                        >
+                          <Edit2 size={13} />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(w.id || w.workCenterId, w.name)}
+                          title="Delete Work Center"
+                          style={{ width: "30px", height: "30px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", color: "#EF4444", border: "1px solid var(--border-subtle)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={6} style={{ padding: "48px 24px", textAlign: "center", color: "var(--text-muted)" }}>
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px" }}>
+                      <Cpu size={40} strokeWidth={1.5} color="var(--text-muted)" style={{ opacity: 0.5 }} />
+                      <div style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-primary)" }}>
+                        No Work Centers registered yet
+                      </div>
+                      <div style={{ fontSize: "12px", color: "var(--text-muted)", maxWidth: "420px" }}>
+                        Click &quot;+ Add Work Center&quot; to configure your equipment cells and machines.
+                      </div>
                     </div>
                   </td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
         </div>

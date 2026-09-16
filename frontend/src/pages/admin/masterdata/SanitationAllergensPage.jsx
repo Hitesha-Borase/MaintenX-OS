@@ -40,18 +40,16 @@ export function SanitationAllergensPage() {
 
   const fetchLiveSanitationAndAllergens = async () => {
     try {
-      localStorage.removeItem("mx_master_sanitation");
-      localStorage.removeItem("mx_master_allergens");
       const [sanRes, algRes] = await Promise.all([
         masterDataService.getSanitationClasses(),
         masterDataService.getAllergenRules()
       ]);
       const sanData = sanRes?.data?.data || sanRes?.data || sanRes;
-      if (Array.isArray(sanData) && typeof setSanitationClasses === "function") {
+      if (Array.isArray(sanData) && sanData.length > 0 && typeof setSanitationClasses === "function") {
         setSanitationClasses(sanData);
       }
       const algData = algRes?.data?.data || algRes?.data || algRes;
-      if (Array.isArray(algData) && typeof setAllergenRules === "function") {
+      if (Array.isArray(algData) && algData.length > 0 && typeof setAllergenRules === "function") {
         setAllergenRules(algData);
       }
     } catch (err) {

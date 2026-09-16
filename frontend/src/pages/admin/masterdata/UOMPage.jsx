@@ -28,10 +28,9 @@ export function UOMPage() {
 
   const fetchUoms = React.useCallback(async () => {
     try {
-      localStorage.removeItem("mx_master_uoms");
       const res = await masterDataService.getUoms();
-      const data = res?.data || res;
-      if (Array.isArray(data) && typeof setUoms === "function") {
+      const data = res?.data !== undefined ? res.data : res;
+      if (Array.isArray(data) && data.length > 0 && typeof setUoms === "function") {
         setUoms(data);
       }
     } catch (err) {

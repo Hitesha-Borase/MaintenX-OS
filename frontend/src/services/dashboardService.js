@@ -473,9 +473,27 @@ export const dashboardService = {
     return apiClient.get("/dashboards/supervisor/labour/productivity");
   },
 
+  async getLabourAllocations(shift = "Shift A") {
+    const query = shift ? `?shift=${encodeURIComponent(shift)}` : "";
+    return apiClient.get(`/dashboards/labour/allocations${query}`);
+  },
+
+  async createLabourAllocation(payload) {
+    return apiClient.post("/dashboards/labour/allocations", payload);
+  },
+
+  async updateLabourAllocation(id, payload) {
+    return apiClient.put(`/dashboards/labour/allocations/${encodeURIComponent(id)}`, payload);
+  },
+
+  async deleteLabourAllocation(id) {
+    return apiClient.delete(`/dashboards/labour/allocations/${encodeURIComponent(id)}`);
+  },
+
   async getSupervisorStaffing() {
     return apiClient.get("/dashboards/supervisor/labour/staffing");
   },
+
 
   async addSupervisorStaffing(payload) {
     return apiClient.post("/dashboards/supervisor/labour/staffing", payload);

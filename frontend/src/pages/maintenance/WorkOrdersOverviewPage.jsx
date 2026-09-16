@@ -20,7 +20,7 @@ import { useApp } from "../../context/AppContext";
 
 export function WorkOrdersOverviewPage() {
   const { workOrders, updateWorkOrderStatus, addWorkOrder, assets } = useCMMS();
-  const { addToast, setIsQuickActionOpen } = useApp();
+  const { addToast, setIsQuickActionOpen, openQuickAction } = useApp();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [priorityFilter, setPriorityFilter] = useState("ALL");
@@ -49,7 +49,7 @@ export function WorkOrdersOverviewPage() {
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-          <Button variant="primary" icon={Plus} onClick={() => setIsQuickActionOpen(true)}>
+          <Button variant="primary" icon={Plus} onClick={() => (openQuickAction ? openQuickAction("work_order") : setIsQuickActionOpen(true))}>
             + Create Work Order
           </Button>
         </div>
