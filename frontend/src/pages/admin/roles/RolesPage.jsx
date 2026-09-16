@@ -250,7 +250,7 @@ export function RolesPage() {
                   <Pencil size={13} />
                 </button>
                 <button
-                  onClick={() => navigate("/roles/permissions")}
+                  onClick={() => navigate("/roles/permissions", { state: { roleId: r.code || r.id } })}
                   title="Edit Granular Permissions"
                   style={{
                     padding: "4px 8px",
@@ -399,8 +399,9 @@ export function RolesPage() {
                   variant="primary"
                   icon={ArrowRight}
                   onClick={() => {
+                    const rCode = viewingRole?.code || viewingRole?.id;
                     setViewingRole(null);
-                    navigate("/roles/permissions");
+                    navigate("/roles/permissions", { state: { roleId: rCode } });
                   }}
                 >
                   Inspect Matrix

@@ -60,15 +60,11 @@ export function ProcessChecks() {
     
     try {
       const res = await qualityService.toggleProcessCheck({ checkId: id, status: newStatus, name });
-      if (res.data?.data && Array.isArray(res.data.data)) {
-        setProcesses(res.data.data);
+      const list = Array.isArray(res.data?.data) ? res.data.data : Array.isArray(res.data?.data?.data) ? res.data.data.data : null;
+      if (list) {
+        setProcesses(list);
       } else {
-        setProcesses(prev => prev.map(p => {
-          if (p.id === id) {
-            return { ...p, status: newStatus, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) };
-          }
-          return p;
-        }));
+        await fetchProcesses();
       }
 
       if (newStatus === "WARNING") {
@@ -78,12 +74,7 @@ export function ProcessChecks() {
       }
     } catch (err) {
       console.warn("Toggle process fallback:", err.message);
-      setProcesses(prev => prev.map(p => {
-        if (p.id === id) {
-          return { ...p, status: newStatus };
-        }
-        return p;
-      }));
+      await fetchProcesses();
       addToast(newStatus === "WARNING" ? `${name} marked as WARNING.` : `${name} calibrated as OK.`, "info");
     }
   };
@@ -92,19 +83,16 @@ export function ProcessChecks() {
     try {
       setIsProcessing(true);
       const res = await qualityService.calibrateAllProcessChecks();
-      if (res.data?.data && Array.isArray(res.data.data)) {
-        setProcesses(res.data.data);
+      const list = Array.isArray(res.data?.data) ? res.data.data : Array.isArray(res.data?.data?.data) ? res.data.data.data : null;
+      if (list) {
+        setProcesses(list);
       } else {
-        setProcesses(prev =>
-          prev.map(p => ({ ...p, status: "OK", timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }))
-        );
+        await fetchProcesses();
       }
       addToast("All in-process parameters calibrated & verified.", "success");
     } catch (err) {
       console.warn("Calibrate all fallback:", err.message);
-      setProcesses(prev =>
-        prev.map(p => ({ ...p, status: "OK" }))
-      );
+      await fetchProcesses();
       addToast("All in-process parameters calibrated & verified.", "success");
     } finally {
       setIsProcessing(false);
@@ -116,7 +104,6 @@ export function ProcessChecks() {
     if (!paramName || !actualVal) return;
 
     const newCheck = {
-      id: Date.now(),
       name: paramName,
       parameter: paramName,
       target: targetVal || "Standard Range",
@@ -128,14 +115,15 @@ export function ProcessChecks() {
 
     try {
       const res = await qualityService.recordProcessCheck(newCheck);
-      if (res.data?.data && Array.isArray(res.data.data)) {
-        setProcesses(res.data.data);
+      const list = Array.isArray(res.data?.data) ? res.data.data : Array.isArray(res.data?.data?.data) ? res.data.data.data : null;
+      if (list) {
+        setProcesses(list);
       } else {
-        setProcesses([newCheck, ...processes]);
+        await fetchProcesses();
       }
     } catch (err) {
       console.warn("Process check error:", err);
-      setProcesses([newCheck, ...processes]);
+      await fetchProcesses();
     }
 
     setShowModal(false);

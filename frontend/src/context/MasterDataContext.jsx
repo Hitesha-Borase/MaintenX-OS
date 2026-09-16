@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from "react";
 import masterDataService from "../services/masterDataService";
+import adminService from "../services/adminService";
 
 const MasterDataContext = createContext();
 
@@ -684,6 +685,15 @@ export function MasterDataProvider({ children }) {
         }
         if (liveStorage.status === "fulfilled" && Array.isArray(liveStorage.value?.data || liveStorage.value)) {
           setStorageResources(liveStorage.value?.data || liveStorage.value);
+        }
+
+        try {
+          const liveMatrix = await adminService.getPermissionMatrix();
+          if (liveMatrix && typeof liveMatrix === "object" && Object.keys(liveMatrix).length > 0) {
+            setRolePermissions((prev) => ({ ...prev, ...liveMatrix }));
+          }
+        } catch (e) {
+          console.warn("Live permission matrix sync fallback:", e.message);
         }
       } catch (err) {
         console.warn("MasterData backend sync fallback:", err.message);
@@ -1998,19 +2008,24 @@ export function MasterDataProvider({ children }) {
   };
 
   const updatePermissionMatrix = (roleKey, moduleName, action, value) => {
-    setRolePermissions((prev) => ({
-      ...prev,
-      [roleKey]: {
-        ...prev[roleKey],
-        permissions: {
-          ...prev[roleKey].permissions,
-          [moduleName]: {
-            ...prev[roleKey].permissions[moduleName],
-            [action]: value
+    setRolePermissions((prev) => {
+      const prevRole = (prev && prev[roleKey]) || { permissions: {} };
+      const prevPermissions = prevRole.permissions || {};
+      const prevModule = prevPermissions[moduleName] || {};
+      return {
+        ...prev,
+        [roleKey]: {
+          ...prevRole,
+          permissions: {
+            ...prevPermissions,
+            [moduleName]: {
+              ...prevModule,
+              [action]: value
+            }
           }
         }
-      }
-    }));
+      };
+    });
     logAudit({ entityId: roleKey, entityType: "Permission Matrix", action: "Updated", newValue: `${roleKey} → ${moduleName}.${action} = ${value}` });
   };
 

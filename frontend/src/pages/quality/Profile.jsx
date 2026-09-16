@@ -68,6 +68,7 @@ export function Profile() {
     try {
       setVerifyingCertId(cert.id);
       const res = await qualityService.verifyCert({ certId: cert.id, name: cert.name });
+      await loadProfile();
       addToast(res?.data?.message || `Verified: ${cert.name} is ACTIVE on registry`, "success");
     } catch (err) {
       addToast(`Certification ${cert.name} verified successfully!`, "success");
@@ -89,6 +90,7 @@ export function Profile() {
 
     try {
       const res = await qualityService.updateProfile({ signaturePin: newPin });
+      await loadProfile();
       addToast(res?.data?.message || "21 CFR Part 11 Digital Signature PIN updated successfully!", "success");
       setIsEditingPin(false);
       setNewPin("");

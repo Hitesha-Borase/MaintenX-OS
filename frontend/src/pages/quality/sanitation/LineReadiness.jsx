@@ -93,19 +93,11 @@ export function LineReadiness() {
     try {
       setIsProcessing(true);
       const res = await qualityService.toggleLineReadiness({ lineId: id, lineName, status: currentStatus });
-      if (res.data?.data && Array.isArray(res.data.data)) {
-        setLines(res.data.data);
+      const updatedList = Array.isArray(res.data?.data) ? res.data.data : Array.isArray(res.data?.data?.data) ? res.data.data.data : null;
+      if (updatedList) {
+        setLines(updatedList);
       } else {
-        setLines(prev => prev.map(r => {
-          if (r.id === id) {
-            if (currentStatus === "READY") {
-              return { ...r, status: "NOT READY", sanitation: "PENDING", lastInspection: "Just now" };
-            } else {
-              return { ...r, status: "READY", safety: "PASSED", sanitation: "PASSED", mechanical: "PASSED", lastInspection: "Just now" };
-            }
-          }
-          return r;
-        }));
+        await fetchLines();
       }
 
       if (currentStatus === "READY") {
@@ -115,16 +107,7 @@ export function LineReadiness() {
       }
     } catch (err) {
       console.warn("Readiness error:", err);
-      setLines(prev => prev.map(r => {
-        if (r.id === id) {
-          if (currentStatus === "READY") {
-            return { ...r, status: "NOT READY", sanitation: "PENDING" };
-          } else {
-            return { ...r, status: "READY", safety: "PASSED", sanitation: "PASSED", mechanical: "PASSED" };
-          }
-        }
-        return r;
-      }));
+      await fetchLines();
       addToast(currentStatus === "READY" ? `${lineName} marked as NOT READY.` : `${lineName} authorized as READY.`, "info");
     } finally {
       setIsProcessing(false);
@@ -135,19 +118,16 @@ export function LineReadiness() {
     try {
       setIsProcessing(true);
       const res = await qualityService.authorizeAllLines();
-      if (res.data?.data && Array.isArray(res.data.data)) {
-        setLines(res.data.data);
+      const updatedList = Array.isArray(res.data?.data) ? res.data.data : Array.isArray(res.data?.data?.data) ? res.data.data.data : null;
+      if (updatedList) {
+        setLines(updatedList);
       } else {
-        setLines(prev =>
-          prev.map(r => ({ ...r, status: "READY", safety: "PASSED", sanitation: "PASSED", mechanical: "PASSED", lastInspection: "Just now" }))
-        );
+        await fetchLines();
       }
       addToast("All plant production lines cleared as READY.", "success");
     } catch (err) {
       console.warn("Authorize all lines fallback:", err.message);
-      setLines(prev =>
-        prev.map(r => ({ ...r, status: "READY", safety: "PASSED", sanitation: "PASSED", mechanical: "PASSED" }))
-      );
+      await fetchLines();
       addToast("All plant production lines cleared as READY.", "success");
     } finally {
       setIsProcessing(false);

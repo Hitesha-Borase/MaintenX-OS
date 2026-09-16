@@ -23,37 +23,11 @@ export function BlockedBatches() {
     setLoading(true);
     try {
       const res = await qualityService.getBlockedBatches();
-      if (res && res.data && res.data.length > 0) {
-        setHolds(res.data);
-      } else {
-        setHolds([
-          { 
-            id: "BLK-101", 
-            batch: "BAT-2026-0890", 
-            reason: "CCP Pasteurizer temp excursion to 82.9°C (Minimum threshold: 83.1°C)", 
-            blockedBy: "Maria Santos (QA Lead)", 
-            date: "2026-08-31", 
-            status: "HOLD",
-            severity: "HIGH",
-            lotNumber: "LOT-ORG-442"
-          }
-        ]);
-      }
+      const raw = Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : Array.isArray(res?.data?.data) ? res.data.data : [];
+      setHolds(raw);
     } catch (err) {
-      console.error("Failed to load blocked batches", err);
-      addToast("Loaded blocked batches", "info");
-      setHolds([
-        { 
-          id: "BLK-101", 
-          batch: "BAT-2026-0890", 
-          reason: "CCP Pasteurizer temp excursion to 82.9°C (Minimum threshold: 83.1°C)", 
-          blockedBy: "Maria Santos (QA Lead)", 
-          date: "2026-08-31", 
-          status: "HOLD",
-          severity: "HIGH",
-          lotNumber: "LOT-ORG-442"
-        }
-      ]);
+      console.error("Failed to load blocked batches from database", err);
+      setHolds([]);
     } finally {
       setLoading(false);
     }
@@ -65,13 +39,13 @@ export function BlockedBatches() {
 
   const handleToggleStatus = async (h) => {
     const nextStatus = h.status === "HOLD" ? "RELEASED" : "HOLD";
-    setHolds(prev => prev.map(item => item.id === h.id ? { ...item, status: nextStatus } : item));
     try {
       await qualityService.toggleBlockedBatch({ id: h.id, batch: h.batch, status: h.status });
       addToast(`Batch ${h.batch} status updated to ${nextStatus}.`, nextStatus === "RELEASED" ? "success" : "warning");
+      await fetchBlocked();
     } catch (err) {
       console.warn("Toggle blocked batch status error:", err);
-      addToast(`Batch ${h.batch} status updated to ${nextStatus}.`, nextStatus === "RELEASED" ? "success" : "warning");
+      addToast("Failed to update status in database", "error");
     }
   };
 

@@ -36,57 +36,11 @@ export function NonConformance() {
     setLoading(true);
     try {
       const res = await qualityService.getNcrs();
-      if (res && res.data) {
-        setNcrList(res.data);
-      } else {
-        setNcrList([
-          { 
-            id: "NCR-402", 
-            part: "Aseptic Orange Caps (LOT-ORG-442)", 
-            reason: "Plastic thread dimensions out-of-spec (0.2mm variance)", 
-            severity: "CRITICAL",
-            status: "PENDING QA REVIEW",
-            disposition: "QUARANTINED",
-            date: "2026-09-02",
-            reportedBy: "Dr. Rachel Thorne"
-          },
-          { 
-            id: "NCR-403", 
-            part: "Aluminum End Cans 330ml (LOT-CAN-981)", 
-            reason: "Flange width deformation on pallet 04", 
-            severity: "HIGH",
-            status: "REVIEWED",
-            disposition: "RETURN_TO_VENDOR",
-            date: "2026-09-01",
-            reportedBy: "Marcus Vance"
-          }
-        ]);
-      }
+      const rawList = Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : Array.isArray(res?.data?.data) ? res.data.data : [];
+      setNcrList(rawList);
     } catch (err) {
       console.error("Failed to fetch NCRs", err);
-      addToast("Loaded local NCR records", "info");
-      setNcrList([
-        { 
-          id: "NCR-402", 
-          part: "Aseptic Orange Caps (LOT-ORG-442)", 
-          reason: "Plastic thread dimensions out-of-spec (0.2mm variance)", 
-          severity: "CRITICAL",
-          status: "PENDING QA REVIEW",
-          disposition: "QUARANTINED",
-          date: "2026-09-02",
-          reportedBy: "Dr. Rachel Thorne"
-        },
-        { 
-          id: "NCR-403", 
-          part: "Aluminum End Cans 330ml (LOT-CAN-981)", 
-          reason: "Flange width deformation on pallet 04", 
-          severity: "HIGH",
-          status: "REVIEWED",
-          disposition: "RETURN_TO_VENDOR",
-          date: "2026-09-01",
-          reportedBy: "Marcus Vance"
-        }
-      ]);
+      setNcrList([]);
     } finally {
       setLoading(false);
     }
@@ -110,11 +64,10 @@ export function NonConformance() {
         disposition: formDisposition
       };
 
-      const res = await qualityService.createNcr(payload);
-      const newNcr = res?.data || payload;
-      setNcrList(prev => [newNcr, ...prev]);
+      await qualityService.createNcr(payload);
+      await fetchNcrs();
 
-      addToast(`NCR ${newNcr.id || newNcr.ncrNumber} logged successfully.`, "success");
+      addToast(`NCR logged successfully.`, "success");
       setFormPart("");
       setFormLot("");
       setFormReason("");
@@ -130,13 +83,12 @@ export function NonConformance() {
   const handleToggleStatus = async (ncr) => {
     const nextStatus = ncr.status === "PENDING QA REVIEW" ? "REVIEWED" : "PENDING QA REVIEW";
     try {
-      const res = await qualityService.reviewNcr({ id: ncr.id, status: nextStatus, currentStatus: ncr.status });
-      setNcrList(prev => prev.map(n => n.id === ncr.id ? { ...n, status: nextStatus } : n));
+      await qualityService.reviewNcr({ id: ncr.id, status: nextStatus, currentStatus: ncr.status });
+      await fetchNcrs();
       addToast(`NCR ${ncr.id} marked as ${nextStatus}.`, "success");
     } catch (err) {
       console.error(err);
-      setNcrList(prev => prev.map(n => n.id === ncr.id ? { ...n, status: nextStatus } : n));
-      addToast(`NCR ${ncr.id} marked as ${nextStatus}.`, "success");
+      addToast(`Failed to update NCR status.`, "error");
     }
   };
 
@@ -145,19 +97,14 @@ export function NonConformance() {
     if (!selectedNcr) return;
 
     try {
-      const res = await qualityService.reviewNcr({
+      await qualityService.reviewNcr({
         id: selectedNcr.id,
         status: "REVIEWED",
         disposition: reviewDisposition,
         comments: reviewComments
       });
 
-      setNcrList(prev => prev.map(n => n.id === selectedNcr.id ? {
-        ...n,
-        status: "REVIEWED",
-        disposition: reviewDisposition
-      } : n));
-
+      await fetchNcrs();
       addToast(`Disposition '${reviewDisposition}' confirmed for ${selectedNcr.id}.`, "success");
       setShowReviewModal(false);
       setSelectedNcr(null);

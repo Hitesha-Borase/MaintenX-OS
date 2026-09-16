@@ -30,39 +30,11 @@ export function Investigations() {
     setLoading(true);
     try {
       const res = await qualityService.getInvestigations();
-      if (res && res.data && res.data.length > 0) {
-        setInvestigations(res.data);
-      } else {
-        setInvestigations([
-          {
-            id: "INV-901",
-            devId: "DEV-802",
-            title: "Root Cause Investigation: Pasteurizer Thermal Excursion",
-            finding: "Valve actuator seal fatigue caused brief steam diversion (drop to 81.4°C for 42s)",
-            action: "Preventative valve actuator rebuild & real-time telemetry threshold update",
-            status: "In Progress",
-            leadInvestigator: "Dr. Rachel Thorne",
-            targetDate: "2026-09-12",
-            createdAt: "2026-09-02"
-          }
-        ]);
-      }
+      const rawList = Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : Array.isArray(res?.data?.data) ? res.data.data : [];
+      setInvestigations(rawList);
     } catch (err) {
       console.error("Failed to fetch investigations", err);
-      addToast("Loaded local investigations", "info");
-      setInvestigations([
-        {
-          id: "INV-901",
-          devId: "DEV-802",
-          title: "Root Cause Investigation: Pasteurizer Thermal Excursion",
-          finding: "Valve actuator seal fatigue caused brief steam diversion (drop to 81.4°C for 42s)",
-          action: "Preventative valve actuator rebuild & real-time telemetry threshold update",
-          status: "In Progress",
-          leadInvestigator: "Dr. Rachel Thorne",
-          targetDate: "2026-09-12",
-          createdAt: "2026-09-02"
-        }
-      ]);
+      setInvestigations([]);
     } finally {
       setLoading(false);
     }
@@ -86,11 +58,7 @@ export function Investigations() {
       };
 
       await qualityService.addInvestigationFinding(payload);
-      setInvestigations(prev => prev.map(i => i.id === selectedInv.id ? {
-        ...i,
-        finding: findingText,
-        status: "In Progress"
-      } : i));
+      await fetchInvestigations();
 
       addToast(`Findings added to investigation ${selectedInv.id}.`, "success");
       setFindingText("");
@@ -111,17 +79,16 @@ export function Investigations() {
 
   const handleComplete = async (inv) => {
     try {
-      const res = await qualityService.completeInvestigation({
+      await qualityService.completeInvestigation({
         invId: inv.id,
         devId: inv.devId
       });
 
-      setInvestigations(prev => prev.map(i => i.id === inv.id ? { ...i, status: "Completed" } : i));
+      await fetchInvestigations();
       addToast(`Investigation ${inv.id} marked as completed. Deviation resolved.`, "success");
     } catch (err) {
       console.error(err);
-      setInvestigations(prev => prev.map(i => i.id === inv.id ? { ...i, status: "Completed" } : i));
-      addToast(`Investigation ${inv.id} marked as completed.`, "success");
+      addToast(`Failed to complete investigation.`, "error");
     }
   };
 

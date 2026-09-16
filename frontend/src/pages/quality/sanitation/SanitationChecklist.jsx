@@ -88,7 +88,7 @@ export function SanitationChecklist() {
   const [selectedLoop, setSelectedLoop] = useState("CIP Loop 01 (Rotary Filler & Intake Manifold)");
   const [sanitationType, setSanitationType] = useState("5-Step Full Thermal & Chemical CIP Cycle");
   const [operatorName, setOperatorName] = useState("Dr. Rachel Thorne (QA Lead)");
-  const [steps, setSteps] = useState(INITIAL_SANITATION_STEPS);
+  const [steps, setSteps] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -545,8 +545,15 @@ export function SanitationChecklist() {
                       <input
                         type="text"
                         placeholder="Log titration / temp reading..."
-                        value={step.logValue}
+                        value={step.logValue || ""}
                         onChange={(e) => handleLogChange(step.id, e.target.value)}
+                        onBlur={async () => {
+                          try {
+                            await qualityService.saveSanitationProgress({ steps, loop: selectedLoop, protocol: sanitationType, operator: operatorName });
+                          } catch (e) {
+                            console.warn("Auto-save log error:", e);
+                          }
+                        }}
                         style={{
                           width: "100%",
                           minWidth: "220px",

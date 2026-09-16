@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import {
   ShieldCheck,
   Save,
@@ -47,10 +48,48 @@ const MODULES_LIST = [
 ];
 
 export function PermissionsMatrixPage() {
+  const location = useLocation();
+  const locationRole = location?.state?.roleId || location?.state?.roleCode;
+
   const { rolePermissions = {}, setRolePermissions, updatePermissionMatrix } = useMasterData();
   const { addToast } = useApp();
 
+  const [rolesList, setRolesList] = useState(ROLES_LIST);
+  const [selectedRoleKey, setSelectedRoleKey] = useState(locationRole || "plant_manager");
+  const [testModule, setTestModule] = useState("BOM / Recipe");
+  const [testAction, setTestAction] = useState("delete");
+  const [testResult, setTestResult] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isTesting, setIsTesting] = useState(false);
+
   useEffect(() => {
+    if (locationRole) {
+      setSelectedRoleKey(locationRole);
+    }
+  }, [locationRole]);
+
+  useEffect(() => {
+    adminService.getRoles()
+      .then((data) => {
+        const roles = Array.isArray(data) ? data : data?.roles;
+        if (roles && roles.length > 0) {
+          const formatted = roles.map((r) => ({
+            id: r.code || r.id,
+            label: r.name ? `${r.name}${r.description ? ` / ${r.description}` : ""}` : (r.label || r.code || r.id)
+          }));
+          const seen = new Set();
+          const unique = [];
+          for (const item of [...formatted, ...ROLES_LIST]) {
+            if (!seen.has(item.id)) {
+              seen.add(item.id);
+              unique.push(item);
+            }
+          }
+          setRolesList(unique);
+        }
+      })
+      .catch((err) => console.warn("Roles list load:", err.message));
+
     adminService.getPermissionMatrix()
       .then((matrix) => {
         if (matrix && typeof matrix === "object" && Object.keys(matrix).length > 0) {
@@ -61,13 +100,6 @@ export function PermissionsMatrixPage() {
       })
       .catch((err) => console.warn("Matrix load:", err.message));
   }, [setRolePermissions]);
-
-  const [selectedRoleKey, setSelectedRoleKey] = useState("plant_manager");
-  const [testModule, setTestModule] = useState("BOM / Recipe");
-  const [testAction, setTestAction] = useState("delete");
-  const [testResult, setTestResult] = useState(null);
-  const [isSaving, setIsSaving] = useState(false);
-  const [isTesting, setIsTesting] = useState(false);
 
   const currentRoleConfig = rolePermissions[selectedRoleKey] || { permissions: {} };
 
@@ -161,7 +193,7 @@ export function PermissionsMatrixPage() {
       >
         <StatCard
           title="Active Role Selected"
-          value={ROLES_LIST.find((r) => r.id === selectedRoleKey)?.label.split(" / ")[0] || "Plant Manager"}
+          value={rolesList.find((r) => r.id === selectedRoleKey)?.label.split(" / ")[0] || "Plant Manager"}
           unit="Role"
           trend={{ value: "Granular action rights active", isPositive: true, text: "" }}
           icon={ShieldCheck}
@@ -260,7 +292,7 @@ export function PermissionsMatrixPage() {
       <Card style={{ padding: "18px", width: "100%", boxSizing: "border-box", minWidth: 0 }}>
         {/* Role Selector Tabs */}
         <div style={{ display: "flex", gap: "6px", overflowX: "auto", paddingBottom: "14px", borderBottom: "1px solid var(--border-subtle)", marginBottom: "16px" }}>
-          {ROLES_LIST.map((role) => (
+          {rolesList.map((role) => (
             <button
               key={role.id}
               onClick={() => {

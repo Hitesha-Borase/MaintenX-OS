@@ -23,57 +23,11 @@ export function ApprovedReleases() {
     setLoading(true);
     try {
       const res = await qualityService.getApprovedReleases();
-      if (res && res.data && res.data.length > 0) {
-        setReleases(res.data);
-      } else {
-        setReleases([
-          { 
-            id: "REL-201", 
-            batch: "BAT-2026-0888", 
-            recipe: "Organic Orange Juice 1L Bottle", 
-            approvedBy: "Maria Santos (QA Lead)", 
-            date: "2026-08-30", 
-            status: "APPROVED",
-            pallets: "24 Pallets (28,800 Units)",
-            coaUrl: "COA-BAT-2026-0888.pdf"
-          },
-          { 
-            id: "REL-202", 
-            batch: "BAT-2026-0889", 
-            recipe: "Organic Orange Juice 500ml Bottle", 
-            approvedBy: "Maria Santos (QA Lead)", 
-            date: "2026-08-30", 
-            status: "APPROVED",
-            pallets: "18 Pallets (32,400 Units)",
-            coaUrl: "COA-BAT-2026-0889.pdf"
-          }
-        ]);
-      }
+      const raw = Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : Array.isArray(res?.data?.data) ? res.data.data : [];
+      setReleases(raw);
     } catch (err) {
-      console.error("Failed to load approved releases", err);
-      addToast("Loaded approved releases", "info");
-      setReleases([
-        { 
-          id: "REL-201", 
-          batch: "BAT-2026-0888", 
-          recipe: "Organic Orange Juice 1L Bottle", 
-          approvedBy: "Maria Santos (QA Lead)", 
-          date: "2026-08-30", 
-          status: "APPROVED",
-          pallets: "24 Pallets (28,800 Units)",
-          coaUrl: "COA-BAT-2026-0888.pdf"
-        },
-        { 
-          id: "REL-202", 
-          batch: "BAT-2026-0889", 
-          recipe: "Organic Orange Juice 500ml Bottle", 
-          approvedBy: "Maria Santos (QA Lead)", 
-          date: "2026-08-30", 
-          status: "APPROVED",
-          pallets: "18 Pallets (32,400 Units)",
-          coaUrl: "COA-BAT-2026-0889.pdf"
-        }
-      ]);
+      console.error("Failed to load approved releases from database", err);
+      setReleases([]);
     } finally {
       setLoading(false);
     }
@@ -85,13 +39,13 @@ export function ApprovedReleases() {
 
   const handleToggleStatus = async (r) => {
     const nextStatus = r.status === "APPROVED" ? "REVOKED" : "APPROVED";
-    setReleases(prev => prev.map(item => item.id === r.id ? { ...item, status: nextStatus } : item));
     try {
       await qualityService.toggleApprovedRelease({ id: r.id, batch: r.batch, status: r.status });
       addToast(`Batch ${r.batch} authorization marked as ${nextStatus}.`, nextStatus === "APPROVED" ? "success" : "warning");
+      await fetchApproved();
     } catch (err) {
       console.warn("Toggle release status error:", err);
-      addToast(`Batch ${r.batch} authorization marked as ${nextStatus}.`, nextStatus === "APPROVED" ? "success" : "warning");
+      addToast("Failed to update status in database", "error");
     }
   };
 

@@ -102,9 +102,7 @@ export function QualityHolds() {
         await qualityService.reviewHold({ holdId: selectedHold.id, action: reviewAction, notes: reviewNotes });
       }
 
-      const nextStatus = isRelease ? "RELEASED" : reviewAction === "REWORK" ? "REWORK_SCHEDULED" : "UNDER_REVIEW";
-      setHolds(prev => prev.map(h => h.id === selectedHold.id ? { ...h, status: nextStatus } : h));
-
+      await fetchHolds();
       addToast(`Hold ${selectedHold.id} updated: ${nextStatus}.`, "success");
       setShowReviewModal(false);
       setSelectedHold(null);

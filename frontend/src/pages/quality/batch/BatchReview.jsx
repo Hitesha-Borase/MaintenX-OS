@@ -28,113 +28,11 @@ export function BatchReview() {
     setLoading(true);
     try {
       const res = await qualityService.getBatchReviews();
-      if (res && res.data && res.data.length > 0) {
-        setBatches(res.data);
-      } else {
-        setBatches([
-          {
-            id: "BAT-2026-0890",
-            batchNumber: "BAT-2026-0890",
-            recipeName: "Sparkling Citrus Soda 500ml",
-            currentStep: "Phase 4: Carbonation & Chilling",
-            stepNumber: 4,
-            totalSteps: 5,
-            progressPercent: 75,
-            line: "Line 1 (Aseptic Bottling)",
-            ccpStatus: "PASSED (83.5°C)",
-            qaStatus: "QA REVIEW IN PROGRESS"
-          },
-          {
-            id: "BAT-2026-0891",
-            batchNumber: "BAT-2026-0891",
-            recipeName: "Cold Brew Espresso 330ml Can",
-            currentStep: "Phase 2: Syrup Blending & Extraction",
-            stepNumber: 2,
-            totalSteps: 6,
-            progressPercent: 33,
-            line: "Line 2 (High-Speed Canner)",
-            ccpStatus: "IN SPEC",
-            qaStatus: "SAMPLING SCHEDULED"
-          },
-          {
-            id: "BAT-2026-0892",
-            batchNumber: "BAT-2026-0892",
-            recipeName: "Sparkling Blood Orange Soda",
-            currentStep: "Phase 1: Water Treatment & Mineral Dosing",
-            stepNumber: 1,
-            totalSteps: 5,
-            progressPercent: 0,
-            line: "Line 1 (Aseptic Bottling)",
-            ccpStatus: "PRE-OP CLEARED",
-            qaStatus: "PENDING COMMENCEMENT"
-          },
-          {
-            id: "BAT-2026-0893",
-            batchNumber: "BAT-2026-0893",
-            recipeName: "Almond Milk Latte Carton 250ml",
-            currentStep: "Phase 1: Raw Emulsification",
-            stepNumber: 1,
-            totalSteps: 6,
-            progressPercent: 0,
-            line: "Line 3 (Tetra Pak)",
-            ccpStatus: "ALLERGEN AUDITED",
-            qaStatus: "LINE CLEARED"
-          },
-          {
-            id: "BAT-2026-0894",
-            batchNumber: "BAT-2026-0894",
-            recipeName: "Premium Tonic Water Craft Keg 50L",
-            currentStep: "Phase 1: Botanical Infusion",
-            stepNumber: 1,
-            totalSteps: 4,
-            progressPercent: 0,
-            line: "Line 4 (Kegging)",
-            ccpStatus: "TANK SANITIZED",
-            qaStatus: "STANDBY"
-          }
-        ]);
-      }
+      const rawList = Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : Array.isArray(res?.data?.data) ? res.data.data : [];
+      setBatches(rawList);
     } catch (err) {
       console.error("Failed to load batches", err);
-      addToast("Loaded local batch reviews", "info");
-      setBatches([
-        {
-          id: "BAT-2026-0890",
-          batchNumber: "BAT-2026-0890",
-          recipeName: "Sparkling Citrus Soda 500ml",
-          currentStep: "Phase 4: Carbonation & Chilling",
-          stepNumber: 4,
-          totalSteps: 5,
-          progressPercent: 75,
-          line: "Line 1 (Aseptic Bottling)",
-          ccpStatus: "PASSED (83.5°C)",
-          qaStatus: "QA REVIEW IN PROGRESS"
-        },
-        {
-          id: "BAT-2026-0891",
-          batchNumber: "BAT-2026-0891",
-          recipeName: "Cold Brew Espresso 330ml Can",
-          currentStep: "Phase 2: Syrup Blending & Extraction",
-          stepNumber: 2,
-          totalSteps: 6,
-          progressPercent: 33,
-          line: "Line 2 (High-Speed Canner)",
-          ccpStatus: "IN SPEC",
-          qaStatus: "SAMPLING SCHEDULED"
-        },
-        {
-          id: "BAT-2026-0892",
-          batchNumber: "BAT-2026-0892",
-          recipeName: "Sparkling Blood Orange Soda",
-          currentStep: "Phase 1: Water Treatment & Mineral Dosing",
-          stepNumber: 1,
-          totalSteps: 5,
-          progressPercent: 0,
-          line: "Line 1 (Aseptic Bottling)",
-          ccpStatus: "PRE-OP CLEARED",
-          qaStatus: "PENDING COMMENCEMENT"
-        }
-      ]);
+      setBatches([]);
     } finally {
       setLoading(false);
     }
@@ -161,18 +59,14 @@ export function BatchReview() {
 
     setSigning(true);
     try {
-      const res = await qualityService.authorizeRelease({
+      await qualityService.authorizeRelease({
         batchId: selectedBatch.id || selectedBatch.batchNumber,
         disposition: "RELEASED",
         signaturePin: signaturePin || "1234",
         comments: "Authorized batch disposition in compliance with 21 CFR Part 11"
       });
 
-      setBatches(prev => prev.map(b => (b.id === selectedBatch.id || b.batchNumber === selectedBatch.batchNumber) ? {
-        ...b,
-        qaStatus: "RELEASED",
-        progressPercent: 100
-      } : b));
+      await fetchBatches();
 
       addToast(`Batch ${selectedBatch.batchNumber || selectedBatch.id} digitally signed & released to warehouse.`, "success");
       setShowSignModal(false);
