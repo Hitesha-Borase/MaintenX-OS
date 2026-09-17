@@ -225,6 +225,20 @@ export function BreakdownList() {
       const currentSeverity = getSeverity(b);
       const currentStage = getBreakdownStage(b);
       const matchesStatus = statusFilter === "ALL" || currentStatus === statusFilter;
+      const matchesSeverity = severityFilter === "ALL" || currentSeverity === severityFilter;
+      const matchesStage = stageFilter === "ALL" || currentStage === stageFilter;
+      const query = searchQuery.toLowerCase().trim();
+      const matchesSearch =
+        !query ||
+        b.id?.toLowerCase().includes(query) ||
+        b.assetName?.toLowerCase().includes(query) ||
+        b.assetId?.toLowerCase().includes(query) ||
+        b.symptom?.toLowerCase().includes(query) ||
+        b.failureCategory?.toLowerCase().includes(query) ||
+        b.failureCode?.toLowerCase().includes(query) ||
+        b.technician?.toLowerCase().includes(query) ||
+        b.line?.toLowerCase().includes(query);
+
       return matchesStatus && matchesSeverity && matchesStage && matchesSearch;
     });
   }, [breakdowns, statusFilter, severityFilter, stageFilter, searchQuery]);
@@ -807,6 +821,21 @@ export function BreakdownList() {
                 <option value="In Progress">In Progress</option>
                 <option value="Resolved">Resolved</option>
                 <option value="Closed">Closed</option>
+              </select>
+            </div>
+
+            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <span style={{ fontSize: "12px", color: "var(--text-muted)", fontWeight: 600 }}>SEVERITY:</span>
+              <select
+                className="form-select"
+                value={severityFilter}
+                onChange={(e) => setSeverityFilter(e.target.value)}
+                style={{ fontSize: "12px", height: "36px", width: "auto" }}
+              >
+                <option value="ALL">All Severities</option>
+                <option value="Critical">Critical</option>
+                <option value="High">High</option>
+                <option value="Medium">Medium</option>
               </select>
             </div>
 
