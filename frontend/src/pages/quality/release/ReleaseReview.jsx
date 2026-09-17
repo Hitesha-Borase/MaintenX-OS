@@ -26,21 +26,7 @@ export function ReleaseReview() {
   const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const loadBatchReview = async () => {
-      setLoading(true);
-      try {
-        await qualityService.getReleaseQueue();
-      } catch (err) {
-        console.warn("Release review load fallback:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadBatchReview();
-  }, [releaseBatch]);
-
-  const batchInfo = {
+  const [batchInfo, setBatchInfo] = useState({
     id: releaseBatch,
     recipe: itemData.sku || "Finished Product SKU",
     line: itemData.line || "Line 1 (Main Production Line)",
@@ -49,7 +35,35 @@ export function ReleaseReview() {
     allergen: itemData.allergen || "Allergen Clear (0 ppm)",
     preOp: "PASSED (100% Clean)",
     deviations: "No Open Critical Deviations"
-  };
+  });
+
+  useEffect(() => {
+    const loadBatchReview = async () => {
+      setLoading(true);
+      try {
+        const res = await qualityService.getReleaseDossier(releaseBatch);
+        if (res?.data) {
+          setBatchInfo(prev => ({
+            ...prev,
+            ...res.data,
+            id: res.data.id || releaseBatch,
+            recipe: res.data.recipe || prev.recipe,
+            line: res.data.line || prev.line,
+            ccpTemp: res.data.ccpTemp || prev.ccpTemp,
+            brix: res.data.brix || prev.brix,
+            allergen: res.data.allergen || prev.allergen,
+            preOp: res.data.preOp || prev.preOp,
+            deviations: res.data.deviations || prev.deviations
+          }));
+        }
+      } catch (err) {
+        console.warn("Release review load fallback:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadBatchReview();
+  }, [releaseBatch]);
 
   const handleApprove = async (e) => {
     if (e) e.preventDefault();

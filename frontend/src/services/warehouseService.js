@@ -64,6 +64,36 @@ export const warehouseService = {
     return apiClient.get("/warehouse/dashboard");
   },
 
+  // Material Processing & Packaging Flow Endpoints
+  async getFlowSummary() {
+    return apiClient.get("/warehouse/flow-summary");
+  },
+
+  async issueRawMaterialForProcessing(data) {
+    return apiClient.post("/warehouse/processing/issue-raw-material", data);
+  },
+
+  async getWipLots() {
+    return apiClient.get("/warehouse/wip-lots");
+  },
+
+  async createWipLot(data) {
+    return apiClient.post("/warehouse/wip-lots", data);
+  },
+
+  async stagePackagingMaterial(data) {
+    return apiClient.post("/warehouse/packaging/stage-material", data);
+  },
+
+  async getSeparatedMovements(category) {
+    const params = category ? { category } : {};
+    return apiClient.get("/warehouse/movements/separated", { params });
+  },
+
+  async createPackagingFinishedGoods(data) {
+    return apiClient.post("/warehouse/packaging/create-finished-goods", data);
+  },
+
   // Inbound Receiving Endpoints
   async getIncomingDeliveries() {
     return apiClient.get("/warehouse/receiving/incoming");

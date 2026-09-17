@@ -54,6 +54,10 @@ export const qualityService = {
     return apiClient.get("/quality/release/metrics");
   },
 
+  async getReleaseDossier(batchId) {
+    return apiClient.get(`/quality/release/review/${batchId}`);
+  },
+
   async authorizeRelease(releaseData) {
     return apiClient.post("/quality/release/authorize", releaseData);
   },
@@ -100,6 +104,14 @@ export const qualityService = {
 
   async getAllergenAudits() {
     return apiClient.get("/quality/sanitation/allergen");
+  },
+
+  async createAllergenAudit(auditData) {
+    return apiClient.post("/quality/sanitation/allergen", auditData);
+  },
+
+  async deleteAllergenAudit(id) {
+    return apiClient.delete(`/quality/sanitation/allergen/${id}`);
   },
 
   async clearAllergenAudit(auditData) {

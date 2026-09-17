@@ -25,38 +25,7 @@ export function Notifications() {
   const [activeTab, setActiveTab] = useState("All");
   const [loading, setLoading] = useState(false);
 
-  const [notifications, setNotifications] = useState([
-    { 
-      id: "NOTIF-01", 
-      title: "CCP Excursion Alert", 
-      msg: "Pasteurizer HTST temp dropped to 82.9°C on Line 1. Batch BAT-2026-0890 placed on HOLD.", 
-      time: "2 min ago", 
-      path: "/quality/events/holds",
-      type: "danger",
-      badge: "CRITICAL",
-      read: false
-    },
-    { 
-      id: "NOTIF-02", 
-      title: "Batch Ready for QA Release", 
-      msg: "Batch BAT-2026-0888 is awaiting human QA sign-off before dispatch.", 
-      time: "1 hour ago", 
-      path: "/quality/release/queue",
-      type: "primary",
-      badge: "RELEASE",
-      read: false
-    },
-    { 
-      id: "NOTIF-03", 
-      title: "Investigation Finding Recorded", 
-      msg: "Dr. Rachel Thorne submitted root cause findings for thermal probe drift.", 
-      time: "3 hours ago", 
-      path: "/quality/rca-capa",
-      type: "primary",
-      badge: "INVESTIGATION",
-      read: true
-    }
-  ]);
+  const [notifications, setNotifications] = useState([]);
 
   const loadNotifications = async () => {
     try {
@@ -64,9 +33,12 @@ export function Notifications() {
       const res = await qualityService.getNotifications();
       if (res?.data && Array.isArray(res.data)) {
         setNotifications(res.data);
+      } else {
+        setNotifications([]);
       }
     } catch (err) {
       console.warn("Notifications fallback:", err);
+      setNotifications([]);
     } finally {
       setLoading(false);
     }
@@ -87,44 +59,40 @@ export function Notifications() {
   const handleMarkRead = async (id) => {
     try {
       await qualityService.markNotificationRead({ id });
-      setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+      await loadNotifications();
       addToast("Notification marked as read.", "success");
     } catch (err) {
-      setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
-      addToast("Notification marked as read.", "success");
+      addToast("Failed to mark notification as read", "error");
     }
   };
 
   const handleDelete = async (id) => {
     try {
       await qualityService.clearNotifications({ id });
-      setNotifications(prev => prev.filter(n => n.id !== id));
-      addToast("Notification deleted.", "info");
+      await loadNotifications();
+      addToast("Notification removed from database.", "info");
     } catch (err) {
-      setNotifications(prev => prev.filter(n => n.id !== id));
-      addToast("Notification deleted.", "info");
+      addToast("Failed to delete notification", "error");
     }
   };
 
   const handleMarkAllRead = async () => {
     try {
       await qualityService.markNotificationRead({ id: "ALL" });
-      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      await loadNotifications();
       addToast("All notifications marked as read.", "success");
     } catch (err) {
-      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-      addToast("All notifications marked as read.", "success");
+      addToast("Failed to mark all as read", "error");
     }
   };
 
   const handleClearAll = async () => {
     try {
       await qualityService.clearNotifications({ id: "ALL" });
-      setNotifications([]);
-      addToast("All notifications cleared.", "info");
+      await loadNotifications();
+      addToast("All notifications cleared from database.", "info");
     } catch (err) {
-      setNotifications([]);
-      addToast("All notifications cleared.", "info");
+      addToast("Failed to clear notifications", "error");
     }
   };
 

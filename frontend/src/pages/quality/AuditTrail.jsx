@@ -25,63 +25,7 @@ export function AuditTrail() {
   const [filterType, setFilterType] = useState("ALL");
   const [selectedAuditRecord, setSelectedAuditRecord] = useState(null);
 
-  const [auditEvents, setAuditEvents] = useState([
-    { 
-      id: "AUD-9901", 
-      user: "Maria Santos (QA Lead)", 
-      action: "Blocked Batch BAT-2026-0890 — CCP excursion", 
-      entityType: "BATCH_HOLD",
-      entityId: "BAT-2026-0890",
-      timestamp: "2026-08-31 14:32:18", 
-      ipAddress: "192.168.1.104",
-      verified: true,
-      hash: "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-    },
-    { 
-      id: "AUD-9902", 
-      user: "Maria Santos (QA Lead)", 
-      action: "Approved Release BAT-2026-0888 (21 CFR Part 11 Sign-Off)", 
-      entityType: "BATCH_RELEASE",
-      entityId: "BAT-2026-0888",
-      timestamp: "2026-08-31 12:10:44", 
-      ipAddress: "192.168.1.104",
-      verified: true,
-      hash: "sha256:7f83b1657ff1fc53b92dc18148a1d65dfc2d4b1fa3d677284addd200126d9069"
-    },
-    { 
-      id: "AUD-9903", 
-      user: "Maria Santos (QA Lead)", 
-      action: "Signed Pre-Op Line Clearance Checklist Line 1", 
-      entityType: "LINE_CLEARANCE",
-      entityId: "LINE-1",
-      timestamp: "2026-08-31 07:45:00", 
-      ipAddress: "192.168.1.104",
-      verified: true,
-      hash: "sha256:6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b"
-    },
-    { 
-      id: "AUD-9904", 
-      user: "Dr. Rachel Thorne (QA Lead)", 
-      action: "Authorized Batch Disposition (Scrap Lot HLD-401)", 
-      entityType: "DISPOSITION",
-      entityId: "HLD-401",
-      timestamp: "2026-08-30 16:22:15", 
-      ipAddress: "192.168.1.112",
-      verified: true,
-      hash: "sha256:d4735e3a265e16eee03f59718b9b5d03019c07d8b6c51f90da3a666eec13ab35"
-    },
-    { 
-      id: "AUD-9905", 
-      user: "Dr. Rachel Thorne (QA Lead)", 
-      action: "Approved Investigation INV-001 Finding & Root Cause", 
-      entityType: "INVESTIGATION",
-      entityId: "INV-001",
-      timestamp: "2026-08-30 11:15:30", 
-      ipAddress: "192.168.1.112",
-      verified: true,
-      hash: "sha256:4e07408562bedb8b60ce05c1decfe3ad16b72230967de01f640b7e4729b49fce"
-    }
-  ]);
+  const [auditEvents, setAuditEvents] = useState([]);
 
   const loadAuditTrail = async () => {
     try {
@@ -89,9 +33,12 @@ export function AuditTrail() {
       const res = await qualityService.getAuditTrail();
       if (res?.data && Array.isArray(res.data)) {
         setAuditEvents(res.data);
+      } else {
+        setAuditEvents([]);
       }
     } catch (err) {
       console.warn("Audit trail fallback:", err);
+      setAuditEvents([]);
     } finally {
       setLoading(false);
     }

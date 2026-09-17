@@ -420,8 +420,9 @@ export function RolesPage() {
                   variant="primary"
                   icon={ArrowRight}
                   onClick={() => {
+                    const rCode = viewingRole?.code || viewingRole?.id;
                     setViewingRole(null);
-                    navigate("/roles/permissions");
+                    navigate("/roles/permissions", { state: { roleId: rCode } });
                   }}
                 >
                   Inspect Matrix

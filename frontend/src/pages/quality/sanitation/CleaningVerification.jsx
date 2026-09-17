@@ -51,8 +51,10 @@ export function CleaningVerification() {
         loop: "CIP Loop 01",
         notes
       });
-      if (res.data?.data) {
-        setVerified(res.data.data.verified || true);
+      const updated = res.data?.data;
+      if (updated) {
+        setVerified(Boolean(updated.verified));
+        if (updated.notes !== undefined) setNotes(updated.notes);
       } else {
         setVerified(true);
       }
@@ -68,12 +70,20 @@ export function CleaningVerification() {
 
   const handleReset = async () => {
     try {
-      await qualityService.resetCleaningVerification();
+      const res = await qualityService.resetCleaningVerification();
+      const updated = res.data?.data;
+      if (updated) {
+        setVerified(Boolean(updated.verified));
+        setNotes(updated.notes || "");
+      } else {
+        setVerified(false);
+        setNotes("");
+      }
     } catch (err) {
       console.warn("Reset verification fallback:", err.message);
+      setVerified(false);
+      setNotes("");
     }
-    setVerified(false);
-    setNotes("");
     addToast("Verification form reset for new audit run.", "info");
   };
 

@@ -10,19 +10,12 @@ export function Downgrade() {
   const { addToast } = useApp();
   const navigate = useNavigate();
 
-  const [batches, setBatches] = useState([
-    { id: "BAT-2026-0890", name: "BAT-2026-0890 — Organic Orange Juice 1L (Hold: HLD-401)" },
-    { id: "BAT-2026-0888", name: "BAT-2026-0888 — Organic Orange Juice 1L" }
-  ]);
-  const [grades, setGrades] = useState([
-    { id: "Animal Feed Grade", label: "Animal Feed Grade (Certified Safe)", defaultNote: "Lot passed microbiological tests but failed aesthetic flavor/color profile for commercial retail." },
-    { id: "Industrial Cleaning / Vinegar Base", label: "Industrial Cleaning / Vinegar Fermentation Base", defaultNote: "Reclassified as raw industrial vinegar fermentation substrate." },
-    { id: "Compost / Bio-fertilizer Substrate", label: "Compost / Bio-fertilizer Substrate", defaultNote: "Safe organic material designated for agricultural composting." }
-  ]);
+  const [batches, setBatches] = useState([]);
+  const [grades, setGrades] = useState([]);
 
-  const [selectedBatch, setSelectedBatch] = useState("BAT-2026-0890");
-  const [downgradeTarget, setDowngradeTarget] = useState("Animal Feed Grade");
-  const [notes, setNotes] = useState("Lot passed microbiological tests but failed aesthetic flavor/color profile for commercial retail.");
+  const [selectedBatch, setSelectedBatch] = useState("");
+  const [downgradeTarget, setDowngradeTarget] = useState("");
+  const [notes, setNotes] = useState("");
   const [confirmed, setConfirmed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -66,18 +59,17 @@ export function Downgrade() {
     e.preventDefault();
     setSubmitting(true);
     try {
-      await qualityService.submitDowngrade({
+      const res = await qualityService.submitDowngrade({
         batch: selectedBatch,
         targetGrade: downgradeTarget,
         notes: notes
       });
 
       setConfirmed(true);
-      addToast(`Batch ${selectedBatch} downgraded to "${downgradeTarget}" by QA authorization.`, "success");
+      addToast(res?.data?.message || `Batch ${selectedBatch} downgraded to "${downgradeTarget}" in database.`, "success");
     } catch (err) {
       console.error(err);
-      setConfirmed(true);
-      addToast(`Batch ${selectedBatch} downgraded to "${downgradeTarget}".`, "success");
+      addToast(`Failed to record downgrade for batch ${selectedBatch}`, "error");
     } finally {
       setSubmitting(false);
     }

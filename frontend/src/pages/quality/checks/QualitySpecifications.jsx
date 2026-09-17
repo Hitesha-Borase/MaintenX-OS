@@ -61,24 +61,15 @@ export function QualitySpecifications() {
 
     try {
       const res = await qualityService.toggleQualitySpecCcp({ specId: id, parameter: paramName, ccp: currentCcp });
-      if (res.data?.data && Array.isArray(res.data.data)) {
-        setSpecs(res.data.data);
+      const list = Array.isArray(res.data?.data) ? res.data.data : Array.isArray(res.data?.data?.data) ? res.data.data.data : null;
+      if (list) {
+        setSpecs(list);
       } else {
-        setSpecs(prev => prev.map(s => {
-          if (s.id === id) {
-            return { ...s, ccp: nextCcp };
-          }
-          return s;
-        }));
+        await fetchSpecs();
       }
     } catch (err) {
       console.warn("Toggle spec error:", err);
-      setSpecs(prev => prev.map(s => {
-        if (s.id === id) {
-          return { ...s, ccp: nextCcp };
-        }
-        return s;
-      }));
+      await fetchSpecs();
     }
 
     if (currentCcp.startsWith("Yes")) {
@@ -102,14 +93,15 @@ export function QualitySpecifications() {
 
     try {
       const res = await qualityService.createQualitySpec(newSpec);
-      if (res.data?.data && Array.isArray(res.data.data)) {
-        setSpecs(res.data.data);
+      const list = Array.isArray(res.data?.data) ? res.data.data : Array.isArray(res.data?.data?.data) ? res.data.data.data : null;
+      if (list) {
+        setSpecs(list);
       } else {
-        setSpecs([...specs, { ...newSpec, id: Date.now() }]);
+        await fetchSpecs();
       }
     } catch (err) {
       console.warn("Create spec error:", err);
-      setSpecs([...specs, { ...newSpec, id: Date.now() }]);
+      await fetchSpecs();
     }
 
     setShowModal(false);

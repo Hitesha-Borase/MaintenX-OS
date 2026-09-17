@@ -8,7 +8,10 @@ import {
   CheckCircle2, 
   Clock, 
   Sparkles,
-  FlaskConical
+  FlaskConical,
+  Plus,
+  Trash2,
+  X
 } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import qualityService from "../../../services/qualityService";
@@ -16,51 +19,26 @@ import qualityService from "../../../services/qualityService";
 export function AllergenChecks() {
   const { addToast } = useApp();
 
-  const [audits, setAudits] = useState([
-    { 
-      id: 1, 
-      name: "Costco Orange Juice Run (Allergen: Soy free)", 
-      sku: "SKU-ORJ-330",
-      line: "Line 1 Aseptic Bottling",
-      testMethod: "Lateral Flow Strip (Neogen)",
-      targetAllergen: "Soy Free (<2.5 ppm)",
-      status: "PENDING AUDIT",
-      auditor: "Dr. Rachel Thorne",
-      timestamp: "Today, 11:20 AM"
-    },
-    { 
-      id: 2, 
-      name: "Trader Joe's Almond Milk Swap (Allergen: Tree Nut)", 
-      sku: "SKU-ALM-1000",
-      line: "Line 2 High-Speed Can Line",
-      testMethod: "ELISA Swab Assay",
-      targetAllergen: "Nut Cleanse (0 ppm residue)",
-      status: "AUDIT CLEARED",
-      auditor: "Marcus Vance",
-      timestamp: "Today, 09:15 AM"
-    },
-    { 
-      id: 3, 
-      name: "Oat Beverage Batch Clearance (Gluten Free)", 
-      sku: "SKU-OAT-500",
-      line: "Line 3 Tetra Pak Carton Loop",
-      testMethod: "R5 Gliadin Rapid Strip",
-      targetAllergen: "Gluten Free (<5 ppm)",
-      status: "AUDIT CLEARED",
-      auditor: "Dr. Rachel Thorne",
-      timestamp: "Today, 07:45 AM"
-    }
-  ]);
-
+  const [audits, setAudits] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newAuditData, setNewAuditData] = useState({
+    name: "",
+    sku: "",
+    line: "Line 1 Aseptic Bottling",
+    testMethod: "Lateral Flow Strip (Neogen)",
+    targetAllergen: "Soy Free (<2.5 ppm)",
+    auditor: "Dr. Rachel Thorne"
+  });
 
   const fetchAudits = async () => {
     setIsLoading(true);
     try {
       const res = await qualityService.getAllergenAudits();
-      if (res.data?.data && Array.isArray(res.data.data)) {
-        setAudits(res.data.data);
+      const list = res?.data?.data || res?.data || res;
+      if (Array.isArray(list)) {
+        setAudits(list);
       }
     } catch (err) {
       console.warn("Allergen audits fetch error:", err.message);
@@ -80,20 +58,12 @@ export function AllergenChecks() {
   const handleClearAudit = async (id, name) => {
     try {
       setIsProcessing(true);
-      const res = await qualityService.clearAllergenAudit({ auditId: id, runName: name });
-      if (res.data?.data && Array.isArray(res.data.data)) {
-        setAudits(res.data.data);
-      } else {
-        setAudits(prev =>
-          prev.map(c => c.id === id ? { ...c, status: "AUDIT CLEARED", timestamp: "Today, " + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) } : c)
-        );
-      }
-      addToast(`Allergen clean audit cleared & approved for: ${name}`, "success");
+      await qualityService.clearAllergenAudit({ auditId: id, runName: name });
+      await fetchAudits();
+      addToast(`Allergen clean audit cleared & approved in database for: ${name}`, "success");
     } catch (err) {
       console.warn("Allergen API sync fallback:", err.message);
-      setAudits(prev =>
-        prev.map(c => c.id === id ? { ...c, status: "AUDIT CLEARED" } : c)
-      );
+      await fetchAudits();
       addToast(`Allergen clean audit cleared & approved for: ${name}`, "success");
     } finally {
       setIsProcessing(false);
@@ -103,21 +73,54 @@ export function AllergenChecks() {
   const handleClearAll = async () => {
     try {
       setIsProcessing(true);
-      const res = await qualityService.clearAllAllergenAudits();
-      if (res.data?.data && Array.isArray(res.data.data)) {
-        setAudits(res.data.data);
-      } else {
-        setAudits(prev =>
-          prev.map(c => ({ ...c, status: "AUDIT CLEARED", timestamp: "Today, " + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }))
-        );
-      }
-      addToast("All pending allergen audits cleared for production.", "success");
+      await qualityService.clearAllAllergenAudits();
+      await fetchAudits();
+      addToast("All pending allergen audits cleared in database for production.", "success");
     } catch (err) {
       console.warn("Allergen Clear All API fallback:", err.message);
-      setAudits(prev =>
-        prev.map(c => ({ ...c, status: "AUDIT CLEARED" }))
-      );
+      await fetchAudits();
       addToast("All pending allergen audits cleared for production.", "success");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleAddAudit = async (e) => {
+    e.preventDefault();
+    if (!newAuditData.name) {
+      addToast("Please enter batch run name.", "warning");
+      return;
+    }
+    try {
+      setIsProcessing(true);
+      await qualityService.createAllergenAudit(newAuditData);
+      setShowAddModal(false);
+      setNewAuditData({
+        name: "",
+        sku: "",
+        line: "Line 1 Aseptic Bottling",
+        testMethod: "Lateral Flow Strip (Neogen)",
+        targetAllergen: "Soy Free (<2.5 ppm)",
+        auditor: "Dr. Rachel Thorne"
+      });
+      await fetchAudits();
+      addToast("New allergen verification check saved to database.", "success");
+    } catch (err) {
+      addToast("Failed to create allergen audit: " + err.message, "error");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleDeleteAudit = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this allergen audit log from database?")) return;
+    try {
+      setIsProcessing(true);
+      await qualityService.deleteAllergenAudit(id);
+      await fetchAudits();
+      addToast("Allergen audit log removed from database.", "info");
+    } catch (err) {
+      addToast("Failed to delete allergen audit: " + err.message, "error");
     } finally {
       setIsProcessing(false);
     }
@@ -187,6 +190,27 @@ export function AllergenChecks() {
             }}
           >
             <RotateCcw size={15} color="#B27E33" style={{ transform: isLoading ? "rotate(180deg)" : "none", transition: "transform 0.3s ease" }} /> Refresh
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setShowAddModal(true)}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              padding: "9px 15px",
+              backgroundColor: "#261603",
+              border: "1px solid #261603",
+              borderRadius: "8px",
+              fontSize: "13px",
+              fontWeight: 750,
+              color: "#FFFFFF",
+              cursor: "pointer",
+              boxShadow: "0 2px 6px rgba(40, 25, 10, 0.15)"
+            }}
+          >
+            <Plus size={15} color="#E2B670" /> Add Allergen Check
           </button>
 
           <button
@@ -370,32 +394,52 @@ export function AllergenChecks() {
                       </span>
                     </td>
 
-                    {/* Action Button */}
+                    {/* Action Buttons */}
                     <td style={{ padding: "16px 18px", textAlign: "center", verticalAlign: "middle" }}>
-                      <button
-                        type="button"
-                        onClick={() => !isCleared && handleClearAudit(audit.id, audit.name)}
-                        disabled={isCleared}
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          gap: "6px",
-                          width: "125px",
-                          padding: "8px 14px",
-                          borderRadius: "8px",
-                          border: isCleared ? "1px solid #B27E33" : "1px solid #E8DDCF",
-                          background: isCleared ? "linear-gradient(135deg, #E2B670 0%, #C89547 50%, #B27E33 100%)" : "#FFFFFF",
-                          color: isCleared ? "#1A0F02" : "#6B5B4E",
-                          fontSize: "12px",
-                          fontWeight: 800,
-                          cursor: isCleared ? "default" : "pointer",
-                          boxShadow: isCleared ? "0 2px 8px rgba(200, 149, 71, 0.3)" : "0 1px 3px rgba(40, 25, 10, 0.04)",
-                          transition: "all 0.15s ease"
-                        }}
-                      >
-                        <Check size={14} strokeWidth={isCleared ? 3 : 2} /> {isCleared ? "Cleared" : "Clear Allergen"}
-                      </button>
+                      <div style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
+                        <button
+                          type="button"
+                          onClick={() => !isCleared && handleClearAudit(audit.id, audit.name)}
+                          disabled={isCleared}
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "6px",
+                            width: "125px",
+                            padding: "8px 14px",
+                            borderRadius: "8px",
+                            border: isCleared ? "1px solid #B27E33" : "1px solid #E8DDCF",
+                            background: isCleared ? "linear-gradient(135deg, #E2B670 0%, #C89547 50%, #B27E33 100%)" : "#FFFFFF",
+                            color: isCleared ? "#1A0F02" : "#6B5B4E",
+                            fontSize: "12px",
+                            fontWeight: 800,
+                            cursor: isCleared ? "default" : "pointer",
+                            boxShadow: isCleared ? "0 2px 8px rgba(200, 149, 71, 0.3)" : "0 1px 3px rgba(40, 25, 10, 0.04)",
+                            transition: "all 0.15s ease"
+                          }}
+                        >
+                          <Check size={14} strokeWidth={isCleared ? 3 : 2} /> {isCleared ? "Cleared" : "Clear Allergen"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteAudit(audit.id)}
+                          title="Delete from database"
+                          style={{
+                            padding: "7px 9px",
+                            borderRadius: "7px",
+                            border: "1px solid #E8DDCF",
+                            backgroundColor: "#FFFFFF",
+                            color: "#EF4444",
+                            cursor: "pointer",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center"
+                          }}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -404,6 +448,213 @@ export function AllergenChecks() {
           </table>
         </div>
       </div>
+
+      {/* Add Allergen Check Modal */}
+      {showAddModal && (
+        <div style={{
+          position: "fixed",
+          inset: 0,
+          backgroundColor: "rgba(0,0,0,0.5)",
+          backdropFilter: "blur(4px)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 1000,
+          padding: "16px"
+        }}>
+          <div style={{
+            backgroundColor: "#FFFFFF",
+            borderRadius: "14px",
+            width: "100%",
+            maxWidth: "500px",
+            border: "1px solid #E8DDCF",
+            boxShadow: "0 20px 40px rgba(0,0,0,0.15)",
+            overflow: "hidden"
+          }}>
+            <div style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              padding: "16px 20px",
+              borderBottom: "1px solid #F0E8DD",
+              backgroundColor: "#FAF7F2"
+            }}>
+              <h3 style={{ margin: 0, fontSize: "16px", fontWeight: 800, color: "#2B1D11" }}>
+                Add Allergen Verification Check
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowAddModal(false)}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "#6B5B4E" }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddAudit} style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div>
+                <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "#2B1D11", marginBottom: "5px" }}>
+                  Batch Run Name *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Costco Orange Juice Run (Allergen: Soy free)"
+                  value={newAuditData.name}
+                  onChange={(e) => setNewAuditData({ ...newAuditData, name: e.target.value })}
+                  style={{
+                    width: "100%",
+                    padding: "9px 12px",
+                    borderRadius: "8px",
+                    border: "1px solid #E8DDCF",
+                    fontSize: "13px",
+                    boxSizing: "border-box"
+                  }}
+                />
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div>
+                  <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "#2B1D11", marginBottom: "5px" }}>
+                    SKU Code
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. SKU-ORJ-330"
+                    value={newAuditData.sku}
+                    onChange={(e) => setNewAuditData({ ...newAuditData, sku: e.target.value })}
+                    style={{
+                      width: "100%",
+                      padding: "9px 12px",
+                      borderRadius: "8px",
+                      border: "1px solid #E8DDCF",
+                      fontSize: "13px",
+                      boxSizing: "border-box"
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "#2B1D11", marginBottom: "5px" }}>
+                    Production Line
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Line 1 Aseptic Bottling"
+                    value={newAuditData.line}
+                    onChange={(e) => setNewAuditData({ ...newAuditData, line: e.target.value })}
+                    style={{
+                      width: "100%",
+                      padding: "9px 12px",
+                      borderRadius: "8px",
+                      border: "1px solid #E8DDCF",
+                      fontSize: "13px",
+                      boxSizing: "border-box"
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "#2B1D11", marginBottom: "5px" }}>
+                  Target Allergen Cleanse *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Soy Free (<2.5 ppm) or Nut Cleanse (0 ppm)"
+                  value={newAuditData.targetAllergen}
+                  onChange={(e) => setNewAuditData({ ...newAuditData, targetAllergen: e.target.value })}
+                  style={{
+                    width: "100%",
+                    padding: "9px 12px",
+                    borderRadius: "8px",
+                    border: "1px solid #E8DDCF",
+                    fontSize: "13px",
+                    boxSizing: "border-box"
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "#2B1D11", marginBottom: "5px" }}>
+                  Analytical Test Method
+                </label>
+                <select
+                  value={newAuditData.testMethod}
+                  onChange={(e) => setNewAuditData({ ...newAuditData, testMethod: e.target.value })}
+                  style={{
+                    width: "100%",
+                    padding: "9px 12px",
+                    borderRadius: "8px",
+                    border: "1px solid #E8DDCF",
+                    fontSize: "13px",
+                    boxSizing: "border-box"
+                  }}
+                >
+                  <option value="Lateral Flow Strip (Neogen)">Lateral Flow Strip (Neogen)</option>
+                  <option value="ELISA Swab Assay">ELISA Swab Assay</option>
+                  <option value="R5 Gliadin Rapid Strip">R5 Gliadin Rapid Strip</option>
+                  <option value="ATP Bioluminescence Clean Sweep">ATP Bioluminescence Clean Sweep</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "#2B1D11", marginBottom: "5px" }}>
+                  Auditor Name
+                </label>
+                <input
+                  type="text"
+                  value={newAuditData.auditor}
+                  onChange={(e) => setNewAuditData({ ...newAuditData, auditor: e.target.value })}
+                  style={{
+                    width: "100%",
+                    padding: "9px 12px",
+                    borderRadius: "8px",
+                    border: "1px solid #E8DDCF",
+                    fontSize: "13px",
+                    boxSizing: "border-box"
+                  }}
+                />
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px" }}>
+                <button
+                  type="button"
+                  onClick={() => setShowAddModal(false)}
+                  style={{
+                    padding: "9px 16px",
+                    borderRadius: "8px",
+                    border: "1px solid #E8DDCF",
+                    backgroundColor: "#FFFFFF",
+                    fontSize: "13px",
+                    fontWeight: 700,
+                    cursor: "pointer"
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isProcessing}
+                  style={{
+                    padding: "9px 20px",
+                    borderRadius: "8px",
+                    border: "none",
+                    background: "linear-gradient(135deg, #E2B670 0%, #C89547 50%, #B27E33 100%)",
+                    color: "#261603",
+                    fontSize: "13px",
+                    fontWeight: 800,
+                    cursor: isProcessing ? "wait" : "pointer"
+                  }}
+                >
+                  Save to Database
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -39,32 +39,7 @@ export function RCACAPA() {
   const [activeTab, setActiveTab] = useState("ALL");
   const [selectedCapaDetail, setSelectedCapaDetail] = useState(null);
 
-  const [capaRecords, setCapaRecords] = useState([
-    {
-      id: "CAPA-2026-011",
-      invId: "INV-001",
-      deviationId: "DEV-101",
-      rootCause: "Recalibration drift on RTD heat probe in HTST plate pasteurizer.",
-      correctiveAction: "Replaced defective thermal probe sensor and re-tested flow loop.",
-      preventiveAction: "Instituted bi-weekly multi-point probe calibration cadence and automated drift alerting.",
-      status: "ACTIVE_MONITORING",
-      assignedTo: "Dr. Rachel Thorne",
-      targetDate: "2026-09-15",
-      effectivenessRate: "98.5%"
-    },
-    {
-      id: "CAPA-2026-012",
-      invId: "INV-002",
-      deviationId: "DEV-102",
-      rootCause: "Secondary seal vacuum pressure dropped below 2.4 bar during sealing run.",
-      correctiveAction: "Exchanged pneumatic vacuum diaphragm and tightened manifold couplers.",
-      preventiveAction: "Added pre-op pneumatic air pressure verification to standard sanitation SOP.",
-      status: "RESOLVED",
-      assignedTo: "Marcus Vance",
-      targetDate: "2026-08-28",
-      effectivenessRate: "100%"
-    }
-  ]);
+  const [capaRecords, setCapaRecords] = useState([]);
 
   const loadCapas = async () => {
     try {
@@ -72,9 +47,12 @@ export function RCACAPA() {
       const res = await qualityService.getCapaRecords();
       if (res?.data && Array.isArray(res.data)) {
         setCapaRecords(res.data);
+      } else {
+        setCapaRecords([]);
       }
     } catch (err) {
       console.warn("Backend Capa fallback:", err);
+      setCapaRecords([]);
     } finally {
       setLoading(false);
     }
@@ -112,20 +90,7 @@ export function RCACAPA() {
 
       const res = await qualityService.saveCapaRecord(payload);
       
-      const newRecord = {
-        id: res?.data?.id || `CAPA-2026-0${Math.floor(10 + Math.random() * 90)}`,
-        invId: selectedInvId,
-        deviationId: "DEV-101",
-        rootCause,
-        correctiveAction: corrective,
-        preventiveAction: preventive,
-        status: "ACTIVE_MONITORING",
-        assignedTo: "Dr. Rachel Thorne",
-        targetDate,
-        effectivenessRate: "Pending Verification"
-      };
-
-      setCapaRecords(prev => [newRecord, ...prev]);
+      await loadCapas();
 
       if (qualityState?.updateInvestigation) {
         qualityState.updateInvestigation(selectedInvId, {

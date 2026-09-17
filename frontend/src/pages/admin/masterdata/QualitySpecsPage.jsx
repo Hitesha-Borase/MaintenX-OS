@@ -209,6 +209,7 @@ export function QualitySpecsPage() {
       fetchLiveSpecs();
     } catch (err) {
       addToast(`Failed to update quality spec: ${err.message}`, "error");
+    }
   };
 
   return (

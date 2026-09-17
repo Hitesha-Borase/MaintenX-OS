@@ -23,11 +23,11 @@ export function BatchHistory() {
     setLoading(true);
     try {
       const res = await qualityService.getBatchHistory();
-      if (res?.data) {
-        setHistory(res.data);
-      }
+      const rawList = Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : Array.isArray(res?.data?.data) ? res.data.data : [];
+      setHistory(rawList);
     } catch (err) {
-      console.warn("Batch history fetch fallback:", err.message);
+      console.warn("Batch history fetch error:", err.message);
+      setHistory([]);
     } finally {
       setLoading(false);
     }
@@ -40,17 +40,13 @@ export function BatchHistory() {
   const handleToggleStatus = async (id, currentStatus) => {
     const nextStatus = currentStatus === "RELEASED" ? "ARCHIVED" : "RELEASED";
     try {
-      const res = await qualityService.toggleBatchHistory({ id, currentStatus });
-      if (res?.data?.data) {
-        setHistory(res.data.data);
-      } else {
-        setHistory(prev => prev.map(h => h.id === id ? { ...h, status: nextStatus } : h));
-      }
+      await qualityService.toggleBatchHistory({ id, currentStatus });
+      await fetchHistory();
+      addToast(`${id} status updated to ${nextStatus}.`, "success");
     } catch (err) {
       console.warn("Toggle batch status error:", err);
-      setHistory(prev => prev.map(h => h.id === id ? { ...h, status: nextStatus } : h));
+      addToast(`Failed to update batch status.`, "error");
     }
-    addToast(`${id} status updated to ${nextStatus}.`, "success");
   };
 
   const handleExportCSV = async () => {

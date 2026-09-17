@@ -25,48 +25,7 @@ export function Reports() {
   const [newReportName, setNewReportName] = useState("");
   const [newReportCategory, setNewReportCategory] = useState("CRITICAL_CONTROL_POINTS");
 
-  const [reports, setReports] = useState([
-    { 
-      id: "REP-001", 
-      name: "CCP Pasteurizer Temperature Log & Excursion Audit", 
-      date: "2026-08-31", 
-      category: "CRITICAL_CONTROL_POINTS",
-      format: "PDF / CSV",
-      status: "READY",
-      recordsCount: 142,
-      generatedBy: "System (Automated Daily)"
-    },
-    { 
-      id: "REP-002", 
-      name: "Batch Release & Reject Summary Report (Monthly)", 
-      date: "2026-08-31", 
-      category: "BATCH_RELEASE",
-      format: "PDF / Excel",
-      status: "READY",
-      recordsCount: 88,
-      generatedBy: "Maria Santos"
-    },
-    { 
-      id: "REP-003", 
-      name: "Quality Events, NCRs & Deviations Dossier", 
-      date: "2026-08-31", 
-      category: "EVENTS_NCR",
-      format: "PDF / CSV",
-      status: "READY",
-      recordsCount: 26,
-      generatedBy: "Dr. Rachel Thorne"
-    },
-    { 
-      id: "REP-004", 
-      name: "Sanitation CIP & Environmental Swab Compliance Log", 
-      date: "2026-08-30", 
-      category: "SANITATION_CIP",
-      format: "PDF / CSV",
-      status: "READY",
-      recordsCount: 54,
-      generatedBy: "Sanitation Lead"
-    }
-  ]);
+  const [reports, setReports] = useState([]);
 
   const loadReports = async () => {
     try {
@@ -74,9 +33,12 @@ export function Reports() {
       const res = await qualityService.getReports();
       if (res?.data && Array.isArray(res.data)) {
         setReports(res.data);
+      } else {
+        setReports([]);
       }
     } catch (err) {
       console.warn("Reports fallback:", err);
+      setReports([]);
     } finally {
       setLoading(false);
     }
@@ -121,18 +83,7 @@ export function Reports() {
 
       const res = await qualityService.generateReport(payload);
       
-      const newEntry = {
-        id: `REP-00${reports.length + 1}`,
-        name: newReportName,
-        date: new Date().toISOString().split("T")[0],
-        category: newReportCategory,
-        format: "PDF / CSV",
-        status: "READY",
-        recordsCount: 35,
-        generatedBy: "Dr. Rachel Thorne"
-      };
-
-      setReports(prev => [newEntry, ...prev]);
+      await loadReports();
       setShowGenerateModal(false);
       setNewReportName("");
       addToast(res?.data?.message || `Report "${newReportName}" generated successfully!`, "success");
