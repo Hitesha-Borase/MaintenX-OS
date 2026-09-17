@@ -22,34 +22,14 @@ export function DispositionRelease() {
     setLoading(true);
     try {
       const res = await qualityService.getDispositionRelease();
-      if (res && res.data && res.data.length > 0) {
+      if (res && res.data && Array.isArray(res.data)) {
         setHolds(res.data.filter(h => h.status === "Active" || h.status === "ACTIVE_HOLD" || h.status === "HOLD"));
       } else {
-        setHolds([
-          {
-            id: "HLD-401",
-            batch: "BAT-2026-0890",
-            lotNumber: "LOT-ORG-442",
-            reason: "Temperature Deviation (Excursion below 83.1°C)",
-            severity: "HIGH",
-            status: "Active",
-            date: "2026-09-02"
-          }
-        ]);
+        setHolds([]);
       }
     } catch (err) {
       console.error("Failed to load holds for disposition", err);
-      setHolds([
-        {
-          id: "HLD-401",
-          batch: "BAT-2026-0890",
-          lotNumber: "LOT-ORG-442",
-          reason: "Temperature Deviation (Excursion below 83.1°C)",
-          severity: "HIGH",
-          status: "Active",
-          date: "2026-09-02"
-        }
-      ]);
+      setHolds([]);
     } finally {
       setLoading(false);
     }
@@ -61,19 +41,19 @@ export function DispositionRelease() {
 
   const handleDecision = async (hold, decision) => {
     try {
-      await qualityService.authorizeDisposition({
+      const res = await qualityService.authorizeDisposition({
         holdId: hold.id,
         batch: hold.batch,
         decision: decision
       });
 
-      setHolds(prev => prev.filter(h => h.id !== hold.id));
-      const decisionLabel = decision === "RELEASE" ? "RELEASED" : decision === "SCRAP" ? "SCRAPPED" : "REWORK AUTHORIZED";
-      addToast(`Batch ${hold.batch} disposition: ${decisionLabel} by QA human sign-off.`, "success");
+      const decisionLabel = decision === "RELEASE" ? "RELEASED" : decision === "SCRAP" ? "SCRAPPED" : decision === "DOWNGRADE" ? "DOWNGRADED" : "REWORK AUTHORIZED";
+      addToast(res?.data?.message || `Batch ${hold.batch} disposition: ${decisionLabel} saved to database.`, "success");
+      await fetchHolds();
     } catch (err) {
       console.error(err);
-      setHolds(prev => prev.filter(h => h.id !== hold.id));
-      addToast(`Batch ${hold.batch} disposition: ${decision} completed.`, "success");
+      addToast(`Failed to record disposition for batch ${hold.batch}`, "error");
+      await fetchHolds();
     }
   };
 

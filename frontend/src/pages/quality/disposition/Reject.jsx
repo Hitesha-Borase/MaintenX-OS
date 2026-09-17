@@ -10,19 +10,12 @@ export function Reject() {
   const { addToast } = useApp();
   const navigate = useNavigate();
 
-  const [batches, setBatches] = useState([
-    { id: "BAT-2026-0890", name: "BAT-2026-0890 — Organic Orange Juice 1L (Hold: HLD-401)" },
-    { id: "BAT-2026-0888", name: "BAT-2026-0888 — Organic Orange Juice 1L" }
-  ]);
-  const [protocols, setProtocols] = useState([
-    { id: "ON_SITE_BIO_DRAIN", label: "On-Site Waste Water / Bio-Drain Neutralization", defaultNote: "Non-recoverable CCP pasteurizer excursion. Biological integrity compromised." },
-    { id: "CERTIFIED_LANDFILL", label: "Certified Industrial Waste Landfill Transfer", defaultNote: "Material unfit for reclamation. Scheduled for certified landfill transfer." },
-    { id: "HAZARDOUS_INCINERATION", label: "High-Temperature Incineration", defaultNote: "Complete thermal destruction under hazardous waste protocol." }
-  ]);
+  const [batches, setBatches] = useState([]);
+  const [protocols, setProtocols] = useState([]);
 
-  const [selectedBatch, setSelectedBatch] = useState("BAT-2026-0890");
-  const [rejectReason, setRejectReason] = useState("Non-recoverable CCP pasteurizer excursion. Biological integrity compromised.");
-  const [destructionProtocol, setDestructionProtocol] = useState("ON_SITE_BIO_DRAIN");
+  const [selectedBatch, setSelectedBatch] = useState("");
+  const [rejectReason, setRejectReason] = useState("");
+  const [destructionProtocol, setDestructionProtocol] = useState("");
   const [confirmed, setConfirmed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -66,18 +59,17 @@ export function Reject() {
     e.preventDefault();
     setSubmitting(true);
     try {
-      await qualityService.submitReject({
+      const res = await qualityService.submitReject({
         batch: selectedBatch,
         reason: rejectReason,
         destructionProtocol: destructionProtocol
       });
 
       setConfirmed(true);
-      addToast(`Batch ${selectedBatch} REJECTED and marked for scrap/destruction.`, "warning");
+      addToast(res?.data?.message || `Batch ${selectedBatch} REJECTED and marked for scrap in database.`, "warning");
     } catch (err) {
       console.error(err);
-      setConfirmed(true);
-      addToast(`Batch ${selectedBatch} REJECTED.`, "warning");
+      addToast(`Failed to record scrap for batch ${selectedBatch}`, "error");
     } finally {
       setSubmitting(false);
     }

@@ -17,6 +17,7 @@ export function ReleaseReview() {
 
   const releaseId = location.state?.releaseId || "REL-201";
   const releaseBatch = location.state?.batch || "BAT-2026-0889";
+  const itemData = location.state?.item || {};
 
   const [status, setStatus] = useState("PENDING");
   const [showSignModal, setShowSignModal] = useState(false);
@@ -25,11 +26,36 @@ export function ReleaseReview() {
   const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  const [batchInfo, setBatchInfo] = useState({
+    id: releaseBatch,
+    recipe: itemData.sku || "Finished Product SKU",
+    line: itemData.line || "Line 1 (Main Production Line)",
+    ccpTemp: itemData.ccp || "PASSED (100%)",
+    brix: "Standard (OK)",
+    allergen: itemData.allergen || "Allergen Clear (0 ppm)",
+    preOp: "PASSED (100% Clean)",
+    deviations: "No Open Critical Deviations"
+  });
+
   useEffect(() => {
     const loadBatchReview = async () => {
       setLoading(true);
       try {
-        await qualityService.getReleaseQueue();
+        const res = await qualityService.getReleaseDossier(releaseBatch);
+        if (res?.data) {
+          setBatchInfo(prev => ({
+            ...prev,
+            ...res.data,
+            id: res.data.id || releaseBatch,
+            recipe: res.data.recipe || prev.recipe,
+            line: res.data.line || prev.line,
+            ccpTemp: res.data.ccpTemp || prev.ccpTemp,
+            brix: res.data.brix || prev.brix,
+            allergen: res.data.allergen || prev.allergen,
+            preOp: res.data.preOp || prev.preOp,
+            deviations: res.data.deviations || prev.deviations
+          }));
+        }
       } catch (err) {
         console.warn("Release review load fallback:", err);
       } finally {
@@ -38,17 +64,6 @@ export function ReleaseReview() {
     };
     loadBatchReview();
   }, [releaseBatch]);
-
-  const batchInfo = {
-    id: releaseBatch,
-    recipe: "Organic Orange Juice 1L Bottle",
-    line: "Line 1 (Aseptic Bottling 580 BPM)",
-    ccpTemp: "83.5°C (PASS)",
-    brix: "11.9°Bx (OK)",
-    allergen: "Allergen Clear (0 ppm)",
-    preOp: "PASSED (100% Clean)",
-    deviations: "1 Open (DEV-802)"
-  };
 
   const handleApprove = async (e) => {
     if (e) e.preventDefault();

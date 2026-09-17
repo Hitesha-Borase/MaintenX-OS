@@ -1,0 +1,473 @@
+<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+<head>
+<meta charset="utf-8">
+<title>MaintenX-OS Complete Architecture and Client Guide</title>
+<!--[if gte mso 9]>
+<xml>
+ <w:WordDocument>
+  <w:View>Print</w:View>
+  <w:Zoom>100</w:Zoom>
+  <w:DoNotOptimizeForBrowser/>
+ </w:WordDocument>
+</xml>
+<![endif]-->
+<style>
+body {
+  font-family: 'Calibri', 'Segoe UI', Arial, sans-serif;
+  font-size: 11pt;
+  line-height: 1.5;
+  color: #2D3748;
+  padding: 20px;
+}
+h1 {
+  font-size: 24pt;
+  color: #1A365D;
+  border-bottom: 2px solid #2B6CB0;
+  padding-bottom: 8px;
+  margin-top: 10px;
+}
+h2 {
+  font-size: 16pt;
+  color: #2B6CB0;
+  border-bottom: 1px solid #CBD5E0;
+  padding-bottom: 4px;
+  margin-top: 24px;
+}
+h3 {
+  font-size: 13pt;
+  color: #2C5282;
+  margin-top: 18px;
+}
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 15px 0;
+  font-size: 10pt;
+}
+th {
+  background-color: #2B6CB0;
+  color: #FFFFFF;
+  font-weight: bold;
+  text-align: left;
+  padding: 8px 10px;
+  border: 1px solid #CBD5E0;
+}
+td {
+  padding: 8px 10px;
+  border: 1px solid #CBD5E0;
+  vertical-align: top;
+}
+tr:nth-child(even) {
+  background-color: #F7FAFC;
+}
+.highlight-box {
+  background-color: #EBF8FF;
+  border-left: 4px solid #3182CE;
+  padding: 12px 16px;
+  margin: 15px 0;
+  border-radius: 4px;
+}
+.step-card {
+  background-color: #F7FAFC;
+  border: 1px solid #E2E8F0;
+  border-left: 4px solid #48BB78;
+  padding: 12px 16px;
+  margin: 12px 0;
+  border-radius: 4px;
+}
+code {
+  font-family: 'Consolas', 'Courier New', monospace;
+  background-color: #EDF2F7;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 9.5pt;
+  color: #C53030;
+}
+pre {
+  background-color: #1A202C;
+  color: #E2E8F0;
+  padding: 14px;
+  border-radius: 6px;
+  font-family: 'Consolas', monospace;
+  font-size: 9.5pt;
+  overflow-x: auto;
+}
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  font-size: 8.5pt;
+  font-weight: bold;
+  border-radius: 4px;
+  color: #FFFFFF;
+  background-color: #3182CE;
+}
+</style>
+</head>
+<body>
+
+<h1>MaintenX-OS: Smart Manufacturing & Maintenance System</h1>
+<p><strong>Comprehensive Architecture, Data Flow & Client Operational Guide</strong><br>
+<em>Document Version: 2.4 | Enterprise Edition | Release: September 2026</em></p>
+
+<div class="highlight-box">
+<strong>Client Executive Summary:</strong><br>
+MaintenX-OS is an integrated industrial software suite combining <strong>MES (Manufacturing Execution System)</strong>, <strong>WMS (Warehouse Management System)</strong>, and <strong>CMMS (Computerized Maintenance Management System)</strong> into a single unified platform. It connects physical shop-floor machinery, operators, planners, quality managers, and executives in real time.
+</div>
+
+<h2>1. Complete Project Folder Structure</h2>
+<p>The codebase is partitioned into three core tiers: Frontend Web Client, Backend API Server, and PostgreSQL Database Schema:</p>
+
+<pre>
+MaintenX-OS/
+├── backend/                         # Node.js + Fastify + TypeScript Backend Server
+│   ├── src/
+│   │   ├── app.ts                   # Fastify server initialization & middleware
+│   │   ├── server.ts                # HTTP listen on port 5001
+│   │   ├── db/
+│   │   │   ├── index.ts             # Drizzle ORM client connection
+│   │   │   └── schema/              # 19 Database Schema files (121 Tables)
+│   │   ├── middleware/              # JWT verification & Tenant context injector
+│   │   └── modules/                 # Modular Domain Business Logic
+│   │       ├── auth/                # Authentication & User Sessions
+│   │       ├── admin/               # Company & Plant Management
+│   │       ├── master-data/         # SKUs, BOMs, Lines, Assets, Labour Standards
+│   │       ├── planning/            # Work Orders & Schedule Gantt
+│   │       ├── production/          # Live Runs, Downtime, Batch Execution
+│   │       ├── quality/             # QA Specs, CCP Limits & Quarantine Holds
+│   │       ├── warehouse/           # Inward Receiving, Stock, Shipping Dispatch
+│   │       ├── maintenance/         # Asset PM Plans, Work Orders, Spare Parts
+│   │       ├── traceability/        # Raw Material to Finished Goods Genealogy
+│   │       └── dashboards/          # Plant Manager & Executive OEE Dashboards
+│
+├── frontend/                        # React.js 18 + Vite Web Application
+│   ├── src/
+│   │   ├── App.jsx                  # Main Router & Theme Engine
+│   │   ├── api/client.js            # Axios API Client with JWT Bearer Interceptors
+│   │   ├── components/              # Modals, Tables, Stat Cards, Navbar & Sidebar
+│   │   └── pages/                   # Department Screens (Admin, Master, Warehouse, etc.)
+│
+└── database/                        # PostgreSQL SQL Snapshots & 121 Tables
+</pre>
+
+<h2>2. Step-by-Step User Journey ("Pehle Kahan Jana Hai Aur Kaise Karna Hai")</h2>
+
+<p>For any client or plant starting fresh with MaintenX-OS, the system follows an intuitive 8-stage operational flow:</p>
+
+<div class="step-card">
+<h3>Step 1: Admin Onboarding & Plant Creation</h3>
+<strong>Path:</strong> <code>/admin/companies</code> and <code>/admin/plants</code><br>
+<strong>Action:</strong> Register your company entity and define physical manufacturing plants (e.g., Plant 01 - North Facility). Create user logins for plant managers, planners, operators, QA, and technicians with specific role-based permissions.
+</div>
+
+<div class="step-card">
+<h3>Step 2: Master Data Setup (One-Time Foundation)</h3>
+<strong>Path:</strong> <code>/master/*</code><br>
+<strong>Action:</strong> Define the foundational rules of your manufacturing floor:
+<ul>
+  <li><strong>Lines & Work Centers:</strong> Configure packaging and processing lines.</li>
+  <li><strong>SKUs:</strong> Register finished goods and raw materials with barcodes and shelf-life.</li>
+  <li><strong>Bill of Materials (BOM):</strong> Set recipes and component ratios for each product.</li>
+  <li><strong>Quality Specs & CCP Limits:</strong> Set allowable temperature, weight, and metal detector tolerances.</li>
+  <li><strong>Assets:</strong> Catalog all factory equipment and machines with serial numbers.</li>
+</ul>
+</div>
+
+<div class="step-card">
+<h3>Step 3: Inward Warehouse Receiving & GRN</h3>
+<strong>Path:</strong> <code>/warehouse/receiving</code><br>
+<strong>Action:</strong> When supplier delivery trucks arrive, warehouse staff log the Goods Receipt Note (GRN). The system creates unique Batch/Lot numbers, records expiration dates, and allocates material to specific warehouse racks/bins.
+</div>
+
+<div class="step-card">
+<h3>Step 4: Production Planning & Work Order Dispatch</h3>
+<strong>Path:</strong> <code>/planning/scheduler</code><br>
+<strong>Action:</strong> The production planner creates a Work Order for required SKU quantities. The system verifies BOM inventory availability, checks line capacity, and dispatches the work order to the target production line and shift.
+</div>
+
+<div class="step-card">
+<h3>Step 5: Shop Floor Execution, CCP Quality & Downtime</h3>
+<strong>Path:</strong> <code>/production/active-run</code> and <code>/quality/ccp-checks</code><br>
+<strong>Action:</strong> The line operator starts the run. As units are produced, good counts and scrap are recorded. Operators log hourly Critical Control Point (CCP) readings. If a machine stops, downtime events (motor jam, electrical trip) are logged immediately.
+</div>
+
+<div class="step-card">
+<h3>Step 6: Finished Goods, QA Release & Shipping</h3>
+<strong>Path:</strong> <code>/quality/releases</code> and <code>/warehouse/shipping</code><br>
+<strong>Action:</strong> Completed production batches undergo final quality inspection. Once approved, a Certificate of Analysis (CoA) is generated. The shipping team picks and packs the approved finished goods pallets and generates outward dispatch documents.
+</div>
+
+<div class="step-card">
+<h3>Step 7: Maintenance & Asset Reliability (CMMS)</h3>
+<strong>Path:</strong> <code>/maintenance/orders</code> and <code>/maintenance/pm</code><br>
+<strong>Action:</strong> If a machine breaks down, a Maintenance Work Order alerts on-duty technicians. Technicians log repair time and replacement spare parts used. Scheduled Preventive Maintenance (PM) work orders trigger automatically to avoid unexpected stoppages.
+</div>
+
+<div class="step-card">
+<h3>Step 8: Executive Dashboards & Continuous Improvement</h3>
+<strong>Path:</strong> <code>/dashboards/oee</code> and <code>/ci/kaizen</code><br>
+<strong>Action:</strong> Factory leadership monitors live OEE (Overall Equipment Effectiveness = Availability × Performance × Quality), yield loss, and labor cost. Kaizen teams use Root Cause Analysis (RCA) boards to solve recurring bottlenecks.
+</div>
+
+<h2>3. End-to-End Data Flow Architecture</h2>
+<p>Every interaction from the user interface down to the database follows an enterprise 10-step flow:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Stage</th>
+      <th>Component</th>
+      <th>Technical Action</th>
+      <th>Data Transformation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>1</strong></td>
+      <td>React UI (View)</td>
+      <td>User fills form & clicks submit (e.g. Create SKU or Log GRN)</td>
+      <td>Form state captured in React state object</td>
+    </tr>
+    <tr>
+      <td><strong>2</strong></td>
+      <td>Axios Client (API)</td>
+      <td><code>src/api/client.js</code> sends HTTP POST request</td>
+      <td>Attaches Bearer JWT, <code>X-Tenant-Id</code>, and <code>X-Plant-Id</code> headers</td>
+    </tr>
+    <tr>
+      <td><strong>3</strong></td>
+      <td>Fastify Route</td>
+      <td><code>*.routes.ts</code> matches URL endpoint & HTTP method</td>
+      <td>Passes request to authentication middleware</td>
+    </tr>
+    <tr>
+      <td><strong>4</strong></td>
+      <td>Auth Middleware</td>
+      <td><code>authenticate.ts</code> decodes JWT & verifies roles</td>
+      <td>Injects validated <code>tenantId</code>, <code>plantId</code>, and <code>userId</code></td>
+    </tr>
+    <tr>
+      <td><strong>5</strong></td>
+      <td>Module Controller</td>
+      <td><code>*.controller.ts</code> extracts body & params</td>
+      <td>Performs input type validation & calls service</td>
+    </tr>
+    <tr>
+      <td><strong>6</strong></td>
+      <td>Module Service</td>
+      <td><code>*.service.ts</code> executes business rules</td>
+      <td>Applies calculations, default fallbacks, and logic</td>
+    </tr>
+    <tr>
+      <td><strong>7</strong></td>
+      <td>Drizzle ORM</td>
+      <td><code>db.execute(sql`...`)</code> constructs query</td>
+      <td>Generates safe parameterized SQL statement</td>
+    </tr>
+    <tr>
+      <td><strong>8</strong></td>
+      <td>PostgreSQL 18 DB</td>
+      <td>PostgreSQL engine executes query</td>
+      <td>Persists data, updates indexes, commits transaction</td>
+    </tr>
+    <tr>
+      <td><strong>9</strong></td>
+      <td>Backend Response</td>
+      <td>Fastify serializes result to JSON</td>
+      <td>Sends HTTP 200/201 response back to browser</td>
+    </tr>
+    <tr>
+      <td><strong>10</strong></td>
+      <td>Frontend Reaction</td>
+      <td>React receives JSON response</td>
+      <td>Closes modal, displays green success notification, updates table</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>4. Module by Module Directory & Dashboard Catalog</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Module</th>
+      <th>Screen Route</th>
+      <th>Backend Endpoint</th>
+      <th>Database Tables</th>
+      <th>Business Function</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Admin</strong></td>
+      <td><code>/admin/plants</code></td>
+      <td><code>GET/POST /api/v1/admin/plants</code></td>
+      <td><code>plants</code></td>
+      <td>Define and configure plant locations and facility settings.</td>
+    </tr>
+    <tr>
+      <td><strong>Admin</strong></td>
+      <td><code>/admin/users</code></td>
+      <td><code>GET/POST /api/v1/admin/users</code></td>
+      <td><code>users</code>, <code>user_roles</code></td>
+      <td>Add personnel, reset credentials, assign roles and plant scope.</td>
+    </tr>
+    <tr>
+      <td><strong>Master Data</strong></td>
+      <td><code>/master/skus</code></td>
+      <td><code>GET/POST/PUT /api/v1/master-data/skus</code></td>
+      <td><code>skus</code></td>
+      <td>Manage SKU catalog, barcode identifiers, unit weights and pack sizes.</td>
+    </tr>
+    <tr>
+      <td><strong>Master Data</strong></td>
+      <td><code>/master/boms</code></td>
+      <td><code>GET/POST /api/v1/master-data/boms</code></td>
+      <td><code>boms</code>, <code>bom_items</code></td>
+      <td>Configure production recipes and ingredient bill of materials.</td>
+    </tr>
+    <tr>
+      <td><strong>Master Data</strong></td>
+      <td><code>/master/lines</code></td>
+      <td><code>GET/POST /api/v1/master-data/lines</code></td>
+      <td><code>lines</code>, <code>departments</code></td>
+      <td>Set up packaging and processing lines with target speed metrics.</td>
+    </tr>
+    <tr>
+      <td><strong>Master Data</strong></td>
+      <td><code>/master/assets</code></td>
+      <td><code>GET/POST /api/v1/master-data/assets</code></td>
+      <td><code>assets</code>, <code>asset_types</code></td>
+      <td>Catalog production machines, manufacturer details, and criticality.</td>
+    </tr>
+    <tr>
+      <td><strong>Master Data</strong></td>
+      <td><code>/master/labour-standards</code></td>
+      <td><code>GET/POST /api/v1/master-data/labour-standards</code></td>
+      <td><code>labour_standards</code></td>
+      <td>Crew sizing, standard man-hours per 1,000 units, direct hourly cost.</td>
+    </tr>
+    <tr>
+      <td><strong>Warehouse</strong></td>
+      <td><code>/warehouse/receiving</code></td>
+      <td><code>GET/POST /api/v1/warehouse/receiving</code></td>
+      <td><code>wms_receiving</code>, <code>batches</code></td>
+      <td>Record incoming materials, supplier PO, lot numbering, and bin storage.</td>
+    </tr>
+    <tr>
+      <td><strong>Warehouse</strong></td>
+      <td><code>/warehouse/inventory</code></td>
+      <td><code>GET /api/v1/warehouse/inventory</code></td>
+      <td><code>inventory_lots</code>, <code>bins</code></td>
+      <td>Real-time view of all raw materials, work-in-progress, and finished goods.</td>
+    </tr>
+    <tr>
+      <td><strong>Warehouse</strong></td>
+      <td><code>/warehouse/shipping</code></td>
+      <td><code>GET/POST /api/v1/warehouse/shipping</code></td>
+      <td><code>shipping_orders</code>, <code>batches</code></td>
+      <td>Outward shipping orders, pallet scanning, dispatch documentation.</td>
+    </tr>
+    <tr>
+      <td><strong>Planning</strong></td>
+      <td><code>/planning/scheduler</code></td>
+      <td><code>GET/POST /api/v1/planning/schedules</code></td>
+      <td><code>schedules</code>, <code>work_orders</code></td>
+      <td>Schedule work orders on timeline gantt, check capacity and material.</td>
+    </tr>
+    <tr>
+      <td><strong>Production</strong></td>
+      <td><code>/production/work-orders</code></td>
+      <td><code>GET/POST /api/v1/production/work-orders</code></td>
+      <td><code>work_orders</code></td>
+      <td>Authorize and release production work orders to the shop floor.</td>
+    </tr>
+    <tr>
+      <td><strong>Production</strong></td>
+      <td><code>/production/active-run</code></td>
+      <td><code>GET/POST /api/v1/production/runs</code></td>
+      <td><code>production_runs</code>, <code>shifts</code></td>
+      <td>Live operator terminal: count good units, reject scrap, track speed.</td>
+    </tr>
+    <tr>
+      <td><strong>Production</strong></td>
+      <td><code>/production/downtime</code></td>
+      <td><code>GET/POST /api/v1/production/downtime</code></td>
+      <td><code>downtime_events</code></td>
+      <td>Log machine stops, mechanical jams, changeovers, and root causes.</td>
+    </tr>
+    <tr>
+      <td><strong>Quality</strong></td>
+      <td><code>/quality/ccp-checks</code></td>
+      <td><code>GET/POST /api/v1/quality/ccp-checks</code></td>
+      <td><code>ccp_checks</code>, <code>ccp_limits</code></td>
+      <td>Monitor critical control limits (metal detector, pasteurization temp).</td>
+    </tr>
+    <tr>
+      <td><strong>Quality</strong></td>
+      <td><code>/quality/releases</code></td>
+      <td><code>GET/POST /api/v1/quality/releases</code></td>
+      <td><code>qa_releases</code>, <code>quality_holds</code></td>
+      <td>Inspect finished lots, issue Certificates of Analysis, release for dispatch.</td>
+    </tr>
+    <tr>
+      <td><strong>Maintenance</strong></td>
+      <td><code>/maintenance/orders</code></td>
+      <td><code>GET/POST /api/v1/maintenance/work-orders</code></td>
+      <td><code>maintenance_work_orders</code></td>
+      <td>Manage breakdown and corrective maintenance work orders.</td>
+    </tr>
+    <tr>
+      <td><strong>Maintenance</strong></td>
+      <td><code>/maintenance/pm</code></td>
+      <td><code>GET/POST /api/v1/maintenance/pm-plans</code></td>
+      <td><code>pm_schedules</code></td>
+      <td>Calendar-based and meter-based preventive maintenance routines.</td>
+    </tr>
+    <tr>
+      <td><strong>Traceability</strong></td>
+      <td><code>/traceability/genealogy</code></td>
+      <td><code>GET /api/v1/traceability/tree</code></td>
+      <td><code>batches</code>, <code>wms_receiving</code></td>
+      <td>Bi-directional audit tree: trace finished box back to ingredient lot.</td>
+    </tr>
+    <tr>
+      <td><strong>Dashboards</strong></td>
+      <td><code>/dashboards/oee</code></td>
+      <td><code>GET /api/v1/dashboards/oee</code></td>
+      <td><code>production_runs</code>, <code>downtime</code></td>
+      <td>Live OEE dashboard showing Availability, Performance, and Quality %.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>5. Quick Setup & Demonstration Guide</h2>
+<p>To run the complete system locally or in a staging environment for client demonstration:</p>
+
+<ol>
+  <li><strong>Database:</strong> Ensure PostgreSQL 18 is running and database <code>maintenxos</code> is created with the imported tables.</li>
+  <li><strong>Backend API Server:</strong>
+    <pre>
+cd backend
+npm install
+npm run dev
+# Server listens at http://localhost:5001
+    </pre>
+  </li>
+  <li><strong>Frontend Web Application:</strong>
+    <pre>
+cd frontend
+npm install
+npm run dev
+# Web application available at http://localhost:5173
+    </pre>
+  </li>
+  <li><strong>Login Credentials:</strong> Access <code>http://localhost:5173</code> with your admin credentials.</li>
+</ol>
+
+<div class="highlight-box">
+<strong>Client Delivery Note:</strong><br>
+This document can be distributed directly to stakeholders, technical architects, and plant managers to understand the complete end-to-end architecture and day-to-day operation of MaintenX-OS.
+</div>
+
+</body>
+</html>

@@ -4,9 +4,12 @@ const enc = encodeURIComponent;
 
 export const ciService = {
   // 1. CI Executive Dashboard
-  async getDashboardSummary(plantId) {
-    const query = plantId && plantId !== "ALL" ? `?plantId=${enc(plantId)}` : "";
-    return apiClient.get(`/ci/dashboard/summary${query}`);
+  async getDashboardSummary(plantId, stage) {
+    const params = new URLSearchParams();
+    if (plantId && plantId !== "ALL") params.append("plantId", plantId);
+    if (stage && stage !== "ALL") params.append("stage", stage);
+    const qs = params.toString() ? `?${params.toString()}` : "";
+    return apiClient.get(`/ci/dashboard/summary${qs}`);
   },
 
   // 2. CI Projects & Benefits Verification (21 CFR Part 11)
@@ -45,9 +48,12 @@ export const ciService = {
   },
 
   // 3. RCA 2.0 Investigations Hub
-  async getInvestigations(plantId) {
-    const query = plantId && plantId !== "ALL" ? `?plantId=${enc(plantId)}` : "";
-    return apiClient.get(`/ci/rca/investigations${query}`);
+  async getInvestigations(plantId, stage) {
+    const params = new URLSearchParams();
+    if (plantId && plantId !== "ALL") params.append("plantId", plantId);
+    if (stage && stage !== "ALL") params.append("stage", stage);
+    const qs = params.toString() ? `?${params.toString()}` : "";
+    return apiClient.get(`/ci/rca/investigations${qs}`);
   },
 
   async getInvestigation(id) {
@@ -83,6 +89,10 @@ export const ciService = {
 
   async createEvidence(data) {
     return apiClient.post("/ci/rca/evidence", data);
+  },
+
+  async updateEvidence(id, data) {
+    return apiClient.put(`/ci/rca/evidence/${enc(id)}`, data);
   },
 
   async deleteEvidence(id) {
@@ -122,6 +132,10 @@ export const ciService = {
     return apiClient.post("/ci/capa/actions", data);
   },
 
+  async updateCapaAction(id, data) {
+    return apiClient.put(`/ci/capa/actions/${enc(id)}`, data);
+  },
+
   async updateCapaStatus(id, status, completionDate, evidenceNotes) {
     return apiClient.patch(`/ci/capa/actions/${enc(id)}/status`, { status, completionDate, evidenceNotes });
   },
@@ -135,10 +149,11 @@ export const ciService = {
   },
 
   // 7. Loss Analysis
-  async getLosses(plantId, category) {
+  async getLosses(plantId, category, stage) {
     const params = new URLSearchParams();
     if (plantId && plantId !== "ALL") params.append("plantId", plantId);
     if (category && category !== "ALL") params.append("category", category);
+    if (stage && stage !== "ALL") params.append("stage", stage);
     const qs = params.toString() ? `?${params.toString()}` : "";
     return apiClient.get(`/ci/losses${qs}`);
   },
@@ -209,10 +224,11 @@ export const ciService = {
   },
 
   // 11. Reliability & Bad Actors
-  async getReliabilityRecords(plantId, onlyBadActors = false) {
+  async getReliabilityRecords(plantId, onlyBadActors = false, stage) {
     const params = new URLSearchParams();
     if (plantId && plantId !== "ALL") params.append("plantId", plantId);
     if (onlyBadActors) params.append("onlyBadActors", "true");
+    if (stage && stage !== "ALL") params.append("stage", stage);
     const qs = params.toString() ? `?${params.toString()}` : "";
     return apiClient.get(`/ci/reliability${qs}`);
   },

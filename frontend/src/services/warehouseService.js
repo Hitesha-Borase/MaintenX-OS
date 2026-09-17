@@ -5,6 +5,14 @@ export const warehouseService = {
     return apiClient.get("/warehouse/lots");
   },
 
+  async createLot(data) {
+    return apiClient.post("/warehouse/lots", data);
+  },
+
+  async deleteLot(id) {
+    return apiClient.delete(`/warehouse/lots/${id}`);
+  },
+
   async getTransactions() {
     return apiClient.get("/warehouse/transactions");
   },
@@ -54,6 +62,36 @@ export const warehouseService = {
 
   async getDashboardStats() {
     return apiClient.get("/warehouse/dashboard");
+  },
+
+  // Material Processing & Packaging Flow Endpoints
+  async getFlowSummary() {
+    return apiClient.get("/warehouse/flow-summary");
+  },
+
+  async issueRawMaterialForProcessing(data) {
+    return apiClient.post("/warehouse/processing/issue-raw-material", data);
+  },
+
+  async getWipLots() {
+    return apiClient.get("/warehouse/wip-lots");
+  },
+
+  async createWipLot(data) {
+    return apiClient.post("/warehouse/wip-lots", data);
+  },
+
+  async stagePackagingMaterial(data) {
+    return apiClient.post("/warehouse/packaging/stage-material", data);
+  },
+
+  async getSeparatedMovements(category) {
+    const params = category ? { category } : {};
+    return apiClient.get("/warehouse/movements/separated", { params });
+  },
+
+  async createPackagingFinishedGoods(data) {
+    return apiClient.post("/warehouse/packaging/create-finished-goods", data);
   },
 
   // Inbound Receiving Endpoints
@@ -147,6 +185,10 @@ export const warehouseService = {
     return apiClient.post("/warehouse/lots", lotData);
   },
 
+  async deleteSupplier(id) {
+    return apiClient.delete(`/warehouse/suppliers/${id}`);
+  },
+
   async toggleSupplierStatus(id) {
     return apiClient.post(`/warehouse/suppliers/${id}/toggle-status`, {});
   },
@@ -162,6 +204,14 @@ export const warehouseService = {
 
   async dockCheckIn(checkInData) {
     return apiClient.post("/warehouse/wms/dock-checkin", checkInData);
+  },
+
+  async updateWmsReceiving(id, data) {
+    return apiClient.put(`/warehouse/wms/receiving/${id}`, data);
+  },
+
+  async deleteWmsReceiving(id) {
+    return apiClient.delete(`/warehouse/wms/receiving/${id}`);
   },
 
   async inspectAndAccept(taskData) {
@@ -233,10 +283,34 @@ export const warehouseService = {
     return apiClient.post("/warehouse/locations/relocate", relocateData);
   },
 
+  async createLocation(locationData) {
+    return apiClient.post("/warehouse/locations", locationData);
+  },
+
+  async updateLocation(id, locationData) {
+    return apiClient.put(`/warehouse/locations/${id}`, locationData);
+  },
+
+  async deleteLocation(id) {
+    return apiClient.delete(`/warehouse/locations/${id}`);
+  },
+
   // 360° Lot Traceability & FDA 21 CFR
   async getTraceability(lotNumber) {
     const query = lotNumber ? `?lot=${encodeURIComponent(lotNumber)}` : "";
     return apiClient.get(`/warehouse/traceability${query}`);
+  },
+
+  async createTraceabilityBatch(batchData) {
+    return apiClient.post("/warehouse/traceability/batch", batchData);
+  },
+
+  async updateTraceabilityBatch(id, batchData) {
+    return apiClient.put(`/warehouse/traceability/batch/${id}`, batchData);
+  },
+
+  async deleteTraceabilityBatch(id) {
+    return apiClient.delete(`/warehouse/traceability/batch/${id}`);
   },
 
   async simulateRecall(recallData) {
@@ -264,6 +338,18 @@ export const warehouseService = {
   // Finished Goods Inventory
   async getFinishedGoods(params = {}) {
     return apiClient.get("/warehouse/inventory/finished-goods", { params });
+  },
+
+  async createFinishedGood(data) {
+    return apiClient.post("/warehouse/inventory/finished-goods", data);
+  },
+
+  async updateFinishedGood(id, data) {
+    return apiClient.put(`/warehouse/inventory/finished-goods/${id}`, data);
+  },
+
+  async deleteFinishedGood(id) {
+    return apiClient.delete(`/warehouse/inventory/finished-goods/${id}`);
   },
 
   // Outbound Shipping Orders & Manifest
@@ -358,6 +444,62 @@ export const warehouseService = {
 
   async toggleWarehouseCertification(id, status) {
     return apiClient.post(`/warehouse/profile/certifications/${id}/toggle`, { status });
+  },
+
+  // 360° Supply Lot Traceability (Connected to PostgreSQL `batches`)
+  async getTraceability(lotNumber) {
+    const query = lotNumber ? `?lot=${encodeURIComponent(lotNumber)}` : "";
+    return apiClient.get(`/warehouse/traceability${query}`);
+  },
+
+  async createTraceabilityBatch(batchData) {
+    return apiClient.post("/warehouse/traceability/batch", batchData);
+  },
+
+  async updateTraceabilityBatch(id, batchData) {
+    return apiClient.put(`/warehouse/traceability/batch/${id}`, batchData);
+  },
+
+  async deleteTraceabilityBatch(id) {
+    return apiClient.delete(`/warehouse/traceability/batch/${id}`);
+  },
+
+  async simulateRecall(recallData) {
+    return apiClient.post("/warehouse/traceability/recall", recallData);
+  },
+
+  // Outbound Shipping Orders & Logistics (Connected directly to PostgreSQL `shipment_orders`)
+  async getShipmentOrders() {
+    return apiClient.get("/warehouse/shipping/orders");
+  },
+
+  async createShipmentOrder(shipmentData) {
+    return apiClient.post("/warehouse/shipping/orders", shipmentData);
+  },
+
+  async updateShipmentOrder(id, shipmentData) {
+    return apiClient.put(`/warehouse/shipping/orders/${id}`, shipmentData);
+  },
+
+  async deleteShipmentOrder(id) {
+    return apiClient.delete(`/warehouse/shipping/orders/${id}`);
+  },
+
+  async dispatchShipmentOrder(id) {
+    return apiClient.post(`/warehouse/shipping/orders/${id}/dispatch`, {});
+  },
+
+  async dispatchShipment(payload) {
+    const id = payload?.shipmentId || payload?.id;
+    return apiClient.post(`/warehouse/shipping/dispatch${id ? `/${id}` : ""}`, payload);
+  },
+
+  async getShipmentTracking() {
+    return apiClient.get("/warehouse/shipping/tracking");
+  },
+
+  async toggleShipmentTracking(id, newStatus) {
+    return apiClient.post(`/warehouse/shipping/tracking/${id}/toggle`, { status: newStatus });
   }
 };
 

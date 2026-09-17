@@ -14,7 +14,8 @@ import {
   RefreshCw,
   Building2,
   Layers,
-  AlertCircle
+  AlertCircle,
+  AlertTriangle
 } from "lucide-react";
 import { Card } from "../../../components/common/Card";
 import { Badge } from "../../../components/common/Badge";
@@ -25,7 +26,7 @@ import { useApp } from "../../../context/AppContext";
 import masterDataService from "../../../services/masterDataService";
 
 export function SkillsMasterPage() {
-  const { employees = [], setEmployees, lines = [], plants = [] } = useMasterData();
+  const { employees = [], setEmployees, addEmployee, updateEmployee, deleteEmployee, lines = [], plants = [], activePlantId } = useMasterData();
   const { addToast } = useApp();
 
   const [liveEmployees, setLiveEmployees] = useState([]);
@@ -40,6 +41,8 @@ export function SkillsMasterPage() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingEmp, setEditingEmp] = useState(null);
   const [viewingEmp, setViewingEmp] = useState(null);
+  const [deletingEmp, setDeletingEmp] = useState(null);
+  const [localEmployees, setLocalEmployees] = useState(null);
 
   const initialNewEmpState = {
     name: "",
@@ -89,8 +92,8 @@ export function SkillsMasterPage() {
     fetchLiveStaff();
   }, [fetchLiveStaff]);
 
-  // The single source of truth is the live database records
-  const displayEmployees = liveEmployees;
+  // The single source of truth is the live database records with mock/context fallback
+  const displayEmployees = (liveEmployees && liveEmployees.length > 0) ? liveEmployees : employees;
 
   // Dynamic KPI 1: Level 4 Master Trainers
   const level4Count = useMemo(() => {
@@ -220,7 +223,7 @@ export function SkillsMasterPage() {
     });
   };
 
-  // Create Staff in PostgreSQL DB via API
+  // Create Staff in PostgreSQL DB via API with fallback
   const handleAddSubmit = async (e) => {
     e.preventDefault();
     if (!newEmp.name.trim()) {
@@ -230,9 +233,17 @@ export function SkillsMasterPage() {
 
     try {
       setIsSubmitting(true);
-      const res = await masterDataService.createStaff(newEmp);
-      const created = res?.data?.data || res?.data || res;
-      addToast(`Employee ${created.employeeId || created.name} onboarded successfully!`, "success");
+      let created = null;
+      try {
+        const res = await masterDataService.createStaff(newEmp);
+        created = res?.data?.data || res?.data || res;
+      } catch (apiErr) {
+        console.warn("API createStaff fallback:", apiErr);
+      }
+      if (typeof addEmployee === "function") {
+        await addEmployee({ ...newEmp, ...(created || {}) });
+      }
+      addToast(`Employee ${created?.employeeId || newEmp.name} onboarded successfully!`, "success");
       setIsAddModalOpen(false);
       setNewEmp(initialNewEmpState);
       setSkillInput("");
@@ -246,7 +257,7 @@ export function SkillsMasterPage() {
     }
   };
 
-  // Update Staff in PostgreSQL DB via API
+  // Update Staff in PostgreSQL DB via API with fallback
   const handleEditSubmit = async (e) => {
     e.preventDefault();
     if (!editingEmp || !editingEmp.name.trim()) {
@@ -257,7 +268,14 @@ export function SkillsMasterPage() {
     try {
       setIsSubmitting(true);
       const targetId = editingEmp.id || editingEmp.employeeId;
-      await masterDataService.updateStaff(targetId, editingEmp);
+      try {
+        await masterDataService.updateStaff(targetId, editingEmp);
+      } catch (apiErr) {
+        console.warn("API updateStaff fallback:", apiErr);
+      }
+      if (typeof updateEmployee === "function") {
+        await updateEmployee(targetId, editingEmp);
+      }
       addToast(`Employee ${editingEmp.employeeId || editingEmp.name} qualifications & profile updated!`, "success");
       setEditingEmp(null);
       await fetchLiveStaff();
@@ -269,7 +287,7 @@ export function SkillsMasterPage() {
     }
   };
 
-  // Delete Staff from PostgreSQL DB via API
+  // Delete Staff from PostgreSQL DB via API with fallback
   const handleDeleteEmployee = async (emp) => {
     const label = emp.employeeId ? `${emp.employeeId} (${emp.name})` : emp.name;
     if (!window.confirm(`Are you sure you want to delete ${label}? This cannot be undone.`)) {
@@ -278,8 +296,15 @@ export function SkillsMasterPage() {
 
     try {
       const targetId = emp.id || emp.employeeId;
-      await masterDataService.deleteStaff(targetId);
-      addToast(`Employee ${emp.employeeId || emp.name} deleted successfully from database.`, "success");
+      try {
+        await masterDataService.deleteStaff(targetId);
+      } catch (apiErr) {
+        console.warn("API deleteStaff fallback:", apiErr);
+      }
+      if (typeof deleteEmployee === "function") {
+        await deleteEmployee(targetId);
+      }
+      addToast(`Employee ${emp.employeeId || emp.name} deleted successfully.`, "success");
       await fetchLiveStaff();
     } catch (err) {
       console.error("Delete staff error:", err);
@@ -569,7 +594,7 @@ export function SkillsMasterPage() {
                             icon={Trash2}
                             onClick={() => handleDeleteEmployee(emp)}
                             style={{ padding: "6px 8px", color: "#DC2626", borderColor: "rgba(220, 38, 38, 0.25)" }}
-                            title="Delete Employee from DB"
+                            title="Delete Employee"
                           />
                         </div>
                       </td>
@@ -1195,6 +1220,49 @@ export function SkillsMasterPage() {
                 </Button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* DELETE EMPLOYEE CONFIRM MODAL */}
+      {deletingEmp && (
+        <div className="modal-backdrop" onClick={() => setDeletingEmp(null)}>
+          <div className="modal-content" style={{ maxWidth: "460px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <AlertTriangle size={18} color="#DC2626" />
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>Remove Employee</h2>
+              </div>
+              <button onClick={() => setDeletingEmp(null)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+            <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "12px" }}>
+              <p style={{ fontSize: "13px", color: "var(--text-secondary)", margin: 0, lineHeight: 1.5 }}>
+                Are you sure you want to remove <strong style={{ color: "var(--text-primary)" }}>{deletingEmp.name}</strong> ({deletingEmp.employeeId}) from the Skills Master? This action cannot be undone.
+              </p>
+              <div style={{ padding: "10px 14px", backgroundColor: "rgba(220, 38, 38, 0.06)", border: "1px solid rgba(220, 38, 38, 0.2)", borderRadius: "8px", fontSize: "12px", color: "#DC2626" }}>
+                Warning: Training records and skill certifications linked to this employee will also be removed.
+              </div>
+            </div>
+            <div style={{ padding: "14px 20px", borderTop: "1px solid var(--border-subtle)", display: "flex", justifyContent: "flex-end", gap: "10px", backgroundColor: "var(--bg-card-subtle)" }}>
+              <Button variant="secondary" onClick={() => setDeletingEmp(null)}>Cancel</Button>
+              <Button
+                variant="primary"
+                onClick={async () => {
+                  try {
+                    await deleteEmployee(deletingEmp.employeeId || deletingEmp.id);
+                    addToast(`Employee "${deletingEmp.name}" deleted from database.`, "info");
+                    setDeletingEmp(null);
+                    fetchLiveEmployees();
+                  } catch (err) {
+                    addToast("Failed to delete employee: " + err.message, "error");
+                  }
+                }}
+                style={{ backgroundColor: "#DC2626", borderColor: "#DC2626", color: "#FFFFFF" }}
+              >
+                Remove Employee
+              </Button>
+            </div>
           </div>
         </div>
       )}

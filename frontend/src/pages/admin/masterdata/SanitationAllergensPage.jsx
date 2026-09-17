@@ -38,21 +38,28 @@ export function SanitationAllergensPage() {
   } = useMasterData();
   const { addToast } = useApp();
 
-  useEffect(() => {
-    masterDataService.getSanitationClasses().then((res) => {
-      const data = res?.data?.data !== undefined ? res.data.data : (res?.data !== undefined ? res.data : res);
-      if (Array.isArray(data) && typeof setSanitationClasses === "function") {
-        setSanitationClasses(data);
+  const fetchLiveSanitationAndAllergens = async () => {
+    try {
+      const [sanRes, algRes] = await Promise.all([
+        masterDataService.getSanitationClasses(),
+        masterDataService.getAllergenRules()
+      ]);
+      const sanData = sanRes?.data?.data || sanRes?.data || sanRes;
+      if (Array.isArray(sanData) && sanData.length > 0 && typeof setSanitationClasses === "function") {
+        setSanitationClasses(sanData);
       }
-    }).catch((err) => console.warn("Sanitation load:", err.message));
+      const algData = algRes?.data?.data || algRes?.data || algRes;
+      if (Array.isArray(algData) && algData.length > 0 && typeof setAllergenRules === "function") {
+        setAllergenRules(algData);
+      }
+    } catch (err) {
+      console.warn("Live sanitation & allergen load:", err.message);
+    }
+  };
 
-    masterDataService.getAllergenRules().then((res) => {
-      const data = res?.data?.data !== undefined ? res.data.data : (res?.data !== undefined ? res.data : res);
-      if (Array.isArray(data) && typeof setAllergenRules === "function") {
-        setAllergenRules(data);
-      }
-    }).catch((err) => console.warn("Allergen rules load:", err.message));
-  }, [setSanitationClasses, setAllergenRules]);
+  useEffect(() => {
+    fetchLiveSanitationAndAllergens();
+  }, []);
 
   const [activeTab, setActiveTab] = useState("sanitation"); // "sanitation" | "allergens"
   const [searchQuery, setSearchQuery] = useState("");
@@ -105,49 +112,75 @@ export function SanitationAllergensPage() {
     });
   }, [allergenRules, searchQuery]);
 
-  const handleAddSanitationSubmit = (e) => {
+  const handleAddSanitationSubmit = async (e) => {
     e.preventDefault();
     if (!newSanitation.sanitationClass.trim()) {
       addToast("Please provide sanitation class name.", "warning");
       return;
     }
 
-    const created = addSanitationClass(newSanitation);
-    addToast(`Sanitation Class "${created.sanitationClass}" registered!`, "success");
-    setIsModalOpen(false);
-    setNewSanitation({
-      sanitationClass: "",
-      description: "",
-      durationMin: 45,
-      cleaningMethod: "Automated 5-Step Central CIP Skid",
-      riskLevel: "Critical / Allergen Elimination",
-      applicableProducts: "Tonics, Fruit Sodas, Ginger Extract"
-    });
+    try {
+      const created = await addSanitationClass(newSanitation);
+      addToast(`Sanitation Class "${created?.sanitationClass || newSanitation.sanitationClass}" registered!`, "success");
+      setIsModalOpen(false);
+      setNewSanitation({
+        sanitationClass: "",
+        description: "",
+        durationMin: 45,
+        cleaningMethod: "Automated 5-Step Central CIP Skid",
+        riskLevel: "Critical / Allergen Elimination",
+        applicableProducts: "Tonics, Fruit Sodas, Ginger Extract"
+      });
+      fetchLiveSanitationAndAllergens();
+    } catch (err) {
+      addToast("Failed to create sanitation class: " + err.message, "error");
+    }
   };
 
-  const handleAddAllergenSubmit = (e) => {
+  const handleAddAllergenSubmit = async (e) => {
     e.preventDefault();
+    if (!newAllergen.allergenName.trim()) {
+      addToast("Please provide allergen name.", "warning");
+      return;
+    }
     const selSku = skus.find((s) => s.skuId === newAllergen.skuId);
-    const created = addAllergenRule({
-      ...newAllergen,
-      skuCode: selSku ? selSku.skuCode : "SKU-5001"
-    });
-    addToast(`Allergen rule "${created.allergenName}" registered!`, "success");
-    setIsModalOpen(false);
+    try {
+      const created = await addAllergenRule({
+        ...newAllergen,
+        skuCode: selSku ? selSku.skuCode : "SKU-5001"
+      });
+      addToast(`Allergen rule "${created?.allergenName || newAllergen.allergenName}" registered!`, "success");
+      setIsModalOpen(false);
+      setNewAllergen({
+        allergenName: "",
+        skuId: skus[0]?.skuId || "SKU-001",
+        riskLevel: "High Regulatory CCP",
+        cleaningProtocol: "Class A Full CIP + ATP Swab Validation < 10 RLU",
+        changeoverRestriction: "Mandatory QA clearance sign-off before starting non-allergen SKU"
+      });
+      fetchLiveSanitationAndAllergens();
+    } catch (err) {
+      addToast("Failed to create allergen rule: " + err.message, "error");
+    }
   };
 
-  const handleEditSanitationSubmit = (e) => {
+  const handleEditSanitationSubmit = async (e) => {
     e.preventDefault();
     if (!editingSanitation?.sanitationClass?.trim()) {
       addToast("Please provide sanitation class name.", "warning");
       return;
     }
-    updateSanitationClass(editingSanitation.sanitationId || editingSanitation.id, editingSanitation);
-    addToast(`Sanitation Class "${editingSanitation.sanitationClass}" updated!`, "success");
-    setEditingSanitation(null);
+    try {
+      await updateSanitationClass(editingSanitation.id || editingSanitation.sanitationId || editingSanitation.classId, editingSanitation);
+      addToast(`Sanitation Class "${editingSanitation.sanitationClass}" updated!`, "success");
+      setEditingSanitation(null);
+      fetchLiveSanitationAndAllergens();
+    } catch (err) {
+      addToast("Failed to update sanitation class: " + err.message, "error");
+    }
   };
 
-  const handleEditAllergenSubmit = (e) => {
+  const handleEditAllergenSubmit = async (e) => {
     e.preventDefault();
     if (!editingAllergen?.allergenName?.trim()) {
       addToast("Please provide allergen name.", "warning");
@@ -158,9 +191,44 @@ export function SanitationAllergensPage() {
       ...editingAllergen,
       skuCode: selSku ? selSku.skuCode : editingAllergen.skuCode || "SKU-5001"
     };
-    updateAllergenRule(editingAllergen.allergenId || editingAllergen.id, updated);
-    addToast(`Allergen rule "${editingAllergen.allergenName}" updated!`, "success");
-    setEditingAllergen(null);
+    try {
+      await updateAllergenRule(editingAllergen.id || editingAllergen.allergenId || editingAllergen.ruleId, updated);
+      addToast(`Allergen rule "${editingAllergen.allergenName}" updated!`, "success");
+      setEditingAllergen(null);
+      fetchLiveSanitationAndAllergens();
+    } catch (err) {
+      addToast("Failed to update allergen rule: " + err.message, "error");
+    }
+  };
+
+  const handleDeleteSanitation = async (s) => {
+    if (window.confirm(`Are you sure you want to delete sanitation class "${s.sanitationClass}"?`)) {
+      try {
+        await deleteSanitationClass(s.id || s.sanitationId || s.classId);
+        if (viewingSanitation && (viewingSanitation.sanitationId === s.sanitationId || viewingSanitation.id === s.id)) {
+          setViewingSanitation(null);
+        }
+        addToast(`Sanitation class "${s.sanitationClass}" deleted`, "info");
+        fetchLiveSanitationAndAllergens();
+      } catch (err) {
+        addToast("Failed to delete sanitation class: " + err.message, "error");
+      }
+    }
+  };
+
+  const handleDeleteAllergen = async (a) => {
+    if (window.confirm(`Are you sure you want to delete allergen rule "${a.allergenName}"?`)) {
+      try {
+        await deleteAllergenRule(a.id || a.allergenId || a.ruleId);
+        if (viewingAllergen && (viewingAllergen.allergenId === a.allergenId || viewingAllergen.id === a.id)) {
+          setViewingAllergen(null);
+        }
+        addToast(`Allergen rule "${a.allergenName}" deleted`, "info");
+        fetchLiveSanitationAndAllergens();
+      } catch (err) {
+        addToast("Failed to delete allergen rule: " + err.message, "error");
+      }
+    }
   };
 
   return (
@@ -305,8 +373,15 @@ export function SanitationAllergensPage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredSanitation.map((s) => (
-                  <tr key={s.sanitationId} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+                {filteredSanitation.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} style={{ padding: "36px 16px", textAlign: "center", color: "var(--text-muted)", fontSize: "13px" }}>
+                      No sanitation classes found. Click "+ Add Sanitation Class" to create one.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredSanitation.map((s) => (
+                  <tr key={s.id || s.sanitationId || s.classId} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
                     <td style={{ padding: "12px 16px", fontWeight: 800, color: "var(--text-primary)" }}>
                       {s.sanitationClass}
                     </td>
@@ -343,15 +418,7 @@ export function SanitationAllergensPage() {
                           <Edit2 size={13} />
                         </button>
                         <button
-                          onClick={() => {
-                            if (window.confirm(`Are you sure you want to delete sanitation class "${s.sanitationClass}"?`)) {
-                              deleteSanitationClass(s.sanitationId || s.id);
-                              if (viewingSanitation && (viewingSanitation.sanitationId === s.sanitationId || viewingSanitation.id === s.id)) {
-                                setViewingSanitation(null);
-                              }
-                              addToast(`Sanitation class "${s.sanitationClass}" deleted`, "info");
-                            }
-                          }}
+                          onClick={() => handleDeleteSanitation(s)}
                           title="Delete Sanitation Class"
                           style={{ width: "30px", height: "30px", borderRadius: "6px", backgroundColor: "rgba(239, 68, 68, 0.08)", color: "#EF4444", border: "1px solid rgba(239, 68, 68, 0.2)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
                         >
@@ -360,7 +427,7 @@ export function SanitationAllergensPage() {
                       </div>
                     </td>
                   </tr>
-                ))}
+                )))}
               </tbody>
             </table>
           </div>
@@ -379,8 +446,15 @@ export function SanitationAllergensPage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredAllergens.map((a) => (
-                  <tr key={a.allergenId} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+                {filteredAllergens.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} style={{ padding: "36px 16px", textAlign: "center", color: "var(--text-muted)", fontSize: "13px" }}>
+                      No allergen control rules found. Click "+ Add Allergen Rule" to create one.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredAllergens.map((a) => (
+                  <tr key={a.id || a.allergenId || a.ruleId} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
                     <td style={{ padding: "12px 16px", fontWeight: 800, color: "var(--text-primary)" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                         <ShieldAlert size={14} color="#EF4444" />
@@ -419,15 +493,7 @@ export function SanitationAllergensPage() {
                           <Edit2 size={13} />
                         </button>
                         <button
-                          onClick={() => {
-                            if (window.confirm(`Are you sure you want to delete allergen rule "${a.allergenName}"?`)) {
-                              deleteAllergenRule(a.allergenId || a.id);
-                              if (viewingAllergen && (viewingAllergen.allergenId === a.allergenId || viewingAllergen.id === a.id)) {
-                                setViewingAllergen(null);
-                              }
-                              addToast(`Allergen rule "${a.allergenName}" deleted`, "info");
-                            }
-                          }}
+                          onClick={() => handleDeleteAllergen(a)}
                           title="Delete Allergen Rule"
                           style={{ width: "30px", height: "30px", borderRadius: "6px", backgroundColor: "rgba(239, 68, 68, 0.08)", color: "#EF4444", border: "1px solid rgba(239, 68, 68, 0.2)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
                         >
@@ -436,7 +502,7 @@ export function SanitationAllergensPage() {
                       </div>
                     </td>
                   </tr>
-                ))}
+                )))}
               </tbody>
             </table>
           </div>

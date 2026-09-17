@@ -21,9 +21,8 @@ export function QualityRecords() {
     setLoading(true);
     try {
       const res = await qualityService.getQualityRecords();
-      if (res?.data) {
-        setRecords(res.data);
-      }
+      const rawList = Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : Array.isArray(res?.data?.data) ? res.data.data : [];
+      setRecords(rawList);
     } catch (err) {
       console.warn("Quality records fetch fallback:", err.message);
     } finally {

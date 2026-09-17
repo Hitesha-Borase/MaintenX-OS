@@ -27,12 +27,11 @@ import ciService from "../../../services/ciService";
 
 export function OwnersDueDates() {
   const navigate = useNavigate();
-  const { addToast } = useApp();
-  const { capaActions = [], overdueCapaCount } = useCI();
+  const { capaActions = [], overdueCapaCount, refreshCapa } = useCI();
 
   useEffect(() => {
-    ciService.getCapaActions().catch((err) => console.warn("CAPA actions load:", err.message));
-  }, []);
+    refreshCapa?.();
+  }, [refreshCapa]);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedOwnerFilter, setSelectedOwnerFilter] = useState("ALL");

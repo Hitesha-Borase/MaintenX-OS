@@ -12,7 +12,8 @@ import {
   ShieldCheck,
   Target,
   Clock,
-  Layers
+  Layers,
+  Briefcase
 } from "lucide-react";
 import { Card } from "../../../components/common/Card";
 import { StatCard } from "../../../components/common/StatCard";
@@ -262,24 +263,44 @@ export function Savings() {
                       </Badge>
                     </td>
                     <td style={{ padding: "12px 16px", textAlign: "right" }}>
-                      <button
-                        onClick={() => navigate("/ci/projects/benefits")}
-                        title="View Benefits Verification Dossier"
-                        style={{
-                          width: "30px",
-                          height: "30px",
-                          borderRadius: "6px",
-                          backgroundColor: "var(--bg-card-subtle)",
-                          color: "#059669",
-                          border: "1px solid var(--border-subtle)",
-                          cursor: "pointer",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          justifyContent: "center"
-                        }}
-                      >
-                        <ShieldCheck size={14} />
-                      </button>
+                      <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                        <button
+                          onClick={() => navigate("/ci/projects/list")}
+                          title="View in Projects Register"
+                          style={{
+                            width: "30px",
+                            height: "30px",
+                            borderRadius: "6px",
+                            backgroundColor: "var(--bg-card-subtle)",
+                            color: "#0284C7",
+                            border: "1px solid var(--border-subtle)",
+                            cursor: "pointer",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center"
+                          }}
+                        >
+                          <Briefcase size={14} />
+                        </button>
+                        <button
+                          onClick={() => navigate("/ci/projects/benefits")}
+                          title="View Benefits Verification Dossier"
+                          style={{
+                            width: "30px",
+                            height: "30px",
+                            borderRadius: "6px",
+                            backgroundColor: "var(--bg-card-subtle)",
+                            color: "#059669",
+                            border: "1px solid var(--border-subtle)",
+                            cursor: "pointer",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center"
+                          }}
+                        >
+                          <ShieldCheck size={14} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );

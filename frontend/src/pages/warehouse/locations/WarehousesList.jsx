@@ -13,7 +13,8 @@ import {
   X,
   Thermometer,
   ShieldCheck,
-  Download
+  Download,
+  Plus
 } from "lucide-react";
 import { Card } from "../../../components/common/Card";
 import { Badge } from "../../../components/common/Badge";
@@ -156,46 +157,135 @@ const INITIAL_WAREHOUSE_LOCATIONS = [
 export function WarehousesList() {
   const { addToast } = useApp();
 
-  const [locations, setLocations] = useState(INITIAL_WAREHOUSE_LOCATIONS);
+  const [locations, setLocations] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedWarehouse, setSelectedWarehouse] = useState("ALL");
   const [selectedZone, setSelectedZone] = useState("ALL");
 
-  // Sync with Fastify Backend on mount
-  useEffect(() => {
-    let isMounted = true;
-    warehouseService.getLocationsList().then((res) => {
+  // Fetch live locations from PostgreSQL via Fastify Backend
+  const fetchLocations = async () => {
+    try {
+      const res = await warehouseService.getLocationsList();
       const data = res?.data || res;
-      if (isMounted && data && Array.isArray(data.locations) && data.locations.length > 0) {
+      if (data && Array.isArray(data.locations)) {
         setLocations(data.locations);
+      } else {
+        setLocations([]);
       }
-    }).catch((err) => {
+    } catch (err) {
       console.warn("Backend location list fallback:", err.message);
-    });
-    return () => { isMounted = false; };
+      setLocations([]);
+    }
+  };
+
+  useEffect(() => {
+    fetchLocations();
   }, []);
 
   // Modals
   const [selectedLocationForView, setSelectedLocationForView] = useState(null);
   const [selectedLocationForTransfer, setSelectedLocationForTransfer] = useState(null);
   const [transferTarget, setTransferTarget] = useState("");
+  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+
+  // Add / Register Location Modal States
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [newLocation, setNewLocation] = useState({
+    warehouse: "Main Plant WH-01",
+    zone: "Zone A (Cold Storage +4°C)",
+    rack: "Rack R05",
+    location: "",
+    capacityPallets: 40,
+    occupiedPallets: 0,
+    material: "",
+    materialCode: "",
+    batchLot: "",
+    quantity: "",
+    temp: "4.0°C"
+  });
+
+  // Edit Location Modal States
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingLocation, setEditingLocation] = useState(null);
+
+  const handleAddLocation = async (e) => {
+    e.preventDefault();
+    if (!newLocation.location.trim()) {
+      addToast("Please provide bin location code (e.g. Bin R05-A1)", "warning");
+      return;
+    }
+    try {
+      await warehouseService.createLocation(newLocation);
+      await fetchLocations();
+      addToast(`Storage location ${newLocation.location} registered in database!`, "success");
+      setIsAddModalOpen(false);
+      setNewLocation({
+        warehouse: "Main Plant WH-01",
+        zone: "Zone A (Cold Storage +4°C)",
+        rack: "Rack R05",
+        location: "",
+        capacityPallets: 40,
+        occupiedPallets: 0,
+        material: "",
+        materialCode: "",
+        batchLot: "",
+        quantity: "",
+        temp: "4.0°C"
+      });
+    } catch (err) {
+      console.error("Failed to add location:", err);
+      addToast("Failed to save location in database", "error");
+    }
+  };
+
+  const handleUpdateLocation = async (e) => {
+    e.preventDefault();
+    if (!editingLocation) return;
+    try {
+      await warehouseService.updateLocation(editingLocation.id, editingLocation);
+      await fetchLocations();
+      addToast(`Location ${editingLocation.location} updated in database!`, "success");
+      setIsEditModalOpen(false);
+      setEditingLocation(null);
+    } catch (err) {
+      console.error("Failed to update location:", err);
+      addToast("Failed to update location in database", "error");
+    }
+  };
+
+  const handleDeleteLocation = async (loc) => {
+    if (!window.confirm(`Are you sure you want to delete storage bin "${loc.location}"?`)) return;
+    try {
+      await warehouseService.deleteLocation(loc.id);
+      await fetchLocations();
+      addToast(`Storage bin ${loc.location} deleted from database!`, "success");
+    } catch (err) {
+      console.error("Failed to delete location:", err);
+      addToast("Failed to delete location from database", "error");
+    }
+  };
 
   const filteredLocations = useMemo(() => {
     return locations.filter((loc) => {
       const q = searchQuery.toLowerCase();
       const matchesSearch =
-        loc.location.toLowerCase().includes(q) ||
-        loc.fullHierarchy.toLowerCase().includes(q) ||
-        loc.material.toLowerCase().includes(q) ||
-        loc.batchLot.toLowerCase().includes(q) ||
-        loc.materialCode.toLowerCase().includes(q);
+        (loc.location || "").toLowerCase().includes(q) ||
+        (loc.fullHierarchy || "").toLowerCase().includes(q) ||
+        (loc.material || "").toLowerCase().includes(q) ||
+        (loc.batchLot || "").toLowerCase().includes(q) ||
+        (loc.materialCode || "").toLowerCase().includes(q);
 
       const matchesWh = selectedWarehouse === "ALL" || loc.warehouse === selectedWarehouse;
-      const matchesZone = selectedZone === "ALL" || loc.zone.includes(selectedZone);
+      const matchesZone = selectedZone === "ALL" || (loc.zone || "").includes(selectedZone);
 
       return matchesSearch && matchesWh && matchesZone;
     });
   }, [locations, searchQuery, selectedWarehouse, selectedZone]);
+
+  const totalCap = useMemo(() => locations.reduce((acc, l) => acc + (Number(l.capacityPallets) || 0), 0), [locations]);
+  const totalOcc = useMemo(() => locations.reduce((acc, l) => acc + (Number(l.occupiedPallets) || 0), 0), [locations]);
+  const activeWhCount = useMemo(() => new Set(locations.map(l => l.warehouse)).size, [locations]);
+  const emptyBinsCount = useMemo(() => locations.filter((l) => (Number(l.occupiedPallets) || 0) === 0).length, [locations]);
 
   const handleTransferStock = async (e) => {
     e.preventDefault();
@@ -208,49 +298,21 @@ export function WarehousesList() {
       await warehouseService.relocateStock({
         sourceLocationId: selectedLocationForTransfer.id,
         targetLocationId: transferTarget
-      }).catch(() => null);
+      });
+      await fetchLocations();
+      addToast(
+        `Stock ${selectedLocationForTransfer.batchLot} relocated to target location successfully!`,
+        "success"
+      );
     } catch (apiErr) {
       console.warn("Backend relocate sync:", apiErr);
+      await fetchLocations();
     }
 
-    setLocations((prev) =>
-      prev.map((l) => {
-        if (l.id === selectedLocationForTransfer.id) {
-          return {
-            ...l,
-            occupiedPallets: 0,
-            material: "Unoccupied Available Staging Bay",
-            materialCode: "BIN-EMPTY",
-            batchLot: "N/A",
-            quantity: "0 units",
-            status: "Available"
-          };
-        }
-        if (l.id === transferTarget) {
-          return {
-            ...l,
-            occupiedPallets: selectedLocationForTransfer.occupiedPallets,
-            material: selectedLocationForTransfer.material,
-            materialCode: selectedLocationForTransfer.materialCode,
-            batchLot: selectedLocationForTransfer.batchLot,
-            quantity: selectedLocationForTransfer.quantity,
-            status: "Optimal"
-          };
-        }
-        return l;
-      })
-    );
-
-    addToast(
-      `Stock ${selectedLocationForTransfer.batchLot} relocated to target location successfully!`,
-      "success"
-    );
     setIsTransferModalOpen(false);
     setSelectedLocationForTransfer(null);
     setTransferTarget("");
   };
-
-  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
 
   const getStatusBadge = (status) => {
     switch (status) {
@@ -300,6 +362,14 @@ export function WarehousesList() {
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+          <Button
+            variant="primary"
+            icon={Plus}
+            onClick={() => setIsAddModalOpen(true)}
+            style={{ fontSize: "12px", padding: "7px 14px" }}
+          >
+            Register Location Bin
+          </Button>
           <Button variant="secondary" icon={Download} onClick={handleExportCSV} style={{ fontSize: "12px", padding: "7px 12px" }}>
             Export Layout CSV
           </Button>
@@ -319,31 +389,31 @@ export function WarehousesList() {
       >
         <StatCard
           title="Active Warehouses"
-          value="2 Facilities"
-          unit="WH-01 & WH-02"
-          trend={{ value: "100% Operational", isPositive: true, text: "" }}
+          value={activeWhCount > 0 ? `${activeWhCount} Facilities` : "0 Facilities"}
+          unit={activeWhCount > 0 ? "Operational" : "No Warehouses"}
+          trend={{ value: activeWhCount > 0 ? "100% Operational" : "Awaiting Setup", isPositive: activeWhCount > 0, text: "" }}
           icon={Building2}
           colorVariant="blue"
         />
         <StatCard
           title="Global Rack Occupancy"
-          value="76.4%"
+          value={totalCap > 0 ? `${Math.round((totalOcc / totalCap) * 100)}%` : "0%"}
           unit="Pallet Capacity"
-          trend={{ value: "348 / 450 Pallets", isPositive: true, text: "" }}
+          trend={{ value: `${totalOcc} / ${totalCap} Pallets`, isPositive: true, text: "" }}
           icon={Layers}
           colorVariant="amber"
         />
         <StatCard
           title="Cold Zone Temp SLA"
-          value="3.6°C"
-          unit="Stable"
-          trend={{ value: "Within 2.0-4.0°C target", isPositive: true, text: "" }}
+          value={locations.length > 0 ? "3.6°C" : "N/A"}
+          unit={locations.length > 0 ? "Stable" : "Inactive"}
+          trend={{ value: locations.length > 0 ? "Within 2.0-4.0°C target" : "No active bins", isPositive: locations.length > 0, text: "" }}
           icon={Thermometer}
           colorVariant="cyan"
         />
         <StatCard
           title="Available Empty Bins"
-          value={locations.filter((l) => l.occupiedPallets === 0).length.toString()}
+          value={emptyBinsCount.toString()}
           unit="Ready for Inbound"
           trend={{ value: "Clean & pre-audited", isPositive: true, text: "" }}
           icon={CheckCircle2}
@@ -440,8 +510,16 @@ export function WarehousesList() {
             <tbody>
               {filteredLocations.length === 0 ? (
                 <tr>
-                  <td colSpan={8} style={{ textAlign: "center", padding: "24px", color: "var(--text-secondary)" }}>
-                    No warehouse storage bins match your filters.
+                  <td colSpan={8} style={{ textAlign: "center", padding: "40px 20px", color: "var(--text-secondary)" }}>
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px" }}>
+                      <Building2 size={32} color="var(--text-muted)" style={{ opacity: 0.5 }} />
+                      <div style={{ fontWeight: 600, color: "var(--text-primary)", fontSize: "14px" }}>
+                        No warehouse locations registered
+                      </div>
+                      <div style={{ fontSize: "12px", color: "var(--text-muted)" }}>
+                        Click "+ Register Location Bin" above to add your first storage location.
+                      </div>
+                    </div>
                   </td>
                 </tr>
               ) : (
@@ -531,8 +609,21 @@ export function WarehousesList() {
                             size="sm"
                             onClick={() => setSelectedLocationForView(loc)}
                             style={{ fontSize: "11px", padding: "4px 8px" }}
+                            title="View Dossier"
                           >
                             View
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => {
+                              setEditingLocation({ ...loc });
+                              setIsEditModalOpen(true);
+                            }}
+                            style={{ fontSize: "11px", padding: "4px 8px" }}
+                            title="Edit Location"
+                          >
+                            Edit
                           </Button>
                           {!isAvailable && (
                             <Button
@@ -544,10 +635,20 @@ export function WarehousesList() {
                                 setIsTransferModalOpen(true);
                               }}
                               style={{ fontSize: "11px", padding: "4px 8px", color: "#8C5B23" }}
+                              title="Transfer Stock"
                             >
-                              Transfer Stock
+                              Transfer
                             </Button>
                           )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteLocation(loc)}
+                            style={{ fontSize: "11px", padding: "4px 8px", color: "#EF4444" }}
+                            title="Delete Location"
+                          >
+                            Delete
+                          </Button>
                         </div>
                       </td>
                     </tr>
@@ -688,6 +789,425 @@ export function WarehousesList() {
                 </Button>
                 <Button variant="primary" type="submit" icon={ArrowRightLeft}>
                   Execute Transfer
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* REGISTER LOCATION MODAL */}
+      {isAddModalOpen && (
+        <div className="modal-backdrop" onClick={() => setIsAddModalOpen(false)}>
+          <div
+            className="modal-content"
+            style={{
+              maxWidth: "540px",
+              width: "100%",
+              maxHeight: "90vh",
+              display: "flex",
+              flexDirection: "column",
+              margin: "16px",
+              borderRadius: "14px",
+              overflow: "hidden",
+              boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.1)"
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)", flexShrink: 0 }}>
+              <div>
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                  Register Storage Location Bin
+                </h2>
+                <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+                  Add a new rack slot / storage bay to warehouse physical hierarchy
+                </span>
+              </div>
+              <button onClick={() => setIsAddModalOpen(false)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <form
+              onSubmit={handleAddLocation}
+              style={{
+                padding: "20px",
+                display: "flex",
+                flexDirection: "column",
+                gap: "14px",
+                overflowY: "auto",
+                flex: 1
+              }}
+            >
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "12px" }}>
+                <div>
+                  <label className="form-label">Warehouse Facility *</label>
+                  <select
+                    className="form-select"
+                    value={newLocation.warehouse}
+                    onChange={(e) => setNewLocation({ ...newLocation, warehouse: e.target.value })}
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  >
+                    <option value="Main Plant WH-01">Main Plant WH-01</option>
+                    <option value="Distribution Center WH-02">Distribution Center WH-02</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="form-label">Zone *</label>
+                  <select
+                    className="form-select"
+                    value={newLocation.zone}
+                    onChange={(e) => setNewLocation({ ...newLocation, zone: e.target.value })}
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  >
+                    <option value="Zone A (Cold Storage +4°C)">Zone A (Cold Storage +4°C)</option>
+                    <option value="Zone B (Ambient Raw)">Zone B (Ambient Raw)</option>
+                    <option value="Zone C (Packaging High-Bay)">Zone C (Packaging High-Bay)</option>
+                    <option value="Zone D (Finished Goods Log Bay)">Zone D (Finished Goods Log Bay)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "12px" }}>
+                <div>
+                  <label className="form-label">Rack Identifier *</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    required
+                    placeholder="e.g. Rack R05"
+                    value={newLocation.rack}
+                    onChange={(e) => setNewLocation({ ...newLocation, rack: e.target.value })}
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+
+                <div>
+                  <label className="form-label">Bin Location Code *</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    required
+                    placeholder="e.g. Bin R05-A1"
+                    value={newLocation.location}
+                    onChange={(e) => setNewLocation({ ...newLocation, location: e.target.value })}
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "12px" }}>
+                <div>
+                  <label className="form-label">Pallet Capacity *</label>
+                  <input
+                    type="number"
+                    min="1"
+                    className="form-input"
+                    required
+                    value={newLocation.capacityPallets}
+                    onChange={(e) => setNewLocation({ ...newLocation, capacityPallets: parseInt(e.target.value) || 40 })}
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+
+                <div>
+                  <label className="form-label">Occupied Pallets</label>
+                  <input
+                    type="number"
+                    min="0"
+                    className="form-input"
+                    value={newLocation.occupiedPallets}
+                    onChange={(e) => setNewLocation({ ...newLocation, occupiedPallets: parseInt(e.target.value) || 0 })}
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="form-label">Stored Material Name (Optional)</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="e.g. Valencia Organic Orange Concentrate 65° Brix"
+                  value={newLocation.material}
+                  onChange={(e) => setNewLocation({ ...newLocation, material: e.target.value })}
+                  style={{ backgroundColor: "#FFFFFF" }}
+                />
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "12px" }}>
+                <div>
+                  <label className="form-label">Batch / Lot Number</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    placeholder="e.g. LOT-RM-ORG-5501"
+                    value={newLocation.batchLot}
+                    onChange={(e) => setNewLocation({ ...newLocation, batchLot: e.target.value })}
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+
+                <div>
+                  <label className="form-label">Quantity</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    placeholder="e.g. 2,400 kg"
+                    value={newLocation.quantity}
+                    onChange={(e) => setNewLocation({ ...newLocation, quantity: e.target.value })}
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="form-label">Zone Temperature Target</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="e.g. 4.0°C"
+                  value={newLocation.temp}
+                  onChange={(e) => setNewLocation({ ...newLocation, temp: e.target.value })}
+                  style={{ backgroundColor: "#FFFFFF" }}
+                />
+              </div>
+
+              <div
+                style={{
+                  position: "sticky",
+                  bottom: "-20px",
+                  margin: "0 -20px -20px -20px",
+                  padding: "16px 20px",
+                  backgroundColor: "#FFFFFF",
+                  borderTop: "1px solid var(--border-subtle)",
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  gap: "10px",
+                  zIndex: 10
+                }}
+              >
+                <Button variant="secondary" type="button" onClick={() => setIsAddModalOpen(false)}>
+                  Cancel
+                </Button>
+                <Button variant="primary" type="submit" icon={Plus}>
+                  Save Location Bin
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT LOCATION MODAL */}
+      {isEditModalOpen && editingLocation && (
+        <div className="modal-backdrop" onClick={() => setIsEditModalOpen(false)}>
+          <div
+            className="modal-content"
+            style={{
+              maxWidth: "540px",
+              width: "100%",
+              maxHeight: "90vh",
+              display: "flex",
+              flexDirection: "column",
+              margin: "16px",
+              borderRadius: "14px",
+              overflow: "hidden",
+              boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.1)"
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)", flexShrink: 0 }}>
+              <div>
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                  Edit Location Bin: {editingLocation.location}
+                </h2>
+                <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+                  Update rack capacity, stored material lot, and occupancy details
+                </span>
+              </div>
+              <button onClick={() => setIsEditModalOpen(false)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <form
+              onSubmit={handleUpdateLocation}
+              style={{
+                padding: "20px",
+                display: "flex",
+                flexDirection: "column",
+                gap: "14px",
+                overflowY: "auto",
+                flex: 1
+              }}
+            >
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "12px" }}>
+                <div>
+                  <label className="form-label">Warehouse Facility *</label>
+                  <select
+                    className="form-select"
+                    value={editingLocation.warehouse}
+                    onChange={(e) => setEditingLocation({ ...editingLocation, warehouse: e.target.value })}
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  >
+                    <option value="Main Plant WH-01">Main Plant WH-01</option>
+                    <option value="Distribution Center WH-02">Distribution Center WH-02</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="form-label">Zone *</label>
+                  <select
+                    className="form-select"
+                    value={editingLocation.zone}
+                    onChange={(e) => setEditingLocation({ ...editingLocation, zone: e.target.value })}
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  >
+                    <option value="Zone A (Cold Storage +4°C)">Zone A (Cold Storage +4°C)</option>
+                    <option value="Zone B (Ambient Raw)">Zone B (Ambient Raw)</option>
+                    <option value="Zone C (Packaging High-Bay)">Zone C (Packaging High-Bay)</option>
+                    <option value="Zone D (Finished Goods Log Bay)">Zone D (Finished Goods Log Bay)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "12px" }}>
+                <div>
+                  <label className="form-label">Rack Identifier *</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    required
+                    value={editingLocation.rack}
+                    onChange={(e) => setEditingLocation({ ...editingLocation, rack: e.target.value })}
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+
+                <div>
+                  <label className="form-label">Bin Location Code *</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    required
+                    value={editingLocation.location}
+                    onChange={(e) => setEditingLocation({ ...editingLocation, location: e.target.value })}
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "12px" }}>
+                <div>
+                  <label className="form-label">Capacity (Pallets) *</label>
+                  <input
+                    type="number"
+                    min="1"
+                    className="form-input"
+                    required
+                    value={editingLocation.capacityPallets}
+                    onChange={(e) => setEditingLocation({ ...editingLocation, capacityPallets: parseInt(e.target.value) || 40 })}
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+
+                <div>
+                  <label className="form-label">Occupied (Pallets) *</label>
+                  <input
+                    type="number"
+                    min="0"
+                    className="form-input"
+                    required
+                    value={editingLocation.occupiedPallets}
+                    onChange={(e) => setEditingLocation({ ...editingLocation, occupiedPallets: parseInt(e.target.value) || 0 })}
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="form-label">Stored Material Name</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  value={editingLocation.material || ""}
+                  onChange={(e) => setEditingLocation({ ...editingLocation, material: e.target.value })}
+                  style={{ backgroundColor: "#FFFFFF" }}
+                />
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "12px" }}>
+                <div>
+                  <label className="form-label">Batch / Lot Number</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={editingLocation.batchLot || ""}
+                    onChange={(e) => setEditingLocation({ ...editingLocation, batchLot: e.target.value })}
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+
+                <div>
+                  <label className="form-label">Quantity</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={editingLocation.quantity || ""}
+                    onChange={(e) => setEditingLocation({ ...editingLocation, quantity: e.target.value })}
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "12px" }}>
+                <div>
+                  <label className="form-label">Status</label>
+                  <select
+                    className="form-select"
+                    value={editingLocation.status}
+                    onChange={(e) => setEditingLocation({ ...editingLocation, status: e.target.value })}
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  >
+                    <option value="Optimal">Optimal</option>
+                    <option value="Near Capacity">Near Capacity</option>
+                    <option value="Available">Available</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="form-label">Zone Temperature</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={editingLocation.temp || "20.0°C"}
+                    onChange={(e) => setEditingLocation({ ...editingLocation, temp: e.target.value })}
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+              </div>
+
+              <div
+                style={{
+                  position: "sticky",
+                  bottom: "-20px",
+                  margin: "0 -20px -20px -20px",
+                  padding: "16px 20px",
+                  backgroundColor: "#FFFFFF",
+                  borderTop: "1px solid var(--border-subtle)",
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  gap: "10px",
+                  zIndex: 10
+                }}
+              >
+                <Button variant="secondary" type="button" onClick={() => setIsEditModalOpen(false)}>
+                  Cancel
+                </Button>
+                <Button variant="primary" type="submit">
+                  Save Changes
                 </Button>
               </div>
             </form>

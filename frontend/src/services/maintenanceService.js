@@ -187,6 +187,30 @@ export const maintenanceService = {
   async addWorkOrderComment(woId, data) {
     return apiClient.post(`/maintenance/work-orders/${woId}/comments`, data);
   },
+
+  async getReports() {
+    return apiClient.get("/maintenance/reports");
+  },
+
+  async getReportsSummary() {
+    return apiClient.get("/maintenance/reports/summary");
+  },
+
+  async createReport(data) {
+    return apiClient.post("/maintenance/reports", data);
+  },
+
+  async updateReport(id, data) {
+    return apiClient.put(`/maintenance/reports/${id}`, data);
+  },
+
+  async deleteReport(id) {
+    return apiClient.delete(`/maintenance/reports/${id}`);
+  },
+
+  async generateReport(id, format = "CSV") {
+    return apiClient.post(`/maintenance/reports/${id}/generate`, { format });
+  },
 };
 
 export default maintenanceService;

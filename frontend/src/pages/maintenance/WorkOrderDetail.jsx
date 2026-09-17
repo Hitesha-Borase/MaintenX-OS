@@ -22,11 +22,18 @@ import { Button } from "../../components/common/Button";
 import { Modal } from "../../components/common/Modal";
 import { useCMMS } from "../../context/CMMSContext";
 import { useApp } from "../../context/AppContext";
+import { useRole } from "../../context/RoleContext";
 import { maintenanceService } from "../../services/maintenanceService";
 
 export function WorkOrderDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { currentRole } = useRole();
+  const isPlantManager = currentRole?.id === "plant_manager";
+  const managerName = currentRole?.user?.name
+    ? `${currentRole.user.name} (${currentRole.label || "Plant Manager"})`
+    : "Arthur Sterling (Plant Manager)";
+
   const {
     workOrders,
     updateWorkOrder,
@@ -49,7 +56,7 @@ export function WorkOrderDetail() {
     wo?.actualHours != null && wo.actualHours !== "" ? String(wo.actualHours) : "0"
   );
   const [isSignOffModalOpen, setIsSignOffModalOpen] = useState(false);
-  const [supervisorName, setSupervisorName] = useState("Thomas Sterling (Plant Operations)");
+  const [supervisorName, setSupervisorName] = useState(managerName || "Thomas Sterling (Plant Operations)");
   const [actualHoursLog, setActualHoursLog] = useState(
     wo?.actualHours != null && wo.actualHours !== "" ? String(wo.actualHours) : "0"
   );
@@ -101,17 +108,18 @@ export function WorkOrderDetail() {
   const handleAddComment = async (e) => {
     e.preventDefault();
     if (!commentText.trim()) return;
+    const author = isPlantManager ? managerName : (currentRole?.user?.name || "Marcus Vance (Senior Tech)");
     try {
       await maintenanceService.addWorkOrderComment(wo.id, {
         text: commentText,
-        user: "Dave Miller"
+        user: author
       });
     } catch (err) {
       console.warn("Add comment notice:", err);
     }
-    updateWorkOrderStatus(wo.id, wo.status, commentText);
+    updateWorkOrderStatus(wo.id, wo.status, `[${author}]: ${commentText}`);
     setCommentText("");
-    addToast("Comment logged to Work Order activity trail.");
+    addToast("Directive logged to Work Order activity trail.", "success");
   };
 
   const handleSaveRepairNotes = async () => {
@@ -155,13 +163,21 @@ export function WorkOrderDetail() {
     } catch (err) {
       console.warn("Sign off notice:", err);
     }
-    updateWorkOrderStatus(wo.id, "Verified", `Supervisor sign-off completed by ${supervisorName}. Labour: ${hoursNum} hrs.`);
-    completeWorkOrder(wo.id, { actualHours: hoursNum });
+    const signOffNote = isPlantManager
+      ? `Managerial sign-off & operational clearance authorized by ${supervisorName}. Labour: ${hoursNum} hrs.`
+      : `Supervisor sign-off completed by ${supervisorName}. Labour: ${hoursNum} hrs.`;
+    updateWorkOrderStatus(wo.id, "Verified", signOffNote);
+    completeWorkOrder(wo.id, { actualHours: hoursNum, status: "Verified" });
     if (refreshWorkOrders) {
       await refreshWorkOrders();
     }
     setIsSignOffModalOpen(false);
-    addToast(`Work order ${wo.id} verified and ${hoursNum} labour hrs signed off!`, "success");
+    addToast(
+      isPlantManager
+        ? `Work order ${wo.id} verified and signed off by Management!`
+        : `Work order ${wo.id} verified and ${hoursNum} labour hrs signed off!`,
+      "success"
+    );
   };
 
   const handleIssuePart = async (e) => {
@@ -226,7 +242,7 @@ export function WorkOrderDetail() {
         <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
           {wo.status !== "Verified" && wo.status !== "Closed" && (
             <Button variant="success" icon={ShieldCheck} onClick={() => setIsSignOffModalOpen(true)}>
-              Supervisor Sign-Off
+              {isPlantManager ? "Managerial Sign-Off & Verification" : "Supervisor Sign-Off"}
             </Button>
           )}
           <Button variant="secondary" icon={Sparkles} onClick={handleConvertToSolution}>
@@ -373,9 +389,18 @@ export function WorkOrderDetail() {
         <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
           {/* Repair Action & Post-Test Verification Notes */}
           <Card>
-            <h3 style={{ fontSize: "15px", fontWeight: 700, color: "var(--text-primary)", marginBottom: "12px" }}>
-              Execution & Verification Results
-            </h3>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px", flexWrap: "wrap", gap: "6px" }}>
+              <h3 style={{ fontSize: "15px", fontWeight: 700, color: "var(--text-primary)", margin: 0 }}>
+                Execution & Verification Results
+              </h3>
+              <Badge variant="cyan">Tech Scope: {wo.assignedTechnician || "Marcus Vance"}</Badge>
+            </div>
+
+            {isPlantManager && (
+              <div style={{ padding: "10px 12px", borderRadius: "6px", backgroundColor: "rgba(200, 149, 71, 0.08)", border: "1px solid rgba(200, 149, 71, 0.25)", fontSize: "12px", color: "var(--text-secondary)", marginBottom: "12px", lineHeight: 1.5 }}>
+                <strong style={{ color: "#B27E33" }}>Plant Manager Scope:</strong> Physical repair execution is performed on the shop-floor by the technician ({wo.assignedTechnician}). Your managerial actions are <strong>Managerial Sign-Off & Verification</strong> (top green button) and <strong>Audit Directives</strong> (audit notes below).
+              </div>
+            )}
 
             <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
               <div className="form-group">
@@ -480,16 +505,16 @@ export function WorkOrderDetail() {
         </div>
       </div>
 
-      {/* Supervisor Sign-Off Modal */}
+      {/* Supervisor / Manager Sign-Off Modal */}
       <Modal
         isOpen={isSignOffModalOpen}
         onClose={() => setIsSignOffModalOpen(false)}
-        title="Supervisor Work Order Sign-Off"
+        title={isPlantManager ? "Managerial Work Order Sign-Off & Authorization" : "Supervisor Work Order Sign-Off"}
         subtitle={`Authorize completion and verification for ${wo.id}`}
       >
         <form onSubmit={handleSupervisorSignOff} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
           <div className="form-group">
-            <label className="form-label">Signing Supervisor</label>
+            <label className="form-label">{isPlantManager ? "Signing Director / Manager" : "Signing Supervisor"}</label>
             <input
               type="text"
               className="form-input"

@@ -310,17 +310,18 @@ export const masterDataService = {
     return apiClient.delete(`/master-data/criticality-levels/${enc(id)}`);
   },
 
+  // 13. Assets & Machine Capability
   async getAssets(plantId) {
     const query = plantId && plantId !== "ALL" ? `?plantId=${enc(plantId)}` : "";
     return apiClient.get(`/master-data/assets${query}`);
   },
 
-  async createAsset(data) {
-    return apiClient.post("/master-data/assets", data);
+  async createAsset(assetData) {
+    return apiClient.post("/master-data/assets", assetData);
   },
 
-  async updateAsset(id, data) {
-    return apiClient.put(`/master-data/assets/${enc(id)}`, data);
+  async updateAsset(id, assetData) {
+    return apiClient.put(`/master-data/assets/${enc(id)}`, assetData);
   },
 
   async deleteAsset(id) {
@@ -361,16 +362,17 @@ export const masterDataService = {
     return apiClient.delete(`/master-data/staff/${enc(id)}`);
   },
 
+  // 14. Quality Specifications & Parameter Master
   async getQualitySpecs() {
     return apiClient.get("/master-data/quality-specs");
   },
 
-  async createQualitySpec(data) {
-    return apiClient.post("/master-data/quality-specs", data);
+  async createQualitySpec(specData) {
+    return apiClient.post("/master-data/quality-specs", specData);
   },
 
-  async updateQualitySpec(id, data) {
-    return apiClient.put(`/master-data/quality-specs/${enc(id)}`, data);
+  async updateQualitySpec(id, specData) {
+    return apiClient.put(`/master-data/quality-specs/${enc(id)}`, specData);
   },
 
   async deleteQualitySpec(id) {
@@ -394,22 +396,74 @@ export const masterDataService = {
     return apiClient.delete(`/master-data/labour-standards/${enc(id)}`);
   },
 
-  // 16. Storage Resources & Warehouse Locations
+  // 16. HACCP CCP Limits
+  async getCCPLimits() {
+    return apiClient.get("/master-data/ccp-limits");
+  },
+
+  async createCCPLimit(data) {
+    return apiClient.post("/master-data/ccp-limits", data);
+  },
+
+  async updateCCPLimit(id, data) {
+    return apiClient.put(`/master-data/ccp-limits/${enc(id)}`, data);
+  },
+
+  async deleteCCPLimit(id) {
+    return apiClient.delete(`/master-data/ccp-limits/${enc(id)}`);
+  },
+
+  // 17. Storage Resources & Warehouse Locations
   async getStorageResources(plantId) {
     const query = plantId && plantId !== "ALL" ? `?plantId=${enc(plantId)}` : "";
-    return apiClient.get(`/master-data/work-centers${query}`);
+    return apiClient.get(`/master-data/storage-resources${query}`);
   },
 
   async createStorageResource(data) {
-    return apiClient.post("/master-data/work-centers", data);
+    return apiClient.post("/master-data/storage-resources", data);
   },
 
   async updateStorageResource(id, data) {
-    return apiClient.put(`/master-data/work-centers/${enc(id)}`, data);
+    return apiClient.put(`/master-data/storage-resources/${enc(id)}`, data);
   },
 
   async deleteStorageResource(id) {
-    return apiClient.delete(`/master-data/work-centers/${enc(id)}`);
+    return apiClient.delete(`/master-data/storage-resources/${enc(id)}`);
+  },
+
+  // 17. Employee Skills & Qualifications Matrix
+  async getEmployeeSkills(plantId) {
+    const query = plantId && plantId !== "ALL" ? `?plantId=${enc(plantId)}` : "";
+    return apiClient.get(`/master-data/employee-skills${query}`);
+  },
+
+  async createEmployeeSkill(data) {
+    return apiClient.post("/master-data/employee-skills", data);
+  },
+
+  async updateEmployeeSkill(id, data) {
+    return apiClient.put(`/master-data/employee-skills/${enc(id)}`, data);
+  },
+
+  async deleteEmployeeSkill(id) {
+    return apiClient.delete(`/master-data/employee-skills/${enc(id)}`);
+  },
+
+  // Aliases for Employee Master / Skills
+  async getEmployees(plantId) {
+    return this.getEmployeeSkills(plantId);
+  },
+
+  async createEmployee(data) {
+    return this.createEmployeeSkill(data);
+  },
+
+  async updateEmployee(id, data) {
+    return this.updateEmployeeSkill(id, data);
+  },
+
+  async deleteEmployee(id) {
+    return this.deleteEmployeeSkill(id);
   },
 
   // 17. Deviation Categories Master (Stored in DB: public.tenants.settings)

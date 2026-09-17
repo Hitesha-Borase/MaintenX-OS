@@ -643,6 +643,8 @@ export function AppContent() {
           <Route path="/kpi-analytics" element={<RoleProtectedRoute><KPIAnalytics /></RoleProtectedRoute>} />
           <Route path="/ai-analytics" element={<RoleProtectedRoute><AIAnalytics /></RoleProtectedRoute>} />
           <Route path="/exception-control-tower" element={<RoleProtectedRoute><ExceptionControlTower /></RoleProtectedRoute>} />
+          <Route path="/exceptions" element={<RoleProtectedRoute><ExceptionControlTower /></RoleProtectedRoute>} />
+          <Route path="/control-tower" element={<RoleProtectedRoute><ExceptionControlTower /></RoleProtectedRoute>} />
 
           <Route path="/performance/oee" element={<RoleProtectedRoute><OEEPage /></RoleProtectedRoute>} />
           <Route path="/performance/hb-management" element={<RoleProtectedRoute><HBManagementPage /></RoleProtectedRoute>} />

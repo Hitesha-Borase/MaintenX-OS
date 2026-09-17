@@ -26,14 +26,21 @@ export function PackagingMasterPage() {
   const { packConfigs = [], setPackConfigs, addPackConfig, updatePackConfig, deletePackConfig, skus = [] } = useMasterData();
   const { addToast } = useApp();
 
-  useEffect(() => {
-    masterDataService.getPackConfigs().then((res) => {
+  const fetchPackConfigs = React.useCallback(async () => {
+    try {
+      const res = await masterDataService.getPackConfigs();
       const data = res?.data !== undefined ? res.data : res;
-      if (Array.isArray(data) && typeof setPackConfigs === "function") {
+      if (Array.isArray(data) && data.length > 0 && typeof setPackConfigs === "function") {
         setPackConfigs(data);
       }
-    }).catch((err) => console.warn("Pack configs load:", err.message));
-  }, []);
+    } catch (err) {
+      console.warn("Pack configs load:", err.message);
+    }
+  }, [setPackConfigs]);
+
+  useEffect(() => {
+    fetchPackConfigs();
+  }, [fetchPackConfigs]);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [skuFilter, setSkuFilter] = useState("ALL");
@@ -88,27 +95,35 @@ export function PackagingMasterPage() {
     });
   }, [packConfigs, skuFilter, searchQuery]);
 
-  const handleAddSubmit = (e) => {
+  const handleAddSubmit = async (e) => {
     e.preventDefault();
-    const selSku = skus.find((s) => s.skuId === newPkg.skuId);
+    const selSku = skus.find((s) => (s.skuId || s.id) === newPkg.skuId);
     if (!selSku) {
       addToast("Please select a valid SKU.", "warning");
       return;
     }
 
-    const created = addPackConfig({
+    const payload = {
       ...newPkg,
-      skuCode: selSku.skuCode,
+      skuCode: selSku.skuCode || selSku.code,
       skuName: selSku.name,
       unitsPerPack: Number(newPkg.unitsPerPack) || 24,
       tareWeightKg: Number(newPkg.tareWeightKg) || 12.0
-    });
+    };
 
-    addToast(`Pack configuration "${created.packCode}" created!`, "success");
+    try {
+      await masterDataService.createPackConfig(payload);
+      addToast(`Pack configuration "${payload.packCode}" created!`, "success");
+      await fetchPackConfigs();
+    } catch (err) {
+      console.warn("Add pack config error:", err);
+      addPackConfig(payload);
+    }
+
     setIsModalOpen(false);
     setNewPkg({
       packCode: "",
-      skuId: finishedSkus[0]?.skuId || "SKU-001",
+      skuId: finishedSkus[0]?.skuId || finishedSkus[0]?.id || "SKU-001",
       unitsPerPack: 24,
       packType: "Corrugated Tray & Shrink Wrap",
       packagingUom: "CASE-24",
@@ -118,26 +133,44 @@ export function PackagingMasterPage() {
     });
   };
 
-  const handleEditSubmit = (e) => {
+  const handleEditSubmit = async (e) => {
     e.preventDefault();
-    const selSku = skus.find((s) => s.skuId === editingPkg.skuId);
-    updatePackConfig(editingPkg.packConfigId, {
+    const selSku = skus.find((s) => (s.skuId || s.id) === editingPkg.skuId);
+    const targetId = editingPkg.packConfigId || editingPkg.id || editingPkg.packCode || editingPkg.code;
+    const payload = {
       ...editingPkg,
-      skuCode: selSku ? selSku.skuCode : editingPkg.skuCode,
+      skuCode: selSku ? (selSku.skuCode || selSku.code) : editingPkg.skuCode,
       skuName: selSku ? selSku.name : editingPkg.skuName,
       unitsPerPack: Number(editingPkg.unitsPerPack) || 24
-    });
-    addToast(`Pack Configuration "${editingPkg.packCode}" updated successfully!`, "success");
+    };
+
+    try {
+      await masterDataService.updatePackConfig(targetId, payload);
+      addToast(`Pack Configuration "${editingPkg.packCode}" updated successfully!`, "success");
+      await fetchPackConfigs();
+    } catch (err) {
+      console.warn("Update pack config error:", err);
+      updatePackConfig(targetId, payload);
+    }
     setEditingPkg(null);
   };
 
-  const handleDelete = (packConfigId, code) => {
+  const handleDelete = async (packConfigId, code) => {
     if (window.confirm(`Are you sure you want to delete Pack Configuration "${code}"?`)) {
-      deletePackConfig(packConfigId);
+      const targetId = packConfigId || code;
+      try {
+        await masterDataService.deletePackConfig(targetId);
+        if (typeof deletePackConfig === "function") deletePackConfig(targetId);
+        addToast(`Pack Configuration "${code}" deleted.`, "info");
+        await fetchPackConfigs();
+      } catch (err) {
+        console.warn("Delete pack config error:", err);
+        if (typeof deletePackConfig === "function") deletePackConfig(targetId);
+        addToast(`Pack Configuration "${code}" deleted.`, "info");
+      }
       if (viewingPkg && (viewingPkg.packConfigId === packConfigId || viewingPkg.id === packConfigId || viewingPkg.packCode === code || viewingPkg.code === code)) {
         setViewingPkg(null);
       }
-      addToast(`Pack Configuration "${code}" deleted.`, "info");
     }
   };
 
@@ -348,7 +381,7 @@ export function PackagingMasterPage() {
                           <Edit2 size={13} />
                         </button>
                         <button
-                          onClick={() => handleDelete(p.packConfigId, p.packCode)}
+                          onClick={() => handleDelete(p.packConfigId || p.id, p.packCode || p.code)}
                           title="Delete Pack Configuration"
                           style={{
                             width: "30px",

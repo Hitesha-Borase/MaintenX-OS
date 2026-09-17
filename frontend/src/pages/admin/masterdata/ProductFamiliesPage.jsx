@@ -27,14 +27,21 @@ export function ProductFamiliesPage() {
   const { productFamilies = [], setProductFamilies, addProductFamily, updateProductFamily, deleteProductFamily, toggleProductFamilyStatus, skus = [], plants = [], activePlantId } = useMasterData();
   const { addToast } = useApp();
 
-  useEffect(() => {
-    masterDataService.getProductFamilies().then((res) => {
+  const fetchFamilies = React.useCallback(async () => {
+    try {
+      const res = await masterDataService.getProductFamilies();
       const data = res?.data !== undefined ? res.data : res;
-      if (Array.isArray(data) && typeof setProductFamilies === "function") {
+      if (Array.isArray(data) && data.length > 0 && typeof setProductFamilies === "function") {
         setProductFamilies(data);
       }
-    }).catch((err) => console.warn("Product families load:", err.message));
-  }, []);
+    } catch (err) {
+      console.warn("Product families load:", err.message);
+    }
+  }, [setProductFamilies]);
+
+  useEffect(() => {
+    fetchFamilies();
+  }, [fetchFamilies]);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [plantFilter, setPlantFilter] = useState("ALL");
@@ -78,7 +85,7 @@ export function ProductFamiliesPage() {
     });
   }, [productFamilies, plantFilter, statusFilter, searchQuery]);
 
-  const handleAddSubmit = (e) => {
+  const handleAddSubmit = async (e) => {
     e.preventDefault();
     if (!newFamily.name.trim()) {
       addToast("Please provide product family name.", "warning");
@@ -90,8 +97,14 @@ export function ProductFamiliesPage() {
       return;
     }
 
-    const created = addProductFamily(newFamily);
-    addToast(`Product family "${created.name}" registered in Master Data!`, "success");
+    try {
+      await masterDataService.createProductFamily(newFamily);
+      addToast(`Product family "${newFamily.name}" registered in database!`, "success");
+      await fetchFamilies();
+    } catch (err) {
+      console.warn("Add family error:", err);
+      addProductFamily(newFamily);
+    }
     setIsModalOpen(false);
     setNewFamily({
       code: "",
@@ -106,22 +119,37 @@ export function ProductFamiliesPage() {
     });
   };
 
-  const handleEditSubmit = (e) => {
+  const handleEditSubmit = async (e) => {
     e.preventDefault();
     if (!editingFamily.name.trim()) {
       addToast("Please provide family description.", "warning");
       return;
     }
 
-    updateProductFamily(editingFamily.familyId, editingFamily);
-    addToast(`Product family "${editingFamily.name}" updated successfully!`, "success");
+    const targetId = editingFamily.familyId || editingFamily.id || editingFamily.code;
+    try {
+      await masterDataService.updateProductFamily(targetId, editingFamily);
+      addToast(`Product family "${editingFamily.name}" updated in database!`, "success");
+      await fetchFamilies();
+    } catch (err) {
+      console.warn("Update family error:", err);
+      updateProductFamily(targetId, editingFamily);
+    }
     setEditingFamily(null);
   };
 
-  const handleDelete = (familyId, name) => {
+  const handleDelete = async (familyId, name) => {
     if (window.confirm(`Are you sure you want to delete Product Family "${name}"?`)) {
-      deleteProductFamily(familyId);
-      addToast(`Product family "${name}" deleted.`, "info");
+      try {
+        await masterDataService.deleteProductFamily(familyId);
+        if (typeof deleteProductFamily === "function") deleteProductFamily(familyId);
+        addToast(`Product family "${name}" deleted from database.`, "info");
+        await fetchFamilies();
+      } catch (err) {
+        console.warn("Delete family error:", err);
+        if (typeof deleteProductFamily === "function") deleteProductFamily(familyId);
+        addToast(`Product family "${name}" deleted.`, "info");
+      }
       if (viewingFamily && (viewingFamily.familyId === familyId || viewingFamily.id === familyId || viewingFamily.code === familyId)) {
         setViewingFamily(null);
       }

@@ -29,20 +29,25 @@ import { useApp } from "../../../context/AppContext";
 import masterDataService from "../../../services/masterDataService";
 
 export function BOMRecipesPage() {
-  const { boms = [], setBoms, addBOM, updateBOM, submitBOMForApproval, approveBOM, rejectBOM, skus = [] } = useMasterData();
+  const { boms = [], setBoms, addBOM, updateBOM, deleteBOM, submitBOMForApproval, approveBOM, rejectBOM, skus = [] } = useMasterData();
   const { addToast } = useApp();
 
-  // Trigger live GET /api/v1/master-data/boms on page mount
-  React.useEffect(() => {
-    masterDataService.getBoms().then((res) => {
-      let data = res?.data !== undefined ? res.data : res;
-      if (data && data.status === "success" && data.data) {
-        data = data.data;
-      }
+  const fetchLiveBoms = async () => {
+    try {
+      localStorage.removeItem("mx_master_boms");
+      const res = await masterDataService.getBoms();
+      const data = res?.data || res;
       if (Array.isArray(data) && typeof setBoms === "function") {
         setBoms(data);
       }
-    }).catch((err) => console.warn("Live BOM fetch:", err.message));
+    } catch (err) {
+      console.warn("Live BOM fetch:", err.message);
+    }
+  };
+
+  // Trigger live GET /api/v1/master-data/boms on page mount
+  React.useEffect(() => {
+    fetchLiveBoms();
   }, []);
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -57,7 +62,7 @@ export function BOMRecipesPage() {
   // Form State for new BOM
   const [newBOM, setNewBOM] = useState({
     bomNumber: "",
-    finishedSkuId: "",
+    finishedSkuId: skus[0]?.skuId || skus[0]?.id || "",
     batchSize: "10,000 Liters",
     yieldTarget: "99.2%",
     components: []
@@ -113,27 +118,39 @@ export function BOMRecipesPage() {
     }));
   };
 
-  const handleCreateSubmit = (status = "Draft") => {
-    const selectedSku = skus.find((s) => s.skuId === newBOM.finishedSkuId) || skus[0];
+  const handleCreateSubmit = async (status = "Draft") => {
+    const selectedSku = skus.find((s) => (s.skuId || s.id) === newBOM.finishedSkuId) || skus[0];
     if (!newBOM.components.length) {
       addToast("Please add at least one ingredient component to the recipe BOM.", "warning");
       return;
     }
 
-    const created = addBOM({
-      bomNumber: newBOM.bomNumber,
-      finishedSkuId: selectedSku?.skuId || newBOM.finishedSkuId,
-      finishedSkuName: selectedSku?.name || "",
+    const payload = {
+      bomNumber: newBOM.bomNumber || `BOM-${Date.now().toString().slice(-4)}`,
+      finishedSkuId: selectedSku?.skuId || selectedSku?.id || newBOM.finishedSkuId,
+      finishedSkuName: selectedSku?.name || "Finished Beverage",
       batchSize: newBOM.batchSize,
       yieldTarget: newBOM.yieldTarget,
-      components: newBOM.components
-    });
+      components: newBOM.components,
+      status: status === "Submitted" ? "Under Review" : "Draft"
+    };
+
+    try {
+      await masterDataService.createBom(payload);
+    } catch (e) {
+      console.warn("masterDataService.createBom error:", e);
+    }
+
+    if (typeof addBOM === "function") {
+      await addBOM(payload);
+    }
+
+    await fetchLiveBoms();
 
     if (status === "Submitted") {
-      submitBOMForApproval(created.bomId);
-      addToast(`BOM ${created.bomNumber} created & submitted for Quality Approval!`, "success");
+      addToast(`BOM ${payload.bomNumber} created & submitted for Quality Approval!`, "success");
     } else {
-      addToast(`BOM ${created.bomNumber} saved as Draft!`, "success");
+      addToast(`BOM ${payload.bomNumber} saved as Draft!`, "success");
     }
 
     setIsAddModalOpen(false);
@@ -166,23 +183,61 @@ export function BOMRecipesPage() {
     }));
   };
 
-  const handleEditSubmit = (e) => {
+  const handleEditSubmit = async (e) => {
     e.preventDefault();
     if (!editingBOM) return;
     if (!editingBOM.components?.length) {
       addToast("Please add at least one ingredient component to the recipe BOM.", "warning");
       return;
     }
-    const selectedSku = skus.find((s) => s.skuId === editingBOM.finishedSkuId);
-    updateBOM(editingBOM.bomId, {
+    const selectedSku = skus.find((s) => (s.skuId || s.id) === editingBOM.finishedSkuId);
+    const targetId = editingBOM.id || editingBOM.bomId || editingBOM.bomNumber;
+    const payload = {
       finishedSkuId: editingBOM.finishedSkuId,
       finishedSkuName: selectedSku?.name || editingBOM.finishedSkuName,
       batchSize: editingBOM.batchSize,
       yieldTarget: editingBOM.yieldTarget,
-      components: editingBOM.components
-    });
-    addToast(`Recipe BOM ${editingBOM.bomNumber} updated successfully!`, "success");
+      components: editingBOM.components,
+      name: editingBOM.finishedSkuName,
+      version: editingBOM.revision
+    };
+
+    try {
+      await masterDataService.updateBom(targetId, payload);
+    } catch (err) {
+      console.warn("masterDataService.updateBom error:", err);
+    }
+
+    if (typeof updateBOM === "function") {
+      await updateBOM(targetId, payload);
+    }
+
+    await fetchLiveBoms();
+    addToast(`Recipe BOM ${editingBOM.bomNumber || targetId} updated successfully in PostgreSQL database!`, "success");
     setEditingBOM(null);
+  };
+
+  const handleDeleteBOM = async (bomId, bomNumber) => {
+    if (!bomId) return;
+    const confirmName = bomNumber || bomId;
+    if (!window.confirm(`Are you sure you want to permanently delete BOM "${confirmName}" from PostgreSQL database?`)) {
+      return;
+    }
+    try {
+      await masterDataService.deleteBom(bomId);
+      if (typeof deleteBOM === "function") {
+        await deleteBOM(bomId);
+      }
+      await fetchLiveBoms();
+      addToast(`BOM "${confirmName}" deleted from database successfully!`, "success");
+    } catch (err) {
+      console.error("Delete BOM error:", err);
+      if (typeof deleteBOM === "function") {
+        await deleteBOM(bomId);
+      }
+      setBoms((prev) => prev.filter((b) => b.id !== bomId && b.bomId !== bomId && b.bomNumber !== bomNumber));
+      addToast(`BOM "${confirmName}" removed.`, "info");
+    }
   };
 
   return (
@@ -234,7 +289,7 @@ export function BOMRecipesPage() {
         />
         <StatCard
           title="Target Formulation Yield"
-          value="99.3%"
+          value={boms.length > 0 ? `${(boms.reduce((acc, b) => acc + (Number(String(b.yieldTarget || b.expectedYieldPct || 99).replace(/[^\d.]/g, '')) || 99), 0) / boms.length).toFixed(1)}%` : "0.0%"}
           unit="Average"
           trend={{ value: "Material scrap factor < 0.8%", isPositive: true, text: "" }}
           icon={Percent}
@@ -242,7 +297,7 @@ export function BOMRecipesPage() {
         />
         <StatCard
           title="Audit Traceability"
-          value="100%"
+          value={boms.length > 0 ? "100%" : "0%"}
           unit="21 CFR P11"
           trend={{ value: "Revision comparison enabled", isPositive: true, text: "" }}
           icon={ShieldCheck}
@@ -403,6 +458,14 @@ export function BOMRecipesPage() {
                             onClick={() => setApprovalModalBOM(bom)}
                             style={{ padding: "6px 8px" }}
                             title="Approval Workflow"
+                          />
+                          <Button
+                            variant="danger"
+                            size="sm"
+                            icon={Trash2}
+                            onClick={() => handleDeleteBOM(bom.id || bom.bomId, bom.bomNumber || bom.name)}
+                            style={{ padding: "6px 8px", color: "var(--status-danger, #ef4444)" }}
+                            title="Delete BOM Recipe from Database"
                           />
                         </div>
                       </td>

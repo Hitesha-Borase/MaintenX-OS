@@ -267,7 +267,7 @@ export function ReleaseQueue() {
                       variant="primary" 
                       size="sm" 
                       icon={FileCheck} 
-                      onClick={() => navigate("/quality/release/review", { state: { releaseId: b.id, batch: b.batch } })}
+                      onClick={() => navigate("/quality/release/review", { state: { releaseId: b.id, batch: b.batch, item: b } })}
                     >
                       Review & Sign-Off
                     </Button>

@@ -18,7 +18,9 @@ import {
   FileText,
   X,
   Wrench,
-  RefreshCw
+  RefreshCw,
+  Pencil,
+  Trash2
 } from "lucide-react";
 import { Card } from "../../../components/common/Card";
 import { Button } from "../../../components/common/Button";
@@ -39,6 +41,8 @@ export function Investigations() {
     openRcaCount,
     advanceRcaPhase,
     initiateRCA,
+    updateRCA,
+    deleteRCA,
     refreshInvestigations,
     availableAssets = [],
     availableLines = []
@@ -48,6 +52,7 @@ export function Investigations() {
   const [severityFilter, setSeverityFilter] = useState("ALL");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedRcaDetail, setSelectedRcaDetail] = useState(null);
+  const [editingRca, setEditingRca] = useState(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [summaryData, setSummaryData] = useState(null);
 
@@ -55,7 +60,8 @@ export function Investigations() {
   const [newAssetId, setNewAssetId] = useState("");
   const [newLineId, setNewLineId] = useState("");
   const [newSeverity, setNewSeverity] = useState("High");
-
+  const [stageFilter, setStageFilter] = useState("ALL"); // ALL | PROCESSING | PACKAGING
+  const [newStage, setNewStage] = useState("PROCESSING"); // PROCESSING | PACKAGING
   useEffect(() => {
     const list = (assets && assets.length > 0) ? assets : availableAssets;
     if (list && list.length > 0 && !newAssetId) {
@@ -118,6 +124,7 @@ export function Investigations() {
         lineName,
         title: newTitle.trim(),
         severity: newSeverity,
+        stage: newStage,
       }).catch(() => {});
 
       await initiateRCA({
@@ -127,9 +134,9 @@ export function Investigations() {
         lineId,
         lineName,
         severity: newSeverity,
-        problemStatement: newTitle.trim()
+        problemStatement: newTitle.trim(),
+        stage: newStage,
       });
-
       setNewTitle("");
       setNewAssetId("");
       setNewLineId("");
@@ -147,6 +154,50 @@ export function Investigations() {
       await loadData();
     } catch (err) {
       addToast("Failed to advance RCA phase.", "error");
+    }
+  };
+
+  const handleOpenEdit = (inv) => {
+    setEditingRca({
+      id: inv.id,
+      title: inv.title || "",
+      severity: inv.severity || "High",
+      stage: inv.stage || "PACKAGING",
+      status: inv.status || "Open",
+      problemStatement: inv.problemStatement || "",
+      lineName: inv.lineName || "",
+      assetName: inv.assetName || ""
+    });
+  };
+
+  const handleSaveEdit = async (e) => {
+    e.preventDefault();
+    if (!editingRca) return;
+    try {
+      await updateRCA(editingRca.id, {
+        title: editingRca.title.trim(),
+        severity: editingRca.severity,
+        stage: editingRca.stage,
+        status: editingRca.status,
+        problemStatement: editingRca.problemStatement
+      });
+      setEditingRca(null);
+      await loadData();
+      addToast(`Investigation ${editingRca.id} updated successfully.`, "success");
+    } catch (err) {
+      addToast(`Failed to update investigation: ${err.message}`, "error");
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm(`Are you sure you want to delete investigation ${id}? This action cannot be undone.`)) {
+      return;
+    }
+    try {
+      await deleteRCA(id);
+      await loadData();
+    } catch (err) {
+      addToast(`Failed to delete investigation: ${err.message}`, "error");
     }
   };
 
@@ -186,6 +237,7 @@ export function Investigations() {
   const filteredInvestigations = useMemo(() => {
     return investigations.filter((inv) => {
       const matchesSeverity = severityFilter === "ALL" || inv.severity === severityFilter;
+      const matchesStage = stageFilter === "ALL" || (inv.stage || "PACKAGING") === stageFilter;
       const q = searchQuery.toLowerCase().trim();
       const matchesSearch =
         !q ||
@@ -194,9 +246,9 @@ export function Investigations() {
         inv.assetName?.toLowerCase().includes(q) ||
         inv.leadInvestigator?.toLowerCase().includes(q);
 
-      return matchesSeverity && matchesSearch;
+      return matchesSeverity && matchesStage && matchesSearch;
     });
-  }, [investigations, searchQuery, severityFilter]);
+  }, [investigations, searchQuery, severityFilter, stageFilter]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%", maxWidth: "1600px", margin: "0 auto", minWidth: 0 }}>
@@ -318,6 +370,16 @@ export function Investigations() {
 
           <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
             <select
+              value={stageFilter}
+              onChange={(e) => setStageFilter(e.target.value)}
+              className="form-input"
+              style={{ fontSize: "12px", padding: "6px 10px", width: "auto", backgroundColor: "#FFFFFF", fontWeight: 700 }}
+            >
+              <option value="ALL">All Stages</option>
+              <option value="PROCESSING">Processing Hall</option>
+              <option value="PACKAGING">Packaging Lines</option>
+            </select>
+            <select
               value={severityFilter}
               onChange={(e) => setSeverityFilter(e.target.value)}
               className="form-input"
@@ -355,8 +417,13 @@ export function Investigations() {
                 filteredInvestigations.map((inv) => (
                   <tr key={inv.id} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
                   <td style={{ padding: "12px 16px" }}>
-                    <div style={{ fontWeight: 800, color: "var(--text-primary)", fontSize: "13px" }}>{inv.title}</div>
-                    <div style={{ fontSize: "11px", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+                      <span style={{ fontWeight: 800, color: "var(--text-primary)", fontSize: "13px" }}>{inv.title}</span>
+                      <Badge variant={inv.stage === "PROCESSING" ? "amber" : "cyan"}>
+                        {inv.stage || "PACKAGING"}
+                      </Badge>
+                    </div>
+                    <div style={{ fontSize: "11px", color: "var(--text-muted)", fontFamily: "var(--font-mono)", marginTop: "2px" }}>
                       {inv.id} • Lead: {inv.leadInvestigator}
                     </div>
                   </td>
@@ -421,6 +488,24 @@ export function Investigations() {
                         <Eye size={13} />
                       </button>
                       <button
+                        onClick={() => handleOpenEdit(inv)}
+                        title="Edit Investigation"
+                        style={{
+                          width: "30px",
+                          height: "30px",
+                          borderRadius: "6px",
+                          backgroundColor: "rgba(2, 132, 199, 0.08)",
+                          color: "#0284C7",
+                          border: "1px solid rgba(2, 132, 199, 0.25)",
+                          cursor: "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center"
+                        }}
+                      >
+                        <Pencil size={13} />
+                      </button>
+                      <button
                         onClick={async () => {
                           if (inv.currentPhase === "Closed" || inv.status?.includes("Closed")) {
                             addToast(`Investigation ${inv.id} is already completed & verified.`, "info");
@@ -457,6 +542,24 @@ export function Investigations() {
                         ) : (
                           <ChevronRight size={14} />
                         )}
+                      </button>
+                      <button
+                        onClick={() => handleDelete(inv.id)}
+                        title="Delete Investigation"
+                        style={{
+                          width: "30px",
+                          height: "30px",
+                          borderRadius: "6px",
+                          backgroundColor: "rgba(239, 68, 68, 0.08)",
+                          color: "#EF4444",
+                          border: "1px solid rgba(239, 68, 68, 0.25)",
+                          cursor: "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center"
+                        }}
+                      >
+                        <Trash2 size={13} />
                       </button>
                     </div>
                   </td>
@@ -542,6 +645,19 @@ export function Investigations() {
               </div>
 
               <div>
+                <label className="form-label">Operational Stage</label>
+                <select
+                  value={newStage}
+                  onChange={(e) => setNewStage(e.target.value)}
+                  className="form-input"
+                  style={{ backgroundColor: "#FFFFFF", fontWeight: 700 }}
+                >
+                  <option value="PROCESSING">Processing Hall (Mixers, Pasteurizers, Silos, Tanks)</option>
+                  <option value="PACKAGING">Packaging Lines (Blow-molder, Filler, Capper, Packer)</option>
+                </select>
+              </div>
+
+              <div>
                 <label className="form-label">Severity Level</label>
                 <select
                   value={newSeverity}
@@ -561,6 +677,103 @@ export function Investigations() {
                 </Button>
                 <Button variant="primary" type="submit">
                   Launch Investigation
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT RCA MODAL */}
+      {editingRca && (
+        <div className="modal-backdrop" onClick={() => setEditingRca(null)}>
+          <div className="modal-content" style={{ maxWidth: "520px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Pencil size={18} color="#0284C7" />
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                  Edit Investigation {editingRca.id}
+                </h2>
+              </div>
+              <button onClick={() => setEditingRca(null)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEdit} style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div>
+                <label className="form-label">Problem Statement / Failure Title *</label>
+                <input
+                  type="text"
+                  required
+                  value={editingRca.title}
+                  onChange={(e) => setEditingRca({ ...editingRca, title: e.target.value })}
+                  className="form-input"
+                  style={{ backgroundColor: "#FFFFFF" }}
+                />
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div>
+                  <label className="form-label">Operational Stage</label>
+                  <select
+                    value={editingRca.stage}
+                    onChange={(e) => setEditingRca({ ...editingRca, stage: e.target.value })}
+                    className="form-select"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  >
+                    <option value="PROCESSING">Processing Hall</option>
+                    <option value="PACKAGING">Packaging Lines</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="form-label">Severity Level</label>
+                  <select
+                    value={editingRca.severity}
+                    onChange={(e) => setEditingRca({ ...editingRca, severity: e.target.value })}
+                    className="form-select"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  >
+                    <option value="Critical">Critical</option>
+                    <option value="High">High</option>
+                    <option value="Medium">Medium</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="form-label">Investigation Status</label>
+                <select
+                  value={editingRca.status}
+                  onChange={(e) => setEditingRca({ ...editingRca, status: e.target.value })}
+                  className="form-select"
+                  style={{ backgroundColor: "#FFFFFF" }}
+                >
+                  <option value="Open">Open</option>
+                  <option value="In Progress">In Progress</option>
+                  <option value="Root Cause Validated">Root Cause Validated</option>
+                  <option value="Closed">Closed</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="form-label">Detailed Failure Description / Statement</label>
+                <textarea
+                  rows={4}
+                  value={editingRca.problemStatement}
+                  onChange={(e) => setEditingRca({ ...editingRca, problemStatement: e.target.value })}
+                  className="form-textarea"
+                  style={{ backgroundColor: "#FFFFFF" }}
+                />
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "8px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
+                <Button variant="secondary" onClick={() => setEditingRca(null)}>
+                  Cancel
+                </Button>
+                <Button variant="primary" type="submit">
+                  Save Changes
                 </Button>
               </div>
             </form>
@@ -618,11 +831,17 @@ export function Investigations() {
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", fontSize: "12px" }}>
                     <div style={{ padding: "8px", backgroundColor: "var(--bg-card-subtle)", borderRadius: "6px" }}>
                       <strong style={{ color: "#8C5B23" }}>D3 Containment:</strong>
-                      <div style={{ color: "var(--text-secondary)", marginTop: "2px" }}>{selectedRcaDetail.eightD.d3Containment}</div>
+                      <div style={{ color: "var(--text-secondary)", marginTop: "2px" }}>{selectedRcaDetail.eightD.d3Containment || "Line stopped; interim containment active."}</div>
                     </div>
-                    <div style={{ padding: "8px", backgroundColor: "var(--bg-card-subtle)", borderRadius: "6px" }}>
-                      <strong style={{ color: "#059669" }}>D5 Corrective Action:</strong>
-                      <div style={{ color: "var(--text-secondary)", marginTop: "2px" }}>{selectedRcaDetail.eightD.d5CorrectiveAction}</div>
+                    <div style={{ padding: "8px", backgroundColor: "rgba(5, 150, 105, 0.08)", borderRadius: "6px", border: "1px solid rgba(5, 150, 105, 0.25)" }}>
+                      <strong style={{ color: "#059669" }}>D4 Validated Root Cause:</strong>
+                      <div style={{ color: "var(--text-primary)", marginTop: "2px", fontWeight: 700 }}>
+                        {selectedRcaDetail.eightD?.d4RootCause || selectedRcaDetail.problemStatement || "Root cause validation in progress"}
+                      </div>
+                    </div>
+                    <div style={{ padding: "8px", backgroundColor: "var(--bg-card-subtle)", borderRadius: "6px", gridColumn: "span 2" }}>
+                      <strong style={{ color: "#0284C7" }}>D5 Corrective Action (CAPA):</strong>
+                      <div style={{ color: "var(--text-secondary)", marginTop: "2px" }}>{selectedRcaDetail.eightD.d5CorrectiveAction || "CAPA action item formulation pending."}</div>
                     </div>
                   </div>
                 </div>

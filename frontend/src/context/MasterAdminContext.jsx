@@ -35,7 +35,13 @@ export function MasterAdminProvider({ children }) {
         if (parts.length === 3) {
           try {
             const payload = JSON.parse(atob(parts[1]));
-            if (payload.role === "master_admin" || payload.isMasterAdmin) {
+            if (
+              payload.role === "master_admin" ||
+              payload.isMasterAdmin ||
+              payload.role === "admin" ||
+              payload.role === "system_admin" ||
+              payload.role === "super_admin"
+            ) {
               return;
             }
           } catch {
@@ -252,6 +258,7 @@ export function MasterAdminProvider({ children }) {
 
   const addCompany = async (companyData) => {
     try {
+      await ensureMasterToken();
       const created = await masterAdminService.createCompany(companyData);
       await fetchAllData();
       return created;
@@ -421,6 +428,29 @@ export function MasterAdminProvider({ children }) {
     }
   };
 
+  const deleteAuditLog = async (logId) => {
+    try {
+      setAuditLogs((prev) => prev.filter((l) => l.id !== logId));
+      await masterAdminService.deleteAuditLog(logId);
+      await fetchAuditLogs();
+    } catch (err) {
+      console.error("Failed to delete audit log:", err);
+      await fetchAuditLogs();
+      throw err;
+    }
+  };
+
+  const clearAllAuditLogs = async () => {
+    try {
+      setAuditLogs([]);
+      await masterAdminService.clearAllAuditLogs();
+      await fetchAuditLogs();
+    } catch (err) {
+      console.error("Failed to clear all audit logs:", err);
+      setAuditLogs([]);
+    }
+  };
+
   const addPlan = async (planDetails) => {
     try {
       await masterAdminService.createPlan(planDetails);
@@ -530,6 +560,8 @@ export function MasterAdminProvider({ children }) {
         resetAdminPassword,
         updateTicketStatus,
         deleteTicket,
+        deleteAuditLog,
+        clearAllAuditLogs,
         addPlan,
         editPlan,
         updatePlanStatus,

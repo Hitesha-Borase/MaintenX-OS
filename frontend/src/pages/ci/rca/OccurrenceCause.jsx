@@ -312,9 +312,42 @@ export function OccurrenceCause() {
 
       {/* Validated Occurrence Cause Statement Card */}
       <Card style={{ padding: "18px", minWidth: 0, width: "100%", boxSizing: "border-box" }}>
-        <div style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)", marginBottom: "12px" }}>
-          Validated Occurrence Cause Statement ({activeCase})
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px", flexWrap: "wrap", gap: "8px" }}>
+          <div style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)" }}>
+            Validated Occurrence Cause Statement ({activeCase})
+          </div>
+          {isConfirmed && (
+            <Badge variant="emerald">
+              ✓ PERSISTED & VALIDATED IN POSTGRESQL DOSSIER
+            </Badge>
+          )}
         </div>
+
+        {isConfirmed && (
+          <div style={{ backgroundColor: "rgba(5, 150, 105, 0.08)", border: "1px solid rgba(5, 150, 105, 0.25)", borderRadius: "8px", padding: "10px 14px", marginBottom: "12px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "8px" }}>
+            <div style={{ fontSize: "12px", color: "#065F46" }}>
+              <strong>Status: Root Cause Validated.</strong> This verified occurrence cause is locked into the 8D Dossier and active across MaintenX OS.
+            </div>
+            <button
+              type="button"
+              onClick={() => navigate("/ci/rca/investigations")}
+              style={{
+                background: "transparent",
+                border: "none",
+                color: "#059669",
+                fontSize: "12px",
+                fontWeight: 700,
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "4px"
+              }}
+            >
+              <span>View in Investigations Hub</span>
+              <ArrowRight size={13} />
+            </button>
+          </div>
+        )}
 
         <form onSubmit={handleConfirm} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
           <div>

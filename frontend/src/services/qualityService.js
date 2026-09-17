@@ -54,6 +54,10 @@ export const qualityService = {
     return apiClient.get("/quality/release/metrics");
   },
 
+  async getReleaseDossier(batchId) {
+    return apiClient.get(`/quality/release/review/${batchId}`);
+  },
+
   async authorizeRelease(releaseData) {
     return apiClient.post("/quality/release/authorize", releaseData);
   },
@@ -100,6 +104,14 @@ export const qualityService = {
 
   async getAllergenAudits() {
     return apiClient.get("/quality/sanitation/allergen");
+  },
+
+  async createAllergenAudit(auditData) {
+    return apiClient.post("/quality/sanitation/allergen", auditData);
+  },
+
+  async deleteAllergenAudit(id) {
+    return apiClient.delete(`/quality/sanitation/allergen/${id}`);
   },
 
   async clearAllergenAudit(auditData) {
@@ -440,6 +452,17 @@ export const qualityService = {
 
   async deleteProductCheck(id) {
     return apiClient.delete(`/quality/checks/product/${id}`);
+  },
+  async getDeviationCategories() {
+    return apiClient.get("/quality/deviation-categories");
+  },
+
+  async saveDeviationCategory(data) {
+    return apiClient.post("/quality/deviation-categories", data);
+  },
+
+  async deleteDeviationCategory(id) {
+    return apiClient.delete(`/quality/deviation-categories/${id}`);
   },
 };
 

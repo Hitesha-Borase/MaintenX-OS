@@ -10,19 +10,12 @@ export function Rework() {
   const { addToast } = useApp();
   const navigate = useNavigate();
 
-  const [batches, setBatches] = useState([
-    { id: "BAT-2026-0890", name: "BAT-2026-0890 — Organic Orange Juice 1L (Hold: HLD-401)" },
-    { id: "BAT-2026-0891", name: "BAT-2026-0891 — Cold Brew Espresso 330ml Can" }
-  ]);
-  const [protocols, setProtocols] = useState([
-    { id: "THERMAL_REPASTEURIZE", label: "Thermal Kill Step Re-Pasteurization (≥83.1°C)", defaultNote: "Re-pasteurize at 84°C for 30 seconds to satisfy CCP thermal kill protocol" },
-    { id: "BRIX_DILUTION", label: "Refractometer Brix Adjustment & Sugar Re-blending", defaultNote: "Adjust brix sugar levels to 11.8°Bx by controlled purified water blending" },
-    { id: "FILTER_POLISH", label: "Secondary Micro-Filtration Polish", defaultNote: "Perform secondary 0.45 micron micro-filtration polish cycle" }
-  ]);
+  const [batches, setBatches] = useState([]);
+  const [protocols, setProtocols] = useState([]);
 
-  const [selectedBatch, setSelectedBatch] = useState("BAT-2026-0890");
-  const [reworkNote, setReworkNote] = useState("Re-pasteurize at 84°C for 30 seconds to satisfy CCP thermal kill protocol");
-  const [reworkProtocol, setReworkProtocol] = useState("THERMAL_REPASTEURIZE");
+  const [selectedBatch, setSelectedBatch] = useState("");
+  const [reworkNote, setReworkNote] = useState("");
+  const [reworkProtocol, setReworkProtocol] = useState("");
   const [confirmed, setConfirmed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -66,18 +59,17 @@ export function Rework() {
     e.preventDefault();
     setSubmitting(true);
     try {
-      await qualityService.submitRework({
+      const res = await qualityService.submitRework({
         batch: selectedBatch,
         instruction: reworkNote,
         protocol: reworkProtocol
       });
 
       setConfirmed(true);
-      addToast(`Batch ${selectedBatch} authorized for rework. Production order updated.`, "success");
+      addToast(res?.data?.message || `Batch ${selectedBatch} authorized for rework and saved in database.`, "success");
     } catch (err) {
       console.error(err);
-      setConfirmed(true);
-      addToast(`Batch ${selectedBatch} authorized for rework.`, "success");
+      addToast(`Failed to authorize rework for ${selectedBatch}`, "error");
     } finally {
       setSubmitting(false);
     }

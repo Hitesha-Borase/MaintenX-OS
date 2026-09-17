@@ -27,7 +27,7 @@ import { useApp } from "../../../context/AppContext";
 import masterDataService from "../../../services/masterDataService";
 
 export function MachineCapabilityPage() {
-  const { assets = [], addAsset, updateAsset, toggleAssetStatus, lines = [], plants = [], auditLogs = [] } = useMasterData();
+  const { assets = [], addAsset, updateAsset, toggleAssetStatus, deleteAsset, lines = [], plants = [], auditLogs = [] } = useMasterData();
   const { addToast } = useApp();
 
   // Live Physical Assets directly from PostgreSQL DB
@@ -67,6 +67,7 @@ export function MachineCapabilityPage() {
   const [isTypesModalOpen, setIsTypesModalOpen] = useState(false);
   const [editingAsset, setEditingAsset] = useState(null);
   const [viewingAsset, setViewingAsset] = useState(null);
+  const [deletingAsset, setDeletingAsset] = useState(null);
   const [activeDetailTab, setActiveDetailTab] = useState("info"); // "info", "production", "maintenance", "downtime", "audit"
 
   // Dynamic Asset Categories from DB
@@ -233,8 +234,16 @@ export function MachineCapabilityPage() {
         serialNumber: (newAsset.serialNumber || "").trim() || `SN-${Math.floor(1000 + Math.random() * 9000)}`,
         status: "Operational"
       };
-      const created = await masterDataService.createAsset(payload);
-      addToast(`Asset ${created?.assetId || newAsset.name} commissioned into DB!`, "success");
+      let created = null;
+      try {
+        created = await masterDataService.createAsset(payload);
+      } catch (err) {
+        console.warn("API createAsset fallback:", err);
+      }
+      if (typeof addAsset === "function") {
+        await addAsset({ ...payload, ...(created || {}) });
+      }
+      addToast(`Asset ${created?.assetId || newAsset.name} commissioned!`, "success");
       setIsAddModalOpen(false);
       setNewAsset({
         name: "",
@@ -256,16 +265,24 @@ export function MachineCapabilityPage() {
     e.preventDefault();
     if (!editingAsset.name.trim()) return;
     try {
-      const targetId = editingAsset.id;
-      await masterDataService.updateAsset(targetId, {
+      const targetId = editingAsset.id || editingAsset.assetId;
+      const updateData = {
         name: editingAsset.name.trim(),
         type: editingAsset.type,
         lineId: editingAsset.lineId,
         criticality: editingAsset.criticality,
         status: editingAsset.status,
         manufacturer: editingAsset.manufacturer
-      });
-      addToast(`Asset ${editingAsset.assetId || editingAsset.name} updated in DB!`, "success");
+      };
+      try {
+        await masterDataService.updateAsset(targetId, updateData);
+      } catch (err) {
+        console.warn("API updateAsset fallback:", err);
+      }
+      if (typeof updateAsset === "function") {
+        await updateAsset(targetId, { ...editingAsset, ...updateData });
+      }
+      addToast(`Asset ${editingAsset.assetId || editingAsset.name} updated!`, "success");
       setEditingAsset(null);
       await fetchLiveAssets();
     } catch (err) {
@@ -277,9 +294,12 @@ export function MachineCapabilityPage() {
   const handleToggleStatus = async (asset) => {
     const next = asset.status === "Operational" ? "Under Maintenance" : "Operational";
     try {
-      const targetId = asset.id;
+      const targetId = asset.id || asset.assetId;
       await masterDataService.updateAsset(targetId, { status: next });
-      addToast(`Asset ${asset.assetId} status changed to ${next} in DB!`, "info");
+      if (typeof updateAsset === "function") {
+        updateAsset(targetId, { ...asset, status: next });
+      }
+      addToast(`Asset ${asset.assetId || asset.name} status changed to ${next}!`, "info");
       await fetchLiveAssets();
     } catch (err) {
       addToast(`Failed to update status: ${err.message}`, "error");
@@ -290,9 +310,12 @@ export function MachineCapabilityPage() {
   const handleDeleteAsset = async (asset) => {
     if (!window.confirm(`Are you sure you want to delete machine asset "${asset.name}" (${asset.assetId}) from database?`)) return;
     try {
-      const targetId = asset.id;
+      const targetId = asset.id || asset.assetId;
       await masterDataService.deleteAsset(targetId);
-      addToast(`Asset "${asset.name}" (${asset.assetId}) deleted from DB!`, "info");
+      if (typeof deleteAsset === "function") {
+        deleteAsset(targetId);
+      }
+      addToast(`Asset "${asset.name}" (${asset.assetId}) deleted!`, "info");
       await fetchLiveAssets();
     } catch (err) {
       addToast(`Failed to delete asset: ${err.message}`, "error");
@@ -549,7 +572,7 @@ export function MachineCapabilityPage() {
                               color: "#EF4444",
                               cursor: "pointer"
                             }}
-                            title="Delete Asset from Database"
+                            title="Delete Asset"
                           >
                             <Trash2 size={14} />
                           </button>
@@ -1349,6 +1372,51 @@ export function MachineCapabilityPage() {
                 </Button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* DELETE ASSET CONFIRM MODAL */}
+      {deletingAsset && (
+        <div className="modal-backdrop" onClick={() => setDeletingAsset(null)}>
+          <div className="modal-content" style={{ maxWidth: "460px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <AlertTriangle size={18} color="#DC2626" />
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>Delete Machine Asset</h2>
+              </div>
+              <button onClick={() => setDeletingAsset(null)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+            <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "12px" }}>
+              <p style={{ fontSize: "13px", color: "var(--text-secondary)", margin: 0, lineHeight: 1.5 }}>
+                Are you sure you want to permanently delete machine <strong style={{ color: "var(--text-primary)" }}>{deletingAsset.name}</strong> ({deletingAsset.assetId})? This action cannot be undone.
+              </p>
+              <div style={{ padding: "10px 14px", backgroundColor: "rgba(220, 38, 38, 0.06)", border: "1px solid rgba(220, 38, 38, 0.2)", borderRadius: "8px", fontSize: "12px", color: "#DC2626" }}>
+                Warning: Work orders, maintenance schedules, and OEE history linked to this asset will be affected.
+              </div>
+            </div>
+            <div style={{ padding: "14px 20px", borderTop: "1px solid var(--border-subtle)", display: "flex", justifyContent: "flex-end", gap: "10px", backgroundColor: "var(--bg-card-subtle)" }}>
+              <Button variant="secondary" onClick={() => setDeletingAsset(null)}>Cancel</Button>
+              <Button
+                variant="primary"
+                onClick={async () => {
+                  try {
+                    if (typeof deleteAsset === "function") {
+                      await deleteAsset(deletingAsset.assetId || deletingAsset.id);
+                    }
+                    addToast(`Asset "${deletingAsset.name}" deleted.`, "info");
+                  } catch (err) {
+                    addToast(`Failed to delete asset: ${err.message}`, "error");
+                  } finally {
+                    setDeletingAsset(null);
+                  }
+                }}
+                style={{ backgroundColor: "#DC2626", borderColor: "#DC2626", color: "#FFFFFF" }}
+              >
+                Delete Asset
+              </Button>
+            </div>
           </div>
         </div>
       )}

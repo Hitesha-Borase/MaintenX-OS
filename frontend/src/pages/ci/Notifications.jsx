@@ -37,21 +37,22 @@ export function Notifications() {
     // 1. Overdue CAPA
     capaActions.forEach((ca) => {
       const isOverdue = ca.dueDate && new Date(ca.dueDate) < now && ca.status !== "Completed" && ca.status !== "Verified";
+      const ownerName = ca.owner || ca.assignedTo || "CI Team";
       if (isOverdue) {
         list.push({
           id: `notif-capa-od-${ca.id}`,
           title: `CAPA Overdue — ${ca.id}`,
-          msg: `Action "${ca.description}" is past its target due date (${ca.dueDate}). Responsible: ${ca.assignedTo}.`,
+          msg: `Action "${ca.description}" is past its target due date (${ca.dueDate}). Responsible: ${ownerName}.`,
           time: "Immediate SLA Violation",
           path: "/ci/capa/corrective",
           type: "danger",
           badge: "OVERDUE"
         });
-      } else if (ca.status === "Pending") {
+      } else if (ca.status === "Open" || ca.status === "In Progress") {
         list.push({
           id: `notif-capa-pend-${ca.id}`,
-          title: `CAPA Pending — ${ca.id}`,
-          msg: `Action "${ca.description}" requires implementation. Assigned to: ${ca.assignedTo}.`,
+          title: `CAPA Active — ${ca.id}`,
+          msg: `Action "${ca.description}" requires implementation. Assigned to: ${ownerName}.`,
           time: `Target: ${ca.dueDate}`,
           path: "/ci/capa/corrective",
           type: "warning",
@@ -63,13 +64,15 @@ export function Notifications() {
     // 2. Open Investigations
     investigations.forEach((inv) => {
       if (inv.status !== "Closed") {
+        const leadName = inv.leadInvestigator || inv.lead || "Lead Investigator";
+        const severityLevel = inv.severity || inv.priority || "High";
         list.push({
           id: `notif-rca-${inv.id}`,
           title: `RCA Investigation Active — ${inv.id}`,
-          msg: `${inv.title} on ${inv.assetName || inv.assetId} is currently in 8D phase "${inv.currentPhase}". Lead: ${inv.lead}.`,
-          time: `Priority: ${inv.priority}`,
+          msg: `${inv.title} on ${inv.assetName || inv.assetId} is currently in 8D phase "${inv.currentPhase}". Lead: ${leadName}.`,
+          time: `Severity: ${severityLevel}`,
           path: "/ci/rca/investigations",
-          type: inv.priority === "Critical" ? "danger" : "warning",
+          type: severityLevel === "Critical" ? "danger" : "warning",
           badge: inv.currentPhase || "RCA"
         });
       }
@@ -80,8 +83,8 @@ export function Notifications() {
       if (rec.isBadActor) {
         list.push({
           id: `notif-rel-${rec.assetId}`,
-          title: `Bad Actor Asset Flagged — ${rec.assetName}`,
-          msg: `${rec.assetId} on ${rec.lineName} reached ${rec.failuresCount} failures with ${rec.totalDowntimeMin} min downtime. Systematic RCA recommended.`,
+          title: `Bad Actor Asset Flagged — ${rec.assetName || rec.assetId}`,
+          msg: `${rec.assetId} on ${rec.lineName || "Line 1"} reached ${rec.failuresCount} failures with ${rec.totalDowntimeMin} min downtime. Systematic RCA recommended.`,
           time: "Reliability Alert",
           path: "/ci/reliability",
           type: "danger",
@@ -92,11 +95,13 @@ export function Notifications() {
 
     // 4. CI Projects
     ciProjects.forEach((proj) => {
-      if (proj.status === "Active" || proj.status === "Planning") {
+      if (proj.status !== "Closed") {
+        const savingsTarget = Number(proj.projectedSavingsAnnual || proj.annualizedTargetSavings || 0);
+        const ownerName = proj.owner || proj.lead || "CI Lead";
         list.push({
           id: `notif-proj-${proj.id}`,
           title: `Kaizen Project Milestone — ${proj.name}`,
-          msg: `Project ${proj.id} targeting $${Number(proj.annualizedTargetSavings || 0).toLocaleString()} annualized savings. Project Lead: ${proj.lead}.`,
+          msg: `Project ${proj.id} targeting $${savingsTarget.toLocaleString()} annualized savings. Project Lead: ${ownerName}.`,
           time: `Status: ${proj.status}`,
           path: "/ci/projects/list",
           type: "info",
@@ -107,7 +112,7 @@ export function Notifications() {
 
     // 5. Standards in Review or Draft
     standards.forEach((std) => {
-      if (std.status === "Review" || std.status === "Draft") {
+      if (std.status === "Review" || std.status === "Draft" || std.status === "Under Review") {
         list.push({
           id: `notif-std-${std.id}`,
           title: `Controlled Standard — ${std.title}`,

@@ -284,7 +284,11 @@ export function VerifiedSolutions() {
                   </td>
                   <td style={{ padding: "12px 16px", textAlign: "right" }}>
                     <button
-                      onClick={() => deleteVerifiedSolution(s.id)}
+                      onClick={async () => {
+                        if (window.confirm(`Delete verified solution "${s.failureMode}" (${s.id})?`)) {
+                          await deleteVerifiedSolution(s.id);
+                        }
+                      }}
                       title="Remove Solution"
                       style={{
                         width: "30px",

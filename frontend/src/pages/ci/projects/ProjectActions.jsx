@@ -16,7 +16,8 @@ import {
   Filter,
   X,
   ShieldCheck,
-  Zap
+  Zap,
+  Trash2
 } from "lucide-react";
 import { Card } from "../../../components/common/Card";
 import { StatCard } from "../../../components/common/StatCard";
@@ -34,6 +35,7 @@ export function ProjectActions() {
     ciProjects = [],
     createCapaAction,
     updateCapaStatus,
+    deleteCapaAction,
     overdueCapaCount,
     currentUser
   } = useCI();
@@ -337,6 +339,17 @@ export function ProjectActions() {
                             <CheckCircle2 size={13} />
                           </button>
                         )}
+                        <button
+                          onClick={async () => {
+                            if (window.confirm(`Delete deliverable "${a.description.substring(0, 30)}..." (${a.id})?`)) {
+                              await deleteCapaAction(a.id);
+                            }
+                          }}
+                          title="Delete Action Deliverable"
+                          style={{ width: "30px", height: "30px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", color: "#DC2626", border: "1px solid var(--border-subtle)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+                        >
+                          <Trash2 size={13} />
+                        </button>
                       </div>
                     </td>
                   </tr>

@@ -178,25 +178,31 @@ export function CIProvider({ children }) {
     refreshAll();
   }, [refreshAll]);
 
+  // Helper to match plant ID flexibly (supports default PLT-01, ALL, and DB UUIDs)
+  const isPlantMatch = (recPlantId) => {
+    if (!activePlantId || activePlantId === "ALL" || activePlantId === "PLT-01" || activePlantId === "PLT-IND") return true;
+    return !recPlantId || recPlantId === activePlantId;
+  };
+
   // Derived plant filtered views
   const plantFilteredReliability = useMemo(() => {
-    return reliabilityRecords.filter((r) => !activePlantId || r.plantId === activePlantId || activePlantId === "ALL");
+    return reliabilityRecords.filter((r) => isPlantMatch(r.plantId));
   }, [reliabilityRecords, activePlantId]);
 
   const plantFilteredProjects = useMemo(() => {
-    return ciProjects.filter((p) => !activePlantId || p.plantId === activePlantId || activePlantId === "ALL");
+    return ciProjects.filter((p) => isPlantMatch(p.plantId));
   }, [ciProjects, activePlantId]);
 
   const plantFilteredRca = useMemo(() => {
-    return investigations.filter((i) => !activePlantId || i.plantId === activePlantId || activePlantId === "ALL");
+    return investigations.filter((i) => isPlantMatch(i.plantId));
   }, [investigations, activePlantId]);
 
   const plantFilteredCapex = useMemo(() => {
-    return capexProjects.filter((c) => !activePlantId || c.plantId === activePlantId || activePlantId === "ALL");
+    return capexProjects.filter((c) => isPlantMatch(c.plantId));
   }, [capexProjects, activePlantId]);
 
   const plantFilteredLosses = useMemo(() => {
-    return lossRecords.filter((l) => !activePlantId || l.plantId === activePlantId || activePlantId === "ALL");
+    return lossRecords.filter((l) => isPlantMatch(l.plantId));
   }, [lossRecords, activePlantId]);
 
   // Dynamic KPIs (fallback to calculated if dashboard summary pending)
@@ -215,13 +221,19 @@ export function CIProvider({ children }) {
   }, [dashboardSummary, plantFilteredReliability]);
 
   const realizedSavingsTotal = useMemo(() => {
-    if (dashboardSummary?.financials?.realizedSavings !== undefined) return dashboardSummary.financials.realizedSavings;
-    return plantFilteredProjects.reduce((acc, p) => acc + (Number(p.realizedSavingsYTD) || 0), 0);
+    if (plantFilteredProjects.length > 0) {
+      return plantFilteredProjects.reduce((acc, p) => acc + (Number(p.realizedSavingsYTD) || 0), 0);
+    }
+    if (dashboardSummary?.financials?.realizedSavings !== undefined) return Number(dashboardSummary.financials.realizedSavings) || 0;
+    return 0;
   }, [dashboardSummary, plantFilteredProjects]);
 
   const projectedSavingsTotal = useMemo(() => {
-    if (dashboardSummary?.financials?.projectedSavings !== undefined) return dashboardSummary.financials.projectedSavings;
-    return plantFilteredProjects.reduce((acc, p) => acc + (Number(p.projectedSavingsAnnual) || 0), 0);
+    if (plantFilteredProjects.length > 0) {
+      return plantFilteredProjects.reduce((acc, p) => acc + (Number(p.projectedSavingsAnnual) || 0), 0);
+    }
+    if (dashboardSummary?.financials?.projectedSavings !== undefined) return Number(dashboardSummary.financials.projectedSavings) || 0;
+    return 0;
   }, [dashboardSummary, plantFilteredProjects]);
 
   const badActorsCount = useMemo(() => {
@@ -295,6 +307,7 @@ export function CIProvider({ children }) {
         teamMembers: [currentUser, "Marcus Vance (Maintenance Lead)", "Elena Rostova (QA)"],
         eventDate: new Date().toISOString().substring(0, 10),
         daysActive: 1,
+        stage: assetOrId.stage || extraFields.stage || "PACKAGING",
         whyTree: assetOrId.whyTree && assetOrId.whyTree.length > 0 ? assetOrId.whyTree : defaultWhyTree,
         eightD: assetOrId.eightD || defaultEightD,
       };
@@ -321,6 +334,7 @@ export function CIProvider({ children }) {
         severity: extraFields.severity || "High",
         status: "Open",
         currentPhase: "Event",
+        stage: extraFields.stage || asset.stage || "PACKAGING",
         problemStatement: customProblem || extraFields.problemStatement || `Systematic failure detected on ${asset.assetName || asset.name || "equipment"}. Investigation initiated to determine root cause and implement permanent CAPA.`,
         leadInvestigator: currentUser,
         teamMembers: [currentUser, "Marcus Vance (Maintenance Lead)", "Elena Rostova (QA)"],
@@ -407,7 +421,7 @@ export function CIProvider({ children }) {
     }
   };
 
-  // 5. Evidence Locker: Add / Delete
+  // 5. Evidence Locker: Add / Update / Delete
   const addEvidence = async (evidenceData) => {
     try {
       const res = await ciService.createEvidence(evidenceData);
@@ -419,6 +433,20 @@ export function CIProvider({ children }) {
     } catch (err) {
       console.error("API createEvidence error:", err.message);
       addToast(`Error adding evidence: ${err.message}`, "error");
+    }
+  };
+
+  const updateEvidence = async (id, evidenceData) => {
+    try {
+      const res = await ciService.updateEvidence(id, evidenceData);
+      const updated = res?.data || res;
+      setEvidenceList((prev) => prev.map((e) => (e.id === id ? { ...e, ...updated } : e)));
+      addToast(`Evidence ${id} updated successfully!`, "success");
+      await refreshEvidence();
+      return updated;
+    } catch (err) {
+      console.error("API updateEvidence error:", err.message);
+      addToast(`Error updating evidence: ${err.message}`, "error");
     }
   };
 
@@ -484,22 +512,38 @@ export function CIProvider({ children }) {
     }
   };
 
-  // 7. CAPA Actions: Create / Update Status / Verify Effectiveness / Delete
+  // 7. CAPA Actions: Create / Update / Update Status / Verify Effectiveness / Delete
   const createCapaAction = async (actionData) => {
     try {
       const res = await ciService.createCapaAction({
         ...actionData,
         owner: actionData.owner || currentUser,
       });
-      const created = res?.data || res;
-      setCapaActions((prev) => [created, ...prev]);
-      addToast(`CAPA Action ${created.id} assigned to ${created.owner}!`, "success");
+      const created = res?.data !== undefined ? (res.data?.data !== undefined ? res.data.data : res.data) : res;
+      setCapaActions((prev) => [created, ...prev.filter((c) => c.id !== created?.id)]);
+      addToast(`CAPA Action ${created?.id || ""} assigned to ${created?.owner || "owner"}!`, "success");
       await refreshCapa();
       await refreshDashboard();
-      return created.id;
+      return created?.id;
     } catch (err) {
       console.error("API createCapaAction error:", err.message);
       addToast(`Error creating CAPA: ${err.message}`, "error");
+    }
+  };
+
+  const updateCapaAction = async (actionId, updateData) => {
+    try {
+      const res = await ciService.updateCapaAction(actionId, updateData);
+      const updated = res?.data !== undefined ? (res.data?.data !== undefined ? res.data.data : res.data) : res;
+      setCapaActions((prev) =>
+        prev.map((c) => (c.id === actionId ? { ...c, ...updated } : c))
+      );
+      addToast(`CAPA ${actionId} successfully updated!`, "success");
+      await refreshCapa();
+      await refreshDashboard();
+    } catch (err) {
+      console.error("API updateCapaAction error:", err.message);
+      addToast(`Error updating CAPA: ${err.message}`, "error");
     }
   };
 
@@ -507,7 +551,7 @@ export function CIProvider({ children }) {
     const today = new Date().toISOString().substring(0, 10);
     try {
       const res = await ciService.updateCapaStatus(actionId, newStatus, today, extraNotes);
-      const updated = res?.data || res;
+      const updated = res?.data !== undefined ? (res.data?.data !== undefined ? res.data.data : res.data) : res;
       setCapaActions((prev) =>
         prev.map((c) => (c.id === actionId ? { ...c, ...updated } : c))
       );
@@ -523,7 +567,7 @@ export function CIProvider({ children }) {
   const verifyCapaEffectiveness = async (actionId, effectivenessResult) => {
     try {
       const res = await ciService.verifyCapaEffectiveness(actionId, effectivenessResult);
-      const updated = res?.data || res;
+      const updated = res?.data !== undefined ? (res.data?.data !== undefined ? res.data.data : res.data) : res;
       setCapaActions((prev) =>
         prev.map((c) => (c.id === actionId ? { ...c, ...updated } : c))
       );
@@ -850,11 +894,13 @@ export function CIProvider({ children }) {
         advanceRcaPhase,
         deleteRCA,
         addEvidence,
+        updateEvidence,
         deleteEvidence,
         addHypothesis,
         validateRootCause,
         deleteHypothesis,
         createCapaAction,
+        updateCapaAction,
         updateCapaStatus,
         verifyCapaEffectiveness,
         deleteCapaAction,

@@ -1,0 +1,516 @@
+<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+<head>
+<meta charset="utf-8">
+<title>MaintenX-OS Client Business Data Flow Guide</title>
+<!--[if gte mso 9]>
+<xml>
+ <w:WordDocument>
+  <w:View>Print</w:View>
+  <w:Zoom>100</w:Zoom>
+  <w:DoNotOptimizeForBrowser/>
+ </w:WordDocument>
+</xml>
+<![endif]-->
+<style>
+body {
+  font-family: 'Segoe UI', 'Calibri', Arial, sans-serif;
+  font-size: 11pt;
+  line-height: 1.6;
+  color: #1A202C;
+  padding: 30px;
+  background-color: #FFFFFF;
+}
+h1 {
+  font-size: 26pt;
+  color: #1A365D;
+  border-bottom: 3px solid #2B6CB0;
+  padding-bottom: 12px;
+  margin-top: 0px;
+  font-weight: 700;
+}
+h2 {
+  font-size: 18pt;
+  color: #2B6CB0;
+  border-bottom: 1.5px solid #E2E8F0;
+  padding-bottom: 6px;
+  margin-top: 32px;
+  font-weight: 600;
+}
+h3 {
+  font-size: 14pt;
+  color: #2D3748;
+  margin-top: 20px;
+  font-weight: 600;
+}
+.hero-box {
+  background-color: #EBF8FF;
+  border: 1px solid #BEE3F8;
+  border-left: 6px solid #3182CE;
+  padding: 18px 24px;
+  margin: 20px 0;
+  border-radius: 6px;
+}
+.flow-diagram-container {
+  background-color: #F7FAFC;
+  border: 2px dashed #CBD5E0;
+  padding: 20px;
+  margin: 25px 0;
+  border-radius: 8px;
+  text-align: center;
+}
+.flow-step {
+  display: inline-block;
+  background-color: #2B6CB0;
+  color: #FFFFFF;
+  padding: 12px 18px;
+  margin: 6px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 11pt;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+.flow-arrow {
+  display: inline-block;
+  font-size: 18pt;
+  color: #4A5568;
+  font-weight: bold;
+  vertical-align: middle;
+  margin: 0 8px;
+}
+.dashboard-card {
+  background-color: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-left: 6px solid #48BB78;
+  padding: 18px 22px;
+  margin: 20px 0;
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+.dashboard-card.alert-card {
+  border-left-color: #E53E3E;
+}
+.dashboard-card.purple-card {
+  border-left-color: #805AD5;
+}
+.dashboard-card.blue-card {
+  border-left-color: #3182CE;
+}
+.dashboard-card.orange-card {
+  border-left-color: #DD6B20;
+}
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 18px 0;
+  font-size: 10.5pt;
+}
+th {
+  background-color: #2B6CB0;
+  color: #FFFFFF;
+  font-weight: 600;
+  text-align: left;
+  padding: 10px 12px;
+  border: 1px solid #CBD5E0;
+}
+td {
+  padding: 10px 12px;
+  border: 1px solid #E2E8F0;
+  vertical-align: top;
+}
+tr:nth-child(even) {
+  background-color: #F8FAFC;
+}
+.badge-in {
+  background-color: #EBF8FF;
+  color: #2B6CB0;
+  font-weight: bold;
+  padding: 4px 10px;
+  border-radius: 4px;
+  border: 1px solid #BEE3F8;
+  display: inline-block;
+}
+.badge-out {
+  background-color: #F0FFF4;
+  color: #276749;
+  font-weight: bold;
+  padding: 4px 10px;
+  border-radius: 4px;
+  border: 1px solid #C6F6D5;
+  display: inline-block;
+}
+.user-role {
+  font-weight: bold;
+  color: #4A5568;
+}
+.example-box {
+  background-color: #FFFDF5;
+  border: 1px solid #FEEBC8;
+  border-left: 6px solid #DD6B20;
+  padding: 16px 20px;
+  margin: 20px 0;
+  border-radius: 6px;
+}
+</style>
+</head>
+<body>
+
+<h1>MaintenX-OS: Business Data Flow & Operational Guide</h1>
+<p><strong>Non-Technical Client Manual: How Data Flows From Screen to Screen Across Your Factory</strong><br>
+<em>Document Type: Executive & Client Presentation | System Version: 2.4 | Multi-Plant Edition</em></p>
+
+<div class="hero-box">
+<h3>🌟 Purpose of this Document</h3>
+<p>This document explains <strong>exactly how information moves in MaintenX-OS without using any technical coding terms</strong>. It details who enters what data, which dashboard receives it, and how one department's action automatically triggers the next department's workflow.</p>
+</div>
+
+<h2>1. The Big Picture: Master Data Pipeline</h2>
+<p>In a smart factory running MaintenX-OS, information flows seamlessly across 7 key functional areas:</p>
+
+<div class="flow-diagram-container">
+  <div class="flow-step">1. Raw Material Inward<br><small>(Warehouse Dock)</small></div>
+  <span class="flow-arrow">➔</span>
+  <div class="flow-step">2. Production Planning<br><small>(Work Orders)</small></div>
+  <span class="flow-arrow">➔</span>
+  <div class="flow-step">3. Shop Floor Execution<br><small>(Line Operator)</small></div>
+  <span class="flow-arrow">➔</span>
+  <div class="flow-step">4. Quality & CCP<br><small>(QA Inspection)</small></div>
+  <br><br>
+  <span class="flow-arrow" style="transform: rotate(90deg); display: block; margin: 10px auto;">➔</span>
+  <div class="flow-step" style="background-color: #DD6B20;">5. Machine Maintenance<br><small>(Auto Breakdown Alerts)</small></div>
+  <span class="flow-arrow">➔</span>
+  <div class="flow-step" style="background-color: #38A169;">6. Finished Goods Shipping<br><small>(Pick, Pack & Dispatch)</small></div>
+  <span class="flow-arrow">➔</span>
+  <div class="flow-step" style="background-color: #805AD5;">7. Executive Command Center<br><small>(Live Real-Time OEE)</small></div>
+</div>
+
+<hr style="border: 0; border-top: 1px solid #E2E8F0; margin: 30px 0;">
+
+<h2>2. Screen-by-Screen Data Flow Breakdown</h2>
+<p>Below is the detailed operational lifecycle of every dashboard: who interacts with it, what inputs go in, and which dashboard receives the resulting data.</p>
+
+<!-- DASHBOARD 1: WAREHOUSE RECEIVING -->
+<div class="dashboard-card blue-card">
+  <h3>📦 1. Warehouse Receiving & Inward Dock Dashboard</h3>
+  <p><span class="user-role">Who Uses It:</span> Warehouse Gate Executive, Inward Material Inspector, Stores Manager.</p>
+  
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 25%;">What Data Enters Here?</th>
+        <th style="width: 40%;">What Happens on this Screen?</th>
+        <th style="width: 35%;">Where Does this Data Go Next?</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>
+          <span class="badge-in">Inputs</span><br>
+          • Supplier Delivery Challan<br>
+          • Purchase Order (PO) Number<br>
+          • Raw Material Name & SKU<br>
+          • Received Quantity & Bags/Boxes<br>
+          • Supplier Lot Number & Expiry
+        </td>
+        <td>
+          1. The truck arrives at the factory dock.<br>
+          2. The clerk checks the PO number and records received weight.<br>
+          3. Clicks <strong>"Generate Goods Receipt Note (GRN)"</strong>.<br>
+          4. The system assigns a <strong>Unique Internal Barcode/Lot ID</strong> and prints labels.<br>
+          5. Allocates material to a specific Rack/Bin location (e.g. <em>Aisle-02, Shelf-B</em>).
+        </td>
+        <td>
+          <span class="badge-out">Destination Dashboards</span><br>
+          <strong>➔ Planner Dashboard:</strong> Instantly updates raw material inventory so the planner knows materials are available for production.<br><br>
+          <strong>➔ Quality Dashboard:</strong> Alerts QA team if incoming material requires a pre-acceptance lab check.<br><br>
+          <strong>➔ Traceability Tree:</strong> Stores the root origin record for end-to-end audit tracking.
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- DASHBOARD 2: PRODUCTION PLANNING -->
+<div class="dashboard-card purple-card">
+  <h3>📅 2. Production Planning & Work Order Scheduling Dashboard</h3>
+  <p><span class="user-role">Who Uses It:</span> Production Planner, Supply Chain Manager, Plant Head.</p>
+  
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 25%;">What Data Enters Here?</th>
+        <th style="width: 40%;">What Happens on this Screen?</th>
+        <th style="width: 35%;">Where Does this Data Go Next?</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>
+          <span class="badge-in">Inputs</span><br>
+          • Customer Sales Orders<br>
+          • Target SKU & Target Quantity<br>
+          • Target Delivery Date<br>
+          • Bill of Materials (Recipe)<br>
+          • Live Raw Material Stock
+        </td>
+        <td>
+          1. Planner creates a new <strong>Work Order (e.g. WO-8492)</strong> for 5,000 units.<br>
+          2. The system calculates recipe requirements (e.g., 200kg Flour, 50kg Sugar).<br>
+          3. System checks Warehouse Stock: If available, changes status to <strong>"Approved"</strong>.<br>
+          4. Planner drags the order onto the <strong>Gantt Timeline</strong>, assigning it to <em>Production Line 01</em> and <em>Morning Shift</em>.
+        </td>
+        <td>
+          <span class="badge-out">Destination Dashboards</span><br>
+          <strong>➔ Shop Floor Operator Terminal:</strong> The scheduled Work Order instantly appears on the line operator's touchscreen terminal.<br><br>
+          <strong>➔ Warehouse Store Dashboard:</strong> Issues a pick-list to reserve and move raw materials from storage to the production staging area.
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- DASHBOARD 3: SHOP FLOOR OPERATOR TERMINAL -->
+<div class="dashboard-card">
+  <h3>🏭 3. Shop Floor & Line Operator Dashboard (Live Terminal)</h3>
+  <p><span class="user-role">Who Uses It:</span> Line Operators, Machine Operators, Shift In-charge, Line Leads.</p>
+  
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 25%;">What Data Enters Here?</th>
+        <th style="width: 40%;">What Happens on this Screen?</th>
+        <th style="width: 35%;">Where Does this Data Go Next?</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>
+          <span class="badge-in">Inputs</span><br>
+          • Work Order Dispatched by Planner<br>
+          • Operator Shift Login (Staff ID)<br>
+          • Real-time Machine Pulse / Counter<br>
+          • Good Packed Units Counter<br>
+          • Defective / Rejected Units<br>
+          • Stoppage Reason (if stopped)
+        </td>
+        <td>
+          1. Operator clicks <strong>"Start Work Order"</strong>.<br>
+          2. The screen shows live target speed (e.g. 120 packs/minute) vs actual speed.<br>
+          3. Operator logs hourly output or IoT sensor counts units automatically.<br>
+          4. If machine stops, operator selects the stoppage reason (e.g. <em>Conveyor Jam</em>, <em>Heating Element Trip</em>, <em>Packaging Film Roll Change</em>).<br>
+          5. At run completion, clicks <strong>"Complete Batch"</strong>.
+        </td>
+        <td>
+          <span class="badge-out">Destination Dashboards</span><br>
+          <strong>➔ Quality Dashboard:</strong> Sends finished batch notification for final QA inspection & CoA release.<br><br>
+          <strong>➔ Maintenance Dashboard:</strong> If downtime reason was a mechanical breakdown, an emergency maintenance ticket triggers automatically!<br><br>
+          <strong>➔ Executive OEE Dashboard:</strong> Feeds live line speed, availability %, and scrap count directly into the plant manager's screen.
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- DASHBOARD 4: QUALITY & CCP -->
+<div class="dashboard-card orange-card">
+  <h3>🔬 4. Quality Assurance, Lab & CCP Inspection Dashboard</h3>
+  <p><span class="user-role">Who Uses It:</span> Quality Inspector, Food Safety Auditor, Lab Chemist, QA Manager.</p>
+  
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 25%;">What Data Enters Here?</th>
+        <th style="width: 40%;">What Happens on this Screen?</th>
+        <th style="width: 35%;">Where Does this Data Go Next?</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>
+          <span class="badge-in">Inputs</span><br>
+          • Active Production Batch ID<br>
+          • Critical Control Point (CCP) limits (e.g. Sealing Temp 180°C ± 5°C)<br>
+          • Metal Detector Test Result (Pass/Fail)<br>
+          • Sample Weights, Moisture, pH<br>
+          • Visual Defect Checks
+        </td>
+        <td>
+          1. QA checks the live batch every 30-60 minutes.<br>
+          2. Enters test values on the digital quality form.<br>
+          3. <strong>Automatic Tolerance Validation:</strong> If a value breaches safety limits (e.g. Temp drops to 165°C), the system turns RED and blocks release.<br>
+          4. If all tests pass: QA Manager digitally signs the <strong>Certificate of Analysis (CoA)</strong> and clicks <strong>"Release Batch"</strong>.<br>
+          5. If failed: Clicks <strong>"Quarantine Batch"</strong> to lock stock.
+        </td>
+        <td>
+          <span class="badge-out">Destination Dashboards</span><br>
+          <strong>➔ Warehouse Finished Goods Dashboard:</strong> Released batches appear as "Ready for Customer Dispatch". Quarantined batches are locked from shipping.<br><br>
+          <strong>➔ Line Operator Terminal:</strong> Alerts operator immediately if a CCP failure occurred so they can stop or adjust machine parameters.<br><br>
+          <strong>➔ Regulatory Compliance Reports:</strong> Stored permanently for ISO, HACCP, FDA, or customer audits.
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- DASHBOARD 5: MAINTENANCE CMMS -->
+<div class="dashboard-card alert-card">
+  <h3>🔧 5. Maintenance, Breakdown & Asset Reliability Dashboard</h3>
+  <p><span class="user-role">Who Uses It:</span> Maintenance Manager, Plant Electrician, Mechanical Fitter, Reliability Engineer.</p>
+  
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 25%;">What Data Enters Here?</th>
+        <th style="width: 40%;">What Happens on this Screen?</th>
+        <th style="width: 35%;">Where Does this Data Go Next?</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>
+          <span class="badge-in">Inputs</span><br>
+          • Auto-Triggered Breakdown Tickets (from Operator Dashboard)<br>
+          • Scheduled Preventive Maintenance (PM) Calendar<br>
+          • Machine Run Hours & Sensor Temperatures<br>
+          • Technician Work Logs & Time Taken<br>
+          • Spare Parts Consumed (Bearings, Belts)
+        </td>
+        <td>
+          1. When an operator logs a breakdown, the technician's dashboard chimes with an alert.<br>
+          2. Technician arrives at the line, clicks <strong>"Start Work"</strong>.<br>
+          3. Replaces faulty part, selects the spare part from store inventory, and logs cause.<br>
+          4. Clicks <strong>"Resolve & Handover"</strong>.<br>
+          5. Runs routine weekly/monthly PM checklists to prevent future breakdowns.
+        </td>
+        <td>
+          <span class="badge-out">Destination Dashboards</span><br>
+          <strong>➔ Line Operator Terminal:</strong> Machine status changes back to "Online / Ready to Run".<br><br>
+          <strong>➔ Spare Parts Store Dashboard:</strong> Deducts the consumed parts from stock and triggers reorder alert if below minimum threshold.<br><br>
+          <strong>➔ Executive Dashboard:</strong> Automatically computes <strong>MTBF (Mean Time Between Failures)</strong> and <strong>MTTR (Mean Time to Repair)</strong>.
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- DASHBOARD 6: WAREHOUSE SHIPPING -->
+<div class="dashboard-card blue-card">
+  <h3>🚚 6. Finished Goods Warehouse & Outward Shipping Dashboard</h3>
+  <p><span class="user-role">Who Uses It:</span> Shipping Manager, Forklift Operators, Dispatch Clerks, Logistics Officers.</p>
+  
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 25%;">What Data Enters Here?</th>
+        <th style="width: 40%;">What Happens on this Screen?</th>
+        <th style="width: 35%;">Where Does this Data Go Next?</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>
+          <span class="badge-in">Inputs</span><br>
+          • Customer Sales Orders & Delivery Schedule<br>
+          • QA-Approved Finished Goods Lots<br>
+          • Shipping Dock & Transporter Details<br>
+          • Vehicle / Truck Number<br>
+          • Pallet Scans
+        </td>
+        <td>
+          1. Shipping team opens the <strong>Outward Dispatch Orders</strong> screen.<br>
+          2. System shows only batches that have been <strong>QA-Approved</strong> (quarantined lots cannot be selected).<br>
+          3. Workers scan pallet barcodes as they load the truck.<br>
+          4. System verifies that the correct FIFO (First-In, First-Out) lot is dispatched.<br>
+          5. Clicks <strong>"Generate Dispatch Note & Gate Pass"</strong>.
+        </td>
+        <td>
+          <span class="badge-out">Destination Dashboards</span><br>
+          <strong>➔ Finished Goods Stock Dashboard:</strong> Deducts dispatched quantity from active plant inventory.<br><br>
+          <strong>➔ Traceability Dashboard:</strong> Binds the exact shipped customer details to the specific batch for 100% recall readiness.<br><br>
+          <strong>➔ Executive Sales Fulfilment:</strong> Updates order fulfillment KPI from "Processing" to "Shipped".
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- DASHBOARD 7: EXECUTIVE DASHBOARD -->
+<div class="dashboard-card purple-card">
+  <h3>📊 7. Executive & Plant Manager Live Command Center</h3>
+  <p><span class="user-role">Who Uses It:</span> Managing Director, Plant Manager, Head of Operations, General Manager.</p>
+  
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 25%;">Where Does Data Come From?</th>
+        <th style="width: 40%;">What Does the Executive See Live?</th>
+        <th style="width: 35%;">Business Value Delivered</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>
+          <span class="badge-in">Automatic Live Streams</span><br>
+          • Warehouse Inward Counts<br>
+          • Shopfloor Running Speeds<br>
+          • Quality Scrap & Yield Logs<br>
+          • Maintenance Downtime Minutes<br>
+          • Shipping Dispatch Volumes
+        </td>
+        <td>
+          1. <strong>Real-Time Plant OEE:</strong> Live gauge showing Availability % × Performance % × Quality %.<br>
+          2. <strong>Visual Line Heatmap:</strong> Color-coded status of every production line (Green = Running, Yellow = Micro-stop, Red = Breakdown).<br>
+          3. <strong>Today's Output vs Target:</strong> Progress bar of daily production commitment.<br>
+          4. <strong>Cost & Loss Pareto:</strong> Top 5 causes of financial loss today (e.g. Scrap loss, Electrical downtime, Packaging rework).
+        </td>
+        <td>
+          <span class="badge-out">Executive Impact</span><br>
+          <strong>• Complete Transparency:</strong> No need to call supervisors or wait for end-of-day Excel sheets.<br><br>
+          <strong>• Proactive Decision Making:</strong> Spot line bottlenecks before they cause missed customer delivery deadlines.<br><br>
+          <strong>• Cost Optimization:</strong> Reduce machine downtime and material waste by identifying the root cause instantly.
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<hr style="border: 0; border-top: 1px solid #E2E8F0; margin: 30px 0;">
+
+<h2>3. A Real-World Story: Journey of "Batch #8492" (1,000 Units)</h2>
+<p>To help clients visualize the flow in practice, here is how a single production batch travels through the entire MaintenX-OS software:</p>
+
+<div class="example-box">
+  <h4>Step 1: Raw Material Arrives (Monday 09:00 AM)</h4>
+  <p>A truck delivers 50 bags of raw material. The warehouse executive logs into the <strong>Warehouse Receiving Dashboard</strong>, enters PO #101, and prints barcode labels with Lot #RM-501. The stock count in the warehouse jumps by 50 bags.</p>
+
+  <h4>Step 2: Planning Schedules the Run (Monday 11:00 AM)</h4>
+  <p>The planner opens the <strong>Planning Dashboard</strong>. The system confirms Lot #RM-501 is sitting in Bin A-2. The planner clicks "Create Work Order #WO-8492" for 1,000 finished units and assigns it to Line 01 for tomorrow morning.</p>
+
+  <h4>Step 3: Line Operator Starts Production (Tuesday 08:00 AM)</h4>
+  <p>The operator at Line 01 powers on the line terminal. Work Order #WO-8492 is waiting. The operator clicks "Start Run". As the machine runs, the counter displays 200, 500, 800 units. The Plant Manager's dashboard shows Line 01 running at 96% efficiency.</p>
+
+  <h4>Step 4: Machine Jams & Maintenance Steps In (Tuesday 10:15 AM)</h4>
+  <p>The sealing machine jams. The operator clicks "Downtime: Sealing Jaw Jam" on the screen. Immediately, the <strong>Maintenance Dashboard</strong> sounds an alert for Technician Dave. Dave fixes the jam in 12 minutes, logs the repair, and the operator resumes the run. The downtime was recorded automatically without paperwork.</p>
+
+  <h4>Step 5: Quality Inspection & CoA Release (Tuesday 12:30 PM)</h4>
+  <p>The 1,000 units are finished. Quality Specialist Sarah opens the <strong>Quality Dashboard</strong> and tests sealing strength and metal detection. Both pass. She clicks "Digitally Sign CoA & Release". The status of Batch #8492 turns green.</p>
+
+  <h4>Step 6: Outward Shipping & Customer Delivery (Tuesday 03:00 PM)</h4>
+  <p>The shipping clerk opens the <strong>Shipping Dashboard</strong>, scans the pallet barcodes for Batch #8492, and assigns them to Transporter ABC's truck. The delivery challan is printed, and inventory is officially deducted.</p>
+
+  <h4>Step 7: Traceability Audit Ready in 2 Seconds (Anytime Later)</h4>
+  <p>Two weeks later, a customer asks: <em>"Which raw material lot was used in Batch #8492?"</em> The plant manager opens the <strong>Traceability Dashboard</strong>, types <em>8492</em>, and the screen instantly reveals: Raw Material Lot #RM-501, delivered on Monday by Supplier X, operated on Line 01 by Operator John, inspected by QA Sarah, and repaired by Tech Dave. <strong>100% complete genealogy in one click!</strong></p>
+</div>
+
+<hr style="border: 0; border-top: 1px solid #E2E8F0; margin: 30px 0;">
+
+<h2>4. Summary of Key Business Benefits for Clients</h2>
+<ul>
+  <li><strong>Zero Missing Information:</strong> Every department sees exactly what they need in real time; no phone calls, WhatsApp groups, or paper logbooks.</li>
+  <li><strong>Instant Audit Compliance:</strong> Full traceability from supplier raw material to customer dispatch box.</li>
+  <li><strong>Drastic Downtime Reduction:</strong> Automated maintenance dispatch gets technicians to broken machines minutes faster.</li>
+  <li><strong>100% Quality Assurance:</strong> No defective or un-inspected product can ever be shipped to a customer by mistake.</li>
+  <li><strong>Live Executive Clarity:</strong> Leadership has live OEE and cost analytics at their fingertips 24/7.</li>
+</ul>
+
+</body>
+</html>

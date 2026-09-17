@@ -17,7 +17,8 @@ import {
   Layers,
   ShieldCheck,
   Zap,
-  Edit2
+  Edit2,
+  Trash2
 } from "lucide-react";
 import { Card } from "../../../components/common/Card";
 import { StatCard } from "../../../components/common/StatCard";
@@ -39,6 +40,7 @@ export function CIProjects() {
     ciProjects = [],
     createProject,
     updateProject,
+    deleteProject,
     investigations = [],
     activeProjectsCount,
     realizedSavingsTotal,
@@ -58,20 +60,24 @@ export function CIProjects() {
     owner: currentUser?.name || currentUser?.email || "CI Engineer",
     sponsor: "Plant Operations",
     projectedSavingsAnnual: "",
+    realizedSavingsYTD: "",
     baselineMetric: "",
-    targetMetric: ""
+    targetMetric: "",
+    targetDate: new Date(Date.now() + 60 * 86400000).toISOString().substring(0, 10)
   });
 
-  const handleAdd = (e) => {
+  const handleAdd = async (e) => {
     e.preventDefault();
     if (!formData.name.trim()) {
       addToast("Please provide a project title.", "warning");
       return;
     }
 
-    createProject({
+    await createProject({
       ...formData,
-      projectedSavingsAnnual: Number(formData.projectedSavingsAnnual) || 0
+      projectedSavingsAnnual: Number(formData.projectedSavingsAnnual) || 0,
+      realizedSavingsYTD: Number(formData.realizedSavingsYTD) || 0,
+      benefitStatus: Number(formData.realizedSavingsYTD) > 0 ? "Pending Verification" : "Draft"
     });
     setFormData({
       name: "",
@@ -80,8 +86,10 @@ export function CIProjects() {
       owner: currentUser?.name || currentUser?.email || "CI Engineer",
       sponsor: "Plant Operations",
       projectedSavingsAnnual: "",
+      realizedSavingsYTD: "",
       baselineMetric: "",
-      targetMetric: ""
+      targetMetric: "",
+      targetDate: new Date(Date.now() + 60 * 86400000).toISOString().substring(0, 10)
     });
     setIsModalOpen(false);
   };
@@ -329,6 +337,28 @@ export function CIProjects() {
                       >
                         <ShieldCheck size={14} />
                       </button>
+                      <button
+                        onClick={async () => {
+                          if (window.confirm(`Delete CI Project "${p.name}" (${p.id})?`)) {
+                            await deleteProject(p.id);
+                          }
+                        }}
+                        title="Delete CI Project"
+                        style={{
+                          width: "30px",
+                          height: "30px",
+                          borderRadius: "6px",
+                          backgroundColor: "var(--bg-card-subtle)",
+                          color: "#DC2626",
+                          border: "1px solid var(--border-subtle)",
+                          cursor: "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center"
+                        }}
+                      >
+                        <Trash2 size={14} />
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -341,7 +371,7 @@ export function CIProjects() {
       {/* CREATE PROJECT MODAL */}
       {isModalOpen && (
         <div className="modal-backdrop" onClick={() => setIsModalOpen(false)}>
-          <div className="modal-content" style={{ maxWidth: "540px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+          <div className="modal-content" style={{ maxWidth: "580px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                 <Briefcase size={18} color="#C89547" />
@@ -414,12 +444,65 @@ export function CIProjects() {
                 </div>
 
                 <div>
+                  <label className="form-label">Target Completion Date</label>
+                  <input
+                    type="date"
+                    required
+                    value={formData.targetDate}
+                    onChange={(e) => setFormData({ ...formData, targetDate: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div>
                   <label className="form-label">Projected Annual Savings ($)</label>
                   <input
                     type="number"
                     required
+                    placeholder="e.g. 25000"
                     value={formData.projectedSavingsAnnual}
                     onChange={(e) => setFormData({ ...formData, projectedSavingsAnnual: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+
+                <div>
+                  <label className="form-label">Realized Savings YTD ($)</label>
+                  <input
+                    type="number"
+                    placeholder="e.g. 15000 (if already verified)"
+                    value={formData.realizedSavingsYTD}
+                    onChange={(e) => setFormData({ ...formData, realizedSavingsYTD: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div>
+                  <label className="form-label">Baseline Metric Statement</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Jam rate 1.4%, 8.2 hrs loss/mo"
+                    value={formData.baselineMetric}
+                    onChange={(e) => setFormData({ ...formData, baselineMetric: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+
+                <div>
+                  <label className="form-label">Target Metric Objective</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Jam rate < 0.1%, zero jams"
+                    value={formData.targetMetric}
+                    onChange={(e) => setFormData({ ...formData, targetMetric: e.target.value })}
                     className="form-input"
                     style={{ backgroundColor: "#FFFFFF" }}
                   />

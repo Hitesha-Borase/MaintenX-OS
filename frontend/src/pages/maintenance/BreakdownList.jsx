@@ -163,6 +163,61 @@ export function BreakdownList() {
   const getRelatedWO = (b) => b.linkedWorkOrder || b.relatedWorkOrder || "-";
   const getResolution = (b) => b.resolution || b.repairAction || (b.status === "Resolved" ? "Repaired and test run passed" : "Under investigation");
 
+  // Local Timezone Formatter (converts UTC to local Indian Standard Time / user timezone)
+  const formatBreakdownTime = (val) => {
+    if (!val) return "-";
+    try {
+      let d;
+      if (typeof val === "string") {
+        if (!val.endsWith("Z") && !val.includes("+") && !val.slice(10).includes("-")) {
+          d = new Date(val.replace(" ", "T") + "Z");
+        } else {
+          d = new Date(val);
+        }
+      } else {
+        d = new Date(val);
+      }
+      if (isNaN(d.getTime())) return val;
+      return d.toLocaleDateString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric"
+      }) + " " + d.toLocaleTimeString("en-IN", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true
+      });
+    } catch {
+      return val;
+    }
+  };
+
+  // Live Downtime Calculator (calculates elapsed minutes from startTime for open breakdowns)
+  const getDowntimeDisplay = (row) => {
+    if (!row) return "0 mins";
+    const isClosed = row.status === "Resolved" || row.status === "Closed";
+    let mins = Number(row.durationMinutes) || 0;
+    if (!isClosed && row.startTime) {
+      try {
+        let start;
+        if (typeof row.startTime === "string") {
+          if (!row.startTime.endsWith("Z") && !row.startTime.includes("+") && !row.startTime.slice(10).includes("-")) {
+            start = new Date(row.startTime.replace(" ", "T") + "Z");
+          } else {
+            start = new Date(row.startTime);
+          }
+        } else {
+          start = new Date(row.startTime);
+        }
+        if (!isNaN(start.getTime())) {
+          const elapsed = Math.max(1, Math.floor((Date.now() - start.getTime()) / 60000));
+          return `${elapsed} mins`;
+        }
+      } catch (_) {}
+    }
+    return `${mins} mins`;
+  };
+
   // Filtered Breakdowns
   const filteredBreakdowns = useMemo(() => {
     return breakdowns.filter((b) => {
@@ -407,7 +462,7 @@ export function BreakdownList() {
           </div>
           <div style={{ whiteSpace: "nowrap" }}>
             <div style={{ fontWeight: 700, color: "var(--text-primary)", fontFamily: "var(--font-mono)", whiteSpace: "nowrap" }}>{row.id}</div>
-            <div style={{ fontSize: "11px", color: "var(--text-muted)", whiteSpace: "nowrap" }}>{row.startTime}</div>
+            <div style={{ fontSize: "11px", color: "var(--text-muted)", whiteSpace: "nowrap" }}>{formatBreakdownTime(row.startTime)}</div>
           </div>
         </div>
       )
@@ -475,9 +530,9 @@ export function BreakdownList() {
       accessor: "durationMinutes",
       headerStyle: { minWidth: "110px", whiteSpace: "nowrap" },
       cellStyle: { minWidth: "110px", whiteSpace: "nowrap" },
-      render: (val) => (
+      render: (_, row) => (
         <span style={{ fontFamily: "var(--font-mono)", fontSize: "12px", fontWeight: 700, color: "#EF4444" }}>
-          {val || 0} mins
+          {getDowntimeDisplay(row)}
         </span>
       )
     },
@@ -997,9 +1052,16 @@ export function BreakdownList() {
               </div>
 
               <div>
+                <span style={{ color: "var(--text-muted)", fontSize: "11px", textTransform: "uppercase", fontWeight: 600 }}>Reported Time (IST):</span>
+                <div style={{ fontWeight: 600, color: "var(--text-primary)", marginTop: "2px" }}>
+                  {formatBreakdownTime(selectedBreakdown.startTime)}
+                </div>
+              </div>
+
+              <div>
                 <span style={{ color: "var(--text-muted)", fontSize: "11px", textTransform: "uppercase", fontWeight: 600 }}>Downtime Duration:</span>
                 <div style={{ fontWeight: 700, color: "#EF4444", marginTop: "2px", fontFamily: "var(--font-mono)" }}>
-                  {selectedBreakdown.durationMinutes || 0} minutes
+                  {getDowntimeDisplay(selectedBreakdown)}
                 </div>
               </div>
 

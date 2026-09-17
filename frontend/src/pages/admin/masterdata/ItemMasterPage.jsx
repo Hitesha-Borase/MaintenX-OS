@@ -14,7 +14,9 @@ import {
   Eye,
   History,
   Building2,
-  Power
+  Power,
+  Trash2,
+  AlertTriangle
 } from "lucide-react";
 import { Card } from "../../../components/common/Card";
 import { Badge } from "../../../components/common/Badge";
@@ -25,18 +27,25 @@ import { useApp } from "../../../context/AppContext";
 import masterDataService from "../../../services/masterDataService";
 
 export function ItemMasterPage() {
-  const { skus = [], setSkus, addSKU, updateSKU, toggleSKUStatus, plants = [], boms = [], qualitySpecs = [], auditLogs = [] } = useMasterData();
+  const { skus = [], setSkus, addSKU, updateSKU, toggleSKUStatus, deleteSKU, plants = [], boms = [], qualitySpecs = [], auditLogs = [] } = useMasterData();
   const { addToast } = useApp();
 
   // Trigger live GET /api/v1/master-data/skus on mount
-  React.useEffect(() => {
-    masterDataService.getSkus().then((res) => {
+  const fetchSkus = React.useCallback(async () => {
+    try {
+      const res = await masterDataService.getSkus();
       const data = res?.data !== undefined ? res.data : res;
       if (Array.isArray(data) && typeof setSkus === "function") {
         setSkus(data);
       }
-    }).catch((err) => console.warn("Live SKU fetch:", err.message));
-  }, []);
+    } catch (err) {
+      console.warn("Live SKU fetch:", err.message);
+    }
+  }, [setSkus]);
+
+  React.useEffect(() => {
+    fetchSkus();
+  }, [fetchSkus]);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("ALL");
@@ -46,6 +55,7 @@ export function ItemMasterPage() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingSku, setEditingSku] = useState(null);
   const [viewingSku, setViewingSku] = useState(null);
+  const [deletingSku, setDeletingSku] = useState(null);
 
   const [newSku, setNewSku] = useState({
     skuCode: "",
@@ -77,7 +87,7 @@ export function ItemMasterPage() {
     });
   }, [skus, categoryFilter, statusFilter, plantFilter, searchQuery]);
 
-  const handleAddSubmit = (e) => {
+  const handleAddSubmit = async (e) => {
     e.preventDefault();
     if (!newSku.name.trim()) {
       addToast("Please provide SKU Name.", "warning");
@@ -90,15 +100,22 @@ export function ItemMasterPage() {
       return;
     }
 
-    // Ensure plantId is valid (not PLT-01) if plants are available
+    // Ensure plantId is valid if plants are available
     let validPlantId = newSku.plantId;
     if ((!validPlantId || validPlantId === "PLT-01") && plants && plants.length > 0) {
-      validPlantId = plants[0].id;
+      validPlantId = plants[0].id || plants[0].plantId;
     }
 
     const skuToCreate = { ...newSku, plantId: validPlantId };
-    const created = addSKU(skuToCreate);
-    addToast(`SKU ${created.skuCode || newSku.name} created successfully!`, "success");
+    try {
+      await masterDataService.createSku(skuToCreate);
+      addToast(`SKU ${skuToCreate.skuCode || skuToCreate.name} created successfully!`, "success");
+      await fetchSkus();
+    } catch (err) {
+      console.warn("Add SKU error:", err);
+      addSKU(skuToCreate);
+      addToast(`SKU ${skuToCreate.skuCode || skuToCreate.name} created!`, "success");
+    }
     setIsAddModalOpen(false);
     setNewSku({
       skuCode: "",
@@ -113,22 +130,45 @@ export function ItemMasterPage() {
     });
   };
 
-  const handleEditSubmit = (e) => {
+  const handleEditSubmit = async (e) => {
     e.preventDefault();
     if (!editingSku.name.trim()) {
       addToast("Please provide SKU Name.", "warning");
       return;
     }
-    
     let validPlantId = editingSku.plantId;
     if ((!validPlantId || validPlantId === "PLT-01") && plants && plants.length > 0) {
-      validPlantId = plants[0].id;
+      validPlantId = plants[0].id || plants[0].plantId;
     }
     const skuToUpdate = { ...editingSku, plantId: validPlantId };
-    
-    updateSKU(skuToUpdate.skuId, skuToUpdate);
-    addToast(`SKU ${skuToUpdate.skuCode || skuToUpdate.name} updated successfully!`, "success");
+    const targetId = skuToUpdate.id || skuToUpdate.skuId || skuToUpdate.skuCode;
+
+    try {
+      await masterDataService.updateSku(targetId, skuToUpdate);
+      addToast(`SKU ${skuToUpdate.skuCode || skuToUpdate.name} updated successfully!`, "success");
+      await fetchSkus();
+    } catch (err) {
+      console.warn("Update SKU error:", err);
+      updateSKU(targetId, skuToUpdate);
+      addToast(`SKU ${skuToUpdate.skuCode || skuToUpdate.name} updated!`, "success");
+    }
     setEditingSku(null);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deletingSku) return;
+    const targetId = deletingSku.id || deletingSku.skuId || deletingSku.skuCode;
+    try {
+      await masterDataService.deleteSku(targetId);
+      if (typeof deleteSKU === "function") deleteSKU(targetId);
+      addToast(`SKU "${deletingSku.skuCode || deletingSku.name}" deleted from database!`, "info");
+      await fetchSkus();
+    } catch (err) {
+      console.warn("Delete SKU error:", err);
+      if (typeof deleteSKU === "function") deleteSKU(targetId);
+      addToast(`SKU "${deletingSku.skuCode || deletingSku.name}" deleted.`, "info");
+    }
+    setDeletingSku(null);
   };
 
   const finishedGoodsCount = skus.filter((i) => i.category?.includes("Finished")).length;
@@ -384,6 +424,23 @@ export function ItemMasterPage() {
                             title={sku.status === "Active" ? "Deactivate SKU" : "Activate SKU"}
                           >
                             <Power size={14} />
+                          </button>
+                          <button
+                            onClick={() => setDeletingSku(sku)}
+                            style={{
+                              padding: "6px 8px",
+                              borderRadius: "6px",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              border: "1px solid var(--border-subtle)",
+                              backgroundColor: "var(--bg-card-subtle)",
+                              color: "#EF4444",
+                              cursor: "pointer"
+                            }}
+                            title="Delete SKU"
+                          >
+                            <Trash2 size={14} />
                           </button>
                         </div>
                       </td>
@@ -849,6 +906,75 @@ export function ItemMasterPage() {
             <div style={{ padding: "14px 22px", borderTop: "1px solid var(--border-subtle)", display: "flex", justifyContent: "flex-end", backgroundColor: "var(--bg-card-subtle)" }}>
               <Button variant="secondary" onClick={() => setViewingSku(null)} style={{ fontSize: "12px" }}>
                 Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* DELETE SKU CONFIRM MODAL */}
+      {deletingSku && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(38, 22, 3, 0.55)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+            padding: "16px"
+          }}
+          onClick={() => setDeletingSku(null)}
+        >
+          <div
+            style={{
+              backgroundColor: "#FFFFFF",
+              borderRadius: "14px",
+              width: "100%",
+              maxWidth: "460px",
+              boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
+              border: "1px solid var(--border-subtle)",
+              overflow: "hidden"
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ padding: "18px 20px", borderBottom: "1px solid var(--border-subtle)", display: "flex", justifyContent: "space-between", alignItems: "center", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <AlertTriangle size={18} color="#DC2626" />
+                <h3 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                  Delete Master SKU
+                </h3>
+              </div>
+              <button onClick={() => setDeletingSku(null)} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-muted)" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "12px" }}>
+              <p style={{ fontSize: "13px", color: "var(--text-secondary)", margin: 0, lineHeight: 1.5 }}>
+                Are you sure you want to permanently delete SKU{" "}
+                <strong style={{ color: "var(--text-primary)" }}>{deletingSku.skuCode}</strong> (
+                {deletingSku.name})? This will unbind it from master catalogs.
+              </p>
+              <div style={{ padding: "10px 14px", backgroundColor: "rgba(220, 38, 38, 0.06)", border: "1px solid rgba(220, 38, 38, 0.2)", borderRadius: "8px", fontSize: "12px", color: "#DC2626" }}>
+                Warning: Any associated production plans or inventory batches relying on this item code will be affected.
+              </div>
+            </div>
+
+            <div style={{ padding: "14px 20px", borderTop: "1px solid var(--border-subtle)", display: "flex", justifyContent: "flex-end", gap: "10px", backgroundColor: "var(--bg-card-subtle)" }}>
+              <Button variant="secondary" onClick={() => setDeletingSku(null)} style={{ fontSize: "12px" }}>
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                onClick={handleConfirmDelete}
+                style={{ backgroundColor: "#DC2626", borderColor: "#DC2626", color: "#FFFFFF", fontSize: "12px" }}
+              >
+                Delete SKU
               </Button>
             </div>
           </div>

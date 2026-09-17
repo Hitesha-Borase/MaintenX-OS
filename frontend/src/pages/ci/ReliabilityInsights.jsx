@@ -32,16 +32,18 @@ export function ReliabilityInsights() {
     fleetMTBF,
     fleetMTTR,
     badActorsCount,
-    initiateRCA
+    initiateRCA,
+    refreshReliability
   } = useCI();
-
-  useEffect(() => {
-    ciService.getReliabilityRecords().catch((err) => console.warn("Reliability records load:", err.message));
-  }, []);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [criticalityFilter, setCriticalityFilter] = useState("ALL");
   const [badActorFilter, setBadActorFilter] = useState("ALL");
+  const [stageFilter, setStageFilter] = useState("ALL"); // ALL | PROCESSING | PACKAGING
+
+  useEffect(() => {
+    refreshReliability?.();
+  }, [refreshReliability, stageFilter]);
 
   const handleExportCSV = () => {
     const headers = "Asset ID,Asset Name,Line,Plant,MTBF (hrs),MTTR (min),Failure Count,Downtime (min),Criticality,Bad Actor,Trigger Reason\n";
@@ -62,14 +64,25 @@ export function ReliabilityInsights() {
     navigate(`/ci/rca/investigations`);
   };
 
+  const stageStats = useMemo(() => {
+    const list = reliabilityRecords.filter((a) => stageFilter === "ALL" || (a.stage || "PACKAGING") === stageFilter);
+    if (list.length === 0) return { mtbf: fleetMTBF, mttr: fleetMTTR, badActors: badActorsCount };
+    const avgMtbf = Math.round(list.reduce((acc, a) => acc + (Number(a.mtbfHrs) || 0), 0) / list.length);
+    const avgMttr = Math.round(list.reduce((acc, a) => acc + (Number(a.mttrMin) || 0), 0) / list.length);
+    const badActors = list.filter((a) => a.isBadActor).length;
+    return { mtbf: avgMtbf, mttr: avgMttr, badActors };
+  }, [reliabilityRecords, stageFilter, fleetMTBF, fleetMTTR, badActorsCount]);
+
   const reliabilityRate = useMemo(() => {
-    if (reliabilityRecords.length === 0) return "100%";
-    const healthy = reliabilityRecords.filter((r) => !r.isBadActor).length;
-    return `${Math.round((healthy / reliabilityRecords.length) * 100)}%`;
-  }, [reliabilityRecords]);
+    const list = reliabilityRecords.filter((a) => stageFilter === "ALL" || (a.stage || "PACKAGING") === stageFilter);
+    if (list.length === 0) return "100%";
+    const healthy = list.filter((r) => !r.isBadActor).length;
+    return `${Math.round((healthy / list.length) * 100)}%`;
+  }, [reliabilityRecords, stageFilter]);
 
   const filteredAssets = useMemo(() => {
     return reliabilityRecords.filter((a) => {
+      const matchesStage = stageFilter === "ALL" || (a.stage || "PACKAGING") === stageFilter;
       const matchesCriticality = criticalityFilter === "ALL" || a.criticality === criticalityFilter;
       const matchesBadActor =
         badActorFilter === "ALL" ||
@@ -84,9 +97,9 @@ export function ReliabilityInsights() {
         a.lineName?.toLowerCase().includes(q) ||
         a.failureCategory?.toLowerCase().includes(q);
 
-      return matchesCriticality && matchesBadActor && matchesSearch;
+      return matchesStage && matchesCriticality && matchesBadActor && matchesSearch;
     });
-  }, [reliabilityRecords, searchQuery, criticalityFilter, badActorFilter]);
+  }, [reliabilityRecords, searchQuery, criticalityFilter, badActorFilter, stageFilter]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%", maxWidth: "1600px", margin: "0 auto", minWidth: 0 }}>
@@ -126,28 +139,28 @@ export function ReliabilityInsights() {
         }}
       >
         <StatCard
-          title="Fleet MTBF"
-          value={`${fleetMTBF} hrs`}
+          title={stageFilter === "PROCESSING" ? "Processing MTBF" : stageFilter === "PACKAGING" ? "Packaging MTBF" : "Fleet MTBF"}
+          value={`${stageStats.mtbf} hrs`}
           unit="Mean Time Between Failures"
-          trend={reliabilityRecords.length > 0 ? { value: "+18% vs benchmark", isPositive: true, text: "" } : undefined}
+          trend={reliabilityRecords.length > 0 ? { value: stageFilter === "PROCESSING" ? "Heavy Thermal / Agitators" : "High-Speed Rotary", isPositive: true, text: "" } : undefined}
           icon={Gauge}
           colorVariant="emerald"
         />
         <StatCard
-          title="Fleet MTTR"
-          value={`${fleetMTTR} min`}
+          title={stageFilter === "PROCESSING" ? "Processing MTTR" : stageFilter === "PACKAGING" ? "Packaging MTTR" : "Fleet MTTR"}
+          value={`${stageStats.mttr} min`}
           unit="Mean Time To Repair"
-          trend={reliabilityRecords.length > 0 ? { value: "Target < 30 min", isPositive: true, text: "" } : undefined}
+          trend={reliabilityRecords.length > 0 ? { value: stageFilter === "PROCESSING" ? "Sanitary Seals / Valves" : "Pneumatic / Capper", isPositive: true, text: "" } : undefined}
           icon={Clock}
           colorVariant="cyan"
         />
         <StatCard
           title="Bad Actor Assets"
-          value={`${badActorsCount} Machines`}
+          value={`${stageStats.badActors} Machines`}
           unit="Threshold: >= 2 Failures"
-          trend={badActorsCount > 0 ? { value: "RCA Required", isPositive: false, text: "" } : undefined}
+          trend={stageStats.badActors > 0 ? { value: "RCA Required", isPositive: false, text: "" } : undefined}
           icon={AlertOctagon}
-          colorVariant={badActorsCount > 0 ? "rose" : "emerald"}
+          colorVariant={stageStats.badActors > 0 ? "rose" : "emerald"}
         />
         <StatCard
           title="Reliability Rate"
@@ -209,6 +222,17 @@ export function ReliabilityInsights() {
 
           <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
             <select
+              value={stageFilter}
+              onChange={(e) => setStageFilter(e.target.value)}
+              className="form-input"
+              style={{ fontSize: "12px", padding: "6px 10px", width: "auto", backgroundColor: "#FFFFFF", fontWeight: 700 }}
+            >
+              <option value="ALL">All Stages (Processing + Packaging)</option>
+              <option value="PROCESSING">Processing Hall (Mixers, Pasteurizers, Silos)</option>
+              <option value="PACKAGING">Packaging Lines (Fillers, Cappers, Packers)</option>
+            </select>
+
+            <select
               value={badActorFilter}
               onChange={(e) => setBadActorFilter(e.target.value)}
               className="form-input"
@@ -266,8 +290,13 @@ export function ReliabilityInsights() {
                 filteredAssets.map((a) => (
                 <tr key={a.assetId} style={{ borderBottom: "1px solid var(--border-subtle)", backgroundColor: a.isBadActor ? "rgba(239, 68, 68, 0.02)" : "transparent" }}>
                   <td style={{ padding: "12px 16px" }}>
-                    <div style={{ fontWeight: 800, color: "var(--text-primary)", fontSize: "13px" }}>{a.assetName}</div>
-                    <div style={{ fontSize: "11px", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>{a.assetId} • {a.criticality}</div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+                      <span style={{ fontWeight: 800, color: "var(--text-primary)", fontSize: "13px" }}>{a.assetName}</span>
+                      <Badge variant={a.stage === "PROCESSING" ? "amber" : "cyan"}>
+                        {a.stage || "PACKAGING"}
+                      </Badge>
+                    </div>
+                    <div style={{ fontSize: "11px", color: "var(--text-muted)", fontFamily: "var(--font-mono)", marginTop: "2px" }}>{a.assetId} • {a.criticality}</div>
                   </td>
                   <td style={{ padding: "12px 16px", fontSize: "12px", color: "var(--text-secondary)" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>

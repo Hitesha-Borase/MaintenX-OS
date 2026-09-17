@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   Layers,
   Plus,
@@ -10,8 +10,7 @@ import {
   Gauge,
   Activity,
   Zap,
-  Building2,
-  CheckCircle2
+  Building2
 } from "lucide-react";
 import { Card } from "../../../components/common/Card";
 import { Badge } from "../../../components/common/Badge";
@@ -22,17 +21,40 @@ import { useApp } from "../../../context/AppContext";
 import masterDataService from "../../../services/masterDataService";
 
 export function LinesPage() {
-  const { lines = [], setLines, addLine, updateLine, deleteLine, plants = [], assets = [] } = useMasterData();
+  const { lines = [], setLines, addLine, updateLine, deleteLine, plants = [], setPlants, assets = [] } = useMasterData();
   const { addToast } = useApp();
 
-  // Trigger live GET /api/v1/master-data/lines on mount
-  React.useEffect(() => {
-    masterDataService.getLines().then((res) => {
+  const fetchLines = async () => {
+    try {
+      const res = await masterDataService.getLines();
       const data = res?.data !== undefined ? res.data : res;
-      if (Array.isArray(data) && typeof setLines === "function") {
+      if (Array.isArray(data) && data.length > 0 && typeof setLines === "function") {
         setLines(data);
       }
-    }).catch((err) => console.warn("Live lines fetch:", err.message));
+    } catch (err) {
+      console.warn("Live lines fetch:", err.message);
+    }
+  };
+
+  const fetchPlants = async () => {
+    try {
+      const res = await masterDataService.getPlants();
+      const data = res?.data || res;
+      if (Array.isArray(data) && data.length > 0 && typeof setPlants === "function") {
+        setPlants(data);
+      }
+    } catch (err) {
+      console.warn("Live plants fetch:", err.message);
+    }
+  };
+
+  // Trigger live GET on mount and clear old cached demo data
+  useEffect(() => {
+    try {
+      localStorage.removeItem("mx_master_lines");
+    } catch (_) {}
+    fetchLines();
+    fetchPlants();
   }, []);
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -41,62 +63,154 @@ export function LinesPage() {
   const [editingLine, setEditingLine] = useState(null);
   const [viewingLine, setViewingLine] = useState(null);
 
+  // Dynamic KPI stats calculated directly from actual database rows
+  const activeLinesCount = useMemo(() => {
+    return lines.filter(
+      (l) => (l.status || "").toUpperCase() === "RUNNING" || (l.status || "").toUpperCase() === "ACTIVE"
+    ).length;
+  }, [lines]);
+
+  const mappedAssetsCount = useMemo(() => {
+    const lineIds = new Set(lines.map((l) => String(l.id || l.lineId || l.code || l.lineCode)));
+    return assets.filter((a) => a.lineId && lineIds.has(String(a.lineId))).length;
+  }, [lines, assets]);
+
+  const avgSpeedDisplay = useMemo(() => {
+    if (!lines.length) return "0 BPH";
+    const speeds = lines
+      .map((l) => {
+        if (l.ratedSpeedBPH && !isNaN(Number(l.ratedSpeedBPH)) && Number(l.ratedSpeedBPH) > 0) {
+          return Number(l.ratedSpeedBPH);
+        }
+        if (l.nominalSpeedBpm && !isNaN(Number(l.nominalSpeedBpm)) && Number(l.nominalSpeedBpm) > 0) {
+          return Number(l.nominalSpeedBpm) * 60;
+        }
+        if (l.nominal_speed_bpm && !isNaN(Number(l.nominal_speed_bpm)) && Number(l.nominal_speed_bpm) > 0) {
+          return Number(l.nominal_speed_bpm) * 60;
+        }
+        if (typeof l.ratedSpeed === "string") {
+          const num = parseInt(l.ratedSpeed.replace(/[^0-9]/g, ""), 10);
+          if (!isNaN(num) && num > 0) return num;
+        }
+        return null;
+      })
+      .filter((s) => s !== null);
+
+    if (!speeds.length) return "0 BPH";
+    const avg = Math.round(speeds.reduce((a, b) => a + b, 0) / speeds.length);
+    return `${avg.toLocaleString()} BPH`;
+  }, [lines]);
+
+  const avgOeeDisplay = useMemo(() => {
+    if (!lines.length) return "0.0%";
+    const oees = lines
+      .map((l) => {
+        const val = l.ratedOEE || l.targetOee || l.rated_oee;
+        if (val) {
+          const num = parseFloat(String(val).replace(/[^0-9.]/g, ""));
+          if (!isNaN(num) && num > 0) return num;
+        }
+        return null;
+      })
+      .filter((v) => v !== null);
+
+    if (!oees.length) return "0.0%";
+    const avg = (oees.reduce((a, b) => a + b, 0) / oees.length).toFixed(1);
+    return `${avg}%`;
+  }, [lines]);
+
+  const resolvePlantName = (line) => {
+    if (!line) return "—";
+    const matched = plants.find(
+      (p) =>
+        (p.id && p.id === line.plantId) ||
+        (p.plantId && p.plantId === line.plantId) ||
+        (p.code && p.code === line.plantId)
+    );
+    if (matched?.name) return matched.name.split(" - ")[0];
+    if (line.plantName && line.plantName !== "Main Facility") return line.plantName;
+    if (plants.length > 0 && plants[0]?.name) return plants[0].name.split(" - ")[0];
+    return "Indore Facility";
+  };
+
   const filteredLines = useMemo(() => {
     return lines.filter((l) => {
-      const matchesPlant = plantFilter === "ALL" || l.plantId === plantFilter;
+      const plantName = resolvePlantName(l);
+      const matchesPlant =
+        plantFilter === "ALL" ||
+        l.plantId === plantFilter ||
+        plantName.toLowerCase().includes(plantFilter.toLowerCase());
+
       const q = searchQuery.toLowerCase().trim();
       const matchesSearch =
         !q ||
         (l.name || "").toLowerCase().includes(q) ||
         (l.lineCode || l.code || l.lineId || "").toLowerCase().includes(q) ||
-        (l.type || l.lineType || "").toLowerCase().includes(q);
+        (l.type || l.lineType || "").toLowerCase().includes(q) ||
+        plantName.toLowerCase().includes(q);
 
       return matchesPlant && matchesSearch;
     });
-  }, [lines, plantFilter, searchQuery]);
+  }, [lines, plantFilter, searchQuery, plants]);
 
   const [newLine, setNewLine] = useState({
     lineCode: "",
     name: "",
-    plantId: "PLT-01",
-    ratedSpeed: "40,000 BPH",
-    type: "Rotary Aseptic PET"
+    plantId: plants[0]?.id || "",
+    ratedSpeed: "",
+    type: "Bottling"
   });
 
-  const handleAddSubmit = (e) => {
+  const handleAddSubmit = async (e) => {
     e.preventDefault();
     if (!newLine.name.trim() || !newLine.lineCode.trim()) {
       addToast("Please provide line name and code.", "warning");
       return;
     }
 
-    const created = addLine(newLine);
-    addToast(`Line "${created.name}" registered!`, "success");
-    setIsModalOpen(false);
-    setNewLine({ lineCode: "", name: "", plantId: "PLT-01", ratedSpeed: "40,000 BPH", type: "Rotary Aseptic PET" });
+    try {
+      const created = await addLine(newLine);
+      addToast(`Line "${created?.name || newLine.name}" registered in database!`, "success");
+      setIsModalOpen(false);
+      setNewLine({ lineCode: "", name: "", plantId: plants[0]?.id || "", ratedSpeed: "", type: "Bottling" });
+      await fetchLines();
+    } catch (err) {
+      addToast(`Failed to register line: ${err.message}`, "error");
+    }
   };
 
-  const handleEditSubmit = (e) => {
+  const handleEditSubmit = async (e) => {
     e.preventDefault();
     if (!editingLine.name.trim()) {
       addToast("Please provide line name.", "warning");
       return;
     }
 
-    updateLine(editingLine.lineId || editingLine.id, editingLine);
-    addToast(`Line "${editingLine.name}" updated!`, "success");
-    setEditingLine(null);
+    try {
+      const idToUpdate = editingLine.id || editingLine.lineId || editingLine.code || editingLine.lineCode;
+      await updateLine(idToUpdate, editingLine);
+      addToast(`Line "${editingLine.name}" updated in database!`, "success");
+      setEditingLine(null);
+      await fetchLines();
+    } catch (err) {
+      addToast(`Failed to update line: ${err.message}`, "error");
+    }
   };
 
-  const handleDelete = (lineId, name) => {
-    if (window.confirm(`Are you sure you want to delete Line "${name}"?`)) {
-      deleteLine(lineId);
-      addToast(`Line "${name}" deleted.`, "info");
-      if (viewingLine && (viewingLine.lineId === lineId || viewingLine.id === lineId || viewingLine.lineCode === lineId)) {
-        setViewingLine(null);
-      }
-      if (editingLine && (editingLine.lineId === lineId || editingLine.id === lineId || editingLine.lineCode === lineId)) {
-        setEditingLine(null);
+  const handleDelete = async (lineId, name) => {
+    if (window.confirm(`Are you sure you want to delete Line "${name}" from database?`)) {
+      try {
+        await deleteLine(lineId);
+        addToast(`Line "${name}" deleted from database.`, "info");
+        if (viewingLine && (viewingLine.lineId === lineId || viewingLine.id === lineId || viewingLine.lineCode === lineId || viewingLine.code === lineId)) {
+          setViewingLine(null);
+        }
+        if (editingLine && (editingLine.lineId === lineId || editingLine.id === lineId || editingLine.lineCode === lineId || editingLine.code === lineId)) {
+          setEditingLine(null);
+        }
+        await fetchLines();
+      } catch (err) {
+        addToast(`Failed to delete line: ${err.message}`, "error");
       }
     }
   };
@@ -134,28 +248,28 @@ export function LinesPage() {
       >
         <StatCard
           title="Active Production Lines"
-          value={lines.length.toString()}
+          value={activeLinesCount.toString()}
           unit="Lines"
           icon={Layers}
           colorVariant="emerald"
         />
         <StatCard
           title="Mapped Assets"
-          value={assets.length.toString()}
+          value={mappedAssetsCount.toString()}
           unit="Machines"
           icon={Gauge}
           colorVariant="cyan"
         />
         <StatCard
           title="Average Rated Speed"
-          value="38,000 BPH"
+          value={avgSpeedDisplay}
           unit="Paced"
           icon={Activity}
           colorVariant="amber"
         />
         <StatCard
           title="OEE Benchmark Target"
-          value="88.0%"
+          value={avgOeeDisplay}
           unit="Standard"
           icon={Zap}
           colorVariant="emerald"
@@ -219,7 +333,9 @@ export function LinesPage() {
             >
               <option value="ALL">All Plants</option>
               {plants.map((p) => (
-                <option key={p.id} value={p.id}>{p.name.split(" - ")[0]}</option>
+                <option key={p.id || p.plantId} value={p.id || p.plantId}>
+                  {p.name ? p.name.split(" - ")[0] : p.code || "Plant"}
+                </option>
               ))}
             </select>
           </div>
@@ -240,11 +356,41 @@ export function LinesPage() {
               </tr>
             </thead>
             <tbody>
-              {filteredLines.length > 0 ? (
+              {filteredLines.length === 0 ? (
+                <tr>
+                  <td colSpan={7} style={{ padding: "48px 24px", textAlign: "center" }}>
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px" }}>
+                      <div style={{ width: "48px", height: "48px", borderRadius: "50%", backgroundColor: "var(--bg-card-subtle)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-muted)" }}>
+                        <Layers size={24} />
+                      </div>
+                      <div style={{ fontSize: "15px", fontWeight: 700, color: "var(--text-primary)" }}>
+                        No Manufacturing Lines Configured
+                      </div>
+                      <div style={{ fontSize: "12px", color: "var(--text-secondary)", maxWidth: "380px" }}>
+                        All dummy data has been removed. Click "+ Add Line Cell" above to register your real production lines.
+                      </div>
+                      <Button variant="primary" icon={Plus} onClick={() => setIsModalOpen(true)} style={{ fontSize: "12px", padding: "7px 14px", marginTop: "6px" }}>
+                        + Add Line Cell
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
                 filteredLines.map((l) => {
-                  const plantName = plants.find((p) => p.id === l.plantId)?.name?.split(" - ")[0] || l.plantName || "—";
+                  const plantName = resolvePlantName(l);
+                  const speedDisplay =
+                    l.ratedSpeed && l.ratedSpeed !== "—"
+                      ? l.ratedSpeed
+                      : l.ratedSpeedBPH
+                      ? `${Number(l.ratedSpeedBPH).toLocaleString()} BPH`
+                      : l.nominalSpeedBpm
+                      ? `${(Number(l.nominalSpeedBpm) * 60).toLocaleString()} BPH`
+                      : "—";
+
+                  const isRunning = (l.status || "").toUpperCase() === "RUNNING" || (l.status || "").toUpperCase() === "ACTIVE";
+
                   return (
-                    <tr key={l.lineId || l.id || l.lineCode} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+                    <tr key={l.lineId || l.id || l.lineCode || l.code} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
                       <td style={{ padding: "12px 16px", fontFamily: "var(--font-mono)", fontWeight: 800, color: "#8C5B23" }}>
                         {l.lineCode || l.code || l.lineId}
                       </td>
@@ -258,13 +404,13 @@ export function LinesPage() {
                         </div>
                       </td>
                       <td style={{ padding: "12px 16px" }}>
-                        <Badge variant="cyan">{l.type || l.lineType || "Continuous Flow"}</Badge>
+                        <Badge variant="cyan">{l.type || l.lineType || "Standard"}</Badge>
                       </td>
                       <td style={{ padding: "12px 16px", fontFamily: "var(--font-mono)", fontWeight: 800, color: "#D97706" }}>
-                        {l.ratedSpeed || `${l.ratedSpeedBPH ? l.ratedSpeedBPH.toLocaleString() : "—"} BPH`}
+                        {speedDisplay}
                       </td>
                       <td style={{ padding: "12px 16px" }}>
-                        <Badge variant="emerald">{l.status || "Active"}</Badge>
+                        <Badge variant={isRunning ? "emerald" : "amber"}>{l.status || "Active"}</Badge>
                       </td>
                       <td style={{ padding: "12px 16px", textAlign: "right" }}>
                         <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
@@ -283,7 +429,7 @@ export function LinesPage() {
                             <Edit2 size={13} />
                           </button>
                           <button
-                            onClick={() => handleDelete(l.lineId || l.id || l.lineCode, l.name)}
+                            onClick={() => handleDelete(l.lineId || l.id || l.lineCode || l.code, l.name)}
                             title="Delete Line"
                             style={{ width: "30px", height: "30px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", color: "#EF4444", border: "1px solid var(--border-subtle)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
                           >
@@ -294,20 +440,6 @@ export function LinesPage() {
                     </tr>
                   );
                 })
-              ) : (
-                <tr>
-                  <td colSpan={7} style={{ padding: "48px 24px", textAlign: "center", color: "var(--text-muted)" }}>
-                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px" }}>
-                      <Layers size={40} strokeWidth={1.5} color="var(--text-muted)" style={{ opacity: 0.5 }} />
-                      <div style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-primary)" }}>
-                        No Production Lines configured yet
-                      </div>
-                      <div style={{ fontSize: "12px", color: "var(--text-muted)", maxWidth: "420px" }}>
-                        Click &quot;+ Add Line&quot; to configure your production line cells and packaging formats.
-                      </div>
-                    </div>
-                  </td>
-                </tr>
               )}
             </tbody>
           </table>
@@ -337,7 +469,7 @@ export function LinesPage() {
                   <input
                     type="text"
                     required
-                    placeholder="e.g. LIN-04"
+                    placeholder="e.g. LIN-06"
                     value={newLine.lineCode}
                     onChange={(e) => setNewLine({ ...newLine, lineCode: e.target.value.toUpperCase() })}
                     className="form-input"
@@ -349,7 +481,7 @@ export function LinesPage() {
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Glass Bottling Line 4"
+                    placeholder="e.g. Aseptic PET Line 6"
                     value={newLine.name}
                     onChange={(e) => setNewLine({ ...newLine, name: e.target.value })}
                     className="form-input"
@@ -368,15 +500,17 @@ export function LinesPage() {
                     style={{ backgroundColor: "#FFFFFF" }}
                   >
                     {plants.map((p) => (
-                      <option key={p.id} value={p.id}>{p.name.split(" - ")[0]}</option>
+                      <option key={p.id || p.plantId} value={p.id || p.plantId}>
+                        {p.name ? p.name.split(" - ")[0] : p.code || "Plant"}
+                      </option>
                     ))}
                   </select>
                 </div>
                 <div>
-                  <label className="form-label">Rated Speed</label>
+                  <label className="form-label">Rated Speed (BPH)</label>
                   <input
                     type="text"
-                    placeholder="e.g. 40,000 BPH"
+                    placeholder="e.g. 36,000 BPH"
                     value={newLine.ratedSpeed}
                     onChange={(e) => setNewLine({ ...newLine, ratedSpeed: e.target.value })}
                     className="form-input"
@@ -389,7 +523,7 @@ export function LinesPage() {
                 <label className="form-label">Packaging Format / Cell Type</label>
                 <input
                   type="text"
-                  placeholder="e.g. Rotary Aseptic PET or Sleek Can"
+                  placeholder="e.g. Bottling, Canning, Aseptic"
                   value={newLine.type}
                   onChange={(e) => setNewLine({ ...newLine, type: e.target.value })}
                   className="form-input"
@@ -418,7 +552,7 @@ export function LinesPage() {
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                 <Edit2 size={16} color="#C89547" />
                 <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
-                  Edit Line — {editingLine.lineCode || editingLine.lineId}
+                  Edit Line — {editingLine.lineCode || editingLine.code || editingLine.lineId}
                 </h2>
               </div>
               <button onClick={() => setEditingLine(null)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
@@ -432,7 +566,7 @@ export function LinesPage() {
                 <input
                   type="text"
                   required
-                  value={editingLine.name}
+                  value={editingLine.name || ""}
                   onChange={(e) => setEditingLine({ ...editingLine, name: e.target.value })}
                   className="form-input"
                   style={{ backgroundColor: "#FFFFFF" }}
@@ -444,7 +578,8 @@ export function LinesPage() {
                   <label className="form-label">Rated Speed</label>
                   <input
                     type="text"
-                    value={editingLine.ratedSpeed}
+                    value={editingLine.ratedSpeed || ""}
+                    placeholder="e.g. 38,000 BPH"
                     onChange={(e) => setEditingLine({ ...editingLine, ratedSpeed: e.target.value })}
                     className="form-input"
                     style={{ backgroundColor: "#FFFFFF" }}
@@ -454,7 +589,8 @@ export function LinesPage() {
                   <label className="form-label">Format Type</label>
                   <input
                     type="text"
-                    value={editingLine.type}
+                    value={editingLine.type || editingLine.lineType || ""}
+                    placeholder="e.g. Bottling, Canning"
                     onChange={(e) => setEditingLine({ ...editingLine, type: e.target.value })}
                     className="form-input"
                     style={{ backgroundColor: "#FFFFFF" }}
@@ -502,7 +638,9 @@ export function LinesPage() {
                 <div>
                   <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Status</div>
                   <div style={{ marginTop: "4px" }}>
-                    <Badge variant="emerald">{viewingLine.status || "Active"}</Badge>
+                    <Badge variant={(viewingLine.status || "").toUpperCase() === "RUNNING" || (viewingLine.status || "").toUpperCase() === "ACTIVE" ? "emerald" : "amber"}>
+                      {viewingLine.status || "Active"}
+                    </Badge>
                   </div>
                 </div>
               </div>
@@ -519,13 +657,13 @@ export function LinesPage() {
                   <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Plant Facility</div>
                   <div style={{ fontSize: "13px", fontWeight: 600, color: "var(--text-secondary)", marginTop: "4px", display: "flex", alignItems: "center", gap: "4px" }}>
                     <Building2 size={13} color="#C89547" />
-                    <span>{plants.find((p) => p.id === viewingLine.plantId || p.plantId === viewingLine.plantId)?.name?.split(" - ")[0] || "Indore Plant 1"}</span>
+                    <span>{resolvePlantName(viewingLine)}</span>
                   </div>
                 </div>
                 <div>
                   <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Packaging Format</div>
                   <div style={{ marginTop: "4px" }}>
-                    <Badge variant="cyan">{viewingLine.type || viewingLine.lineType || "Continuous Flow"}</Badge>
+                    <Badge variant="cyan">{viewingLine.type || viewingLine.lineType || "Standard"}</Badge>
                   </div>
                 </div>
               </div>
@@ -534,13 +672,19 @@ export function LinesPage() {
                 <div>
                   <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Nameplate Speed</div>
                   <div style={{ fontSize: "14px", fontWeight: 800, color: "#D97706", fontFamily: "var(--font-mono)", marginTop: "4px" }}>
-                    {viewingLine.ratedSpeed || `${viewingLine.ratedSpeedBPH ? viewingLine.ratedSpeedBPH.toLocaleString() : "38,000"} BPH`}
+                    {viewingLine.ratedSpeed && viewingLine.ratedSpeed !== "—"
+                      ? viewingLine.ratedSpeed
+                      : viewingLine.ratedSpeedBPH
+                      ? `${Number(viewingLine.ratedSpeedBPH).toLocaleString()} BPH`
+                      : viewingLine.nominalSpeedBpm
+                      ? `${(Number(viewingLine.nominalSpeedBpm) * 60).toLocaleString()} BPH`
+                      : "—"}
                   </div>
                 </div>
                 <div>
                   <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>OEE Target / Health</div>
                   <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-secondary)", marginTop: "4px" }}>
-                    {viewingLine.ratedOEE || "88.0% Standard"} ({viewingLine.healthScore || 95}% Health)
+                    {viewingLine.ratedOEE || "85.0% Standard"} {viewingLine.healthScore ? `(${viewingLine.healthScore}% Health)` : ""}
                   </div>
                 </div>
               </div>
@@ -549,7 +693,7 @@ export function LinesPage() {
                 <Button
                   type="button"
                   variant="danger"
-                  onClick={() => handleDelete(viewingLine.lineId || viewingLine.id || viewingLine.lineCode, viewingLine.name)}
+                  onClick={() => handleDelete(viewingLine.lineId || viewingLine.id || viewingLine.lineCode || viewingLine.code, viewingLine.name)}
                   style={{ fontSize: "12px", padding: "6px 12px", display: "inline-flex", alignItems: "center", gap: "6px" }}
                 >
                   <Trash2 size={13} /> Delete

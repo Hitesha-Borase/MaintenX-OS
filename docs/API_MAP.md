@@ -6,7 +6,7 @@ This document catalogs every API in the MaintenX OS Fastify backend with its exa
 
 ## Global Backend Architecture
 - **Protocol & Framework:** Fastify 5 + TypeScript
-- **Base URL Prefix:** `http://localhost:4000/api/v1`
+- **Base URL Prefix:** `https://mainten-x-os-production.up.railway.app/api/v1`
 - **Data Persistence:** PostgreSQL 16 via Drizzle ORM
 - **Authentication:** JWT Bearer Token (`@fastify/jwt`) with dynamic active tenant resolution fallback
 - **Regulatory Standard:** 21 CFR Part 11 Digital Signatures + Immutable Audit Log

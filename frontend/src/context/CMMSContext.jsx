@@ -23,180 +23,190 @@ export function CMMSProvider({ children }) {
   const hasTenant = Boolean(typeof window !== "undefined" && (localStorage.getItem("maintenx_tenant_name") || localStorage.getItem("maintenx_tenant_id")));
   const isTenantActive = Boolean(hasTenant || hasAuthToken);
 
-  // 1. Assets State - initialized from DB / local cache, clearing legacy mocks
+  // 1. Assets State — Unified with MasterDataContext / PostgreSQL Assets
   const [assets, setAssets] = useState(() => {
-    if (isTenantActive) return [];
-    const saved = localStorage.getItem("flowstate_assets");
+    const masterSaved = typeof window !== "undefined" ? localStorage.getItem("mx_master_assets") : null;
+    if (masterSaved) {
+      try {
+        const parsed = JSON.parse(masterSaved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.map((a) => ({
+            id: a.assetId || a.assetCode || a.id,
+            name: a.name,
+            department: a.department || a.lineName || a.type || "General",
+            line: a.lineName || a.line || "Line 1",
+            status: a.status || "Operational",
+            health: a.health !== undefined ? Number(a.health) : (a.healthPercent !== undefined ? Number(a.healthPercent) : 95),
+            vibration: a.vibration !== undefined ? Number(a.vibration) : 1.5,
+            temperature: a.temperature !== undefined ? Number(a.temperature) : 48,
+            _raw: a,
+          }));
+        }
+      } catch (e) {}
+    }
+    const saved = typeof window !== "undefined" ? localStorage.getItem("flowstate_assets") : null;
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        const hasLegacyMocks = Array.isArray(parsed) && parsed.some(a => ["FM-001", "CP-102", "LB-204", "MX-003", "HT-105", "PK-401", "CV-301", "AC-505"].includes(a.id));
-        if (hasLegacyMocks) {
-          localStorage.removeItem("flowstate_assets");
-          return [];
-        }
-        return parsed;
-      } catch {
-        return [];
-      }
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (e) {}
     }
-    return [];
+    return INITIAL_ASSETS;
   });
 
   const [assetHierarchy, setAssetHierarchy] = useState(() => {
-    if (isTenantActive) return [];
-    const saved = localStorage.getItem("flowstate_asset_hierarchy");
-    return saved ? JSON.parse(saved) : ASSET_HIERARCHY_TREE;
-  });
-
-  // 2. Work Orders State - 100% Live PostgreSQL DB state, purge legacy mocks
-  const [workOrders, setWorkOrders] = useState(() => {
-    if (isTenantActive) return [];
-    const saved = localStorage.getItem("flowstate_work_orders");
+    const saved = typeof window !== "undefined" ? localStorage.getItem("flowstate_asset_hierarchy") : null;
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        const hasLegacyMocks = Array.isArray(parsed) && parsed.some(w =>
-          ["WO-2026-0891", "WO-2026-0888", "WO-2026-0885", "WO-2026-0870", "WO-2026-0865", "WO-2026-0850"].includes(w?.id) ||
-          (w?.title && (w.title.includes("Vibration on Main Drive") || w.title.includes("Plate Seal Leakage")))
-        );
-        if (hasLegacyMocks) {
-          localStorage.removeItem("flowstate_work_orders");
-          return [];
-        }
-        return Array.isArray(parsed) ? parsed : [];
-      } catch {
-        return [];
-      }
+        if (parsed) return parsed;
+      } catch (e) {}
     }
-    return [];
+    return ASSET_HIERARCHY_TREE;
+  });
+
+  // 2. Work Orders State — Dispatched from Fast Actions or DB
+  const [workOrders, setWorkOrders] = useState(() => {
+    const saved = typeof window !== "undefined" ? localStorage.getItem("flowstate_work_orders") : null;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      } catch (e) {}
+    }
+    return INITIAL_WORK_ORDERS;
   });
 
   // 3. PM Plans & Schedules
   const [pmPlans, setPmPlans] = useState(() => {
-    if (isTenantActive) return [];
-    const saved = localStorage.getItem("flowstate_pm_plans");
-    return saved ? JSON.parse(saved) : INITIAL_PM_PLANS;
+    const saved = typeof window !== "undefined" ? localStorage.getItem("flowstate_pm_plans") : null;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (e) {}
+    }
+    return INITIAL_PM_PLANS;
   });
 
   const [pmSchedules, setPmSchedules] = useState(() => {
-    if (isTenantActive) return [];
-    const saved = localStorage.getItem("flowstate_pm_schedules");
-    return saved ? JSON.parse(saved) : INITIAL_PM_SCHEDULES;
+    const saved = typeof window !== "undefined" ? localStorage.getItem("flowstate_pm_schedules") : null;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (e) {}
+    }
+    return INITIAL_PM_SCHEDULES;
   });
 
   // Checklists
   const [checklistTemplates, setChecklistTemplates] = useState(() => {
-    if (isTenantActive) return [];
-    try {
-      const saved = localStorage.getItem("flowstate_checklists_v2");
-      if (saved) return JSON.parse(saved);
-      localStorage.removeItem("flowstate_checklists");
-    } catch (e) {}
+    const saved = typeof window !== "undefined" ? (localStorage.getItem("flowstate_checklists_v2") || localStorage.getItem("flowstate_checklists")) : null;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (e) {}
+    }
     return CHECKLIST_TEMPLATES;
   });
 
   const [checklistHistory, setChecklistHistory] = useState(() => {
-    if (isTenantActive) return [];
-    const saved = localStorage.getItem("flowstate_checklist_history");
-    return saved ? JSON.parse(saved) : CHECKLIST_HISTORY;
+    const saved = typeof window !== "undefined" ? localStorage.getItem("flowstate_checklist_history") : null;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (e) {}
+    }
+    return CHECKLIST_HISTORY;
   });
 
   // 4. Breakdowns
   const [breakdowns, setBreakdowns] = useState(() => {
-    if (isTenantActive) return [];
-    try {
-      const saved = localStorage.getItem("flowstate_breakdowns");
-      if (!saved) return [];
-      const parsed = JSON.parse(saved);
-      if (!Array.isArray(parsed)) return [];
-      // Filter out legacy mock data
-      const filtered = parsed.filter(b => !["BD-2026-042", "BD-2026-039", "BD-2026-035", "BD-2026-028"].includes(b?.id));
-      return filtered;
-    } catch {
-      return [];
+    const saved = typeof window !== "undefined" ? localStorage.getItem("flowstate_breakdowns") : null;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (e) {}
     }
+    return INITIAL_BREAKDOWNS;
   });
 
   // 5. Spare Parts & BOM & Requests
   const [spareParts, setSpareParts] = useState(() => {
-    if (isTenantActive) return [];
-    const saved = localStorage.getItem("flowstate_spare_parts");
+    const saved = typeof window !== "undefined" ? localStorage.getItem("flowstate_spare_parts") : null;
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        const hasLegacyMocks = Array.isArray(parsed) && parsed.some((p) => ["BRG-6208-2RS", "GSK-EPDM-HT105", "SL-VTON-45"].includes(p?.partNo));
-        if (hasLegacyMocks) {
-          localStorage.removeItem("flowstate_spare_parts");
-          return [];
-        }
-        return parsed;
-      } catch {
-        return [];
-      }
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (e) {}
     }
-    return [];
+    return INITIAL_SPARE_PARTS;
   });
 
   const [equipmentBOMs] = useState(() => (isTenantActive ? {} : EQUIPMENT_BOMS));
 
   const [partsRequests, setPartsRequests] = useState(() => {
-    if (isTenantActive) return [];
-    const saved = localStorage.getItem("flowstate_parts_requests");
-    return saved ? JSON.parse(saved) : INITIAL_PARTS_REQUESTS;
+    const saved = typeof window !== "undefined" ? localStorage.getItem("flowstate_parts_requests") : null;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (e) {}
+    }
+    return INITIAL_PARTS_REQUESTS;
   });
 
   // 6. Calibrations & History
   const [calibrations, setCalibrations] = useState(() => {
-    if (isTenantActive) return [];
-    const saved = localStorage.getItem("flowstate_calibrations");
+    const saved = typeof window !== "undefined" ? localStorage.getItem("flowstate_calibrations") : null;
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        const hasLegacyMocks = Array.isArray(parsed) && parsed.some((c) => ["CAL-2026-088", "CAL-2026-082", "CAL-2026-091", "CAL-2026-079"].includes(c?.id));
-        if (hasLegacyMocks) {
-          localStorage.removeItem("flowstate_calibrations");
-          return [];
-        }
-        return Array.isArray(parsed) ? parsed : [];
-      } catch {
-        return [];
-      }
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (e) {}
     }
-    return [];
+    return INITIAL_CALIBRATIONS;
   });
 
   const [calibrationHistory, setCalibrationHistory] = useState(() => {
-    if (isTenantActive) return [];
-    const saved = localStorage.getItem("flowstate_calibration_history");
-    return saved ? JSON.parse(saved) : CALIBRATION_HISTORY;
+    const saved = typeof window !== "undefined" ? localStorage.getItem("flowstate_calibration_history") : null;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (e) {}
+    }
+    return CALIBRATION_HISTORY;
   });
 
   // 7. Failure Codes
   const [failureCodes, setFailureCodes] = useState(() => {
-    if (isTenantActive) return [];
-    const saved = localStorage.getItem("flowstate_failure_codes");
-    return saved ? JSON.parse(saved) : INITIAL_FAILURE_CODES;
+    const saved = typeof window !== "undefined" ? localStorage.getItem("flowstate_failure_codes") : null;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (e) {}
+    }
+    return INITIAL_FAILURE_CODES;
   });
 
   // 8. Troubleshooting & Verified Solutions
   const [solutions, setSolutions] = useState(() => {
-    if (isTenantActive) return [];
-    const saved = localStorage.getItem("flowstate_solutions");
+    const saved = typeof window !== "undefined" ? localStorage.getItem("flowstate_solutions") : null;
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        const hasLegacyMocks = Array.isArray(parsed) && parsed.some((s) => ["SOL-2026-012", "SOL-2025-084", "SOL-2025-045"].includes(s?.id));
-        if (hasLegacyMocks) {
-          localStorage.removeItem("flowstate_solutions");
-          return [];
-        }
-        return Array.isArray(parsed) ? parsed : [];
-      } catch {
-        return [];
-      }
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (e) {}
     }
-    return [];
+    return INITIAL_SOLUTIONS;
   });
 
   // 9. Reliability
@@ -486,7 +496,9 @@ export function CMMSProvider({ children }) {
         if (remoteWOs.status === "fulfilled") {
           const list = Array.isArray(remoteWOs.value) ? remoteWOs.value : (remoteWOs.value?.data || []);
           if (Array.isArray(list) && list.length > 0) {
-            setWorkOrders(normalizeWorkOrders(list));
+            const normalized = normalizeWorkOrders(list);
+            setWorkOrders(normalized);
+            localStorage.setItem("flowstate_work_orders", JSON.stringify(normalized));
           }
         }
         if (remotePMs.status === "fulfilled") {
@@ -502,9 +514,21 @@ export function CMMSProvider({ children }) {
           }
         }
         if (remoteAssets.status === "fulfilled") {
-          const list = remoteAssets.value?.data || remoteAssets.value || [];
-          if (Array.isArray(list)) {
-            setAssets(list);
+          const raw = remoteAssets.value?.data || remoteAssets.value || [];
+          if (Array.isArray(raw) && raw.length > 0) {
+            const mapped = raw.map((a) => ({
+              id: a.assetCode || a.assetId || a.id,
+              name: a.name,
+              department: a.department || a.lineName || a.type || "General",
+              line: a.lineName || a.line || "Line 1",
+              status: a.status || "Operational",
+              health: a.health !== undefined ? Number(a.health) : (a.healthPercent !== undefined ? Number(a.healthPercent) : 95),
+              vibration: a.vibration !== undefined ? Number(a.vibration) : 1.5,
+              temperature: a.temperature !== undefined ? Number(a.temperature) : 48,
+              _raw: a,
+            }));
+            setAssets(mapped);
+            localStorage.setItem("flowstate_assets", JSON.stringify(mapped));
           }
         }
         if (remoteBreakdowns.status === "fulfilled") {
@@ -555,6 +579,57 @@ export function CMMSProvider({ children }) {
     syncCMMSBackend();
   }, []);
 
+  // Real-time synchronization with MasterDataContext asset changes
+  useEffect(() => {
+    const handleSyncAssets = (e) => {
+      const incoming = e?.detail;
+      if (Array.isArray(incoming) && incoming.length > 0) {
+        setAssets(
+          incoming.map((a) => ({
+            id: a.assetId || a.assetCode || a.id,
+            name: a.name,
+            department: a.department || a.lineName || a.type || "General",
+            line: a.lineName || a.line || "Line 1",
+            status: a.status || "Operational",
+            health: a.health !== undefined ? Number(a.health) : (a.healthPercent !== undefined ? Number(a.healthPercent) : 95),
+            vibration: a.vibration !== undefined ? Number(a.vibration) : 1.5,
+            temperature: a.temperature !== undefined ? Number(a.temperature) : 48,
+            _raw: a,
+          }))
+        );
+        return;
+      }
+      const saved = localStorage.getItem("mx_master_assets");
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) {
+            setAssets(
+              parsed.map((a) => ({
+                id: a.assetId || a.assetCode || a.id,
+                name: a.name,
+                department: a.department || a.lineName || a.type || "General",
+                line: a.lineName || a.line || "Line 1",
+                status: a.status || "Operational",
+                health: a.health !== undefined ? Number(a.health) : (a.healthPercent !== undefined ? Number(a.healthPercent) : 95),
+                vibration: a.vibration !== undefined ? Number(a.vibration) : 1.5,
+                temperature: a.temperature !== undefined ? Number(a.temperature) : 48,
+                _raw: a,
+              }))
+            );
+          }
+        } catch (_) {}
+      }
+    };
+
+    window.addEventListener("maintenx:asset_updated", handleSyncAssets);
+    window.addEventListener("storage", handleSyncAssets);
+    return () => {
+      window.removeEventListener("maintenx:asset_updated", handleSyncAssets);
+      window.removeEventListener("storage", handleSyncAssets);
+    };
+  }, []);
+
   useEffect(() => {
     const handleTenantChanged = () => {
       setAssets([]);
@@ -595,6 +670,12 @@ export function CMMSProvider({ children }) {
     return () => window.removeEventListener("maintenx:tenant_changed", handleTenantChanged);
   }, []);
 
+  // Persist workOrders state across dashboards
+  useEffect(() => {
+    if (workOrders && workOrders.length > 0) {
+      localStorage.setItem("flowstate_work_orders", JSON.stringify(workOrders));
+    }
+  }, [workOrders]);
   // Dynamic MTTR / MTBF recalculation based on actual Breakdowns
   useEffect(() => {
     const resolvedBDs = breakdowns.filter(b => b.status === "Resolved" || b.status === "Closed");
@@ -1238,7 +1319,7 @@ export function CMMSProvider({ children }) {
       durationMinutes: 0,
       ...breakdownData,
       id: tempId,
-      startTime: new Date().toISOString().replace("T", " ").substring(0, 16),
+      startTime: new Date().toISOString(),
       status: "Active Repair",
       durationMinutes: breakdownData.durationMinutes !== undefined ? Number(breakdownData.durationMinutes) : 0
     };
@@ -1272,7 +1353,7 @@ export function CMMSProvider({ children }) {
           if (bd.assetId) {
             updateAssetStatus(bd.assetId, "Operational", +30);
           }
-          const endTimeStr = new Date().toISOString().replace("T", " ").substring(0, 16);
+          const endTimeStr = new Date().toISOString();
           const start = new Date(bd.startTime || Date.now());
           const end = new Date(endTimeStr);
           const durationMinutes = Math.max(0, Math.floor((end - start) / 60000));
