@@ -17,46 +17,27 @@ export function ExceptionProvider({ children }) {
     async function loadBackendExceptions() {
       setIsLoading(true);
       try {
-<<<<<<< HEAD
-        const res = await exceptionService.getExceptions();
+        const res = await exceptionService.getExceptions({ plantId: "PLT-01" });
         const list = res?.data?.data || res?.data || res;
         if (Array.isArray(list) && isMounted && list.length > 0) {
-          // Normalize fields for UI compatibility
-          const mapped = list.map(e => ({
-=======
-        const res = await exceptionService.getExceptions({ plantId: "PLT-01" });
-        const list = res?.data || res;
-        if (Array.isArray(list) && isMounted) {
           // Normalize fields from live PostgreSQL pm_exceptions
           const mapped = list.map((e) => ({
->>>>>>> 56229c1306e64a6fb111e20df76dbc5e997d1142
             id: e.id,
             title: e.title,
             severity: e.severity,
             category: e.category,
-<<<<<<< HEAD
-            assetOrOrder: e.assetOrOrder,
-            description: e.impactDescription || e.description || e.title,
-            impact: e.impactDescription || e.description || e.title,
-            owner: e.owner || "Unassigned",
-            escalationLevel: e.escalationLevel || "Monitor Only",
-            status: e.status === "Active" ? "Open" : e.status,
-            resolutionNotes: e.resolutionNotes,
-            discoveredAt: e.createdAt ? new Date(e.createdAt).toISOString().replace("T", " ").substring(0, 16) : "Just now",
-            timeOpenMinutes: 12
-=======
             stage: e.stage || (e.title?.toLowerCase().includes("pasteurizer") || e.title?.toLowerCase().includes("mixer") ? "PROCESSING" : "PACKAGING"),
             assetOrOrder: e.assetOrOrder || e.asset_or_order || "N/A",
-            description: e.impactDescription || e.impact_description || "",
-            impact: e.impactDescription || e.impact_description || "",
+            description: e.impactDescription || e.impact_description || e.description || e.title,
+            impact: e.impactDescription || e.impact_description || e.description || e.title,
             owner: e.owner || "Unassigned",
             escalationLevel: e.escalationLevel || e.escalation_level || "Level 1 (Shift Supervisor)",
-            status: e.status,
+            status: e.status === "Active" ? "Open" : e.status,
             resolutionNotes: e.resolutionNotes || e.resolution_notes || "",
             resolvedAt: e.resolvedAt || e.resolved_at || null,
             createdAt: e.createdAt || e.created_at || new Date().toISOString(),
-            discoveredAt: e.createdAt ? new Date(e.createdAt).toISOString().replace("T", " ").substring(0, 16) : "Just now"
->>>>>>> 56229c1306e64a6fb111e20df76dbc5e997d1142
+            discoveredAt: e.createdAt ? new Date(e.createdAt).toISOString().replace("T", " ").substring(0, 16) : "Just now",
+            timeOpenMinutes: 12
           }));
           setExceptions(mapped);
         } else if (isMounted) {

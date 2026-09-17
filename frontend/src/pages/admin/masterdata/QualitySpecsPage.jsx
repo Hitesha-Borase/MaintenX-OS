@@ -1100,4 +1100,3 @@ export function QualitySpecsPage() {
     </div>
   );
 }
-}
