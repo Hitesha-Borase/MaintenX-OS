@@ -2,8 +2,12 @@ import apiClient from "./apiClient";
 
 export const dashboardService = {
   // ─── Plant Manager ──────────────────────────────────────────────────────────
-  async getCommandCenterOverview(plantId) {
-    return apiClient.get(`/dashboards/command-center${plantId ? `?plantId=${plantId}` : ""}`);
+  async getCommandCenterOverview(plantId, stage) {
+    const params = new URLSearchParams();
+    if (plantId && plantId !== "ALL") params.append("plantId", plantId);
+    if (stage && stage !== "ALL") params.append("stage", stage);
+    const qs = params.toString() ? `?${params.toString()}` : "";
+    return apiClient.get(`/dashboards/command-center${qs}`);
   },
 
   async getKPIs(plantId) {

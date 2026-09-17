@@ -494,7 +494,8 @@ export const NAVIGATION_CONFIG = {
     {
       group: "Dashboards",
       items: [
-        { label: "Command Center", path: "/command-center", icon: "LayoutDashboard" }
+        { label: "Command Center", path: "/command-center", icon: "LayoutDashboard" },
+        { label: "Control Tower", path: "/exception-control-tower", icon: "AlertTriangle" }
       ]
     },
     {
@@ -533,8 +534,14 @@ export const NAVIGATION_CONFIG = {
       ]
     },
     { label: "Inventory", path: "/inventory", icon: "Package" },
-    { label: "Labour", path: "/labour", icon: "Users" },
-    { label: "CMMS Dashboard", path: "/maintenance", icon: "Wrench" },
+    {
+      group: "Maintenance",
+      items: [
+        { label: "CMMS Dashboard", path: "/maintenance", icon: "Wrench" },
+        { label: "Work Orders", path: "/maintenance/work-orders", icon: "FileText" },
+        { label: "Breakdowns", path: "/maintenance/breakdowns", icon: "AlertOctagon" }
+      ]
+    },
     { label: "Reports", path: "/reports", icon: "FileSpreadsheet" }
   ],
   executive: [
@@ -860,30 +867,43 @@ export function RoleProvider({ children }) {
     if (currentRole.id === "maintenance") {
       allowedPaths.push("/work-orders", "/assets", "/breakdowns", "/pm", "/spare-parts", "/calibration", "/troubleshooting", "/cmms", "/ci", "/maintenance");
     } else if (currentRole.id === "plant_manager") {
-      allowedPaths.push("/work-orders", "/assets", "/breakdowns", "/pm", "/spare-parts", "/calibration", "/troubleshooting", "/planning", "/production", "/quality", "/inventory", "/labour", "/maintenance", "/performance", "/cmms", "/master-data", "/reports", "/governance", "/migration", "/supervisor", "/people", "/command-center", "/traceability", "/warehouse", "/ci", "/rca", "/capa", "/rca-capa", "/costing", "/executive", "/organization");
+      allowedPaths.push(
+        "/work-orders", "/assets", "/breakdowns", "/pm", "/spare-parts", "/calibration", "/troubleshooting",
+        "/planning", "/production", "/quality", "/inventory", "/labour", "/maintenance", "/performance",
+        "/cmms", "/master-data", "/reports", "/governance", "/migration", "/supervisor", "/people",
+        "/command-center", "/traceability", "/warehouse", "/ci", "/rca", "/capa", "/rca-capa", "/costing",
+        "/executive", "/organization", "/exception-control-tower", "/exceptions", "/control-tower",
+        "/oee-performance", "/kpi-analytics", "/ai-analytics"
+      );
     } else if (currentRole.id === "ci_engineer") {
-      allowedPaths.push("/ci", "/quality", "/rca", "/capa", "/traceability");
+      allowedPaths.push("/ci", "/quality", "/rca", "/capa", "/traceability", "/exception-control-tower", "/exceptions", "/control-tower");
     } else if (currentRole.id === "executive") {
-      allowedPaths.push("/production", "/ci/reliability", "/ci/projects/savings", "/quality", "/ci/reports", "/costing", "/executive", "/traceability");
+      allowedPaths.push("/production", "/ci/reliability", "/ci/projects/savings", "/quality", "/ci/reports", "/costing", "/executive", "/traceability", "/exception-control-tower", "/exceptions", "/control-tower");
     } else if (currentRole.id === "planner") {
       allowedPaths.push("/planner", "/planning", "/traceability");
     } else if (currentRole.id === "warehouse") {
       allowedPaths.push("/warehouse", "/inventory", "/traceability");
     } else if (currentRole.id === "quality") {
-      allowedPaths.push("/quality", "/traceability");
+      allowedPaths.push("/quality", "/traceability", "/exception-control-tower", "/exceptions", "/control-tower");
     } else if (currentRole.id === "supervisor") {
-      allowedPaths.push("/supervisor", "/labour", "/traceability", "/production");
+      allowedPaths.push("/supervisor", "/labour", "/traceability", "/production", "/exception-control-tower", "/exceptions", "/control-tower");
     } else if (currentRole.id === "line_lead") {
-      allowedPaths.push("/linelead", "/traceability");
+      allowedPaths.push("/linelead", "/traceability", "/exception-control-tower", "/exceptions", "/control-tower");
     } else if (currentRole.id === "operator") {
       allowedPaths.push("/operator");
     }
 
-    const cleanPath = path.split("?")[0].split("#")[0];
+    const rawClean = path.split("?")[0].split("#")[0];
+    let cleanPath = rawClean;
+    try {
+      cleanPath = decodeURIComponent(rawClean);
+    } catch (_) {}
+    const normalizedPath = cleanPath.toLowerCase().replace(/\s+/g, "-");
 
     return allowedPaths.some((p) => {
       if (p === "/") return cleanPath === "/";
-      return cleanPath.startsWith(p);
+      const normP = p.toLowerCase().replace(/\s+/g, "-");
+      return cleanPath.startsWith(p) || normalizedPath.startsWith(normP);
     });
   };
 

@@ -480,6 +480,5 @@ export const masterDataService = {
   },
 };
 
-export { masterDataService };
 export default masterDataService;
 

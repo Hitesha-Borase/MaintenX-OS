@@ -15,7 +15,9 @@ import {
   Filter,
   CheckSquare,
   RotateCcw,
-  Sparkles
+  Sparkles,
+  Edit2,
+  Trash2
 } from "lucide-react";
 import { Card } from "../../../components/common/Card";
 import { Button } from "../../../components/common/Button";
@@ -29,23 +31,28 @@ export function CorrectiveActions() {
   const navigate = useNavigate();
   const { addToast } = useApp();
 
-  // Trigger live GET /api/v1/ci/capa/actions on mount
-  React.useEffect(() => {
-    ciService.getCapaActions().catch((err) => console.warn("Live CAPA fetch:", err.message));
-  }, []);
   const {
     capaActions = [],
     createCapaAction,
+    updateCapaAction,
     updateCapaStatus,
+    deleteCapaAction,
+    refreshCapa,
     investigations = [],
     overdueCapaCount,
     currentUser
   } = useCI();
 
+  React.useEffect(() => {
+    refreshCapa?.();
+  }, [refreshCapa]);
+
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [priorityFilter, setPriorityFilter] = useState("ALL");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editingAction, setEditingAction] = useState(null);
 
   const [newAction, setNewAction] = useState({
     rcaId: investigations[0]?.id || "",
@@ -89,6 +96,26 @@ export function CorrectiveActions() {
       priority: "High",
       status: "Open"
     });
+  };
+
+  const handleEditSave = async (e) => {
+    e.preventDefault();
+    if (!editingAction || !editingAction.id) return;
+    await updateCapaAction(editingAction.id, {
+      description: editingAction.description,
+      owner: editingAction.owner,
+      dueDate: editingAction.dueDate,
+      priority: editingAction.priority,
+      status: editingAction.status
+    });
+    setEditModalOpen(false);
+    setEditingAction(null);
+  };
+
+  const handleDelete = async (id, desc) => {
+    if (window.confirm(`Are you sure you want to delete CAPA ${id} (${(desc || "").substring(0, 30)}...)?`)) {
+      await deleteCapaAction(id);
+    }
   };
 
   const handleExportCSV = () => {
@@ -360,6 +387,23 @@ export function CorrectiveActions() {
                             <CheckSquare size={13} />
                           </button>
                         )}
+                        <button
+                          onClick={() => {
+                            setEditingAction({ ...a });
+                            setEditModalOpen(true);
+                          }}
+                          title="Edit Action"
+                          style={{ width: "30px", height: "30px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", color: "#0284C7", border: "1px solid var(--border-subtle)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+                        >
+                          <Edit2 size={13} />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(a.id, a.description)}
+                          title="Delete Action"
+                          style={{ width: "30px", height: "30px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", color: "#EF4444", border: "1px solid var(--border-subtle)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+                        >
+                          <Trash2 size={13} />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -478,6 +522,107 @@ export function CorrectiveActions() {
                 </Button>
                 <Button variant="primary" type="submit">
                   Assign Action
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT CAPA MODAL */}
+      {editModalOpen && editingAction && (
+        <div className="modal-backdrop" onClick={() => setEditModalOpen(false)}>
+          <div className="modal-content" style={{ maxWidth: "520px", margin: "16px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Edit2 size={18} color="#0284C7" />
+                <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                  Edit Corrective Action ({editingAction.id})
+                </h2>
+              </div>
+              <button onClick={() => setEditModalOpen(false)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditSave} style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div>
+                <label className="form-label">Corrective Action Description *</label>
+                <textarea
+                  rows={3}
+                  required
+                  value={editingAction.description || ""}
+                  onChange={(e) => setEditingAction({ ...editingAction, description: e.target.value })}
+                  className="form-textarea"
+                  style={{ backgroundColor: "#FFFFFF" }}
+                />
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div>
+                  <label className="form-label">Assigned Owner</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingAction.owner || ""}
+                    onChange={(e) => setEditingAction({ ...editingAction, owner: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+
+                <div>
+                  <label className="form-label">Target Due Date</label>
+                  <input
+                    type="date"
+                    required
+                    value={editingAction.dueDate ? editingAction.dueDate.substring(0, 10) : ""}
+                    onChange={(e) => setEditingAction({ ...editingAction, dueDate: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div>
+                  <label className="form-label">Priority</label>
+                  <select
+                    value={editingAction.priority || "High"}
+                    onChange={(e) => setEditingAction({ ...editingAction, priority: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  >
+                    <option value="Critical">Critical</option>
+                    <option value="High">High</option>
+                    <option value="Medium">Medium</option>
+                    <option value="Low">Low</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="form-label">Lifecycle Status</label>
+                  <select
+                    value={editingAction.status || "Open"}
+                    onChange={(e) => setEditingAction({ ...editingAction, status: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  >
+                    <option value="Open">Open</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Completed">Completed</option>
+                    <option value="Verified">Verified</option>
+                    <option value="Closed">Closed</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "8px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
+                <Button variant="secondary" onClick={() => setEditModalOpen(false)}>
+                  Cancel
+                </Button>
+                <Button variant="primary" type="submit">
+                  Save Changes
                 </Button>
               </div>
             </form>

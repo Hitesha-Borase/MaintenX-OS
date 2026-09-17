@@ -14,8 +14,7 @@ import {
   Eye,
   History,
   FileCheck,
-  AlertTriangle,
-  Trash2
+  AlertTriangle
 } from "lucide-react";
 import { Card } from "../../../components/common/Card";
 import { Badge } from "../../../components/common/Badge";
@@ -30,7 +29,6 @@ import masterDataService from "../../../services/masterDataService";
 export function QualitySpecsPage() {
   const { qualitySpecs = [], setQualitySpecs, addQualitySpec, updateQualitySpec, approveQualitySpec, rejectQualitySpec, deleteQualitySpec, skus = [] } = useMasterData();
   const { addToast } = useApp();
-  const [deletingSpec, setDeletingSpec] = useState(null);
 
   const fetchLiveSpecs = async () => {
     try {
@@ -1096,7 +1094,9 @@ export function QualitySpecsPage() {
               </Button>
             </div>
           </div>
+        </div>
       )}
     </div>
   );
+}
 }

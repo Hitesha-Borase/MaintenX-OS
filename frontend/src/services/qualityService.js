@@ -454,7 +454,6 @@ export const qualityService = {
   },
 };
 
-export { qualityService };
 export default qualityService;
 
 

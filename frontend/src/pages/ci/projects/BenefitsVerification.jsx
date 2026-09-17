@@ -15,7 +15,8 @@ import {
   Unlock,
   DollarSign,
   X,
-  RefreshCw
+  RefreshCw,
+  Briefcase
 } from "lucide-react";
 import { Card } from "../../../components/common/Card";
 import { StatCard } from "../../../components/common/StatCard";
@@ -324,6 +325,24 @@ export function BenefitsVerification() {
                     </td>
                     <td style={{ padding: "12px 16px", textAlign: "right" }}>
                       <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                        <button
+                          onClick={() => navigate("/ci/projects/list")}
+                          title="View in Projects Register"
+                          style={{
+                            width: "30px",
+                            height: "30px",
+                            borderRadius: "6px",
+                            backgroundColor: "var(--bg-card-subtle)",
+                            color: "#0284C7",
+                            border: "1px solid var(--border-subtle)",
+                            cursor: "pointer",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center"
+                          }}
+                        >
+                          <Briefcase size={13} />
+                        </button>
                         {!isLocked ? (
                           <button
                             onClick={() => handleVerify(p.id)}

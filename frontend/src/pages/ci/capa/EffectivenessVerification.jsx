@@ -28,12 +28,11 @@ import ciService from "../../../services/ciService";
 
 export function EffectivenessVerification() {
   const navigate = useNavigate();
-  const { addToast } = useApp();
-  const { capaActions = [], verifyCapaEffectiveness, updateCapaStatus } = useCI();
+  const { capaActions = [], verifyCapaEffectiveness, updateCapaStatus, refreshCapa } = useCI();
 
   useEffect(() => {
-    ciService.getCapaActions().catch((err) => console.warn("CAPA actions load:", err.message));
-  }, []);
+    refreshCapa?.();
+  }, [refreshCapa]);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");

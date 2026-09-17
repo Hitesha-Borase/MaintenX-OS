@@ -1319,7 +1319,7 @@ export function CMMSProvider({ children }) {
       durationMinutes: 0,
       ...breakdownData,
       id: tempId,
-      startTime: new Date().toISOString().replace("T", " ").substring(0, 16),
+      startTime: new Date().toISOString(),
       status: "Active Repair",
       durationMinutes: breakdownData.durationMinutes !== undefined ? Number(breakdownData.durationMinutes) : 0
     };
@@ -1353,7 +1353,7 @@ export function CMMSProvider({ children }) {
           if (bd.assetId) {
             updateAssetStatus(bd.assetId, "Operational", +30);
           }
-          const endTimeStr = new Date().toISOString().replace("T", " ").substring(0, 16);
+          const endTimeStr = new Date().toISOString();
           const start = new Date(bd.startTime || Date.now());
           const end = new Date(endTimeStr);
           const durationMinutes = Math.max(0, Math.floor((end - start) / 60000));

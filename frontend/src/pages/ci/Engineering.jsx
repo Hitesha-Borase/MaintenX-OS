@@ -309,7 +309,11 @@ export function Engineering() {
                   </td>
                   <td style={{ padding: "12px 16px", textAlign: "right" }}>
                     <button
-                      onClick={() => deleteCapexProject(p.id)}
+                      onClick={async () => {
+                        if (window.confirm(`Delete Capex Project "${p.name}" (${p.id})?`)) {
+                          await deleteCapexProject(p.id);
+                        }
+                      }}
                       title="Remove Capex Project"
                       style={{
                         width: "30px",

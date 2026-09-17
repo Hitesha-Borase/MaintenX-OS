@@ -22,11 +22,51 @@ import { Drawer } from "../../components/common/Drawer";
 import { Modal } from "../../components/common/Modal";
 import { useExceptions } from "../../context/ExceptionContext";
 import { useApp } from "../../context/AppContext";
+import { useRole } from "../../context/RoleContext";
 import { useNavigate } from "react-router-dom";
+
+function formatExceptionTime(exc) {
+  if (exc.status === "Resolved") {
+    if (exc.resolvedAt) {
+      try {
+        const d = new Date(exc.resolvedAt);
+        const dateStr = d.toLocaleDateString([], { month: "short", day: "numeric" });
+        const timeStr = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+        return `Closed: ${dateStr}, ${timeStr}`;
+      } catch (e) {
+        return "Closed";
+      }
+    }
+    return "Closed";
+  }
+
+  if (exc.createdAt) {
+    try {
+      const created = new Date(exc.createdAt).getTime();
+      const now = Date.now();
+      const diffMs = Math.max(0, now - created);
+      const diffMinutes = Math.max(1, Math.round(diffMs / 60000));
+      if (diffMinutes < 60) {
+        return `Open: ${diffMinutes}m`;
+      }
+      const hours = Math.floor(diffMinutes / 60);
+      const mins = diffMinutes % 60;
+      if (hours < 24) {
+        return `Open: ${hours}h ${mins}m`;
+      }
+      const days = Math.floor(hours / 24);
+      return `Open: ${days}d ${hours % 24}h`;
+    } catch (e) {
+      return "Open";
+    }
+  }
+  return "Open";
+}
 
 export function ExceptionControlTower() {
   const { exceptions, addException, updateExceptionStatus, assignException } = useExceptions();
   const { addToast } = useApp();
+  const { currentRole } = useRole();
   const navigate = useNavigate();
 
   const [selectedSeverity, setSelectedSeverity] = useState("ALL");
@@ -36,18 +76,44 @@ export function ExceptionControlTower() {
   // Drawer / Modal states
   const [activeDrawerException, setActiveDrawerException] = useState(null);
   const [assignModalException, setAssignModalException] = useState(null);
-  const [newOwner, setNewOwner] = useState("Marcus Vance");
-  const [newEscalation, setNewEscalation] = useState("Level 2 (Plant Ops Manager)");
+  const [newOwner, setNewOwner] = useState("");
+  const [newEscalation, setNewEscalation] = useState("Level 1 (Shift Supervisor)");
 
   const [resolveModalException, setResolveModalException] = useState(null);
   const [resolutionNotes, setResolutionNotes] = useState("");
+  const [resolverName, setResolverName] = useState("");
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newSeverity, setNewSeverity] = useState("P2");
   const [newCat, setNewCat] = useState("Production At Risk");
-  const [newAssetOrOrder, setNewAssetOrOrder] = useState("Line 1 (Aseptic Bottling)");
+  const [newStage, setNewStage] = useState("PROCESSING");
+  const [newAssetOrOrder, setNewAssetOrOrder] = useState("");
   const [newImpact, setNewImpact] = useState("");
+
+  const availableOwners = Array.from(
+    new Set(
+      exceptions
+        .map((e) => e.owner)
+        .filter((o) => o && o !== "Unassigned")
+    )
+  );
+
+  const openAssignModal = (exc) => {
+    setAssignModalException(exc);
+    setNewOwner(exc.owner && exc.owner !== "Unassigned" ? exc.owner : "");
+    setNewEscalation(exc.escalationLevel || "Level 1 (Shift Supervisor)");
+  };
+
+  const openResolveModal = (exc) => {
+    setResolveModalException(exc);
+    const existingCleanNotes = exc.resolutionNotes?.replace(/^\[Resolved by [^\]]+\]:\s*/, "") || "";
+    setResolutionNotes(existingCleanNotes);
+    const defaultSigner = currentRole?.user?.name 
+      ? `${currentRole.user.name} (${currentRole.label || "Plant Manager"})` 
+      : "Arthur Sterling (Plant Manager)";
+    setResolverName(defaultSigner);
+  };
 
   const filteredExceptions = exceptions.filter((exc) => {
     if (selectedSeverity !== "ALL" && exc.severity !== selectedSeverity) return false;
@@ -55,10 +121,10 @@ export function ExceptionControlTower() {
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       return (
-        exc.title.toLowerCase().includes(q) ||
-        exc.assetOrOrder.toLowerCase().includes(q) ||
-        exc.owner.toLowerCase().includes(q) ||
-        exc.id.toLowerCase().includes(q)
+        exc.title?.toLowerCase().includes(q) ||
+        exc.assetOrOrder?.toLowerCase().includes(q) ||
+        exc.owner?.toLowerCase().includes(q) ||
+        exc.id?.toLowerCase().includes(q)
       );
     }
     return true;
@@ -83,31 +149,45 @@ export function ExceptionControlTower() {
   const handleResolve = (e) => {
     e.preventDefault();
     if (!resolveModalException) return;
-    updateExceptionStatus(resolveModalException.id, "Resolved", resolutionNotes);
-    addToast(`Exception ${resolveModalException.id} marked as Resolved!`);
+    const author = resolverName.trim() || currentRole?.user?.name || "Arthur Sterling";
+    const fullNotes = `[Resolved by ${author}]: ${resolutionNotes.trim()}`;
+    const nowIso = new Date().toISOString();
+    updateExceptionStatus(resolveModalException.id, "Resolved", fullNotes);
+    addToast(`Exception ${resolveModalException.id} marked as Resolved by ${author}!`);
     setResolveModalException(null);
     setResolutionNotes("");
     if (activeDrawerException?.id === resolveModalException.id) {
-      setActiveDrawerException((prev) => ({ ...prev, status: "Resolved", resolutionNotes }));
+      setActiveDrawerException((prev) => ({ 
+        ...prev, 
+        status: "Resolved", 
+        resolutionNotes: fullNotes,
+        resolvedAt: nowIso
+      }));
     }
   };
 
-  const handleCreateException = (e) => {
+  const handleCreateException = async (e) => {
     e.preventDefault();
     if (!newTitle.trim()) return;
-    const newE = addException({
-      severity: newSeverity,
-      category: newCat,
-      title: newTitle,
-      assetOrOrder: newAssetOrOrder,
-      impactDescription: newImpact || "Escalated for immediate triage by shift command.",
-      owner: "Unassigned",
-      escalationLevel: newSeverity === "P1" ? "Level 3 (VP Operations)" : "Level 1 (Shift Supervisor)"
-    });
-    addToast(`Exception ${newE.id} logged in Control Tower!`);
-    setIsCreateModalOpen(false);
-    setNewTitle("");
-    setNewImpact("");
+    try {
+      const newE = await addException({
+        severity: newSeverity,
+        category: newCat,
+        stage: newStage,
+        title: newTitle,
+        assetOrOrder: newAssetOrOrder || "N/A",
+        impactDescription: newImpact || "Escalated for immediate triage by shift command.",
+        owner: "Unassigned",
+        escalationLevel: newSeverity === "P1" ? "Level 3 (VP Operations)" : "Level 1 (Shift Supervisor)"
+      });
+      addToast(`Exception ${newE.id} logged in Control Tower!`);
+      setIsCreateModalOpen(false);
+      setNewTitle("");
+      setNewImpact("");
+      setNewAssetOrOrder("");
+    } catch (err) {
+      addToast(`Error logging exception: ${err.message}`, "error");
+    }
   };
 
   const getSeverityBadge = (sev) => {
@@ -242,94 +322,111 @@ export function ExceptionControlTower() {
 
       {/* Exception Queue List */}
       <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-        {filteredExceptions.map((exc) => {
-          const isResolved = exc.status === "Resolved";
+        {filteredExceptions.length === 0 ? (
+          <Card style={{ textAlign: "center", padding: "48px 24px" }}>
+            <CheckCircle2 size={40} style={{ color: "#10B981", margin: "0 auto 12px" }} />
+            <h3 style={{ fontSize: "16px", fontWeight: 600, color: "var(--text-primary)" }}>
+              No Exceptions Found in Database
+            </h3>
+            <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>
+              All systems are normal. Use the "+ Log New Exception" button to manually log an incident to PostgreSQL.
+            </p>
+          </Card>
+        ) : (
+          filteredExceptions.map((exc) => {
+            const isResolved = exc.status === "Resolved";
 
-          return (
-            <Card
-              key={exc.id}
-              interactive
-              onClick={() => setActiveDrawerException(exc)}
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "12px",
-                borderLeft: `4px solid ${exc.severity === "P1" ? "#EF4444" : exc.severity === "P2" ? "#F59E0B" : "#38BDF8"}`,
-                opacity: isResolved ? 0.7 : 1
-              }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "10px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                  {getSeverityBadge(exc.severity)}
-                  <span style={{ fontSize: "12px", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>
-                    {exc.id}
-                  </span>
-                  <span style={{ fontSize: "12px", color: "var(--text-secondary)", fontWeight: 600 }}>
-                    • {exc.category}
-                  </span>
+            return (
+              <Card
+                key={exc.id}
+                interactive
+                onClick={() => setActiveDrawerException(exc)}
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "12px",
+                  borderLeft: `4px solid ${exc.severity === "P1" ? "#EF4444" : exc.severity === "P2" ? "#F59E0B" : "#38BDF8"}`,
+                  opacity: isResolved ? 0.7 : 1
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "10px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    {getSeverityBadge(exc.severity)}
+                    <span style={{ fontSize: "12px", fontFamily: "var(--font-mono)", color: "var(--text-muted)" }}>
+                      {exc.id}
+                    </span>
+                    {exc.stage && (
+                      <Badge variant={exc.stage === "PROCESSING" ? "amber" : "cyan"}>
+                        {exc.stage}
+                      </Badge>
+                    )}
+                    <span style={{ fontSize: "12px", color: "var(--text-secondary)", fontWeight: 600 }}>
+                      • {exc.category}
+                    </span>
+                  </div>
+
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <Badge variant={isResolved ? "emerald" : exc.status === "In Review" || exc.status === "Active - In Repair" ? "amber" : "rose"}>
+                      {exc.status}
+                    </Badge>
+                    <span style={{ fontSize: "11px", color: isResolved ? "#10B981" : "var(--text-muted)", fontWeight: isResolved ? 600 : 400 }}>
+                      {formatExceptionTime(exc)}
+                    </span>
+                  </div>
                 </div>
 
-                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <Badge variant={isResolved ? "emerald" : "amber"}>
-                    {exc.status}
-                  </Badge>
-                  <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>
-                    Open: {exc.timeOpenMinutes} mins
-                  </span>
-                </div>
-              </div>
-
-              <div>
-                <h3 style={{ fontSize: "15px", fontWeight: 700, color: "var(--text-primary)" }}>
-                  {exc.title}
-                </h3>
-                <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "4px" }}>
-                  {exc.impactDescription}
-                </p>
-              </div>
-
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px", paddingTop: "8px", borderTop: "1px solid var(--border-subtle)", fontSize: "12px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "16px", color: "var(--text-muted)" }}>
-                  <span>Target: <strong style={{ color: "var(--text-primary)" }}>{exc.assetOrOrder}</strong></span>
-                  <span>Owner: <strong style={{ color: "#38BDF8" }}>{exc.owner}</strong></span>
-                  <span>Escalation: <strong style={{ color: "var(--text-secondary)" }}>{exc.escalationLevel}</strong></span>
+                <div>
+                  <h3 style={{ fontSize: "15px", fontWeight: 700, color: "var(--text-primary)" }}>
+                    {exc.title}
+                  </h3>
+                  <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "4px" }}>
+                    {exc.impactDescription || exc.impact || exc.description}
+                  </p>
                 </div>
 
-                <div style={{ display: "flex", gap: "8px" }}>
-                  {!isResolved && (
-                    <>
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        icon={UserCheck}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setAssignModalException(exc);
-                        }}
-                      >
-                        Assign / Escalate
-                      </Button>
-                      <Button
-                        variant="success"
-                        size="sm"
-                        icon={CheckCircle2}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setResolveModalException(exc);
-                        }}
-                      >
-                        Resolve
-                      </Button>
-                    </>
-                  )}
-                  <Button variant="ghost" size="sm" icon={ChevronRight}>
-                    View Details
-                  </Button>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px", paddingTop: "8px", borderTop: "1px solid var(--border-subtle)", fontSize: "12px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "16px", color: "var(--text-muted)" }}>
+                    <span>Target: <strong style={{ color: "var(--text-primary)" }}>{exc.assetOrOrder}</strong></span>
+                    <span>Owner: <strong style={{ color: "#38BDF8" }}>{exc.owner}</strong></span>
+                    <span>Escalation: <strong style={{ color: "var(--text-secondary)" }}>{exc.escalationLevel}</strong></span>
+                  </div>
+
+                  <div style={{ display: "flex", gap: "8px" }}>
+                    {!isResolved && (
+                      <>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          icon={UserCheck}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openAssignModal(exc);
+                          }}
+                        >
+                          {exc.owner && exc.owner !== "Unassigned" ? "Reassign" : "Assign Owner"}
+                        </Button>
+                        <Button
+                          variant="success"
+                          size="sm"
+                          icon={CheckCircle2}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openResolveModal(exc);
+                          }}
+                        >
+                          Resolve
+                        </Button>
+                      </>
+                    )}
+                    <Button variant="ghost" size="sm" icon={ChevronRight}>
+                      View Details
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            </Card>
-          );
-        })}
+              </Card>
+            );
+          })
+        )}
       </div>
 
       {/* Detail Drawer */}
@@ -340,28 +437,30 @@ export function ExceptionControlTower() {
         subtitle={activeDrawerException?.category}
         width="540px"
         footer={
-          activeDrawerException?.status !== "Resolved" ? (
-            <div style={{ display: "flex", gap: "10px" }}>
-              <Button
-                variant="secondary"
-                icon={UserCheck}
-                onClick={() => setAssignModalException(activeDrawerException)}
-              >
-                Assign / Escalate
+          activeDrawerException ? (
+            activeDrawerException.status !== "Resolved" ? (
+              <div style={{ display: "flex", gap: "10px" }}>
+                <Button
+                  variant="secondary"
+                  icon={UserCheck}
+                  onClick={() => openAssignModal(activeDrawerException)}
+                >
+                  {activeDrawerException.owner && activeDrawerException.owner !== "Unassigned" ? "Reassign" : "Assign Owner"}
+                </Button>
+                <Button
+                  variant="success"
+                  icon={CheckCircle2}
+                  onClick={() => openResolveModal(activeDrawerException)}
+                >
+                  Mark Resolved
+                </Button>
+              </div>
+            ) : (
+              <Button variant="secondary" onClick={() => setActiveDrawerException(null)}>
+                Close
               </Button>
-              <Button
-                variant="success"
-                icon={CheckCircle2}
-                onClick={() => setResolveModalException(activeDrawerException)}
-              >
-                Mark Resolved
-              </Button>
-            </div>
-          ) : (
-            <Button variant="secondary" onClick={() => setActiveDrawerException(null)}>
-              Close
-            </Button>
-          )
+            )
+          ) : null
         }
       >
         {activeDrawerException && (
@@ -386,18 +485,49 @@ export function ExceptionControlTower() {
                 <span style={{ fontWeight: 600, color: "var(--text-primary)" }}>{activeDrawerException.assetOrOrder}</span>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid var(--border-subtle)" }}>
+                <span style={{ color: "var(--text-muted)" }}>Manufacturing Stage:</span>
+                <span style={{ fontWeight: 600, color: activeDrawerException.stage === "PROCESSING" ? "#F59E0B" : "#38BDF8" }}>
+                  {activeDrawerException.stage || "PACKAGING"}
+                </span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid var(--border-subtle)" }}>
                 <span style={{ color: "var(--text-muted)" }}>Assigned Incident Owner:</span>
                 <span style={{ fontWeight: 600, color: "#38BDF8" }}>{activeDrawerException.owner}</span>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid var(--border-subtle)" }}>
-                <span style={{ color: "var(--text-muted)" }}>Current Escalation Level:</span>
+                <span style={{ color: "var(--text-muted)" }}>Escalation Tier:</span>
                 <span style={{ fontWeight: 600, color: "#F59E0B" }}>{activeDrawerException.escalationLevel}</span>
               </div>
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid var(--border-subtle)" }}>
+                <span style={{ color: "var(--text-muted)" }}>Reported / Logged At:</span>
+                <span style={{ fontWeight: 600, color: "var(--text-primary)" }}>
+                  {activeDrawerException.createdAt ? new Date(activeDrawerException.createdAt).toLocaleString([], { dateStyle: "medium", timeStyle: "short" }) : "Recently"}
+                </span>
+              </div>
               <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 0" }}>
-                <span style={{ color: "var(--text-muted)" }}>Time Elapsed:</span>
-                <span style={{ fontWeight: 600, color: "var(--text-primary)" }}>{activeDrawerException.timeOpenMinutes} minutes</span>
+                <span style={{ color: "var(--text-muted)" }}>
+                  {activeDrawerException.status === "Resolved" ? "Resolved At:" : "Duration Active:"}
+                </span>
+                <span style={{ fontWeight: 600, color: activeDrawerException.status === "Resolved" ? "#10B981" : "var(--text-primary)" }}>
+                  {activeDrawerException.status === "Resolved"
+                    ? (activeDrawerException.resolvedAt ? new Date(activeDrawerException.resolvedAt).toLocaleString([], { dateStyle: "medium", timeStyle: "short" }) : "Verified Closed")
+                    : formatExceptionTime(activeDrawerException).replace("Open: ", "")}
+                </span>
               </div>
             </div>
+
+            {/* Resolution Verification & Audit Sign-off Box */}
+            {activeDrawerException.status === "Resolved" && (
+              <div style={{ padding: "14px", borderRadius: "8px", backgroundColor: "rgba(16, 185, 129, 0.08)", border: "1px solid rgba(16, 185, 129, 0.25)" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#10B981", fontWeight: 700, fontSize: "13px" }}>
+                  <CheckCircle2 size={16} />
+                  <span>Resolution Sign-off & Audit Notes</span>
+                </div>
+                <p style={{ fontSize: "12px", color: "var(--text-primary)", marginTop: "8px", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
+                  {activeDrawerException.resolutionNotes || "Corrective actions verified and equipment returned to operational clearance."}
+                </p>
+              </div>
+            )}
 
             {activeDrawerException.linkedRoute && (
               <Button
@@ -420,20 +550,28 @@ export function ExceptionControlTower() {
       <Modal
         isOpen={!!assignModalException}
         onClose={() => setAssignModalException(null)}
-        title="Assign & Escalate Exception"
-        subtitle={`Reassign owner or escalate management tier for ${assignModalException?.id}`}
+        title={assignModalException?.owner && assignModalException?.owner !== "Unassigned" ? "Reassign / Escalate Exception" : "Assign Incident Owner"}
+        subtitle={`Update owner or management escalation tier for ${assignModalException?.id}`}
       >
         <form onSubmit={handleAssign} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
           <div className="form-group">
             <label className="form-label">Assign Incident Owner</label>
-            <select className="form-select" value={newOwner} onChange={(e) => setNewOwner(e.target.value)}>
-              <option value="Marcus Vance (Senior Tech)">Marcus Vance (Senior Reliability Tech)</option>
-              <option value="David Kim (Thermal Tech)">David Kim (Thermal Tech)</option>
-              <option value="Sarah Jenkins (QA Lead)">Sarah Jenkins (QA Specialist Lead)</option>
-              <option value="Elena Rostova (Lead Operator)">Elena Rostova (Lead Operator)</option>
-              <option value="Alex Morgan (Purchasing)">Alex Morgan (Purchasing Lead)</option>
-              <option value="Thomas Sterling (Plant Supervisor)">Thomas Sterling (Plant Operations)</option>
-            </select>
+            <input
+              type="text"
+              className="form-input"
+              list="registered-owners-list"
+              placeholder="Type owner name or select existing..."
+              value={newOwner}
+              onChange={(e) => setNewOwner(e.target.value)}
+              required
+            />
+            {availableOwners.length > 0 && (
+              <datalist id="registered-owners-list">
+                {availableOwners.map((staff) => (
+                  <option key={staff} value={staff} />
+                ))}
+              </datalist>
+            )}
           </div>
 
           <div className="form-group">
@@ -464,6 +602,18 @@ export function ExceptionControlTower() {
         subtitle={`Verify corrective action outcome for ${resolveModalException?.id}`}
       >
         <form onSubmit={handleResolve} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+          <div className="form-group">
+            <label className="form-label">Resolved By (Signing Authority)</label>
+            <input
+              type="text"
+              className="form-input"
+              value={resolverName}
+              onChange={(e) => setResolverName(e.target.value)}
+              placeholder="e.g. Arthur Sterling (Plant Manager)"
+              required
+            />
+          </div>
+
           <div className="form-group">
             <label className="form-label">Resolution Summary & Corrective Notes *</label>
             <textarea
@@ -514,6 +664,14 @@ export function ExceptionControlTower() {
               <option value="Material / Inventory">Material / Inventory</option>
               <option value="Labour">Labour</option>
               <option value="Customer / Shipment">Customer / Shipment</option>
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Manufacturing Stage</label>
+            <select className="form-select" value={newStage} onChange={(e) => setNewStage(e.target.value)}>
+              <option value="PROCESSING">PROCESSING</option>
+              <option value="PACKAGING">PACKAGING</option>
             </select>
           </div>
 
