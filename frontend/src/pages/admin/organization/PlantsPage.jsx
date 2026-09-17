@@ -11,7 +11,6 @@ import {
   Eye,
   ShieldCheck,
   CheckCircle2,
-  Eye,
   Clock,
   Calendar,
   Globe,
@@ -286,57 +285,6 @@ export function PlantsPage() {
                         <Badge variant={p.status === "Inactive" || p.isActive === false ? "amber" : "emerald"}>
                           {p.status || (p.isActive === false ? "Inactive" : "Active")}
                         </Badge>
-                      </td>
-                      <td style={{ padding: "12px 16px", textAlign: "right" }}>
-                        <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
-                          {/* VIEW BUTTON */}
-                          <button
-                            onClick={() => setViewingPlant({ ...p })}
-                            title="View Plant Details"
-                            style={{
-                              width: "30px",
-                              height: "30px",
-                              borderRadius: "6px",
-                              backgroundColor: "var(--bg-card-subtle)",
-                              color: "#8C5B23",
-                              border: "1px solid var(--border-subtle)",
-                              cursor: "pointer",
-                              display: "inline-flex",
-                              alignItems: "center",
-                              justifyContent: "center"
-                            }}
-                          >
-                            <Eye size={13} />
-                          </button>
-                          {/* EDIT BUTTON */}
-                          <button
-                            onClick={() =>
-                              setEditingPlant({
-                                ...p,
-                                city: p.city || (p.location ? p.location.split(",")[0]?.trim() : ""),
-                                state: p.state || (p.location ? p.location.split(",")[1]?.trim() : ""),
-                                country: p.country || (p.location ? p.location.split(",")[2]?.trim() : "India"),
-                                status: p.status || (p.isActive === false ? "Inactive" : "Active")
-                              })
-                            }
-                            title="Edit Plant"
-                            style={{
-                              width: "30px",
-                              height: "30px",
-                              borderRadius: "6px",
-                              backgroundColor: "var(--bg-card-subtle)",
-                              color: "var(--text-primary)",
-                              border: "1px solid var(--border-subtle)",
-                              cursor: "pointer",
-                              display: "inline-flex",
-                              alignItems: "center",
-                              justifyContent: "center"
-                            }}
-                          >
-                            <Edit2 size={13} />
-                          </button>
-                          {/* DELETE BUTTON */}
-                          <button
                       </td>
                       <td style={{ padding: "12px 16px", textAlign: "right" }}>
                         <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
