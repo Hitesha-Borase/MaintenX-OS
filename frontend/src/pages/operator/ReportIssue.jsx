@@ -29,6 +29,8 @@ export function ReportIssue() {
   const [isEmergencyModalOpen, setIsEmergencyModalOpen] = useState(false);
   const [hazardType, setHazardType] = useState("Major Pneumatic Leak / High Pressure Hazard");
 
+  const [dbEquipmentList, setDbEquipmentList] = useState([]);
+
   // Loading states
   const [submittingIssue, setSubmittingIssue] = useState(false);
   const [triggeringEmergency, setTriggeringEmergency] = useState(false);
@@ -36,12 +38,20 @@ export function ReportIssue() {
   // Fetch issue configuration & active hazard status on mount
   useEffect(() => {
     dashboardService.getReportIssueStatus()
-      .then((data) => {
-        if (data?.categories && Array.isArray(data.categories) && data.categories.length > 0) {
-          setIssueCategories(data.categories);
+      .then((res) => {
+        const payload = res?.data || res;
+        if (payload?.categories && Array.isArray(payload.categories) && payload.categories.length > 0) {
+          setIssueCategories(payload.categories);
         }
-        if (typeof data?.activeHazards === "number") {
-          setActiveHazards(data.activeHazards);
+        if (typeof payload?.activeHazards === "number") {
+          setActiveHazards(payload.activeHazards);
+        }
+        const assetList = payload?.assets || res?.assets;
+        if (assetList && Array.isArray(assetList) && assetList.length > 0) {
+          setDbEquipmentList(assetList);
+          if (assetList[0]?.id) {
+            setAssetId(assetList[0].id);
+          }
         }
       })
       .catch((err) => console.warn("[ReportIssue] Failed to fetch issue status:", err.message));
@@ -51,7 +61,8 @@ export function ReportIssue() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const selectedAsset = assets.find((a) => a.id === assetId) || assets[0];
+    const availableAssets = dbEquipmentList.length > 0 ? dbEquipmentList : assets;
+    const selectedAsset = availableAssets.find((a) => a.id === assetId) || availableAssets[0] || { name: assetId, id: assetId };
 
     setSubmittingIssue(true);
     try {
@@ -170,9 +181,9 @@ export function ReportIssue() {
                 onChange={(e) => setAssetId(e.target.value)}
                 className="input-field"
               >
-                {assets.map((a) => (
+                {(dbEquipmentList.length > 0 ? dbEquipmentList : assets).map((a) => (
                   <option key={a.id} value={a.id}>
-                    {a.name} ({a.id})
+                    {a.name} ({a.assetCode || a.id})
                   </option>
                 ))}
               </select>

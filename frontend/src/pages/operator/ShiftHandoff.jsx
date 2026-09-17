@@ -36,9 +36,10 @@ export function ShiftHandoff() {
   // Fetch shift handoffs on mount
   useEffect(() => {
     dashboardService.getShiftHandoffs()
-      .then(data => {
-        if (data && Array.isArray(data) && data.length > 0) {
-          setHandoffLogs(data);
+      .then(res => {
+        const list = res?.data?.data || res?.data || res;
+        if (list && Array.isArray(list) && list.length > 0) {
+          setHandoffLogs(list);
         }
       })
       .catch(err => console.warn("[ShiftHandoff] Failed to fetch logs:", err.message));

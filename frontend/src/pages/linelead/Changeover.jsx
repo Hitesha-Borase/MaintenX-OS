@@ -30,6 +30,9 @@ export function Changeover() {
   const [finishingChangeover, setFinishingChangeover] = useState(false);
   const [loggingDelay, setLoggingDelay] = useState(false);
 
+  const [currentSKU, setCurrentSKU] = useState({ code: "SKU-5001", name: "500ml Sparkling Citrus Soda" });
+  const [targetSKU, setTargetSKU] = useState({ code: "PKG-CAN-330", name: "330ml Slimline Aluminum Cans" });
+
   // Load current changeover status from API on mount
   useEffect(() => {
     dashboardService.getChangeoverStatus()
@@ -39,6 +42,14 @@ export function Changeover() {
           setActiveStep(data.activeStep ?? 0);
           if (data.steps && Array.isArray(data.steps)) {
             setSteps(data.steps);
+          }
+          if (data.currentSKU) {
+            const parts = data.currentSKU.split(" - ");
+            setCurrentSKU({ code: parts[0], name: parts.slice(1).join(" - ") || parts[0] });
+          }
+          if (data.targetSKU) {
+            const parts = data.targetSKU.split(" - ");
+            setTargetSKU({ code: parts[0], name: parts.slice(1).join(" - ") || parts[0] });
           }
         }
       })
@@ -169,13 +180,13 @@ export function Changeover() {
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px" }}>
         <Card style={{ borderLeft: "3px solid #38BDF8", backgroundColor: "#FFFFFF", border: "1px solid var(--border-subtle)" }}>
           <span style={{ fontSize: "11px", color: "var(--text-muted)", textTransform: "uppercase" }}>Current Product</span>
-          <div style={{ fontSize: "15px", fontWeight: 800, color: "var(--text-primary)", marginTop: "4px" }}>SKU-AJ-500ML-ORG</div>
-          <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>500ml Aseptic Juice</span>
+          <div style={{ fontSize: "15px", fontWeight: 800, color: "var(--text-primary)", marginTop: "4px" }}>{currentSKU.code}</div>
+          <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>{currentSKU.name}</span>
         </Card>
         <Card style={{ borderLeft: "3px solid #A855F7", backgroundColor: "#FFFFFF", border: "1px solid var(--border-subtle)" }}>
           <span style={{ fontSize: "11px", color: "var(--text-muted)", textTransform: "uppercase" }}>Target Product</span>
-          <div style={{ fontSize: "15px", fontWeight: 800, color: "var(--text-primary)", marginTop: "4px" }}>SKU-AJ-1L-ORG</div>
-          <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>1 Liter Aseptic Juice</span>
+          <div style={{ fontSize: "15px", fontWeight: 800, color: "var(--text-primary)", marginTop: "4px" }}>{targetSKU.code}</div>
+          <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>{targetSKU.name}</span>
         </Card>
       </div>
 
@@ -197,25 +208,36 @@ export function Changeover() {
                   justifyContent: "space-between",
                   alignItems: "center",
                   padding: "12px",
-                  borderRadius: "6px",
-                  backgroundColor: isCurrent ? "rgba(56, 189, 248, 0.05)" : "var(--bg-card-subtle)",
-                  border: isCurrent ? "1px solid #38BDF8" : "1px solid var(--border-subtle)",
-                  opacity: !changeoverActive ? 0.6 : 1
+                  borderRadius: "8px",
+                  backgroundColor: isCompleted
+                    ? "rgba(16, 185, 129, 0.04)"
+                    : isCurrent
+                    ? "rgba(56, 189, 248, 0.06)"
+                    : "#FAF8F5",
+                  border: isCompleted
+                    ? "1px solid #10B981"
+                    : isCurrent
+                    ? "2px solid #38BDF8"
+                    : "1px solid #E2D9CC",
+                  opacity: !changeoverActive ? 0.6 : 1,
+                  transition: "all 0.2s ease",
+                  cursor: changeoverActive && !isCompleted ? "pointer" : "default"
                 }}
+                className="hover:shadow-sm"
               >
                 <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                  <Clock size={16} color="var(--text-muted)" />
+                  <Clock size={16} color={isCompleted ? "#10B981" : isCurrent ? "#0284C7" : "var(--text-muted)"} />
                   <div>
-                    <span style={{ fontSize: "13px", fontWeight: 600, color: isCompleted ? "var(--text-muted)" : "var(--text-primary)", textDecoration: isCompleted ? "line-through" : "none" }}>
+                    <span style={{ fontSize: "13px", fontWeight: 600, color: isCompleted ? "#059669" : "var(--text-primary)", textDecoration: isCompleted ? "line-through" : "none" }}>
                       {step.name}
                     </span>
                     <span style={{ fontSize: "11px", color: "var(--text-muted)", display: "block" }}>Duration: {step.duration}</span>
                   </div>
                 </div>
 
-                {isCurrent && (
+                {changeoverActive && !isCompleted && (
                   <Button
-                    variant="success"
+                    variant={isCurrent ? "success" : "secondary"}
                     size="sm"
                     icon={CheckCircle2}
                     onClick={() => handleStepComplete(step, idx)}
@@ -225,7 +247,7 @@ export function Changeover() {
                   </Button>
                 )}
                 {isCompleted && (
-                  <Badge variant="emerald">Done</Badge>
+                  <Badge variant="emerald">Done ✓</Badge>
                 )}
               </div>
             );

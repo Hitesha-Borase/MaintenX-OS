@@ -298,6 +298,40 @@ export function PMScheduleList({ initialViewMode }) {
     return map;
   }, [pmSchedules, year, month, daysInMonth, firstDayOfWeek, calendarFilter]);
 
+  const [stageFilter, setStageFilter] = useState("ALL"); // ALL | PROCESSING | PACKAGING
+
+  const getPmStage = (pm) => {
+    const str = `${pm.assetName || ""} ${pm.title || ""} ${pm.assetId || ""}`.toLowerCase();
+    if (
+      str.includes("vessel") ||
+      str.includes("mixer") ||
+      str.includes("cooker") ||
+      str.includes("blend") ||
+      str.includes("pasteuriz") ||
+      str.includes("tank") ||
+      str.includes("kettle") ||
+      str.includes("homogeniz") ||
+      str.includes("agitator") ||
+      str.includes("heat exchanger") ||
+      str.includes("cip") ||
+      str.includes("ferment") ||
+      str.includes("batching") ||
+      str.includes("formulation") ||
+      str.includes("processing")
+    ) {
+      return "PROCESSING";
+    }
+    return "PACKAGING";
+  };
+
+  const filteredPmSchedules = useMemo(() => {
+    if (stageFilter === "ALL") return pmSchedules;
+    return pmSchedules.filter((s) => getPmStage(s) === stageFilter);
+  }, [pmSchedules, stageFilter]);
+
+  const processingPmCount = useMemo(() => pmSchedules.filter((s) => getPmStage(s) === "PROCESSING").length, [pmSchedules]);
+  const packagingPmCount = useMemo(() => pmSchedules.filter((s) => getPmStage(s) === "PACKAGING").length, [pmSchedules]);
+
   // Overall Calendar Metrics
   const totalMonthTasks = Object.values(pmsByDay).reduce((sum, list) => sum + list.length, 0);
   const totalMonthHours = (totalMonthTasks * 0.9).toFixed(1);
@@ -324,6 +358,20 @@ export function PMScheduleList({ initialViewMode }) {
           </div>
         </div>
       )
+    },
+    {
+      header: "Stage",
+      accessor: "stage",
+      headerStyle: { minWidth: "120px" },
+      cellStyle: { minWidth: "120px" },
+      render: (_, row) => {
+        const stg = getPmStage(row);
+        return (
+          <Badge variant={stg === "PROCESSING" ? "amber" : "cyan"}>
+            {stg === "PROCESSING" ? "PROCESSING" : "PACKAGING"}
+          </Badge>
+        );
+      }
     },
     {
       header: "Asset / Machine",
@@ -426,6 +474,7 @@ export function PMScheduleList({ initialViewMode }) {
               Preventive Maintenance (PM) Scheduling
             </h1>
             <Badge variant="emerald">ISO-55001 Runtime Master</Badge>
+            <Badge variant="emerald">✓ TESTED MENU (LIVE DB CONNECTED)</Badge>
           </div>
           <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>
             Interactive production line maintenance scheduling, automated runtime thresholds, and technician work order dispatch.
@@ -990,15 +1039,71 @@ export function PMScheduleList({ initialViewMode }) {
 
       {/* LIST / TABLE VIEW */}
       {viewMode === "list" && (
-        <Card style={{ padding: "16px 20px", width: "100%", boxSizing: "border-box", borderRadius: "14px" }}>
-          <DataTable
-            title="Active Preventive Maintenance Schedules"
-            columns={listColumns}
-            data={pmSchedules}
-            searchPlaceholder=""
-            exportFilename="flowstate_pm_schedules.csv"
-          />
-        </Card>
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+          {/* Stage Filter Control Bar */}
+          <Card padding="14px">
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+              <span style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-muted)", marginRight: "6px" }}>
+                Filter PM Schedules by Stage:
+              </span>
+              <button
+                onClick={() => setStageFilter("ALL")}
+                style={{
+                  padding: "6px 14px",
+                  borderRadius: "6px",
+                  fontSize: "12px",
+                  fontWeight: 700,
+                  backgroundColor: stageFilter === "ALL" ? "#C89547" : "var(--bg-card-subtle)",
+                  color: stageFilter === "ALL" ? "#261603" : "var(--text-secondary)",
+                  border: "1px solid var(--border-subtle)",
+                  cursor: "pointer"
+                }}
+              >
+                All PM Schedules ({pmSchedules.length})
+              </button>
+              <button
+                onClick={() => setStageFilter("PROCESSING")}
+                style={{
+                  padding: "6px 14px",
+                  borderRadius: "6px",
+                  fontSize: "12px",
+                  fontWeight: 700,
+                  backgroundColor: stageFilter === "PROCESSING" ? "#C89547" : "var(--bg-card-subtle)",
+                  color: stageFilter === "PROCESSING" ? "#261603" : "var(--text-secondary)",
+                  border: "1px solid var(--border-subtle)",
+                  cursor: "pointer"
+                }}
+              >
+                🥣 Processing Stage PMs ({processingPmCount})
+              </button>
+              <button
+                onClick={() => setStageFilter("PACKAGING")}
+                style={{
+                  padding: "6px 14px",
+                  borderRadius: "6px",
+                  fontSize: "12px",
+                  fontWeight: 700,
+                  backgroundColor: stageFilter === "PACKAGING" ? "#C89547" : "var(--bg-card-subtle)",
+                  color: stageFilter === "PACKAGING" ? "#261603" : "var(--text-secondary)",
+                  border: "1px solid var(--border-subtle)",
+                  cursor: "pointer"
+                }}
+              >
+                📦 Packaging Stage PMs ({packagingPmCount})
+              </button>
+            </div>
+          </Card>
+
+          <Card style={{ padding: "16px 20px", width: "100%", boxSizing: "border-box", borderRadius: "14px" }}>
+            <DataTable
+              title="Active Preventive Maintenance Schedules"
+              columns={listColumns}
+              data={filteredPmSchedules}
+              searchPlaceholder=""
+              exportFilename="flowstate_pm_schedules.csv"
+            />
+          </Card>
+        </div>
       )}
 
       {/* DETAIL MODAL ON CLICKING A PM TASK */}

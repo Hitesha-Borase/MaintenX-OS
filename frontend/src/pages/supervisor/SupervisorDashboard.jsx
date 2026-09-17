@@ -12,7 +12,13 @@ import {
   ChevronRight,
   ClipboardList,
   Play,
-  Send
+  Send,
+  Link,
+  Zap,
+  Box,
+  CheckCircle2,
+  RefreshCw,
+  Activity
 } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { StatCard } from "../../components/common/StatCard";
@@ -29,6 +35,7 @@ export function SupervisorDashboard() {
   const [isShiftModalOpen, setIsShiftModalOpen] = useState(false);
   const [shiftName, setShiftName] = useState("Shift A (Day - 06:00 to 14:00)");
   const [authorizingShift, setAuthorizingShift] = useState(false);
+  const [floorTab, setFloorTab] = useState("ALL"); // ALL | PROCESSING | PACKAGING
 
   const [telemetry, setTelemetry] = useState({
     activeLines: 0,
@@ -39,6 +46,11 @@ export function SupervisorDashboard() {
     shiftLead: "Supervisor On Duty",
     handoffStatus: "PENDING",
     activeSchedules: [],
+    processingBatches: [],
+    packagingRuns: [],
+    laborStageAllocation: { processingCrewCount: 8, packagingCrewCount: 16, totalCrewCount: 24, staffList: [] },
+    stageHandoffs: [],
+    stageExceptions: [],
     loading: true
   });
 
@@ -56,6 +68,11 @@ export function SupervisorDashboard() {
           shiftLead: data.shiftLead || "Supervisor On Duty",
           handoffStatus: data.handoffStatus || "SIGNED OFF",
           activeSchedules: Array.isArray(data.activeSchedules) ? data.activeSchedules : [],
+          processingBatches: Array.isArray(data.processingBatches) ? data.processingBatches : [],
+          packagingRuns: Array.isArray(data.packagingRuns) ? data.packagingRuns : [],
+          laborStageAllocation: data.laborStageAllocation || { processingCrewCount: 8, packagingCrewCount: 16, totalCrewCount: 24, staffList: [] },
+          stageHandoffs: Array.isArray(data.stageHandoffs) ? data.stageHandoffs : [],
+          stageExceptions: Array.isArray(data.stageExceptions) ? data.stageExceptions : [],
           loading: false
         });
       }
@@ -84,6 +101,15 @@ export function SupervisorDashboard() {
     }
   };
 
+  // Helper for batch status badges
+  const getBatchStatusVariant = (st) => {
+    const s = (st || "").toLowerCase();
+    if (s.includes("process") || s.includes("mix")) return "purple";
+    if (s.includes("complete") || s.includes("released")) return "emerald";
+    if (s.includes("qa") || s.includes("draft")) return "amber";
+    return "blue";
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%" }}>
       {/* Header */}
@@ -92,9 +118,15 @@ export function SupervisorDashboard() {
           <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
             Operations Supervisor Command Center
           </h1>
+          <p style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "2px" }}>
+            Unified Floor View: Processing Hall (Vessels & Tanks) ➔ Packaging Lines (Bottling & Canning)
+          </p>
         </div>
 
         <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+          <Button variant="ghost" size="sm" icon={RefreshCw} onClick={fetchTelemetry}>
+            Refresh Telemetry
+          </Button>
           <Button variant="success" icon={Play} onClick={() => setIsShiftModalOpen(true)}>
             Authorize Shift Start
           </Button>
@@ -107,7 +139,7 @@ export function SupervisorDashboard() {
       {/* KPI Stats Grid */}
       <div className="grid-4">
         <StatCard
-          title="Active Lines Running"
+          title="Active Floor Lines Running"
           value={`${telemetry.activeLines} / ${telemetry.totalLines} Lines`}
           description={telemetry.activeLines > 0 ? `${telemetry.activeLines} Production Lines Active` : "No Lines Currently Running"}
           icon={Factory}
@@ -121,97 +153,275 @@ export function SupervisorDashboard() {
           color={telemetry.criticalAlarmsP1 > 0 ? "#EF4444" : "#10B981"}
         />
         <StatCard
-          title="Active Holds"
-          value={`${telemetry.activeHolds} Batches`}
-          description={telemetry.activeHolds > 0 ? "Batches quarantined under hold" : "All CCP checks cleared"}
-          icon={ShieldCheck}
-          color={telemetry.activeHolds > 0 ? "#EF4444" : "#10B981"}
+          title="Stage Labor Allocation"
+          value={`${telemetry.laborStageAllocation?.processingCrewCount || 8} Proc / ${telemetry.laborStageAllocation?.packagingCrewCount || 16} Pkg`}
+          description={`Total Shift Crew: ${telemetry.laborStageAllocation?.totalCrewCount || 24} Staff Members`}
+          icon={Users}
+          color="#8B5CF6"
         />
         <StatCard
-          title="Pending Approvals"
-          value={`${telemetry.pendingApprovals} Requests`}
-          description={telemetry.pendingApprovals > 0 ? "PM check sign-offs & rework releases" : "No pending approvals"}
+          title="Active Holds & Approvals"
+          value={`${telemetry.activeHolds} Holds / ${telemetry.pendingApprovals} Appr`}
+          description={telemetry.pendingApprovals > 0 ? "PM check sign-offs & rework releases" : "All CCP checks cleared"}
           icon={FileCheck}
           color="#F59E0B"
         />
       </div>
 
-      {/* Operational Modules Overview */}
-      <div className="grid-2">
-        {/* Department Schedule & Attainment */}
-        <Card style={{ display: "flex", flexDirection: "column", gap: "14px", backgroundColor: "#FFFFFF", border: "1px solid var(--border-subtle)", padding: "20px" }}>
-          <h3 style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "6px", margin: 0 }}>
-            <Factory size={16} color="#0284C7" /> Active Department Schedules
-          </h3>
-          <div style={{ display: "flex", flexDirection: "column", gap: "10px", fontSize: "13px" }}>
-            {telemetry.activeSchedules.length > 0 ? (
-              telemetry.activeSchedules.map((sch, idx) => (
-                <div key={sch.id || idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 0" }}>
-                  <span style={{ color: "var(--text-secondary)" }}>{sch.line}:</span>
-                  <Badge variant={sch.status === "Running" ? "emerald" : (sch.status.includes("Paused") ? "amber" : "slate")}>
-                    {sch.status} ({sch.order})
-                  </Badge>
-                </div>
-              ))
-            ) : (
-              <div style={{ color: "var(--text-secondary)", fontSize: "13px" }}>No active lines configured.</div>
-            )}
+      {/* Unified Floor View Header & Tab Bar */}
+      <Card style={{ padding: "16px", backgroundColor: "#FFFFFF", border: "1px solid var(--border-subtle)" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <Activity size={18} color="#0284C7" />
+            <span style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)" }}>
+              UNIFIED SHOP FLOOR VIEW
+            </span>
           </div>
-          <Button variant="secondary" onClick={() => navigate("/supervisor/dept-schedule")} style={{ marginTop: "auto" }}>
-            Manage Department Schedule
-          </Button>
-        </Card>
 
-        {/* Labor Allocation Overview */}
-        <Card style={{ display: "flex", flexDirection: "column", gap: "14px", backgroundColor: "#FFFFFF", border: "1px solid var(--border-subtle)", padding: "20px" }}>
-          <h3 style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "6px", margin: 0 }}>
-            <Users size={16} color="#059669" /> Labour & Shift Handover
-          </h3>
-          <div style={{ display: "flex", flexDirection: "column", gap: "10px", fontSize: "13px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 0" }}>
-              <span style={{ color: "var(--text-secondary)" }}>Current Shift Lead:</span>
-              <span style={{ fontWeight: 700, color: "var(--text-primary)" }}>{telemetry.shiftLead}</span>
+          <div style={{ display: "flex", gap: "6px" }}>
+            <button
+              onClick={() => setFloorTab("ALL")}
+              style={{
+                padding: "6px 14px",
+                borderRadius: "6px",
+                border: "none",
+                fontSize: "12px",
+                fontWeight: 700,
+                cursor: "pointer",
+                backgroundColor: floorTab === "ALL" ? "var(--accent-primary)" : "var(--bg-card-subtle)",
+                color: floorTab === "ALL" ? "#FFFFFF" : "var(--text-secondary)"
+              }}
+            >
+              🌐 Unified Floor ({telemetry.processingBatches.length + telemetry.packagingRuns.length})
+            </button>
+            <button
+              onClick={() => setFloorTab("PROCESSING")}
+              style={{
+                padding: "6px 14px",
+                borderRadius: "6px",
+                border: "none",
+                fontSize: "12px",
+                fontWeight: 700,
+                cursor: "pointer",
+                backgroundColor: floorTab === "PROCESSING" ? "#8B5CF6" : "var(--bg-card-subtle)",
+                color: floorTab === "PROCESSING" ? "#FFFFFF" : "var(--text-secondary)"
+              }}
+            >
+              ⚡ Processing Hall ({telemetry.processingBatches.length})
+            </button>
+            <button
+              onClick={() => setFloorTab("PACKAGING")}
+              style={{
+                padding: "6px 14px",
+                borderRadius: "6px",
+                border: "none",
+                fontSize: "12px",
+                fontWeight: 700,
+                cursor: "pointer",
+                backgroundColor: floorTab === "PACKAGING" ? "#0EA5E9" : "var(--bg-card-subtle)",
+                color: floorTab === "PACKAGING" ? "#FFFFFF" : "var(--text-secondary)"
+              }}
+            >
+              📦 Packaging Lines ({telemetry.packagingRuns.length})
+            </button>
+          </div>
+        </div>
+
+        {/* 1 Processing Batch -> Multiple Packaging Lines Backbone Link Visualizer */}
+        {telemetry.processingBatches.length > 0 && (
+          <div style={{ marginTop: "16px", padding: "12px 16px", backgroundColor: "#F8FAFC", borderRadius: "8px", border: "1px solid #E2E8F0" }}>
+            <div style={{ fontSize: "11px", fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "8px", display: "flex", alignItems: "center", gap: "6px" }}>
+              <Link size={14} color="#8B5CF6" /> 1-TO-MANY BACKBONE TRACKER: PROCESSING BATCH ➔ PACKAGING LINES
             </div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 0" }}>
-              <span style={{ color: "var(--text-secondary)" }}>Last Handoff Status:</span>
-              <Badge variant={telemetry.handoffStatus === "SIGNED OFF" ? "emerald" : "amber"}>{telemetry.handoffStatus}</Badge>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+              {telemetry.processingBatches.slice(0, 3).map((batch) => {
+                const linkedOrders = Array.isArray(batch.linkedPackagingOrders) ? batch.linkedPackagingOrders : [];
+                return (
+                  <div key={batch.id} style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap", fontSize: "12px", padding: "8px", borderRadius: "6px", backgroundColor: "#FFFFFF", border: "1px solid #CBD5E1" }}>
+                    {/* Processing Source */}
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: "220px" }}>
+                      <Badge variant="purple">⚡ {batch.tankNumber || "T-01"}</Badge>
+                      <div>
+                        <span style={{ fontWeight: 800, color: "#0F172A" }}>{batch.batchNumber}</span>
+                        <div style={{ fontSize: "11px", color: "#64748B" }}>{batch.skuName || "Citrus Syrup Formulation"} ({batch.targetVolume} {batch.uom || "L"})</div>
+                      </div>
+                    </div>
+
+                    <span style={{ color: "#94A3B8", fontWeight: 700 }}>➔</span>
+
+                    {/* Downstream Packaging Destinations */}
+                    <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", flex: 1, alignItems: "center" }}>
+                      {linkedOrders.length > 0 ? (
+                        linkedOrders.map((po, pIdx) => (
+                          <div key={po.orderId || pIdx} style={{ display: "flex", alignItems: "center", gap: "6px", padding: "4px 8px", backgroundColor: "#F0F9FF", border: "1px solid #BAE6FD", borderRadius: "4px" }}>
+                            <Box size={12} color="#0284C7" />
+                            <span style={{ fontWeight: 700, color: "#0369A1" }}>{po.orderNumber}</span>
+                            <Badge variant="blue" style={{ fontSize: "10px" }}>{po.status || "RUNNING"}</Badge>
+                          </div>
+                        ))
+                      ) : (
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px", padding: "4px 8px", backgroundColor: "#F0F9FF", border: "1px solid #BAE6FD", borderRadius: "4px" }}>
+                          <Box size={12} color="#0284C7" />
+                          <span style={{ fontWeight: 700, color: "#0369A1" }}>PO-2026-001 (High-Speed Bottling Line 1)</span>
+                          <Badge variant="blue" style={{ fontSize: "10px" }}>RUNNING</Badge>
+                        </div>
+                      )}
+                    </div>
+
+                    <Badge variant={getBatchStatusVariant(batch.status)}>{batch.status || "In Process"}</Badge>
+                  </div>
+                );
+              })}
             </div>
           </div>
-          <div style={{ display: "flex", gap: "8px", marginTop: "auto" }}>
-            <Button variant="secondary" onClick={() => navigate("/supervisor/labour/staffing")} style={{ flex: 1 }}>
-              Staffing
-            </Button>
-            <Button variant="secondary" onClick={() => navigate("/supervisor/shift-handoff")} style={{ flex: 1 }}>
-              Shift Handoff
-            </Button>
-          </div>
-        </Card>
+        )}
+      </Card>
+
+      {/* Unified Floor Content Grid */}
+      <div className="grid-2">
+        {/* Processing Hall View */}
+        {(floorTab === "ALL" || floorTab === "PROCESSING") && (
+          <Card style={{ display: "flex", flexDirection: "column", gap: "14px", backgroundColor: "#FFFFFF", border: "1px solid var(--border-subtle)", padding: "20px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <h3 style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "6px", margin: 0 }}>
+                <Zap size={16} color="#8B5CF6" /> Processing Hall (Vessels, Tanks & Mixers)
+              </h3>
+              <Button variant="ghost" size="sm" onClick={() => navigate("/supervisor/batches")}>
+                View All Batches
+              </Button>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+              {telemetry.processingBatches.length > 0 ? (
+                telemetry.processingBatches.map((b) => (
+                  <div key={b.id} style={{ padding: "12px", borderRadius: "8px", backgroundColor: "#FAF5FF", border: "1px solid #E9D5FF", display: "flex", flexDirection: "column", gap: "8px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <span style={{ fontWeight: 800, color: "#581C87", fontSize: "13px" }}>{b.batchNumber}</span>
+                        <Badge variant="purple">{b.tankNumber || "T-01"}</Badge>
+                      </div>
+                      <Badge variant={getBatchStatusVariant(b.status)}>{b.status}</Badge>
+                    </div>
+
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", color: "var(--text-secondary)" }}>
+                      <span>Recipe: {b.recipeVersion || "v1.0"}</span>
+                      <span style={{ fontWeight: 700, color: "var(--text-primary)" }}>{b.targetVolume || 5000} {b.uom || "Liters"}</span>
+                    </div>
+
+                    {/* Progress Bar */}
+                    <div style={{ width: "100%", height: "6px", backgroundColor: "#E9D5FF", borderRadius: "3px", overflow: "hidden" }}>
+                      <div style={{ width: `${b.progressPercent || 65}%`, height: "100%", backgroundColor: "#9333EA", borderRadius: "3px" }} />
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div style={{ color: "var(--text-secondary)", fontSize: "13px" }}>No active processing vessel batches.</div>
+              )}
+            </div>
+          </Card>
+        )}
+
+        {/* Packaging Lines View */}
+        {(floorTab === "ALL" || floorTab === "PACKAGING") && (
+          <Card style={{ display: "flex", flexDirection: "column", gap: "14px", backgroundColor: "#FFFFFF", border: "1px solid var(--border-subtle)", padding: "20px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <h3 style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "6px", margin: 0 }}>
+                <Box size={16} color="#0284C7" /> Packaging Lines (Bottling, Canning & Cartoning)
+              </h3>
+              <Button variant="ghost" size="sm" onClick={() => navigate("/supervisor/dept-schedule")}>
+                Line Schedules
+              </Button>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+              {telemetry.packagingRuns.length > 0 ? (
+                telemetry.packagingRuns.map((p) => (
+                  <div key={p.id} style={{ padding: "12px", borderRadius: "8px", backgroundColor: "#F0F9FF", border: "1px solid #BAE6FD", display: "flex", flexDirection: "column", gap: "8px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <span style={{ fontWeight: 800, color: "#0C4A6E", fontSize: "13px" }}>{p.lineName}</span>
+                        <span style={{ fontSize: "11px", color: "#0369A1" }}>({p.orderNumber})</span>
+                      </div>
+                      <Badge variant={p.status === "RUNNING" ? "emerald" : "amber"}>{p.status}</Badge>
+                    </div>
+
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", color: "var(--text-secondary)" }}>
+                      <span>Speed: <strong>{p.speedBpm} BPM</strong></span>
+                      <span>Produced: <strong>{p.producedQuantity} / {p.targetQuantity} Units</strong></span>
+                    </div>
+
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "11px", color: "#0369A1" }}>
+                      <Link size={12} color="#0284C7" /> Linked Batch: <strong>{p.linkedBatchNumber}</strong>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div style={{ color: "var(--text-secondary)", fontSize: "13px" }}>No active packaging line runs.</div>
+              )}
+            </div>
+          </Card>
+        )}
       </div>
 
-      {/* Exceptions & Approvals alerts */}
+      {/* Labor Allocation & Stage Handoff Row */}
       <div className="grid-2">
-        <Card style={{ borderLeft: "4px solid #F59E0B", backgroundColor: "#FFFFFF", border: "1px solid var(--border-subtle)", padding: "20px" }}>
-          <h3 style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)", marginBottom: "8px" }}>
-            Approvals Needed
+        {/* Stage-Wise Labor Allocation */}
+        <Card style={{ display: "flex", flexDirection: "column", gap: "14px", backgroundColor: "#FFFFFF", border: "1px solid var(--border-subtle)", padding: "20px" }}>
+          <h3 style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "6px", margin: 0 }}>
+            <Users size={16} color="#059669" /> Stage-Wise Labour Allocation Roster
           </h3>
-          <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginBottom: "12px" }}>
-            There {telemetry.pendingApprovals === 1 ? "is 1 pending request" : `are ${telemetry.pendingApprovals} pending requests`} and shift checklist approvals awaiting your signature.
-          </p>
-          <Button variant="warning" onClick={() => navigate("/supervisor/approvals")}>
-            Review Approvals
+
+          <div style={{ display: "flex", gap: "12px" }}>
+            <div style={{ flex: 1, padding: "12px", borderRadius: "8px", backgroundColor: "#FAF5FF", border: "1px solid #E9D5FF" }}>
+              <div style={{ fontSize: "11px", fontWeight: 700, color: "#7E22CE" }}>⚡ PROCESSING STAGE CREW</div>
+              <div style={{ fontSize: "20px", fontWeight: 800, color: "#581C87", marginTop: "4px" }}>
+                {telemetry.laborStageAllocation?.processingCrewCount || 8} Staff
+              </div>
+              <div style={{ fontSize: "11px", color: "#7E22CE", marginTop: "2px" }}>Vessel Operators, Batch Chemists</div>
+            </div>
+
+            <div style={{ flex: 1, padding: "12px", borderRadius: "8px", backgroundColor: "#F0F9FF", border: "1px solid #BAE6FD" }}>
+              <div style={{ fontSize: "11px", fontWeight: 700, color: "#0369A1" }}>📦 PACKAGING STAGE CREW</div>
+              <div style={{ fontSize: "20px", fontWeight: 800, color: "#0C4A6E", marginTop: "4px" }}>
+                {telemetry.laborStageAllocation?.packagingCrewCount || 16} Staff
+              </div>
+              <div style={{ fontSize: "11px", color: "#0369A1", marginTop: "2px" }}>Line Technicians, Cartoner Ops</div>
+            </div>
+          </div>
+
+          <Button variant="secondary" onClick={() => navigate("/supervisor/labour/staffing")} style={{ marginTop: "auto" }}>
+            Manage Roster & Staffing Assignments
           </Button>
         </Card>
 
-        <Card style={{ borderLeft: "4px solid #EF4444", backgroundColor: "#FFFFFF", border: "1px solid var(--border-subtle)", padding: "20px" }}>
-          <h3 style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)", marginBottom: "8px" }}>
-            Exception Control Tower
+        {/* Stage Handoff & Exceptions Summary */}
+        <Card style={{ display: "flex", flexDirection: "column", gap: "14px", backgroundColor: "#FFFFFF", border: "1px solid var(--border-subtle)", padding: "20px" }}>
+          <h3 style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "6px", margin: 0 }}>
+            <ClipboardList size={16} color="#D97706" /> Shift Handoff & Stage Exceptions
           </h3>
-          <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginBottom: "12px" }}>
-            There {telemetry.criticalAlarmsP1 === 1 ? "is 1 open critical event" : `are ${telemetry.criticalAlarmsP1} open critical events`} and alarms flagged on production lines.
-          </p>
-          <Button variant="danger" onClick={() => navigate("/supervisor/exceptions")}>
-            Resolve Exceptions
-          </Button>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: "10px", fontSize: "13px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 0" }}>
+              <span style={{ color: "var(--text-secondary)" }}>Shift Handoff Status:</span>
+              <Badge variant={telemetry.handoffStatus === "SIGNED OFF" ? "emerald" : "amber"}>{telemetry.handoffStatus}</Badge>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 0" }}>
+              <span style={{ color: "var(--text-secondary)" }}>Active Floor Exceptions:</span>
+              <Badge variant={telemetry.stageExceptions.length > 0 ? "rose" : "emerald"}>
+                {telemetry.stageExceptions.length} Open Events
+              </Badge>
+            </div>
+          </div>
+
+          <div style={{ display: "flex", gap: "8px", marginTop: "auto" }}>
+            <Button variant="secondary" onClick={() => navigate("/supervisor/shift-handoff")} style={{ flex: 1 }}>
+              Shift Handoff Log
+            </Button>
+            <Button variant="secondary" onClick={() => navigate("/supervisor/exceptions")} style={{ flex: 1 }}>
+              Exception Control
+            </Button>
+          </div>
         </Card>
       </div>
 

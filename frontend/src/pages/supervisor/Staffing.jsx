@@ -34,6 +34,7 @@ export function Staffing() {
   const [shifts, setShifts] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("All");
+  const [stageFilter, setStageFilter] = useState("ALL"); // ALL | PROCESSING | PACKAGING
 
   // Dropdown menu state
   const [activeDropdownId, setActiveDropdownId] = useState(null);
@@ -108,6 +109,30 @@ export function Staffing() {
   });
   const [closeShiftNotes, setCloseShiftNotes] = useState("Shift completed with 0 safety incidents and nominal yield.");
 
+  const getShiftStage = (s) => {
+    const str = `${s.shiftName || ""} ${s.line || ""} ${s.supervisor || ""}`.toLowerCase();
+    if (
+      str.includes("vessel") ||
+      str.includes("mixer") ||
+      str.includes("cooker") ||
+      str.includes("blend") ||
+      str.includes("pasteuriz") ||
+      str.includes("tank") ||
+      str.includes("kettle") ||
+      str.includes("homogeniz") ||
+      str.includes("agitator") ||
+      str.includes("heat exchanger") ||
+      str.includes("cip") ||
+      str.includes("ferment") ||
+      str.includes("batching") ||
+      str.includes("formulation") ||
+      str.includes("processing")
+    ) {
+      return "PROCESSING";
+    }
+    return "PACKAGING";
+  };
+
   const filteredShifts = useMemo(() => {
     return shifts.filter((s) => {
       const matchesSearch =
@@ -115,9 +140,10 @@ export function Staffing() {
         s.line.toLowerCase().includes(searchQuery.toLowerCase()) ||
         s.supervisor.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesStatus = selectedStatus === "All" || s.shiftStatus === selectedStatus;
-      return matchesSearch && matchesStatus;
+      const matchesStage = stageFilter === "ALL" || getShiftStage(s) === stageFilter;
+      return matchesSearch && matchesStatus && matchesStage;
     });
-  }, [shifts, searchQuery, selectedStatus]);
+  }, [shifts, searchQuery, selectedStatus, stageFilter]);
 
   // Handlers
   const handleCreateShift = async (e) => {
@@ -345,7 +371,58 @@ export function Staffing() {
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-            <span style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)" }}>Status:</span>
+            <div style={{ display: "flex", gap: "4px" }}>
+              <button
+                type="button"
+                onClick={() => setStageFilter("ALL")}
+                style={{
+                  padding: "6px 12px",
+                  borderRadius: "6px",
+                  border: "none",
+                  fontSize: "12px",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  backgroundColor: stageFilter === "ALL" ? "var(--accent-primary)" : "var(--bg-card-subtle)",
+                  color: stageFilter === "ALL" ? "#FFFFFF" : "var(--text-secondary)"
+                }}
+              >
+                All Stages
+              </button>
+              <button
+                type="button"
+                onClick={() => setStageFilter("PROCESSING")}
+                style={{
+                  padding: "6px 12px",
+                  borderRadius: "6px",
+                  border: "none",
+                  fontSize: "12px",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  backgroundColor: stageFilter === "PROCESSING" ? "#8B5CF6" : "var(--bg-card-subtle)",
+                  color: stageFilter === "PROCESSING" ? "#FFFFFF" : "var(--text-secondary)"
+                }}
+              >
+                ⚡ Processing Stage
+              </button>
+              <button
+                type="button"
+                onClick={() => setStageFilter("PACKAGING")}
+                style={{
+                  padding: "6px 12px",
+                  borderRadius: "6px",
+                  border: "none",
+                  fontSize: "12px",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  backgroundColor: stageFilter === "PACKAGING" ? "#0EA5E9" : "var(--bg-card-subtle)",
+                  color: stageFilter === "PACKAGING" ? "#FFFFFF" : "var(--text-secondary)"
+                }}
+              >
+                📦 Packaging Stage
+              </button>
+            </div>
+
+            <span style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)", marginLeft: "8px" }}>Status:</span>
             <select
               value={selectedStatus}
               onChange={(e) => setSelectedStatus(e.target.value)}

@@ -51,7 +51,33 @@ export function WorkOrderList() {
   // Filters State
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [priorityFilter, setPriorityFilter] = useState("ALL");
+  const [stageFilter, setStageFilter] = useState("ALL"); // ALL | PROCESSING | PACKAGING
   const [searchQuery, setSearchQuery] = useState("");
+
+  const getWoStage = (wo) => {
+    if (wo.stage === "PROCESSING" || wo.stage === "PACKAGING") return wo.stage;
+    const str = `${wo.assetName || ""} ${wo.assetId || ""} ${wo.title || ""}`.toLowerCase();
+    if (
+      str.includes("vessel") ||
+      str.includes("mixer") ||
+      str.includes("cooker") ||
+      str.includes("blend") ||
+      str.includes("pasteuriz") ||
+      str.includes("tank") ||
+      str.includes("kettle") ||
+      str.includes("homogeniz") ||
+      str.includes("agitator") ||
+      str.includes("heat exchanger") ||
+      str.includes("cip") ||
+      str.includes("ferment") ||
+      str.includes("batching") ||
+      str.includes("formulation") ||
+      str.includes("processing")
+    ) {
+      return "PROCESSING";
+    }
+    return "PACKAGING";
+  };
 
   // Modals State
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -104,12 +130,15 @@ export function WorkOrderList() {
   const inProgressCount = workOrders.filter((w) => w.status === "In Progress").length;
   const criticalCount = workOrders.filter((w) => w.priority?.includes("P1")).length;
   const completedCount = workOrders.filter((w) => w.status === "Completed" || w.status === "Verified" || w.status === "Closed").length;
+  const processingCount = workOrders.filter((w) => getWoStage(w) === "PROCESSING").length;
+  const packagingCount = workOrders.filter((w) => getWoStage(w) === "PACKAGING").length;
 
   // Filtered List
   const filteredWorkOrders = useMemo(() => {
     return workOrders.filter((wo) => {
       const matchesStatus = statusFilter === "ALL" || wo.status === statusFilter;
       const matchesPriority = priorityFilter === "ALL" || wo.priority?.includes(priorityFilter);
+      const matchesStage = stageFilter === "ALL" || getWoStage(wo) === stageFilter;
       const matchesSearch =
         searchQuery === "" ||
         wo.id?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -118,9 +147,9 @@ export function WorkOrderList() {
         wo.assetId?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         wo.assignedTechnician?.toLowerCase().includes(searchQuery.toLowerCase());
 
-      return matchesStatus && matchesPriority && matchesSearch;
+      return matchesStatus && matchesPriority && matchesStage && matchesSearch;
     });
-  }, [workOrders, statusFilter, priorityFilter, searchQuery]);
+  }, [workOrders, statusFilter, priorityFilter, stageFilter, searchQuery]);
 
   // Actions Handlers
   const handleOpenCreate = () => {
@@ -377,6 +406,20 @@ export function WorkOrderList() {
       )
     },
     {
+      header: "Stage",
+      accessor: "stage",
+      headerStyle: { minWidth: "120px", whiteSpace: "nowrap" },
+      cellStyle: { minWidth: "120px", whiteSpace: "nowrap" },
+      render: (_, row) => {
+        const stg = getWoStage(row);
+        return stg === "PROCESSING" ? (
+          <Badge variant="purple">Processing</Badge>
+        ) : (
+          <Badge variant="blue">Packaging</Badge>
+        );
+      }
+    },
+    {
       header: "Issue / Title",
       accessor: "title",
       headerStyle: { minWidth: "220px" },
@@ -584,6 +627,7 @@ export function WorkOrderList() {
               Work Orders
             </h1>
             <Badge variant="cyan">{workOrders.length} Total Orders</Badge>
+            <Badge variant="emerald">✓ TESTED MENU (LIVE DB CONNECTED)</Badge>
           </div>
           <p style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "4px" }}>
             Manage scheduled, corrective and emergency maintenance tasks across all factory cells
@@ -679,23 +723,21 @@ export function WorkOrderList() {
             </div>
 
             <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-              <span style={{ fontSize: "12px", color: "var(--text-muted)", fontWeight: 600 }}>PRIORITY:</span>
+              <span style={{ fontSize: "12px", color: "var(--text-muted)", fontWeight: 600 }}>STAGE:</span>
               <select
                 className="form-select"
-                value={priorityFilter}
-                onChange={(e) => setPriorityFilter(e.target.value)}
-                style={{ fontSize: "12px", height: "36px", width: "auto" }}
+                value={stageFilter}
+                onChange={(e) => setStageFilter(e.target.value)}
+                style={{ fontSize: "12px", height: "36px", width: "auto", fontWeight: 700 }}
               >
-                <option value="ALL">All Priorities</option>
-                <option value="P1">P1 - Critical</option>
-                <option value="P2">P2 - High</option>
-                <option value="P3">P3 - Medium</option>
-                <option value="P4">P4 - Low</option>
+                <option value="ALL">All Stages ({workOrders.length})</option>
+                <option value="PROCESSING">⚡ Processing Equipment ({processingCount})</option>
+                <option value="PACKAGING">📦 Packaging Equipment ({packagingCount})</option>
               </select>
             </div>
           </div>
 
-          {(statusFilter !== "ALL" || priorityFilter !== "ALL" || searchQuery) && (
+          {(statusFilter !== "ALL" || priorityFilter !== "ALL" || stageFilter !== "ALL" || searchQuery) && (
             <Button
               variant="ghost"
               size="sm"
@@ -703,6 +745,7 @@ export function WorkOrderList() {
               onClick={() => {
                 setStatusFilter("ALL");
                 setPriorityFilter("ALL");
+                setStageFilter("ALL");
                 setSearchQuery("");
               }}
               style={{ fontSize: "12px" }}

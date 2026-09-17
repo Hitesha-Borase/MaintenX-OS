@@ -11,18 +11,16 @@ export function Profile() {
   const { addToast } = useApp();
   const [isEditing, setIsEditing] = useState(false);
   const [profileData, setProfileData] = useState({
-    email: "elena.rostova@maintenx.internal",
-    phone: "+1 (555) 234-9011",
-    plant: "Plant 1 — Main Processing Facility",
-    shift: "Shift A (06:00 - 14:00)"
+    name: "",
+    title: "",
+    employeeId: "",
+    email: "",
+    phone: "",
+    plant: "",
+    shift: ""
   });
 
-  const [certifications, setCertifications] = useState([
-    { name: "Aseptic Filler Calibration", desc: "Expert calibration and preventative maintenance.", level: "Expert", variant: "emerald" },
-    { name: "Allergen Control Protocol", desc: "Completed critical safety and sanitation compliance.", level: "Certified", variant: "emerald" },
-    { name: "Raw Product Recipe Formulation", desc: "Advanced training in recipe changeovers.", level: "Advanced", variant: "cyan" },
-    { name: "SCADA HMI Line Diagnostics", desc: "Competent at level 1 equipment troubleshooting.", level: "Competent", variant: "cyan" }
-  ]);
+  const [certifications, setCertifications] = useState([]);
 
   // Fetch profile on mount
   useEffect(() => {
@@ -30,10 +28,13 @@ export function Profile() {
       .then(data => {
         if (data) {
           setProfileData({
-            email: data.email || profileData.email,
-            phone: data.phone || profileData.phone,
-            plant: data.plant || profileData.plant,
-            shift: data.shift || profileData.shift
+            name: data.name || "Marcus Chen",
+            title: data.title || "Lead Line Operator",
+            employeeId: data.employeeId || "EMP-3092",
+            email: data.email || "operator@maintenx.io",
+            phone: data.phone || "+1 (555) 234-9011",
+            plant: data.plant || "Plant 1 — Main Processing Facility",
+            shift: data.shift || "Shift A (06:00 - 14:00)"
           });
           if (data.certifications && Array.isArray(data.certifications)) {
             setCertifications(data.certifications);
@@ -44,13 +45,20 @@ export function Profile() {
   }, []);
 
   const handleSaveProfile = async (data) => {
-    setProfileData(data);
+    setProfileData(prev => ({ ...prev, ...data }));
     try {
       const res = await dashboardService.updateOperatorProfile(data);
       addToast(res?.message || "Profile updated successfully.", "success");
     } catch (err) {
       addToast("Profile updated successfully.", "success");
     }
+  };
+
+  const getInitials = (name) => {
+    if (!name) return "MC";
+    const parts = name.trim().split(" ");
+    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+    return parts[0].slice(0, 2).toUpperCase();
   };
 
   return (
@@ -84,16 +92,22 @@ export function Profile() {
               fontWeight: 800
             }}
           >
-            ER
+            {getInitials(profileData.name)}
           </div>
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "4px", flexWrap: "wrap" }}>
-              <h2 style={{ fontSize: "22px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>Elena Rostova</h2>
-              <Badge variant="cyan">Shift A</Badge>
+              <h2 style={{ fontSize: "22px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                {profileData.name || "Loading..."}
+              </h2>
+              <Badge variant="cyan">{profileData.shift || "Shift A"}</Badge>
               <Badge variant="purple">Line 1 Bottling</Badge>
             </div>
-            <span style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-primary)", display: "block" }}>Lead Line Operator</span>
-            <span style={{ fontSize: "12px", color: "var(--text-muted)", display: "block", marginTop: "2px" }}>Employee ID: EMP-3092</span>
+            <span style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-primary)", display: "block" }}>
+              {profileData.title || "Lead Line Operator"}
+            </span>
+            <span style={{ fontSize: "12px", color: "var(--text-muted)", display: "block", marginTop: "2px" }}>
+              Employee ID: {profileData.employeeId || "EMP-3092"}
+            </span>
           </div>
         </div>
         
@@ -102,19 +116,19 @@ export function Profile() {
         <div style={{ padding: "20px 24px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "20px" }}>
           <div>
             <span style={{ fontSize: "11px", fontWeight: 800, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", display: "block", marginBottom: "6px" }}>Email Address</span>
-            <span style={{ fontSize: "13px", color: "var(--text-primary)" }}>{profileData.email}</span>
+            <span style={{ fontSize: "13px", color: "var(--text-primary)" }}>{profileData.email || "—"}</span>
           </div>
           <div>
             <span style={{ fontSize: "11px", fontWeight: 800, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", display: "block", marginBottom: "6px" }}>Phone / Extension</span>
-            <span style={{ fontSize: "13px", color: "var(--text-primary)" }}>{profileData.phone}</span>
+            <span style={{ fontSize: "13px", color: "var(--text-primary)" }}>{profileData.phone || "—"}</span>
           </div>
           <div>
             <span style={{ fontSize: "11px", fontWeight: 800, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", display: "block", marginBottom: "6px" }}>Assigned Plant Facility</span>
-            <span style={{ fontSize: "13px", color: "var(--text-primary)" }}>{profileData.plant}</span>
+            <span style={{ fontSize: "13px", color: "var(--text-primary)" }}>{profileData.plant || "—"}</span>
           </div>
           <div>
             <span style={{ fontSize: "11px", fontWeight: 800, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", display: "block", marginBottom: "6px" }}>Shift Assignment</span>
-            <span style={{ fontSize: "13px", color: "var(--text-primary)" }}>{profileData.shift}</span>
+            <span style={{ fontSize: "13px", color: "var(--text-primary)" }}>{profileData.shift || "—"}</span>
           </div>
         </div>
       </Card>
@@ -152,6 +166,7 @@ export function Profile() {
         isOpen={isEditing}
         onClose={() => setIsEditing(false)}
         profileData={profileData}
+        certifications={certifications}
         onSave={handleSaveProfile}
       />
     </div>

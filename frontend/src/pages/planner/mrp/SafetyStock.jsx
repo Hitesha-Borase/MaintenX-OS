@@ -30,19 +30,32 @@ export function SafetyStock() {
   const [customBuffers, setCustomBuffers] = useState({});
   const [isSaving, setIsSaving] = useState(false);
 
+  const [items, setItems] = useState(mrpCalculations);
+
   useEffect(() => {
-    async function loadPolicies() {
+    async function loadData() {
       try {
-        const res = await planningService.getSafetyStockPolicies();
-        const data = res?.data || res;
-        if (data && typeof data === "object") {
-          setCustomBuffers(data);
+        const [resPolicies, resMrp] = await Promise.allSettled([
+          planningService.getSafetyStockPolicies(),
+          planningService.getMrpNetRequirements()
+        ]);
+        if (resPolicies.status === "fulfilled") {
+          const data = resPolicies.value?.data || resPolicies.value;
+          if (data && typeof data === "object") {
+            setCustomBuffers(data);
+          }
+        }
+        if (resMrp.status === "fulfilled") {
+          const mrpList = Array.isArray(resMrp.value) ? resMrp.value : (resMrp.value?.data || []);
+          if (mrpList.length > 0) {
+            setItems(mrpList);
+          }
         }
       } catch (err) {
-        console.warn("Could not fetch safety stock policies from backend:", err.message);
+        console.warn("Could not fetch safety stock data from backend:", err.message);
       }
     }
-    loadPolicies();
+    loadData();
   }, []);
 
   const handleSavePolicy = async (e) => {
@@ -83,10 +96,12 @@ export function SafetyStock() {
   };
 
 
-  const filtered = mrpCalculations.filter(
+  const activeList = items.length > 0 ? items : mrpCalculations;
+
+  const filtered = activeList.filter(
     (m) =>
-      m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      m.skuCode.toLowerCase().includes(searchQuery.toLowerCase())
+      (m.name || m.materialName || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (m.skuCode || "").toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -113,21 +128,21 @@ export function SafetyStock() {
       >
         <StatCard
           title="Monitored Raw SKUs"
-          value={mrpCalculations.length.toString()}
+          value={activeList.length.toString()}
           unit="Active Materials"
           icon={Layers}
           colorVariant="cyan"
         />
         <StatCard
           title="Protected Above Buffer"
-          value={mrpCalculations.filter((m) => m.availableInventory >= m.safetyStock).length.toString()}
+          value={activeList.filter((m) => (m.availableInventory ?? m.availableStock ?? 0) >= (m.safetyStock ?? m.safetyBuffer ?? 0)).length.toString()}
           unit="Safe Buffers"
           icon={ShieldCheck}
           colorVariant="emerald"
         />
         <StatCard
           title="Buffer Violations"
-          value={mrpCalculations.filter((m) => m.availableInventory < m.safetyStock).length.toString()}
+          value={activeList.filter((m) => (m.availableInventory ?? m.availableStock ?? 0) < (m.safetyStock ?? m.safetyBuffer ?? 0)).length.toString()}
           unit="Below Min Threshold"
           icon={AlertTriangle}
           colorVariant="rose"

@@ -847,10 +847,10 @@ export function PlanningProvider({ children }) {
   // ==========================================
   const calculateChangeover = (previousSkuId, nextSkuId) => {
     if (!previousSkuId || !nextSkuId || previousSkuId === nextSkuId) {
-      return { durationHrs: 0, reason: "Same Product Run - Continuous Flow" };
+      return { durationHrs: 0.25, reason: "Same Product Run - Continuous Flow" };
     }
-    const prev = skus.find((s) => s.skuId === previousSkuId);
-    const next = skus.find((s) => s.skuId === nextSkuId);
+    const prev = skus.find((s) => (s.skuId || s.id) === previousSkuId);
+    const next = skus.find((s) => (s.skuId || s.id) === nextSkuId);
 
     if (prev?.family !== next?.family) {
       return {
@@ -866,28 +866,42 @@ export function PlanningProvider({ children }) {
   };
 
   const addScheduleEntry = (scheduleData) => {
-    const targetSku = skus.find((s) => s.skuId === scheduleData.skuId) || skus[0];
-    const targetLine = lines.find((l) => l.lineId === scheduleData.lineId) || lines[0];
+    const targetSku = skus.find((s) => (s.skuId || s.id) === scheduleData.skuId) || skus[0] || {
+      skuId: "SKU-001",
+      skuCode: "SKU-5001",
+      name: "500ml Sparkling Citrus Soda"
+    };
+    const targetLine = lines.find((l) => (l.lineId || l.id) === scheduleData.lineId) || lines[0] || {
+      lineId: "LIN-01",
+      name: "High-Speed Bottling Line 1"
+    };
+
+    const targetLineId = targetLine.lineId || targetLine.id || "LIN-01";
 
     // Find previous order on line to calculate changeover
-    const lineOrders = schedules.filter((s) => s.lineId === targetLine.lineId);
+    const lineOrders = schedules.filter((s) => (s.lineId || s.id) === targetLineId);
     const lastOrder = lineOrders[lineOrders.length - 1];
-    const changeover = calculateChangeover(lastOrder?.skuId, targetSku?.skuId);
+    const changeover = calculateChangeover(lastOrder?.skuId, scheduleData.skuId);
 
     const qty = Number(scheduleData.targetQuantity) || 24000;
     const runRate = Number(scheduleData.runRate) || 500; // BPM
     const productionHours = Math.round((qty / (runRate * 60)) * 10) / 10;
     const totalHours = Math.round((productionHours + changeover.durationHrs) * 10) / 10;
 
+    const sSkuId = targetSku.skuId || targetSku.id || scheduleData.skuId || "SKU-001";
+    const sCode = targetSku.skuCode || targetSku.code || targetSku.sku_code || sSkuId;
+    const sName = targetSku.name || targetSku.productName || targetSku.skuName || "Product";
+    const lName = targetLine.name || targetLine.lineName || "Production Line";
+
     const newSchedule = {
       scheduleId: `SCH-${Math.floor(100 + Math.random() * 900)}`,
-      productionOrderId: scheduleData.productionOrderId || `PO-2026-${Math.floor(1000 + Math.random() * 9000)}`,
+      productionOrderId: scheduleData.productionOrderId || scheduleData.orderNumber || `PO-2026-${Math.floor(1000 + Math.random() * 9000)}`,
       orderNumber: scheduleData.orderNumber || `ORD-${Math.floor(1000 + Math.random() * 9000)}`,
-      skuId: targetSku.skuId,
-      productCode: targetSku.skuCode,
-      productName: targetSku.name,
-      lineId: targetLine.lineId,
-      lineName: targetLine.name,
+      skuId: sSkuId,
+      productCode: sCode,
+      productName: sName,
+      lineId: targetLineId,
+      lineName: lName,
       targetQuantity: qty,
       runRate,
       productionDurationHrs: productionHours,
@@ -901,7 +915,7 @@ export function PlanningProvider({ children }) {
       materialStatus: "Materials Available"
     };
 
-    setSchedules((prev) => [...prev, newSchedule]);
+    setSchedules((prev) => [newSchedule, ...prev]);
     if (logAudit) {
       logAudit({
         entityId: newSchedule.orderNumber,
@@ -924,11 +938,13 @@ export function PlanningProvider({ children }) {
     setSchedules((prev) =>
       prev.map((s) => {
         if (s.scheduleId === scheduleId) {
-          const l = lines.find((item) => item.lineId === newLineId) || lines[0];
+          const l = lines.find((item) => (item.lineId || item.id) === newLineId) || lines[0];
+          const lId = l ? (l.lineId || l.id) : newLineId;
+          const lName = l ? (l.name || l.lineName) : s.lineName;
           const updated = {
             ...s,
-            lineId: l.lineId,
-            lineName: l.name,
+            lineId: lId,
+            lineName: lName,
             startTime: newStartTime || s.startTime
           };
           if (logAudit) {
@@ -936,7 +952,7 @@ export function PlanningProvider({ children }) {
               entityId: s.orderNumber,
               entityType: "APS Schedule",
               action: "Rescheduled",
-              newValue: `Moved to ${l.name} at ${updated.startTime}`,
+              newValue: `Moved to ${lName} at ${updated.startTime}`,
               notes: "Manual Dispatch Adjustment by Planner"
             });
           }

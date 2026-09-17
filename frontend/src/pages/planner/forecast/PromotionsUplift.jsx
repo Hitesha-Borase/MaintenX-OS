@@ -63,54 +63,10 @@ export function PromotionsUplift() {
       setLoading(true);
       const res = await planningService.getPromotions();
       const list = Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : [];
-      if (list.length > 0) {
-        setPromos(list);
-      } else {
-        // Fallback default sample campaigns if DB is fresh
-        setPromos([
-          {
-            id: "PRM-101",
-            name: "Labor Day Juice Promo - Costco National",
-            skuId: "SKU-001",
-            productCode: "SKU-5001",
-            productName: "500ml Sparkling Citrus Soda",
-            upliftPercent: 15,
-            incrementalUnits: 7500,
-            duration: "2026-09-01 to 2026-09-08",
-            channel: "Wholesale Club Flyer",
-            status: "Active"
-          },
-          {
-            id: "PRM-102",
-            name: "Organic Quinine Autumn Feature - Whole Foods",
-            skuId: "SKU-002",
-            productCode: "SKU-5002",
-            productName: "1L Tonic Water Natural Quinine",
-            upliftPercent: 12,
-            incrementalUnits: 3000,
-            duration: "2026-09-10 to 2026-09-24",
-            channel: "Endcap Display",
-            status: "Scheduled"
-          }
-        ]);
-      }
+      setPromos(list);
     } catch (err) {
       console.error("Failed to load promotions:", err);
-      // Fallback
-      setPromos([
-        {
-          id: "PRM-101",
-          name: "Labor Day Juice Promo - Costco National",
-          skuId: "SKU-001",
-          productCode: "SKU-5001",
-          productName: "500ml Sparkling Citrus Soda",
-          upliftPercent: 15,
-          incrementalUnits: 7500,
-          duration: "2026-09-01 to 2026-09-08",
-          channel: "Wholesale Club Flyer",
-          status: "Active"
-        }
-      ]);
+      setPromos([]);
     } finally {
       setLoading(false);
     }

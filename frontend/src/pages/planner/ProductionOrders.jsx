@@ -7,6 +7,8 @@ import { Button } from "../../components/common/Button";
 import { Badge } from "../../components/common/Badge";
 import { StatCard } from "../../components/common/StatCard";
 import { productionService } from "../../services/productionService";
+import { masterDataService } from "../../services/masterDataService";
+import planningService from "../../services/planningService";
 import {
   Factory,
   Plus,
@@ -35,39 +37,72 @@ export function ProductionOrders() {
   const { skus = [], lines = [] } = useMasterData();
   const { addToast } = useApp();
 
+  const [activeTab, setActiveTab] = useState("PACKAGING"); // PACKAGING | PROCESSING | LINKAGE
   const [orders, setOrders] = useState(ctxOrders || []);
+  const [processingBatches, setProcessingBatches] = useState([]);
+  const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
+  const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
+  const [selectedBatchForLink, setSelectedBatchForLink] = useState(null);
+  const [targetPackagingOrderId, setTargetPackagingOrderId] = useState("");
+
+  const [batchFormData, setBatchFormData] = useState({
+    batchNumber: `BAT-2026-B${Math.floor(100 + Math.random() * 900)}`,
+    skuId: "",
+    tankNumber: "Tank-01",
+    targetVolume: 5000,
+    uom: "Liters",
+    recipeVersion: "R1 (Standard Blend)"
+  });
+
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
+
+  // Live DB Master Data State
+  const [dbSkus, setDbSkus] = useState([]);
+  const [dbLines, setDbLines] = useState([]);
+
+  // Fetch live master data (SKUs and Production Lines) from backend DB API
+  const loadMasterData = useCallback(async () => {
+    try {
+      const skuRes = await masterDataService.getSkus();
+      const skuList = Array.isArray(skuRes) ? skuRes : (Array.isArray(skuRes?.data) ? skuRes.data : []);
+      if (skuList.length > 0) setDbSkus(skuList);
+    } catch (err) {
+      console.warn("[ProductionOrders] Failed to load live SKUs from DB API:", err.message);
+    }
+
+    try {
+      const lineRes = await masterDataService.getLines();
+      const lineList = Array.isArray(lineRes) ? lineRes : (Array.isArray(lineRes?.data) ? lineRes.data : []);
+      if (lineList.length > 0) setDbLines(lineList);
+    } catch (err) {
+      console.warn("[ProductionOrders] Failed to load live Lines from DB API:", err.message);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadMasterData();
+  }, [loadMasterData]);
+
+  // Available Master SKUs from live DB or context
+  const availableSkus = useMemo(() => {
+    return dbSkus.length > 0 ? dbSkus : skus;
+  }, [dbSkus, skus]);
+
+  // Available Lines from live DB or context
+  const availableLines = useMemo(() => {
+    return dbLines.length > 0 ? dbLines : lines;
+  }, [dbLines, lines]);
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Available finished goods or master SKUs
-  const availableSkus = useMemo(() => {
-    const fg = skus.filter((s) => s.category === "Finished Goods");
-    return fg.length > 0 ? fg : skus;
-  }, [skus]);
-
-  // Form State using stable master IDs
-  const defaultSku = availableSkus[0] || {
-    skuId: "SKU-001",
-    skuCode: "SKU-5001",
-    name: "500ml Sparkling Citrus Soda",
-    uom: "Bottles"
-  };
-
-  const defaultLine = lines[0] || {
-    lineId: "LIN-01",
-    name: "High-Speed Bottling Line 1",
-    lineCode: "LINE-1"
-  };
-
   const [formData, setFormData] = useState({
     orderNumber: `PO-2026-${Math.floor(1000 + Math.random() * 9000)}`,
-    skuId: defaultSku.skuId || defaultSku.id,
-    lineId: defaultLine.lineId || defaultLine.id,
+    skuId: "",
+    lineId: "",
     targetQuantity: 25000,
     plannedStartDate: new Date().toISOString().substring(0, 10),
     priority: "NORMAL",
@@ -96,16 +131,62 @@ export function ProductionOrders() {
     }
   }, [ctxOrders, setCtxOrders]);
 
+  const fetchProcessingBatches = useCallback(async () => {
+    try {
+      const res = await planningService.getProcessingBatches();
+      const list = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
+      setProcessingBatches(list);
+    } catch (err) {
+      console.warn("Failed to fetch processing batches from API:", err.message);
+    }
+  }, []);
+
   useEffect(() => {
     fetchOrders();
-    const interval = setInterval(fetchOrders, 4000);
-    const handleFocus = () => fetchOrders();
+    fetchProcessingBatches();
+    const interval = setInterval(() => {
+      fetchOrders();
+      fetchProcessingBatches();
+    }, 4000);
+    const handleFocus = () => {
+      fetchOrders();
+      fetchProcessingBatches();
+    };
     window.addEventListener("focus", handleFocus);
     return () => {
       clearInterval(interval);
       window.removeEventListener("focus", handleFocus);
     };
-  }, [fetchOrders]);
+  }, [fetchOrders, fetchProcessingBatches]);
+
+  const handleCreateBatch = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await planningService.createProcessingBatch(batchFormData);
+      addToast(res?.message || "Processing Batch created successfully in PostgreSQL DB!", "success");
+      setIsBatchModalOpen(false);
+      await fetchProcessingBatches();
+    } catch (err) {
+      addToast("Failed to create processing batch.", "error");
+    }
+  };
+
+  const handleLinkBatch = async (e) => {
+    e.preventDefault();
+    if (!selectedBatchForLink || !targetPackagingOrderId) {
+      addToast("Please select a Packaging Order to link.", "warning");
+      return;
+    }
+    try {
+      const res = await planningService.linkProcessingBatch(selectedBatchForLink.id, targetPackagingOrderId);
+      addToast(res?.message || "Batch successfully linked to Packaging Order!", "success");
+      setIsLinkModalOpen(false);
+      await fetchProcessingBatches();
+      await fetchOrders();
+    } catch (err) {
+      addToast("Failed to link batch.", "error");
+    }
+  };
 
   // Update order status via API
   const handleUpdateStatus = async (orderId, newStatus) => {
@@ -130,19 +211,23 @@ export function ProductionOrders() {
 
   // Dynamically resolve SKU details
   const selectedSku = useMemo(() => {
+    if (!formData.skuId) return availableSkus[0] || null;
     return (
-      skus.find((s) => s.skuId === formData.skuId || s.id === formData.skuId) ||
-      defaultSku
+      availableSkus.find(
+        (s) => String(s.skuId || s.id) === String(formData.skuId)
+      ) || availableSkus[0] || null
     );
-  }, [skus, formData.skuId, defaultSku]);
+  }, [availableSkus, formData.skuId]);
 
   // Dynamically resolve Line details
   const selectedLine = useMemo(() => {
+    if (!formData.lineId) return availableLines[0] || null;
     return (
-      lines.find((l) => l.lineId === formData.lineId || l.id === formData.lineId) ||
-      defaultLine
+      availableLines.find(
+        (l) => String(l.lineId || l.id) === String(formData.lineId)
+      ) || availableLines[0] || null
     );
-  }, [lines, formData.lineId, defaultLine]);
+  }, [availableLines, formData.lineId]);
 
   // KPIs
   const totalOrders = orders.length;
@@ -191,11 +276,16 @@ export function ProductionOrders() {
     });
   }, [orders, statusFilter, searchQuery]);
 
-  const handleOpenCreateModal = () => {
+  const handleOpenCreateModal = async () => {
+    await loadMasterData();
+    const currentSkus = dbSkus.length > 0 ? dbSkus : availableSkus;
+    const currentLines = dbLines.length > 0 ? dbLines : availableLines;
+    const firstSkuVal = currentSkus[0]?.id || currentSkus[0]?.skuId || "";
+    const firstLineVal = currentLines[0]?.id || currentLines[0]?.lineId || "";
     setFormData({
       orderNumber: `PO-2026-${Math.floor(1000 + Math.random() * 9000)}`,
-      skuId: availableSkus[0]?.skuId || availableSkus[0]?.id || defaultSku.skuId,
-      lineId: lines[0]?.lineId || lines[0]?.id || defaultLine.lineId,
+      skuId: firstSkuVal,
+      lineId: firstLineVal,
       targetQuantity: 25000,
       plannedStartDate: new Date().toISOString().substring(0, 10),
       priority: "NORMAL",
@@ -232,13 +322,13 @@ export function ProductionOrders() {
     const newPO = {
       id: `PO-${Date.now()}`,
       orderNumber: payload.orderNumber,
-      productCode: selectedSku?.skuCode || selectedSku?.skuId || "SKU-5001",
-      productName: selectedSku?.name || "Finished Goods",
+      productCode: selectedSku?.skuCode || selectedSku?.code || selectedSku?.skuId || "SKU-PROD",
+      productName: selectedSku?.name || selectedSku?.productName || "Finished Goods",
       producedQuantity: 0,
       targetQuantity: payload.targetQuantity,
       unit: selectedSku?.uom || "Bottles",
       status: formData.status || "SCHEDULED",
-      line: selectedLine?.name || "Line 1",
+      line: selectedLine?.name || selectedLine?.lineName || "Line 1",
       plant: selectedLine?.plantName || "Main Bottling Plant",
       startTime: `${formData.plannedStartDate} 06:00`,
       estimatedEndTime: `${formData.plannedStartDate} 18:00`,
@@ -255,6 +345,7 @@ export function ProductionOrders() {
         `Production Order ${payload.orderNumber} successfully created and released to MES! (API Connected)`,
         "success"
       );
+      await fetchOrders();
     } catch (err) {
       console.warn("Backend create order fallback:", err.message);
       setOrders((prev) => [newPO, ...prev]);
@@ -313,7 +404,7 @@ export function ProductionOrders() {
           <Button
             variant="secondary"
             icon={RefreshCw}
-            onClick={fetchOrders}
+            onClick={() => { fetchOrders(); fetchProcessingBatches(); }}
             disabled={isLoading}
             style={{ fontSize: "13px", padding: "8px 14px", fontWeight: 700 }}
           >
@@ -330,12 +421,21 @@ export function ProductionOrders() {
           </Button>
 
           <Button
+            variant="secondary"
+            icon={Plus}
+            onClick={() => setIsBatchModalOpen(true)}
+            style={{ fontSize: "13px", padding: "8px 14px", fontWeight: 700 }}
+          >
+            + Create Bulk Processing Batch
+          </Button>
+
+          <Button
             variant="primary"
             icon={Plus}
             onClick={handleOpenCreateModal}
             style={{ fontSize: "13px", padding: "8px 16px", fontWeight: 700 }}
           >
-            + Create Production Order
+            + Create Packaging Order
           </Button>
         </div>
       </div>
@@ -381,206 +481,414 @@ export function ProductionOrders() {
         />
       </div>
 
-      {/* Search, Status Filter & Table Container */}
+      {/* Main Content Card */}
       <Card style={{ padding: "18px", minWidth: 0, width: "100%", boxSizing: "border-box" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px", marginBottom: "16px" }}>
-          <div style={{ position: "relative", minWidth: "260px", flex: "1 1 280px" }}>
-            <Search
-              size={15}
-              color="var(--text-muted)"
-              style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)" }}
-            />
-            <input
-              type="text"
-              placeholder="Search by Order #, SKU Name, Code, or Line..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="form-input"
-              style={{ paddingLeft: "32px", height: "36px", fontSize: "12px" }}
-            />
-          </div>
+        {/* Navigation Tabs */}
+        <div style={{ display: "flex", gap: "10px", marginBottom: "16px", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "12px", flexWrap: "wrap" }}>
+          <button
+            onClick={() => setActiveTab("PACKAGING")}
+            style={{
+              padding: "8px 16px",
+              borderRadius: "6px",
+              fontSize: "13px",
+              fontWeight: 800,
+              backgroundColor: activeTab === "PACKAGING" ? "#C89547" : "var(--bg-card-subtle)",
+              color: activeTab === "PACKAGING" ? "#261603" : "var(--text-secondary)",
+              border: activeTab === "PACKAGING" ? "1px solid #E8C182" : "1px solid var(--border-subtle)",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px"
+            }}
+          >
+            <Package size={15} /> Packaging Orders (Line Packing Runs) ({orders.length})
+          </button>
 
-          <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", alignItems: "center" }}>
-            {["ALL", "Scheduled", "Running", "Completed", "Paused"].map((st) => (
-              <button
-                key={st}
-                onClick={() => setStatusFilter(st)}
-                style={{
-                  padding: "6px 12px",
-                  borderRadius: "6px",
-                  fontSize: "12px",
-                  fontWeight: 700,
-                  backgroundColor: statusFilter === st ? "#C89547" : "var(--bg-card-subtle)",
-                  color: statusFilter === st ? "#261603" : "var(--text-secondary)",
-                  border: statusFilter === st ? "1px solid #E8C182" : "1px solid var(--border-subtle)",
-                  cursor: "pointer",
-                  transition: "all 0.15s ease"
-                }}
-              >
-                {st}
-              </button>
-            ))}
-          </div>
+          <button
+            onClick={() => setActiveTab("PROCESSING")}
+            style={{
+              padding: "8px 16px",
+              borderRadius: "6px",
+              fontSize: "13px",
+              fontWeight: 800,
+              backgroundColor: activeTab === "PROCESSING" ? "#C89547" : "var(--bg-card-subtle)",
+              color: activeTab === "PROCESSING" ? "#261603" : "var(--text-secondary)",
+              border: activeTab === "PROCESSING" ? "1px solid #E8C182" : "1px solid var(--border-subtle)",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px"
+            }}
+          >
+            <Layers size={15} /> Processing Orders (Bulk Vessel Batches) ({processingBatches.length})
+          </button>
+
+          <button
+            onClick={() => setActiveTab("LINKAGE")}
+            style={{
+              padding: "8px 16px",
+              borderRadius: "6px",
+              fontSize: "13px",
+              fontWeight: 800,
+              backgroundColor: activeTab === "LINKAGE" ? "#C89547" : "var(--bg-card-subtle)",
+              color: activeTab === "LINKAGE" ? "#261603" : "var(--text-secondary)",
+              border: activeTab === "LINKAGE" ? "1px solid #E8C182" : "1px solid var(--border-subtle)",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px"
+            }}
+          >
+            <ArrowRight size={15} /> 1 Processing Batch ➔ Multiple Packaging Runs Tree
+          </button>
         </div>
 
-        {/* Orders Table */}
-        <div className="data-table-container" style={{ width: "100%", overflowX: "auto", WebkitOverflowScrolling: "touch", display: "block" }}>
-          <table className="data-table" style={{ width: "100%", minWidth: "950px" }}>
-            <thead>
-              <tr>
-                <th>Order Number</th>
-                <th>Master SKU & Product</th>
-                <th>Assigned Line</th>
-                <th>Target Quantity</th>
-                <th>Progress</th>
-                <th>Planned Start</th>
-                <th>Status</th>
-                <th style={{ textAlign: "right" }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredOrders.length > 0 ? (
-                filteredOrders.map((po) => {
-                  const target = Number(po.targetQuantity) || 1;
-                  const produced = Number(po.producedQuantity) || 0;
-                  const percent = Math.min(100, Math.round((produced / target) * 100));
-                  const status = (po.status || "SCHEDULED").toUpperCase();
+        {/* TAB 1: PACKAGING ORDERS */}
+        {activeTab === "PACKAGING" && (
+          <>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px", marginBottom: "16px" }}>
+              <div style={{ position: "relative", minWidth: "260px", flex: "1 1 280px" }}>
+                <Search
+                  size={15}
+                  color="var(--text-muted)"
+                  style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)" }}
+                />
+                <input
+                  type="text"
+                  placeholder="Search by Order #, SKU Name, Code, or Line..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="form-input"
+                  style={{ paddingLeft: "32px", height: "36px", fontSize: "12px" }}
+                />
+              </div>
 
-                  return (
-                    <tr
-                      key={po.id || po.orderNumber}
-                      style={{
-                        borderBottom: "1px solid var(--border-subtle)",
-                        transition: "background-color 0.12s ease"
-                      }}
-                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgba(200, 149, 71, 0.04)")}
-                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
-                    >
-                      <td style={{ padding: "12px 14px", whiteSpace: "nowrap" }}>
-                        <div style={{ fontSize: "13px", fontWeight: 800, color: "var(--text-primary)", fontFamily: "var(--font-mono)" }}>
-                          {po.orderNumber || po.id}
-                        </div>
-                        <div style={{ fontSize: "10px", color: "var(--text-muted)" }}>
-                          ID: {po.id}
-                        </div>
-                      </td>
+              <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", alignItems: "center" }}>
+                {["ALL", "Scheduled", "Running", "Completed", "Paused"].map((st) => (
+                  <button
+                    key={st}
+                    onClick={() => setStatusFilter(st)}
+                    style={{
+                      padding: "6px 12px",
+                      borderRadius: "6px",
+                      fontSize: "12px",
+                      fontWeight: 700,
+                      backgroundColor: statusFilter === st ? "#C89547" : "var(--bg-card-subtle)",
+                      color: statusFilter === st ? "#261603" : "var(--text-secondary)",
+                      border: statusFilter === st ? "1px solid #E8C182" : "1px solid var(--border-subtle)",
+                      cursor: "pointer",
+                      transition: "all 0.15s ease"
+                    }}
+                  >
+                    {st}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-                      <td style={{ padding: "12px 14px" }}>
-                        <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)" }}>
-                          {typeof po.productName === "string" ? po.productName : (po.sku?.name || "Finished Product")}
-                        </div>
-                        <div style={{ fontSize: "11px", color: "#8C5B23", fontFamily: "var(--font-mono)", fontWeight: 700, marginTop: "2px" }}>
-                          {typeof po.productCode === "string" ? po.productCode : (po.sku?.skuCode || po.skuId || "SKU-5001")}
-                        </div>
-                      </td>
+            <div className="data-table-container" style={{ width: "100%", overflowX: "auto", WebkitOverflowScrolling: "touch", display: "block" }}>
+              <table className="data-table" style={{ width: "100%", minWidth: "950px" }}>
+                <thead>
+                  <tr>
+                    <th>Order Number</th>
+                    <th>Master SKU & Product</th>
+                    <th>Assigned Line</th>
+                    <th>Target Quantity</th>
+                    <th>Progress</th>
+                    <th>Planned Start</th>
+                    <th>Status</th>
+                    <th style={{ textAlign: "right" }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredOrders.length > 0 ? (
+                    filteredOrders.map((po) => {
+                      const target = Number(po.targetQuantity) || 1;
+                      const produced = Number(po.producedQuantity) || 0;
+                      const percent = Math.min(100, Math.round((produced / target) * 100));
+                      const status = (po.status || "SCHEDULED").toUpperCase();
 
-                      <td style={{ padding: "12px 14px", whiteSpace: "nowrap" }}>
-                        <div style={{ fontSize: "12px", fontWeight: 600, color: "var(--text-primary)" }}>
-                          {typeof po.line === "object" ? (po.line?.name || "Line 1") : (po.line || "Line 1")}
-                        </div>
-                        <div style={{ fontSize: "10px", color: "var(--text-muted)" }}>
-                          {typeof po.plant === "object" ? (po.plant?.name || "Indore Plant") : (po.plant || "Indore Plant")}
-                        </div>
-                      </td>
-
-                      <td style={{ padding: "12px 14px", whiteSpace: "nowrap" }}>
-                        <span style={{ fontSize: "13px", fontWeight: 800, fontFamily: "var(--font-mono)", color: "var(--text-primary)" }}>
-                          {Number(po.targetQuantity || 0).toLocaleString()} {typeof po.unit === "object" ? (po.unit?.name || "Bottles") : (po.unit || "Bottles")}
-                        </span>
-                      </td>
-
-                      <td style={{ padding: "12px 14px", minWidth: "140px" }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", marginBottom: "4px" }}>
-                          <span style={{ fontWeight: 700, color: "var(--text-secondary)" }}>{produced.toLocaleString()}</span>
-                          <span style={{ fontWeight: 800, color: percent >= 100 ? "#8C5B23" : "#C89547" }}>{percent}%</span>
-                        </div>
-                        <div style={{ width: "100%", height: "6px", backgroundColor: "var(--bg-card-subtle)", borderRadius: "3px", overflow: "hidden" }}>
-                          <div
-                            style={{
-                              width: `${percent}%`,
-                              height: "100%",
-                              backgroundColor: percent >= 100 ? "#8C5B23" : "#C89547",
-                              borderRadius: "3px",
-                              transition: "width 0.3s ease"
-                            }}
-                          />
-                        </div>
-                      </td>
-
-                      <td style={{ padding: "12px 14px", whiteSpace: "nowrap" }}>
-                        <div style={{ fontSize: "11px", color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: "4px" }}>
-                          <Calendar size={12} color="var(--text-muted)" />
-                          <span>{po.startTime ? String(po.startTime).substring(0, 10) : (po.plannedStart ? String(po.plannedStart).substring(0, 10) : "2026-08-31")}</span>
-                        </div>
-                      </td>
-
-                      <td style={{ padding: "12px 14px", whiteSpace: "nowrap" }}>
-                        <Badge
-                          variant={
-                            status.includes("RUN")
-                              ? "amber"
-                              : status.includes("COMP")
-                              ? "neutral"
-                              : status.includes("SCHED") || status.includes("PLAN")
-                              ? "amber"
-                              : "rose"
-                          }
-                        >
-                          {po.status || "SCHEDULED"}
-                        </Badge>
-                      </td>
-
-                      <td style={{ padding: "12px 14px", textAlign: "right", whiteSpace: "nowrap" }}>
-                        <div style={{ display: "flex", justifyContent: "flex-end", gap: "6px" }}>
-                          {status !== "RUNNING" && status !== "COMPLETED" && (
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              icon={Play}
-                              onClick={() => handleUpdateStatus(po.id, "RUNNING")}
-                              style={{ fontSize: "11px", padding: "4px 8px" }}
-                            >
-                              Run
-                            </Button>
-                          )}
-                          {status === "RUNNING" && (
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              icon={Pause}
-                              onClick={() => handleUpdateStatus(po.id, "PAUSED")}
-                              style={{ fontSize: "11px", padding: "4px 8px" }}
-                            >
-                              Pause
-                            </Button>
-                          )}
-                          {status !== "COMPLETED" && (
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              icon={Check}
-                              onClick={() => handleUpdateStatus(po.id, "COMPLETED")}
-                              style={{ fontSize: "11px", padding: "4px 8px" }}
-                            >
-                              Done
-                            </Button>
-                          )}
-                        </div>
+                      return (
+                        <tr key={po.id || po.orderNumber} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+                          <td style={{ padding: "12px 14px", whiteSpace: "nowrap" }}>
+                            <div style={{ fontSize: "13px", fontWeight: 800, color: "var(--text-primary)", fontFamily: "var(--font-mono)" }}>
+                              {po.orderNumber || po.id}
+                            </div>
+                          </td>
+                          <td style={{ padding: "12px 14px" }}>
+                            <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)" }}>
+                              {typeof po.productName === "string" ? po.productName : (po.sku?.name || "Finished Product")}
+                            </div>
+                            <div style={{ fontSize: "11px", color: "#8C5B23", fontFamily: "var(--font-mono)", fontWeight: 700 }}>
+                              {typeof po.productCode === "string" ? po.productCode : (po.sku?.skuCode || po.skuId || "SKU-5001")}
+                            </div>
+                          </td>
+                          <td style={{ padding: "12px 14px", whiteSpace: "nowrap" }}>
+                            <div style={{ fontSize: "12px", fontWeight: 600, color: "var(--text-primary)" }}>
+                              {typeof po.line === "object" ? (po.line?.name || "Line 1") : (po.line || "Line 1")}
+                            </div>
+                          </td>
+                          <td style={{ padding: "12px 14px", whiteSpace: "nowrap" }}>
+                            <span style={{ fontSize: "13px", fontWeight: 800, fontFamily: "var(--font-mono)", color: "var(--text-primary)" }}>
+                              {Number(po.targetQuantity || 0).toLocaleString()} {typeof po.unit === "object" ? (po.unit?.name || "Bottles") : (po.unit || "Bottles")}
+                            </span>
+                          </td>
+                          <td style={{ padding: "12px 14px", minWidth: "140px" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", marginBottom: "4px" }}>
+                              <span>{produced.toLocaleString()}</span>
+                              <span style={{ fontWeight: 800, color: percent >= 100 ? "#8C5B23" : "#C89547" }}>{percent}%</span>
+                            </div>
+                            <div style={{ width: "100%", height: "6px", backgroundColor: "var(--bg-card-subtle)", borderRadius: "3px", overflow: "hidden" }}>
+                              <div style={{ width: `${percent}%`, height: "100%", backgroundColor: percent >= 100 ? "#8C5B23" : "#C89547" }} />
+                            </div>
+                          </td>
+                          <td style={{ padding: "12px 14px", whiteSpace: "nowrap" }}>
+                            <div style={{ fontSize: "11px", color: "var(--text-secondary)" }}>
+                              {po.startTime ? String(po.startTime).substring(0, 10) : (po.plannedStart ? String(po.plannedStart).substring(0, 10) : "2026-08-31")}
+                            </div>
+                          </td>
+                          <td style={{ padding: "12px 14px", whiteSpace: "nowrap" }}>
+                            <Badge variant={status.includes("RUN") ? "amber" : status.includes("COMP") ? "neutral" : "amber"}>
+                              {po.status || "SCHEDULED"}
+                            </Badge>
+                          </td>
+                          <td style={{ padding: "12px 14px", textAlign: "right", whiteSpace: "nowrap" }}>
+                            <div style={{ display: "flex", justifyContent: "flex-end", gap: "6px" }}>
+                              {status !== "RUNNING" && status !== "COMPLETED" && (
+                                <Button variant="secondary" size="sm" icon={Play} onClick={() => handleUpdateStatus(po.id, "RUNNING")}>Run</Button>
+                              )}
+                              {status === "RUNNING" && (
+                                <Button variant="secondary" size="sm" icon={Pause} onClick={() => handleUpdateStatus(po.id, "PAUSED")}>Pause</Button>
+                              )}
+                              {status !== "COMPLETED" && (
+                                <Button variant="secondary" size="sm" icon={Check} onClick={() => handleUpdateStatus(po.id, "COMPLETED")}>Done</Button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  ) : (
+                    <tr>
+                      <td colSpan={8} style={{ padding: "36px", textAlign: "center", color: "var(--text-muted)" }}>
+                        No packaging production orders match current filter.
                       </td>
                     </tr>
-                  );
-                })
-              ) : (
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+
+        {/* TAB 2: PROCESSING ORDERS (BULK VESSEL BATCHES) */}
+        {activeTab === "PROCESSING" && (
+          <div className="data-table-container" style={{ width: "100%", overflowX: "auto" }}>
+            <table className="data-table" style={{ width: "100%", minWidth: "950px" }}>
+              <thead>
                 <tr>
-                  <td colSpan={8} style={{ padding: "36px", textAlign: "center", color: "var(--text-muted)", fontSize: "13px" }}>
-                    No production orders match the current filter.
-                  </td>
+                  <th>Batch Number</th>
+                  <th>Assigned Vessel / Tank</th>
+                  <th>Recipe & SKU</th>
+                  <th>Target Volume</th>
+                  <th>Current Step</th>
+                  <th>Status</th>
+                  <th>Linked Packaging Runs</th>
+                  <th style={{ textAlign: "right" }}>Actions</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {processingBatches.length > 0 ? (
+                  processingBatches.map((b) => (
+                    <tr key={b.id} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+                      <td style={{ padding: "12px 14px", fontWeight: 800, fontFamily: "var(--font-mono)", color: "var(--text-primary)" }}>
+                        {b.batchNumber}
+                      </td>
+                      <td style={{ padding: "12px 14px", fontWeight: 700 }}>
+                        <Badge variant="cyan">{b.tankNumber || "Tank-01"}</Badge>
+                      </td>
+                      <td style={{ padding: "12px 14px" }}>
+                        <div style={{ fontWeight: 700 }}>{b.skuName || "Bulk Liquid Formulation"}</div>
+                        <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>{b.recipeVersion || "Standard R1"}</div>
+                      </td>
+                      <td style={{ padding: "12px 14px", fontWeight: 800, fontFamily: "var(--font-mono)" }}>
+                        {Number(b.targetVolume || 0).toLocaleString()} {b.uom || "Liters"}
+                      </td>
+                      <td style={{ padding: "12px 14px" }}>
+                        Step {b.currentStep || 1} ({b.progressPercent || 0}%)
+                      </td>
+                      <td style={{ padding: "12px 14px" }}>
+                        <Badge variant={b.status === "In Process" ? "amber" : "neutral"}>{b.status || "PLANNED"}</Badge>
+                      </td>
+                      <td style={{ padding: "12px 14px" }}>
+                        {b.linkedPackagingOrders && b.linkedPackagingOrders.length > 0 ? (
+                          <div style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>
+                            {b.linkedPackagingOrders.map((l, idx) => (
+                              <Badge key={idx} variant="purple">{l.orderNumber}</Badge>
+                            ))}
+                          </div>
+                        ) : (
+                          <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>Unlinked</span>
+                        )}
+                      </td>
+                      <td style={{ padding: "12px 14px", textAlign: "right" }}>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedBatchForLink(b);
+                            setIsLinkModalOpen(true);
+                          }}
+                        >
+                          + Link Packaging Order
+                        </Button>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={8} style={{ padding: "36px", textAlign: "center", color: "var(--text-muted)" }}>
+                      No processing batches found in PostgreSQL database. Click "+ Create Bulk Processing Batch" to create one.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* TAB 3: 1 BATCH -> MULTIPLE PACKAGING RUNS TREE */}
+        {activeTab === "LINKAGE" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+            <h3 style={{ fontSize: "15px", fontWeight: 800, margin: 0, color: "var(--text-primary)" }}>
+              1 Bulk Processing Batch ➔ Multiple Packaging Line Runs Hierarchy
+            </h3>
+            {processingBatches.map((b) => (
+              <div
+                key={b.id}
+                style={{
+                  border: "1px solid var(--border-subtle)",
+                  borderRadius: "10px",
+                  padding: "16px",
+                  backgroundColor: "var(--bg-card-subtle)"
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+                  <div>
+                    <span style={{ fontSize: "16px", fontWeight: 800, fontFamily: "var(--font-mono)", color: "var(--text-primary)" }}>
+                      {b.batchNumber}
+                    </span>
+                    <span style={{ fontSize: "13px", color: "var(--text-secondary)", marginLeft: "10px" }}>
+                      Vessel: <strong>{b.tankNumber || "Tank-01"}</strong> | Volume: <strong>{Number(b.targetVolume).toLocaleString()} {b.uom || "Liters"}</strong>
+                    </span>
+                  </div>
+                  <Badge variant="amber">{b.status || "PLANNED"}</Badge>
+                </div>
+
+                <div style={{ paddingLeft: "24px", borderLeft: "3px solid #C89547", display: "flex", flexDirection: "column", gap: "8px" }}>
+                  <div style={{ fontSize: "12px", fontWeight: 800, color: "#8C5B23", textTransform: "uppercase" }}>
+                    Linked Child Packaging Line Runs:
+                  </div>
+                  {b.linkedPackagingOrders && b.linkedPackagingOrders.length > 0 ? (
+                    b.linkedPackagingOrders.map((po, idx) => (
+                      <div
+                        key={idx}
+                        style={{
+                          backgroundColor: "#FFFFFF",
+                          border: "1px solid var(--border-subtle)",
+                          borderRadius: "6px",
+                          padding: "10px 14px",
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center"
+                        }}
+                      >
+                        <div>
+                          <strong style={{ fontFamily: "var(--font-mono)", fontSize: "13px" }}>{po.orderNumber}</strong>
+                          <span style={{ fontSize: "12px", color: "var(--text-muted)", marginLeft: "12px" }}>
+                            Target Output: {po.targetQuantity} Bottles
+                          </span>
+                        </div>
+                        <Badge variant="purple">{po.status || "SCHEDULED"}</Badge>
+                      </div>
+                    ))
+                  ) : (
+                    <div style={{ fontSize: "12px", color: "var(--text-muted)", fontStyle: "italic" }}>
+                      No child packaging runs linked yet to this bulk batch. Click "+ Link Packaging Order" in Processing Batches tab to connect.
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </Card>
+
+      {/* CREATE PROCESSING BATCH MODAL */}
+      {isBatchModalOpen && (
+        <div className="modal-backdrop" onClick={() => setIsBatchModalOpen(false)} style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(38, 22, 3, 0.6)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "16px" }}>
+          <div className="modal-content" style={{ backgroundColor: "#FFFFFF", borderRadius: "14px", width: "100%", maxWidth: "500px", padding: "24px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+              <h3 style={{ fontSize: "18px", fontWeight: 800, margin: 0 }}>Create Bulk Processing Batch</h3>
+              <button onClick={() => setIsBatchModalOpen(false)} style={{ border: "none", background: "none", cursor: "pointer" }}><X size={20} /></button>
+            </div>
+            <form onSubmit={handleCreateBatch} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div>
+                <label className="form-label" style={{ fontSize: "12px", fontWeight: 700 }}>Batch Number</label>
+                <input className="form-input" value={batchFormData.batchNumber} onChange={(e) => setBatchFormData({ ...batchFormData, batchNumber: e.target.value })} required />
+              </div>
+              <div>
+                <label className="form-label" style={{ fontSize: "12px", fontWeight: 700 }}>Assigned Processing Vessel / Tank</label>
+                <select className="form-input" value={batchFormData.tankNumber} onChange={(e) => setBatchFormData({ ...batchFormData, tankNumber: e.target.value })}>
+                  <option value="Tank-01">Tank-01 (Mixing Vessel 5,000L)</option>
+                  <option value="Tank-02">Tank-02 (Aseptic Holding Tank 10,000L)</option>
+                  <option value="Vessel-03">Vessel-03 (Cooker Kettle 3,500L)</option>
+                </select>
+              </div>
+              <div>
+                <label className="form-label" style={{ fontSize: "12px", fontWeight: 700 }}>Target Bulk Volume (Liters)</label>
+                <input type="number" className="form-input" value={batchFormData.targetVolume} onChange={(e) => setBatchFormData({ ...batchFormData, targetVolume: Number(e.target.value) })} required />
+              </div>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "12px" }}>
+                <Button variant="secondary" onClick={() => setIsBatchModalOpen(false)}>Cancel</Button>
+                <Button variant="primary" type="submit">Create Batch in DB</Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* LINK BATCH TO PACKAGING ORDER MODAL */}
+      {isLinkModalOpen && selectedBatchForLink && (
+        <div className="modal-backdrop" onClick={() => setIsLinkModalOpen(false)} style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(38, 22, 3, 0.6)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "16px" }}>
+          <div className="modal-content" style={{ backgroundColor: "#FFFFFF", borderRadius: "14px", width: "100%", maxWidth: "500px", padding: "24px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+              <h3 style={{ fontSize: "18px", fontWeight: 800, margin: 0 }}>Link Batch to Packaging Order</h3>
+              <button onClick={() => setIsLinkModalOpen(false)} style={{ border: "none", background: "none", cursor: "pointer" }}><X size={20} /></button>
+            </div>
+            <div style={{ fontSize: "13px", marginBottom: "16px", color: "var(--text-secondary)" }}>
+              Link Processing Batch <strong>{selectedBatchForLink.batchNumber}</strong> ({selectedBatchForLink.tankNumber}) to a child Packaging Line Order:
+            </div>
+            <form onSubmit={handleLinkBatch} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div>
+                <label className="form-label" style={{ fontSize: "12px", fontWeight: 700 }}>Select Packaging Line Order</label>
+                <select className="form-input" value={targetPackagingOrderId} onChange={(e) => setTargetPackagingOrderId(e.target.value)} required>
+                  <option value="">-- Choose Packaging Order --</option>
+                  {orders.map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.orderNumber || o.id} — {typeof o.productName === "string" ? o.productName : "Product"} ({o.targetQuantity} Bottles)
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "12px" }}>
+                <Button variant="secondary" onClick={() => setIsLinkModalOpen(false)}>Cancel</Button>
+                <Button variant="primary" type="submit">Save Linkage in DB</Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* CREATE PRODUCTION ORDER MODAL */}
       {isModalOpen && (
@@ -730,9 +1038,9 @@ export function ProductionOrders() {
                     className="form-input"
                     style={{ backgroundColor: "#FFFFFF" }}
                   >
-                    {lines.map((l) => (
+                    {availableLines.map((l) => (
                       <option key={l.lineId || l.id} value={l.lineId || l.id}>
-                        {l.lineCode ? `${l.lineCode} - ` : ""}{l.name}
+                        {l.lineCode || l.code ? `${l.lineCode || l.code} — ` : ""}{l.name || l.lineName}
                       </option>
                     ))}
                   </select>

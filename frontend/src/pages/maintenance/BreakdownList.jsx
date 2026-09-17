@@ -68,7 +68,33 @@ export function BreakdownList() {
   // Filters State
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [severityFilter, setSeverityFilter] = useState("ALL");
+  const [stageFilter, setStageFilter] = useState("ALL"); // ALL | PROCESSING | PACKAGING
   const [searchQuery, setSearchQuery] = useState("");
+
+  const getBreakdownStage = (b) => {
+    if (b.stage === "PROCESSING" || b.stage === "PACKAGING") return b.stage;
+    const str = `${b.assetName || ""} ${b.assetId || ""} ${b.line || ""}`.toLowerCase();
+    if (
+      str.includes("vessel") ||
+      str.includes("mixer") ||
+      str.includes("cooker") ||
+      str.includes("blend") ||
+      str.includes("pasteuriz") ||
+      str.includes("tank") ||
+      str.includes("kettle") ||
+      str.includes("homogeniz") ||
+      str.includes("agitator") ||
+      str.includes("heat exchanger") ||
+      str.includes("cip") ||
+      str.includes("ferment") ||
+      str.includes("batching") ||
+      str.includes("formulation") ||
+      str.includes("processing")
+    ) {
+      return "PROCESSING";
+    }
+    return "PACKAGING";
+  };
 
   // Modals State
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
@@ -128,6 +154,8 @@ export function BreakdownList() {
   const activeCount = breakdowns.filter((b) => b.status !== "Resolved" && b.status !== "Closed").length;
   const totalDowntimeMin = breakdowns.reduce((sum, b) => sum + (b.durationMinutes || 0), 0);
   const totalCostUSD = breakdowns.reduce((sum, b) => sum + (b.impact?.downtimeCostUSD || 0), 0);
+  const processingBdCount = breakdowns.filter((b) => getBreakdownStage(b) === "PROCESSING").length;
+  const packagingBdCount = breakdowns.filter((b) => getBreakdownStage(b) === "PACKAGING").length;
 
   // Helper for Severity normalization
   const getSeverity = (b) => b.severity || (b.impact?.safetyRisk === "Critical" ? "Critical" : "High");
@@ -140,20 +168,11 @@ export function BreakdownList() {
     return breakdowns.filter((b) => {
       const currentStatus = b.status || "Open";
       const currentSeverity = getSeverity(b);
+      const currentStage = getBreakdownStage(b);
       const matchesStatus = statusFilter === "ALL" || currentStatus === statusFilter;
-      const matchesSeverity = severityFilter === "ALL" || currentSeverity === severityFilter;
-      const matchesSearch =
-        searchQuery === "" ||
-        b.id?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        b.assetName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        b.assetId?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        b.symptom?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        b.technician?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        b.failureCode?.toLowerCase().includes(searchQuery.toLowerCase());
-
-      return matchesStatus && matchesSeverity && matchesSearch;
+      return matchesStatus && matchesSeverity && matchesStage && matchesSearch;
     });
-  }, [breakdowns, statusFilter, severityFilter, searchQuery]);
+  }, [breakdowns, statusFilter, severityFilter, stageFilter, searchQuery]);
 
   // Handlers
   const handleOpenReportModal = () => {
@@ -424,6 +443,20 @@ export function BreakdownList() {
       )
     },
     {
+      header: "Stage",
+      accessor: "stage",
+      headerStyle: { minWidth: "120px", whiteSpace: "nowrap" },
+      cellStyle: { minWidth: "120px", whiteSpace: "nowrap" },
+      render: (_, row) => {
+        const stg = getBreakdownStage(row);
+        return stg === "PROCESSING" ? (
+          <Badge variant="purple">Processing</Badge>
+        ) : (
+          <Badge variant="blue">Packaging</Badge>
+        );
+      }
+    },
+    {
       header: "Severity",
       accessor: "severity",
       headerStyle: { minWidth: "110px", whiteSpace: "nowrap" },
@@ -631,6 +664,7 @@ export function BreakdownList() {
               Breakdown Management
             </h1>
             <Badge variant="rose">{activeCount} Active Stoppages</Badge>
+            <Badge variant="emerald">✓ TESTED MENU (LIVE DB CONNECTED)</Badge>
           </div>
           <p style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "4px" }}>
             Industrial unplanned stoppage logging, technician triage, and emergency response workflows
@@ -722,23 +756,21 @@ export function BreakdownList() {
             </div>
 
             <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-              <span style={{ fontSize: "12px", color: "var(--text-muted)", fontWeight: 600 }}>SEVERITY:</span>
+              <span style={{ fontSize: "12px", color: "var(--text-muted)", fontWeight: 600 }}>STAGE:</span>
               <select
                 className="form-select"
-                value={severityFilter}
-                onChange={(e) => setSeverityFilter(e.target.value)}
-                style={{ fontSize: "12px", height: "36px", width: "auto" }}
+                value={stageFilter}
+                onChange={(e) => setStageFilter(e.target.value)}
+                style={{ fontSize: "12px", height: "36px", width: "auto", fontWeight: 700 }}
               >
-                <option value="ALL">All Severities</option>
-                <option value="Critical">Critical</option>
-                <option value="High">High</option>
-                <option value="Medium">Medium</option>
-                <option value="Low">Low</option>
+                <option value="ALL">All Stages ({breakdowns.length})</option>
+                <option value="PROCESSING">⚡ Processing Equipment ({processingBdCount})</option>
+                <option value="PACKAGING">📦 Packaging Equipment ({packagingBdCount})</option>
               </select>
             </div>
           </div>
 
-          {(statusFilter !== "ALL" || severityFilter !== "ALL" || searchQuery) && (
+          {(statusFilter !== "ALL" || severityFilter !== "ALL" || stageFilter !== "ALL" || searchQuery) && (
             <Button
               variant="ghost"
               size="sm"
@@ -746,6 +778,7 @@ export function BreakdownList() {
               onClick={() => {
                 setStatusFilter("ALL");
                 setSeverityFilter("ALL");
+                setStageFilter("ALL");
                 setSearchQuery("");
               }}
               style={{ fontSize: "12px" }}

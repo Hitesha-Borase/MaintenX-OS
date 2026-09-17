@@ -12,11 +12,7 @@ export function Notifications() {
   const { addToast } = useApp();
 
   const [activeTab, setActiveTab] = useState("all");
-  const [notifications, setNotifications] = useState([
-    { id: 1, type: "system", read: false, icon: Info, title: "Allergen Cleared Line 1", msg: "Sanitation check signed off by Quality QA.", time: "15 min ago", path: "/linelead/quality-events" },
-    { id: 2, type: "wo", read: false, icon: Wrench, title: "Maintenance dispatched", msg: "Technician David Kim assigned to work order WO-0888.", time: "45 min ago", path: "/linelead/maintenance-issues" },
-    { id: 3, type: "material", read: false, icon: Bell, title: "Low Stock Warning - Orange Caps", msg: "WMS inventory stock below safety limit threshold.", time: "2 hours ago", path: "/linelead/material-status" }
-  ]);
+  const [notifications, setNotifications] = useState([]);
 
   // Loading states for actions
   const [markingAll, setMarkingAll] = useState(false);

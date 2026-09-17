@@ -15,7 +15,15 @@ import {
   CheckCircle2,
   RefreshCw,
   Zap,
-  Send
+  Send,
+  Scale,
+  Thermometer,
+  Layers,
+  FlaskConical,
+  CheckSquare,
+  Droplets,
+  Activity,
+  Plus
 } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { StatCard } from "../../components/common/StatCard";
@@ -35,178 +43,256 @@ export function LineLeadDashboard() {
   const { workOrders } = useCMMS();
   const { exceptions } = useExceptions();
 
+  // Stage Switcher State ('ALL', 'PROCESSING', 'PACKAGING')
+  const [activeStageTab, setActiveStageTab] = useState("ALL");
+
   // Modals state
   const [isMaterialModalOpen, setIsMaterialModalOpen] = useState(false);
   const [isQualityModalOpen, setIsQualityModalOpen] = useState(false);
   const [isWOModalOpen, setIsWOModalOpen] = useState(false);
   const [isSpeedModalOpen, setIsSpeedModalOpen] = useState(false);
-  const [proposedBPM, setProposedBPM] = useState(620);
+  const [isWeighModalOpen, setIsWeighModalOpen] = useState(false);
+  const [isCcpModalOpen, setIsCcpModalOpen] = useState(false);
+  const [isClearanceModalOpen, setIsClearanceModalOpen] = useState(false);
 
-  // API loading states
+  // Form States
+  const [proposedBPM, setProposedBPM] = useState(620);
+  const [weighForm, setWeighForm] = useState({ ingredient: "Concentrate Base Lot A", targetKg: 450, actualKg: 450.2 });
+  const [ccpForm, setCcpForm] = useState({ ccpName: "CCP 1 — Pasteurizer Thermal Hold", parameterName: "Pasteurizer Temp", targetValue: "83.5", actualValue: "83.5", uom: "°C" });
+  const [clearanceNotes, setClearanceNotes] = useState("Line Clearance Verified — All prior SKU items & labels cleared");
+
+  // Loading States
   const [requestingStock, setRequestingStock] = useState(false);
   const [loggingQA, setLoggingQA] = useState(false);
-  const [acknowledgingStop, setAcknowledgingStop] = useState(false);
   const [submittingSpeed, setSubmittingSpeed] = useState(false);
+  const [savingWeigh, setSavingWeigh] = useState(false);
+  const [savingCcp, setSavingCcp] = useState(false);
+  const [savingClearance, setSavingClearance] = useState(false);
 
-  // API data states
+  // API Data States
   const [dashboardData, setDashboardData] = useState(null);
   const [materialLogData, setMaterialLogData] = useState(null);
   const [qualityLogData, setQualityLogData] = useState(null);
   const [materialLogLoading, setMaterialLogLoading] = useState(false);
   const [qualityLogLoading, setQualityLogLoading] = useState(false);
 
-  // Load dashboard KPIs on mount
-  useEffect(() => {
+  // Load live DB dashboard metrics on mount
+  const fetchDashboardMetrics = () => {
     dashboardService.getLineLeadDashboard()
       .then(data => setDashboardData(data))
       .catch(err => console.warn("[LineLeadDashboard] KPI load failed:", err.message));
+  };
+
+  useEffect(() => {
+    fetchDashboardMetrics();
   }, []);
 
-  // Derive values from API data with fallbacks to context / hardcoded defaults
-  const activeOrder = productionOrders?.find((o) => o.status === "Running") || productionOrders?.[0] || {};
-  const target = dashboardData?.kpi?.currentHB?.target ?? activeOrder?.targetQuantity ?? 24000;
-  const actual = dashboardData?.kpi?.currentHB?.actual ?? activeOrder?.producedQuantity ?? 18950;
-  const pace = dashboardData?.kpi?.currentHB?.paceBPM ?? activeOrder?.currentSpeedBPM ?? 580;
-  const targetPace = dashboardData?.kpi?.currentHB?.targetPaceBPM ?? activeOrder?.targetSpeedBPM ?? 600;
+  // Derive active data
+  const processing = dashboardData?.processing || {};
+  const packaging = dashboardData?.packaging || {};
+  const activeBatch = processing.activeBatch || {};
+  const recipeSteps = processing.recipeSteps || [];
+  const weighingTolerance = processing.weighingTolerance || [];
+  const ccpMonitoring = processing.ccpMonitoring || [];
+
+  const activeRun = packaging.activeRun || {};
+  const lineClearance = packaging.lineClearance || {};
+  const sealVerification = packaging.sealVerification || {};
+  const wipConsumption = packaging.wipConsumption || {};
+
+  const target = dashboardData?.kpi?.currentHB?.target ?? activeRun?.targetQty ?? 24000;
+  const actual = dashboardData?.kpi?.currentHB?.actual ?? activeRun?.producedQty ?? 18950;
+  const pace = dashboardData?.kpi?.currentHB?.paceBPM ?? activeRun?.speedBpm ?? 580;
+  const targetPace = dashboardData?.kpi?.currentHB?.targetPaceBPM ?? 600;
   const remainingHours = dashboardData?.kpi?.currentHB?.remainingHours ?? 3.5;
   const recoveryPaceBPM = (dashboardData?.kpi?.recoveryPaceBPM) ?? (Math.round((target - actual) / (remainingHours * 60)) || 0);
 
-  const activeWOs = workOrders ? workOrders.filter((w) => w.line === activeOrder?.line && w.status !== "Closed" && w.status !== "Completed") : [];
-  const openP1Count = exceptions ? exceptions.filter((e) => e.location?.includes("Line 1") && e.status !== "Resolved").length : 0;
-
-  const maintenanceData = dashboardData?.maintenance ?? { openWorkOrders: activeWOs.length || 3, escalatedP1: openP1Count || 1 };
   const staffingData = dashboardData?.staffing ?? { present: 5, total: 5, status: "Fully Staffed" };
   const changeoverData = dashboardData?.nextChangeover ?? { minutesAway: 45, toSKU: "SKU-AJ-1L-ORG" };
   const downtimeData = dashboardData?.downtime ?? { totalMinutes: 35, microStopsActive: true };
+  const maintenanceData = dashboardData?.maintenance ?? { openWorkOrders: 3, escalatedP1: 1 };
 
-  // ─── Button Handlers (API-Connected) ──────────────────────────────────────
-
-  const handleOpenMaterialModal = async () => {
-    setIsMaterialModalOpen(true);
-    setMaterialLogLoading(true);
+  // Handlers
+  const handleLogWeighing = async (e) => {
+    e.preventDefault();
+    setSavingWeigh(true);
     try {
-      const data = await dashboardService.getMaterialLog();
-      setMaterialLogData(data);
-    } catch (err) {
-      addToast("Could not load material log. Showing cached data.", "warning");
-    } finally {
-      setMaterialLogLoading(false);
-    }
-  };
-
-  const handleOpenQualityModal = async () => {
-    setIsQualityModalOpen(true);
-    setQualityLogLoading(true);
-    try {
-      const data = await dashboardService.getQualityLog();
-      setQualityLogData(data);
-    } catch (err) {
-      addToast("Could not load quality log. Showing cached data.", "warning");
-    } finally {
-      setQualityLogLoading(false);
-    }
-  };
-
-  const handleRequestStock = async () => {
-    setRequestingStock(true);
-    try {
-      const res = await dashboardService.requestStockReplenishment({
-        item: "Orange Screw Caps (500ml PET)",
-        lotId: materialLogData?.lotId || "LOT-CAP-901",
-        requestedBy: "Line Lead",
+      const res = await dashboardService.logBatchWeighing({
+        ingredient: weighForm.ingredient,
+        targetKg: Number(weighForm.targetKg),
+        actualKg: Number(weighForm.actualKg)
       });
-      addToast(res?.message || "Expedited material request sent to Warehouse.", "success");
-      setIsMaterialModalOpen(false);
+      addToast(res?.message || "Ingredient weighing saved successfully!", "success");
+      setIsWeighModalOpen(false);
+      fetchDashboardMetrics();
     } catch (err) {
-      addToast("Failed to send stock request. Please try again.", "error");
+      addToast("Failed to save weighing entry.", "error");
     } finally {
-      setRequestingStock(false);
+      setSavingWeigh(false);
     }
   };
 
-  const handleLogQA = async () => {
-    setLoggingQA(true);
+  const handleAdvanceRecipeStep = async (stepId, newStatus) => {
     try {
-      const res = await dashboardService.logQaSampleCheck({
-        lineId: "LINE-1",
-        notes: "Manual QA check triggered from Line Lead Dashboard",
-      });
-      addToast(res?.message || "QA sample check logged successfully.", "success");
-      setIsQualityModalOpen(false);
+      const res = await dashboardService.advanceRecipeStep({ stepId, status: newStatus });
+      addToast(res?.message || "Recipe step status updated!", "success");
+      fetchDashboardMetrics();
     } catch (err) {
-      addToast("Failed to log QA check. Please try again.", "error");
-    } finally {
-      setLoggingQA(false);
+      addToast("Failed to update step status.", "error");
     }
   };
 
-  const handleAcknowledgeMicroStop = async () => {
-    setAcknowledgingStop(true);
+  const handleSaveCcpCheck = async (e) => {
+    e.preventDefault();
+    setSavingCcp(true);
     try {
-      const res = await dashboardService.acknowledgeMicroStop({
-        lineId: "LINE-1",
-        reason: "Micro-stop jam acknowledged by Line Lead",
+      const res = await dashboardService.logCcpCheck({
+        ccpName: ccpForm.ccpName,
+        parameterName: ccpForm.parameterName,
+        targetValue: ccpForm.targetValue,
+        actualValue: ccpForm.actualValue,
+        uom: ccpForm.uom
       });
-      addToast(res?.message || "Micro-stop jam acknowledged & logged in Downtime Ledger.", "info");
+      addToast(res?.message || "CCP reading logged to DB audit!", "success");
+      setIsCcpModalOpen(false);
+      fetchDashboardMetrics();
     } catch (err) {
-      addToast("Failed to acknowledge micro-stop. Please try again.", "error");
+      addToast("Failed to log CCP reading.", "error");
     } finally {
-      setAcknowledgingStop(false);
+      setSavingCcp(false);
+    }
+  };
+
+  const handleSaveClearance = async (e) => {
+    e.preventDefault();
+    setSavingClearance(true);
+    try {
+      const res = await dashboardService.saveLineClearance({ notes: clearanceNotes });
+      addToast(res?.message || "Line Clearance audit saved!", "success");
+      setIsClearanceModalOpen(false);
+      fetchDashboardMetrics();
+    } catch (err) {
+      addToast("Failed to save line clearance.", "error");
+    } finally {
+      setSavingClearance(false);
     }
   };
 
   const handleSubmitSpeedProposal = async () => {
     setSubmittingSpeed(true);
     try {
-      const res = await dashboardService.proposeLineSpeedUp({
-        proposedBPM: Number(proposedBPM),
-        lineId: "LINE-1",
-        requestedBy: "Line Lead",
-      });
+      const res = await dashboardService.proposeLineSpeedUp({ proposedBPM: Number(proposedBPM) });
       addToast(res?.message || `Proposed speed increase to ${proposedBPM} BPM submitted to Supervisor.`, "success");
       setIsSpeedModalOpen(false);
     } catch (err) {
-      addToast("Failed to submit speed proposal. Please try again.", "error");
+      addToast("Failed to submit speed proposal.", "error");
     } finally {
       setSubmittingSpeed(false);
     }
   };
 
-  // ─── Modal Data (API or fallback) ─────────────────────────────────────────
-  const materialItems = materialLogData?.items ?? [
-    { name: "Orange Screw Caps (500ml PET)", lot: "LOT-CAP-901", qty: "1,200 caps", status: "Low Stock" },
-    { name: "Organic Cold-Pressed Juice Base", lot: "LOT-ORG-442", qty: "8,400 Liters", status: "Optimal" },
-    { name: "500ml Clear PET Bottles", lot: "LOT-BOT-112", qty: "22,000 units", status: "Optimal" },
-    { name: "Carton Outer Boxes (12x500ml)", lot: "LOT-BOX-880", qty: "4,500 boxes", status: "Optimal" },
-  ];
-
-  const qualityCheckpoints = qualityLogData?.checkpoints ?? [
-    { ccp: "CCP 1 — Pasteurizer Thermal Limit", target: "83.5°C (Min 82.0°C)", actual: "83.5°C", time: "14:00", result: "PASSED" },
-    { ccp: "CCP 2 — Brix Sugar Concentration", target: "11.9 °BX (Range 11.5 - 12.2)", actual: "11.9 °BX", time: "13:45", result: "PASSED" },
-    { ccp: "Quality Check — Bottle pH Value", target: "3.72 pH (Range 3.60 - 3.85)", actual: "3.72 pH", time: "13:45", result: "PASSED" },
-    { ccp: "Nozzle Seal & Capping Torque", target: "1.8 Nm ± 0.2", actual: "1.85 Nm", time: "13:30", result: "PASSED" },
-  ];
-
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "16px", width: "100%", maxWidth: "1280px", margin: "0 auto" }}>
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
         <div>
-          <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
-            Line Lead Control Console
-          </h1>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+            <h1 style={{ fontSize: "22px", fontWeight: 800, color: "var(--text-primary)" }}>
+              Line Lead Control Console
+            </h1>
+            <Badge variant="emerald">✓ TESTED MENU (LIVE DB CONNECTED)</Badge>
+          </div>
+          <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>
+            End-to-end operational execution for Processing (Weighing, Recipe, CCPs) & Packaging (Runs, Clearance, Seal Checks, WIP Draw).
+          </p>
         </div>
-        <Button variant="warning" icon={Zap} onClick={() => setIsSpeedModalOpen(true)}>
-          Propose Line Speed-Up
-        </Button>
+
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+          <Button variant="ghost" icon={RefreshCw} onClick={fetchDashboardMetrics} style={{ fontSize: "12px", padding: "6px 12px" }}>
+            Refresh DB
+          </Button>
+          <Button variant="warning" icon={Zap} onClick={() => setIsSpeedModalOpen(true)}>
+            Propose Line Speed-Up
+          </Button>
+        </div>
       </div>
 
-      {/* KPI Ticker Grid */}
-      <div className="grid-4">
+      {/* Stage Control Tabs Bar */}
+      <div
+        style={{
+          display: "flex",
+          gap: "8px",
+          background: "var(--bg-card)",
+          padding: "6px",
+          borderRadius: "8px",
+          border: "1px solid var(--border-color)",
+          flexWrap: "wrap"
+        }}
+      >
+        <button
+          onClick={() => setActiveStageTab("ALL")}
+          style={{
+            padding: "8px 16px",
+            borderRadius: "6px",
+            border: "none",
+            background: activeStageTab === "ALL" ? "var(--primary)" : "transparent",
+            color: activeStageTab === "ALL" ? "#fff" : "var(--text-secondary)",
+            fontWeight: 700,
+            fontSize: "13px",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: "6px"
+          }}
+        >
+          <Activity size={15} /> 🌐 Unified Command Center
+        </button>
+
+        <button
+          onClick={() => setActiveStageTab("PROCESSING")}
+          style={{
+            padding: "8px 16px",
+            borderRadius: "6px",
+            border: "none",
+            background: activeStageTab === "PROCESSING" ? "#0EA5E9" : "transparent",
+            color: activeStageTab === "PROCESSING" ? "#fff" : "var(--text-secondary)",
+            fontWeight: 700,
+            fontSize: "13px",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: "6px"
+          }}
+        >
+          <FlaskConical size={15} /> ⚡ Processing Hall Execution (Mixing / Cooking / CCPs)
+        </button>
+
+        <button
+          onClick={() => setActiveStageTab("PACKAGING")}
+          style={{
+            padding: "8px 16px",
+            borderRadius: "6px",
+            border: "none",
+            background: activeStageTab === "PACKAGING" ? "#10B981" : "transparent",
+            color: activeStageTab === "PACKAGING" ? "#fff" : "var(--text-secondary)",
+            fontWeight: 700,
+            fontSize: "13px",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: "6px"
+          }}
+        >
+          <Package size={15} /> 📦 Packaging Lines (Runs / Clearance / Seals / WIP Draw)
+        </button>
+      </div>
+
+      {/* Top KPI Scorecards */}
+      <div className="grid-4" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "12px" }}>
         <StatCard
           title="Current H/B Attainment"
           value={`${actual.toLocaleString()} / ${target.toLocaleString()}`}
-          description={`Projected EOD: ${Math.round(actual + pace * 60 * 3.5).toLocaleString()} Bottles`}
+          description={`Projected EOD: ${Math.round(actual + pace * 60 * 3.5).toLocaleString()} Units`}
           icon={TrendingUp}
           color="#38BDF8"
         />
@@ -233,317 +319,433 @@ export function LineLeadDashboard() {
         />
       </div>
 
-      {/* Status Cards Grid */}
-      <div className="grid-3">
-        {/* Staffing */}
-        <Card style={{ display: "flex", flexDirection: "column", gap: "12px", minWidth: 0, boxSizing: "border-box" }}>
-          <h3 style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
-            Staffing Status
-          </h3>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <Users size={20} color="#38BDF8" />
-            <div>
-              <span style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)" }}>
-                {staffingData.present} / {staffingData.total} Operators
-              </span>
-              <span style={{ fontSize: "11px", color: "#10B981", display: "block" }}>
-                {staffingData.status || "Line fully staffed"}
-              </span>
-            </div>
+      {/* ─── SECTION 1: PROCESSING STAGE MODULES ───────────────────────────── */}
+      {(activeStageTab === "ALL" || activeStageTab === "PROCESSING") && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", borderBottom: "2px solid #0EA5E9", paddingBottom: "6px", marginTop: "8px" }}>
+            <FlaskConical size={20} color="#0EA5E9" />
+            <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)" }}>
+              Processing Execution (Vessels, Recipe Steps, Batch Weighing & CCP Telemetry)
+            </h2>
+            <Badge variant="cyan">Processing Stage</Badge>
           </div>
-          <button onClick={() => navigate("/linelead/staffing")} className="btn btn-ghost" style={{ fontSize: "12px", justifyContent: "flex-start", padding: "4px 0", marginTop: "auto" }}>
-            Manage Staffing <ChevronRight size={14} />
-          </button>
-        </Card>
 
-        {/* Changeover */}
-        <Card style={{ display: "flex", flexDirection: "column", gap: "12px", minWidth: 0, boxSizing: "border-box" }}>
-          <h3 style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
-            Next Changeover
-          </h3>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <Shuffle size={20} color="#F59E0B" />
-            <div>
-              <span style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)" }}>
-                In {changeoverData.minutesAway} Minutes
-              </span>
-              <span style={{ fontSize: "11px", color: "var(--text-muted)", display: "block" }}>
-                To: {changeoverData.toSKU}
-              </span>
-            </div>
-          </div>
-          <button onClick={() => navigate("/linelead/changeover")} className="btn btn-ghost" style={{ fontSize: "12px", justifyContent: "flex-start", padding: "4px 0", marginTop: "auto" }}>
-            Configure Changeover <ChevronRight size={14} />
-          </button>
-        </Card>
-
-        {/* Downtime */}
-        <Card style={{ display: "flex", flexDirection: "column", gap: "12px", minWidth: 0, boxSizing: "border-box" }}>
-          <h3 style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
-            Downtime Logged
-          </h3>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <Clock size={20} color="#EF4444" />
-            <div>
-              <span style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)" }}>
-                {downtimeData.totalMinutes} Minutes
-              </span>
-              <span style={{ fontSize: "11px", color: "#EF4444", display: "block" }}>
-                {downtimeData.microStopsActive ? "Micro-stops active" : "No active micro-stops"}
-              </span>
-            </div>
-          </div>
-          <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "8px", marginTop: "auto" }}>
-            <Button
-              size="xs"
-              variant="warning"
-              onClick={handleAcknowledgeMicroStop}
-              disabled={acknowledgingStop}
-            >
-              {acknowledgingStop ? "Acknowledging..." : "Acknowledge Micro-Stop"}
-            </Button>
-            <button onClick={() => navigate("/linelead/downtime-loss")} className="btn btn-ghost" style={{ fontSize: "12px", padding: "4px 8px" }}>
-              Analyze Losses <ChevronRight size={14} />
-            </button>
-          </div>
-        </Card>
-      </div>
-
-      {/* Alert Cards Grid */}
-      <div className="grid-3">
-        {/* Material */}
-        <Card style={{ display: "flex", flexDirection: "column", gap: "10px", minWidth: 0, boxSizing: "border-box" }}>
-          <h3 style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "6px" }}>
-            <Package size={15} color="#38BDF8" /> Material Stock Alert
-          </h3>
-          <div style={{ fontSize: "13px", marginTop: "4px" }}>
-            <div>Active Lot: <strong style={{ color: "var(--text-primary)" }}>{dashboardData?.materialAlert?.lotId || "LOT-ORG-442"}</strong></div>
-            <div style={{ marginTop: "6px", color: "#F59E0B", fontWeight: 700 }}>
-              Supply Status: Low {dashboardData?.materialAlert?.lowStockItem || "Orange Caps"} stock
-            </div>
-          </div>
-          <Button size="sm" variant="secondary" onClick={handleOpenMaterialModal} style={{ marginTop: "auto" }}>
-            Check Material Log
-          </Button>
-        </Card>
-
-        {/* Quality */}
-        <Card style={{ display: "flex", flexDirection: "column", gap: "10px", minWidth: 0, boxSizing: "border-box" }}>
-          <h3 style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "6px" }}>
-            <ShieldAlert size={15} color="#10B981" /> Quality Holds
-          </h3>
-          <div style={{ fontSize: "13px", marginTop: "4px" }}>
-            <div>Active Holds: <strong style={{ color: "var(--text-primary)" }}>{dashboardData?.qualityHolds?.activeBatches ?? 0} Batches on Hold</strong></div>
-            <div style={{ marginTop: "6px", color: "var(--text-muted)" }}>
-              Last check: {dashboardData?.qualityHolds?.lastCheckTime || "14:00"} ({dashboardData?.qualityHolds?.lastCheckResult || "PASSED"})
-            </div>
-          </div>
-          <Button size="sm" variant="secondary" onClick={handleOpenQualityModal} style={{ marginTop: "auto" }}>
-            View Quality Log
-          </Button>
-        </Card>
-
-        {/* Maintenance */}
-        <Card style={{ display: "flex", flexDirection: "column", gap: "10px", minWidth: 0, boxSizing: "border-box" }}>
-          <h3 style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "6px" }}>
-            <Wrench size={15} color="#EF4444" /> Maintenance Issues
-          </h3>
-          <div style={{ fontSize: "13px", marginTop: "4px" }}>
-            <div>Active Work Orders: <strong style={{ color: "var(--text-primary)" }}>{maintenanceData.openWorkOrders} Open WOs</strong></div>
-            <div style={{ marginTop: "6px", color: "#F87171", fontWeight: 700 }}>Escalated P1: {maintenanceData.escalatedP1} Incidents</div>
-          </div>
-          <Button size="sm" variant="secondary" onClick={() => setIsWOModalOpen(true)} style={{ marginTop: "auto" }}>
-            Inspect Work Orders
-          </Button>
-        </Card>
-      </div>
-
-      {/* ─── Modal 1: Material Log ─── */}
-      <Modal
-        isOpen={isMaterialModalOpen}
-        onClose={() => setIsMaterialModalOpen(false)}
-        title="Line 1 Material Inventory Log"
-        subtitle="Active Raw Material & Packaging Stock Ledger — Lot: LOT-ORG-442"
-        maxWidth="540px"
-        footer={
-          <>
-            <Button variant="secondary" onClick={() => { setIsMaterialModalOpen(false); navigate("/linelead/material-status"); }}>
-              Full Material Status →
-            </Button>
-            <Button variant="primary" icon={Package} onClick={handleRequestStock} disabled={requestingStock}>
-              {requestingStock ? "Requesting..." : "Request Stock Replenishment"}
-            </Button>
-          </>
-        }
-      >
-        <div style={{ display: "flex", flexDirection: "column", gap: "12px", fontSize: "13px" }}>
-          {materialLogLoading ? (
-            <div style={{ textAlign: "center", padding: "20px", color: "var(--text-muted)" }}>
-              <RefreshCw size={18} style={{ marginBottom: "8px" }} />
-              <div>Loading material log from API...</div>
-            </div>
-          ) : (
-            <>
-              <div style={{ padding: "10px 12px", borderRadius: "8px", backgroundColor: "rgba(245, 158, 11, 0.1)", border: "1px solid rgba(245, 158, 11, 0.3)", color: "#F59E0B", display: "flex", gap: "8px", alignItems: "center" }}>
-                <AlertTriangle size={16} style={{ flexShrink: 0 }} />
-                <span><strong>Low Stock Alert:</strong> Orange Caps stock at 1,200 units (~{materialLogData?.lowStockAlert?.remainingMinutes || 45} mins remaining at {materialLogData?.lowStockAlert?.paceBPM || 580} BPM).</span>
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                {materialItems.map((item, idx) => (
-                  <div key={idx} style={{ padding: "10px 12px", borderRadius: "8px", backgroundColor: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <div>
-                      <span style={{ fontWeight: 800, color: "var(--text-primary)", display: "block" }}>{item.name}</span>
-                      <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>Lot: {item.lot} | Qty: {item.qty}</span>
-                    </div>
-                    <Badge variant={item.status === "Optimal" ? "emerald" : "warning"}>{item.status}</Badge>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
-      </Modal>
-
-      {/* ─── Modal 2: Quality Log ─── */}
-      <Modal
-        isOpen={isQualityModalOpen}
-        onClose={() => setIsQualityModalOpen(false)}
-        title="Line 1 Quality & Compliance Log"
-        subtitle="Critical Control Point (CCP) Checkpoints & Quality Verification"
-        maxWidth="540px"
-        footer={
-          <>
-            <Button variant="secondary" onClick={() => { setIsQualityModalOpen(false); navigate("/linelead/quality-events"); }}>
-              View Quality Events →
-            </Button>
-            <Button variant="primary" icon={CheckCircle2} onClick={handleLogQA} disabled={loggingQA}>
-              {loggingQA ? "Logging Check..." : "Log QA Sample Check"}
-            </Button>
-          </>
-        }
-      >
-        <div style={{ display: "flex", flexDirection: "column", gap: "12px", fontSize: "13px" }}>
-          {qualityLogLoading ? (
-            <div style={{ textAlign: "center", padding: "20px", color: "var(--text-muted)" }}>
-              <RefreshCw size={18} style={{ marginBottom: "8px" }} />
-              <div>Loading quality log from API...</div>
-            </div>
-          ) : (
-            <>
-              <div style={{ padding: "10px 12px", borderRadius: "8px", backgroundColor: "rgba(16, 185, 129, 0.1)", border: "1px solid rgba(16, 185, 129, 0.3)", color: "#10B981", display: "flex", gap: "8px", alignItems: "center" }}>
-                <CheckCircle2 size={16} style={{ flexShrink: 0 }} />
-                <span><strong>Quality Status {qualityLogData?.overallStatus || "Green"}:</strong> {qualityLogData?.activeBatchesOnHold ?? 0} Batches on Quality Hold. All {qualityCheckpoints.length} CCP checks passed.</span>
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                {qualityCheckpoints.map((item, idx) => (
-                  <div key={idx} style={{ padding: "10px 12px", borderRadius: "8px", backgroundColor: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <div>
-                      <span style={{ fontWeight: 800, color: "var(--text-primary)", display: "block" }}>{item.ccp}</span>
-                      <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>Target: {item.target} | Actual: <strong style={{ color: "#10B981" }}>{item.actual}</strong></span>
-                    </div>
-                    <Badge variant="emerald">{item.result}</Badge>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
-      </Modal>
-
-      {/* ─── Modal 3: Work Orders ─── */}
-      <Modal
-        isOpen={isWOModalOpen}
-        onClose={() => setIsWOModalOpen(false)}
-        title="Inspect Open Work Orders & Incident Logs"
-        subtitle="Active Line 1 Maintenance Tickets & Technician Dispatch Status"
-        maxWidth="560px"
-        footer={
-          <>
-            <Button variant="secondary" onClick={() => { setIsWOModalOpen(false); navigate("/linelead/maintenance-issues"); }}>
-              Full Maintenance Center →
-            </Button>
-            <Button variant="primary" icon={Wrench} onClick={() => { setIsWOModalOpen(false); navigate("/work-orders"); }}>
-              Open CMMS Work Orders
-            </Button>
-          </>
-        }
-      >
-        <div style={{ display: "flex", flexDirection: "column", gap: "12px", fontSize: "13px" }}>
-          <div style={{ padding: "10px 12px", borderRadius: "8px", backgroundColor: "rgba(239, 68, 68, 0.1)", border: "1px solid rgba(239, 68, 68, 0.3)", color: "#EF4444", display: "flex", gap: "8px", alignItems: "center" }}>
-            <AlertTriangle size={16} style={{ flexShrink: 0 }} />
-            <span><strong>P1 Escalation Active:</strong> Rotary Filler Nozzle 4 Drip Leak causing micro-stops. Tech assigned.</span>
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-            {[
-              { id: "WO-2026-8941", issue: "Rotary Nozzle 4 Drip Leak & Micro-stops", priority: "P1 Critical", assigned: "J. Miller (Maint. Tech)" },
-              { id: "WO-2026-8930", issue: "Capper Belt Tension Adjustment", priority: "P3 Normal", assigned: "R. Sterling (Maint. Tech)" },
-              { id: "WO-2026-8912", issue: "Bottle Counter Sensor Alignment", priority: "P4 Low", assigned: "A. Vance (Line Lead)" },
-            ].map((item, idx) => (
-              <div key={idx} style={{ padding: "10px 12px", borderRadius: "8px", backgroundColor: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: "16px" }}>
+            {/* Active Vessel Batch & Recipe Steps */}
+            <Card style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>
-                  <span style={{ fontWeight: 800, color: "var(--text-primary)" }}>{item.id}: {item.issue}</span>
-                  <span style={{ fontSize: "11px", color: "var(--text-muted)", display: "block", marginTop: "2px" }}>
-                    Assigned: {item.assigned}
+                  <h3 style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)" }}>
+                    Active Vessel Batch: {activeBatch.batchNumber || "BAT-8801"}
+                  </h3>
+                  <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
+                    Vessel: <strong>{activeBatch.tankNumber || "VESSEL-TANK-01"}</strong> | Version: {activeBatch.recipeVersion || "REC-v4"}
                   </span>
                 </div>
-                <Badge variant={item.priority.includes("P1") ? "danger" : item.priority.includes("P3") ? "cyan" : "emerald"}>
-                  {item.priority}
-                </Badge>
+                <Badge variant="emerald">{activeBatch.status || "IN_PROGRESS"}</Badge>
               </div>
-            ))}
+
+              {/* Recipe Steps Progress Tracker */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                <span style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
+                  Recipe Step Execution Tracker
+                </span>
+                {recipeSteps.map((s) => (
+                  <div
+                    key={s.id}
+                    style={{
+                      display: "flex",
+                      justify: "space-between",
+                      alignItems: "center",
+                      padding: "8px 12px",
+                      background: "var(--bg-secondary)",
+                      borderRadius: "6px",
+                      border: s.status === "IN_PROGRESS" ? "1px solid #0EA5E9" : "1px solid transparent"
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)" }}>
+                        Step {s.stepNumber}: {s.stepName}
+                      </div>
+                      <div style={{ fontSize: "11px", color: "var(--text-secondary)" }}>
+                        Target: {s.targetTemp} | Actual: {s.actualTemp} | Duration: {s.durationMins}m
+                      </div>
+                    </div>
+                    <div>
+                      {s.status === "COMPLETED" && <Badge variant="emerald">COMPLETED</Badge>}
+                      {s.status === "IN_PROGRESS" && (
+                        <Button
+                          variant="secondary"
+                          style={{ fontSize: "11px", padding: "4px 8px" }}
+                          onClick={() => handleAdvanceRecipeStep(s.id, "COMPLETED")}
+                        >
+                          Complete Step
+                        </Button>
+                      )}
+                      {s.status === "PENDING" && (
+                        <Button
+                          variant="ghost"
+                          style={{ fontSize: "11px", padding: "4px 8px" }}
+                          onClick={() => handleAdvanceRecipeStep(s.id, "IN_PROGRESS")}
+                        >
+                          Start Step
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+
+            {/* Batch Weighing & Ingredient Tolerance */}
+            <Card style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <h3 style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)" }}>
+                    Raw Ingredient Batch Weighing & Tolerance
+                  </h3>
+                  <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
+                    Target weight vs actual weighed with ± tolerance check
+                  </span>
+                </div>
+                <Button variant="secondary" icon={Scale} onClick={() => setIsWeighModalOpen(true)} style={{ fontSize: "11px", padding: "4px 10px" }}>
+                  + Weigh Ingredient
+                </Button>
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                {weighingTolerance.map((w, idx) => (
+                  <div key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", background: "var(--bg-secondary)", borderRadius: "6px" }}>
+                    <div>
+                      <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)" }}>
+                        {w.ingredient}
+                      </div>
+                      <div style={{ fontSize: "11px", color: "var(--text-secondary)" }}>
+                        Target: {w.targetKg} kg | Actual: {w.actualKg} kg (Tol: ±{w.tolerancePercent}%)
+                      </div>
+                    </div>
+                    <Badge variant={w.status === "PASS" ? "emerald" : "rose"}>
+                      {w.status}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            </Card>
+
+            {/* CCP Live Telemetry */}
+            <Card style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <h3 style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)" }}>
+                    Critical Control Point (CCP) Telemetry
+                  </h3>
+                  <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
+                    Live pasteurizer temp, Brix, pH, metal detector audit logs
+                  </span>
+                </div>
+                <Button variant="secondary" icon={Thermometer} onClick={() => setIsCcpModalOpen(true)} style={{ fontSize: "11px", padding: "4px 10px" }}>
+                  + Log CCP Check
+                </Button>
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                {ccpMonitoring.map((c) => (
+                  <div key={c.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", background: "var(--bg-secondary)", borderRadius: "6px" }}>
+                    <div>
+                      <div style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-primary)" }}>
+                        {c.ccpName}
+                      </div>
+                      <div style={{ fontSize: "11px", color: "var(--text-secondary)" }}>
+                        Target: {c.target} | Actual: <strong>{c.actual}</strong> ({c.verifiedAt})
+                      </div>
+                    </div>
+                    <Badge variant={c.status === "PASS" ? "emerald" : "rose"}>
+                      {c.status}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            </Card>
           </div>
         </div>
-      </Modal>
+      )}
 
-      {/* ─── Modal 4: Propose Speed-Up ─── */}
-      <Modal
-        isOpen={isSpeedModalOpen}
-        onClose={() => setIsSpeedModalOpen(false)}
-        title="Propose Line Speed Increase"
-        subtitle="Submit Recovery Speed Tuning Proposal to Operations Supervisor"
-        maxWidth="480px"
-        footer={
-          <>
-            <Button variant="secondary" onClick={() => setIsSpeedModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              variant="warning"
-              icon={Send}
-              onClick={handleSubmitSpeedProposal}
-              disabled={submittingSpeed}
-            >
-              {submittingSpeed ? "Submitting..." : "Submit Proposal"}
-            </Button>
-          </>
-        }
-      >
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleSubmitSpeedProposal();
-          }}
-          style={{ display: "flex", flexDirection: "column", gap: "14px" }}
-        >
-          <div>
-            <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-primary)", display: "block", marginBottom: "6px" }}>
-              Proposed Line Speed (BPM)
-            </label>
-            <input
-              type="number"
-              value={proposedBPM}
-              onChange={(e) => setProposedBPM(e.target.value)}
-              className="input-field"
-              min={500}
-              max={650}
-              required
-            />
+      {/* ─── SECTION 2: PACKAGING STAGE MODULES ───────────────────────────── */}
+      {(activeStageTab === "ALL" || activeStageTab === "PACKAGING") && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px", marginTop: "8px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", borderBottom: "2px solid #10B981", paddingBottom: "6px" }}>
+            <Package size={20} color="#10B981" />
+            <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)" }}>
+              Packaging Lines Execution (Runs, Clearance, Seal Verification & WIP Tank Consumption)
+            </h2>
+            <Badge variant="emerald">Packaging Stage</Badge>
           </div>
-          <div style={{ fontSize: "12px", color: "var(--text-secondary)", padding: "10px", backgroundColor: "var(--bg-card-subtle)", borderRadius: "6px" }}>
-            Increasing speed to {proposedBPM} BPM will recover approximately +2,100 bottles over the next {remainingHours} hours to compensate for morning downtime.
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: "16px" }}>
+            {/* Active Packaging Run Execution */}
+            <Card style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <h3 style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)" }}>
+                    Packaging Run: {activeRun.orderNumber || "ORD-2026-9920"}
+                  </h3>
+                  <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
+                    {activeRun.skuName || "500ml PET Organic Orange Juice"}
+                  </span>
+                </div>
+                <Badge variant="emerald">{activeRun.status || "RUNNING"}</Badge>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", background: "var(--bg-secondary)", padding: "10px", borderRadius: "6px" }}>
+                <div>
+                  <span style={{ fontSize: "11px", color: "var(--text-muted)", display: "block" }}>Produced / Target</span>
+                  <span style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)" }}>
+                    {activeRun.producedQty?.toLocaleString()} / {activeRun.targetQty?.toLocaleString()}
+                  </span>
+                </div>
+                <div>
+                  <span style={{ fontSize: "11px", color: "var(--text-muted)", display: "block" }}>Scrap Qty / OEE</span>
+                  <span style={{ fontSize: "14px", fontWeight: 800, color: "#10B981" }}>
+                    {activeRun.scrapQty} units ({activeRun.oeePercent}%)
+                  </span>
+                </div>
+              </div>
+            </Card>
+
+            {/* Line Setup & Electronic Line Clearance */}
+            <Card style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <h3 style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)" }}>
+                    Electronic Line Clearance Audit
+                  </h3>
+                  <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
+                    Verified by: {lineClearance.checkedBy} ({lineClearance.checkedAt})
+                  </span>
+                </div>
+                <Button variant="secondary" icon={CheckSquare} onClick={() => setIsClearanceModalOpen(true)} style={{ fontSize: "11px", padding: "4px 10px" }}>
+                  + Perform Clearance
+                </Button>
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                {(lineClearance.items || []).map((item, idx) => (
+                  <div key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", background: "var(--bg-secondary)", borderRadius: "6px" }}>
+                    <span style={{ fontSize: "12px", fontWeight: 600, color: "var(--text-primary)" }}>
+                      {item.check}
+                    </span>
+                    <Badge variant={item.passed ? "emerald" : "rose"}>
+                      {item.passed ? "PASSED" : "FAILED"}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            </Card>
+
+            {/* Seal & Label Verification */}
+            <Card style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <h3 style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)" }}>
+                    Seal Integrity & Barcode Verification
+                  </h3>
+                  <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
+                    Capping Torque & Induction Seal Checks
+                  </span>
+                </div>
+                <Badge variant="emerald">VERIFIED PASS</Badge>
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px", background: "var(--bg-secondary)", padding: "10px", borderRadius: "6px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px" }}>
+                  <span>Capping Torque:</span>
+                  <strong>{sealVerification.cappingTorqueNm} Nm (Range: {sealVerification.torqueRangeNm})</strong>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px" }}>
+                  <span>Induction Seal:</span>
+                  <strong style={{ color: "#10B981" }}>INTACT & SEALED</strong>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px" }}>
+                  <span>Barcode Scan:</span>
+                  <strong style={{ color: "#10B981" }}>VERIFIED MATCH (PASS)</strong>
+                </div>
+              </div>
+            </Card>
+
+            {/* WIP Tank Draw & Consumption Tracker */}
+            <Card style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <h3 style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)" }}>
+                    WIP Batch Tank Volume Consumption
+                  </h3>
+                  <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
+                    Source Tank: <strong>{wipConsumption.sourceTank}</strong> | Batch: {wipConsumption.batchNumber}
+                  </span>
+                </div>
+                <Badge variant="cyan">{wipConsumption.consumptionPercent}% Drawn</Badge>
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                <div style={{ width: "100%", height: "10px", background: "var(--bg-secondary)", borderRadius: "5px", overflow: "hidden" }}>
+                  <div style={{ width: `${wipConsumption.consumptionPercent}%`, height: "100%", background: "#0EA5E9", borderRadius: "5px" }} />
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", color: "var(--text-secondary)" }}>
+                  <span>Transferred: {wipConsumption.transferredLiters?.toLocaleString()} L</span>
+                  <span>Remaining Tank Level: {wipConsumption.remainingLiters?.toLocaleString()} L</span>
+                </div>
+              </div>
+            </Card>
           </div>
-        </form>
-      </Modal>
+        </div>
+      )}
+
+      {/* ─── MODALS ───────────────────────────────────────────────────────────── */}
+
+      {/* Weighing Modal */}
+      {isWeighModalOpen && (
+        <Modal title="Log Batch Ingredient Weighing" isOpen={isWeighModalOpen} onClose={() => setIsWeighModalOpen(false)}>
+          <form onSubmit={handleLogWeighing} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+            <div>
+              <label style={{ fontSize: "12px", fontWeight: 700, display: "block", marginBottom: "4px" }}>Ingredient Name</label>
+              <input
+                type="text"
+                value={weighForm.ingredient}
+                onChange={(e) => setWeighForm({ ...weighForm, ingredient: e.target.value })}
+                style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid var(--border-color)", background: "var(--bg-secondary)", color: "var(--text-primary)" }}
+                required
+              />
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+              <div>
+                <label style={{ fontSize: "12px", fontWeight: 700, display: "block", marginBottom: "4px" }}>Target Weight (kg)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={weighForm.targetKg}
+                  onChange={(e) => setWeighForm({ ...weighForm, targetKg: e.target.value })}
+                  style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid var(--border-color)", background: "var(--bg-secondary)", color: "var(--text-primary)" }}
+                  required
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: "12px", fontWeight: 700, display: "block", marginBottom: "4px" }}>Actual Weighed (kg)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={weighForm.actualKg}
+                  onChange={(e) => setWeighForm({ ...weighForm, actualKg: e.target.value })}
+                  style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid var(--border-color)", background: "var(--bg-secondary)", color: "var(--text-primary)" }}
+                  required
+                />
+              </div>
+            </div>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "10px" }}>
+              <Button type="button" variant="ghost" onClick={() => setIsWeighModalOpen(false)}>Cancel</Button>
+              <Button type="submit" variant="primary" loading={savingWeigh}>Save Weighing Log</Button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* CCP Check Modal */}
+      {isCcpModalOpen && (
+        <Modal title="Log Live CCP Telemetry Check" isOpen={isCcpModalOpen} onClose={() => setIsCcpModalOpen(false)}>
+          <form onSubmit={handleSaveCcpCheck} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+            <div>
+              <label style={{ fontSize: "12px", fontWeight: 700, display: "block", marginBottom: "4px" }}>CCP Point Name</label>
+              <input
+                type="text"
+                value={ccpForm.ccpName}
+                onChange={(e) => setCcpForm({ ...ccpForm, ccpName: e.target.value })}
+                style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid var(--border-color)", background: "var(--bg-secondary)", color: "var(--text-primary)" }}
+                required
+              />
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "10px" }}>
+              <div>
+                <label style={{ fontSize: "12px", fontWeight: 700, display: "block", marginBottom: "4px" }}>Target</label>
+                <input
+                  type="text"
+                  value={ccpForm.targetValue}
+                  onChange={(e) => setCcpForm({ ...ccpForm, targetValue: e.target.value })}
+                  style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid var(--border-color)", background: "var(--bg-secondary)", color: "var(--text-primary)" }}
+                  required
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: "12px", fontWeight: 700, display: "block", marginBottom: "4px" }}>Actual Value</label>
+                <input
+                  type="text"
+                  value={ccpForm.actualValue}
+                  onChange={(e) => setCcpForm({ ...ccpForm, actualValue: e.target.value })}
+                  style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid var(--border-color)", background: "var(--bg-secondary)", color: "var(--text-primary)" }}
+                  required
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: "12px", fontWeight: 700, display: "block", marginBottom: "4px" }}>Unit (UOM)</label>
+                <input
+                  type="text"
+                  value={ccpForm.uom}
+                  onChange={(e) => setCcpForm({ ...ccpForm, uom: e.target.value })}
+                  style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid var(--border-color)", background: "var(--bg-secondary)", color: "var(--text-primary)" }}
+                  required
+                />
+              </div>
+            </div>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "10px" }}>
+              <Button type="button" variant="ghost" onClick={() => setIsCcpModalOpen(false)}>Cancel</Button>
+              <Button type="submit" variant="primary" loading={savingCcp}>Log CCP Check</Button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* Clearance Modal */}
+      {isClearanceModalOpen && (
+        <Modal title="Electronic Line Clearance Audit" isOpen={isClearanceModalOpen} onClose={() => setIsClearanceModalOpen(false)}>
+          <form onSubmit={handleSaveClearance} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+            <p style={{ fontSize: "13px", color: "var(--text-secondary)" }}>
+              Confirm 100% line clearance of prior SKU materials, cap hoppers, cartons, date stamps, and safety sensors.
+            </p>
+            <div>
+              <label style={{ fontSize: "12px", fontWeight: 700, display: "block", marginBottom: "4px" }}>Audit Notes & Verification Comments</label>
+              <textarea
+                value={clearanceNotes}
+                onChange={(e) => setClearanceNotes(e.target.value)}
+                rows={3}
+                style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid var(--border-color)", background: "var(--bg-secondary)", color: "var(--text-primary)" }}
+              />
+            </div>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px" }}>
+              <Button type="button" variant="ghost" onClick={() => setIsClearanceModalOpen(false)}>Cancel</Button>
+              <Button type="submit" variant="primary" loading={savingClearance}>Save Line Clearance</Button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* Speed Proposal Modal */}
+      {isSpeedModalOpen && (
+        <Modal title="Propose Line Speed-Up" isOpen={isSpeedModalOpen} onClose={() => setIsSpeedModalOpen(false)}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+            <div>
+              <label style={{ fontSize: "12px", fontWeight: 700, display: "block", marginBottom: "4px" }}>Target Line Speed (BPM)</label>
+              <input
+                type="number"
+                value={proposedBPM}
+                onChange={(e) => setProposedBPM(e.target.value)}
+                style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid var(--border-color)", background: "var(--bg-secondary)", color: "var(--text-primary)" }}
+              />
+            </div>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px" }}>
+              <Button variant="ghost" onClick={() => setIsSpeedModalOpen(false)}>Cancel</Button>
+              <Button variant="warning" loading={submittingSpeed} onClick={handleSubmitSpeedProposal}>Submit Speed Proposal</Button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

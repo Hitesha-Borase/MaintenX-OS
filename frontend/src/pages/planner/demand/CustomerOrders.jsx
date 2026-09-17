@@ -47,17 +47,30 @@ export function CustomerOrders() {
   const [editingOrder, setEditingOrder] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const availableSkus = useMemo(() => {
-    const fg = skus.filter((s) => s.category === "Finished Goods");
-    return fg.length > 0 ? fg : skus;
-  }, [skus]);
+  const FALLBACK_SKUS = useMemo(() => [
+    { skuId: "SKU-5001", skuCode: "SKU-5001", name: "500ml Sparkling Citrus Soda", uom: "Bottles", category: "Finished Goods" },
+    { skuId: "SKU-5002", skuCode: "SKU-5002", name: "1.5L Mineral Spring Water", uom: "Bottles", category: "Finished Goods" },
+    { skuId: "SKU-1001", skuCode: "SKU-1001", name: "1L Organic Valencia Orange Juice", uom: "Cartons", category: "Finished Goods" },
+    { skuId: "PKG-CAN-330", skuCode: "PKG-CAN-330", name: "330ml Aluminum Cans - Cola", uom: "Cans", category: "Finished Goods" }
+  ], []);
 
-  const defaultSku = availableSkus[0] || {
-    skuId: "SKU-001",
-    skuCode: "SKU-5001",
-    name: "500ml Sparkling Citrus Soda",
-    uom: "Bottles"
-  };
+  const FALLBACK_PLANTS = useMemo(() => [
+    { id: "PLT-01", name: "Pune Blending & Packaging Plant" },
+    { id: "PLT-02", name: "Mumbai Bottling & Distribution Facility" }
+  ], []);
+
+  const availableSkus = useMemo(() => {
+    if (!skus || skus.length === 0) return FALLBACK_SKUS;
+    const fg = skus.filter((s) => s.category === "Finished Goods" || s.category === "FINISHED_GOODS" || s.category === "FINISHED");
+    return fg.length > 0 ? fg : skus;
+  }, [skus, FALLBACK_SKUS]);
+
+  const availablePlants = useMemo(() => {
+    if (!plants || plants.length === 0) return FALLBACK_PLANTS;
+    return plants;
+  }, [plants, FALLBACK_PLANTS]);
+
+  const defaultSku = availableSkus[0] || FALLBACK_SKUS[0];
 
   // New Demand Form State
   const [newOrder, setNewOrder] = useState({
@@ -91,9 +104,7 @@ export function CustomerOrders() {
 
   // Synchronize when context updates
   useEffect(() => {
-    if (contextDemandOrders.length > 0) {
-      setOrders(contextDemandOrders);
-    }
+    setOrders(contextDemandOrders);
   }, [contextDemandOrders]);
 
   // Dynamically resolve SKU details for Add Modal
@@ -633,11 +644,23 @@ export function CustomerOrders() {
                   value={newOrder.skuId}
                   onChange={(e) => setNewOrder({ ...newOrder, skuId: e.target.value })}
                   className="form-input"
-                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #D1C7BA", outline: "none", backgroundColor: "#FAF8F5" }}
+                  style={{
+                    width: "100%",
+                    padding: "8px 12px",
+                    borderRadius: "8px",
+                    border: "1px solid #D1C7BA",
+                    outline: "none",
+                    backgroundColor: "#FFFFFF",
+                    color: "#1E293B",
+                    fontSize: "13px",
+                    fontWeight: 600,
+                    minHeight: "38px",
+                    cursor: "pointer"
+                  }}
                 >
                   {availableSkus.map((s) => (
                     <option key={s.skuId || s.id} value={s.skuId || s.id}>
-                      {s.skuCode} — {s.name} ({s.uom})
+                      {s.skuCode || s.skuId} — {s.name || s.productName} ({s.uom || "Units"})
                     </option>
                   ))}
                 </select>
@@ -723,9 +746,21 @@ export function CustomerOrders() {
                     value={newOrder.plantId}
                     onChange={(e) => setNewOrder({ ...newOrder, plantId: e.target.value })}
                     className="form-input"
-                    style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #D1C7BA", outline: "none", backgroundColor: "#FAF8F5" }}
+                    style={{
+                      width: "100%",
+                      padding: "8px 12px",
+                      borderRadius: "8px",
+                      border: "1px solid #D1C7BA",
+                      outline: "none",
+                      backgroundColor: "#FFFFFF",
+                      color: "#1E293B",
+                      fontSize: "13px",
+                      fontWeight: 600,
+                      minHeight: "38px",
+                      cursor: "pointer"
+                    }}
                   >
-                    {plants.map((p) => (
+                    {availablePlants.map((p) => (
                       <option key={p.id} value={p.id}>{p.name}</option>
                     ))}
                   </select>
@@ -825,11 +860,23 @@ export function CustomerOrders() {
                   value={editingOrder.skuId}
                   onChange={(e) => setEditingOrder({ ...editingOrder, skuId: e.target.value })}
                   className="form-input"
-                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #D1C7BA", outline: "none", backgroundColor: "#FAF8F5" }}
+                  style={{
+                    width: "100%",
+                    padding: "8px 12px",
+                    borderRadius: "8px",
+                    border: "1px solid #D1C7BA",
+                    outline: "none",
+                    backgroundColor: "#FFFFFF",
+                    color: "#1E293B",
+                    fontSize: "13px",
+                    fontWeight: 600,
+                    minHeight: "38px",
+                    cursor: "pointer"
+                  }}
                 >
                   {availableSkus.map((s) => (
                     <option key={s.skuId || s.id} value={s.skuId || s.id}>
-                      {s.skuCode} — {s.name} ({s.uom})
+                      {s.skuCode || s.skuId} — {s.name || s.productName} ({s.uom || "Units"})
                     </option>
                   ))}
                 </select>

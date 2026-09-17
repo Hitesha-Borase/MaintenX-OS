@@ -46,11 +46,19 @@ export function APSScheduler() {
   const [splitCount, setSplitCount] = useState(2);
   const [viewDetailItem, setViewDetailItem] = useState(null);
 
-  const [newLineId, setNewLineId] = useState(lines[0]?.lineId || "LIN-01");
-  const [newStartTime, setNewStartTime] = useState(new Date().toISOString().substring(0, 16).replace("T", " "));
-
   const availableSkus = useMemo(() => {
-    const fg = skus.filter((s) => s.category === "Finished Goods");
+    if (!skus || skus.length === 0) {
+      return [
+        { skuId: "SKU-001", skuCode: "SKU-5001", name: "500ml Sparkling Citrus Soda", uom: "Bottles" },
+        { skuId: "SKU-002", skuCode: "SKU-5002", name: "330ml Organic Lemonade", uom: "Bottles" },
+        { skuId: "SKU-003", skuCode: "SKU-5003", name: "1L Mango Passion Nectar", uom: "Bottles" },
+        { skuId: "SKU-004", skuCode: "SKU-5004", name: "250ml Energy Drink", uom: "Cans" }
+      ];
+    }
+    const fg = skus.filter((s) => {
+      const cat = (s.category || "").toLowerCase();
+      return cat.includes("finished") || cat.includes("fg") || !s.category;
+    });
     return fg.length > 0 ? fg : skus;
   }, [skus]);
 
@@ -61,24 +69,63 @@ export function APSScheduler() {
     uom: "Bottles"
   };
 
-  const defaultLine = lines[0] || {
+  const availableLines = useMemo(() => {
+    if (!lines || lines.length === 0) {
+      return [
+        { lineId: "LIN-01", lineCode: "LINE-1", name: "High-Speed Bottling Line 1" },
+        { lineId: "LIN-02", lineCode: "LINE-2", name: "Canning & Beverage Line 2" },
+        { lineId: "LIN-03", lineCode: "LINE-3", name: "Aseptic Tetra Pak Line 3" }
+      ];
+    }
+    return lines;
+  }, [lines]);
+
+  const defaultLine = availableLines[0] || {
     lineId: "LIN-01",
     name: "High-Speed Bottling Line 1",
     lineCode: "LINE-1"
   };
 
+  const initialSkuId = defaultSku.skuId || defaultSku.id || "SKU-001";
+  const initialLineId = defaultLine.lineId || defaultLine.id || "LIN-01";
+
+  const [newLineId, setNewLineId] = useState(initialLineId);
+  const [newStartTime, setNewStartTime] = useState(new Date().toISOString().substring(0, 16).replace("T", " "));
+
   const [newEntry, setNewEntry] = useState({
     orderNumber: `ORD-2026-${Math.floor(1000 + Math.random() * 9000)}`,
-    skuId: defaultSku.skuId,
-    lineId: defaultLine.lineId,
+    skuId: initialSkuId,
+    lineId: initialLineId,
     targetQuantity: 24000,
     runRate: 500,
     startTime: new Date().toISOString().substring(0, 16).replace("T", " ")
   });
 
+  // Ensure newEntry.skuId & lineId stay synced when master data finishes loading
+  React.useEffect(() => {
+    if (availableSkus.length > 0) {
+      const exists = availableSkus.some((s) => (s.skuId || s.id) === newEntry.skuId);
+      if (!exists) {
+        const firstId = availableSkus[0].skuId || availableSkus[0].id;
+        setNewEntry((prev) => ({ ...prev, skuId: firstId }));
+      }
+    }
+  }, [availableSkus]);
+
+  React.useEffect(() => {
+    if (availableLines.length > 0) {
+      const exists = availableLines.some((l) => (l.lineId || l.id) === newEntry.lineId);
+      if (!exists) {
+        const firstId = availableLines[0].lineId || availableLines[0].id;
+        setNewEntry((prev) => ({ ...prev, lineId: firstId }));
+        setNewLineId(firstId);
+      }
+    }
+  }, [availableLines]);
+
   const resolvedNewSku = useMemo(() => {
-    return skus.find((s) => s.skuId === newEntry.skuId) || defaultSku;
-  }, [skus, newEntry.skuId, defaultSku]);
+    return availableSkus.find((s) => (s.skuId || s.id) === newEntry.skuId) || availableSkus[0] || defaultSku;
+  }, [availableSkus, newEntry.skuId, defaultSku]);
 
   // KPIs
   const totalScheduled = schedules.length;
@@ -735,15 +782,40 @@ export function APSScheduler() {
                 <label className="form-label">Master SKU Selection (Single Source of Truth) *</label>
                 <select
                   value={newEntry.skuId}
-                  onChange={(e) => setNewEntry({ ...newEntry, skuId: e.target.value })}
+                  onChange={(e) => {
+                    const selId = e.target.value;
+                    const sel = availableSkus.find((s) => (s.skuId || s.id) === selId);
+                    setNewEntry({
+                      ...newEntry,
+                      skuId: selId,
+                      targetQuantity: sel?.targetQuantity || newEntry.targetQuantity || 24000
+                    });
+                  }}
                   className="form-input"
-                  style={{ backgroundColor: "#FFFFFF" }}
+                  style={{
+                    backgroundColor: "#FFFFFF",
+                    color: "#1E1E1E",
+                    height: "42px",
+                    border: "1px solid #D0D5DD",
+                    borderRadius: "6px",
+                    padding: "8px 12px",
+                    fontSize: "13px",
+                    fontWeight: 600,
+                    width: "100%",
+                    cursor: "pointer"
+                  }}
                 >
-                  {availableSkus.map((s) => (
-                    <option key={s.skuId} value={s.skuId}>
-                      {s.skuCode} — {s.name} ({s.uom})
-                    </option>
-                  ))}
+                  {availableSkus.map((s, idx) => {
+                    const sId = s.skuId || s.id || `sku-${idx}`;
+                    const sCode = s.skuCode || s.code || s.sku_code || sId;
+                    const sName = s.name || s.productName || s.skuName || "Product";
+                    const sUom = s.uom || "Bottles";
+                    return (
+                      <option key={sId} value={sId} style={{ color: "#1E1E1E", backgroundColor: "#FFFFFF" }}>
+                        {sCode} — {sName} ({sUom})
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
 
@@ -763,19 +835,19 @@ export function APSScheduler() {
                   <div>
                     <span style={{ color: "var(--text-muted)" }}>Product Code:</span>
                     <div style={{ fontWeight: 800, color: "#8C5B23", fontFamily: "var(--font-mono)", marginTop: "2px" }}>
-                      {resolvedNewSku.skuCode || resolvedNewSku.skuId}
+                      {resolvedNewSku.skuCode || resolvedNewSku.code || resolvedNewSku.skuId || resolvedNewSku.id}
                     </div>
                   </div>
                   <div>
                     <span style={{ color: "var(--text-muted)" }}>Product Name:</span>
                     <div style={{ fontWeight: 700, color: "var(--text-primary)", marginTop: "2px" }}>
-                      {resolvedNewSku.name || resolvedNewSku.productName}
+                      {resolvedNewSku.name || resolvedNewSku.productName || resolvedNewSku.skuName}
                     </div>
                   </div>
                   <div>
                     <span style={{ color: "var(--text-muted)" }}>UOM:</span>
                     <div style={{ fontWeight: 800, color: "var(--text-primary)", marginTop: "2px" }}>
-                      {resolvedNewSku.uom || "Units"}
+                      {resolvedNewSku.uom || "Bottles"}
                     </div>
                   </div>
                 </div>
@@ -788,13 +860,29 @@ export function APSScheduler() {
                     value={newEntry.lineId}
                     onChange={(e) => setNewEntry({ ...newEntry, lineId: e.target.value })}
                     className="form-input"
-                    style={{ backgroundColor: "#FFFFFF" }}
+                    style={{
+                      backgroundColor: "#FFFFFF",
+                      color: "#1E1E1E",
+                      height: "42px",
+                      border: "1px solid #D0D5DD",
+                      borderRadius: "6px",
+                      padding: "8px 12px",
+                      fontSize: "13px",
+                      fontWeight: 600,
+                      width: "100%",
+                      cursor: "pointer"
+                    }}
                   >
-                    {lines.map((l) => (
-                      <option key={l.lineId} value={l.lineId}>
-                        {l.lineCode ? `${l.lineCode} - ` : ""}{l.name}
-                      </option>
-                    ))}
+                    {availableLines.map((l, idx) => {
+                      const lId = l.lineId || l.id || `line-${idx}`;
+                      const lCode = l.lineCode || l.code || lId;
+                      const lName = l.name || l.lineName || "Line";
+                      return (
+                        <option key={lId} value={lId} style={{ color: "#1E1E1E", backgroundColor: "#FFFFFF" }}>
+                          {lCode ? `${lCode} - ` : ""}{lName}
+                        </option>
+                      );
+                    })}
                   </select>
                 </div>
                 <div>
@@ -840,7 +928,7 @@ export function APSScheduler() {
                 <Button variant="secondary" type="button" onClick={() => setIsCreateModalOpen(false)}>
                   Cancel
                 </Button>
-                <Button variant="primary" type="submit" icon={Plus}>
+                <Button variant="primary" type="submit" icon={Plus} onClick={handleCreateSubmit}>
                   Commit to APS Schedule
                 </Button>
               </div>
@@ -876,13 +964,29 @@ export function APSScheduler() {
                   value={newLineId}
                   onChange={(e) => setNewLineId(e.target.value)}
                   className="form-input"
-                  style={{ backgroundColor: "#FFFFFF" }}
+                  style={{
+                    backgroundColor: "#FFFFFF",
+                    color: "#1E1E1E",
+                    height: "42px",
+                    border: "1px solid #D0D5DD",
+                    borderRadius: "6px",
+                    padding: "8px 12px",
+                    fontSize: "13px",
+                    fontWeight: 600,
+                    width: "100%",
+                    cursor: "pointer"
+                  }}
                 >
-                  {lines.map((l) => (
-                    <option key={l.lineId} value={l.lineId}>
-                      {l.lineCode ? `${l.lineCode} - ` : ""}{l.name}
-                    </option>
-                  ))}
+                  {availableLines.map((l, idx) => {
+                    const lId = l.lineId || l.id || `line-${idx}`;
+                    const lCode = l.lineCode || l.code || lId;
+                    const lName = l.name || l.lineName || "Line";
+                    return (
+                      <option key={lId} value={lId} style={{ color: "#1E1E1E", backgroundColor: "#FFFFFF" }}>
+                        {lCode ? `${lCode} - ` : ""}{lName}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
 

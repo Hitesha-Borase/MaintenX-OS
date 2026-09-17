@@ -1,58 +1,12 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Briefcase, Play, CheckCircle2, FileText } from "lucide-react";
+import { Briefcase, Play, CheckCircle2, FileText, Factory } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { Badge } from "../../components/common/Badge";
 import { Button } from "../../components/common/Button";
 import { Modal } from "../../components/common/Modal";
 import { dashboardService } from "../../services/dashboardService";
 import { useApp } from "../../context/AppContext";
-
-// ─── Static production queue fallback ────────────────────────────────────────
-const INITIAL_JOBS = [
-  {
-    id: "PO-2026-904",
-    orderNumber: "ORD-904-ASEPTIC-JUICE",
-    productName: "Organic Cold-Pressed Orange Juice 500ml",
-    productCode: "SKU-AJ-500ML-ORG",
-    status: "Running",
-    lineName: "Line 1 (Aseptic Bottling)",
-    batchCode: "BAT-2026-0892",
-    producedQuantity: 18450,
-    targetQuantity: 24000,
-    unitName: "Bottles",
-    currentSpeedBPM: 580,
-    targetSpeedBPM: 600,
-  },
-  {
-    id: "PO-2026-905",
-    orderNumber: "ORD-905-FORMULATION-BLEND",
-    productName: "Artisan Ginger-Lime Concentrate Batch 5000L",
-    productCode: "SKU-BLK-SYRUP-1000L",
-    status: "Paused - Equipment Breakdown",
-    lineName: "Line 2 (Formulation & Blending)",
-    batchCode: "BAT-2026-0898",
-    producedQuantity: 1200,
-    targetQuantity: 5000,
-    unitName: "Liters",
-    currentSpeedBPM: 0,
-    targetSpeedBPM: 1200,
-  },
-  {
-    id: "PO-2026-906",
-    orderNumber: "ORD-906-CAN-SPARKLING",
-    productName: "Sparkling Yuzu Sparkling Tea 330ml Can",
-    productCode: "SKU-CAN-330ML-LFM",
-    status: "Completed",
-    lineName: "Line 3 (Canning Line)",
-    batchCode: "BAT-2026-0885",
-    producedQuantity: 36000,
-    targetQuantity: 36000,
-    unitName: "Cans",
-    currentSpeedBPM: 0,
-    targetSpeedBPM: 750,
-  },
-];
 
 // ─── Status helpers ──────────────────────────────────────────────────────────
 const isRunning   = (s) => typeof s === "string" && s.toLowerCase() === "running";
@@ -75,28 +29,53 @@ export function MyJobs() {
   const navigate = useNavigate();
   const { addToast } = useApp() || {};
 
-  // ── Jobs State initialized with fallback ──────────────────────────────────
-  const [jobs, setJobs] = useState(INITIAL_JOBS);
+  // ── Jobs State ────────────────────────────────────────────────────────────
+  const [jobs, setJobs] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // ── Fetch live jobs queue from API on mount ───────────────────────────────
-  useEffect(() => {
-    dashboardService
-      .getOperatorJobs()
-      .then((data) => {
-        const jobsList = Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : null);
-        if (jobsList && jobsList.length > 0) {
-          setJobs(
-            jobsList.map((j) => ({
-              ...j,
-              lineName: j.lineName || j.line || "Line 1",
-              batchCode: j.batchCode || j.activeBatchId || "—",
-              unitName: j.unitName || j.unit || "Bottles",
-            }))
-          );
-        }
-      })
-      .catch((err) => console.warn("[MyJobs] Failed to fetch jobs queue:", err.message));
+const getSafeStr = (val, fallback = "") => {
+  if (!val) return fallback;
+  if (typeof val === "string") return val;
+  if (typeof val === "object") return val.name || val.code || val.skuCode || val.orderNumber || val.id || fallback;
+  return String(val);
+};
+
+  // ── Fetch live jobs queue from API ─────────────────────────────────────────
+  const fetchJobs = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await dashboardService.getOperatorJobs();
+      const jobsList = Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : []);
+      setJobs(
+        jobsList.map((j) => ({
+          ...j,
+          orderNumber: getSafeStr(j.orderNumber, "PO-100"),
+          productName: getSafeStr(j.productName || j.product || j.skuName, "Product"),
+          productCode: getSafeStr(j.productCode || j.skuCode, ""),
+          lineName: getSafeStr(j.lineName || j.line, "Line 1"),
+          batchCode: getSafeStr(j.batchCode || j.activeBatchId, "—"),
+          unitName: getSafeStr(j.unitName || j.unit, "Bottles"),
+          status: getSafeStr(j.status, "PLANNED"),
+        }))
+      );
+    } catch (err) {
+      console.warn("[MyJobs] Failed to fetch jobs queue:", err.message);
+      setJobs([]);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchJobs();
+    const interval = setInterval(fetchJobs, 4000);
+    const handleFocus = () => fetchJobs();
+    window.addEventListener("focus", handleFocus);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("focus", handleFocus);
+    };
+  }, [fetchJobs]);
 
   // ── Modal state ──────────────────────────────────────────────────────────
   const [isStartModalOpen, setIsStartModalOpen] = useState(false);
@@ -136,16 +115,14 @@ export function MyJobs() {
         assetId,
         operatorPin,
       });
-      setJobStatus(selectedJobId, "Running");
       notify(
         res?.message ||
           `Job ${selectedJobId} started on ${assetId}. Line status: Running.`,
         "success"
       );
-    } catch {
-      // Optimistic update even on API error
-      setJobStatus(selectedJobId, "Running");
-      notify(`Job ${selectedJobId} started on ${assetId}.`, "success");
+      await fetchJobs();
+    } catch (err) {
+      notify(`Failed to start job: ${err.message}`, "error");
     } finally {
       setStartingJob(false);
       setIsStartModalOpen(false);
@@ -157,14 +134,13 @@ export function MyJobs() {
     setCompletingJobId(jobId);
     try {
       const res = await dashboardService.completeOperatorJob(jobId);
-      setJobStatus(jobId, "Completed");
       notify(
         res?.message || `Job ${orderNumber} has been marked as Completed.`,
         "info"
       );
-    } catch {
-      setJobStatus(jobId, "Completed");
-      notify(`Job ${orderNumber} has been marked as Completed.`, "info");
+      await fetchJobs();
+    } catch (err) {
+      notify(`Failed to complete job: ${err.message}`, "error");
     } finally {
       setCompletingJobId(null);
     }
@@ -183,7 +159,13 @@ export function MyJobs() {
 
       {/* Job cards */}
       <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-        {jobs.length === 0 ? (
+        {loading ? (
+          <Card style={{ padding: "40px", textAlign: "center", backgroundColor: "#FFFFFF", border: "1px solid var(--border-subtle)" }}>
+            <span style={{ fontSize: "14px", color: "var(--text-secondary)" }}>
+              Loading assigned production jobs...
+            </span>
+          </Card>
+        ) : jobs.length === 0 ? (
           <Card style={{ padding: "40px", textAlign: "center", backgroundColor: "#FFFFFF", border: "1px solid var(--border-subtle)" }}>
             <Briefcase size={32} color="var(--text-muted)" style={{ margin: "0 auto 12px" }} />
             <span style={{ fontSize: "14px", color: "var(--text-secondary)" }}>
@@ -269,12 +251,23 @@ export function MyJobs() {
                       </Button>
                     )}
 
+                    {/* Log Output button */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      icon={Factory}
+                      onClick={() => navigate(`/operator/production-entry?orderNumber=${encodeURIComponent(job.orderNumber || job.id)}`)}
+                      style={{ padding: "5px 12px", fontSize: "11px", height: "30px", fontWeight: 700 }}
+                    >
+                      Log Output
+                    </Button>
+
                     {/* View SOP always visible */}
                     <Button
                       variant="secondary"
                       size="sm"
                       icon={FileText}
-                      onClick={() => navigate("/operator/work-instructions")}
+                      onClick={() => navigate(`/operator/work-instructions?orderNumber=${encodeURIComponent(job.orderNumber || job.id)}`)}
                       style={{ padding: "5px 12px", fontSize: "11px", height: "30px", fontWeight: 700 }}
                     >
                       View SOP

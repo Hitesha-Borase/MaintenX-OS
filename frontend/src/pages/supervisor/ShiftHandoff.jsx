@@ -5,13 +5,14 @@ import { Card } from "../../components/common/Card";
 import { Button } from "../../components/common/Button";
 import { Badge } from "../../components/common/Badge";
 import { Modal } from "../../components/common/Modal";
-import { Users, Send, ShieldCheck, Lock } from "lucide-react";
+import { Users, Send, ShieldCheck, Lock, Zap, Box } from "lucide-react";
 import { dashboardService } from "../../services/dashboardService";
 
 export function ShiftHandoff() {
   const { shiftHandoffs, addShiftHandoff } = useProduction();
   const { addToast } = useApp();
 
+  const [stage, setStage] = useState("PROCESSING"); // PROCESSING | PACKAGING | UNIFIED
   const [shiftFrom, setShiftFrom] = useState("Shift A (Day)");
   const [shiftTo, setShiftTo] = useState("Shift B (Evening)");
   const [incomingSuper, setIncomingSuper] = useState("Thomas Sterling");
@@ -48,12 +49,16 @@ export function ShiftHandoff() {
   const handleConfirmSignature = async (e) => {
     e.preventDefault();
 
+    const stagePrefix = stage === "PROCESSING" ? "[⚡ PROCESSING STAGE] " : (stage === "PACKAGING" ? "[📦 PACKAGING STAGE] " : "[🌐 UNIFIED STAGE] ");
+    const fullNotes = `${stagePrefix}${notes}`;
+
     const handoffData = {
       shiftFrom,
       shiftTo,
       handedOverBy: "Alexander Vance (Operations Supervisor)",
       receivedBy: incomingSuper,
-      notes
+      notes: fullNotes,
+      stage
     };
 
     try {
@@ -73,7 +78,7 @@ export function ShiftHandoff() {
       ...prev
     ]);
 
-    addToast(`Supervisor shift handoff signed and locked electronically with PIN verification.`, "success");
+    addToast(`Supervisor ${stage} stage shift handoff signed and locked electronically with PIN verification.`, "success");
     setNotes("");
     setIsSignModalOpen(false);
   };
@@ -84,10 +89,80 @@ export function ShiftHandoff() {
         <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
           Supervisor Shift Handoff
         </h1>
+        <p style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "2px" }}>
+          Digital Shift Transfer: Record Processing Vessel status & Packaging Line metrics
+        </p>
       </div>
 
       <form onSubmit={handleOpenSignModal} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
         <Card style={{ display: "flex", flexDirection: "column", gap: "14px", backgroundColor: "#FFFFFF", border: "1px solid var(--border-subtle)", padding: "20px" }}>
+          
+          {/* Stage Selector Bar */}
+          <div>
+            <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-primary)", display: "block", marginBottom: "8px" }}>
+              Manufacturing Stage Focus
+            </label>
+            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+              <button
+                type="button"
+                onClick={() => setStage("PROCESSING")}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  padding: "8px 14px",
+                  borderRadius: "6px",
+                  border: "none",
+                  fontSize: "12px",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  backgroundColor: stage === "PROCESSING" ? "#8B5CF6" : "var(--bg-card-subtle)",
+                  color: stage === "PROCESSING" ? "#FFFFFF" : "var(--text-secondary)"
+                }}
+              >
+                <Zap size={14} /> Processing Stage (Vessels & Tanks)
+              </button>
+              <button
+                type="button"
+                onClick={() => setStage("PACKAGING")}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  padding: "8px 14px",
+                  borderRadius: "6px",
+                  border: "none",
+                  fontSize: "12px",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  backgroundColor: stage === "PACKAGING" ? "#0EA5E9" : "var(--bg-card-subtle)",
+                  color: stage === "PACKAGING" ? "#FFFFFF" : "var(--text-secondary)"
+                }}
+              >
+                <Box size={14} /> Packaging Stage (Lines & Cartoning)
+              </button>
+              <button
+                type="button"
+                onClick={() => setStage("UNIFIED")}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  padding: "8px 14px",
+                  borderRadius: "6px",
+                  border: "none",
+                  fontSize: "12px",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  backgroundColor: stage === "UNIFIED" ? "var(--accent-primary)" : "var(--bg-card-subtle)",
+                  color: stage === "UNIFIED" ? "#FFFFFF" : "var(--text-secondary)"
+                }}
+              >
+                🌐 Complete Unified Shift Handoff
+              </button>
+            </div>
+          </div>
+
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "14px" }}>
             <div>
               <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-primary)", display: "block", marginBottom: "6px" }}>
@@ -136,21 +211,25 @@ export function ShiftHandoff() {
 
           <div>
             <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-primary)", display: "block", marginBottom: "6px" }}>
-              Shift Performance & Operational Transfer Notes
+              {stage === "PROCESSING" ? "⚡ Processing Vessel & Batch Handoff Notes" : (stage === "PACKAGING" ? "📦 Packaging Line & Yield Handoff Notes" : "Unified Shift Performance Notes")}
             </label>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               className="input-field"
               style={{ width: "100%", minHeight: "90px" }}
-              placeholder="Record line output summary, active breakdowns, open P1 escalations, and WIP lot status..."
+              placeholder={
+                stage === "PROCESSING"
+                  ? "Record vessel tank volumes, active batch mixing status, CIP cleaning cycles, and raw ingredient Brix levels..."
+                  : "Record line output summary, filler speed BPM, scrap units, open P1 breakdown escalations, and WIP lot transfer..."
+              }
               required
             />
           </div>
         </Card>
 
         <Button type="submit" variant="primary" icon={Lock}>
-          Sign & Lock Shift Handoff
+          Sign & Lock {stage} Stage Handoff
         </Button>
       </form>
 
@@ -160,34 +239,42 @@ export function ShiftHandoff() {
           Shift Handoff History & Audit Trail
         </h3>
         <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-          {(logs || []).map((ho) => (
-            <div
-              key={ho.id}
-              style={{
-                padding: "12px 16px",
-                borderRadius: "6px",
-                backgroundColor: "var(--bg-card-subtle)",
-                border: "1px solid var(--border-subtle)",
-                fontSize: "13px"
-              }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "8px" }}>
-                <span style={{ fontWeight: 700, color: "var(--text-primary)" }}>
-                  {ho.shiftFrom} ➔ {ho.shiftTo}
-                </span>
-                <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>
-                  {ho.timestamp}
-                </span>
+          {(logs || []).map((ho) => {
+            const isProc = ho.notes && (ho.notes.includes("PROCESSING") || ho.notes.toLowerCase().includes("vessel"));
+            return (
+              <div
+                key={ho.id}
+                style={{
+                  padding: "12px 16px",
+                  borderRadius: "6px",
+                  backgroundColor: "var(--bg-card-subtle)",
+                  border: "1px solid var(--border-subtle)",
+                  fontSize: "13px"
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "8px", alignItems: "center" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <span style={{ fontWeight: 700, color: "var(--text-primary)" }}>
+                      {ho.shiftFrom} ➔ {ho.shiftTo}
+                    </span>
+                    <Badge variant={isProc ? "purple" : "blue"}>
+                      {isProc ? "⚡ Processing Stage" : "📦 Packaging Stage"}
+                    </Badge>
+                  </div>
+                  <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>
+                    {ho.timestamp || ho.createdAt}
+                  </span>
+                </div>
+                <div style={{ color: "var(--text-secondary)", marginTop: "4px" }}>
+                  Signed Out: <strong style={{ color: "var(--text-primary)" }}>{ho.handedOverBy}</strong> | Incoming Lead: <strong style={{ color: "var(--text-primary)" }}>{ho.receivedBy}</strong>
+                </div>
+                <p style={{ fontStyle: "italic", fontSize: "12px", color: "var(--text-secondary)", marginTop: "6px" }}>
+                  "{ho.notes}"
+                </p>
+                <Badge variant="emerald" style={{ marginTop: "6px" }}>{ho.status || "SIGNED OFF"}</Badge>
               </div>
-              <div style={{ color: "var(--text-secondary)", marginTop: "2px" }}>
-                Signed Out: <strong style={{ color: "var(--text-primary)" }}>{ho.handedOverBy}</strong> | Incoming Lead: <strong style={{ color: "var(--text-primary)" }}>{ho.receivedBy}</strong>
-              </div>
-              <p style={{ fontStyle: "italic", fontSize: "12px", color: "var(--text-secondary)", marginTop: "6px" }}>
-                "{ho.notes}"
-              </p>
-              <Badge variant="emerald" style={{ marginTop: "6px" }}>{ho.status}</Badge>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </Card>
 
@@ -196,7 +283,7 @@ export function ShiftHandoff() {
         isOpen={isSignModalOpen}
         onClose={() => setIsSignModalOpen(false)}
         title="Electronic Signature & Handoff Lock"
-        subtitle="Signee: Alexander Vance (Operations Supervisor)"
+        subtitle={`Stage: ${stage} | Signee: Alexander Vance`}
         maxWidth="480px"
         footer={
           <>

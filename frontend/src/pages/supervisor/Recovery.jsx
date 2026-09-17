@@ -13,6 +13,7 @@ export function Recovery() {
   const [countermeasures, setCountermeasures] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("pending");
+  const [stageFilter, setStageFilter] = useState("ALL"); // ALL | PROCESSING | PACKAGING
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -22,6 +23,7 @@ export function Recovery() {
     projectedRecoveryUnits: 3500,
     speedBoostPercent: 5,
     overtimeHours: 0.5,
+    stage: "PACKAGING"
   });
 
   const fetchCountermeasures = async (showToast = false) => {
@@ -45,6 +47,26 @@ export function Recovery() {
     fetchCountermeasures();
   }, []);
 
+  const getActionStage = (c) => {
+    const str = `${c.name || ""} ${c.type || ""}`.toLowerCase();
+    if (
+      str.includes("vessel") ||
+      str.includes("mixer") ||
+      str.includes("cooker") ||
+      str.includes("blend") ||
+      str.includes("pasteuriz") ||
+      str.includes("tank") ||
+      str.includes("kettle") ||
+      str.includes("homogeniz") ||
+      str.includes("batch") ||
+      str.includes("formulation") ||
+      str.includes("processing")
+    ) {
+      return "PROCESSING";
+    }
+    return "PACKAGING";
+  };
+
   const handleCreate = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -58,6 +80,7 @@ export function Recovery() {
         projectedRecoveryUnits: 2500,
         speedBoostPercent: 5,
         overtimeHours: 0.5,
+        stage: "PACKAGING"
       });
       await fetchCountermeasures();
     } catch (err) {
@@ -100,8 +123,13 @@ export function Recovery() {
     }
   };
 
-  const pendingActions = countermeasures.filter(c => !c.active && c.status !== "AUTHORIZED");
-  const authorizedActions = countermeasures.filter(c => c.active || c.status === "AUTHORIZED");
+  const filteredCountermeasures = countermeasures.filter(c => {
+    if (stageFilter === "ALL") return true;
+    return getActionStage(c) === stageFilter;
+  });
+
+  const pendingActions = filteredCountermeasures.filter(c => !c.active && c.status !== "AUTHORIZED");
+  const authorizedActions = filteredCountermeasures.filter(c => c.active || c.status === "AUTHORIZED");
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%" }}>
@@ -110,6 +138,9 @@ export function Recovery() {
           <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
             Departmental Recovery Steering
           </h1>
+          <p style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "2px" }}>
+            Schedule catch-up steering protocols for Processing Hall & Packaging Lines
+          </p>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
@@ -127,22 +158,75 @@ export function Recovery() {
         </div>
       </div>
 
-      {/* Navigation Tabs */}
-      <div style={{ display: "flex", gap: "8px", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "6px" }}>
-        <Button
-          variant={activeTab === "pending" ? "primary" : "ghost"}
-          size="sm"
-          onClick={() => setActiveTab("pending")}
-        >
-          Proposed ({pendingActions.length})
-        </Button>
-        <Button
-          variant={activeTab === "history" ? "secondary" : "ghost"}
-          size="sm"
-          onClick={() => setActiveTab("history")}
-        >
-          Authorized ({authorizedActions.length})
-        </Button>
+      {/* Navigation & Stage Filter Bar */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "8px" }}>
+        <div style={{ display: "flex", gap: "8px" }}>
+          <Button
+            variant={activeTab === "pending" ? "primary" : "ghost"}
+            size="sm"
+            onClick={() => setActiveTab("pending")}
+          >
+            Proposed ({pendingActions.length})
+          </Button>
+          <Button
+            variant={activeTab === "history" ? "secondary" : "ghost"}
+            size="sm"
+            onClick={() => setActiveTab("history")}
+          >
+            Authorized ({authorizedActions.length})
+          </Button>
+        </div>
+
+        <div style={{ display: "flex", gap: "4px" }}>
+          <button
+            type="button"
+            onClick={() => setStageFilter("ALL")}
+            style={{
+              padding: "4px 12px",
+              borderRadius: "6px",
+              border: "none",
+              fontSize: "12px",
+              fontWeight: 700,
+              cursor: "pointer",
+              backgroundColor: stageFilter === "ALL" ? "var(--accent-primary)" : "var(--bg-card-subtle)",
+              color: stageFilter === "ALL" ? "#FFFFFF" : "var(--text-secondary)"
+            }}
+          >
+            All Stages
+          </button>
+          <button
+            type="button"
+            onClick={() => setStageFilter("PROCESSING")}
+            style={{
+              padding: "4px 12px",
+              borderRadius: "6px",
+              border: "none",
+              fontSize: "12px",
+              fontWeight: 700,
+              cursor: "pointer",
+              backgroundColor: stageFilter === "PROCESSING" ? "#8B5CF6" : "var(--bg-card-subtle)",
+              color: stageFilter === "PROCESSING" ? "#FFFFFF" : "var(--text-secondary)"
+            }}
+          >
+            ⚡ Processing Hall
+          </button>
+          <button
+            type="button"
+            onClick={() => setStageFilter("PACKAGING")}
+            style={{
+              padding: "4px 12px",
+              borderRadius: "6px",
+              border: "none",
+              fontSize: "12px",
+              fontWeight: 700,
+              cursor: "pointer",
+              backgroundColor: stageFilter === "PACKAGING" ? "#0EA5E9" : "var(--bg-card-subtle)",
+              color: stageFilter === "PACKAGING" ? "#FFFFFF" : "var(--text-secondary)"
+            }}
+          >
+            📦 Packaging Lines
+          </button>
+        </div>
       </div>
 
       {isLoading ? (
@@ -157,33 +241,39 @@ export function Recovery() {
               0 Proposed Recovery Steering Actions
             </span>
             <span style={{ fontSize: "12px", color: "var(--text-secondary)", maxWidth: "480px" }}>
-              All packaging lines are operating within shift pace targets. Use <strong>Propose Action</strong> or Line Lead <strong>Schedule Recovery</strong> to submit a catch-up plan.
+              All lines are operating within shift pace targets. Use <strong>Propose Action</strong> or Line Lead <strong>Schedule Recovery</strong> to submit a catch-up plan.
             </span>
           </Card>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-            {pendingActions.map((c) => (
-              <Card key={c.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px", backgroundColor: "#FFFFFF", border: "1px solid var(--border-subtle)", borderLeft: "4px solid #F59E0B" }}>
-                <div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                    <span style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)" }}>{c.name}</span>
-                    <Badge variant="amber">PROPOSED</Badge>
+            {pendingActions.map((c) => {
+              const stg = getActionStage(c);
+              return (
+                <Card key={c.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px", backgroundColor: "#FFFFFF", border: "1px solid var(--border-subtle)", borderLeft: "4px solid #F59E0B" }}>
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                      <span style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)" }}>{c.name}</span>
+                      <Badge variant="amber">PROPOSED</Badge>
+                      <Badge variant={stg === "PROCESSING" ? "purple" : "blue"}>
+                        {stg === "PROCESSING" ? "⚡ Processing" : "📦 Packaging"}
+                      </Badge>
+                    </div>
+                    <span style={{ fontSize: "11px", color: "var(--text-secondary)", display: "block", marginTop: "4px" }}>
+                      Classification: <strong>{c.type}</strong> • Target Yield Recovery: <strong style={{ color: "#059669" }}>{c.impact}</strong>
+                    </span>
                   </div>
-                  <span style={{ fontSize: "11px", color: "var(--text-secondary)", display: "block", marginTop: "4px" }}>
-                    Classification: <strong>{c.type}</strong> • Target Yield Recovery: <strong style={{ color: "#059669" }}>{c.impact}</strong>
-                  </span>
-                </div>
 
-                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <Button variant="ghost" size="sm" icon={Trash2} onClick={() => handleDismiss(c.id, c.name)} title="Dismiss Action">
-                    Dismiss
-                  </Button>
-                  <Button variant="primary" size="sm" icon={Zap} onClick={() => handleActivate(c.id, c.name)}>
-                    Authorize Action
-                  </Button>
-                </div>
-              </Card>
-            ))}
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <Button variant="ghost" size="sm" icon={Trash2} onClick={() => handleDismiss(c.id, c.name)} title="Dismiss Action">
+                      Dismiss
+                    </Button>
+                    <Button variant="primary" size="sm" icon={Zap} onClick={() => handleActivate(c.id, c.name)}>
+                      Authorize Action
+                    </Button>
+                  </div>
+                </Card>
+              );
+            })}
           </div>
         )
       ) : (
@@ -193,22 +283,28 @@ export function Recovery() {
           </Card>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-            {authorizedActions.map((c) => (
-              <Card key={c.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px", backgroundColor: "#FFFFFF", border: "1px solid var(--border-subtle)", borderLeft: "4px solid #10B981" }}>
-                <div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                    <span style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)" }}>{c.name}</span>
-                    <Badge variant="emerald">AUTHORIZED</Badge>
+            {authorizedActions.map((c) => {
+              const stg = getActionStage(c);
+              return (
+                <Card key={c.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px", backgroundColor: "#FFFFFF", border: "1px solid var(--border-subtle)", borderLeft: "4px solid #10B981" }}>
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                      <span style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)" }}>{c.name}</span>
+                      <Badge variant="emerald">AUTHORIZED</Badge>
+                      <Badge variant={stg === "PROCESSING" ? "purple" : "blue"}>
+                        {stg === "PROCESSING" ? "⚡ Processing" : "📦 Packaging"}
+                      </Badge>
+                    </div>
+                    <span style={{ fontSize: "11px", color: "var(--text-secondary)", display: "block", marginTop: "4px" }}>
+                      Classification: {c.type} • Target Yield Recovery: <strong style={{ color: "#059669" }}>{c.impact}</strong>
+                      {c.appliedAt && ` • Authorized at ${new Date(c.appliedAt).toLocaleTimeString()}`}
+                    </span>
                   </div>
-                  <span style={{ fontSize: "11px", color: "var(--text-secondary)", display: "block", marginTop: "4px" }}>
-                    Classification: {c.type} • Target Yield Recovery: <strong style={{ color: "#059669" }}>{c.impact}</strong>
-                    {c.appliedAt && ` • Authorized at ${new Date(c.appliedAt).toLocaleTimeString()}`}
-                  </span>
-                </div>
 
-                <Badge variant="emerald">Active On Floor</Badge>
-              </Card>
-            ))}
+                  <Badge variant="emerald">Active On Floor</Badge>
+                </Card>
+              );
+            })}
           </div>
         )
       )}
@@ -257,7 +353,7 @@ export function Recovery() {
 
             <div>
               <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-primary)", display: "block", marginBottom: "4px" }}>
-                Projected Yield Recovery (Bottles)
+                Projected Yield Recovery (Units)
               </label>
               <input
                 type="number"

@@ -41,14 +41,28 @@ export function OperatorDashboard() {
   // Button loading states
   const [loggingMicroStop, setLoggingMicroStop] = useState(false);
   const [changingJobStatus, setChangingJobStatus] = useState(false);
+  const [dashboardData, setDashboardData] = useState(null);
 
-  // Active running order
-  const activeOrder = productionOrders.find((o) => o.status === "Running") || productionOrders[0] || {
+  const fetchDashboardData = async () => {
+    try {
+      const data = await dashboardService.getOperatorDashboard();
+      if (data) setDashboardData(data);
+    } catch (err) {
+      console.warn("[OperatorDashboard] Failed to fetch telemetry:", err.message);
+    }
+  };
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  // Active running order from live API state
+  const activeOrder = dashboardData?.activeOrder || productionOrders.find((o) => o.status === "Running") || productionOrders[0] || {
     id: "ORD-904",
     orderNumber: "ORD-904-ASEPTIC-JUICE",
     productCode: "SKU-AJ-500ML-ORG",
     productName: "Organic Cold-Pressed Orange Juice 500ml",
-    status: "Completed",
+    status: "Running",
     producedQuantity: 18950,
     targetQuantity: 24000,
     scrapQuantity: 120,
@@ -58,25 +72,33 @@ export function OperatorDashboard() {
     unit: "Bottles"
   };
 
-  const activeBatch = batches.find((b) => b.id === activeOrder.activeBatchId) || batches[0] || {
+  const activeBatch = dashboardData?.batchFormulation || {
+    batchId: activeOrder.activeBatchId || "BAT-2026-0892",
     currentStep: "In-line Sterilization & Bottle Filling",
     progressPercent: 77
   };
 
-  const activeMachine = assets.find((a) => a.id === "FM-001") || assets[0] || {
+  const scadaTelemetry = dashboardData?.scadaTelemetry || {
+    hbTarget: 36000,
+    actualAttainment: 34800,
     vibration: 2.1,
     temperature: 62.4
   };
 
-  const target = activeOrder.targetQuantity || 24000;
-  const actual = activeOrder.producedQuantity || 18950;
-  const progressPercent = Math.round((actual / target) * 100);
+  const qualityMaterial = dashboardData?.qualityMaterial || {
+    brix: "11.9 °BX (PASS)",
+    ph: "3.72 pH (PASS)",
+    lotId: "LOT-ORG-442"
+  };
 
-  // Fetch operator dashboard telemetry on mount
-  useEffect(() => {
-    dashboardService.getOperatorDashboard()
-      .catch(err => console.warn("[OperatorDashboard] Failed to fetch telemetry:", err.message));
-  }, []);
+  const activeMachine = assets.find((a) => a.id === "FM-001") || assets[0] || {
+    vibration: scadaTelemetry.vibration || 2.1,
+    temperature: scadaTelemetry.temperature || 62.4
+  };
+
+  const target = activeOrder.targetQuantity || 24000;
+  const actual = activeOrder.producedQuantity || 0;
+  const progressPercent = activeBatch.progressPercent || Math.round((actual / target) * 100);
 
   // ─── Update Job Status -> PATCH /api/v1/dashboards/operator/jobs/:jobId/status
   const handleJobAction = async (newStatus) => {
@@ -85,9 +107,11 @@ export function OperatorDashboard() {
       const res = await dashboardService.updateJobStatus(activeOrder.id, { status: newStatus });
       updateOrderStatus(activeOrder.id, newStatus);
       addToast(res?.message || `Job ${activeOrder.orderNumber} status changed to ${newStatus}.`, "info");
+      await fetchDashboardData();
     } catch (err) {
       updateOrderStatus(activeOrder.id, newStatus);
       addToast(`Job ${activeOrder.orderNumber} status changed to ${newStatus}.`, "info");
+      await fetchDashboardData();
     } finally {
       setChangingJobStatus(false);
     }
@@ -105,9 +129,11 @@ export function OperatorDashboard() {
       });
       addToast(res?.message || `Micro-stop of ${stopMins} mins logged. Reason: ${stopReason}. Sent to Line Lead H/B log.`, "warning");
       setIsMicroStopModalOpen(false);
+      await fetchDashboardData();
     } catch (err) {
       addToast(`Micro-stop of ${stopMins} mins logged. Reason: ${stopReason}. Sent to Line Lead H/B log.`, "warning");
       setIsMicroStopModalOpen(false);
+      await fetchDashboardData();
     } finally {
       setLoggingMicroStop(false);
     }
@@ -158,7 +184,7 @@ export function OperatorDashboard() {
           <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: "12px", borderTop: "1px solid var(--border-subtle)", paddingTop: "10px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "11px" }}>
               <span style={{ color: "var(--text-muted)", fontWeight: 700 }}>QA Pre-Op Sanitation:</span>
-              <Badge variant="emerald">APPROVED & CLEARED</Badge>
+              <Badge variant="emerald">{activeOrder.qaSanitationStatus || "APPROVED & CLEARED"}</Badge>
             </div>
 
             <div style={{ display: "flex", gap: "6px" }}>
@@ -184,10 +210,10 @@ export function OperatorDashboard() {
             Batch Formulation
           </span>
           <div style={{ fontWeight: 800, color: "var(--text-primary)", fontSize: "15px", margin: "6px 0 2px 0" }}>
-            {activeOrder.activeBatchId}
+            {activeBatch?.batchId || activeOrder.activeBatchId}
           </div>
           <span style={{ fontSize: "12px", color: "#059669", fontWeight: 600 }}>
-            Step: {activeBatch?.currentStep || "Filling Phase"} • {activeBatch?.progressPercent || 77}% Complete
+            Step: {activeBatch?.currentStep || "Filling Phase"} • {activeBatch?.progressPercent || progressPercent}% Complete
           </span>
         </Card>
 
@@ -226,7 +252,7 @@ export function OperatorDashboard() {
             />
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px", fontSize: "12px", fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--text-primary)" }}>
-            <span>Actual: {actual.toLocaleString()} / {target.toLocaleString()} {activeOrder.unit || "Bottles"}</span>
+            <span>Actual: {Number(actual).toLocaleString()} / {Number(target).toLocaleString()} {activeOrder.unit || "Bottles"}</span>
             <span>Target Remaining: {Math.max(0, target - actual).toLocaleString()} {activeOrder.unit || "Bottles"}</span>
           </div>
         </div>
@@ -243,19 +269,27 @@ export function OperatorDashboard() {
           <div style={{ display: "flex", flexDirection: "column", gap: "8px", fontSize: "13px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0" }}>
               <span style={{ color: "var(--text-secondary)" }}>Current HB Target (Hour):</span>
-              <span style={{ fontWeight: 700, fontFamily: "var(--font-mono)", color: "var(--text-primary)" }}>36,000 bottles/hr</span>
+              <span style={{ fontWeight: 700, fontFamily: "var(--font-mono)", color: "var(--text-primary)" }}>
+                {Number(scadaTelemetry.hbTarget).toLocaleString()} bottles/hr
+              </span>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0" }}>
               <span style={{ color: "var(--text-secondary)" }}>Actual Attainment:</span>
-              <span style={{ fontWeight: 700, fontFamily: "var(--font-mono)", color: "#059669" }}>34,800 bottles/hr</span>
+              <span style={{ fontWeight: 700, fontFamily: "var(--font-mono)", color: "#059669" }}>
+                {Number(scadaTelemetry.actualAttainment).toLocaleString()} bottles/hr
+              </span>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0" }}>
               <span style={{ color: "var(--text-secondary)" }}>Vibration:</span>
-              <span style={{ fontWeight: 600, color: activeMachine.vibration > 3.0 ? "#DC2626" : "var(--text-primary)" }}>{activeMachine.vibration || 2.1} mm/s RMS</span>
+              <span style={{ fontWeight: 600, color: (scadaTelemetry.vibration || activeMachine.vibration) > 3.0 ? "#DC2626" : "var(--text-primary)" }}>
+                {scadaTelemetry.vibration || activeMachine.vibration} mm/s RMS
+              </span>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0" }}>
               <span style={{ color: "var(--text-secondary)" }}>Temperature:</span>
-              <span style={{ fontWeight: 600, color: "var(--text-primary)" }}>{activeMachine.temperature || 62.4}°C</span>
+              <span style={{ fontWeight: 600, color: "var(--text-primary)" }}>
+                {scadaTelemetry.temperature || activeMachine.temperature}°C
+              </span>
             </div>
           </div>
         </Card>
@@ -269,15 +303,17 @@ export function OperatorDashboard() {
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>Brix Sugar Level CCP:</span>
-              <Badge variant="emerald">11.9 °Bx (PASS)</Badge>
+              <Badge variant="emerald">{qualityMaterial.brix}</Badge>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>pH Value:</span>
-              <Badge variant="emerald">3.72 pH (PASS)</Badge>
+              <Badge variant="emerald">{qualityMaterial.ph}</Badge>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>Raw Material Lot:</span>
-              <span style={{ fontFamily: "var(--font-mono)", fontSize: "12px", color: "#0284C7", fontWeight: 600 }}>LOT-ORG-442</span>
+              <span style={{ fontFamily: "var(--font-mono)", fontSize: "12px", color: "#0284C7", fontWeight: 600 }}>
+                {qualityMaterial.lotId}
+              </span>
             </div>
           </div>
         </Card>

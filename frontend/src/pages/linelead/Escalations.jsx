@@ -12,11 +12,7 @@ export function Escalations() {
   const { exceptions, addException } = useExceptions();
   const { addToast } = useApp();
 
-  const [activeEscalations, setActiveEscalations] = useState([
-    { id: "EXC-2026-174", severity: "P1", title: "Mechanical breakdown: High-Speed Rotary Filler 12-Head", owner: "Unassigned", details: "ewqd" },
-    { id: "EXC-2026-081", severity: "P1", title: "Pasteurizer HTST-300 Unplanned Breakdown (Loop Pressure Loss)", owner: "David Kim (Thermal Tech)", details: "Line 2 halted. 1,200L blend buffer on QA hold. 5,000L order delayed." },
-    { id: "EXC-2026-080", severity: "P1", title: "Pasteurization Thermal Excursion below Critical Control Limit (83.1°C)", owner: "Sarah Jenkins (QA Lead)", details: "CCP violation alarm triggered. Tank TK-04 quarantined under RED hold tag." }
-  ]);
+  const [activeEscalations, setActiveEscalations] = useState([]);
 
   const [targetRole, setTargetRole] = useState("Plant Manager");
   const [subject, setSubject] = useState("");
@@ -31,7 +27,7 @@ export function Escalations() {
   const [uploadingEvidence, setUploadingEvidence] = useState(false);
 
   // Fetch escalations from backend on mount
-  useEffect(() => {
+  const fetchEscalations = () => {
     dashboardService.getEscalations()
       .then(data => {
         if (data && Array.isArray(data)) {
@@ -39,23 +35,11 @@ export function Escalations() {
         }
       })
       .catch(err => console.warn("[Escalations] Failed to load backend escalations:", err.message));
-  }, []);
+  };
 
-  // Sync with context if available
   useEffect(() => {
-    if (exceptions && exceptions.length > 0) {
-      const p1s = exceptions.filter((e) => e.location?.includes("Line 1") || e.severity === "P1");
-      if (p1s.length > 0) {
-        setActiveEscalations(prev => {
-          const combined = [...p1s];
-          prev.forEach(item => {
-            if (!combined.some(c => c.id === item.id)) combined.push(item);
-          });
-          return combined;
-        });
-      }
-    }
-  }, [exceptions]);
+    fetchEscalations();
+  }, []);
 
   // ─── Dispatch Escalation -> POST /api/v1/dashboards/linelead/escalations
   const handleSubmit = async (e) => {
@@ -65,55 +49,15 @@ export function Escalations() {
     try {
       const res = await dashboardService.dispatchEscalation({ targetRole, subject, details });
 
-      const newEsc = res?.id ? res : {
-        id: `EXC-2026-${Math.floor(100 + Math.random() * 900)}`,
-        severity: "P1",
-        title: `Escalation to ${targetRole}: ${subject}`,
-        owner: targetRole,
-        details: details
-      };
-
-      setActiveEscalations(prev => [newEsc, ...prev]);
-
-      addException({
-        id: newEsc.id,
-        severity: "P1",
-        category: "Downtime",
-        title: newEsc.title,
-        location: "Line 1 - Aseptic Bottling",
-        details: details,
-        owner: targetRole,
-        escalationLevel: "Immediate Dispatch"
-      });
-
       addToast(res?.message || `Critical Escalation dispatched to ${targetRole}.`, "danger");
       setSubject("");
       setDetails("");
+      fetchEscalations();
     } catch (err) {
-      const newEsc = {
-        id: `EXC-2026-${Math.floor(100 + Math.random() * 900)}`,
-        severity: "P1",
-        title: `Escalation to ${targetRole}: ${subject}`,
-        owner: targetRole,
-        details: details
-      };
-
-      setActiveEscalations(prev => [newEsc, ...prev]);
-
-      addException({
-        id: newEsc.id,
-        severity: "P1",
-        category: "Downtime",
-        title: newEsc.title,
-        location: "Line 1 - Aseptic Bottling",
-        details: details,
-        owner: targetRole,
-        escalationLevel: "Immediate Dispatch"
-      });
-
       addToast(`Critical Escalation dispatched to ${targetRole}.`, "danger");
       setSubject("");
       setDetails("");
+      fetchEscalations();
     } finally {
       setDispatching(false);
     }
@@ -158,34 +102,40 @@ export function Escalations() {
           </h3>
 
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-            {activeEscalations.map((ex) => (
-              <div
-                key={ex.id}
-                style={{
-                  padding: "12px 14px",
-                  borderRadius: "8px",
-                  backgroundColor: "var(--bg-card-subtle)",
-                  border: "1px solid var(--border-subtle)",
-                  fontSize: "12px",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "6px"
-                }}
-              >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontWeight: 700, color: "var(--text-primary)" }}>{ex.id}</span>
-                  <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-                    <Badge variant="danger">{ex.severity || "P1"}</Badge>
-                    <Button variant="secondary" size="xs" icon={Paperclip} onClick={() => handleOpenEvidence(ex)}>
-                      Attach Evidence
-                    </Button>
+            {activeEscalations.length === 0 ? (
+              <p style={{ fontSize: "12px", color: "var(--text-muted)", fontStyle: "italic", padding: "12px 0" }}>
+                No active escalations found. Fill out the "Dispatch New Escalation" form below to create one.
+              </p>
+            ) : (
+              activeEscalations.map((ex) => (
+                <div
+                  key={ex.id}
+                  style={{
+                    padding: "12px 14px",
+                    borderRadius: "8px",
+                    backgroundColor: "var(--bg-card-subtle)",
+                    border: "1px solid var(--border-subtle)",
+                    fontSize: "12px",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "6px"
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ fontWeight: 700, color: "var(--text-primary)" }}>{ex.id}</span>
+                    <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                      <Badge variant="danger">{ex.severity || "P1"}</Badge>
+                      <Button variant="secondary" size="xs" icon={Paperclip} onClick={() => handleOpenEvidence(ex)}>
+                        Attach Evidence
+                      </Button>
+                    </div>
                   </div>
+                  <div style={{ fontWeight: 700, color: "#EF4444" }}>{ex.title}</div>
+                  <div style={{ color: "var(--text-secondary)" }}>Escalated To: {ex.owner}</div>
+                  <div style={{ fontStyle: "italic", color: "var(--text-secondary)", marginTop: "4px" }}>"{ex.details || ex.impactDescription}"</div>
                 </div>
-                <div style={{ fontWeight: 700, color: "#EF4444" }}>{ex.title}</div>
-                <div style={{ color: "var(--text-secondary)" }}>Escalated To: {ex.owner}</div>
-                <div style={{ fontStyle: "italic", color: "var(--text-secondary)", marginTop: "4px" }}>"{ex.details || ex.impactDescription}"</div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </Card>
 

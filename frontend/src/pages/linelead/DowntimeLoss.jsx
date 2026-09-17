@@ -14,7 +14,8 @@ export function DowntimeLoss() {
   const [loadingLogs, setLoadingLogs] = useState(true);
 
   const [isLogModalOpen, setIsLogModalOpen] = useState(false);
-  const [assetName, setAssetName] = useState("Rotary Filling Machine 48-Valve (FM-001)");
+  const [availableAssets, setAvailableAssets] = useState([]);
+  const [assetName, setAssetName] = useState("");
   const [lossDriver, setLossDriver] = useState("Mechanical Breakdown");
   const [symptom, setSymptom] = useState("");
 
@@ -33,6 +34,10 @@ export function DowntimeLoss() {
         setBreakdowns(data.logs);
       } else {
         setBreakdowns([]);
+      }
+      if (data?.assets && Array.isArray(data.assets) && data.assets.length > 0) {
+        setAvailableAssets(data.assets);
+        setAssetName(prev => prev || data.assets[0].displayName);
       }
     } catch (err) {
       console.warn("[DowntimeLoss] Failed to load logs:", err.message);
@@ -292,12 +297,15 @@ export function DowntimeLoss() {
               onChange={(e) => setAssetName(e.target.value)}
               className="input-field"
             >
-              <option value="Rotary Filling Machine 48-Valve (FM-001)">Rotary Filling Machine 48-Valve (FM-001)</option>
-              <option value="XYZ (FM-002)">XYZ (FM-002)</option>
-              <option value="Krones Autocol Rotary Labeler (LB-204)">Krones Autocol Rotary Labeler (LB-204)</option>
-              <option value="Plate Heat Exchanger & Pasteurizer HTST-300 (HT-105)">Plate Heat Exchanger & Pasteurizer HTST-300 (HT-105)</option>
-              <option value="Aseptic Capper CAP-102">Aseptic Capper CAP-102</option>
-              <option value="End-of-Line Case Packer PAC-900">End-of-Line Case Packer PAC-900</option>
+              {availableAssets.length > 0 ? (
+                availableAssets.map((ast) => (
+                  <option key={ast.id} value={ast.displayName}>
+                    {ast.displayName}
+                  </option>
+                ))
+              ) : (
+                <option value="Packaging & Line Asset">Packaging & Line Asset</option>
+              )}
             </select>
           </div>
 

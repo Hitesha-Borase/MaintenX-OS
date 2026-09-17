@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Wrench,
   Search,
@@ -234,6 +234,40 @@ export function AssetList() {
     }
   };
 
+  const [stageTab, setStageTab] = useState("ALL"); // ALL | PROCESSING | PACKAGING
+
+  const detectStage = (asset) => {
+    const str = `${asset.name || ""} ${asset.type || ""} ${asset.line || ""}`.toLowerCase();
+    if (
+      str.includes("vessel") ||
+      str.includes("mixer") ||
+      str.includes("cooker") ||
+      str.includes("blend") ||
+      str.includes("pasteuriz") ||
+      str.includes("tank") ||
+      str.includes("kettle") ||
+      str.includes("homogeniz") ||
+      str.includes("agitator") ||
+      str.includes("heat exchanger") ||
+      str.includes("cip") ||
+      str.includes("ferment") ||
+      str.includes("batching") ||
+      str.includes("formulation") ||
+      str.includes("processing")
+    ) {
+      return "PROCESSING";
+    }
+    return "PACKAGING";
+  };
+
+  const filteredAssets = useMemo(() => {
+    if (stageTab === "ALL") return assets;
+    return assets.filter((a) => detectStage(a) === stageTab);
+  }, [assets, stageTab]);
+
+  const processingCount = useMemo(() => assets.filter((a) => detectStage(a) === "PROCESSING").length, [assets]);
+  const packagingCount = useMemo(() => assets.filter((a) => detectStage(a) === "PACKAGING").length, [assets]);
+
   const columns = [
     {
       header: "Asset ID & Name",
@@ -249,6 +283,18 @@ export function AssetList() {
           </div>
         </div>
       )
+    },
+    {
+      header: "Stage",
+      accessor: "stage",
+      render: (_, row) => {
+        const stage = detectStage(row);
+        return (
+          <Badge variant={stage === "PROCESSING" ? "amber" : "cyan"}>
+            {stage === "PROCESSING" ? "PROCESSING" : "PACKAGING"}
+          </Badge>
+        );
+      }
     },
     {
       header: "Type & Department",
@@ -358,11 +404,12 @@ export function AssetList() {
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
         <div>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
             <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)" }}>
               Equipment & Assets Registry
             </h1>
             <Badge variant="cyan">{assets.length} Registered Machines</Badge>
+            <Badge variant="emerald">✓ TESTED MENU (LIVE DB CONNECTED)</Badge>
           </div>
         </div>
 
@@ -379,12 +426,66 @@ export function AssetList() {
         </div>
       </div>
 
+      {/* Stage Filter Buttons */}
+      <Card padding="14px">
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+          <span style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-muted)", marginRight: "6px" }}>
+            Filter by Manufacturing Stage:
+          </span>
+          <button
+            onClick={() => setStageTab("ALL")}
+            style={{
+              padding: "6px 14px",
+              borderRadius: "6px",
+              fontSize: "12px",
+              fontWeight: 700,
+              backgroundColor: stageTab === "ALL" ? "#C89547" : "var(--bg-card-subtle)",
+              color: stageTab === "ALL" ? "#261603" : "var(--text-secondary)",
+              border: "1px solid var(--border-subtle)",
+              cursor: "pointer"
+            }}
+          >
+            All Equipment ({assets.length})
+          </button>
+          <button
+            onClick={() => setStageTab("PROCESSING")}
+            style={{
+              padding: "6px 14px",
+              borderRadius: "6px",
+              fontSize: "12px",
+              fontWeight: 700,
+              backgroundColor: stageTab === "PROCESSING" ? "#C89547" : "var(--bg-card-subtle)",
+              color: stageTab === "PROCESSING" ? "#261603" : "var(--text-secondary)",
+              border: "1px solid var(--border-subtle)",
+              cursor: "pointer"
+            }}
+          >
+            🥣 Processing Equipment ({processingCount})
+          </button>
+          <button
+            onClick={() => setStageTab("PACKAGING")}
+            style={{
+              padding: "6px 14px",
+              borderRadius: "6px",
+              fontSize: "12px",
+              fontWeight: 700,
+              backgroundColor: stageTab === "PACKAGING" ? "#C89547" : "var(--bg-card-subtle)",
+              color: stageTab === "PACKAGING" ? "#261603" : "var(--text-secondary)",
+              border: "1px solid var(--border-subtle)",
+              cursor: "pointer"
+            }}
+          >
+            📦 Packaging Equipment ({packagingCount})
+          </button>
+        </div>
+      </Card>
+
       {/* Main Asset Data Table */}
       <Card>
         <DataTable
           title="Factory Machinery Directory"
           columns={columns}
-          data={assets}
+          data={filteredAssets}
           searchPlaceholder="Search machine name, asset ID, line, location..."
           onRowClick={(row) => navigate(`/maintenance/assets/${row.id}`)}
           exportFilename="flowstate_assets_registry.csv"

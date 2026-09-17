@@ -10,6 +10,13 @@ import { dashboardService } from "../../services/dashboardService";
 export function QualityChecks() {
   const { addToast } = useApp();
 
+  const toSafeText = (val, fallback = "") => {
+    if (!val) return fallback;
+    if (typeof val === "string") return val;
+    if (typeof val === "object") return val.name || val.value || fallback;
+    return String(val);
+  };
+
   const [brix, setBrix] = useState("11.8");
   const [ph, setPh] = useState("3.72");
   const [torque, setTorque] = useState("15");
@@ -240,7 +247,7 @@ export function QualityChecks() {
         </Card>
 
         <Button type="submit" variant="primary" icon={Send} disabled={submittingChecklist} style={{ width: "fit-content", padding: "10px 28px", alignSelf: "center" }}>
-          {submittingChecklist ? "Submitting..." : "Submit Quality Checklist"}
+          {submittingChecklist ? "Submitting..." : "Submit"}
         </Button>
       </form>
 
@@ -272,7 +279,7 @@ export function QualityChecks() {
                 <span style={{ fontWeight: 800, color: "var(--text-primary)", fontFamily: "var(--font-mono)" }}>{item.ph}</span>
                 <span style={{ fontWeight: 800, color: "var(--text-primary)", fontFamily: "var(--font-mono)" }}>{item.torque}</span>
                 <Badge variant={item.seal === "PASS" ? "emerald" : "danger"}>
-                  {item.seal}
+                  {toSafeText(item.seal, "PASS")}
                 </Badge>
               </div>
             ))}

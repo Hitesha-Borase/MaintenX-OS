@@ -13,19 +13,19 @@ export function ProductionPerformance() {
   const { productionOrders, setProductionOrders } = useProduction();
   const { addToast } = useApp();
 
-  const activeOrder = productionOrders.find((o) => o.status === "Running") || productionOrders[0] || {
-    id: "PO-001",
-    orderNumber: "PO-2026-8801",
-    productName: "500ml Organic Orange Juice",
-    producedQuantity: 18950,
-    targetQuantity: 24000,
-    currentSpeedBPM: 580,
-    targetSpeedBPM: 600,
+  const [liveOrder, setLiveOrder] = useState({
+    orderNumber: "",
+    productName: "",
+    producedQuantity: 0,
+    targetQuantity: 0,
+    currentSpeedBPM: 0,
+    targetSpeedBPM: 0,
+    hoursLeft: 3.5,
     unit: "Bottles"
-  };
+  });
 
   const [hoursLeft, setHoursLeft] = useState(3.5);
-  const [overrideTarget, setOverrideTarget] = useState(activeOrder.targetQuantity || 24000);
+  const [overrideTarget, setOverrideTarget] = useState(0);
   const [isOverrideModalOpen, setIsOverrideModalOpen] = useState(false);
   const [overrideReason, setOverrideReason] = useState("Shift Downtime Catch-up");
   const [isOverrideActive, setIsOverrideActive] = useState(false);
@@ -35,22 +35,25 @@ export function ProductionPerformance() {
   const [resettingOverride, setResettingOverride] = useState(false);
   const [simulatingSpeed, setSimulatingSpeed] = useState(false);
 
-  const actual = activeOrder.producedQuantity || 18950;
-  const targetNum = Number(overrideTarget) || 0;
-  const remaining = Math.max(0, targetNum - actual);
-  const calculatedRecoveryBPM = Math.round(remaining / (hoursLeft * 60)) || 0;
-
   // Fetch performance from backend on mount
   useEffect(() => {
     dashboardService.getProductionPerformance()
       .then(data => {
         if (data) {
-          if (data.targetQuantity) setOverrideTarget(data.targetQuantity);
+          setLiveOrder(data);
+          setOverrideTarget(data.targetQuantity || 0);
           if (data.hoursLeft) setHoursLeft(data.hoursLeft);
         }
       })
       .catch(err => console.warn("[ProductionPerformance] Failed to load backend metrics:", err.message));
   }, []);
+
+  const activeOrder = liveOrder.orderNumber ? liveOrder : (productionOrders.find((o) => o.status === "Running") || productionOrders[0] || liveOrder);
+
+  const actual = Number(activeOrder.producedQuantity) || 0;
+  const targetNum = Number(overrideTarget) || 0;
+  const remaining = Math.max(0, targetNum - actual);
+  const calculatedRecoveryBPM = hoursLeft > 0 ? Math.round(remaining / (hoursLeft * 60)) : 0;
 
   const handleOpenOverrideModal = () => {
     setIsOverrideModalOpen(true);
@@ -248,11 +251,11 @@ export function ProductionPerformance() {
           </h3>
           <div style={{ display: "flex", justifyContent: "space-between", paddingBottom: "6px", borderBottom: "1px solid var(--border-subtle)" }}>
             <span style={{ color: "var(--text-secondary)", fontSize: "13px" }}>Current Line Speed:</span>
-            <span style={{ fontWeight: 800, color: "var(--text-primary)", fontFamily: "var(--font-mono)" }}>{activeOrder.currentSpeedBPM || 580} BPM</span>
+            <span style={{ fontWeight: 800, color: "var(--text-primary)", fontFamily: "var(--font-mono)" }}>{activeOrder.currentSpeedBPM || 0} BPM</span>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", paddingTop: "4px" }}>
             <span style={{ color: "var(--text-secondary)", fontSize: "13px" }}>Target Speed:</span>
-            <span style={{ fontWeight: 800, color: "#0284C7", fontFamily: "var(--font-mono)" }}>{activeOrder.targetSpeedBPM || 600} BPM</span>
+            <span style={{ fontWeight: 800, color: "#0284C7", fontFamily: "var(--font-mono)" }}>{activeOrder.targetSpeedBPM || 0} BPM</span>
           </div>
         </Card>
       </div>

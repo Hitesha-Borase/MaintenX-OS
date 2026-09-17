@@ -43,6 +43,72 @@ export const dashboardService = {
     return apiClient.post("/dashboards/linelead/propose-speedup", payload);
   },
 
+  async logBatchWeighing(payload) {
+    return apiClient.post("/dashboards/linelead/batch-weighing", payload);
+  },
+
+  async advanceRecipeStep(payload) {
+    return apiClient.post("/dashboards/linelead/recipe-step", payload);
+  },
+
+  async logCcpCheck(payload) {
+    return apiClient.post("/dashboards/linelead/ccp-check", payload);
+  },
+
+  async saveLineClearance(payload) {
+    return apiClient.post("/dashboards/linelead/line-clearance", payload);
+  },
+
+  async saveSealVerification(payload) {
+    return apiClient.post("/dashboards/linelead/seal-verification", payload);
+  },
+
+  async logWipConsumption(payload) {
+    return apiClient.post("/dashboards/linelead/wip-consumption", payload);
+  },
+
+  // ─── Processing Operator Methods ──────────────────────────────────────────
+  async advanceProcessingRecipeStep(payload) {
+    return apiClient.post("/dashboards/operator/processing/recipe-step", payload);
+  },
+
+  async weighProcessingIngredient(payload) {
+    return apiClient.post("/dashboards/operator/processing/weigh-ingredient", payload);
+  },
+
+  async logProcessingParameters(payload) {
+    return apiClient.post("/dashboards/operator/processing/log-parameters", payload);
+  },
+
+  async signoffCcp(payload) {
+    return apiClient.post("/dashboards/operator/processing/ccp-signoff", payload);
+  },
+
+  async completeBatchAndCreateWip(payload) {
+    return apiClient.post("/dashboards/operator/processing/complete-batch-wip", payload);
+  },
+
+  // ─── Packaging Operator Methods ───────────────────────────────────────────
+  async selectWipLotForPackaging(payload) {
+    return apiClient.post("/dashboards/operator/packaging/select-wip-lot", payload);
+  },
+
+  async consumePackagingMaterials(payload) {
+    return apiClient.post("/dashboards/operator/packaging/consume-materials", payload);
+  },
+
+  async logPackagingOutputCases(payload) {
+    return apiClient.post("/dashboards/operator/packaging/log-output-cases", payload);
+  },
+
+  async verifySealAndLabel(payload) {
+    return apiClient.post("/dashboards/operator/packaging/verify-seal-label", payload);
+  },
+
+  async finishRunAndCreateFgPallet(payload) {
+    return apiClient.post("/dashboards/operator/packaging/create-fg-pallet", payload);
+  },
+
   // ─── H/B (Hour-by-Hour) Management ─────────────────────────────────────────
   async getHbLogs() {
     return apiClient.get("/dashboards/linelead/hb-logs");
@@ -117,6 +183,14 @@ export const dashboardService = {
   // ─── Staffing ───────────────────────────────────────────────────────────────
   async getStaffingRoster() {
     return apiClient.get("/dashboards/linelead/staffing");
+  },
+
+  async addStaffOperator(payload) {
+    return apiClient.post("/dashboards/linelead/staffing", payload);
+  },
+
+  async deleteStaffOperator(id) {
+    return apiClient.delete(`/dashboards/linelead/staffing/${id}`);
   },
 
   async swapStaffingStations(payload) {
@@ -235,8 +309,8 @@ export const dashboardService = {
   },
 
   // ─── Operator Work Instructions & SOPs ─────────────────────────────────────
-  async getWorkInstructions() {
-    return apiClient.get("/dashboards/operator/work-instructions");
+  async getWorkInstructions(orderNumber) {
+    return apiClient.get(`/dashboards/operator/work-instructions${orderNumber ? `?orderNumber=${encodeURIComponent(orderNumber)}` : ""}`);
   },
 
   async acknowledgeWorkInstructions(payload = {}) {
@@ -244,8 +318,8 @@ export const dashboardService = {
   },
 
   // ─── Operator Production Entry ─────────────────────────────────────────────
-  async getProductionEntryStatus() {
-    return apiClient.get("/dashboards/operator/production-entry");
+  async getProductionEntryStatus(orderNumber) {
+    return apiClient.get(`/dashboards/operator/production-entry${orderNumber ? `?orderNumber=${encodeURIComponent(orderNumber)}` : ""}`);
   },
 
   async submitProductionLog(payload) {
@@ -297,6 +371,10 @@ export const dashboardService = {
 
   async confirmMaterialReceipt(id) {
     return apiClient.post(`/dashboards/operator/material-request/${id}/confirm-receipt`, {});
+  },
+
+  async deleteMaterialRequisition(id) {
+    return apiClient.delete(`/dashboards/operator/material-request/${id}`);
   },
 
   // ─── Operator Barcode & QR Scan ─────────────────────────────────────────────

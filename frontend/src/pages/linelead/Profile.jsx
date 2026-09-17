@@ -13,20 +13,16 @@ export function Profile() {
   const [savingProfile, setSavingProfile] = useState(false);
 
   const [profileData, setProfileData] = useState({
-    id: "EMP-3092",
-    name: "Elena Rostova",
+    id: "EMP-1048",
+    name: "Devang Patel",
     role: "Aseptic Line Lead",
-    email: "elena.rostova@maintenx.internal",
-    phone: "+1 (555) 234-9011",
+    email: "linelead@maintenx.com",
+    phone: "+91 98765-43210",
     plant: "Plant 1 — Main Processing Facility",
     shift: "Shift A (06:00 - 14:00)"
   });
 
-  const [certifications, setCertifications] = useState([
-    { name: "Continuous Improvement Green Belt", desc: "Certified practitioner for process optimization.", level: "LSS Certified" },
-    { name: "High-Speed Bottling Diagnostics v2.0", desc: "Advanced troubleshooting for bottling line 1.", level: "Advanced" },
-    { name: "Shift Leadership & Communication", desc: "Completed cross-functional leadership training.", level: "Competent" }
-  ]);
+  const [certifications, setCertifications] = useState([]);
 
   // Fetch profile details from backend on mount
   useEffect(() => {
@@ -88,16 +84,16 @@ export function Profile() {
               fontWeight: 800
             }}
           >
-            {profileData.name ? profileData.name.split(" ").map(n => n.charAt(0)).join("") : "ER"}
+            {profileData.name ? profileData.name.split(" ").map(n => n.charAt(0)).join("") : "DP"}
           </div>
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "4px", flexWrap: "wrap" }}>
-              <h2 style={{ fontSize: "22px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>{profileData.name || "Elena Rostova"}</h2>
+              <h2 style={{ fontSize: "22px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>{profileData.name || "Devang Patel"}</h2>
               <Badge variant="cyan">Shift A Lead</Badge>
               <Badge variant="purple">Line 1 Bottling</Badge>
             </div>
             <span style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-primary)", display: "block" }}>{profileData.role || "Aseptic Line Lead"}</span>
-            <span style={{ fontSize: "12px", color: "var(--text-muted)", display: "block", marginTop: "2px" }}>Employee ID: {profileData.id || "EMP-3092"}</span>
+            <span style={{ fontSize: "12px", color: "var(--text-muted)", display: "block", marginTop: "2px" }}>Employee ID: {profileData.id || "EMP-1048"}</span>
           </div>
         </div>
 
@@ -128,28 +124,34 @@ export function Profile() {
           <Award size={18} color="#D97706" /> Roster Certifications & Qualifications
         </h3>
         <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-          {certifications.map((cert, idx) => (
-            <div
-              key={idx}
-              className="mobile-flex-col"
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                padding: "12px 16px",
-                borderRadius: "6px",
-                backgroundColor: "var(--bg-card-subtle)",
-                border: "1px solid var(--border-subtle)",
-                gap: "12px"
-              }}
-            >
-              <div>
-                <span style={{ fontSize: "14px", fontWeight: 700, color: "var(--text-primary)", display: "block" }}>{cert.name}</span>
-                <span style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "4px", display: "block" }}>{cert.desc}</span>
+          {certifications.length === 0 ? (
+            <p style={{ fontSize: "12px", color: "var(--text-muted)", fontStyle: "italic", margin: 0 }}>
+              No active certifications or qualifications assigned to this profile.
+            </p>
+          ) : (
+            certifications.map((cert, idx) => (
+              <div
+                key={idx}
+                className="mobile-flex-col"
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  padding: "12px 16px",
+                  borderRadius: "6px",
+                  backgroundColor: "var(--bg-card-subtle)",
+                  border: "1px solid var(--border-subtle)",
+                  gap: "12px"
+                }}
+              >
+                <div>
+                  <span style={{ fontSize: "14px", fontWeight: 700, color: "var(--text-primary)", display: "block" }}>{cert.name}</span>
+                  <span style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "4px", display: "block" }}>{cert.desc}</span>
+                </div>
+                <Badge variant="emerald">{cert.level}</Badge>
               </div>
-              <Badge variant="emerald">{cert.level}</Badge>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       </Card>
       <EditProfileModal

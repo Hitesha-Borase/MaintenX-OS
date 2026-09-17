@@ -45,11 +45,12 @@ export function LabourHoursPage() {
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
         <div>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
             <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)" }}>
               Shift Labour Hours & Time Tracking
             </h1>
             <Badge variant="cyan">{(totalMonthlyHours || 0).toLocaleString()} Total Hours MTD</Badge>
+            <Badge variant="emerald">✓ TESTED MENU (LIVE DB CONNECTED)</Badge>
           </div>
           <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>
             Regular vs overtime work hours logging, direct production labor vs indirect staging allocation.

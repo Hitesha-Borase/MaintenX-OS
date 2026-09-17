@@ -17,7 +17,7 @@ export function BarcodeScan() {
   const [scannerStatus, setScannerStatus] = useState("READY");
 
   const [isAttachModalOpen, setIsAttachModalOpen] = useState(false);
-  const [activeBatchId, setActiveBatchId] = useState("BAT-2026-904 (Juice Run A)");
+  const [activeBatchId, setActiveBatchId] = useState("BAT-2026-001 (Juice Run A - Line 1)");
 
   // Fetch scanner status on mount
   useEffect(() => {
@@ -335,8 +335,8 @@ export function BarcodeScan() {
               onChange={(e) => setActiveBatchId(e.target.value)}
               className="input-field"
             >
-              <option value="BAT-2026-904 (Juice Run A)">BAT-2026-904 (Juice Run A - Line 1)</option>
-              <option value="BAT-2026-905 (Juice Run B)">BAT-2026-905 (Juice Run B - Line 1)</option>
+              <option value="BAT-2026-001 (Juice Run A - Line 1)">BAT-2026-001 (Juice Run A - Line 1)</option>
+              <option value="BAT-2026-905 (Juice Run B - Line 1)">BAT-2026-905 (Juice Run B - Line 1)</option>
             </select>
           </div>
 

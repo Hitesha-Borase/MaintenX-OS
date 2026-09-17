@@ -16,18 +16,19 @@ export function ExceptionProvider({ children }) {
     async function loadBackendExceptions() {
       try {
         const res = await exceptionService.getExceptions();
-        if (res?.data && Array.isArray(res.data) && isMounted && res.data.length > 0) {
+        const list = res?.data?.data || res?.data || res;
+        if (Array.isArray(list) && isMounted && list.length > 0) {
           // Normalize fields for UI compatibility
-          const mapped = res.data.map(e => ({
+          const mapped = list.map(e => ({
             id: e.id,
             title: e.title,
             severity: e.severity,
             category: e.category,
             assetOrOrder: e.assetOrOrder,
-            description: e.impactDescription,
-            impact: e.impactDescription,
-            owner: e.owner,
-            escalationLevel: e.escalationLevel,
+            description: e.impactDescription || e.description || e.title,
+            impact: e.impactDescription || e.description || e.title,
+            owner: e.owner || "Unassigned",
+            escalationLevel: e.escalationLevel || "Monitor Only",
             status: e.status === "Active" ? "Open" : e.status,
             resolutionNotes: e.resolutionNotes,
             discoveredAt: e.createdAt ? new Date(e.createdAt).toISOString().replace("T", " ").substring(0, 16) : "Just now",

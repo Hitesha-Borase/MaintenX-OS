@@ -99,6 +99,21 @@ export const planningService = {
     return unwrapList(response);
   },
 
+  async createDemandHistory(data) {
+    const response = await apiClient.post('/forecast/history', data);
+    return unwrapItem(response);
+  },
+
+  async updateDemandHistory(id, data) {
+    const response = await apiClient.patch(`/forecast/history/${id}`, data);
+    return unwrapItem(response);
+  },
+
+  async deleteDemandHistory(id) {
+    const response = await apiClient.delete(`/forecast/history/${id}`);
+    return unwrapItem(response);
+  },
+
   // Promotions & Uplift Events
   async getPromotions() {
     const response = await apiClient.get('/forecast/promotions');
@@ -382,6 +397,22 @@ export const planningService = {
   // --- Recovery Simulator ---
   async applyRecovery(params) {
     return apiClient.post("/planning/recovery/apply", params);
+  },
+
+  // --- Processing Batches vs Packaging Orders ---
+  async getProcessingBatches() {
+    const response = await apiClient.get("/planning/processing-batches");
+    return unwrapList(response);
+  },
+
+  async createProcessingBatch(data) {
+    const response = await apiClient.post("/planning/processing-batches", data);
+    return unwrapItem(response);
+  },
+
+  async linkProcessingBatch(batchId, productionOrderId) {
+    const response = await apiClient.post("/planning/processing-batches/link", { batchId, productionOrderId });
+    return unwrapItem(response);
   }
 };
 

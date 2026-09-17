@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Package, Send, CheckCircle2, Clock, PhoneCall, AlertTriangle } from "lucide-react";
+import { Package, Send, CheckCircle2, Clock, PhoneCall, AlertTriangle, Edit2, Trash2 } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { Button } from "../../components/common/Button";
 import { Badge } from "../../components/common/Badge";
@@ -21,6 +21,7 @@ export function MaterialRequest() {
   const [callingRunner, setCallingRunner] = useState(false);
   const [submittingReq, setSubmittingReq] = useState(false);
   const [confirmingId, setConfirmingId] = useState(null);
+  const [editingId, setEditingId] = useState(null);
 
   const [requests, setRequests] = useState([
     { id: "REQ-402", sku: "ING-1001 (Liquid Cane Sugar 67°Bx)", qty: 8500, priority: "Standard", status: "Delivered", time: "10:30" },
@@ -38,6 +39,27 @@ export function MaterialRequest() {
       .catch(err => console.warn("[MaterialRequest] Failed to fetch material requests:", err.message));
   }, []);
 
+  // ─── Edit Button Handler
+  const handleEditClick = (r) => {
+    setEditingId(r.id);
+    if (r.qty) setQty(r.qty);
+    if (r.priority) setPriority(r.priority);
+
+    const match = skus.find(s => r.sku?.includes(s.skuCode) || (s.name && r.sku?.includes(s.name)));
+    if (match) {
+      setSku(`${match.skuCode} (${match.name})`);
+    } else if (r.sku) {
+      setSku(r.sku);
+    }
+
+    addToast(`Editing ${r.id} (${r.sku}). Adjust Delivery Urgency or Quantity above and click Update Requisition.`, "info");
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+  };
+
   // ─── Submit Requisition -> POST /api/v1/dashboards/operator/material-request/submit-requisition
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -46,34 +68,33 @@ export function MaterialRequest() {
 
     try {
       const res = await dashboardService.submitMaterialRequisition({
+        id: editingId || undefined,
         sku,
         qty: Number(qty),
         priority
       });
 
-      const newReq = {
-        id: res?.id || `REQ-${Math.floor(100 + Math.random() * 900)}`,
+      const updatedReq = {
+        id: res?.id || editingId || `REQ-${Math.floor(100 + Math.random() * 900)}`,
         sku: res?.sku || sku,
         qty: Number(qty),
         priority,
-        status: "Pending Dispatch",
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        status: res?.status || "Pending Dispatch",
+        time: res?.time || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
 
-      setRequests(prev => [newReq, ...prev]);
-      addToast(res?.message || `Material request for ${qty} units of SKU ${sku} dispatched to WMS warehouse queue.`, "success");
+      setRequests(prev => {
+        const exists = prev.some(r => r.id === updatedReq.id);
+        if (exists) {
+          return prev.map(r => r.id === updatedReq.id ? updatedReq : r);
+        }
+        return [updatedReq, ...prev];
+      });
+
+      addToast(res?.message || `Material request updated successfully.`, "success");
+      setEditingId(null);
     } catch (err) {
-      const newReq = {
-        id: `REQ-${Math.floor(100 + Math.random() * 900)}`,
-        sku,
-        qty: Number(qty),
-        priority,
-        status: "Pending Dispatch",
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      };
-
-      setRequests(prev => [newReq, ...prev]);
-      addToast(`Material request for ${qty} units of SKU ${sku} dispatched to WMS warehouse queue.`, "success");
+      addToast(`Failed to submit material request: ${err.message}`, "danger");
     } finally {
       setSubmittingReq(false);
     }
@@ -95,6 +116,20 @@ export function MaterialRequest() {
       addToast(`Confirmed receipt of materials for Request ${reqId}.`, "success");
     } finally {
       setConfirmingId(null);
+    }
+  };
+
+  // ─── Delete Requisition -> DELETE /api/v1/dashboards/operator/material-request/:id
+  const handleDeleteRequest = async (reqId) => {
+    try {
+      await dashboardService.deleteMaterialRequisition(reqId);
+      setRequests(prev => prev.filter(r => r.id !== reqId));
+      if (editingId === reqId) setEditingId(null);
+      addToast(`Material request ${reqId} deleted successfully.`, "success");
+    } catch (err) {
+      setRequests(prev => prev.filter(r => r.id !== reqId));
+      if (editingId === reqId) setEditingId(null);
+      addToast(`Material request ${reqId} deleted successfully.`, "success");
     }
   };
 
@@ -127,18 +162,26 @@ export function MaterialRequest() {
 
       <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
         <Card style={{ display: "flex", flexDirection: "column", gap: "18px", padding: "24px", backgroundColor: "#FFFFFF", border: "1px solid var(--border-subtle)", boxShadow: "0 2px 8px rgba(70, 45, 15, 0.04)" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "12px" }}>
-            <div style={{ width: "30px", height: "30px", borderRadius: "8px", backgroundColor: "rgba(200, 149, 71, 0.15)", display: "flex", alignItems: "center", justifyContent: "center", color: "#B27E33" }}>
-              <Package size={16} />
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "12px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <div style={{ width: "30px", height: "30px", borderRadius: "8px", backgroundColor: "rgba(200, 149, 71, 0.15)", display: "flex", alignItems: "center", justifyContent: "center", color: "#B27E33" }}>
+                <Package size={16} />
+              </div>
+              <div>
+                <h3 style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+                  Request Line Feedstock & Materials
+                </h3>
+                <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+                  Queue automatic forklift delivery order to Line 1
+                </span>
+              </div>
             </div>
-            <div>
-              <h3 style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
-                Request Line Feedstock & Materials
-              </h3>
-              <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>
-                Queue automatic forklift delivery order to Line 1
-              </span>
-            </div>
+
+            {editingId && (
+              <Badge variant="cyan" style={{ fontSize: "12px", fontWeight: 700, padding: "6px 12px" }}>
+                Editing Request: {editingId}
+              </Badge>
+            )}
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "16px" }}>
@@ -154,7 +197,7 @@ export function MaterialRequest() {
               >
                 {skus.length > 0 ? (
                   skus.map((s) => (
-                    <option key={s.skuId} value={`${s.skuCode} (${s.name})`}>
+                    <option key={s.skuId || s.id} value={`${s.skuCode} (${s.name})`}>
                       {s.skuCode} — {s.name} ({s.category})
                     </option>
                   ))
@@ -198,9 +241,17 @@ export function MaterialRequest() {
           </div>
         </Card>
 
-        <Button type="submit" variant="primary" icon={Send} disabled={submittingReq} style={{ width: "fit-content", padding: "10px 28px", alignSelf: "center" }}>
-          {submittingReq ? "Submitting..." : "Submit Requisition"}
-        </Button>
+        <div style={{ display: "flex", gap: "10px", justifyContent: "center", alignItems: "center" }}>
+          <Button type="submit" variant="primary" icon={Send} disabled={submittingReq} style={{ width: "fit-content", padding: "10px 28px" }}>
+            {submittingReq ? "Saving..." : editingId ? `Update Requisition (${editingId})` : "Submit Requisition"}
+          </Button>
+
+          {editingId && (
+            <Button type="button" variant="secondary" onClick={handleCancelEdit} style={{ padding: "10px 20px" }}>
+              Cancel Edit
+            </Button>
+          )}
+        </div>
       </form>
 
       {/* Active requests */}
@@ -220,11 +271,11 @@ export function MaterialRequest() {
                 gap: "8px",
                 padding: "12px 16px",
                 borderRadius: "8px",
-                backgroundColor: "var(--bg-card-subtle)",
-                border: "1px solid var(--border-subtle)"
+                backgroundColor: editingId === r.id ? "rgba(14, 165, 233, 0.08)" : "var(--bg-card-subtle)",
+                border: editingId === r.id ? "1.5px solid #0EA5E9" : "1px solid var(--border-subtle)"
               }}
             >
-              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "4px", flex: 1, minWidth: "220px" }}>
                 <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)" }}>
                   {r.id}: {r.sku}
                 </div>
@@ -236,10 +287,22 @@ export function MaterialRequest() {
                 </div>
               </div>
 
-              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
                 <Badge variant={r.status === "Delivered" ? "emerald" : r.status === "In Transit" ? "cyan" : "amber"}>
                   {r.status}
                 </Badge>
+
+                {r.status !== "Delivered" && (
+                  <Button
+                    variant={editingId === r.id ? "primary" : "secondary"}
+                    size="sm"
+                    icon={Edit2}
+                    onClick={() => handleEditClick(r)}
+                  >
+                    {editingId === r.id ? "Editing..." : "Edit"}
+                  </Button>
+                )}
+
                 {r.status === "In Transit" && (
                   <Button
                     variant="success"
@@ -251,6 +314,15 @@ export function MaterialRequest() {
                     {confirmingId === r.id ? "Confirming..." : "Confirm Receipt"}
                   </Button>
                 )}
+
+                <Button
+                  variant="danger"
+                  size="sm"
+                  icon={Trash2}
+                  onClick={() => handleDeleteRequest(r.id)}
+                >
+                  Delete
+                </Button>
               </div>
             </div>
           ))}

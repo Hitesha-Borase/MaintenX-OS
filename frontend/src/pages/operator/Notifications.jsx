@@ -12,17 +12,13 @@ export function Notifications() {
   const { addToast } = useApp();
 
   const [activeTab, setActiveTab] = useState("all");
-  const [notifications, setNotifications] = useState([
-    { id: 1, type: "system", read: false, icon: Info, title: "Allergen Cleared Line 1", msg: "Sanitation and allergen wipe-down release signed off by QA team.", time: "10 min ago", path: "/operator/dashboard" },
-    { id: 2, type: "sop", read: false, icon: ShieldCheck, title: "SOP Update v4.1", msg: "Aseptic Bottling packaging procedures updated. Acknowledgement required.", time: "1 hour ago", path: "/operator/work-instructions" },
-    { id: 3, type: "pm", read: false, icon: Wrench, title: "PM checklist scheduled", msg: "Line 1 hourly inspection check due. Perform Brix and pH logs.", time: "2 hours ago", path: "/operator/quality-checks" }
-  ]);
+  const [notifications, setNotifications] = useState([]);
 
   // Fetch notifications on mount
   useEffect(() => {
     dashboardService.getOperatorNotifications()
       .then(data => {
-        if (data && Array.isArray(data) && data.length > 0) {
+        if (data && Array.isArray(data)) {
           const mapped = data.map(item => ({
             ...item,
             icon: item.type === "system" ? Info : item.type === "sop" ? ShieldCheck : Wrench

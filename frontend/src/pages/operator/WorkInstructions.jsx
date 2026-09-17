@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { FileText, Printer, CheckCircle, Award, ShieldCheck } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { Button } from "../../components/common/Button";
@@ -10,31 +11,61 @@ import { dashboardService } from "../../services/dashboardService";
 export function WorkInstructions() {
   const { productionOrders } = useProduction();
   const { addToast } = useApp();
+  const [searchParams] = useSearchParams();
+  const orderNumberParam = searchParams.get("orderNumber");
+
   const [acknowledged, setAcknowledged] = useState(false);
   const [acknowledging, setAcknowledging] = useState(false);
+  const [sopData, setSopData] = useState({
+    activeOrderNumber: "—",
+    productName: "Loading active job...",
+    workInstructions: "SOP Loading..."
+  });
+  const [steps, setSteps] = useState([
+    { title: "1. Pre-Start Sanitation Guard", text: "Verify that sanitation release tag has been signed by Quality QA. Perform visual sanitisation inspection of the aseptic filler nozzles." },
+    { title: "2. Equipment Readiness", text: "Validate Nitrogen flush pressure is at 2.4 Bar. Confirm cap chute and raw bottle feed are fully stocked with SKU raw materials." },
+    { title: "3. Inline HMI Controls", text: "Initialize speed dials. Line standard speed is 580 BPM. Do not exceed 600 BPM limit without supervisor authorization." },
+    { title: "4. Quality CCP Logging", text: "Log Brix sugar levels and pH measurements every 30 minutes in the Quality Checks tab. Burst limit: 200 kPa." },
+    { title: "5. Lot Handoff Procedure", text: "Before shift change, complete production quantities, log active downtime reasons, and clean the line conveyor." }
+  ]);
 
-  const activeOrder = productionOrders.find((o) => o.status === "Running") || productionOrders[0] || {
-    orderNumber: "ORD-904-ASEPTIC-JUICE",
-    productName: "Organic Cold-Pressed Orange Juice 500ml",
-    workInstructions: "SOP-PKG-042: High-Speed Aseptic Cold Fill & Nitrogen Flush Procedures v4.1"
-  };
+const toSafeStr = (val, fallback = "") => {
+  if (!val) return fallback;
+  if (typeof val === "string") return val;
+  if (typeof val === "object") return val.name || val.code || val.orderNumber || fallback;
+  return String(val);
+};
 
-  // Fetch SOP status from backend on mount
+  // Fetch live SOP status & active job details from backend on mount or when orderNumberParam changes
   useEffect(() => {
-    dashboardService.getWorkInstructions()
+    dashboardService.getWorkInstructions(orderNumberParam)
       .then(data => {
-        if (data && data.acknowledged !== undefined) {
-          setAcknowledged(data.acknowledged);
+        if (data) {
+          const resObj = data.data || data;
+          setSopData({
+            activeOrderNumber: toSafeStr(resObj.activeOrderNumber || resObj.orderNumber, "PO-2026"),
+            productName: toSafeStr(resObj.productName, "Standard Product"),
+            workInstructions: toSafeStr(resObj.workInstructions, "SOP-PKG-042: High-Speed Aseptic Fill Procedures")
+          });
+          if (resObj.acknowledged !== undefined) {
+            setAcknowledged(resObj.acknowledged);
+          }
+          if (Array.isArray(resObj.steps) && resObj.steps.length > 0) {
+            setSteps(resObj.steps);
+          }
         }
       })
       .catch(err => console.warn("[WorkInstructions] Failed to fetch SOP status:", err.message));
-  }, []);
+  }, [orderNumberParam]);
 
   // ─── Acknowledge SOP -> POST /api/v1/dashboards/operator/work-instructions/acknowledge
   const handleAcknowledge = async () => {
     setAcknowledging(true);
     try {
-      const res = await dashboardService.acknowledgeWorkInstructions({ sopId: activeOrder.workInstructions });
+      const res = await dashboardService.acknowledgeWorkInstructions({
+        sopId: sopData.workInstructions,
+        orderNumber: sopData.activeOrderNumber
+      });
       setAcknowledged(true);
       addToast(res?.message || "SOP safety, PPE requirements, and CCP operational controls acknowledged.", "success");
     } catch (err) {
@@ -44,14 +75,6 @@ export function WorkInstructions() {
       setAcknowledging(false);
     }
   };
-
-  const steps = [
-    { title: "1. Pre-Start Sanitation Guard", text: "Verify that sanitation release tag has been signed by Quality QA. Perform visual sanitisation inspection of the aseptic filler nozzles." },
-    { title: "2. Equipment Readiness", text: "Validate Nitrogen flush pressure is at 2.4 Bar. Confirm cap chute and raw bottle feed are fully stocked with SKU raw materials." },
-    { title: "3. Inline HMI Controls", text: "Initialize speed dials. Line standard speed is 580 BPM. Do not exceed 600 BPM limit without supervisor authorization." },
-    { title: "4. Quality CCP Logging", text: "Log Brix sugar levels and pH measurements every 30 minutes in the Quality Checks tab. Burst limit: 200 kPa." },
-    { title: "5. Lot Handoff Procedure", text: "Before shift change, complete production quantities, log active downtime reasons, and clean the line conveyor." }
-  ];
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "16px", width: "100%", maxWidth: "100%", boxSizing: "border-box" }}>
@@ -86,14 +109,14 @@ export function WorkInstructions() {
           </div>
           <div style={{ minWidth: 0, flex: 1 }}>
             <h3 style={{ fontSize: "clamp(14px, 3.5vw, 16px)", fontWeight: 800, color: "var(--text-primary)", margin: 0, wordBreak: "break-word", lineHeight: 1.3 }}>
-              {activeOrder.workInstructions || "SOP-PKG-042: High-Speed Aseptic Cold Fill & Nitrogen Flush Procedures v4.1"}
+              {sopData.workInstructions || "SOP-PKG-042: High-Speed Aseptic Cold Fill & Nitrogen Flush Procedures v4.1"}
             </h3>
             <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "6px", display: "flex", flexWrap: "wrap", alignItems: "center", gap: "6px" }}>
               <span>Associated with Active Job:</span>
               <span style={{ backgroundColor: "rgba(2, 132, 199, 0.1)", color: "#0284C7", padding: "2px 8px", borderRadius: "6px", fontWeight: 700, fontFamily: "var(--font-mono)" }}>
-                {activeOrder.orderNumber}
+                {sopData.activeOrderNumber}
               </span>
-              <span style={{ color: "var(--text-muted)" }}>({activeOrder.productName})</span>
+              <span style={{ color: "var(--text-muted)" }}>({sopData.productName})</span>
             </div>
           </div>
         </div>

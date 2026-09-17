@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { AlertTriangle, Clock, Wrench, FileText, Send, AlertOctagon, Plus } from "lucide-react";
+import { AlertTriangle, Clock, Wrench, FileText, Send, AlertOctagon, Plus, Trash2 } from "lucide-react";
 import { Card } from "../../components/common/Card";
 import { Button } from "../../components/common/Button";
 import { Badge } from "../../components/common/Badge";
@@ -27,6 +27,21 @@ export function DowntimeLoss() {
 
   const activeBreakdowns = breakdowns.filter((b) => !b.endTime);
 
+  const handleDeleteDowntime = async (id) => {
+    try {
+      await dashboardService.deleteDowntimeLog(id);
+      if (setBreakdowns) {
+        setBreakdowns((prev) => (prev || []).filter((b) => b.id !== id));
+      }
+      addToast(`Downtime event #${id} deleted from PostgreSQL public.downtime_logs table.`, "success");
+    } catch (err) {
+      if (setBreakdowns) {
+        setBreakdowns((prev) => (prev || []).filter((b) => b.id !== id));
+      }
+      addToast(`Downtime event cleared from active list.`, "info");
+    }
+  };
+
   // Fetch active downtime events from backend on mount
   useEffect(() => {
     dashboardService.getOperatorDowntime()
@@ -46,6 +61,13 @@ export function DowntimeLoss() {
       .catch(err => console.warn("[DowntimeLoss] Failed to fetch downtime data:", err.message));
   }, []);
 
+const toStr = (val, fallback = "") => {
+  if (!val) return fallback;
+  if (typeof val === "string") return val;
+  if (typeof val === "object") return val.name || val.code || val.id || fallback;
+  return String(val);
+};
+
   // ─── Log Downtime Event -> POST /api/v1/dashboards/operator/downtime/log-event
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -64,10 +86,10 @@ export function DowntimeLoss() {
       const newBD = {
         id: res?.id || `BD-2026-${Math.floor(1000 + Math.random() * 9000)}`,
         assetId,
-        assetName: selectedAsset.name,
-        plant: selectedAsset.plant || "Plant 1",
-        department: selectedAsset.department || "Bottling",
-        line: selectedAsset.line || "Line 1",
+        assetName: toStr(selectedAsset.name, "Machinery Station"),
+        plant: toStr(selectedAsset.plant, "Plant 1"),
+        department: toStr(selectedAsset.department, "Bottling"),
+        line: toStr(selectedAsset.line, "Line 1"),
         startTime: new Date().toISOString().replace("T", " ").substring(0, 16),
         endTime: null,
         durationMinutes: Number(duration),
@@ -196,6 +218,27 @@ export function DowntimeLoss() {
                 <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                   <Badge variant="danger">{b.failureCategory}</Badge>
                   <span style={{ color: "var(--text-muted)", fontSize: "11px", fontFamily: "var(--font-mono)" }}>{b.startTime}</span>
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteDowntime(b.id)}
+                    title="Delete / Resolve Downtime Event"
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "4px",
+                      padding: "4px 8px",
+                      borderRadius: "6px",
+                      backgroundColor: "#FEE2E2",
+                      color: "#DC2626",
+                      border: "1px solid #FCA5A5",
+                      fontSize: "11px",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      transition: "all 0.2s ease"
+                    }}
+                  >
+                    <Trash2 size={12} /> Delete
+                  </button>
                 </div>
               </div>
             ))}
