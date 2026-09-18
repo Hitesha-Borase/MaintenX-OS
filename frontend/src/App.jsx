@@ -17,6 +17,7 @@ import { AppLayout } from "./components/layout/AppLayout";
 import { Login } from "./pages/auth/Login";
 import { LandingPage } from "./pages/landing/LandingPage";
 import { PlaceholderPage } from "./pages/PlaceholderPage";
+import { AdminSupportPage } from "./pages/admin/support/AdminSupportPage";
 import { AlertOctagon } from "lucide-react";
 
 // ==========================================
@@ -491,6 +492,8 @@ export function AppContent() {
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/admin/console" element={<AdminDashboard />} />
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/support" element={<AdminSupportPage />} />
+          <Route path="/admin/support" element={<AdminSupportPage />} />
 
           {/* 2. User Management */}
           <Route path="/users" element={<UsersPage />} />

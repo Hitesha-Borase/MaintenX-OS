@@ -64,7 +64,7 @@ export class AuthController {
         {
           token,
           user,
-          tenant: tenant ? { id: tenant.id, name: tenant.name, slug: tenant.slug } : null,
+          tenant: tenant || null,
           company,
         },
         "Tenant registered successfully"
@@ -101,7 +101,7 @@ export class AuthController {
       formatSuccess({
         token,
         user,
-        tenant: tenant ? { id: tenant.id, name: tenant.name, slug: tenant.slug } : null,
+        tenant: tenant || null,
       }, "Logged in successfully")
     );
   }

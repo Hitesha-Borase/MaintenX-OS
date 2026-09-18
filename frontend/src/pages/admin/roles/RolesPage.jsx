@@ -453,11 +453,11 @@ export function RolesPage() {
 
             <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
               <p style={{ fontSize: "13px", color: "var(--text-primary)", lineHeight: 1.5, margin: 0 }}>
-                Kya aap sach me role <strong>{deletingRole.name}</strong> ko delete karna chahte hain?
+                Are you sure you want to delete the role <strong>{deletingRole.name}</strong>?
               </p>
               {deletingRole.isSystem && (
                 <div style={{ fontSize: "12px", color: "#DC2626", backgroundColor: "rgba(220, 38, 38, 0.08)", padding: "10px 12px", borderRadius: "6px", border: "1px solid rgba(220, 38, 38, 0.2)" }}>
-                  Warning: Yeh ek System Built-in role hai. Ise delete karne se related users ka role unassigned ho sakta hai.
+                  Warning: This is a system built-in role. Deleting it may leave associated users unassigned.
                 </div>
               )}
 

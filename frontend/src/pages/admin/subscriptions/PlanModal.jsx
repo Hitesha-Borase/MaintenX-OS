@@ -212,7 +212,7 @@ export function PlanModal({ isOpen, onClose, planToEdit = null }) {
             style={{ width: "100%", fontFamily: "monospace", fontSize: "12px", lineHeight: 1.5, resize: "vertical" }}
           />
           <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "4px" }}>
-            Har line ek checklist item banegi jo Landing Page aur Master Admin dono par dikhegi.
+            Each line becomes a checklist feature displayed on both the Landing Page and Master Admin.
           </div>
         </div>
 

@@ -28,10 +28,13 @@ export function ManageSubscriptions() {
     fetchCompanies?.();
   }, [fetchSubscriptions, fetchCompanies]);
 
-  // Unique plans from actual data
-  const uniquePlans = ["All", ...Array.from(new Set(companies.map((c) => c.subscription).filter(Boolean)))];
+  // Only tenants with a real subscription in the database (excludes non-subscribed or demo-only entities)
+  const subscribedCompanies = companies.filter((c) => Boolean(c.hasSubscription));
 
-  const filtered = companies.filter((c) => {
+  // Unique plans from actual subscribed data
+  const uniquePlans = ["All", ...Array.from(new Set(subscribedCompanies.map((c) => c.subscription).filter(Boolean)))];
+
+  const filtered = subscribedCompanies.filter((c) => {
     if (statusFilter !== "All" && c.status?.toLowerCase() !== statusFilter.toLowerCase()) return false;
     if (planFilter !== "All" && c.subscription !== planFilter) return false;
     if (searchTerm) {

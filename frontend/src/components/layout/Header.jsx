@@ -15,7 +15,8 @@ import {
   Clock,
   ChevronDown,
   ShieldCheck,
-  ShieldAlert
+  ShieldAlert,
+  Lock
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useApp } from "../../context/AppContext";
@@ -34,7 +35,7 @@ export function Header() {
   } = useApp();
 
   const navigate = useNavigate();
-  const { currentRole, setRoleById, ROLES, logout } = useRole();
+  const { currentRole, setRoleById, ROLES, logout, isModuleEnabled } = useRole();
   const { company } = useMasterData();
 
   const [showProfileMenu, setShowProfileMenu] = useState(false);
@@ -492,42 +493,69 @@ export function Header() {
                   Switch Role Perspective
                 </div>
                 <div style={{ maxHeight: "180px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "2px" }}>
-                  {ROLES?.map((r) => (
-                    <button
-                      key={r.id}
-                      onClick={() => {
-                        setRoleById(r.id);
-                        setShowProfileMenu(false);
-                        addToast(`Switched perspective to ${r.label} (${r.user?.name || "User"})!`, "success");
-                        navigate(r.defaultRoute || "/dashboard");
-                      }}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        padding: "6px 10px",
-                        borderRadius: "6px",
-                        border: "none",
-                        backgroundColor: currentRole?.id === r.id ? "rgba(200, 149, 71, 0.15)" : "transparent",
-                        color: currentRole?.id === r.id ? "#8C5B23" : "var(--text-primary, #261603)",
-                        fontSize: "11px",
-                        fontWeight: currentRole?.id === r.id ? 800 : 600,
-                        cursor: "pointer",
-                        textAlign: "left"
-                      }}
-                      onMouseEnter={(e) => {
-                        if (currentRole?.id !== r.id) e.currentTarget.style.backgroundColor = "var(--bg-card-subtle, #FAF6F0)";
-                      }}
-                      onMouseLeave={(e) => {
-                        if (currentRole?.id !== r.id) e.currentTarget.style.backgroundColor = "transparent";
-                      }}
-                    >
-                      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        {r.label}
-                      </span>
-                      {currentRole?.id === r.id && <CheckCircle size={12} color="#C89547" />}
-                    </button>
-                  ))}
+                  {ROLES?.map((r) => {
+                    const isEnabled = isModuleEnabled ? isModuleEnabled(r.module) : true;
+                    const isSelected = currentRole?.id === r.id;
+
+                    return (
+                      <button
+                        key={r.id}
+                        onClick={() => {
+                          if (!isEnabled) {
+                            addToast(
+                              `Role '${r.label}' (${(r.module || "").toUpperCase()} module) is not included in your active subscription plan. Upgrade your plan to unlock access.`,
+                              "warning"
+                            );
+                            return;
+                          }
+                          setRoleById(r.id);
+                          setShowProfileMenu(false);
+                          addToast(`Switched perspective to ${r.label} (${r.user?.name || "User"})!`, "success");
+                          navigate(r.defaultRoute || "/dashboard");
+                        }}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          padding: "6px 10px",
+                          borderRadius: "6px",
+                          border: "none",
+                          backgroundColor: isSelected ? "rgba(200, 149, 71, 0.15)" : "transparent",
+                          color: !isEnabled
+                            ? "var(--text-muted, #A09082)"
+                            : isSelected
+                            ? "#8C5B23"
+                            : "var(--text-primary, #261603)",
+                          fontSize: "11px",
+                          fontWeight: isSelected ? 800 : 600,
+                          cursor: isEnabled ? "pointer" : "not-allowed",
+                          textAlign: "left",
+                          opacity: !isEnabled ? 0.65 : 1
+                        }}
+                        title={!isEnabled ? `Locked - Not in your current subscription plan` : r.label}
+                        onMouseEnter={(e) => {
+                          if (!isSelected && isEnabled) e.currentTarget.style.backgroundColor = "var(--bg-card-subtle, #FAF6F0)";
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!isSelected && isEnabled) e.currentTarget.style.backgroundColor = "transparent";
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px", overflow: "hidden" }}>
+                          {!isEnabled && <Lock size={11} color="var(--text-muted)" style={{ flexShrink: 0 }} />}
+                          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {r.label}
+                          </span>
+                        </div>
+                        {isSelected ? (
+                          <CheckCircle size={12} color="#C89547" style={{ flexShrink: 0 }} />
+                        ) : !isEnabled ? (
+                          <span style={{ fontSize: "9px", fontWeight: 700, color: "var(--text-muted)", letterSpacing: "0.02em" }}>
+                            LOCKED
+                          </span>
+                        ) : null}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 

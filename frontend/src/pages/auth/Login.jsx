@@ -111,10 +111,40 @@ export function Login() {
       }
     } catch (err) {
       console.warn("Credential authentication failed:", err.message);
-      setAuthError({
-        title: "Invalid Corporate Credentials",
-        message: err?.message || "The username or security password entered does not match our records. Please verify and try again."
-      });
+      const rawMsg = (err?.message || err?.data?.error?.message || "").trim();
+      const rawCode = (err?.code || err?.data?.error?.code || "").toUpperCase();
+
+      let title = "Authentication Failed";
+      let message = rawMsg || "The username or security password entered could not be verified. Please try again.";
+
+      if (rawCode === "ACCOUNT_SUSPENDED" || /suspended/i.test(rawMsg)) {
+        title = "Account Suspended";
+        message = "Your account has been suspended by the administrator. Please contact your system administrator.";
+      } else if (rawCode === "ACCOUNT_DEACTIVATED" || rawCode === "ACCOUNT_INACTIVE" || /deactivated|inactive/i.test(rawMsg)) {
+        title = "Account Deactivated";
+        message = "Your account has been deactivated. Please contact your system administrator.";
+      } else if (rawCode === "USER_NOT_FOUND" || rawCode === "NOT_FOUND" || /not found|no corporate account/i.test(rawMsg)) {
+        title = "Account Not Found";
+        message = "No corporate account was found with this email address. Please check your username and try again.";
+      } else if (rawCode === "INCORRECT_PASSWORD" || /incorrect password|security password/i.test(rawMsg)) {
+        title = "Incorrect Password";
+        message = "The security password entered is incorrect. Please check and try again.";
+      } else if (rawCode === "TENANT_SUSPENDED" || /company account has been suspended|organization account has been suspended/i.test(rawMsg)) {
+        title = "Company Account Suspended";
+        message = "Your company account has been suspended. Please contact your organization administrator.";
+      } else if (rawCode === "TENANT_INACTIVE" || /company account is currently inactive|organization account is currently inactive/i.test(rawMsg)) {
+        title = "Company Account Inactive";
+        message = "Your company account is currently inactive. Please contact system administration.";
+      } else if (rawCode === "SUBSCRIPTION_EXPIRED" || /subscription/i.test(rawMsg)) {
+        title = "Subscription Expired";
+        message = "Your organization's subscription has expired. Please contact your administrator to renew your plan.";
+      } else if (/invalid email or password/i.test(rawMsg)) {
+        title = "Invalid Corporate Credentials";
+        message = "The username or security password entered does not match our records. Please verify and try again.";
+      }
+
+      setAuthError({ title, message });
+      addToast(`${title}: ${message}`, "error");
     } finally {
       setIsSubmitting(false);
     }

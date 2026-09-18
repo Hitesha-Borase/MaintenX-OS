@@ -689,8 +689,8 @@ export function MachineCapabilityPage() {
                 <div style={{ maxHeight: "200px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "6px" }}>
                   {displayTypes.length === 0 ? (
                     <div style={{ padding: "18px", textAlign: "center", color: "var(--text-muted)", fontSize: "12px", border: "1px dashed var(--border-subtle)", borderRadius: "8px", backgroundColor: "#FAFAFA" }}>
-                      Database me abhi koi category nahi hai (0 rows in public.asset_types).<br />
-                      <span style={{ fontSize: "11px", marginTop: "4px", display: "inline-block" }}>Upar diye gaye form se apni machine category add karein.</span>
+                      No categories found in the database (0 rows in public.asset_types).<br />
+                      <span style={{ fontSize: "11px", marginTop: "4px", display: "inline-block" }}>Use the form above to add a new machine category.</span>
                     </div>
                   ) : (
                     displayTypes.map((t) => (
@@ -837,8 +837,8 @@ export function MachineCapabilityPage() {
                 <div style={{ maxHeight: "200px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "6px" }}>
                   {criticalityLevels.length === 0 ? (
                     <div style={{ padding: "18px", textAlign: "center", color: "var(--text-muted)", fontSize: "12px", border: "1px dashed var(--border-subtle)", borderRadius: "8px", backgroundColor: "#FAFAFA" }}>
-                      Database me abhi koi rating nahi hai (0 rows in public.criticality_levels).<br />
-                      <span style={{ fontSize: "11px", marginTop: "4px", display: "inline-block" }}>Upar diye gaye form se apni criticality rating add karein.</span>
+                      No criticality ratings found in the database (0 rows in public.criticality_levels).<br />
+                      <span style={{ fontSize: "11px", marginTop: "4px", display: "inline-block" }}>Use the form above to add a new criticality rating.</span>
                     </div>
                   ) : (
                     criticalityLevels.map((c) => (

@@ -9,6 +9,7 @@ export const ROLES = [
     icon: "Globe",
     defaultRoute: "/master/dashboard",
     step: "0. Platform",
+    module: "admin",
     user: {
       name: "Elena Vance",
       email: "master@maintenx.com",
@@ -23,6 +24,7 @@ export const ROLES = [
     icon: "ShieldAlert",
     defaultRoute: "/admin/console",
     step: "1. Setup",
+    module: "admin",
     user: {
       name: "Alexander Vance",
       email: "admin@maintenx.com",
@@ -37,6 +39,7 @@ export const ROLES = [
     icon: "CalendarRange",
     defaultRoute: "/planner/dashboard",
     step: "2. Plan",
+    module: "plan",
     user: {
       name: "Elena Rostova",
       email: "planner@maintenx.com",
@@ -51,6 +54,7 @@ export const ROLES = [
     icon: "Package",
     defaultRoute: "/warehouse/dashboard",
     step: "3. Materials",
+    module: "move",
     user: {
       name: "Carlos Mendez",
       email: "warehouse@maintenx.com",
@@ -65,6 +69,7 @@ export const ROLES = [
     icon: "Wrench",
     defaultRoute: "/maintenance",
     step: "4. Machines",
+    module: "maintain",
     user: {
       name: "Dave Miller",
       email: "maintenance@maintenx.com",
@@ -79,6 +84,7 @@ export const ROLES = [
     icon: "Users",
     defaultRoute: "/supervisor/dashboard",
     step: "5. Shift",
+    module: "produce",
     user: {
       name: "Sarah Jenkins",
       email: "supervisor@maintenx.com",
@@ -93,6 +99,7 @@ export const ROLES = [
     icon: "Briefcase",
     defaultRoute: "/linelead/dashboard",
     step: "6. Line",
+    module: "produce",
     user: {
       name: "Devang Patel",
       email: "linelead@maintenx.com",
@@ -107,6 +114,7 @@ export const ROLES = [
     icon: "Activity",
     defaultRoute: "/operator/dashboard",
     step: "7. Production",
+    module: "produce",
     user: {
       name: "Marcus Chen",
       email: "operator@maintenx.com",
@@ -121,6 +129,7 @@ export const ROLES = [
     icon: "ShieldCheck",
     defaultRoute: "/quality/dashboard",
     step: "8. Quality",
+    module: "verify",
     user: {
       name: "Dr. Rachel Thorne",
       email: "qa@maintenx.com",
@@ -135,6 +144,7 @@ export const ROLES = [
     icon: "Settings",
     defaultRoute: "/ci/dashboard",
     step: "9. Kaizen",
+    module: "improve",
     user: {
       name: "Viktor Hayes",
       email: "ci@maintenx.com",
@@ -149,6 +159,7 @@ export const ROLES = [
     icon: "Building2",
     defaultRoute: "/command-center",
     step: "10. Plant",
+    module: "intelligence",
     user: {
       name: "Arthur Sterling",
       email: "plant.manager@maintenx.com",
@@ -163,6 +174,7 @@ export const ROLES = [
     icon: "Briefcase",
     defaultRoute: "/executive/dashboard",
     step: "11. Enterprise",
+    module: "intelligence",
     user: {
       name: "Victoria Sterling",
       email: "executive@maintenx.com",
@@ -730,10 +742,22 @@ export function RoleProvider({ children }) {
         localStorage.setItem("maintenx_tenant_name", tenantObj.name);
         if (tenantObj.id) localStorage.setItem("maintenx_tenant_id", tenantObj.id);
         localStorage.setItem("mx_current_company_name", tenantObj.name);
+        if (tenantObj.createdAt) localStorage.setItem("maintenx_tenant_created", tenantObj.createdAt);
+        if (tenantObj.plan) localStorage.setItem("maintenx_tenant_plan", tenantObj.plan);
+        if (tenantObj.subscription?.currentPeriodEnd || tenantObj.subscriptionExpiryDate) {
+          localStorage.setItem("maintenx_trial_end", tenantObj.subscription?.currentPeriodEnd || tenantObj.subscriptionExpiryDate);
+        }
+        if (tenantObj.subscriptionStatus) {
+          localStorage.setItem("maintenx_subscription_status", tenantObj.subscriptionStatus);
+        }
       } else {
         localStorage.removeItem("maintenx_tenant_name");
         localStorage.removeItem("maintenx_tenant_id");
         localStorage.removeItem("mx_current_company_name");
+        localStorage.removeItem("maintenx_tenant_created");
+        localStorage.removeItem("maintenx_trial_end");
+        localStorage.removeItem("maintenx_subscription_status");
+        localStorage.removeItem("maintenx_tenant_plan");
       }
 
       window.dispatchEvent(new CustomEvent("maintenx:tenant_changed", { detail: tenantObj }));
@@ -757,6 +781,7 @@ export function RoleProvider({ children }) {
           company: tenantName || found.user?.company || "MaintenX OS",
           companyName: tenantName || found.user?.company || "MaintenX OS",
           tenant: tenantObj,
+          createdAt: userObj.createdAt || tenantObj?.createdAt || new Date().toISOString(),
         } : found.user
       };
 
@@ -768,8 +793,11 @@ export function RoleProvider({ children }) {
       return { success: true, user: mergedRole.user, role: mergedRole };
     } catch (err) {
       console.warn("Backend authentication failed:", err.message);
-      // Re-throw so Login page can catch and show explicit error without granting dashboard access
-      throw new Error(err?.data?.error?.message || err?.message || "Invalid email or password");
+      // Re-throw with preserved code and data so Login page can catch and show explicit error without granting dashboard access
+      const customErr = new Error(err?.data?.error?.message || err?.message || "Invalid email or password");
+      customErr.code = err?.code || err?.data?.error?.code;
+      customErr.data = err?.data;
+      throw customErr;
     }
   };
 
@@ -834,9 +862,94 @@ export function RoleProvider({ children }) {
     }
   };
 
+  const isModuleEnabled = (moduleKey) => {
+    if (!moduleKey || moduleKey === "admin") return true;
+    if (currentRole?.id === "master_admin") return true;
+
+    // 1. Direct tenant modules on current role user
+    let tenantModules = currentRole?.user?.tenant?.modules || currentRole?.user?.modules;
+    if (!tenantModules) {
+      try {
+        const saved = localStorage.getItem("maintenx_tenant_modules");
+        if (saved) tenantModules = JSON.parse(saved);
+      } catch (e) {}
+    }
+
+    if (tenantModules && typeof tenantModules === "object") {
+      return Boolean(tenantModules[moduleKey]);
+    }
+
+    // 2. Plan-based derivation
+    const plan = (currentRole?.user?.tenant?.plan || currentRole?.user?.plan || localStorage.getItem("maintenx_tenant_plan") || "").toLowerCase().trim();
+    if (plan.includes("enterprise") || plan.includes("complete")) {
+      return true;
+    }
+    if (plan.includes("bundle") || plan.includes("advanced")) {
+      return ["plan", "produce", "verify", "maintain", "move"].includes(moduleKey);
+    }
+    if (plan.includes("individual") || plan.includes("starter")) {
+      return ["produce", "verify"].includes(moduleKey);
+    }
+    if (plan.includes("pilot") || plan.includes("trial") || plan.includes("custom")) {
+      return ["produce"].includes(moduleKey);
+    }
+
+    // Default: if BeverageCorp, full access
+    if (currentRole?.user?.companyName?.includes("BeverageCorp") || currentRole?.user?.company?.includes("BeverageCorp")) {
+      return true;
+    }
+
+    return ["produce"].includes(moduleKey);
+  };
+
+  const getPathModule = (path) => {
+    if (!path) return null;
+    const p = path.toLowerCase();
+    if (p.startsWith("/planner") || p.startsWith("/planning")) return "plan";
+    if (p.startsWith("/quality")) return "verify";
+    if (
+      p.startsWith("/maintenance") ||
+      p.startsWith("/work-orders") ||
+      p.startsWith("/breakdowns") ||
+      p.startsWith("/pm") ||
+      p.startsWith("/spare-parts") ||
+      p.startsWith("/calibration") ||
+      p.startsWith("/troubleshooting") ||
+      p.startsWith("/cmms")
+    )
+      return "maintain";
+    if (p.startsWith("/warehouse") || p.startsWith("/inventory")) return "move";
+    if (p.startsWith("/labour") || p.startsWith("/staffing") || p.startsWith("/people")) return "people";
+    if (p.startsWith("/ci") || p.startsWith("/rca") || p.startsWith("/capa") || p.startsWith("/rca-capa")) return "improve";
+    if (
+      p.startsWith("/executive") ||
+      p.startsWith("/command-center") ||
+      p.startsWith("/oee-performance") ||
+      p.startsWith("/kpi-analytics") ||
+      p.startsWith("/ai-analytics")
+    )
+      return "intelligence";
+    if (
+      p.startsWith("/production") ||
+      p.startsWith("/operator") ||
+      p.startsWith("/linelead") ||
+      p.startsWith("/supervisor")
+    )
+      return "produce";
+    return null;
+  };
+
   const canAccessPath = (path) => {
     if (!currentRole) return true;
-    if (currentRole.id === "admin" || currentRole.id === "master_admin") return true;
+    if (currentRole.id === "master_admin") return true;
+
+    // Enforce subscription plan module entitlement
+    const requiredModule = getPathModule(path);
+    if (requiredModule && !isModuleEnabled(requiredModule)) {
+      return false;
+    }
+
+    if (currentRole.id === "admin") return true;
 
     const config = NAVIGATION_CONFIG[currentRole.id];
     if (!config) return false;
@@ -937,6 +1050,7 @@ export function RoleProvider({ children }) {
         updateCurrentUserProfile,
         ROLES,
         canAccessPath,
+        isModuleEnabled,
         isAuthenticated,
         login,
         loginWithCredentials,

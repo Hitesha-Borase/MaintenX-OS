@@ -637,10 +637,10 @@ export function UserInvitationsPage() {
 
             <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
               <p style={{ fontSize: "13px", color: "var(--text-primary)", lineHeight: 1.5, margin: 0 }}>
-                Kya aap sach me <strong>{deletingInvite.email}</strong> ka invitation revoke aur delete karna chahte hain?
+                Are you sure you want to revoke and delete the invitation for <strong>{deletingInvite.email}</strong>?
               </p>
               <div style={{ fontSize: "12px", color: "var(--text-secondary)", backgroundColor: "var(--bg-card-subtle)", padding: "10px 12px", borderRadius: "6px", border: "1px solid var(--border-subtle)" }}>
-                User ka dispatched magic login link expire aur invalidate ho jayega.
+                The dispatched magic login link will expire and become invalidated.
               </div>
 
               <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "6px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>

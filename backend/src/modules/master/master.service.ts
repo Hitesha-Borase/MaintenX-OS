@@ -69,35 +69,75 @@ export class MasterAdminService {
 
     // Company Admins: count users with role 'admin'
     const adminRoles = await db.select().from(roles).where(eq(roles.code, "admin"));
-    let totalAdmins = 0;
+    let adminUsers = allUsers.filter((u) => u.isMasterAdmin !== true);
     if (adminRoles.length > 0) {
       const adminRoleIds = adminRoles.map((r) => r.id);
       const adminUserRoles = await db
         .select()
         .from(userRoles)
         .where(inArray(userRoles.roleId, adminRoleIds));
-      totalAdmins = new Set(adminUserRoles.map((ur) => ur.userId)).size;
+      const adminUserIds = new Set(adminUserRoles.map((ur) => ur.userId));
+      if (adminUserIds.size > 0) {
+        adminUsers = allUsers.filter((u) => adminUserIds.has(u.id));
+      }
     }
+    const totalAdmins = adminUsers.length || allTenants.length;
+    const activeAdmins = adminUsers.filter((u) => u.status.toUpperCase() === "ACTIVE").length || activeCompanies;
 
-    // 3. Subscriptions Metrics
+    // 3. Subscriptions & Trial Metrics
     const allSubs = await db.select().from(subscriptions);
-    const activeSubscriptions = allSubs.filter((s) => s.status.toUpperCase() === "ACTIVE").length;
-
+    const now = new Date();
     const thirtyDaysFromNow = new Date();
     thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
-    const now = new Date();
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-    const expiringSubscriptions = allSubs.filter((s) => {
+    // Free Trial Admins (Registered within 7 days, on trial and no active paid sub)
+    const freeTrialAdmins = allTenants.filter((t) => {
+      const hasPaidSub = allSubs.some((s) => s.tenantId === t.id && s.status.toUpperCase() === "ACTIVE" && Number(s.amount) > 0);
+      if (hasPaidSub) return false;
+      return t.createdAt >= sevenDaysAgo;
+    }).length;
+
+    // Expired Trials (Trial period 7 days has passed without active paid sub)
+    const expiredTrials = allTenants.filter((t) => {
+      const hasPaidSub = allSubs.some((s) => s.tenantId === t.id && s.status.toUpperCase() === "ACTIVE" && Number(s.amount) > 0);
+      if (hasPaidSub) return false;
+      return t.createdAt < sevenDaysAgo;
+    }).length;
+
+    // Active Paid Plans vs Expired Paid Plans
+    const activePaidPlans = allSubs.filter((s) => s.status.toUpperCase() === "ACTIVE" && new Date(s.currentPeriodEnd) >= now).length;
+    const expiredPaidPlans = allSubs.filter((s) => s.status.toUpperCase() !== "ACTIVE" || new Date(s.currentPeriodEnd) < now).length;
+
+    const upcomingRenewals = allSubs.filter((s) => {
       const end = new Date(s.currentPeriodEnd);
       return s.status.toUpperCase() === "ACTIVE" && end > now && end <= thirtyDaysFromNow;
     }).length;
 
-    // 4. Pending Support Tickets
+    const activeSubscriptions = activePaidPlans;
+    const expiringSubscriptions = upcomingRenewals;
+
+    // 4. Revenue Metrics
+    const allPayments = await db.select().from(payments);
+    const totalRevenue = allPayments
+      .filter((p) => p.status.toUpperCase() === "CAPTURED" || p.status.toUpperCase() === "SUCCESS" || p.status.toUpperCase() === "AUTHORIZED")
+      .reduce((sum, p) => sum + Number(p.amount || 0), 0);
+
+    const monthlyRevenue = allSubs
+      .filter((s) => s.status.toUpperCase() === "ACTIVE" && new Date(s.currentPeriodEnd) >= now)
+      .reduce((sum, s) => {
+        const amt = Number(s.amount || 0);
+        return sum + (s.billingCycle === "ANNUAL" ? Math.round(amt / 12) : amt);
+      }, 0);
+
+    // 5. Support Tickets
     const pendingTicketsResult = await db
       .select({ count: sql<number>`count(*)::int` })
       .from(supportTickets)
       .where(or(eq(supportTickets.status, "Open"), eq(supportTickets.status, "In Progress")));
-    const pendingTickets = pendingTicketsResult[0]?.count || 0;
+    const openSupportTickets = pendingTicketsResult[0]?.count || 0;
+    const pendingTickets = openSupportTickets;
 
     // 5. System Alerts (calculated from recent failed payments + open high-priority tickets)
     const highPriorityTickets = await db
@@ -156,11 +196,23 @@ export class MasterAdminService {
 
     return {
       kpis: {
+        // Standard SaaS Super Admin 10 Metrics (Section 11)
+        totalAdmins,
+        activeAdmins,
+        freeTrialAdmins,
+        expiredTrials,
+        activePaidPlans,
+        expiredPaidPlans,
+        totalRevenue,
+        monthlyRevenue,
+        upcomingRenewals,
+        openSupportTickets,
+
+        // Legacy / Additional Metrics
         totalCompanies,
         activeCompanies,
         suspendedCompanies,
         totalUsers,
-        totalAdmins,
         activeSubscriptions,
         expiringSubscriptions,
         pendingTickets,
@@ -221,22 +273,54 @@ export class MasterAdminService {
       tenantModuleMaps.get(m.tenantId)![m.moduleKey] = m.isEnabled;
     }
 
-    const defaultModules = {
-      plan: true,
-      produce: true,
-      verify: true,
-      maintain: true,
-      move: true,
-      people: true,
-      improve: true,
-      intelligence: true,
+    const allPlans = await db.select().from(plans);
+    const planModulesMap = new Map<string, string[]>();
+    for (const p of allPlans) {
+      if (p.modules && Array.isArray(p.modules)) {
+        planModulesMap.set(p.name.toLowerCase().trim(), p.modules as string[]);
+        planModulesMap.set(p.id.toLowerCase().trim(), p.modules as string[]);
+      }
+    }
+
+    const CANONICAL_PLAN_MODULES: Record<string, string[]> = {
+      "plant pilot": ["produce"],
+      "plant-pilot": ["produce"],
+      "trial": ["produce"],
+      "starter": ["produce", "verify"],
+      "individual modules": ["produce", "verify"],
+      "individual-modules": ["produce", "verify"],
+      "bundles": ["plan", "produce", "verify", "maintain", "move"],
+      "advanced": ["plan", "produce", "verify", "maintain", "move"],
+      "maintenx os complete": ["plan", "produce", "verify", "maintain", "move", "people", "improve", "intelligence"],
+      "maintenx-complete": ["plan", "produce", "verify", "maintain", "move", "people", "improve", "intelligence"],
+      "enterprise": ["plan", "produce", "verify", "maintain", "move", "people", "improve", "intelligence"],
+      "custom": ["produce"],
+      "custom ": ["produce"],
     };
 
     let result = allTenants.map((t) => {
       const sub = tenantSubs.get(t.id);
       const admin = tenantAdmins.get(t.id) || { name: "System Administrator", email: `admin@${t.slug}.com`, phone: "", lastLogin: "Never" };
-      const expiry = sub ? new Date(sub.currentPeriodEnd).toISOString().split("T")[0] : "2027-01-01";
+      const expiry = sub ? new Date(sub.currentPeriodEnd).toISOString().split("T")[0] : null;
       const subName = sub ? sub.planName : (t.plan || "Plant Pilot");
+
+      // Plan-based module access calculation
+      const planKey = (subName || "").toLowerCase().trim();
+      const allowedModules = planModulesMap.get(planKey) || CANONICAL_PLAN_MODULES[planKey] || (t.plan?.toUpperCase() === "ENTERPRISE" ? ["plan", "produce", "verify", "maintain", "move", "people", "improve", "intelligence"] : ["produce"]);
+
+      const baseModules: Record<string, boolean> = {
+        plan: allowedModules.includes("plan"),
+        produce: allowedModules.includes("produce"),
+        verify: allowedModules.includes("verify"),
+        maintain: allowedModules.includes("maintain"),
+        move: allowedModules.includes("move"),
+        people: allowedModules.includes("people"),
+        improve: allowedModules.includes("improve"),
+        intelligence: allowedModules.includes("intelligence"),
+      };
+
+      const explicitOverrides = tenantModuleMaps.get(t.id);
+      const finalModules = explicitOverrides ? { ...baseModules, ...explicitOverrides } : baseModules;
 
       return {
         id: t.id,
@@ -244,6 +328,8 @@ export class MasterAdminService {
         slug: t.slug,
         status: t.status.charAt(0).toUpperCase() + t.status.slice(1).toLowerCase(),
         subscription: subName,
+        hasSubscription: Boolean(sub),
+        subscriptionId: sub?.id || null,
         admin: admin.name,
         adminEmail: admin.email,
         adminPhone: (admin as any).phone || "",
@@ -253,7 +339,7 @@ export class MasterAdminService {
         expiryDate: expiry,
         lastActivity: admin.lastLogin || t.updatedAt.toISOString().replace("T", " ").substring(0, 16),
         currency: (t.settings as any)?.currency || "CAD",
-        modules: tenantModuleMaps.get(t.id) || defaultModules,
+        modules: finalModules,
       };
     });
 
@@ -269,7 +355,7 @@ export class MasterAdminService {
     if (query?.status && query.status !== "All") {
       if (query.status === "Expired") {
         const today = new Date().toISOString().split("T")[0];
-        result = result.filter((c) => c.expiryDate < today);
+        result = result.filter((c) => c.expiryDate !== null && c.expiryDate < today);
       } else {
         result = result.filter(
           (c) => c.status.toLowerCase() === query.status!.toLowerCase() || c.subscription.toLowerCase() === query.status!.toLowerCase()
@@ -307,16 +393,37 @@ export class MasterAdminService {
       .orderBy(desc(subscriptions.createdAt));
 
     // 4. Modules
+    const activeSub = companySubs[0];
+    const subPlanName = activeSub?.planName || tenant.plan || "Plant Pilot";
+    const planKey = (subPlanName || "").toLowerCase().trim();
+
+    const CANONICAL_PLAN_MODULES: Record<string, string[]> = {
+      "plant pilot": ["produce"],
+      "plant-pilot": ["produce"],
+      "trial": ["produce"],
+      "starter": ["produce", "verify"],
+      "individual modules": ["produce", "verify"],
+      "individual-modules": ["produce", "verify"],
+      "bundles": ["plan", "produce", "verify", "maintain", "move"],
+      "advanced": ["plan", "produce", "verify", "maintain", "move"],
+      "maintenx os complete": ["plan", "produce", "verify", "maintain", "move", "people", "improve", "intelligence"],
+      "maintenx-complete": ["plan", "produce", "verify", "maintain", "move", "people", "improve", "intelligence"],
+      "enterprise": ["plan", "produce", "verify", "maintain", "move", "people", "improve", "intelligence"],
+      "custom": ["produce"],
+      "custom ": ["produce"],
+    };
+
+    const allowedMods = CANONICAL_PLAN_MODULES[planKey] || (tenant.plan?.toUpperCase() === "ENTERPRISE" ? ["plan", "produce", "verify", "maintain", "move", "people", "improve", "intelligence"] : ["produce"]);
     const compModules = await db.select().from(tenantModules).where(eq(tenantModules.tenantId, id));
     const modulesMap: Record<string, boolean> = {
-      plan: true,
-      produce: true,
-      verify: true,
-      maintain: true,
-      move: true,
-      people: true,
-      improve: true,
-      intelligence: true,
+      plan: allowedMods.includes("plan"),
+      produce: allowedMods.includes("produce"),
+      verify: allowedMods.includes("verify"),
+      maintain: allowedMods.includes("maintain"),
+      move: allowedMods.includes("move"),
+      people: allowedMods.includes("people"),
+      improve: allowedMods.includes("improve"),
+      intelligence: allowedMods.includes("intelligence"),
     };
     for (const m of compModules) {
       modulesMap[m.moduleKey] = m.isEnabled;
@@ -330,7 +437,6 @@ export class MasterAdminService {
       .orderBy(desc(auditLogs.createdAt))
       .limit(10);
 
-    const activeSub = companySubs[0];
     const primaryAdmin = companyUsers[0];
 
     return {
@@ -338,13 +444,15 @@ export class MasterAdminService {
       name: tenant.name,
       slug: tenant.slug,
       status: tenant.status.charAt(0).toUpperCase() + tenant.status.slice(1).toLowerCase(),
-      subscription: activeSub?.planName || tenant.plan || "Plant Pilot",
+      subscription: subPlanName,
+      hasSubscription: Boolean(activeSub),
+      subscriptionId: activeSub?.id || null,
       admin: primaryAdmin ? `${primaryAdmin.firstName} ${primaryAdmin.lastName}` : "System Admin",
       adminEmail: primaryAdmin ? primaryAdmin.email : `admin@${tenant.slug}.com`,
       usersCount: companyUsers.length,
       plants: companyPlants.length,
       createdAt: tenant.createdAt.toISOString().split("T")[0],
-      expiryDate: activeSub ? new Date(activeSub.currentPeriodEnd).toISOString().split("T")[0] : "2027-01-01",
+      expiryDate: activeSub ? new Date(activeSub.currentPeriodEnd).toISOString().split("T")[0] : null,
       lastActivity: primaryAdmin?.lastLoginAt?.toISOString().replace("T", " ").substring(0, 16) || "N/A",
       currency: (tenant.settings as any)?.currency || "CAD",
       modules: modulesMap,
@@ -468,24 +576,52 @@ export class MasterAdminService {
         );
       }
 
-      // 5. Seed Default Module Entitlements
+      // 5. Seed Plan-Specific Module Entitlements
+      const CANONICAL_PLAN_MODULES: Record<string, string[]> = {
+        "plant pilot": ["produce"],
+        "plant-pilot": ["produce"],
+        "trial": ["produce"],
+        "starter": ["produce", "verify"],
+        "individual modules": ["produce", "verify"],
+        "individual-modules": ["produce", "verify"],
+        "bundles": ["plan", "produce", "verify", "maintain", "move"],
+        "advanced": ["plan", "produce", "verify", "maintain", "move"],
+        "maintenx os complete": ["plan", "produce", "verify", "maintain", "move", "people", "improve", "intelligence"],
+        "maintenx-complete": ["plan", "produce", "verify", "maintain", "move", "people", "improve", "intelligence"],
+        "enterprise": ["plan", "produce", "verify", "maintain", "move", "people", "improve", "intelligence"],
+        "custom": ["produce"],
+        "custom ": ["produce"],
+      };
+
+      const planKey = (planName || "").toLowerCase().trim();
+      const planAllowedMods = CANONICAL_PLAN_MODULES[planKey] || (planName?.toUpperCase() === "ENTERPRISE" ? ["plan", "produce", "verify", "maintain", "move", "people", "improve", "intelligence"] : ["produce"]);
+
       const coreModules = ["plan", "produce", "verify", "maintain", "move", "people", "improve", "intelligence"];
       for (const mod of coreModules) {
+        const isModEnabled = planAllowedMods.includes(mod);
         await client.query(
           `INSERT INTO tenant_modules (tenant_id, module_key, is_enabled)
-           VALUES ($1, $2, true)
-           ON CONFLICT DO NOTHING`,
-          [newTenant.id, mod]
+           VALUES ($1, $2, $3)
+           ON CONFLICT (tenant_id, module_key) DO UPDATE SET is_enabled = EXCLUDED.is_enabled, updated_at = NOW()`,
+          [newTenant.id, mod, isModEnabled]
         );
       }
 
-      // 6. Create Initial Subscription (1 year)
+      // 6. Create Initial Subscription (7-day trial for trial/pilot signups, 1 year for enterprise)
+      const isTrialPlan = !planName || planName.toLowerCase().includes("pilot") || planName.toLowerCase().includes("trial");
+      const trialPeriodEnd = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
       const oneYearLater = new Date();
       oneYearLater.setFullYear(oneYearLater.getFullYear() + 1);
+
+      const subStatus = isTrialPlan ? "TRIAL" : "ACTIVE";
+      const subBillingCycle = isTrialPlan ? "TRIAL_7_DAYS" : "ANNUAL";
+      const subAmount = isTrialPlan ? 0 : 34990;
+      const subPeriodEnd = isTrialPlan ? trialPeriodEnd : oneYearLater;
+
       await client.query(
         `INSERT INTO subscriptions (tenant_id, plan_id, plan_name, status, billing_cycle, amount, currency, current_period_end)
-         VALUES ($1, $2, $3, 'ACTIVE', 'ANNUAL', 34990, $4, $5)`,
-        [newTenant.id, "bundles", planName, input.currency || "CAD", oneYearLater]
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [newTenant.id, isTrialPlan ? "pilot" : "bundles", planName, subStatus, subBillingCycle, subAmount, input.currency || "CAD", subPeriodEnd]
       );
 
       // 7. Commit Transaction
@@ -512,8 +648,8 @@ export class MasterAdminService {
         adminPhone: input.adminPhone || "",
         usersCount: 1,
         plants: 1,
-        createdAt: newTenant.created_at.toISOString().split("T")[0],
-        expiryDate: oneYearLater.toISOString().split("T")[0],
+        createdAt: (newTenant.created_at || newTenant.createdAt || new Date()).toISOString(),
+        expiryDate: subPeriodEnd.toISOString(),
         currency: input.currency || "CAD",
       };
     } catch (error) {
@@ -972,31 +1108,64 @@ export class MasterAdminService {
   async getSubscriptions(query?: { search?: string; plan?: string; status?: string }) {
     const allSubs = await db.select().from(subscriptions).orderBy(desc(subscriptions.createdAt));
     const allTenants = await db.select().from(tenants);
-    const tenantMap = new Map(allTenants.map((t) => [t.id, t.name]));
+    const allUsers = await db.select().from(users).orderBy(asc(users.createdAt));
+    const allPlants = await db.select().from(plants);
 
-    let results = allSubs.map((s) => ({
-      id: s.id,
-      tenantId: s.tenantId,
-      company: tenantMap.get(s.tenantId) || "Enterprise Company",
-      plan: s.planName,
-      planId: s.planId,
-      status: s.status,
-      billingCycle: s.billingCycle,
-      amount: Number(s.amount),
-      currency: s.currency,
-      startDate: s.currentPeriodStart.toISOString().split("T")[0],
-      endDate: s.currentPeriodEnd.toISOString().split("T")[0],
-      renewalDate: s.currentPeriodEnd.toISOString().split("T")[0],
-      razorpaySubscriptionId: s.razorpaySubscriptionId || "N/A",
-    }));
+    const tenantMap = new Map(allTenants.map((t) => [t.id, t]));
+
+    const plantCounts = new Map<string, number>();
+    for (const p of allPlants) plantCounts.set(p.tenantId, (plantCounts.get(p.tenantId) || 0) + 1);
+
+    const userCounts = new Map<string, number>();
+    const tenantAdmins = new Map<string, { name: string; email: string; phone?: string }>();
+    for (const u of allUsers) {
+      userCounts.set(u.tenantId, (userCounts.get(u.tenantId) || 0) + 1);
+      if (!tenantAdmins.has(u.tenantId)) {
+        tenantAdmins.set(u.tenantId, {
+          name: `${u.firstName || ""} ${u.lastName || ""}`.trim() || u.email,
+          email: u.email,
+          phone: u.phone || "",
+        });
+      }
+    }
+
+    let results = allSubs.map((s) => {
+      const tenant = tenantMap.get(s.tenantId);
+      const admin = tenantAdmins.get(s.tenantId) || { name: "Company Admin", email: `admin@${tenant?.slug || "company"}.com`, phone: "" };
+      const exp = s.currentPeriodEnd ? s.currentPeriodEnd.toISOString().split("T")[0] : null;
+
+      return {
+        id: s.id,
+        tenantId: s.tenantId,
+        company: tenant ? tenant.name : "Enterprise Company",
+        name: tenant ? tenant.name : "Enterprise Company",
+        admin: admin.name,
+        adminEmail: admin.email,
+        adminPhone: admin.phone,
+        usersCount: userCounts.get(s.tenantId) || 1,
+        plants: plantCounts.get(s.tenantId) || 1,
+        plan: s.planName,
+        planId: s.planId,
+        status: s.status.charAt(0).toUpperCase() + s.status.slice(1).toLowerCase(),
+        billingCycle: s.billingCycle,
+        amount: Number(s.amount),
+        currency: s.currency,
+        startDate: s.currentPeriodStart.toISOString().split("T")[0],
+        endDate: exp,
+        expiryDate: exp,
+        renewalDate: exp,
+        hasSubscription: true,
+        razorpaySubscriptionId: s.razorpaySubscriptionId || "N/A",
+      };
+    });
 
     if (query?.search) {
       const q = query.search.toLowerCase();
-      results = results.filter((s) => s.company.toLowerCase().includes(q) || s.plan.toLowerCase().includes(q));
+      results = results.filter((s) => s.company.toLowerCase().includes(q) || s.plan.toLowerCase().includes(q) || s.admin.toLowerCase().includes(q) || s.adminEmail.toLowerCase().includes(q));
     }
 
     if (query?.plan && query.plan !== "All") {
-      results = results.filter((s) => s.plan === query.plan);
+      results = results.filter((s) => s.plan.toLowerCase() === query.plan!.toLowerCase());
     }
 
     if (query?.status && query.status !== "All") {
@@ -1195,16 +1364,41 @@ export class MasterAdminService {
   // 7. MODULES & FEATURES
   // =========================================================================
   async getCompanyModules(companyId: string) {
+    const [tenant] = await db.select().from(tenants).where(eq(tenants.id, companyId)).limit(1);
+    if (!tenant) throw new NotFoundError("Company not found");
+
+    const [sub] = await db.select().from(subscriptions).where(eq(subscriptions.tenantId, companyId)).limit(1);
+    const subPlanName = sub?.planName || tenant.plan || "Plant Pilot";
+    const planKey = (subPlanName || "").toLowerCase().trim();
+
+    const CANONICAL_PLAN_MODULES: Record<string, string[]> = {
+      "plant pilot": ["produce"],
+      "plant-pilot": ["produce"],
+      "trial": ["produce"],
+      "starter": ["produce", "verify"],
+      "individual modules": ["produce", "verify"],
+      "individual-modules": ["produce", "verify"],
+      "bundles": ["plan", "produce", "verify", "maintain", "move"],
+      "advanced": ["plan", "produce", "verify", "maintain", "move"],
+      "maintenx os complete": ["plan", "produce", "verify", "maintain", "move", "people", "improve", "intelligence"],
+      "maintenx-complete": ["plan", "produce", "verify", "maintain", "move", "people", "improve", "intelligence"],
+      "enterprise": ["plan", "produce", "verify", "maintain", "move", "people", "improve", "intelligence"],
+      "custom": ["produce"],
+      "custom ": ["produce"],
+    };
+
+    const allowedMods = CANONICAL_PLAN_MODULES[planKey] || (tenant.plan?.toUpperCase() === "ENTERPRISE" ? ["plan", "produce", "verify", "maintain", "move", "people", "improve", "intelligence"] : ["produce"]);
+
     const modules = await db.select().from(tenantModules).where(eq(tenantModules.tenantId, companyId));
     const modulesMap: Record<string, boolean> = {
-      plan: true,
-      produce: true,
-      verify: true,
-      maintain: true,
-      move: true,
-      people: true,
-      improve: true,
-      intelligence: true,
+      plan: allowedMods.includes("plan"),
+      produce: allowedMods.includes("produce"),
+      verify: allowedMods.includes("verify"),
+      maintain: allowedMods.includes("maintain"),
+      move: allowedMods.includes("move"),
+      people: allowedMods.includes("people"),
+      improve: allowedMods.includes("improve"),
+      intelligence: allowedMods.includes("intelligence"),
     };
 
     for (const m of modules) {

@@ -20,8 +20,8 @@ export class NotFoundError extends AppError {
 }
 
 export class UnauthorizedError extends AppError {
-  constructor(message = "Unauthorized access") {
-    super(message, 401, "UNAUTHORIZED");
+  constructor(message = "Unauthorized access", code = "UNAUTHORIZED", details?: any) {
+    super(message, 401, code, details);
   }
 }
 

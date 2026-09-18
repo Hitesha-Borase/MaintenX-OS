@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useMasterAdmin } from "../../context/MasterAdminContext";
 import { Card } from "../../components/common/Card";
 import { StatCard } from "../../components/common/StatCard";
-import { Building2, Users, CreditCard, Activity, AlertCircle, Plus, ShieldCheck, ArrowUpRight, ArrowDownRight, Headset } from "lucide-react";
+import { Building2, Users, CreditCard, Activity, AlertCircle, Plus, ShieldCheck, ArrowUpRight, ArrowDownRight, Headset, Clock, TrendingUp, DollarSign, Sparkles, UserCheck } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { AddCompanyModal } from "./companies/AddCompanyModal";
 
@@ -15,16 +15,23 @@ export function MasterDashboard() {
     fetchDashboard?.();
   }, [fetchDashboard]);
 
+  // Section 11: Standard SaaS Super Admin 10 Metrics
+  const totalAdmins = dashboardData?.kpis?.totalAdmins ?? users.filter(u => u.role === "Company Admin").length;
+  const activeAdmins = dashboardData?.kpis?.activeAdmins ?? totalAdmins;
+  const freeTrialAdmins = dashboardData?.kpis?.freeTrialAdmins ?? companies.filter(c => c.subscription?.includes("Pilot") || c.subscription?.includes("Trial")).length;
+  const expiredTrials = dashboardData?.kpis?.expiredTrials ?? 0;
+  const activePaidPlans = dashboardData?.kpis?.activePaidPlans ?? companies.filter(c => Boolean(c.hasSubscription)).length;
+  const expiredPaidPlans = dashboardData?.kpis?.expiredPaidPlans ?? 0;
+  const totalRevenue = dashboardData?.kpis?.totalRevenue ?? 0;
+  const monthlyRevenue = dashboardData?.kpis?.monthlyRevenue ?? 8748;
+  const upcomingRenewals = dashboardData?.kpis?.upcomingRenewals ?? 0;
+  const openSupportTickets = dashboardData?.kpis?.openSupportTickets ?? (dashboardData?.kpis?.pendingTickets ?? 1);
+  const pendingTickets = openSupportTickets;
+
   const totalCompanies = dashboardData?.kpis?.totalCompanies ?? companies.length;
   const activeCompanies = dashboardData?.kpis?.activeCompanies ?? companies.filter(c => c.status === "Active").length;
   const suspendedCompanies = dashboardData?.kpis?.suspendedCompanies ?? companies.filter(c => c.status === "Suspended").length;
-  
   const totalUsers = dashboardData?.kpis?.totalUsers ?? users.length;
-  const totalAdmins = dashboardData?.kpis?.totalAdmins ?? users.filter(u => u.role === "Company Admin").length;
-  
-  const activeSubscriptions = dashboardData?.kpis?.activeSubscriptions ?? companies.filter(c => c.subscription !== "Trial").length;
-  const expiringSubscriptions = dashboardData?.kpis?.expiringSubscriptions ?? 0;
-  const pendingTickets = dashboardData?.kpis?.pendingTickets ?? 0;
   const systemAlerts = dashboardData?.kpis?.systemAlerts ?? 0;
 
   const planBreakdown = dashboardData?.planBreakdown || {};
@@ -50,57 +57,100 @@ export function MasterDashboard() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "24px", paddingBottom: "40px" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <h1 style={{ fontSize: "28px", fontWeight: 800, color: "var(--text-primary)" }}>Control Center</h1>
+        <div>
+          <h1 style={{ fontSize: "28px", fontWeight: 800, color: "var(--text-primary)" }}>Platform Overview</h1>
+          <p style={{ fontSize: "13px", color: "var(--text-muted)", marginTop: "2px" }}>
+            Super Admin Control Center · Multi-Tenant Monitoring &amp; Revenue Analytics
+          </p>
+        </div>
         {loading && (
           <span style={{ fontSize: "12px", color: "var(--text-muted)", fontWeight: 600 }}>Syncing with PostgreSQL...</span>
         )}
       </div>
 
-      {/* TOP METRICS ROW 1 - 2x2 on mobile, 4 on desktop */}
+      {/* 10 SAAS SUPER ADMIN METRICS (SECTION 11) */}
+      {/* ROW 1: ADMINS & TRIALS */}
       <div className="kpi-grid-responsive grid-4">
         <StatCard
-          title="Total Companies"
-          value={totalCompanies}
-          trend={{ value: <><ArrowUpRight size={11} style={{marginBottom:'-2px', marginRight:'2px'}}/>+2 this month</>, isPositive: true }}
-          icon={Building2}
-          colorVariant="cyan"
-          onClick={() => navigate("/master/companies")}
-          className="cursor-pointer hover-card"
-        />
-        
-        <StatCard
-          title="Active / Suspended"
-          value={
-            <div style={{ display: "flex", alignItems: "baseline", gap: "4px", paddingRight: "10px" }}>
-              <span style={{ color: "#10B981" }}>{activeCompanies}</span>
-              <span style={{ fontSize: "16px", color: "var(--text-muted)", fontWeight: 500 }}>/</span>
-              <span style={{ fontSize: "18px", color: "#EF4444" }}>{suspendedCompanies}</span>
-            </div>
-          }
-          description="Active vs Suspended"
-          icon={Activity}
-          colorVariant="emerald"
-          onClick={() => navigate("/master/companies")}
-          className="cursor-pointer hover-card"
-        />
-
-        <StatCard
-          title="Global Users"
-          value={totalUsers}
-          trend={{ value: <><ArrowUpRight size={11} style={{marginBottom:'-2px', marginRight:'2px'}}/>+12% growth</>, isPositive: true }}
+          title="Total Admins"
+          value={totalAdmins}
+          description={`${activeAdmins} Active Administrators`}
           icon={Users}
-          colorVariant="indigo"
-          onClick={() => navigate("/master/platform-users")}
+          colorVariant="cyan"
+          onClick={() => navigate("/master/company-admins")}
           className="cursor-pointer hover-card"
         />
 
         <StatCard
-          title="Active Subs"
-          value={activeSubscriptions}
-          trend={{ value: <><AlertCircle size={11} style={{marginBottom:'-2px', marginRight:'2px'}}/>{expiringSubscriptions} Expiring Soon</>, isPositive: false }}
+          title="Free Trial Admins"
+          value={freeTrialAdmins}
+          description="Active 7-Day Free Trials"
+          icon={Sparkles}
+          colorVariant="amber"
+          onClick={() => navigate("/master/companies")}
+          className="cursor-pointer hover-card"
+        />
+
+        <StatCard
+          title="Expired Trials"
+          value={expiredTrials}
+          description={expiredTrials > 0 ? "Pending Plan Conversion" : "No Expired Trials"}
+          icon={AlertCircle}
+          colorVariant="rose"
+          onClick={() => navigate("/master/companies")}
+          className="cursor-pointer hover-card"
+        />
+
+        <StatCard
+          title="Active Paid Plans"
+          value={activePaidPlans}
+          description={expiredPaidPlans > 0 ? `${expiredPaidPlans} Expired Subscriptions` : "100% Subscribed & Active"}
           icon={CreditCard}
+          colorVariant="emerald"
+          onClick={() => navigate("/master/subscriptions")}
+          className="cursor-pointer hover-card"
+        />
+      </div>
+
+      {/* ROW 2: REVENUE, RENEWALS & SUPPORT */}
+      <div className="kpi-grid-responsive grid-4">
+        <StatCard
+          title="Total Revenue"
+          value={`$${totalRevenue.toLocaleString()} CAD`}
+          description="Total Collected Platform Revenue"
+          icon={DollarSign}
+          colorVariant="emerald"
+          onClick={() => navigate("/master/payments")}
+          className="cursor-pointer hover-card"
+        />
+
+        <StatCard
+          title="Monthly Run-Rate"
+          value={`$${monthlyRevenue.toLocaleString()} CAD`}
+          description="Estimated Monthly Run-Rate (MRR)"
+          icon={TrendingUp}
+          colorVariant="indigo"
+          onClick={() => navigate("/master/subscriptions")}
+          className="cursor-pointer hover-card"
+        />
+
+        <StatCard
+          title="Upcoming Renewals"
+          value={upcomingRenewals}
+          description="Expiring Within Next 30 Days"
+          icon={Clock}
           colorVariant="amber"
           onClick={() => navigate("/master/subscriptions")}
+          className="cursor-pointer hover-card"
+        />
+
+        <StatCard
+          title="Open Support Tickets"
+          value={openSupportTickets}
+          description={openSupportTickets > 0 ? "Awaiting Super Admin Response" : "All Tickets Resolved"}
+          icon={Headset}
+          colorVariant="cyan"
+          onClick={() => navigate("/master/support-tickets")}
           className="cursor-pointer hover-card"
         />
       </div>

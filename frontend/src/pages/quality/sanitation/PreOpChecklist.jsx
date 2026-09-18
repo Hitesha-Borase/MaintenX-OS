@@ -596,7 +596,7 @@ export function PreOpChecklist() {
                         No Inspection Checkpoints Found
                       </div>
                       <p style={{ fontSize: "13px", color: "#6B5B4E", margin: 0, maxWidth: "450px" }}>
-                        Abhi is production line ke liye koi checkpoints database me nahi hain. Aap naya checkpoint manually add kar sakte hain ya standard HACCP protocol load kar sakte hain.
+                        No inspection checkpoints found for this production line. You can add a new checkpoint manually or load the standard HACCP protocol.
                       </p>
                       <div style={{ display: "flex", gap: "12px", marginTop: "8px" }}>
                         <button

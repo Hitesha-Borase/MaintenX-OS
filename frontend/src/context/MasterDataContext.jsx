@@ -449,94 +449,94 @@ export function MasterDataProvider({ children }) {
   });
   const [plants, setPlants] = useState(() => {
     const saved = localStorage.getItem("mx_master_plants");
-    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
-    return INITIAL_PLANTS;
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p)) return p; } catch (e) { } }
+    return isTenantActive ? [] : INITIAL_PLANTS;
   });
   const [activePlantId, setActivePlantId] = useState("");
   const [departments, setDepartments] = useState(() => {
     const saved = localStorage.getItem("mx_master_departments");
-    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
-    return INITIAL_DEPARTMENTS;
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p)) return p; } catch (e) { } }
+    return isTenantActive ? [] : INITIAL_DEPARTMENTS;
   });
   const [workCenters, setWorkCenters] = useState(() => {
     const saved = localStorage.getItem("mx_master_workcenters");
-    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
-    return INITIAL_WORK_CENTERS;
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p)) return p; } catch (e) { } }
+    return isTenantActive ? [] : INITIAL_WORK_CENTERS;
   });
 
   // 1. Core Master Datasets with Cache Initialization & Live DB Sync
   const [productFamilies, setProductFamilies] = useState(() => {
     const saved = localStorage.getItem("mx_master_families");
-    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
-    return INITIAL_PRODUCT_FAMILIES;
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p)) return p; } catch (e) { } }
+    return isTenantActive ? [] : INITIAL_PRODUCT_FAMILIES;
   });
 
   const [uoms, setUoms] = useState(() => {
     const saved = localStorage.getItem("mx_master_uoms");
-    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
-    return INITIAL_UOMS;
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p)) return p; } catch (e) { } }
+    return isTenantActive ? [] : INITIAL_UOMS;
   });
 
   const [skus, setSkus] = useState(() => {
     const saved = localStorage.getItem("mx_master_skus");
-    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
-    return INITIAL_SKUS;
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p)) return p; } catch (e) { } }
+    return isTenantActive ? [] : INITIAL_SKUS;
   });
 
   const [packConfigs, setPackConfigs] = useState(() => {
     const saved = localStorage.getItem("mx_master_pack_configs");
-    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
-    return INITIAL_PACK_CONFIGS;
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p)) return p; } catch (e) { } }
+    return isTenantActive ? [] : INITIAL_PACK_CONFIGS;
   });
 
   const [shelfLifeRecords, setShelfLifeRecords] = useState(() => {
     const saved = localStorage.getItem("mx_master_shelflife");
-    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
-    return INITIAL_SHELF_LIFE;
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p)) return p; } catch (e) { } }
+    return isTenantActive ? [] : INITIAL_SHELF_LIFE;
   });
 
-  const [customers, setCustomers] = useState(INITIAL_CUSTOMERS);
+  const [customers, setCustomers] = useState(isTenantActive ? [] : INITIAL_CUSTOMERS);
 
   const [customerSkuMappings, setCustomerSkuMappings] = useState(() => {
     const saved = localStorage.getItem("mx_master_csm");
-    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
-    return INITIAL_CUSTOMER_SKU_MAPPINGS;
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p)) return p; } catch (e) { } }
+    return isTenantActive ? [] : INITIAL_CUSTOMER_SKU_MAPPINGS;
   });
 
   const [boms, setBoms] = useState(() => {
     const saved = localStorage.getItem("mx_master_boms");
-    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
-    return INITIAL_BOMS;
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p)) return p; } catch (e) { } }
+    return isTenantActive ? [] : INITIAL_BOMS;
   });
 
   const [operations, setOperations] = useState(() => {
     const saved = localStorage.getItem("mx_master_operations");
-    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
-    return INITIAL_OPERATIONS;
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p)) return p; } catch (e) { } }
+    return isTenantActive ? [] : INITIAL_OPERATIONS;
   });
 
   const [routings, setRoutings] = useState(() => {
     const saved = localStorage.getItem("mx_master_routings");
-    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
-    return INITIAL_ROUTINGS;
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p)) return p; } catch (e) { } }
+    return isTenantActive ? [] : INITIAL_ROUTINGS;
   });
 
   const [lines, setLines] = useState(() => {
     const saved = localStorage.getItem("mx_master_lines");
-    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
-    return INITIAL_LINES;
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p)) return p; } catch (e) { } }
+    return isTenantActive ? [] : INITIAL_LINES;
   });
 
   const [lineTargets, setLineTargets] = useState(() => {
     const saved = localStorage.getItem("mx_master_line_targets");
-    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
-    return INITIAL_LINE_TARGETS;
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p)) return p; } catch (e) { } }
+    return isTenantActive ? [] : INITIAL_LINE_TARGETS;
   });
 
   const [changeoverMatrix, setChangeoverMatrix] = useState(() => {
     const saved = localStorage.getItem("mx_master_changeovers");
-    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
-    return INITIAL_CHANGEOVER_MATRIX;
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p)) return p; } catch (e) { } }
+    return isTenantActive ? [] : INITIAL_CHANGEOVER_MATRIX;
   });
 
   const [sanitationClasses, setSanitationClasses] = useState(() => {
@@ -549,7 +549,7 @@ export function MasterDataProvider({ children }) {
         }
       } catch (_) { }
     }
-    return INITIAL_SANITATION_CLASSES;
+    return isTenantActive ? [] : INITIAL_SANITATION_CLASSES;
   });
 
   const [allergenRules, setAllergenRules] = useState(() => {
@@ -562,7 +562,7 @@ export function MasterDataProvider({ children }) {
         }
       } catch (_) { }
     }
-    return INITIAL_ALLERGEN_RULES;
+    return isTenantActive ? [] : INITIAL_ALLERGEN_RULES;
   });
 
   const [labourStandards, setLabourStandards] = useState(() => {
@@ -573,63 +573,63 @@ export function MasterDataProvider({ children }) {
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       } catch (_) { }
     }
-    return INITIAL_LABOUR_STANDARDS;
+    return isTenantActive ? [] : INITIAL_LABOUR_STANDARDS;
   });
 
   const [assets, setAssets] = useState(() => {
     const saved = localStorage.getItem("mx_master_assets");
-    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
-    return INITIAL_ASSETS;
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p)) return p; } catch (e) { } }
+    return isTenantActive ? [] : INITIAL_ASSETS;
   });
 
   const [employees, setEmployees] = useState(() => {
     const saved = localStorage.getItem("mx_master_employees");
-    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
-    return INITIAL_EMPLOYEES;
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p)) return p; } catch (e) { } }
+    return isTenantActive ? [] : INITIAL_EMPLOYEES;
   });
 
   const [trainingRecords, setTrainingRecords] = useState(() => {
     const saved = localStorage.getItem("mx_master_training");
-    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
-    return INITIAL_TRAINING_RECORDS;
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p)) return p; } catch (e) { } }
+    return isTenantActive ? [] : INITIAL_TRAINING_RECORDS;
   });
 
   const [qualitySpecs, setQualitySpecs] = useState(() => {
     const saved = localStorage.getItem("mx_master_quality_specs");
-    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
-    return INITIAL_QUALITY_SPECS;
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p)) return p; } catch (e) { } }
+    return isTenantActive ? [] : INITIAL_QUALITY_SPECS;
   });
 
   const [storageResources, setStorageResources] = useState(() => {
     const saved = localStorage.getItem("mx_master_storage");
-    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
-    return INITIAL_STORAGE_RESOURCES;
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p)) return p; } catch (e) { } }
+    return isTenantActive ? [] : INITIAL_STORAGE_RESOURCES;
   });
 
   const [ccpLimits, setCcpLimits] = useState(() => {
     const saved = localStorage.getItem("mx_master_ccp_limits");
-    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p)) return p; } catch (e) { } }
     return [];
   });
 
   const [users, setUsers] = useState(() => {
     const saved = localStorage.getItem("mx_admin_users");
-    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
-    return INITIAL_USERS;
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p)) return p; } catch (e) { } }
+    return isTenantActive ? [] : INITIAL_USERS;
   });
 
-  const [userInvitations, setUserInvitations] = useState(INITIAL_USER_INVITATIONS);
+  const [userInvitations, setUserInvitations] = useState(isTenantActive ? [] : INITIAL_USER_INVITATIONS);
 
   const [auditLogs, setAuditLogs] = useState(() => {
     const saved = localStorage.getItem("mx_master_audit_logs");
-    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
-    return INITIAL_AUDIT_LOGS;
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p)) return p; } catch (e) { } }
+    return isTenantActive ? [] : INITIAL_AUDIT_LOGS;
   });
 
   const [rolePermissions, setRolePermissions] = useState(() => {
     const saved = localStorage.getItem("mx_master_permissions");
-    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
-    return INITIAL_ROLE_PERMISSIONS;
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p)) return p; } catch (e) { } }
+    return isTenantActive ? [] : INITIAL_ROLE_PERMISSIONS;
   });
 
   // Local Storage Synchronization
@@ -722,10 +722,10 @@ export function MasterDataProvider({ children }) {
         const safeArr = (item) => {
           if (item?.status !== "fulfilled") return null;
           let v = item.value?.data !== undefined ? item.value.data : item.value;
-          if (v && v.status === "success" && v.data) {
+          if (v && v.status === "success" && v.data !== undefined) {
             v = v.data;
           }
-          return Array.isArray(v) && v.length > 0 ? v : null;
+          return Array.isArray(v) ? v : null;
         };
 
         const compArr = safeArr(liveCompanies);

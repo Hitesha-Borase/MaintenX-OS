@@ -373,10 +373,10 @@ export function UserStatusPage() {
 
             <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
               <p style={{ fontSize: "13px", color: "var(--text-primary)", lineHeight: 1.5, margin: 0 }}>
-                Kya aap sach me user <strong>{deletingUser.name}</strong> ({deletingUser.email}) ko database se permanent delete karna chahte hain?
+                Are you sure you want to permanently delete user <strong>{deletingUser.name}</strong> ({deletingUser.email}) from the database?
               </p>
               <div style={{ fontSize: "12px", color: "#DC2626", backgroundColor: "rgba(220, 38, 38, 0.08)", padding: "10px 12px", borderRadius: "6px", border: "1px solid rgba(220, 38, 38, 0.2)" }}>
-                Warning: Yeh action user ko PostgreSQL database table se completely remove kar dega.
+                Warning: This action will permanently remove the user record from the database.
               </div>
 
               <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "6px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>

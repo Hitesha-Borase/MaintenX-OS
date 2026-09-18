@@ -128,9 +128,120 @@ const iconMap = {
   BookOpen
 };
 
+export function getGroupOrItemModule(item) {
+  if (!item) return null;
+  if (item.module) return item.module;
+  const target = `${item.group || ""} ${item.label || ""} ${item.path || ""}`.toLowerCase();
+
+  // Plan module
+  if (
+    target.includes("demand") ||
+    target.includes("forecast") ||
+    target.includes("mrp") ||
+    target.includes("aps") ||
+    target.includes("scheduler") ||
+    target.includes("/planner")
+  ) {
+    return "plan";
+  }
+
+  // Verify / Quality module
+  if (
+    target.includes("quality") ||
+    target.includes("sanitation") ||
+    target.includes("pre-op") ||
+    target.includes("ccp") ||
+    target.includes("qa release") ||
+    target.includes("disposition") ||
+    target.includes("hold") ||
+    target.includes("/quality")
+  ) {
+    return "verify";
+  }
+
+  // Maintain / CMMS module
+  if (
+    target.includes("maintain") ||
+    target.includes("cmms") ||
+    target.includes("work order") ||
+    target.includes("breakdown") ||
+    target.includes("calibration") ||
+    target.includes("troubleshoot") ||
+    target.includes("/maintenance")
+  ) {
+    return "maintain";
+  }
+
+  // Move / Warehouse module
+  if (
+    target.includes("move") ||
+    target.includes("warehouse") ||
+    target.includes("inventory") ||
+    target.includes("purchasing") ||
+    target.includes("receiving") ||
+    target.includes("picking") ||
+    target.includes("shipping") ||
+    target.includes("stock") ||
+    target.includes("/warehouse")
+  ) {
+    return "move";
+  }
+
+  // People / Workforce module
+  if (
+    target.includes("people") ||
+    target.includes("labour") ||
+    target.includes("workforce") ||
+    target.includes("staffing")
+  ) {
+    return "people";
+  }
+
+  // Improve / CI module
+  if (
+    target.includes("improve") ||
+    target.includes("kaizen") ||
+    target.includes("rca") ||
+    target.includes("capa") ||
+    target.includes("ci project") ||
+    target.includes("loss analysis") ||
+    target.includes("/ci")
+  ) {
+    return "improve";
+  }
+
+  // Intelligence module
+  if (
+    target.includes("intelligence") ||
+    target.includes("executive") ||
+    target.includes("enterprise") ||
+    target.includes("financial") ||
+    target.includes("/executive") ||
+    target.includes("/command-center")
+  ) {
+    return "intelligence";
+  }
+
+  // Produce module
+  if (
+    target.includes("production") ||
+    target.includes("produce") ||
+    target.includes("linelead") ||
+    target.includes("operator") ||
+    target.includes("recovery") ||
+    target.includes("shift") ||
+    target.includes("my-jobs") ||
+    target.includes("work-instructions")
+  ) {
+    return "produce";
+  }
+
+  return null;
+}
+
 export function Sidebar() {
   const navigate = useNavigate();
-  const { currentRole, logout, NAVIGATION_CONFIG } = useRole();
+  const { currentRole, logout, NAVIGATION_CONFIG, isModuleEnabled, setRoleById, ROLES } = useRole();
   const { sidebarCollapsed, setSidebarCollapsed, mobileMenuOpen, setMobileMenuOpen, addToast } = useApp();
   const location = useLocation();
   const isCollapsed = sidebarCollapsed && !mobileMenuOpen;
@@ -691,79 +802,188 @@ export function Sidebar() {
                   <FileSpreadsheet size={18} style={{ flexShrink: 0 }} />
                   {!sidebarCollapsed && <span>12. System Reports</span>}
                 </NavLink>
-              </>
-            ) : (
-              /* 2. OTHER ROLES: RENDER CONFIG DYNAMICALLY */
-              (NAVIGATION_CONFIG[currentRole?.id] || []).map((item, idx) => {
-                if (item.group) {
-                  const isGroupOpen = openGroups[item.group] ?? true;
-                  const groupPaths = item.items.map((i) => i.path);
-                  const active = isGroupActive(groupPaths);
 
-                  return (
-                    <div key={item.group || idx}>
-                      <div
-                        onClick={() => toggleGroup(item.group)}
-                        style={groupHeaderStyle(active)}
-                        title={item.group}
-                      >
-                        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                          <Layers size={18} color={active ? "#B27E33" : "var(--text-secondary)"} style={{ flexShrink: 0 }} />
-                          {!isCollapsed && <span>{item.group}</span>}
+                {/* 13. Support & Helpdesk */}
+                <NavLink to="/support" end style={navItemStyle} title="Support & Helpdesk">
+                  <Headset size={18} style={{ flexShrink: 0 }} color="#0284C7" />
+                  {!sidebarCollapsed && <span>13. Support</span>}
+                </NavLink>
+              </>
+            ) : currentRole?.module && currentRole.module !== "admin" && isModuleEnabled && !isModuleEnabled(currentRole.module) ? (
+              /* IF CURRENT ROLE MODULE IS LOCKED IN TENANT'S SUBSCRIPTION PLAN */
+              <div
+                style={{
+                  padding: "20px 12px",
+                  textAlign: "center",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "12px",
+                  alignItems: "center",
+                  backgroundColor: "rgba(200, 149, 71, 0.04)",
+                  borderRadius: "12px",
+                  border: "1px dashed rgba(200, 149, 71, 0.3)",
+                  margin: "8px 4px"
+                }}
+              >
+                <div
+                  style={{
+                    width: "42px",
+                    height: "42px",
+                    borderRadius: "50%",
+                    backgroundColor: "rgba(200, 149, 71, 0.12)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#C89547"
+                  }}
+                >
+                  <Lock size={20} />
+                </div>
+                <div>
+                  <div style={{ fontSize: "13px", fontWeight: 800, color: "var(--text-primary)" }}>
+                    Module Not In Plan
+                  </div>
+                  <div style={{ fontSize: "11px", color: "var(--text-muted)", lineHeight: 1.4, marginTop: "4px" }}>
+                    The <strong>{currentRole.label}</strong> ({currentRole.module.toUpperCase()}) module is not included in your active subscription.
+                  </div>
+                </div>
+                <div
+                  style={{
+                    fontSize: "10px",
+                    color: "#8C5B23",
+                    fontWeight: 700,
+                    backgroundColor: "rgba(200, 149, 71, 0.12)",
+                    padding: "4px 8px",
+                    borderRadius: "6px"
+                  }}
+                >
+                  Plan: {currentRole?.user?.tenant?.plan || currentRole?.user?.plan || "Plant Pilot"}
+                </div>
+                <button
+                  onClick={() => {
+                    const fallbackRole =
+                      ROLES?.find((r) => r.id !== "admin" && r.id !== "master_admin" && isModuleEnabled(r.module)) ||
+                      ROLES?.find((r) => r.id === "operator");
+                    if (fallbackRole) {
+                      setRoleById(fallbackRole.id);
+                      navigate(fallbackRole.defaultRoute || "/dashboard");
+                    }
+                  }}
+                  style={{
+                    padding: "7px 14px",
+                    borderRadius: "8px",
+                    backgroundColor: "#C89547",
+                    color: "#FFFFFF",
+                    border: "none",
+                    fontSize: "11px",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    boxShadow: "0 2px 6px rgba(200, 149, 71, 0.25)"
+                  }}
+                >
+                  Switch to Available Module
+                </button>
+              </div>
+            ) : (
+              /* 2. OTHER ROLES: RENDER CONFIG DYNAMICALLY FILTERED BY SUBSCRIPTION PLAN */
+              (NAVIGATION_CONFIG[currentRole?.id] || [])
+                .filter((item) => {
+                  if (currentRole?.id === "master_admin") return true;
+                  const mod = getGroupOrItemModule(item);
+                  if (mod && isModuleEnabled && !isModuleEnabled(mod)) {
+                    return false;
+                  }
+                  return true;
+                })
+                .map((item, idx) => {
+                  if (item.group) {
+                    const visibleSubItems = item.items.filter((subItem) => {
+                      if (currentRole?.id === "master_admin") return true;
+                      const subMod = getGroupOrItemModule(subItem);
+                      if (subMod && isModuleEnabled && !isModuleEnabled(subMod)) {
+                        return false;
+                      }
+                      return true;
+                    });
+
+                    if (visibleSubItems.length === 0) return null;
+
+                    const isGroupOpen = openGroups[item.group] ?? true;
+                    const groupPaths = visibleSubItems.map((i) => i.path);
+                    const active = isGroupActive(groupPaths);
+
+                    return (
+                      <div key={item.group || idx}>
+                        <div
+                          onClick={() => toggleGroup(item.group)}
+                          style={groupHeaderStyle(active)}
+                          title={item.group}
+                        >
+                          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                            <Layers size={18} color={active ? "#B27E33" : "var(--text-secondary)"} style={{ flexShrink: 0 }} />
+                            {!isCollapsed && <span>{item.group}</span>}
+                          </div>
+                          {!isCollapsed && (
+                            isGroupOpen ? <ChevronDown size={14} color="var(--text-muted)" /> : <ChevronRight size={14} color="var(--text-muted)" />
+                          )}
                         </div>
-                        {!isCollapsed && (
-                          isGroupOpen ? <ChevronDown size={14} color="var(--text-muted)" /> : <ChevronRight size={14} color="var(--text-muted)" />
+
+                        {!isCollapsed && isGroupOpen && (
+                          <div style={{ display: "flex", flexDirection: "column", gap: "2px", marginTop: "2px" }}>
+                            {visibleSubItems.map((subItem) => {
+                              const IconComp = iconMap[subItem.icon] || FileText;
+                              return (
+                                <NavLink
+                                  key={subItem.path}
+                                  to={subItem.path}
+                                  end
+                                  style={subNavItemStyle}
+                                >
+                                  {({ isActive }) => (
+                                    <>
+                                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                        <IconComp size={14} color={isActive ? "#1A0F02" : "currentColor"} />
+                                        <span>{subItem.label}</span>
+                                      </div>
+                                      {renderBadge(subItem.label)}
+                                    </>
+                                  )}
+                                </NavLink>
+                              );
+                            })}
+                          </div>
                         )}
                       </div>
+                    );
+                  }
 
-                      {!isCollapsed && isGroupOpen && (
-                        <div style={{ display: "flex", flexDirection: "column", gap: "2px", marginTop: "2px" }}>
-                          {item.items.map((subItem) => {
-                            const IconComp = iconMap[subItem.icon] || FileText;
-                            return (
-                              <NavLink
-                                key={subItem.path}
-                                to={subItem.path}
-                                end
-                                style={subNavItemStyle}
-                              >
-                                {({ isActive }) => (
-                                  <>
-                                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                                      <IconComp size={14} color={isActive ? "#1A0F02" : "currentColor"} />
-                                      <span>{subItem.label}</span>
-                                    </div>
-                                    {renderBadge(subItem.label)}
-                                  </>
-                                )}
-                              </NavLink>
-                            );
-                          })}
-                        </div>
+                  const IconComp = iconMap[item.icon] || LayoutDashboard;
+                  return (
+                    <NavLink
+                      key={item.path}
+                      to={item.path}
+                      end
+                      style={navItemStyle}
+                      title={item.label}
+                    >
+                      {({ isActive }) => (
+                        <>
+                          <IconComp size={18} color={isActive ? "#1A0F02" : "currentColor"} style={{ flexShrink: 0 }} />
+                          {!isCollapsed && <span>{item.label}</span>}
+                          {!isCollapsed && renderBadge(item.label)}
+                        </>
                       )}
-                    </div>
+                    </NavLink>
                   );
-                }
+                })
+            )}
 
-                const IconComp = iconMap[item.icon] || LayoutDashboard;
-                return (
-                  <NavLink
-                    key={item.path}
-                    to={item.path}
-                    end
-                    style={navItemStyle}
-                    title={item.label}
-                  >
-                    {({ isActive }) => (
-                      <>
-                        <IconComp size={18} color={isActive ? "#1A0F02" : "currentColor"} style={{ flexShrink: 0 }} />
-                        {!isCollapsed && <span>{item.label}</span>}
-                        {!isCollapsed && renderBadge(item.label)}
-                      </>
-                    )}
-                  </NavLink>
-                );
-              })
+            {/* Global Tenant Support (Section 9) */}
+            {currentRole?.id !== "master_admin" && currentRole?.id !== "admin" && (
+              <NavLink to="/support" end style={navItemStyle} title="Support & Helpdesk">
+                <Headset size={18} style={{ flexShrink: 0 }} color="#0284C7" />
+                {!isCollapsed && <span>Support</span>}
+              </NavLink>
             )}
           </nav>
         </div>

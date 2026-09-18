@@ -522,7 +522,7 @@ export function ApprovalPermissionsPage() {
 
             <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
               <p style={{ fontSize: "13px", color: "var(--text-primary)", lineHeight: 1.5, margin: 0 }}>
-                Kya aap sach me approval rule <strong>{deletingRule.id}</strong> ({deletingRule.event}) ko database se delete karna chahte hain?
+                Are you sure you want to delete approval rule <strong>{deletingRule.id}</strong> ({deletingRule.event}) from the database?
               </p>
 
               <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "6px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>

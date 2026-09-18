@@ -1,32 +1,93 @@
 import React from "react";
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
+import { TrialBanner } from "../common/TrialBanner";
+import { TrialExpiredLockout } from "../common/TrialExpiredLockout";
 import { GlobalSearchModal } from "../common/GlobalSearchModal";
 import { QRModal } from "../common/QRModal";
 import { QuickActionDrawer } from "../common/QuickActionDrawer";
 import { ErrorBoundary } from "../common/ErrorBoundary";
 import { useApp } from "../../context/AppContext";
+import { useRole } from "../../context/RoleContext";
 import { CheckCircle2, AlertTriangle, AlertOctagon, Info, X } from "lucide-react";
 
 export function AppLayout() {
   const { toasts = [], removeToast } = useApp();
+  const { currentRole } = useRole();
+  const location = useLocation();
+
+  // Comprehensive Subscription & Trial Expiration Check
+  let isSubscriptionExpired = false;
+  if (currentRole?.id !== "master_admin") {
+    const tenant = currentRole?.user?.tenant;
+    const plan = (tenant?.plan || currentRole?.user?.plan || localStorage.getItem("maintenx_tenant_plan") || "").toLowerCase();
+    const isEnterprise = plan.includes("enterprise") || plan.includes("complete") || currentRole?.user?.companyName?.includes("BeverageCorp");
+
+    const hasPaidSub = Boolean(tenant?.hasSubscription || currentRole?.user?.hasSubscription);
+    const subExpiryStr = tenant?.subscriptionExpiryDate;
+    const subStatus = (tenant?.subscriptionStatus || "").toUpperCase();
+
+    // 1. Paid plan expiration check
+    const isPaidSubExpired = hasPaidSub && (
+      subStatus === "EXPIRED" || 
+      subStatus === "CANCELLED" || 
+      (subExpiryStr && new Date(subExpiryStr) < new Date())
+    );
+
+    // 2. 7-Day Free Trial expiration check
+    let isTrialPeriodExpired = false;
+    if (!hasPaidSub && !isEnterprise) {
+      const registeredAtStr = tenant?.createdAt || currentRole?.user?.createdAt || localStorage.getItem("maintenx_tenant_created");
+      if (registeredAtStr) {
+        const registeredAt = new Date(registeredAtStr);
+        const now = new Date();
+        const diffDays = Math.floor((now.getTime() - registeredAt.getTime()) / (1000 * 60 * 60 * 24));
+        if (diffDays >= 7) {
+          isTrialPeriodExpired = true;
+        }
+      }
+    }
+
+    if (isPaidSubExpired || isTrialPeriodExpired) {
+      const userRole = currentRole?.id || "";
+      const roleName = (currentRole?.user?.role || currentRole?.label || "").toLowerCase();
+      const isCompanyAdmin = userRole === "admin" || roleName.includes("admin") || roleName.includes("administrator");
+
+      // Company Admin is allowed into /pricing and /support to renew or buy plans
+      if (isCompanyAdmin && (location.pathname.startsWith("/pricing") || location.pathname.startsWith("/support"))) {
+        isSubscriptionExpired = false;
+      }
+      // Sub-users/employees are allowed only on /support if needed, but blocked on dashboards
+      else if (!isCompanyAdmin && location.pathname.startsWith("/support")) {
+        isSubscriptionExpired = false;
+      } else {
+        isSubscriptionExpired = true;
+      }
+    }
+  }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh", width: "100%", maxWidth: "100vw", backgroundColor: "var(--bg-main)", overflow: "hidden", position: "relative" }}>
       {/* Global Header - Full Width */}
       <Header />
+      {isSubscriptionExpired && <TrialExpiredLockout />}
 
       <div className="app-container" style={{ display: "flex", flex: 1, minHeight: 0, width: "100%", maxWidth: "100vw", position: "relative", overflow: "hidden" }}>
         {/* Global Sidebar */}
         <Sidebar />
 
-        {/* Dynamic Page Content wrapper */}
-        <main className="page-content-wrapper" style={{ flex: 1, minWidth: 0, width: "100%", height: "100%", overflowY: "auto", overflowX: "hidden" }}>
-          <ErrorBoundary>
-            <Outlet />
-          </ErrorBoundary>
-        </main>
+        {/* Content area beside Sidebar with Trial Banner */}
+        <div style={{ display: "flex", flexDirection: "column", flex: 1, minWidth: 0, height: "100%", overflow: "hidden" }}>
+          <TrialBanner />
+
+          {/* Dynamic Page Content wrapper */}
+          <main className="page-content-wrapper" style={{ flex: 1, minWidth: 0, width: "100%", height: "100%", overflowY: "auto", overflowX: "hidden" }}>
+            <ErrorBoundary>
+              <Outlet />
+            </ErrorBoundary>
+          </main>
+        </div>
       </div>
 
       {/* Global Modals & Drawers */}

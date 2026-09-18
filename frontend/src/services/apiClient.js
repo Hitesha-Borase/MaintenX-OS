@@ -89,8 +89,8 @@ class ApiClient {
     }
 
     if (!endpoint.includes("/auth/login")) {
-      const tenantId = typeof window !== "undefined" ? (localStorage.getItem("maintenx_tenant_id") || "5bce8458-909a-4dd2-b221-614c32ac7c89") : "5bce8458-909a-4dd2-b221-614c32ac7c89";
-      if (!sanitizedHeaders["X-Tenant-Id"]) {
+      const tenantId = typeof window !== "undefined" ? localStorage.getItem("maintenx_tenant_id") : null;
+      if (tenantId && !sanitizedHeaders["X-Tenant-Id"]) {
         sanitizedHeaders["X-Tenant-Id"] = tenantId;
       }
       const tenantName = typeof window !== "undefined" ? (localStorage.getItem("maintenx_tenant_name") || "") : "";

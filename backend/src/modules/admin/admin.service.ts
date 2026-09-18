@@ -439,6 +439,10 @@ export class AdminService {
           };
         });
 
+      if (isTenantUuid) {
+        return mapped;
+      }
+
       if (mapped.length > 0) {
         return mapped;
       }
@@ -446,7 +450,7 @@ export class AdminService {
       console.warn("Database query failed in getAllUsers:", err.message);
     }
 
-    return inMemoryUsers;
+    return tenantId ? [] : inMemoryUsers;
   }
 
   async updateUserStatus(tenantId: string | undefined, userId: string, newStatus: string) {
@@ -1271,23 +1275,30 @@ export class AdminService {
 
       let roleList = [];
       if (activeTenantId) {
-        roleList = await db.select().from(roles).where(eq(roles.tenantId, activeTenantId));
-        if (roleList.length === 0) {
-          roleList = await db.select().from(roles);
-        }
+        roleList = await db
+          .select()
+          .from(roles)
+          .where(or(eq(roles.tenantId, activeTenantId), eq(roles.isSystem, true), isNull(roles.tenantId)));
       } else {
         roleList = await db.select().from(roles);
       }
 
       let userRoleList: any[] = [];
       try {
-        userRoleList = await db.select().from(userRoles);
+        if (activeTenantId) {
+          userRoleList = await db
+            .select({ roleId: userRoles.roleId })
+            .from(userRoles)
+            .innerJoin(users, eq(userRoles.userId, users.id))
+            .where(eq(users.tenantId, activeTenantId));
+        } else {
+          userRoleList = await db.select().from(userRoles);
+        }
       } catch (_) {}
 
       if (roleList && roleList.length > 0) {
         return roleList.map((r, idx) => {
           const assignedCount = userRoleList.filter((ur) => ur.roleId === r.id).length;
-          const defaultFallbackCount = r.code === "operator" ? 42 : r.code === "plant_manager" ? 4 : r.code === "admin" ? 2 : 1;
 
           return {
             id: r.id || `ROL-0${idx + 1}`,
@@ -1295,7 +1306,7 @@ export class AdminService {
             code: r.code,
             name: r.name,
             description: r.description || "Custom enterprise operational scope",
-            userCount: assignedCount > 0 ? assignedCount : defaultFallbackCount,
+            userCount: assignedCount,
             isSystem: r.isSystem,
             createdAt: r.createdAt instanceof Date ? r.createdAt.toISOString() : String(r.createdAt || new Date().toISOString()),
           };
@@ -1305,7 +1316,7 @@ export class AdminService {
       console.warn("Database query failed in getRoles:", err.message);
     }
 
-    return inMemoryRoles;
+    return tenantId ? [] : inMemoryRoles;
   }
 
   async createRole(tenantId: string | undefined, input: { name: string; description?: string }) {
