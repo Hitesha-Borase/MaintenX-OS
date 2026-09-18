@@ -444,7 +444,7 @@ export class MasterDataService {
       const dbPlants = tenantId
         ? await db.select().from(plants).where(eq(plants.tenantId, tenantId)).orderBy(desc(plants.createdAt))
         : await db.select().from(plants).orderBy(desc(plants.createdAt));
-      if (dbPlants && dbPlants.length > 0) {
+      if (dbPlants) {
         return dbPlants.map((p) => ({
           id: p.id,
           plantId: p.id,
@@ -464,13 +464,11 @@ export class MasterDataService {
           updatedAt: p.updatedAt,
         }));
       }
-      if (tenantId) {
-        return [];
-      }
+      return [];
     } catch (err: any) {
       console.warn("DB listPlants fallback:", err.message);
     }
-    return tenantId ? [] : inMemoryPlants;
+    return [];
   }
 
   async createPlant(tenantId: string | undefined, input: any) {
@@ -2693,7 +2691,7 @@ export class MasterDataService {
     try {
       const res = await db.execute(sql`SELECT * FROM public.skus ORDER BY created_at DESC`);
       const rows = (res as any)?.rows || (Array.isArray(res) ? res : []);
-      if (rows.length > 0) {
+      if (rows) {
         return rows.map((s: any) => ({
           id: s.id,
           skuId: s.id,
@@ -2713,10 +2711,11 @@ export class MasterDataService {
           updatedAt: s.updated_at,
         }));
       }
+      return [];
     } catch (err: any) {
       console.warn("DB listSkus error:", err.message);
     }
-    return inMemorySkus;
+    return [];
   }
 
   async createSku(tenantId: string | undefined, input: any) {
@@ -2828,11 +2827,21 @@ export class MasterDataService {
     // Persist delete to PostgreSQL
     try {
       const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
-      if (isUuid) {
-        await db.delete(skus).where(eq(skus.id, id));
-      } else {
-        await db.delete(skus).where(eq(skus.skuCode, id));
+      let targetSkuId = id;
+      if (!isUuid) {
+        const found = await db.select({ id: skus.id }).from(skus).where(eq(skus.skuCode, id)).limit(1);
+        if (found[0]?.id) targetSkuId = found[0].id;
       }
+      await db.execute(sql`DELETE FROM public.inventory_transactions WHERE lot_id IN (SELECT id FROM public.inventory_lots WHERE sku_id::text = ${targetSkuId})`);
+      await db.execute(sql`DELETE FROM public.inventory_lots WHERE sku_id::text = ${targetSkuId}`);
+      await db.execute(sql`DELETE FROM public.batches WHERE sku_id::text = ${targetSkuId}`);
+      await db.execute(sql`DELETE FROM public.customer_orders WHERE sku_id::text = ${targetSkuId}`);
+      await db.execute(sql`DELETE FROM public.forecasts WHERE sku_id::text = ${targetSkuId}`);
+      await db.execute(sql`DELETE FROM public.production_orders WHERE sku_id::text = ${targetSkuId}`);
+      await db.execute(sql`DELETE FROM public.quality_specs WHERE sku_id::text = ${targetSkuId}`);
+      await db.execute(sql`DELETE FROM public.bom_items WHERE component_sku_id::text = ${targetSkuId}`);
+      await db.execute(sql`DELETE FROM public.boms WHERE sku_id::text = ${targetSkuId}`);
+      await db.execute(sql`DELETE FROM public.skus WHERE id::text = ${targetSkuId} OR sku_code = ${id}`);
     } catch (err: any) {
       console.warn("DB delete sku error:", err.message);
     }

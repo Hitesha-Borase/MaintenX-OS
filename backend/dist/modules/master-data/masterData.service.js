@@ -213,7 +213,7 @@ class MasterDataService {
             const dbPlants = tenantId
                 ? await database_js_1.db.select().from(tenants_js_1.plants).where((0, drizzle_orm_1.eq)(tenants_js_1.plants.tenantId, tenantId)).orderBy((0, drizzle_orm_1.desc)(tenants_js_1.plants.createdAt))
                 : await database_js_1.db.select().from(tenants_js_1.plants).orderBy((0, drizzle_orm_1.desc)(tenants_js_1.plants.createdAt));
-            if (dbPlants && dbPlants.length > 0) {
+            if (dbPlants) {
                 return dbPlants.map((p) => ({
                     id: p.id,
                     plantId: p.id,
@@ -233,14 +233,12 @@ class MasterDataService {
                     updatedAt: p.updatedAt,
                 }));
             }
-            if (tenantId) {
-                return [];
-            }
+            return [];
         }
         catch (err) {
             console.warn("DB listPlants fallback:", err.message);
         }
-        return tenantId ? [] : inMemoryPlants;
+        return [];
     }
     async createPlant(tenantId, input) {
         const newId = `PLT-0${inMemoryPlants.length + 1}`;
@@ -2423,7 +2421,7 @@ class MasterDataService {
         try {
             const res = await database_js_1.db.execute((0, drizzle_orm_1.sql) `SELECT * FROM public.skus ORDER BY created_at DESC`);
             const rows = res?.rows || (Array.isArray(res) ? res : []);
-            if (rows.length > 0) {
+            if (rows) {
                 return rows.map((s) => ({
                     id: s.id,
                     skuId: s.id,
@@ -2443,11 +2441,12 @@ class MasterDataService {
                     updatedAt: s.updated_at,
                 }));
             }
+            return [];
         }
         catch (err) {
             console.warn("DB listSkus error:", err.message);
         }
-        return inMemorySkus;
+        return [];
     }
     async createSku(tenantId, input) {
         const newId = `SKU-00${inMemorySkus.length + 1}`;
@@ -2566,12 +2565,22 @@ class MasterDataService {
         // Persist delete to PostgreSQL
         try {
             const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
-            if (isUuid) {
-                await database_js_1.db.delete(masterData_js_1.skus).where((0, drizzle_orm_1.eq)(masterData_js_1.skus.id, id));
+            let targetSkuId = id;
+            if (!isUuid) {
+                const found = await database_js_1.db.select({ id: masterData_js_1.skus.id }).from(masterData_js_1.skus).where((0, drizzle_orm_1.eq)(masterData_js_1.skus.skuCode, id)).limit(1);
+                if (found[0]?.id)
+                    targetSkuId = found[0].id;
             }
-            else {
-                await database_js_1.db.delete(masterData_js_1.skus).where((0, drizzle_orm_1.eq)(masterData_js_1.skus.skuCode, id));
-            }
+            await database_js_1.db.execute((0, drizzle_orm_1.sql) `DELETE FROM public.inventory_transactions WHERE lot_id IN (SELECT id FROM public.inventory_lots WHERE sku_id::text = ${targetSkuId})`);
+            await database_js_1.db.execute((0, drizzle_orm_1.sql) `DELETE FROM public.inventory_lots WHERE sku_id::text = ${targetSkuId}`);
+            await database_js_1.db.execute((0, drizzle_orm_1.sql) `DELETE FROM public.batches WHERE sku_id::text = ${targetSkuId}`);
+            await database_js_1.db.execute((0, drizzle_orm_1.sql) `DELETE FROM public.customer_orders WHERE sku_id::text = ${targetSkuId}`);
+            await database_js_1.db.execute((0, drizzle_orm_1.sql) `DELETE FROM public.forecasts WHERE sku_id::text = ${targetSkuId}`);
+            await database_js_1.db.execute((0, drizzle_orm_1.sql) `DELETE FROM public.production_orders WHERE sku_id::text = ${targetSkuId}`);
+            await database_js_1.db.execute((0, drizzle_orm_1.sql) `DELETE FROM public.quality_specs WHERE sku_id::text = ${targetSkuId}`);
+            await database_js_1.db.execute((0, drizzle_orm_1.sql) `DELETE FROM public.bom_items WHERE component_sku_id::text = ${targetSkuId}`);
+            await database_js_1.db.execute((0, drizzle_orm_1.sql) `DELETE FROM public.boms WHERE sku_id::text = ${targetSkuId}`);
+            await database_js_1.db.execute((0, drizzle_orm_1.sql) `DELETE FROM public.skus WHERE id::text = ${targetSkuId} OR sku_code = ${id}`);
         }
         catch (err) {
             console.warn("DB delete sku error:", err.message);
