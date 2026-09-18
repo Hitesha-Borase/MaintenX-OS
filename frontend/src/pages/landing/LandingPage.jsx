@@ -35,7 +35,7 @@ import "./landing.css";
 
 import { useApp } from "../../context/AppContext";
 import { useRole } from "../../context/RoleContext";
-import { useMasterAdmin } from "../../context/MasterAdminContext";
+import { useMasterAdmin, DEFAULT_PLANS } from "../../context/MasterAdminContext";
 import billingService from "../../services/billingService";
 import authService from "../../services/authService";
 
@@ -623,15 +623,20 @@ export function LandingPage() {
         </div>
 
         <div className="saas-pricing-grid">
-          {(plans && plans.length > 0 ? plans.filter(p => p.status !== "Inactive") : []).map((plan) => {
-            const isPopular = plan.isPopular || plan.name === "Bundles";
-            const priceText = plan.priceMonthly === 0 ? "₹0" : `$${plan.priceMonthly.toLocaleString()} ${plan.currency || "CAD"}`;
-            const periodText = plan.priceMonthly === 0 ? "/ 7 days" : "/ month";
-            const subtitleText = plan.subtitle || (plan.priceMonthly === 0 ? "Free 7-Day Evaluation" : `${plan.duration || "Unlimited"} Production`);
-            const ctaBtnText = plan.ctaText || (plan.priceMonthly === 0 ? "Start Free Pilot" : isPopular ? "Launch Bundles" : plan.name.toLowerCase().includes("complete") ? "Contact Enterprise" : "Choose Modules");
+          {((plans && plans.length > 0 ? plans.filter(p => p.status !== "Inactive") : null) || DEFAULT_PLANS).map((plan) => {
+            const isPopular = Boolean(plan.isPopular || plan.name === "Bundles");
+            const priceNum = Number(plan.priceMonthly ?? 0);
+            const priceText = priceNum === 0 ? "$0" : `$${priceNum.toLocaleString()} ${plan.currency || "CAD"}`;
+            const periodText = priceNum === 0 ? "/ 7 days" : "/ month";
+            const subtitleText = plan.subtitle || (priceNum === 0 ? "Free 7-Day Evaluation" : `${plan.duration || "Unlimited"} Production`);
+            const ctaBtnText = plan.ctaText || (priceNum === 0 ? "Start Free Pilot" : isPopular ? "Launch Bundles" : (plan.name || "").toLowerCase().includes("complete") ? "Contact Enterprise" : "Choose Modules");
+            const rawFeatures = plan.features || [];
+            const featuresList = Array.isArray(rawFeatures)
+              ? rawFeatures
+              : (typeof rawFeatures === "string" ? JSON.parse(rawFeatures) : []);
 
             return (
-              <div key={plan.id} className={`saas-price-card ${isPopular ? "popular-plan" : ""}`}>
+              <div key={plan.id || plan.name} className={`saas-price-card ${isPopular ? "popular-plan" : ""}`}>
                 {isPopular && <div className="saas-popular-tag">MOST POPULAR</div>}
                 <div>
                   <div className="saas-plan-header">
@@ -644,7 +649,7 @@ export function LandingPage() {
                   </div>
 
                   <ul className="saas-plan-features" style={{ marginTop: "20px" }}>
-                    {(plan.features || []).map((feat, idx) => (
+                    {featuresList.map((feat, idx) => (
                       <li key={idx} className="saas-plan-feature-item">
                         <Check size={14} color={isPopular ? "#B27E33" : "#059669"} />
                         <span>{feat}</span>
@@ -654,12 +659,13 @@ export function LandingPage() {
                 </div>
 
                 <button
+                  type="button"
                   onClick={() => handleOpenPlanModal({ 
-                    id: String(plan.id), 
+                    id: String(plan.id || plan.name?.toLowerCase().replace(/\s+/g, '-')), 
                     name: plan.name, 
                     price: priceText, 
                     period: periodText, 
-                    isFree: plan.priceMonthly === 0 
+                    isFree: priceNum === 0 
                   })}
                   className="saas-plan-btn"
                 >
