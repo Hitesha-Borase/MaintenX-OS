@@ -238,7 +238,7 @@ export function MasterDataProvider({ children }) {
   // Purge old cached mock/dummy data once so DB truth is displayed
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const cleaned = localStorage.getItem("mx_db_live_v4_clean");
+      const cleaned = localStorage.getItem("mx_db_live_v5_clean");
       if (!cleaned) {
         const dummyKeys = [
           "mx_master_companies", "mx_master_plants", "mx_master_departments",
@@ -252,7 +252,7 @@ export function MasterDataProvider({ children }) {
           "flowstate_assets", "flowstate_notifications"
         ];
         dummyKeys.forEach((k) => localStorage.removeItem(k));
-        localStorage.setItem("mx_db_live_v4_clean", "true");
+        localStorage.setItem("mx_db_live_v5_clean", "true");
       }
     }
   }, []);
@@ -270,7 +270,15 @@ export function MasterDataProvider({ children }) {
   });
   const [plants, setPlants] = useState(() => {
     const saved = localStorage.getItem("mx_master_plants");
-    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
+    if (saved) {
+      try {
+        const p = JSON.parse(saved);
+        if (Array.isArray(p) && p.length > 0) {
+          const filtered = p.filter((item) => item.code !== "INDORE-01" && !item.name?.includes("Indore Mega"));
+          if (filtered.length > 0) return filtered;
+        }
+      } catch (e) { }
+    }
     return INITIAL_PLANTS;
   });
   const [activePlantId, setActivePlantId] = useState("");
