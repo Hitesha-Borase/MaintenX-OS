@@ -14,6 +14,7 @@ exports.users = (0, pg_core_1.pgTable)("users", {
     avatarUrl: (0, pg_core_1.text)("avatar_url"),
     digitalSignaturePinHash: (0, pg_core_1.varchar)("digital_signature_pin_hash", { length: 255 }),
     isMasterAdmin: (0, pg_core_1.boolean)("is_master_admin").default(false).notNull(),
+    department: (0, pg_core_1.varchar)("department", { length: 255 }),
     status: (0, pg_core_1.varchar)("status", { length: 50 }).default("ACTIVE").notNull(),
     lastLoginAt: (0, pg_core_1.timestamp)("last_login_at"),
     createdAt: (0, pg_core_1.timestamp)("created_at").defaultNow().notNull(),

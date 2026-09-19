@@ -94,8 +94,10 @@ export class AdminController {
 
   async getActivityLogs(request: FastifyRequest, reply: FastifyReply) {
     const user = (request as any).user;
+    const headerTenantId = request.headers["x-tenant-id"] as string;
+    const tenantId = user?.tenantId || (headerTenantId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(headerTenantId) ? headerTenantId : undefined);
     const { query } = (request.query as { query?: string }) || {};
-    const logs = await adminService.getActivityLogs(user?.tenantId, query);
+    const logs = await adminService.getActivityLogs(tenantId, query);
     return reply.status(200).send(logs);
   }
 
@@ -118,6 +120,12 @@ export class AdminController {
     const user = (request as any).user;
     const { id } = request.params as { id: string };
     const res = await adminService.deleteActivityLog(user?.tenantId, id);
+    return reply.status(200).send(res);
+  }
+
+  async clearActivityLogs(request: FastifyRequest, reply: FastifyReply) {
+    const user = (request as any).user;
+    const res = await adminService.clearActivityLogs(user?.tenantId);
     return reply.status(200).send(res);
   }
 

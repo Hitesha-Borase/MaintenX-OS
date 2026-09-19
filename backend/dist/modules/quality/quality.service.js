@@ -115,13 +115,7 @@ let inMemoryProductChecks = [
     { id: "CHK-1004", type: "Can Double Seam & Visual Crimp Inspection", batch: "BAT-2026-0892", sku: "330ml Sparkling Orange Can", line: "Line 2", target: "Seam Overlap ≥ 1.1mm", actual: "1.22mm Overlap", status: "PENDING", time: "16:00" }
 ];
 // In-memory approved releases and blocked batches removed: using PostgreSQL qa_approved_releases and quality_holds tables
-let inMemoryQualitySpecs = [
-    { id: 1, parameter: "Brix Sugar Level (Concentration)", range: "11.6 - 12.2 °Bx", sku: "Sparkling Citrus & Cola 500ml", ccp: "No", uom: "°Bx", min: 11.6, max: 12.2 },
-    { id: 2, parameter: "Pasteurizer Heat Exchanger Temperature", range: "≥ 83.1 °C", sku: "All Bottled / Aseptic SKUs", ccp: "Yes (CCP-01)", uom: "°C", min: 83.1, max: 88.0 },
-    { id: 3, parameter: "Net Volume Fill Tolerance", range: "330.0 ± 2.5 ml", sku: "330ml Aluminum Cans", ccp: "No", uom: "ml", min: 327.5, max: 332.5 },
-    { id: 4, parameter: "Dissolved Carbon Dioxide (CO2)", range: "3.60 - 3.80 Vol", sku: "Sparkling Sodas", ccp: "No", uom: "Vol", min: 3.60, max: 3.80 },
-    { id: 5, parameter: "End-of-Line Metal Detector Sensitivity", range: "Fe 2.0mm / Non-Fe 2.5mm / SS 3.0mm", sku: "All Packaged SKUs", ccp: "Yes (CCP-02)", uom: "mm", min: 0, max: 0 }
-];
+let inMemoryQualitySpecs = [];
 class QualityService {
     async listCcpChecks(tenantId, plantId) {
         const client = await database_js_1.pool.connect();

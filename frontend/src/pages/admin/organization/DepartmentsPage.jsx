@@ -40,13 +40,13 @@ export function DepartmentsPage() {
     code: "",
     name: "",
     plantId: activePlantId || "PLT-01",
-    deptHead: "Robert Thorne",
-    operatingShifts: "3 Shifts (24/7 Continuous)",
-    costCenter: "CC-4010"
+    deptHead: "",
+    operatingShifts: "",
+    costCenter: ""
   });
 
   const totalPersonnel = useMemo(() => {
-    return employees.length || 48;
+    return employees.length || 0;
   }, [employees]);
 
   const filteredDepts = useMemo(() => {
@@ -78,9 +78,9 @@ export function DepartmentsPage() {
       code: "",
       name: "",
       plantId: activePlantId || "PLT-01",
-      deptHead: "Robert Thorne",
-      operatingShifts: "3 Shifts (24/7 Continuous)",
-      costCenter: "CC-4010"
+      deptHead: "",
+      operatingShifts: "",
+      costCenter: ""
     });
   };
 
@@ -349,6 +349,7 @@ export function DepartmentsPage() {
                   <label className="form-label">Department Head / Manager</label>
                   <input
                     type="text"
+                    placeholder="e.g. Robert Thorne"
                     value={newDept.deptHead}
                     onChange={(e) => setNewDept({ ...newDept, deptHead: e.target.value })}
                     className="form-input"
@@ -375,6 +376,7 @@ export function DepartmentsPage() {
                   <label className="form-label">Cost Center Code</label>
                   <input
                     type="text"
+                    placeholder="e.g. CC-4010"
                     value={newDept.costCenter}
                     onChange={(e) => setNewDept({ ...newDept, costCenter: e.target.value })}
                     className="form-input"
@@ -385,6 +387,7 @@ export function DepartmentsPage() {
                   <label className="form-label">Operating Shifts</label>
                   <input
                     type="text"
+                    placeholder="e.g. 3 Shifts (24/7 Continuous)"
                     value={newDept.operatingShifts}
                     onChange={(e) => setNewDept({ ...newDept, operatingShifts: e.target.value })}
                     className="form-input"

@@ -20,18 +20,32 @@ export async function authenticate(request: FastifyRequest, _reply: FastifyReply
   // 1. If JWT decoded successfully
   if (currentUser) {
     if (headerTenantId) {
-      if (currentUser.isMasterAdmin || !currentUser.tenantId) {
-        currentUser.tenantId = headerTenantId;
-      }
+      try {
+        const [t] = await db.select().from(tenants).where(eq(tenants.id, headerTenantId)).limit(1);
+        if (t) {
+          currentUser.tenantId = headerTenantId;
+        }
+      } catch (_) {}
+    }
+    if (currentUser.tenantId) {
+      try {
+        const [t] = await db.select().from(tenants).where(eq(tenants.id, currentUser.tenantId)).limit(1);
+        if (!t) {
+          currentUser.tenantId = undefined;
+        }
+      } catch (_) {}
+    }
+    if (!currentUser.tenantId) {
+      try {
+        const [demoTenant] = await db.select().from(tenants).limit(1);
+        currentUser.tenantId = demoTenant?.id;
+      } catch (_) {}
     }
     if (!currentUser.plantId && currentUser.tenantId) {
       try {
         const [p] = await db.select().from(plants).where(eq(plants.tenantId, currentUser.tenantId)).limit(1);
         if (p) currentUser.plantId = p.id;
       } catch (_) {}
-    }
-    if (!currentUser.tenantId) {
-      currentUser.tenantId = headerTenantId || "5bce8458-909a-4dd2-b221-614c32ac7c89";
     }
     return;
   }
@@ -86,7 +100,7 @@ export async function authenticate(request: FastifyRequest, _reply: FastifyReply
       (request as any).user = {
         id: `demo-${demoTenant.id}`,
         userId: "4a9fe1e0-6512-444d-a639-25ca55ff4866",
-        tenantId: headerTenantId || demoTenant.id,
+        tenantId: demoTenant.id,
         plantId: demoPlant?.id || "PLT-01",
         role: "admin",
         email: `admin@${demoTenant.slug || "maintenx.com"}`,
@@ -99,10 +113,16 @@ export async function authenticate(request: FastifyRequest, _reply: FastifyReply
   }
 
   // 5. Fallback safe dummy context
+  let fallbackTenantId = "0bf4f354-4e0e-41f3-9974-e24de98d25ff";
+  try {
+    const [t] = await db.select({ id: tenants.id }).from(tenants).limit(1);
+    if (t?.id) fallbackTenantId = t.id;
+  } catch (_) {}
+
   (request as any).user = {
     id: "admin-default",
     userId: "4a9fe1e0-6512-444d-a639-25ca55ff4866",
-    tenantId: headerTenantId || "5bce8458-909a-4dd2-b221-614c32ac7c89",
+    tenantId: fallbackTenantId,
     plantId: "83c90534-4761-495c-b2bf-6a61de2260c4",
     role: "admin",
     email: "admin@maintenx.com",

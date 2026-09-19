@@ -79,19 +79,21 @@ export function PlantsPage() {
     const loc = `${newPlant.city || ""}${newPlant.state ? `, ${newPlant.state}` : ""}${newPlant.country ? `, ${newPlant.country}` : ""}`.replace(/^,\s*/, "") || newPlant.location || "Primary Facility";
     const plantPayload = {
       ...newPlant,
+      code: newPlant.code.trim().toUpperCase(),
+      name: newPlant.name.trim(),
+      city: newPlant.city.trim() || "Indore",
+      state: (newPlant.state || "").trim(),
+      country: (newPlant.country || "India").trim(),
       location: loc
     };
     try {
-      let created = null;
-      try {
-        created = await masterDataService.createPlant(plantPayload);
-      } catch (apiErr) {
-        console.warn("API createPlant fallback:", apiErr);
-      }
+      const res = await masterDataService.createPlant(plantPayload);
+      const created = res?.data || res || plantPayload;
       if (typeof addPlant === "function") {
-        addPlant(created ? { ...plantPayload, ...created } : plantPayload);
+        addPlant(created);
       }
-      addToast(`Plant "${plantPayload.name}" registered!`, "success");
+      setLocalPlants((prev) => [created, ...(prev || []).filter((p) => p.id !== created.id && p.code !== created.code)]);
+      addToast(`Plant "${plantPayload.name}" registered successfully!`, "success");
       setIsModalOpen(false);
       setNewPlant({
         code: "",

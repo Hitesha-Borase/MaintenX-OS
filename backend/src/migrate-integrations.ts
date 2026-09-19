@@ -143,19 +143,9 @@ export async function migrateIntegrations() {
       ALTER TABLE iot_gateways ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
     `);
 
-    // Seed default gateways if table empty
+    // Default gateways check (no auto-seeding dummy data)
     const { rows: gwRows } = await client.query(`SELECT count(*) FROM iot_gateways`);
-    if (parseInt(gwRows[0].count, 10) === 0) {
-      console.log("Seeding default industrial IoT gateways...");
-      await client.query(`
-        INSERT INTO iot_gateways (id, name, protocol, endpoint_url, connected_nodes, telemetry_rate, status)
-        VALUES
-          ('IOT-01', 'Plant 1 OPC-UA Industrial Edge Server', 'OPC-UA (TCP:4840)', 'opc.tcp://192.168.1.100:4840', 142, '100 Hz', 'Connected'),
-          ('IOT-02', 'Plant 1 MQTT Sensor Broker', 'MQTT (TLS:8883)', 'mqtts://broker.flowstate.internal:8883', 86, '10 Hz', 'Connected'),
-          ('IOT-03', 'Plant 2 Modbus-TCP Gateway', 'Modbus TCP (Port 502)', 'tcp://192.168.2.50:502', 64, '1 Hz', 'Connected')
-        ON CONFLICT (id) DO NOTHING;
-      `);
-    }
+    console.log(`Current iot_gateways count: ${gwRows[0].count}`);
 
     // 6. User Invitations Table
     console.log("Creating 'user_invitations' table if not exists...");

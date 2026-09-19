@@ -28,13 +28,16 @@ import { useAdmin } from "../../../context/AdminContext";
 import { useMasterData } from "../../../context/MasterDataContext";
 import { useApp } from "../../../context/AppContext";
 import { adminService } from "../../../services/adminService";
+import masterDataService from "../../../services/masterDataService";
 
 export function UsersPage() {
   const { users = [], roles = [], setUsers, addUser, editUser, deleteUser, updateUserStatus } = useAdmin() || {};
   const { plants = [], departments = [] } = (useMasterData ? useMasterData() : null) || {};
   const { addToast } = (useApp ? useApp() : null) || { addToast: () => {} };
 
-  // Trigger live GET /api/v1/admin/users on mount and sync with AdminContext
+  const [liveDepartments, setLiveDepartments] = useState([]);
+
+  // Trigger live GET /api/v1/admin/users and master-data departments on mount
   React.useEffect(() => {
     adminService
       .getUsers()
@@ -44,7 +47,31 @@ export function UsersPage() {
         }
       })
       .catch((err) => console.warn("Live users fetch:", err.message));
+
+    masterDataService
+      .getDepartments()
+      .then((res) => {
+        const d = res?.data?.data || res?.data || res;
+        if (Array.isArray(d)) {
+          setLiveDepartments(d);
+        }
+      })
+      .catch((err) => console.warn("Live depts fetch:", err.message));
   }, [setUsers]);
+
+  const allDepartments = useMemo(() => {
+    if (liveDepartments && liveDepartments.length > 0) return liveDepartments;
+    if (departments && departments.length > 0) return departments;
+    return [];
+  }, [liveDepartments, departments]);
+
+  const defaultDeptName = useMemo(() => {
+    if (allDepartments && allDepartments.length > 0) {
+      const first = allDepartments[0];
+      return typeof first === "string" ? first : (first.name || first.code || "");
+    }
+    return "";
+  }, [allDepartments]);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("ALL");
@@ -63,7 +90,7 @@ export function UsersPage() {
     email: "",
     password: "",
     role: "Plant Manager",
-    department: "Operations / Production",
+    department: "",
     plantId: "PLT-01",
     status: "Active"
   });
@@ -73,7 +100,7 @@ export function UsersPage() {
     email: "",
     password: "",
     role: "Plant Manager",
-    department: "Operations / Production",
+    department: "",
     plantId: "PLT-01",
     status: "Active"
   });
@@ -86,8 +113,8 @@ export function UsersPage() {
       email: u.email || "",
       password: "",
       role: u.role || "Plant Manager",
-      department: u.department || "Operations / Production",
-      plantId: matchedPlant ? matchedPlant.id : "PLT-01",
+      department: u.department || defaultDeptName,
+      plantId: matchedPlant ? matchedPlant.id : (plants[0]?.id || "PLT-01"),
       status: u.status || "Active"
     });
   };
@@ -102,7 +129,8 @@ export function UsersPage() {
     try {
       setIsSubmitting(true);
       const selectedPlant = plants.find((p) => p.id === editFormData.plantId);
-      const plantName = selectedPlant ? selectedPlant.name.split(" - ")[0] : "Indore Plant";
+      const plantName = selectedPlant ? selectedPlant.name.split(" - ")[0] : (plants[0]?.name?.split(" - ")[0] || "");
+      const deptToSubmit = editFormData.department || defaultDeptName;
 
       if (editUser) {
         await editUser(editingUser.id, {
@@ -110,9 +138,9 @@ export function UsersPage() {
           email: editFormData.email.trim(),
           password: editFormData.password && editFormData.password.trim() ? editFormData.password.trim() : undefined,
           role: editFormData.role,
-          department: editFormData.department,
+          department: deptToSubmit,
           plant: plantName,
-          plantId: editFormData.plantId,
+          plantId: editFormData.plantId || (plants[0]?.id || "PLT-01"),
           status: editFormData.status
         });
       }
@@ -178,7 +206,8 @@ export function UsersPage() {
     try {
       setIsSubmitting(true);
       const selectedPlant = plants.find((p) => p.id === formData.plantId);
-      const plantName = selectedPlant ? selectedPlant.name.split(" - ")[0] : "Indore Plant";
+      const plantName = selectedPlant ? selectedPlant.name.split(" - ")[0] : (plants[0]?.name?.split(" - ")[0] || "");
+      const deptToSubmit = formData.department || defaultDeptName;
 
       if (addUser) {
         await addUser({
@@ -186,9 +215,9 @@ export function UsersPage() {
           email: formData.email.trim(),
           password: formData.password && formData.password.trim() ? formData.password.trim() : "Password@123",
           role: formData.role,
-          department: formData.department,
+          department: deptToSubmit,
           plant: plantName,
-          plantId: formData.plantId,
+          plantId: formData.plantId || (plants[0]?.id || "PLT-01"),
           status: "Active"
         });
       }
@@ -200,7 +229,7 @@ export function UsersPage() {
         email: "",
         password: "",
         role: "Plant Manager",
-        department: "Operations / Production",
+        department: "",
         plantId: "PLT-01",
         status: "Active"
       });
@@ -353,7 +382,7 @@ export function UsersPage() {
             </thead>
             <tbody>
               {filteredUsers.map((u) => {
-                const plantName = plants.find((p) => p.id === u.plantId)?.name?.split(" - ")[0] || "Indore Plant 1";
+                const plantName = u.plant || plants.find((p) => p.id === u.plantId)?.name?.split(" - ")[0] || plants[0]?.name?.split(" - ")[0] || "Main Facility";
                 return (
                   <tr key={u.id} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
                     <td style={{ padding: "12px 16px" }}>
@@ -364,7 +393,7 @@ export function UsersPage() {
                       <Badge variant="cyan">{u.role}</Badge>
                     </td>
                     <td style={{ padding: "12px 16px", fontSize: "12px", color: "var(--text-secondary)" }}>
-                      {u.department}
+                      {u.department || defaultDeptName}
                     </td>
                     <td style={{ padding: "12px 16px", fontSize: "12px", color: "var(--text-secondary)" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
@@ -547,15 +576,23 @@ export function UsersPage() {
               <div>
                 <label className="form-label">Department</label>
                 <select
-                  value={formData.department}
+                  value={formData.department || defaultDeptName}
                   onChange={(e) => setFormData({ ...formData, department: e.target.value })}
                   className="form-input"
                   style={{ backgroundColor: "#FFFFFF" }}
                 >
-                  <option value="Operations / Production">Operations / Production</option>
-                  <option value="Maintenance & Reliability">Maintenance & Reliability</option>
-                  <option value="Quality Assurance & Lab">Quality Assurance & Lab</option>
-                  <option value="Warehouse & Logistics">Warehouse & Logistics</option>
+                  {allDepartments && allDepartments.length > 0 ? (
+                    allDepartments.map((d) => {
+                      const val = typeof d === "string" ? d : (d.name || d.code);
+                      return (
+                        <option key={d.id || d.departmentId || val} value={val}>
+                          {val}
+                        </option>
+                      );
+                    })
+                  ) : (
+                    <option value="">-- No Departments Registered --</option>
+                  )}
                 </select>
               </div>
 
@@ -670,7 +707,7 @@ export function UsersPage() {
                 <div style={{ padding: "12px", borderRadius: "8px", backgroundColor: "var(--bg-card)", border: "1px solid var(--border-subtle)" }}>
                   <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Department</div>
                   <div style={{ fontSize: "13px", fontWeight: 600, color: "var(--text-primary)", marginTop: "6px" }}>
-                    {viewingUser.department || "Operations"}
+                    {viewingUser.department || defaultDeptName || "—"}
                   </div>
                 </div>
 
@@ -678,7 +715,7 @@ export function UsersPage() {
                   <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Plant Facility</div>
                   <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", fontWeight: 600, color: "var(--text-primary)", marginTop: "6px" }}>
                     <Building2 size={14} color="#C89547" />
-                    <span>{plants.find((p) => p.id === viewingUser.plantId)?.name?.split(" - ")[0] || viewingUser.plant || "Indore Plant 1"}</span>
+                    <span>{viewingUser.plant || plants.find((p) => p.id === viewingUser.plantId)?.name?.split(" - ")[0] || plants[0]?.name?.split(" - ")[0] || "Main Facility"}</span>
                   </div>
                 </div>
 
@@ -800,17 +837,26 @@ export function UsersPage() {
                 <div>
                   <label className="form-label">Department</label>
                   <select
-                    value={editFormData.department}
+                    value={editFormData.department || defaultDeptName}
                     onChange={(e) => setEditFormData({ ...editFormData, department: e.target.value })}
                     className="form-input"
                     style={{ backgroundColor: "#FFFFFF" }}
                   >
-                    <option value="Operations / Production">Operations / Production</option>
-                    <option value="Maintenance & Reliability">Maintenance & Reliability</option>
-                    <option value="Quality Assurance & Lab">Quality Assurance & Lab</option>
-                    <option value="Warehouse & Logistics">Warehouse & Logistics</option>
-                    <option value="Supply Chain & Planning">Supply Chain & Planning</option>
-                    <option value="IT & Digital Ops">IT & Digital Ops</option>
+                    {allDepartments && allDepartments.length > 0 ? (
+                      allDepartments.map((d) => {
+                        const val = typeof d === "string" ? d : (d.name || d.code);
+                        return (
+                          <option key={d.id || d.departmentId || val} value={val}>
+                            {val}
+                          </option>
+                        );
+                      })
+                    ) : (
+                      <option value="">-- No Departments Registered --</option>
+                    )}
+                    {editFormData.department && !allDepartments.some((d) => (d.name || d.code || d) === editFormData.department) && (
+                      <option value={editFormData.department}>{editFormData.department}</option>
+                    )}
                   </select>
                 </div>
                 <div>

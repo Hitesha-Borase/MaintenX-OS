@@ -203,10 +203,11 @@ export function QualitySpecsPage() {
     e.preventDefault();
     if (!editingSpec.parameter.trim()) return;
     try {
-      await updateQualitySpec(editingSpec.specId || editingSpec.id, editingSpec);
-      addToast(`Specification ${editingSpec.specId || editingSpec.id} updated!`, "success");
+      const targetId = editingSpec.id || editingSpec.specId;
+      await updateQualitySpec(targetId, editingSpec);
+      addToast(`Specification ${editingSpec.specId || editingSpec.parameter} updated!`, "success");
       setEditingSpec(null);
-      fetchLiveSpecs();
+      await fetchLiveSpecs();
     } catch (err) {
       addToast(`Failed to update quality spec: ${err.message}`, "error");
     }
@@ -1079,10 +1080,14 @@ export function QualitySpecsPage() {
                 variant="primary"
                 onClick={async () => {
                   try {
+                    const targetId = deletingSpec.id || deletingSpec.specId;
                     if (typeof deleteQualitySpec === "function") {
-                      await deleteQualitySpec(deletingSpec.specId || deletingSpec.id);
+                      await deleteQualitySpec(targetId);
+                    } else {
+                      await masterDataService.deleteQualitySpec(targetId);
                     }
-                    addToast(`Quality spec "${deletingSpec.specId}" deleted.`, "info");
+                    addToast(`Quality spec "${deletingSpec.specId || deletingSpec.parameter}" deleted.`, "info");
+                    await fetchLiveSpecs();
                   } catch (err) {
                     addToast(`Failed to delete quality spec: ${err.message}`, "error");
                   } finally {

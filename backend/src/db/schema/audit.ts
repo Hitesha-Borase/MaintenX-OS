@@ -14,7 +14,7 @@ export const auditLogs = pgTable("audit_logs", {
   newValues: jsonb("new_values"),
   ipAddress: varchar("ip_address", { length: 50 }),
   userAgent: text("user_agent"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
 export const digitalSignatures = pgTable("digital_signatures", {
@@ -26,5 +26,5 @@ export const digitalSignatures = pgTable("digital_signatures", {
   entityId: varchar("entity_id", { length: 255 }).notNull(),
   meaning: varchar("meaning", { length: 255 }).notNull(), // "Author of Batch Record", "QA Release Disposition"
   comments: text("comments"),
-  signedAt: timestamp("signed_at").defaultNow().notNull(),
+  signedAt: timestamp("signed_at", { withTimezone: true }).defaultNow().notNull(),
 });

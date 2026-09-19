@@ -140,6 +140,15 @@ export class AdminService {
     return await apiClient.delete(`/admin/activity/${encodeURIComponent(id)}`);
   }
 
+  async clearAllActivityLogs() {
+    try {
+      return await apiClient.delete("/admin/activity");
+    } catch (err) {
+      console.warn("Backend clearAllActivityLogs fallback:", err.message);
+      return { success: true };
+    }
+  }
+
   // Roles & Permissions
   async getRoles() {
     try {

@@ -778,11 +778,11 @@ export function MasterDataProvider({ children }) {
   // 0. PLANT FACILITIES MUTATIONS
   // ============================================================================
   const addPlant = (plantData) => {
-    const newId = `PLT-0${plants.length + 1}`;
+    const newId = plantData.id || plantData.plantId || `PLT-0${plants.length + 1}`;
     const newRecord = {
       id: newId,
       plantId: newId,
-      companyId: companies[0]?.id || "CMP-01",
+      companyId: plantData.companyId || companies[0]?.id || "CMP-01",
       code: (plantData.code || `PLT-${plants.length + 1}`).toUpperCase(),
       name: plantData.name,
       location: plantData.location || `${plantData.city || ""}${plantData.state ? `, ${plantData.state}` : ""}${plantData.country ? `, ${plantData.country}` : ""}`.replace(/^,\s*/, ""),
@@ -792,14 +792,16 @@ export function MasterDataProvider({ children }) {
       capacity: plantData.dailyCapacity || plantData.capacity || "350,000 Units/Day",
       dailyCapacity: plantData.dailyCapacity || plantData.capacity || "350,000 Units/Day",
       operatingShifts: Number(plantData.operatingShifts) || 3,
-      linesCount: Number(plantData.linesCount) || 3,
+      linesCount: Number(plantData.linesCount) || 0,
       status: plantData.status || "Active",
       timezone: plantData.timezone || "Asia/Kolkata (IST)",
       effectiveFrom: new Date().toISOString().substring(0, 10),
       effectiveTo: "2030-12-31"
     };
-    setPlants((prev) => [newRecord, ...prev]);
-    masterDataService.createPlant(newRecord).catch((err) => console.warn("API createPlant:", err.message));
+    setPlants((prev) => [newRecord, ...(prev || []).filter((p) => p.id !== newRecord.id && p.code !== newRecord.code)]);
+    if (!plantData.id && !plantData.plantId) {
+      masterDataService.createPlant(newRecord).catch((err) => console.warn("API createPlant:", err.message));
+    }
     logAudit({ entityId: newRecord.code, entityType: "Plant Facility", action: "Provisioned", newValue: `${newRecord.name} (${newRecord.code})` });
     return newRecord;
   };
@@ -826,13 +828,13 @@ export function MasterDataProvider({ children }) {
     const newRecord = {
       id: newId,
       departmentId: newId,
-      plantId: deptData.plantId || activePlantId || "PLT-01",
+      plantId: deptData.plantId || activePlantId || (plants[0]?.id || ""),
       code: (deptData.code || `DEP-0${departments.length + 1}`).toUpperCase(),
       name: deptData.name,
-      deptHead: deptData.deptHead || deptData.managerName || "Robert Thorne",
-      managerName: deptData.deptHead || deptData.managerName || "Robert Thorne",
-      costCenter: deptData.costCenter || "CC-101",
-      operatingShifts: deptData.operatingShifts || "3 Shifts (24/7 Continuous)",
+      deptHead: deptData.deptHead || deptData.managerName || "",
+      managerName: deptData.deptHead || deptData.managerName || "",
+      costCenter: deptData.costCenter || "",
+      operatingShifts: deptData.operatingShifts || "General Shift",
       status: deptData.status || "Active",
     };
     setDepartments((prev) => [newRecord, ...prev]);

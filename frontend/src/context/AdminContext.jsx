@@ -45,16 +45,8 @@ export function AdminProvider({ children }) {
   const hasAuthToken = Boolean(typeof window !== "undefined" && (localStorage.getItem("maintenx_auth_token") || localStorage.getItem("flowstate_token")));
   const hasTenant = Boolean(typeof window !== "undefined" && (localStorage.getItem("maintenx_tenant_name") || localStorage.getItem("maintenx_tenant_id")));
 
-  // 1. Users (Directly synchronized with PostgreSQL users table with offline/mock fallback)
-  const [users, setUsers] = useState(() => {
-    if (hasAuthToken || hasTenant) return [];
-    const saved = typeof window !== "undefined" ? localStorage.getItem("admin_users") : null;
-    return saved
-      ? JSON.parse(saved)
-      : [
-          { id: "USR-001", name: "Alexander Vance", email: "admin@maintenx.com", role: "Company Administrator", department: "IT & Digital Ops", status: "Active", lastLogin: "Just now", plant: "Indore Plant 1" }
-        ];
-  });
+  // 1. Users (Directly synchronized with PostgreSQL users table)
+  const [users, setUsers] = useState(() => []);
 
   // 2. User Invitations
   const [invitations, setInvitations] = useState(() => []);
@@ -329,6 +321,16 @@ export function AdminProvider({ children }) {
     }
   };
 
+  const clearAllActivityLogs = async () => {
+    try {
+      await adminService.clearAllActivityLogs();
+      setActivityLogs([]);
+    } catch (err) {
+      console.warn("clearAllActivityLogs error:", err);
+      setActivityLogs([]);
+    }
+  };
+
   const createActivityLog = async (data) => {
     try {
       const newLog = await adminService.createActivityLog(data);
@@ -454,6 +456,7 @@ export function AdminProvider({ children }) {
         setActivityLogs,
         fetchActivityLogs,
         deleteActivityLog,
+        clearAllActivityLogs,
         createActivityLog,
         updateActivityLog,
         refreshAll,

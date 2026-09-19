@@ -12,6 +12,7 @@ export const users = pgTable("users", {
   avatarUrl: text("avatar_url"),
   digitalSignaturePinHash: varchar("digital_signature_pin_hash", { length: 255 }),
   isMasterAdmin: boolean("is_master_admin").default(false).notNull(),
+  department: varchar("department", { length: 255 }),
   status: varchar("status", { length: 50 }).default("ACTIVE").notNull(),
   lastLoginAt: timestamp("last_login_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
