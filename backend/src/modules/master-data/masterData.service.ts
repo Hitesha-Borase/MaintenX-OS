@@ -780,7 +780,12 @@ export class MasterDataService {
       }
       const nominalSpeedBpm = ratedSpeedBPH ? Math.round(ratedSpeedBPH / 60) : 250;
       const status = input.status || "RUNNING";
-      const plantId = (input.plantId && input.plantId.length === 36 && input.plantId.includes("-")) ? input.plantId : null;
+
+      let plantId = (input.plantId && input.plantId.length === 36 && input.plantId.includes("-")) ? input.plantId : null;
+      if (!plantId) {
+        const [firstPlant] = await db.select({ id: plants.id }).from(plants).limit(1);
+        plantId = firstPlant?.id || null;
+      }
 
       const res = await db.execute(sql`
         INSERT INTO public.production_lines (
@@ -792,6 +797,22 @@ export class MasterDataService {
       `);
       const row = (res as any)?.rows?.[0] || (Array.isArray(res) ? res[0] : null);
       const newId = row?.id ? String(row.id) : `LIN-${Date.now().toString().slice(-4)}`;
+
+      // Sync to public.lines table as well
+      try {
+        await db.execute(sql`
+          INSERT INTO public.lines (
+            id, plant_id, code, name, line_type, nominal_speed_bpm, status, health_score, created_at
+          ) VALUES (
+            ${newId}::uuid, ${plantId}, ${code}, ${name}, ${lineType}, ${nominalSpeedBpm}, ${status}, 95, NOW()
+          ) ON CONFLICT (id) DO UPDATE SET
+            plant_id = EXCLUDED.plant_id, name = EXCLUDED.name, code = EXCLUDED.code,
+            line_type = EXCLUDED.line_type, nominal_speed_bpm = EXCLUDED.nominal_speed_bpm, status = EXCLUDED.status;
+        `);
+      } catch (syncErr: any) {
+        console.warn("Sync to public.lines failed:", syncErr.message);
+      }
+
       return {
         id: newId,
         lineId: newId,
@@ -836,6 +857,23 @@ export class MasterDataService {
           status = COALESCE(${input.status || null}, status)
         WHERE id::text = ${id} OR code = ${id}
       `);
+
+      // Sync update to public.lines table
+      try {
+        await db.execute(sql`
+          UPDATE public.lines
+          SET 
+            name = COALESCE(${input.name || null}, name),
+            code = COALESCE(${input.code || input.lineCode || null}, code),
+            line_type = COALESCE(${newType}, line_type),
+            nominal_speed_bpm = COALESCE(${nominalSpeedBpm}, nominal_speed_bpm),
+            status = COALESCE(${input.status || null}, status)
+          WHERE id::text = ${id} OR code = ${id}
+        `);
+      } catch (syncErr: any) {
+        console.warn("Sync update to public.lines failed:", syncErr.message);
+      }
+
       return { id, ...input };
     } catch (err: any) {
       console.warn("DB updateLine error:", err.message);
@@ -849,6 +887,17 @@ export class MasterDataService {
         DELETE FROM public.production_lines
         WHERE id::text = ${id} OR code = ${id}
       `);
+
+      // Sync delete from public.lines table
+      try {
+        await db.execute(sql`
+          DELETE FROM public.lines
+          WHERE id::text = ${id} OR code = ${id}
+        `);
+      } catch (syncErr: any) {
+        console.warn("Sync delete from public.lines failed:", syncErr.message);
+      }
+
       return { id, message: "Line deleted successfully" };
     } catch (err: any) {
       console.warn("DB deleteLine error:", err.message);
