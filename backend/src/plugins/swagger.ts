@@ -11,8 +11,12 @@ export default fp(async (fastify) => {
         version: "1.0.0",
       },
       servers: [
+        // {
+        //   url: "https://mainten-x-os-production.up.railway.app",
+        //   description: "Live Production Server (Railway)",
+        // },
         {
-          url: "https://mainten-x-os-production.up.railway.app",
+          url: "http://localhost:4000",
           description: "Local Development Server",
         },
       ],

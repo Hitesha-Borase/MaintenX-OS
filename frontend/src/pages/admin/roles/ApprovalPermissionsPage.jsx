@@ -25,14 +25,7 @@ export function ApprovalPermissionsPage() {
   const { addToast } = useApp();
   const isTenant = Boolean(typeof window !== "undefined" && (localStorage.getItem("maintenx_tenant_name") || localStorage.getItem("maintenx_tenant_id")));
 
-  const [approvalRules, setApprovalRules] = useState(() => {
-    return isTenant ? [] : [
-      { id: "APR-01", event: "Finished Goods QA Batch Release (CoA)", tier: "Dual Sign-off", authorizedRoles: "QA Manager + Plant Manager", compliance: "FDA 21 CFR Part 11" },
-      { id: "APR-02", event: "Master BOM & Recipe Revision Approval", tier: "2-Tier Approval", authorizedRoles: "QA Manager + System Admin", compliance: "ISO 22000" },
-      { id: "APR-03", event: "Capital Asset Decommissioning / Scrap", tier: "Executive Sign-off", authorizedRoles: "Plant Manager + Corporate Ops", compliance: "GAAP Fixed Assets" },
-      { id: "APR-04", event: "Emergency Schedule Override & Overtime", tier: "1-Tier Instant", authorizedRoles: "Plant Manager", compliance: "Internal Ops Policy" }
-    ];
-  });
+  const [approvalRules, setApprovalRules] = useState([]);
   const [viewingRule, setViewingRule] = useState(null);
   const [deletingRule, setDeletingRule] = useState(null);
   const [editingRule, setEditingRule] = useState(null);
@@ -49,7 +42,7 @@ export function ApprovalPermissionsPage() {
   const fetchRules = async () => {
     try {
       const rules = await adminService.getApprovalRules();
-      if (Array.isArray(rules) && rules.length > 0) {
+      if (Array.isArray(rules)) {
         setApprovalRules(rules);
       }
     } catch (err) {

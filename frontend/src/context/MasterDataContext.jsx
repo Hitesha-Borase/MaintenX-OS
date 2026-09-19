@@ -8,50 +8,9 @@ const MasterDataContext = createContext();
 // INITIAL MOCK MASTER DATASETS (ENTERPRISE-GRADE STABLE ID ARCHITECTURE)
 // ============================================================================
 
-export const INITIAL_COMPANIES = [
-  { id: "CMP-01", name: "ABC Manufacturing Global", code: "ABCMFG", currency: "USD", taxId: "US-9842109-K", headquarters: "Austin, TX", status: "Active" }
-];
-
-export const INITIAL_PLANTS = [
-  {
-    id: "PLT-01",
-    companyId: "CMP-01",
-    code: "PLT-IND",
-    name: "Indore Plant - Processing & Bottling",
-    location: "Sector 3 Industrial Corridor, Indore, MP",
-    city: "Indore",
-    state: "MP",
-    country: "India",
-    capacity: "350,000 Units/Day",
-    operatingShifts: 3,
-    status: "Active",
-    effectiveFrom: "2024-01-01",
-    effectiveTo: "2030-12-31"
-  },
-  {
-    id: "PLT-02",
-    companyId: "CMP-01",
-    code: "PLT-AUST",
-    name: "Austin Facility - Canning & Logistics",
-    location: "7400 Metropolis Dr, Austin, TX",
-    city: "Austin",
-    state: "TX",
-    country: "USA",
-    capacity: "280,000 Units/Day",
-    operatingShifts: 2,
-    status: "Active",
-    effectiveFrom: "2024-03-01",
-    effectiveTo: "2030-12-31"
-  }
-];
-
-export const INITIAL_DEPARTMENTS = [
-  { id: "DEP-01", plantId: "PLT-01", code: "PROD", name: "Production & Bottling", managerId: "EMP-002", managerName: "Robert Thorne", costCenter: "CC-101", status: "Active" },
-  { id: "DEP-02", plantId: "PLT-01", code: "MAINT", name: "Maintenance & Reliability", managerId: "EMP-004", managerName: "Marcus Vance", costCenter: "CC-102", status: "Active" },
-  { id: "DEP-03", plantId: "PLT-01", code: "QAQC", name: "Quality Assurance & Lab", managerId: "EMP-003", managerName: "Sarah Jenkins", costCenter: "CC-103", status: "Active" },
-  { id: "DEP-04", plantId: "PLT-01", code: "WHSE", name: "Warehouse & Materials", managerId: "EMP-005", managerName: "David Kim", costCenter: "CC-104", status: "Active" },
-  { id: "DEP-05", plantId: "PLT-01", code: "CI-ENG", name: "Continuous Improvement & Engineering", managerId: "EMP-001", managerName: "Alexander Vance", costCenter: "CC-105", status: "Active" }
-];
+export const INITIAL_COMPANIES = [];
+export const INITIAL_PLANTS = [];
+export const INITIAL_DEPARTMENTS = [];
 
 export const INITIAL_WORK_CENTERS = [];
 
@@ -63,121 +22,11 @@ export const INITIAL_SKUS = [];
 
 export const INITIAL_PACK_CONFIGS = [];
 
-export const INITIAL_SHELF_LIFE = [
-  {
-    shelfLifeId: "SLF-01",
-    skuId: "SKU-001",
-    skuCode: "SKU-5001",
-    skuName: "500ml Sparkling Citrus Soda",
-    shelfLifeValue: 365,
-    shelfLifeUom: "Days",
-    storageCondition: "Ambient Dry (15°C - 25°C)",
-    minTempC: 4,
-    maxTempC: 28,
-    lightSensitivity: "Avoid Direct Sunlight",
-    quarantineDays: 1,
-    status: "Active",
-    effectiveFrom: "2025-01-01",
-    effectiveTo: "2030-12-31"
-  },
-  {
-    shelfLifeId: "SLF-02",
-    skuId: "SKU-002",
-    skuCode: "SKU-5002",
-    skuName: "1L Tonic Water Natural Quinine",
-    shelfLifeValue: 540,
-    shelfLifeUom: "Days",
-    storageCondition: "Ambient Dry (15°C - 25°C)",
-    minTempC: 4,
-    maxTempC: 28,
-    lightSensitivity: "UV-Resistant Amber Glass",
-    quarantineDays: 1,
-    status: "Active",
-    effectiveFrom: "2025-01-01",
-    effectiveTo: "2030-12-31"
-  },
-  {
-    shelfLifeId: "SLF-03",
-    skuId: "SKU-003",
-    skuCode: "SKU-5003",
-    skuName: "330ml Organic Ginger Beer",
-    shelfLifeValue: 270,
-    shelfLifeUom: "Days",
-    storageCondition: "Cool Ambient (10°C - 20°C)",
-    minTempC: 2,
-    maxTempC: 22,
-    lightSensitivity: "Hermetic Can Sealed",
-    quarantineDays: 2,
-    status: "Active",
-    effectiveFrom: "2025-01-01",
-    effectiveTo: "2030-12-31"
-  }
-];
-
-export const INITIAL_CUSTOMERS = [
-  { customerId: "CUST-001", name: "Costco Wholesale EMEA", code: "COSTCO-EU", region: "Europe", rating: "Tier 1 Priority", status: "Active" },
-  { customerId: "CUST-002", name: "Walmart Supply Chain NA", code: "WMT-US", region: "North America", rating: "Tier 1 Priority", status: "Active" },
-  { customerId: "CUST-003", name: "Tesco Retail Stores UK", code: "TSCO-UK", region: "UK & Ireland", rating: "Tier 2 Standard", status: "Active" },
-  { customerId: "CUST-004", name: "Metro Cash & Carry India", code: "METRO-IN", region: "South Asia", rating: "Tier 1 Priority", status: "Active" }
-];
-
-export const INITIAL_CUSTOMER_SKU_MAPPINGS = [
-  {
-    mappingId: "CSM-01",
-    customerId: "CUST-001",
-    customerName: "Costco Wholesale EMEA",
-    skuId: "SKU-001",
-    internalSkuCode: "SKU-5001",
-    internalSkuName: "500ml Sparkling Citrus Soda",
-    customerSkuCode: "CST-CITRUS-500",
-    customerSkuName: "Kirkland Signature Citrus Soda 500ml 24pk",
-    customerUom: "CASE-24",
-    barcodeUPC: "890123450012",
-    status: "Active",
-    effectiveFrom: "2025-01-01",
-    effectiveTo: "2030-12-31"
-  },
-  {
-    mappingId: "CSM-02",
-    customerId: "CUST-002",
-    customerName: "Walmart Supply Chain NA",
-    skuId: "SKU-001",
-    internalSkuCode: "SKU-5001",
-    internalSkuName: "500ml Sparkling Citrus Soda",
-    customerSkuCode: "WMT-SODA-5001",
-    customerSkuName: "Great Value Sparkling Citrus 500ml",
-    customerUom: "CASE-24",
-    barcodeUPC: "890123450013",
-    status: "Active",
-    effectiveFrom: "2025-01-01",
-    effectiveTo: "2030-12-31"
-  },
-  {
-    mappingId: "CSM-03",
-    customerId: "CUST-001",
-    customerName: "Costco Wholesale EMEA",
-    skuId: "SKU-002",
-    internalSkuCode: "SKU-5002",
-    internalSkuName: "1L Tonic Water Natural Quinine",
-    customerSkuCode: "CST-TONIC-1L",
-    customerSkuName: "Kirkland Botanical Tonic Water 1L 12pk",
-    customerUom: "CASE-12",
-    barcodeUPC: "890123450024",
-    status: "Active",
-    effectiveFrom: "2025-01-01",
-    effectiveTo: "2030-12-31"
-  }
-];
-
+export const INITIAL_SHELF_LIFE = [];
+export const INITIAL_CUSTOMERS = [];
+export const INITIAL_CUSTOMER_SKU_MAPPINGS = [];
 export const INITIAL_BOMS = [];
-
-export const INITIAL_OPERATIONS = [
-  { operationId: "OP-01", operationCode: "OP-SYR-MIX", name: "Syrup Batch Blending & Brix Adjustment", sequence: 10, department: "Processing", stdDurationMin: 45, setupDurationMin: 20, status: "Active" },
-  { operationId: "OP-02", operationCode: "OP-CARB-CHL", name: "Chilling & Inline Carbonation Injection", sequence: 20, department: "Processing", stdDurationMin: 30, setupDurationMin: 15, status: "Active" },
-  { operationId: "OP-03", operationCode: "OP-BLOW-MOLD", name: "PET Bottle Blow Molding SBO", sequence: 30, department: "Packaging", stdDurationMin: 60, setupDurationMin: 25, status: "Active" },
-  { operationId: "OP-04", operationCode: "OP-ISO-FILL", name: "Isobaric Rotary Bottle Filling & Capping", sequence: 40, department: "Packaging", stdDurationMin: 60, setupDurationMin: 30, status: "Active" },
-  { operationId: "OP-05", operationCode: "OP-LBL-PCK", name: "Hot-Melt Labeling, Case Packing & Palletizing", sequence: 50, department: "Packaging", stdDurationMin: 60, setupDurationMin: 15, status: "Active" }
-];
+export const INITIAL_OPERATIONS = [];
 
 export const INITIAL_ROUTINGS = [];
 
@@ -198,30 +47,7 @@ export const INITIAL_ASSETS = [];
 
 export const INITIAL_EMPLOYEES = [];
 
-export const INITIAL_TRAINING_RECORDS = [
-  {
-    trainingId: "TRN-01",
-    employeeId: "EMP-005",
-    employeeName: "David Kim",
-    courseTitle: "Autonomous Maintenance Level 2 (TPM Pillar)",
-    trainer: "Alexander Vance",
-    completionDate: "2026-06-15",
-    expiryDate: "2027-06-15",
-    score: "98%",
-    status: "Certified Valid"
-  },
-  {
-    trainingId: "TRN-02",
-    employeeId: "EMP-004",
-    employeeName: "Marcus Vance",
-    courseTitle: "High-Voltage LOTO & Arc Flash Safety",
-    trainer: "Industrial Safety Institute",
-    completionDate: "2025-08-10",
-    expiryDate: "2026-08-10",
-    score: "100%",
-    status: "Expired / Needs Renewal"
-  }
-];
+export const INITIAL_TRAINING_RECORDS = [];
 
 export const INITIAL_QUALITY_SPECS = [];
 
@@ -229,13 +55,7 @@ export const INITIAL_STORAGE_RESOURCES = [];
 
 export const INITIAL_CCP_LIMITS = [];
 
-export const INITIAL_USERS = [
-  { id: "USR-001", name: "Alexander Vance", email: "alexander.vance@flowstate.io", role: "System Administrator", roleKey: "admin", department: "IT & Digital Ops", plantId: "PLT-01", status: "Active", lastLogin: "Just now" },
-  { id: "USR-002", name: "Robert Thorne", email: "robert.thorne@flowstate.io", role: "Plant Manager", roleKey: "plant_manager", department: "Operations", plantId: "PLT-01", status: "Active", lastLogin: "10 mins ago" },
-  { id: "USR-003", name: "Sarah Jenkins", email: "sarah.jenkins@flowstate.io", role: "QA Manager", roleKey: "qa_manager", department: "Quality Assurance", plantId: "PLT-01", status: "Active", lastLogin: "1 hour ago" },
-  { id: "USR-004", name: "Marcus Vance", email: "marcus.vance@flowstate.io", role: "Maintenance Lead", roleKey: "maintenance", department: "Maintenance", plantId: "PLT-01", status: "Active", lastLogin: "3 hours ago" },
-  { id: "USR-005", name: "David Kim", email: "david.kim@flowstate.io", role: "Production Supervisor", roleKey: "operator", department: "Production", plantId: "PLT-01", status: "Active", lastLogin: "3 days ago" }
-];
+export const INITIAL_USERS = [];
 
 export const INITIAL_USER_INVITATIONS = [];
 
@@ -418,7 +238,7 @@ export function MasterDataProvider({ children }) {
   // Purge old cached mock/dummy data once so DB truth is displayed
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const cleaned = localStorage.getItem("mx_db_live_v3");
+      const cleaned = localStorage.getItem("mx_db_live_v4_clean");
       if (!cleaned) {
         const dummyKeys = [
           "mx_master_companies", "mx_master_plants", "mx_master_departments",
@@ -428,10 +248,11 @@ export function MasterDataProvider({ children }) {
           "mx_master_routings", "mx_master_lines", "mx_master_line_targets",
           "mx_master_changeovers", "mx_master_sanitation", "mx_master_allergens",
           "mx_master_labour_standards", "mx_master_assets", "mx_master_employees",
-          "mx_master_training", "mx_master_quality_specs", "mx_master_storage"
+          "mx_master_training", "mx_master_quality_specs", "mx_master_storage",
+          "flowstate_assets", "flowstate_notifications"
         ];
         dummyKeys.forEach((k) => localStorage.removeItem(k));
-        localStorage.setItem("mx_db_live_v3", "true");
+        localStorage.setItem("mx_db_live_v4_clean", "true");
       }
     }
   }, []);
@@ -722,10 +543,10 @@ export function MasterDataProvider({ children }) {
         const safeArr = (item) => {
           if (item?.status !== "fulfilled") return null;
           let v = item.value?.data !== undefined ? item.value.data : item.value;
-          if (v && v.status === "success" && v.data) {
+          if (v && v.status === "success" && v.data !== undefined) {
             v = v.data;
           }
-          return Array.isArray(v) && v.length > 0 ? v : null;
+          return Array.isArray(v) ? v : null;
         };
 
         const compArr = safeArr(liveCompanies);

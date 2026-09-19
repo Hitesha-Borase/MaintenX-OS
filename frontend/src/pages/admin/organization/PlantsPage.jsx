@@ -28,19 +28,19 @@ export function PlantsPage() {
   const { plants: contextPlants = [], setPlants: setContextPlants, addPlant, updatePlant, deletePlant, togglePlantStatus, lines = [], activePlantId, setActivePlantId } = useMasterData();
   const { addToast } = useApp();
 
-  const [localPlants, setLocalPlants] = useState([]);
+  const [localPlants, setLocalPlants] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPlant, setEditingPlant] = useState(null);
   const [viewingPlant, setViewingPlant] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const plants = (localPlants && localPlants.length > 0) ? localPlants : contextPlants;
+  const plants = localPlants !== null ? localPlants : contextPlants;
 
   const fetchPlants = async () => {
     try {
       const res = await masterDataService.getPlants();
       const data = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
-      if (data.length > 0) {
+      if (Array.isArray(data)) {
         setLocalPlants(data);
         if (typeof setContextPlants === "function") {
           setContextPlants(data);
@@ -149,6 +149,10 @@ export function PlantsPage() {
       try {
         await masterDataService.deletePlant(plantId);
         addToast(`Plant "${name}" deleted from database.`, "success");
+        setLocalPlants((prev) => (prev || []).filter((p) => p.id !== plantId && p.plantId !== plantId && p.code !== plantId));
+        if (typeof deletePlant === "function") {
+          deletePlant(plantId);
+        }
         if (editingPlant && (editingPlant.id === plantId || editingPlant.plantId === plantId)) {
           setEditingPlant(null);
         }

@@ -41,20 +41,10 @@ let inMemoryInvitations: InvitationRecord[] = [
 ];
 
 let inMemoryUsers: any[] = [
-  { id: "USR-001", name: "Alexander Vance", email: "alexander.vance@flowstate.io", role: "System Administrator", roleCode: "admin", department: "IT & Digital Ops", plant: "Indore Plant", status: "Active", lastLogin: "Just now", createdAt: new Date().toISOString() },
-  { id: "USR-002", name: "Robert Thorne", email: "robert.thorne@flowstate.io", role: "Plant Manager", roleCode: "plant_manager", department: "Operations", plant: "Indore Plant", status: "Suspended", lastLogin: "10 mins ago", createdAt: new Date().toISOString() },
-  { id: "USR-003", name: "Sarah Jenkins", email: "sarah.jenkins@flowstate.io", role: "QA Manager", roleCode: "quality", department: "Quality Assurance", plant: "Indore Plant", status: "Active", lastLogin: "1 hour ago", createdAt: new Date().toISOString() },
-  { id: "USR-004", name: "Marcus Vance", email: "marcus.vance@flowstate.io", role: "Maintenance Lead", roleCode: "maintenance", department: "Maintenance", plant: "Indore Plant", status: "Active", lastLogin: "3 hours ago", createdAt: new Date().toISOString() },
-  { id: "USR-005", name: "David Kim", email: "david.kim@flowstate.io", role: "Production Supervisor", roleCode: "supervisor", department: "Operations", plant: "Indore Plant", status: "Active", lastLogin: "3 days ago", createdAt: new Date().toISOString() },
+  { id: "USR-001", name: "Alexander Vance", email: "admin@maintenx.com", role: "Company Administrator", roleCode: "admin", department: "IT & Digital Ops", plant: "Indore Plant 1", status: "Active", lastLogin: "Just now", createdAt: new Date().toISOString() },
 ];
 
-let inMemoryRoles: any[] = [
-  { id: "ROL-01", dbId: "ROL-01", code: "admin", name: "System Administrator", description: "Full system governance, master data, security, user administration", userCount: 2, isSystem: true, createdAt: new Date().toISOString() },
-  { id: "ROL-02", dbId: "ROL-02", code: "plant_manager", name: "Plant Manager", description: "Executive plant operations, OEE, planning, recovery, cross-functional oversight", userCount: 4, isSystem: true, createdAt: new Date().toISOString() },
-  { id: "ROL-03", dbId: "ROL-03", code: "maintenance", name: "Maintenance Lead", description: "CMMS, asset condition monitoring, work order dispatch, spare parts", userCount: 8, isSystem: false, createdAt: new Date().toISOString() },
-  { id: "ROL-04", dbId: "ROL-04", code: "quality", name: "QA Manager", description: "Quality inspection logs, holds, CoA release, statistical process control", userCount: 5, isSystem: false, createdAt: new Date().toISOString() },
-  { id: "ROL-05", dbId: "ROL-05", code: "operator", name: "Operator / Line Tech", description: "Shop floor execution, hour-by-hour logging, downtime reporting", userCount: 42, isSystem: false, createdAt: new Date().toISOString() },
-];
+let inMemoryRoles: any[] = [];
 
 export class AdminService {
   async getDashboardMetrics(tenantId?: string) {
@@ -1261,8 +1251,6 @@ export class AdminService {
   // ==========================================
 
   async getRoles(tenantId?: string) {
-    await this.ensurePermissionsSeeded();
-
     try {
       let activeTenantId: string | null = null;
       if (typeof tenantId === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tenantId)) {
@@ -1284,10 +1272,9 @@ export class AdminService {
         userRoleList = await db.select().from(userRoles);
       } catch (_) {}
 
-      if (roleList && roleList.length > 0) {
+      if (roleList) {
         return roleList.map((r, idx) => {
           const assignedCount = userRoleList.filter((ur) => ur.roleId === r.id).length;
-          const defaultFallbackCount = r.code === "operator" ? 42 : r.code === "plant_manager" ? 4 : r.code === "admin" ? 2 : 1;
 
           return {
             id: r.id || `ROL-0${idx + 1}`,
@@ -1295,17 +1282,17 @@ export class AdminService {
             code: r.code,
             name: r.name,
             description: r.description || "Custom enterprise operational scope",
-            userCount: assignedCount > 0 ? assignedCount : defaultFallbackCount,
+            userCount: assignedCount,
             isSystem: r.isSystem,
             createdAt: r.createdAt instanceof Date ? r.createdAt.toISOString() : String(r.createdAt || new Date().toISOString()),
           };
         });
       }
+      return [];
     } catch (err: any) {
       console.warn("Database query failed in getRoles:", err.message);
+      return [];
     }
-
-    return inMemoryRoles;
   }
 
   async createRole(tenantId: string | undefined, input: { name: string; description?: string }) {
@@ -1502,80 +1489,8 @@ export class AdminService {
           .returning();
       }
 
-      // 2. Ensure standard System Roles exist in PostgreSQL
-      const standardRoles = [
-        { code: "master_admin", name: "Master Admin", description: "Platform Chief Administrator & SuperAdmin" },
-        { code: "admin", name: "Super Admin / System Administrator", description: "Indore IT & System Configuration Administrator" },
-        { code: "plant_manager", name: "Plant Manager", description: "Indore Plant Director & Operations Lead" },
-        { code: "quality", name: "Quality Manager", description: "Quality Assurance & Food Safety Lead" },
-        { code: "qa_manager", name: "Quality Manager", description: "Quality Assurance & Food Safety Manager" },
-        { code: "maintenance", name: "Maintenance Manager / Lead", description: "Senior Reliability Technician & Maintenance Lead" },
-        { code: "operator", name: "Line Operator", description: "Certified HMI Line Operator" },
-        { code: "planner", name: "Planner / Scheduler", description: "Lead Production & Demand Scheduler" },
-        { code: "warehouse", name: "Warehouse / Receiver", description: "Warehouse, Receiving & Logistics Manager" },
-        { code: "supervisor", name: "Operations Supervisor", description: "Shift Operations & Workforce Supervisor" },
-        { code: "line_lead", name: "Line Lead", description: "Line Lead - Packaging & Bottling" },
-        { code: "ci_engineer", name: "CI / Engineering", description: "Continuous Improvement & RCA Engineer" },
-        { code: "executive", name: "Executive", description: "Chief Operating Officer & Enterprise Executive" },
-      ];
-
-      const currentRoles = await db.select().from(roles);
-      for (const r of standardRoles) {
-        const found = currentRoles.find((cr) => cr.code === r.code);
-        if (!found) {
-          const [insertedRole] = await db
-            .insert(roles)
-            .values({
-              tenantId: demoTenant.id,
-              code: r.code,
-              name: r.name,
-              description: r.description,
-              isSystem: true,
-            })
-            .returning();
-          if (insertedRole) currentRoles.push(insertedRole);
-        }
-      }
-
-      // 3. Ensure test users exist in PostgreSQL for role testing
-      const passwordHash = await bcrypt.hash("Password@123", 10);
-      const testUsers = [
-        { email: "admin@maintenx.com", firstName: "Alexander", lastName: "Vance", roleCode: "admin", isMasterAdmin: true },
-        { email: "plant.manager@maintenx.com", firstName: "Arthur", lastName: "Sterling", roleCode: "plant_manager", isMasterAdmin: false },
-        { email: "qa@maintenx.com", firstName: "Dr. Rachel", lastName: "Thorne", roleCode: "quality", isMasterAdmin: false },
-        { email: "maintenance@maintenx.com", firstName: "Dave", lastName: "Miller", roleCode: "maintenance", isMasterAdmin: false },
-        { email: "operator@maintenx.com", firstName: "Marcus", lastName: "Chen", roleCode: "operator", isMasterAdmin: false },
-      ];
-
-      for (const u of testUsers) {
-        let [existingUser] = await db.select().from(users).where(eq(users.email, u.email)).limit(1);
-        if (!existingUser) {
-          [existingUser] = await db
-            .insert(users)
-            .values({
-              tenantId: demoTenant.id,
-              email: u.email,
-              passwordHash,
-              firstName: u.firstName,
-              lastName: u.lastName,
-              isMasterAdmin: u.isMasterAdmin,
-              status: "ACTIVE",
-            })
-            .returning();
-        }
-
-        const roleObj = currentRoles.find((r) => r.code === u.roleCode);
-        if (existingUser && roleObj) {
-          const [existingUserRole] = await db.select().from(userRoles).where(eq(userRoles.userId, existingUser.id)).limit(1);
-          if (!existingUserRole) {
-            await db.insert(userRoles).values({
-              userId: existingUser.id,
-              roleId: roleObj.id,
-              plantId: demoPlant.id,
-            });
-          }
-        }
-      }
+      // 2. Roles are managed by user and explicit migrations, no auto-reseed here.
+      // 3. (REMOVED) Do NOT re-insert deleted users. Deleted users must stay deleted permanently.
 
       // 4. Ensure all 55 Permissions exist
       const existingPerms = await db.select().from(permissions);
@@ -2025,7 +1940,7 @@ export class AdminService {
   async getApprovalRules(tenantId?: string) {
     try {
       const dbRules = await db.select().from(approvalRules).orderBy(approvalRules.id);
-      if (dbRules && dbRules.length > 0) {
+      if (dbRules) {
         return dbRules.map((r) => ({
           id: r.id,
           event: r.event,
@@ -2039,12 +1954,7 @@ export class AdminService {
       console.warn("Database query failed in getApprovalRules:", err.message);
     }
 
-    return [
-      { id: "APR-01", event: "Finished Goods QA Batch Release (CoA)", tier: "Dual Sign-off", authorizedRoles: "QA Manager + Plant Manager", compliance: "FDA 21 CFR Part 11" },
-      { id: "APR-02", event: "Master BOM & Recipe Revision Approval", tier: "2-Tier Approval", authorizedRoles: "QA Manager + System Admin", compliance: "ISO 22000" },
-      { id: "APR-03", event: "Capital Asset Decommissioning / Scrap", tier: "Executive Sign-off", authorizedRoles: "Plant Manager + Corporate Ops", compliance: "GAAP Fixed Assets" },
-      { id: "APR-04", event: "Emergency Schedule Override & Overtime", tier: "1-Tier Instant", authorizedRoles: "Plant Manager", compliance: "Internal Ops Policy" },
-    ];
+    return [];
   }
 
   async createApprovalRule(

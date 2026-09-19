@@ -52,33 +52,15 @@ export function AdminProvider({ children }) {
     return saved
       ? JSON.parse(saved)
       : [
-          { id: "USR-001", name: "Alexander Vance", email: "alexander.vance@flowstate.io", role: "System Administrator", department: "IT & Digital Ops", status: "Active", lastLogin: "Just now", plant: "Indore Plant" },
-          { id: "USR-002", name: "Robert Thorne", email: "robert.thorne@flowstate.io", role: "Plant Manager", department: "Operations", status: "Suspended", lastLogin: "10 mins ago", plant: "Indore Plant" },
-          { id: "USR-003", name: "Sarah Jenkins", email: "sarah.jenkins@flowstate.io", role: "QA Manager", department: "Quality Assurance", status: "Active", lastLogin: "1 hour ago", plant: "Indore Plant" },
-          { id: "USR-004", name: "Marcus Vance", email: "marcus.vance@flowstate.io", role: "Maintenance Lead", department: "Maintenance", status: "Active", lastLogin: "3 hours ago", plant: "Indore Plant" },
-          { id: "USR-005", name: "David Kim", email: "david.kim@flowstate.io", role: "Production Supervisor", department: "Production", status: "Active", lastLogin: "3 days ago", plant: "Indore Plant" }
+          { id: "USR-001", name: "Alexander Vance", email: "admin@maintenx.com", role: "Company Administrator", department: "IT & Digital Ops", status: "Active", lastLogin: "Just now", plant: "Indore Plant 1" }
         ];
   });
 
   // 2. User Invitations
-  const [invitations, setInvitations] = useState(() => {
-    if (hasAuthToken || hasTenant) return [];
-    return [
-      { id: "INV-101", email: "clara.oswald@flowstate.io", role: "Quality Analyst", department: "Quality", invitedBy: "Alexander Vance", sentDate: "2026-08-30", status: "Pending" },
-      { id: "INV-102", email: "james.holden@flowstate.io", role: "Controls Engineer", department: "Maintenance", invitedBy: "Alexander Vance", sentDate: "2026-08-31", status: "Pending" },
-    ];
-  });
+  const [invitations, setInvitations] = useState(() => []);
 
   // 3. User Activity Logs
-  const [activityLogs, setActivityLogs] = useState(() => {
-    if (hasAuthToken || hasTenant) return [];
-    return [
-      { id: "ACT-801", user: "Alexander Vance", action: "Updated ERP Sync Frequency to 15 mins", timestamp: "10:45 AM", ip: "192.168.1.10", category: "Configuration" },
-      { id: "ACT-802", user: "Robert Thorne", action: "Approved Schedule Recovery Catch-up Plan", timestamp: "09:30 AM", ip: "192.168.1.45", category: "Planning" },
-      { id: "ACT-803", user: "Sarah Jenkins", action: "Released Lot LOT-CIT-0830 Certificate of Analysis", timestamp: "08:15 AM", ip: "192.168.1.72", category: "Quality" },
-      { id: "ACT-804", user: "Alexander Vance", action: "Modified Role Permissions for Maintenance Lead", timestamp: "Yesterday", ip: "192.168.1.10", category: "Security" }
-    ];
-  });
+  const [activityLogs, setActivityLogs] = useState(() => []);
 
   // 4. Roles
   const [roles, setRoles] = useState([]);
@@ -415,10 +397,15 @@ export function AdminProvider({ children }) {
       if (adminService.deleteRole) {
         await adminService.deleteRole(roleId);
       }
+      setRoles((prev) => prev.filter((r) => r.id !== roleId && r.code !== roleId && r.dbId !== roleId));
+      const liveRoles = await adminService.getRoles();
+      if (Array.isArray(liveRoles)) {
+        setRoles(liveRoles);
+      }
     } catch (err) {
       console.warn("deleteRole service call:", err);
+      throw err;
     }
-    setRoles((prev) => prev.filter((r) => r.id !== roleId && r.code !== roleId));
     adminService.getActivityLogs().then((logs) => Array.isArray(logs) && setActivityLogs(logs)).catch(() => {});
   };
 
