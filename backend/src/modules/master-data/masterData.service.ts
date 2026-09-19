@@ -562,9 +562,13 @@ export class MasterDataService {
 
   async deletePlant(tenantId: string | undefined, id: string) {
     try {
+      // Clear FK references in production_lines & departments to prevent FK constraints
+      await db.execute(sql`UPDATE public.production_lines SET plant_id = NULL WHERE plant_id::text = ${id}`);
+      await db.execute(sql`UPDATE public.departments SET plant_id = NULL WHERE plant_id::text = ${id}`);
+
       await db
         .delete(plants)
-        .where(sql`${plants.id}::text = ${id} OR ${plants.code} = ${id} OR lower(${plants.code}) = lower(${id})`);
+        .where(sql`${plants.id}::text = ${id} OR ${plants.code} = ${id} OR lower(${plants.code}) = lower(${id}) OR ${plants.name} = ${id}`);
     } catch (err: any) {
       console.warn("DB deletePlant error:", err.message);
     }
