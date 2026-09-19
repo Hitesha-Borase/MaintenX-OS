@@ -34,7 +34,7 @@ export function RolesPage() {
     adminService
       .getRoles()
       .then((data) => {
-        if (Array.isArray(data) && data.length > 0 && setRoles) {
+        if (Array.isArray(data) && setRoles) {
           setRoles(data);
         }
       })

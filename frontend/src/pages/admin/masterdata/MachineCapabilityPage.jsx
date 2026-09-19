@@ -31,7 +31,7 @@ export function MachineCapabilityPage() {
   const { addToast } = useApp();
 
   // Live Physical Assets directly from PostgreSQL DB
-  const [liveAssets, setLiveAssets] = useState([]);
+  const [liveAssets, setLiveAssets] = useState(null);
   const [isLoadingAssets, setIsLoadingAssets] = useState(false);
 
   const fetchLiveAssets = async () => {
@@ -39,7 +39,7 @@ export function MachineCapabilityPage() {
     try {
       const res = await masterDataService.getAssets();
       let data = res?.data !== undefined ? res.data : res;
-      if (data && data.status === "success" && data.data) {
+      if (data && data.status === "success" && data.data !== undefined) {
         data = data.data;
       }
       if (Array.isArray(data)) {
@@ -56,7 +56,7 @@ export function MachineCapabilityPage() {
     fetchLiveAssets();
   }, []);
 
-  const effectiveAssets = liveAssets.length > 0 ? liveAssets : (assets || []);
+  const effectiveAssets = liveAssets !== null ? liveAssets : (assets || []);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [criticalityFilter, setCriticalityFilter] = useState("ALL");
@@ -312,6 +312,7 @@ export function MachineCapabilityPage() {
     try {
       const targetId = asset.id || asset.assetId;
       await masterDataService.deleteAsset(targetId);
+      setLiveAssets((prev) => (prev || []).filter((a) => a.id !== targetId && a.assetId !== targetId && a.assetCode !== targetId));
       if (typeof deleteAsset === "function") {
         deleteAsset(targetId);
       }
