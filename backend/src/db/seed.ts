@@ -58,21 +58,7 @@ export async function runDatabaseSeed() {
     console.log(`✅ Tenant ready: ${demoTenant.name}`);
 
     // 2. Seed Plants
-    let [indorePlant] = await db.select().from(plants).where(eq(plants.code, "INDORE-01")).limit(1);
-    if (!indorePlant) {
-      [indorePlant] = await db
-        .insert(plants)
-        .values({
-          tenantId: demoTenant.id,
-          code: "INDORE-01",
-          name: "Indore Mega Bottling & Canning Facility",
-          city: "Indore",
-          state: "Madhya Pradesh",
-          country: "India",
-          timezone: "Asia/Kolkata",
-        })
-        .returning();
-    }
+    let [indorePlant] = await db.select().from(plants).limit(1);
 
     let [punePlant] = await db.select().from(plants).where(eq(plants.code, "PUNE-02")).limit(1);
     if (!punePlant) {
