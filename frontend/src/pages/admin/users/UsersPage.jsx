@@ -552,10 +552,17 @@ export function UsersPage() {
                   className="form-input"
                   style={{ backgroundColor: "#FFFFFF" }}
                 >
-                  <option value="Operations / Production">Operations / Production</option>
-                  <option value="Maintenance & Reliability">Maintenance & Reliability</option>
-                  <option value="Quality Assurance & Lab">Quality Assurance & Lab</option>
-                  <option value="Warehouse & Logistics">Warehouse & Logistics</option>
+                  {departments && departments.length > 0 ? (
+                    departments.map((d) => (
+                      <option key={d.id || d.code || d.name} value={d.name}>
+                        {d.name}
+                      </option>
+                    ))
+                  ) : (
+                    <option value={formData.department || "Operations / Production"}>
+                      {formData.department || "Operations / Production"}
+                    </option>
+                  )}
                 </select>
               </div>
 
@@ -805,12 +812,17 @@ export function UsersPage() {
                     className="form-input"
                     style={{ backgroundColor: "#FFFFFF" }}
                   >
-                    <option value="Operations / Production">Operations / Production</option>
-                    <option value="Maintenance & Reliability">Maintenance & Reliability</option>
-                    <option value="Quality Assurance & Lab">Quality Assurance & Lab</option>
-                    <option value="Warehouse & Logistics">Warehouse & Logistics</option>
-                    <option value="Supply Chain & Planning">Supply Chain & Planning</option>
-                    <option value="IT & Digital Ops">IT & Digital Ops</option>
+                    {departments && departments.length > 0 ? (
+                      departments.map((d) => (
+                        <option key={d.id || d.code || d.name} value={d.name}>
+                          {d.name}
+                        </option>
+                      ))
+                    ) : (
+                      <option value={editFormData.department || "Operations / Production"}>
+                        {editFormData.department || "Operations / Production"}
+                      </option>
+                    )}
                   </select>
                 </div>
                 <div>
