@@ -356,20 +356,18 @@ export function AdminProvider({ children }) {
   const addRole = async (roleData) => {
     try {
       const created = await adminService.createRole(roleData);
-      setRoles((prev) => [...prev, created]);
+      const liveRoles = await adminService.getRoles();
+      if (Array.isArray(liveRoles) && liveRoles.length > 0) {
+        setRoles(liveRoles);
+      } else if (created) {
+        setRoles((prev) => [...prev, created]);
+      }
       // refresh activity
-      adminService.getActivityLogs().then((logs) => Array.isArray(logs) && setActivityLogs(logs));
+      adminService.getActivityLogs().then((logs) => Array.isArray(logs) && setActivityLogs(logs)).catch(() => {});
       return created;
     } catch (err) {
-      const fallback = {
-        id: `ROL-0${roles.length + 1}`,
-        name: roleData.name,
-        description: roleData.description || "Custom enterprise operational scope",
-        userCount: 0,
-        isSystem: false,
-      };
-      setRoles((prev) => [...prev, fallback]);
-      return fallback;
+      console.warn("addRole failed:", err.message);
+      throw err;
     }
   };
 

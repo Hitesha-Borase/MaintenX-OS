@@ -1305,10 +1305,16 @@ export class AdminService {
     try {
       let activeTenantId: string | null = null;
       if (typeof tenantId === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tenantId)) {
-        activeTenantId = tenantId;
+        const [foundTenant] = await db.select({ id: tenants.id }).from(tenants).where(eq(tenants.id, tenantId)).limit(1);
+        if (foundTenant) {
+          activeTenantId = foundTenant.id;
+        } else {
+          const [demoTenant] = await db.select({ id: tenants.id }).from(tenants).limit(1);
+          activeTenantId = demoTenant?.id || null;
+        }
       } else {
-        const [demoTenant] = await db.select().from(tenants).limit(1);
-        if (demoTenant?.id) activeTenantId = demoTenant.id;
+        const [demoTenant] = await db.select({ id: tenants.id }).from(tenants).limit(1);
+        activeTenantId = demoTenant?.id || null;
       }
 
       const [existing] = await db.select().from(roles).where(eq(roles.code, code)).limit(1);

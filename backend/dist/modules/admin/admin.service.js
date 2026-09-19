@@ -1203,12 +1203,18 @@ class AdminService {
         try {
             let activeTenantId = null;
             if (typeof tenantId === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tenantId)) {
-                activeTenantId = tenantId;
+                const [foundTenant] = await database_js_1.db.select({ id: index_js_1.tenants.id }).from(index_js_1.tenants).where((0, drizzle_orm_1.eq)(index_js_1.tenants.id, tenantId)).limit(1);
+                if (foundTenant) {
+                    activeTenantId = foundTenant.id;
+                }
+                else {
+                    const [demoTenant] = await database_js_1.db.select({ id: index_js_1.tenants.id }).from(index_js_1.tenants).limit(1);
+                    activeTenantId = demoTenant?.id || null;
+                }
             }
             else {
-                const [demoTenant] = await database_js_1.db.select().from(index_js_1.tenants).limit(1);
-                if (demoTenant?.id)
-                    activeTenantId = demoTenant.id;
+                const [demoTenant] = await database_js_1.db.select({ id: index_js_1.tenants.id }).from(index_js_1.tenants).limit(1);
+                activeTenantId = demoTenant?.id || null;
             }
             const [existing] = await database_js_1.db.select().from(index_js_1.roles).where((0, drizzle_orm_1.eq)(index_js_1.roles.code, code)).limit(1);
             if (existing) {

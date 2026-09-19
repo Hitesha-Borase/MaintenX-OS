@@ -154,14 +154,8 @@ export class AdminService {
     try {
       return await apiClient.post("/admin/roles", roleData);
     } catch (err) {
-      console.warn("Backend createRole fallback:", err.message);
-      return {
-        id: `ROL-${Date.now().toString(36)}`,
-        name: roleData.name,
-        description: roleData.description || "Custom enterprise operational scope",
-        userCount: 0,
-        isSystem: false,
-      };
+      console.warn("Backend createRole error:", err.message);
+      throw err;
     }
   }
 
