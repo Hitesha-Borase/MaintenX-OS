@@ -21,7 +21,9 @@ export function AdminSupportPage() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const companyName = currentRole?.user?.companyName || currentRole?.user?.company || "My Company";
+  const tenantName = typeof window !== "undefined" ? localStorage.getItem("maintenx_tenant_name") : null;
+  const companyName = tenantName || currentRole?.user?.companyName || currentRole?.user?.company || "My Company";
+  const tenantId = typeof window !== "undefined" ? localStorage.getItem("maintenx_tenant_id") : (currentRole?.user?.tenantId || null);
 
   const fetchTenantTickets = async () => {
     setLoading(true);
@@ -31,10 +33,11 @@ export function AdminSupportPage() {
       // Filter tickets for this tenant / company
       const tenantTickets = all.filter(
         (t) =>
-          t.companyName?.toLowerCase() === companyName.toLowerCase() ||
-          t.company?.toLowerCase() === companyName.toLowerCase()
+          (tenantId && t.tenantId === tenantId) ||
+          ((t.companyName || t.company || "").toLowerCase() === companyName.toLowerCase()) ||
+          companyName === "My Company"
       );
-      setTickets(tenantTickets.length > 0 ? tenantTickets : all.slice(0, 3));
+      setTickets(tenantTickets.length > 0 ? tenantTickets : all);
     } catch (e) {
       console.warn("Failed to fetch tickets:", e);
     } finally {
@@ -44,7 +47,7 @@ export function AdminSupportPage() {
 
   useEffect(() => {
     fetchTenantTickets();
-  }, [companyName]);
+  }, [companyName, tenantId]);
 
   const handleCreateTicket = async (e) => {
     e.preventDefault();
@@ -55,15 +58,16 @@ export function AdminSupportPage() {
     setIsSubmitting(true);
     try {
       await masterAdminService.createSupportTicket({
-        subject: form.subject,
-        description: form.description,
+        subject: form.subject.trim(),
+        description: form.description.trim(),
         priority: form.priority,
-        companyName: companyName
+        companyName: companyName,
+        tenantId: tenantId || undefined
       });
       addToast("Support ticket submitted successfully! Super Admin will respond shortly.", "success");
       setForm({ subject: "", description: "", priority: "Medium" });
       setIsCreateOpen(false);
-      fetchTenantTickets();
+      await fetchTenantTickets();
     } catch (err) {
       addToast(err.message || "Failed to create support ticket", "error");
     } finally {

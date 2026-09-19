@@ -109,5 +109,5 @@ async function start() {
     });
   }
 }
-
+// Start fastify production mes server
 start();

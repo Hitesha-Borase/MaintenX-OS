@@ -19,8 +19,11 @@ export function SupportTickets() {
     fetchTickets?.();
   }, [fetchTickets]);
 
-  const filteredTickets = supportTickets.filter(t => {
-    const matchesSearch = t.company.toLowerCase().includes(searchTerm.toLowerCase()) || t.subject.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredTickets = (supportTickets || []).filter(t => {
+    const comp = (t.company || t.companyName || "").toLowerCase();
+    const subj = (t.subject || "").toLowerCase();
+    const q = (searchTerm || "").toLowerCase();
+    const matchesSearch = comp.includes(q) || subj.includes(q);
     const matchesStatus = statusFilter === "All" || t.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
