@@ -978,14 +978,6 @@ export function Sidebar() {
                   );
                 })
             )}
-
-            {/* Global Tenant Support (Section 9) */}
-            {currentRole?.id !== "master_admin" && currentRole?.id !== "admin" && (
-              <NavLink to="/support" end style={navItemStyle} title="Support & Helpdesk">
-                <Headset size={18} style={{ flexShrink: 0 }} color="#0284C7" />
-                {!isCollapsed && <span>Support</span>}
-              </NavLink>
-            )}
           </nav>
         </div>
 
