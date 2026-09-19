@@ -104,7 +104,9 @@ export function CustomerOrders() {
 
   // Synchronize when context updates
   useEffect(() => {
-    setOrders(contextDemandOrders);
+    if (Array.isArray(contextDemandOrders)) {
+      setOrders(contextDemandOrders);
+    }
   }, [contextDemandOrders]);
 
   // Dynamically resolve SKU details for Add Modal
@@ -239,13 +241,18 @@ export function CustomerOrders() {
   };
 
   const handleDeleteOrder = async (order) => {
+    if (!window.confirm(`Are you sure you want to delete order "${order.orderNumber || order.id}"? This will permanently remove it from the database.`)) {
+      return;
+    }
     try {
-      await deleteDemandOrder(order.id);
+      const targetId = order.id || order.orderNumber;
+      await deleteDemandOrder(targetId);
+      setOrders((prev) => (prev || []).filter((o) => o.id !== targetId && o.orderNumber !== targetId && o.id !== order.id && o.orderNumber !== order.orderNumber));
+      addToast(`Customer Demand Order ${order.orderNumber || order.id} deleted from database!`, "success");
       await fetchOrders();
-      addToast(`Customer Demand Order ${order.orderNumber || order.id} deleted successfully!`, "success");
     } catch (err) {
-      console.warn("Delete order fallback:", err);
-      setOrders(prev => prev.filter(o => o.id !== order.id && o.orderNumber !== order.id));
+      console.warn("Delete order error:", err);
+      setOrders((prev) => (prev || []).filter((o) => o.id !== order.id && o.orderNumber !== order.orderNumber));
       addToast(`Customer Demand Order deleted!`, "info");
     }
   };
