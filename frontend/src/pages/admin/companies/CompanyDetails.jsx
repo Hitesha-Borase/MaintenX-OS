@@ -285,7 +285,7 @@ export function CompanyDetails() {
                       </div>
                       <div>
                         <span style={{ color: "var(--text-secondary)" }}>Lines / Cells:</span>
-                        <div style={{ fontWeight: 600, color: "var(--text-primary)", marginTop: "2px" }}>{plant.lines || 3} Active Lines</div>
+                        <div style={{ fontWeight: 600, color: "var(--text-primary)", marginTop: "2px" }}>{plant.lines || 0} Active Lines</div>
                       </div>
                     </div>
 

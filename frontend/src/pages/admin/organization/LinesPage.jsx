@@ -188,7 +188,12 @@ export function LinesPage() {
 
     try {
       const idToUpdate = editingLine.id || editingLine.lineId || editingLine.code || editingLine.lineCode;
-      await updateLine(idToUpdate, editingLine);
+      const payload = {
+        ...editingLine,
+        type: editingLine.type || editingLine.lineType,
+        lineType: editingLine.type || editingLine.lineType
+      };
+      await updateLine(idToUpdate, payload);
       addToast(`Line "${editingLine.name}" updated in database!`, "success");
       setEditingLine(null);
       await fetchLines();
@@ -591,7 +596,7 @@ export function LinesPage() {
                     type="text"
                     value={editingLine.type || editingLine.lineType || ""}
                     placeholder="e.g. Bottling, Canning"
-                    onChange={(e) => setEditingLine({ ...editingLine, type: e.target.value })}
+                    onChange={(e) => setEditingLine({ ...editingLine, type: e.target.value, lineType: e.target.value })}
                     className="form-input"
                     style={{ backgroundColor: "#FFFFFF" }}
                   />
