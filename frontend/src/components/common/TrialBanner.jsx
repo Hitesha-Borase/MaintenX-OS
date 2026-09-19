@@ -6,7 +6,9 @@ import { useRole } from "../../context/RoleContext";
 export function TrialBanner() {
   const navigate = useNavigate();
   const { currentRole } = useRole();
-  const [dismissed, setDismissed] = useState(false);
+  const [dismissed, setDismissed] = useState(() => {
+    return sessionStorage.getItem("maintenx_trial_banner_dismissed") === "true";
+  });
 
   // Only show for non-master admins
   if (currentRole?.id === "master_admin") return null;
@@ -148,7 +150,10 @@ export function TrialBanner() {
         )}
 
         <button
-          onClick={() => setDismissed(true)}
+          onClick={() => {
+            setDismissed(true);
+            sessionStorage.setItem("maintenx_trial_banner_dismissed", "true");
+          }}
           style={{
             background: "none",
             border: "none",

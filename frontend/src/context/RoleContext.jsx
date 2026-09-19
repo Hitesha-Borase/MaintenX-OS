@@ -864,9 +864,9 @@ export function RoleProvider({ children }) {
 
   const isModuleEnabled = (moduleKey) => {
     if (!moduleKey || moduleKey === "admin") return true;
-    if (currentRole?.id === "master_admin") return true;
+    if (currentRole?.id === "master_admin" || currentRole?.id === "admin") return true;
 
-    // 1. Direct tenant modules on current role user
+    // 1. Direct tenant modules on current role user if explicitly configured
     let tenantModules = currentRole?.user?.tenant?.modules || currentRole?.user?.modules;
     if (!tenantModules) {
       try {
@@ -875,31 +875,14 @@ export function RoleProvider({ children }) {
       } catch (e) {}
     }
 
-    if (tenantModules && typeof tenantModules === "object") {
-      return Boolean(tenantModules[moduleKey]);
+    if (tenantModules && typeof tenantModules === "object" && Object.keys(tenantModules).length > 0) {
+      if (tenantModules[moduleKey] !== undefined) {
+        return Boolean(tenantModules[moduleKey]);
+      }
     }
 
-    // 2. Plan-based derivation
-    const plan = (currentRole?.user?.tenant?.plan || currentRole?.user?.plan || localStorage.getItem("maintenx_tenant_plan") || "").toLowerCase().trim();
-    if (plan.includes("enterprise") || plan.includes("complete")) {
-      return true;
-    }
-    if (plan.includes("bundle") || plan.includes("advanced")) {
-      return ["plan", "produce", "verify", "maintain", "move"].includes(moduleKey);
-    }
-    if (plan.includes("individual") || plan.includes("starter")) {
-      return ["produce", "verify"].includes(moduleKey);
-    }
-    if (plan.includes("pilot") || plan.includes("trial") || plan.includes("custom")) {
-      return ["produce"].includes(moduleKey);
-    }
-
-    // Default: if BeverageCorp, full access
-    if (currentRole?.user?.companyName?.includes("BeverageCorp") || currentRole?.user?.company?.includes("BeverageCorp")) {
-      return true;
-    }
-
-    return ["produce"].includes(moduleKey);
+    // 2. All active evaluation trials (7-day trial, Plant Pilot, Enterprise) grant access to all operational modules
+    return true;
   };
 
   const getPathModule = (path) => {
@@ -941,15 +924,13 @@ export function RoleProvider({ children }) {
 
   const canAccessPath = (path) => {
     if (!currentRole) return true;
-    if (currentRole.id === "master_admin") return true;
+    if (currentRole.id === "admin" || currentRole.id === "master_admin") return true;
 
-    // Enforce subscription plan module entitlement
+    // Enforce subscription plan module entitlement only if explicitly disabled
     const requiredModule = getPathModule(path);
-    if (requiredModule && !isModuleEnabled(requiredModule)) {
+    if (requiredModule && typeof isModuleEnabled === "function" && isModuleEnabled(requiredModule) === false) {
       return false;
     }
-
-    if (currentRole.id === "admin") return true;
 
     const config = NAVIGATION_CONFIG[currentRole.id];
     if (!config) return false;

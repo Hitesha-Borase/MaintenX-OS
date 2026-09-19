@@ -70,16 +70,22 @@ export function AppLayout() {
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh", width: "100%", maxWidth: "100vw", backgroundColor: "var(--bg-main)", overflow: "hidden", position: "relative" }}>
       {/* Global Header - Full Width */}
-      <Header />
+      <ErrorBoundary>
+        <Header />
+      </ErrorBoundary>
       {isSubscriptionExpired && <TrialExpiredLockout />}
 
       <div className="app-container" style={{ display: "flex", flex: 1, minHeight: 0, width: "100%", maxWidth: "100vw", position: "relative", overflow: "hidden" }}>
         {/* Global Sidebar */}
-        <Sidebar />
+        <ErrorBoundary>
+          <Sidebar />
+        </ErrorBoundary>
 
         {/* Content area beside Sidebar with Trial Banner */}
         <div style={{ display: "flex", flexDirection: "column", flex: 1, minWidth: 0, height: "100%", overflow: "hidden" }}>
-          <TrialBanner />
+          <ErrorBoundary>
+            <TrialBanner />
+          </ErrorBoundary>
 
           {/* Dynamic Page Content wrapper */}
           <main className="page-content-wrapper" style={{ flex: 1, minWidth: 0, width: "100%", height: "100%", overflowY: "auto", overflowX: "hidden" }}>

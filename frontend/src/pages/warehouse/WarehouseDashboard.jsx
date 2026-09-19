@@ -141,14 +141,21 @@ export function WarehouseDashboard() {
 
       const flow = flowRes?.data || flowRes;
       if (flow) {
+        const safeMovements = (flow.recentMovements && typeof flow.recentMovements === 'object' && !Array.isArray(flow.recentMovements))
+          ? {
+              processing: Array.isArray(flow.recentMovements.processing) ? flow.recentMovements.processing : [],
+              packaging: Array.isArray(flow.recentMovements.packaging) ? flow.recentMovements.packaging : []
+            }
+          : { processing: [], packaging: [] };
+
         setFlowSummary({
-          rawMaterials: flow.rawMaterials || [],
-          processingBatches: flow.processingBatches || [],
-          wipLots: flow.wipLots || [],
-          tankLocations: flow.tankLocations || [],
-          packagingMaterials: flow.packagingMaterials || [],
-          recentMovements: flow.recentMovements || { processing: [], packaging: [] },
-          finishedGoods: flow.finishedGoods || []
+          rawMaterials: Array.isArray(flow.rawMaterials) ? flow.rawMaterials : [],
+          processingBatches: Array.isArray(flow.processingBatches) ? flow.processingBatches : [],
+          wipLots: Array.isArray(flow.wipLots) ? flow.wipLots : [],
+          tankLocations: Array.isArray(flow.tankLocations) ? flow.tankLocations : [],
+          packagingMaterials: Array.isArray(flow.packagingMaterials) ? flow.packagingMaterials : [],
+          recentMovements: safeMovements,
+          finishedGoods: Array.isArray(flow.finishedGoods) ? flow.finishedGoods : []
         });
 
         // Pre-select first RM lot if not set
@@ -246,7 +253,7 @@ export function WarehouseDashboard() {
       return;
     }
 
-    const selectedLot = flowSummary.rawMaterials.find(r => r.lotNumber === issueRmForm.lotNumber);
+    const selectedLot = (flowSummary.rawMaterials || []).find(r => r.lotNumber === issueRmForm.lotNumber);
     if (selectedLot && Number(issueRmForm.quantity) > Number(selectedLot.quantity)) {
       addToast(`Cannot issue: available stock is ${selectedLot.quantity} ${selectedLot.uom} (Negative stock prevented)`, "danger");
       return;
@@ -297,7 +304,7 @@ export function WarehouseDashboard() {
       return;
     }
 
-    const selectedLot = flowSummary.packagingMaterials.find(p => p.lotNumber === stagePkgForm.lotNumber);
+    const selectedLot = (flowSummary.packagingMaterials || []).find(p => p.lotNumber === stagePkgForm.lotNumber);
     if (selectedLot && Number(stagePkgForm.quantity) > Number(selectedLot.quantity)) {
       addToast(`Cannot stage: available stock is ${selectedLot.quantity} ${selectedLot.uom} (Negative stock prevented)`, "danger");
       return;
@@ -349,7 +356,7 @@ export function WarehouseDashboard() {
   const openIssueModalForLot = (lot) => {
     setIssueRmForm({
       lotNumber: lot.lotNumber,
-      batchNumber: flowSummary.processingBatches[0]?.batchNumber || "BAT-2026-0885",
+      batchNumber: (flowSummary.processingBatches || [])[0]?.batchNumber || "BAT-2026-0885",
       quantity: "",
       uom: lot.uom || "Liters",
       notes: `Issue from ${lot.lotNumber} for batch processing`
@@ -371,8 +378,8 @@ export function WarehouseDashboard() {
 
   // Filtered movements
   const displayedMovements = [
-    ...(movementCategoryFilter === "packaging" ? [] : flowSummary.recentMovements.processing.map(m => ({ ...m, category: "PROCESSING" }))),
-    ...(movementCategoryFilter === "processing" ? [] : flowSummary.recentMovements.packaging.map(m => ({ ...m, category: "PACKAGING" })))
+    ...(movementCategoryFilter === "packaging" ? [] : (flowSummary.recentMovements?.processing || []).map(m => ({ ...m, category: "PROCESSING" }))),
+    ...(movementCategoryFilter === "processing" ? [] : (flowSummary.recentMovements?.packaging || []).map(m => ({ ...m, category: "PACKAGING" })))
   ];
 
   return (
@@ -545,21 +552,21 @@ export function WarehouseDashboard() {
             size="sm"
             onClick={() => setActiveFlowTab("rm-issue")}
           >
-            1. Raw Materials ({flowSummary.rawMaterials.length})
+            1. Raw Materials ({(flowSummary.rawMaterials || []).length})
           </Button>
           <Button
             variant={activeFlowTab === "wip-tanks" ? "primary" : "ghost"}
             size="sm"
             onClick={() => setActiveFlowTab("wip-tanks")}
           >
-            2. WIP Lots & Tanks ({flowSummary.wipLots.length})
+            2. WIP Lots & Tanks ({(flowSummary.wipLots || []).length})
           </Button>
           <Button
             variant={activeFlowTab === "pkg-stage" ? "primary" : "ghost"}
             size="sm"
             onClick={() => setActiveFlowTab("pkg-stage")}
           >
-            3. Packaging Staging ({flowSummary.packagingMaterials.length})
+            3. Packaging Staging ({(flowSummary.packagingMaterials || []).length})
           </Button>
           <Button
             variant={activeFlowTab === "movements" ? "primary" : "ghost"}
@@ -573,7 +580,7 @@ export function WarehouseDashboard() {
             size="sm"
             onClick={() => setActiveFlowTab("pkg-run")}
           >
-            5. Finished Goods Pallets ({flowSummary.finishedGoods.length})
+            5. Finished Goods Pallets ({(flowSummary.finishedGoods || []).length})
           </Button>
         </div>
 
@@ -602,14 +609,14 @@ export function WarehouseDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {flowSummary.rawMaterials.length === 0 ? (
+                  {(flowSummary.rawMaterials || []).length === 0 ? (
                     <tr>
                       <td colSpan="6" style={{ padding: "24px", textAlign: "center", color: "var(--text-muted)" }}>
                         No raw material lots found in database. Click "Refresh Live KPIs" to initialize.
                       </td>
                     </tr>
                   ) : (
-                    flowSummary.rawMaterials.map((lot) => (
+                    (flowSummary.rawMaterials || []).map((lot) => (
                       <tr key={lot.id} style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.05)" }}>
                         <td style={{ padding: "12px", fontWeight: 700, color: "#FFFFFF" }}>
                           {lot.lotNumber}
@@ -660,7 +667,7 @@ export function WarehouseDashboard() {
 
             {/* Tanks / Silos Visual Grid */}
             <div className="grid-3">
-              {flowSummary.tankLocations.map((tank) => (
+              {(flowSummary.tankLocations || []).map((tank) => (
                 <div
                   key={tank.id}
                   style={{
@@ -711,14 +718,14 @@ export function WarehouseDashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {flowSummary.wipLots.length === 0 ? (
+                    {(flowSummary.wipLots || []).length === 0 ? (
                       <tr>
                         <td colSpan="5" style={{ padding: "20px", textAlign: "center", color: "var(--text-muted)" }}>
                           No WIP lots currently stored in tanks.
                         </td>
                       </tr>
                     ) : (
-                      flowSummary.wipLots.map((wip) => (
+                      (flowSummary.wipLots || []).map((wip) => (
                         <tr key={wip.id} style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.05)" }}>
                           <td style={{ padding: "12px", fontWeight: 700, color: "#38BDF8" }}>{wip.lotNumber}</td>
                           <td style={{ padding: "12px", color: "#FFFFFF" }}>{wip.batchNumber}</td>
@@ -764,14 +771,14 @@ export function WarehouseDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {flowSummary.packagingMaterials.length === 0 ? (
+                  {(flowSummary.packagingMaterials || []).length === 0 ? (
                     <tr>
                       <td colSpan="6" style={{ padding: "20px", textAlign: "center", color: "var(--text-muted)" }}>
                         No packaging materials found in database.
                       </td>
                     </tr>
                   ) : (
-                    flowSummary.packagingMaterials.map((lot) => (
+                    (flowSummary.packagingMaterials || []).map((lot) => (
                       <tr key={lot.id} style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.05)" }}>
                         <td style={{ padding: "12px", fontWeight: 700, color: "#FFFFFF" }}>{lot.lotNumber}</td>
                         <td style={{ padding: "12px", color: "#10B981", fontWeight: 600 }}>
@@ -918,14 +925,14 @@ export function WarehouseDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {flowSummary.finishedGoods.length === 0 ? (
+                  {(flowSummary.finishedGoods || []).length === 0 ? (
                     <tr>
                       <td colSpan="7" style={{ padding: "24px", textAlign: "center", color: "var(--text-muted)" }}>
                         No finished goods pallets recorded. Click "Create FG Pallet" to generate a pallet from a packaging run.
                       </td>
                     </tr>
                   ) : (
-                    flowSummary.finishedGoods.map((fg) => (
+                    (flowSummary.finishedGoods || []).map((fg) => (
                       <tr key={fg.id} style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.05)" }}>
                         <td style={{ padding: "12px", fontWeight: 700, color: "#10B981" }}>{fg.palletSerial}</td>
                         <td style={{ padding: "12px", fontWeight: 600, color: "#FFFFFF" }}>{fg.finishedLot}</td>
@@ -972,7 +979,7 @@ export function WarehouseDashboard() {
             <select
               value={issueRmForm.lotNumber}
               onChange={(e) => {
-                const selected = flowSummary.rawMaterials.find(r => r.lotNumber === e.target.value);
+                const selected = (flowSummary.rawMaterials || []).find(r => r.lotNumber === e.target.value);
                 setIssueRmForm(prev => ({
                   ...prev,
                   lotNumber: e.target.value,
@@ -991,7 +998,7 @@ export function WarehouseDashboard() {
               required
             >
               <option value="" disabled>-- Select Lot --</option>
-              {flowSummary.rawMaterials.map(r => (
+              {(flowSummary.rawMaterials || []).map(r => (
                 <option key={r.id} value={r.lotNumber} style={{ backgroundColor: "#1E293B", color: "#FFFFFF" }}>
                   {r.lotNumber} (Available: {Number(r.quantity).toLocaleString()} {r.uom})
                 </option>
@@ -1211,7 +1218,7 @@ export function WarehouseDashboard() {
             <select
               value={stagePkgForm.lotNumber}
               onChange={(e) => {
-                const selected = flowSummary.packagingMaterials.find(p => p.lotNumber === e.target.value);
+                const selected = (flowSummary.packagingMaterials || []).find(p => p.lotNumber === e.target.value);
                 setStagePkgForm(prev => ({
                   ...prev,
                   lotNumber: e.target.value,
@@ -1230,7 +1237,7 @@ export function WarehouseDashboard() {
               required
             >
               <option value="" disabled>-- Select Packaging Lot --</option>
-              {flowSummary.packagingMaterials.map(p => (
+              {(flowSummary.packagingMaterials || []).map(p => (
                 <option key={p.id} value={p.lotNumber} style={{ backgroundColor: "#1E293B", color: "#FFFFFF" }}>
                   {p.lotNumber} (Available: {Number(p.quantity).toLocaleString()} {p.uom})
                 </option>
@@ -1315,7 +1322,7 @@ export function WarehouseDashboard() {
               <select
                 value={createFgForm.wipLotNumber}
                 onChange={(e) => {
-                  const selWip = flowSummary.wipLots.find(w => w.lotNumber === e.target.value);
+                  const selWip = (flowSummary.wipLots || []).find(w => w.lotNumber === e.target.value);
                   setCreateFgForm({
                     ...createFgForm,
                     wipLotNumber: e.target.value,
@@ -1333,7 +1340,7 @@ export function WarehouseDashboard() {
                 }}
                 required
               >
-                {flowSummary.wipLots.map(w => (
+                {(flowSummary.wipLots || []).map(w => (
                   <option key={w.id} value={w.lotNumber} style={{ backgroundColor: "#1E293B" }}>
                     {w.lotNumber} ({w.batchNumber} - {Number(w.quantity).toLocaleString()} {w.uom})
                   </option>

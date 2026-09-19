@@ -494,7 +494,7 @@ export function Header() {
                 </div>
                 <div style={{ maxHeight: "180px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "2px" }}>
                   {ROLES?.map((r) => {
-                    const isEnabled = isModuleEnabled ? isModuleEnabled(r.module) : true;
+                    const isEnabled = typeof isModuleEnabled === "function" ? isModuleEnabled(r.module) !== false : true;
                     const isSelected = currentRole?.id === r.id;
 
                     return (

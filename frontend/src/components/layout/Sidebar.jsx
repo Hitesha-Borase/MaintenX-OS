@@ -399,6 +399,7 @@ export function Sidebar() {
   });
 
   const renderBadge = (label) => {
+    if (!label || typeof label !== "string") return null;
     if (label === "Work Orders" && activeWOCount > 0) {
       return (
         <span style={{ fontSize: "10px", backgroundColor: "rgba(200, 149, 71, 0.18)", color: "#B27E33", padding: "1px 6px", borderRadius: "4px", fontWeight: 700 }}>
@@ -416,7 +417,7 @@ export function Sidebar() {
     if (label === "Assets Registry" || label === "Asset Register") {
       return (
         <span style={{ fontSize: "10px", color: "var(--text-muted)", fontWeight: 600 }}>
-          {assets.length || 24}
+          {masterAssets.length || 24}
         </span>
       );
     }
@@ -809,7 +810,7 @@ export function Sidebar() {
                   {!sidebarCollapsed && <span>13. Support</span>}
                 </NavLink>
               </>
-            ) : currentRole?.module && currentRole.module !== "admin" && isModuleEnabled && !isModuleEnabled(currentRole.module) ? (
+            ) : currentRole?.module && currentRole.module !== "admin" && typeof isModuleEnabled === "function" && isModuleEnabled(currentRole.module) === false ? (
               /* IF CURRENT ROLE MODULE IS LOCKED IN TENANT'S SUBSCRIPTION PLAN */
               <div
                 style={{
@@ -862,7 +863,7 @@ export function Sidebar() {
                 <button
                   onClick={() => {
                     const fallbackRole =
-                      ROLES?.find((r) => r.id !== "admin" && r.id !== "master_admin" && isModuleEnabled(r.module)) ||
+                      ROLES?.find((r) => r.id !== "admin" && r.id !== "master_admin" && (!isModuleEnabled || isModuleEnabled(r.module) !== false)) ||
                       ROLES?.find((r) => r.id === "operator");
                     if (fallbackRole) {
                       setRoleById(fallbackRole.id);
@@ -890,7 +891,7 @@ export function Sidebar() {
                 .filter((item) => {
                   if (currentRole?.id === "master_admin") return true;
                   const mod = getGroupOrItemModule(item);
-                  if (mod && isModuleEnabled && !isModuleEnabled(mod)) {
+                  if (mod && typeof isModuleEnabled === "function" && isModuleEnabled(mod) === false) {
                     return false;
                   }
                   return true;
@@ -900,7 +901,7 @@ export function Sidebar() {
                     const visibleSubItems = item.items.filter((subItem) => {
                       if (currentRole?.id === "master_admin") return true;
                       const subMod = getGroupOrItemModule(subItem);
-                      if (subMod && isModuleEnabled && !isModuleEnabled(subMod)) {
+                      if (subMod && typeof isModuleEnabled === "function" && isModuleEnabled(subMod) === false) {
                         return false;
                       }
                       return true;
