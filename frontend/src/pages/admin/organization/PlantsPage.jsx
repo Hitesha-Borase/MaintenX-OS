@@ -283,7 +283,7 @@ export function PlantsPage() {
                         {p.timezone || "Asia/Kolkata (IST)"}
                       </td>
                       <td style={{ padding: "12px 16px" }}>
-                        <Badge variant="cyan">{plantLines || 3} Active Lines</Badge>
+                        <Badge variant="cyan">{plantLines} Active Lines</Badge>
                       </td>
                       <td style={{ padding: "12px 16px" }}>
                         <Badge variant={p.status === "Inactive" || p.isActive === false ? "amber" : "emerald"}>
@@ -768,7 +768,7 @@ export function PlantsPage() {
                 <div>
                   <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Configured Lines</div>
                   <div style={{ fontSize: "13px", fontWeight: 600, color: "var(--text-primary)", marginTop: "4px" }}>
-                    {lines.filter((l) => l.plantId === viewingPlant.id).length || viewingPlant.linesCount || 3} Active Lines
+                    {lines.filter((l) => l.plantId === (viewingPlant.id || viewingPlant.plantId)).length || viewingPlant.linesCount || 0} Active Lines
                   </div>
                 </div>
                 <div>

@@ -487,7 +487,7 @@ Author: Victoria Sterling (Executive VP Operations)
                 {dashboardData?.packagingPerformance?.downtimeMinutes || 48} <span style={{ fontSize: "11px", fontWeight: 600 }}>mins</span>
               </div>
               <span style={{ fontSize: "10px", color: "var(--text-secondary)" }}>
-                {dashboardData?.operationsSummary?.packaging?.runningLines || 3} Active Lines
+                {dashboardData?.operationsSummary?.packaging?.runningLines || 0} Active Lines
               </span>
             </div>
           </div>

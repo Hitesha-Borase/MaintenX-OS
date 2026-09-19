@@ -713,11 +713,11 @@ export class MasterDataService {
         name: l.name || "Production Line",
         plantId: l.plant_id ? String(l.plant_id) : "PLT-01",
         plantName: l.plant_name || "Main Facility",
-        type: l.type || l.line_type || "Continuous Flow",
-        lineType: l.line_type || "BOTTLING",
+        type: l.line_type || l.type || "Continuous Flow",
+        lineType: l.line_type || l.type || "Continuous Flow",
         nominalSpeedBpm: l.nominal_speed_bpm || 0,
-        ratedSpeed: l.rated_speed || (l.nominal_speed_bpm ? `${(l.nominal_speed_bpm * 60).toLocaleString()} BPH` : "38,000 BPH"),
-        ratedSpeedBPH: l.rated_speed_bph || (l.nominal_speed_bpm ? l.nominal_speed_bpm * 60 : 38000),
+        ratedSpeed: l.rated_speed || (l.nominal_speed_bpm ? `${(l.nominal_speed_bpm * 60).toLocaleString()} BPH` : "—"),
+        ratedSpeedBPH: l.rated_speed_bph || (l.nominal_speed_bpm ? l.nominal_speed_bpm * 60 : 0),
         status: l.status || "Active",
         healthScore: l.health_score ?? 95,
         supervisorId: null,
@@ -785,19 +785,21 @@ export class MasterDataService {
   async updateLine(tenantId: string | undefined, id: string, input: any) {
     try {
       let nominalSpeedBpm: number | null = null;
-      if (input.ratedSpeedBPH) {
-        nominalSpeedBpm = Math.round(Number(input.ratedSpeedBPH) / 60);
-      } else if (input.ratedSpeed) {
+      if (input.ratedSpeed !== undefined && input.ratedSpeed !== null && String(input.ratedSpeed).trim() !== "") {
         const parsed = parseInt(String(input.ratedSpeed).replace(/[^0-9]/g, ""), 10);
-        if (!isNaN(parsed) && parsed > 0) nominalSpeedBpm = Math.round(parsed / 60);
+        if (!isNaN(parsed) && parsed >= 0) nominalSpeedBpm = Math.round(parsed / 60);
+      } else if (input.ratedSpeedBPH !== undefined && input.ratedSpeedBPH !== null) {
+        nominalSpeedBpm = Math.round(Number(input.ratedSpeedBPH) / 60);
       }
+
+      const newType = input.type || input.lineType || null;
 
       await db.execute(sql`
         UPDATE public.production_lines
         SET 
           name = COALESCE(${input.name || null}, name),
           code = COALESCE(${input.code || input.lineCode || null}, code),
-          line_type = COALESCE(${input.lineType || input.type || null}, line_type),
+          line_type = COALESCE(${newType}, line_type),
           nominal_speed_bpm = COALESCE(${nominalSpeedBpm}, nominal_speed_bpm),
           status = COALESCE(${input.status || null}, status)
         WHERE id::text = ${id} OR code = ${id}
