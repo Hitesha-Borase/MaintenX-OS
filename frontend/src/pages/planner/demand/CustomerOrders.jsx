@@ -47,40 +47,27 @@ export function CustomerOrders() {
   const [editingOrder, setEditingOrder] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const FALLBACK_SKUS = useMemo(() => [
-    { skuId: "SKU-5001", skuCode: "SKU-5001", name: "500ml Sparkling Citrus Soda", uom: "Bottles", category: "Finished Goods" },
-    { skuId: "SKU-5002", skuCode: "SKU-5002", name: "1.5L Mineral Spring Water", uom: "Bottles", category: "Finished Goods" },
-    { skuId: "SKU-1001", skuCode: "SKU-1001", name: "1L Organic Valencia Orange Juice", uom: "Cartons", category: "Finished Goods" },
-    { skuId: "PKG-CAN-330", skuCode: "PKG-CAN-330", name: "330ml Aluminum Cans - Cola", uom: "Cans", category: "Finished Goods" }
-  ], []);
-
-  const FALLBACK_PLANTS = useMemo(() => [
-    { id: "PLT-01", name: "Pune Blending & Packaging Plant" },
-    { id: "PLT-02", name: "Mumbai Bottling & Distribution Facility" }
-  ], []);
-
   const availableSkus = useMemo(() => {
-    if (!skus || skus.length === 0) return FALLBACK_SKUS;
-    const fg = skus.filter((s) => s.category === "Finished Goods" || s.category === "FINISHED_GOODS" || s.category === "FINISHED");
-    return fg.length > 0 ? fg : skus;
-  }, [skus, FALLBACK_SKUS]);
+    if (!skus || !Array.isArray(skus)) return [];
+    return skus;
+  }, [skus]);
 
   const availablePlants = useMemo(() => {
-    if (!plants || plants.length === 0) return FALLBACK_PLANTS;
+    if (!plants || !Array.isArray(plants)) return [];
     return plants;
-  }, [plants, FALLBACK_PLANTS]);
+  }, [plants]);
 
-  const defaultSku = availableSkus[0] || FALLBACK_SKUS[0];
+  const defaultSku = availableSkus[0] || null;
 
   // New Demand Form State
   const [newOrder, setNewOrder] = useState({
     orderNumber: `PO-CUST-${Math.floor(10000 + Math.random() * 90000)}`,
     customer: "",
-    skuId: defaultSku.skuId || defaultSku.id,
+    skuId: defaultSku?.skuId || defaultSku?.id || "",
     quantity: 24000,
     requestedShipDate: new Date(Date.now() + 7 * 86400000).toISOString().substring(0, 10),
     priority: "High",
-    plantId: "PLT-01",
+    plantId: availablePlants[0]?.id || "PLT-01",
     notes: ""
   });
 
@@ -104,7 +91,9 @@ export function CustomerOrders() {
 
   // Synchronize when context updates
   useEffect(() => {
-    setOrders(contextDemandOrders);
+    if (Array.isArray(contextDemandOrders)) {
+      setOrders(contextDemandOrders);
+    }
   }, [contextDemandOrders]);
 
   // Dynamically resolve SKU details for Add Modal
@@ -239,13 +228,18 @@ export function CustomerOrders() {
   };
 
   const handleDeleteOrder = async (order) => {
+    if (!window.confirm(`Are you sure you want to delete order "${order.orderNumber || order.id}"? This will permanently remove it from the database.`)) {
+      return;
+    }
     try {
-      await deleteDemandOrder(order.id);
+      const targetId = order.id || order.orderNumber;
+      await deleteDemandOrder(targetId);
+      setOrders((prev) => (prev || []).filter((o) => o.id !== targetId && o.orderNumber !== targetId && o.id !== order.id && o.orderNumber !== order.orderNumber));
+      addToast(`Customer Demand Order ${order.orderNumber || order.id} deleted from database!`, "success");
       await fetchOrders();
-      addToast(`Customer Demand Order ${order.orderNumber || order.id} deleted successfully!`, "success");
     } catch (err) {
-      console.warn("Delete order fallback:", err);
-      setOrders(prev => prev.filter(o => o.id !== order.id && o.orderNumber !== order.id));
+      console.warn("Delete order error:", err);
+      setOrders((prev) => (prev || []).filter((o) => o.id !== order.id && o.orderNumber !== order.orderNumber));
       addToast(`Customer Demand Order deleted!`, "info");
     }
   };
@@ -658,11 +652,15 @@ export function CustomerOrders() {
                     cursor: "pointer"
                   }}
                 >
-                  {availableSkus.map((s) => (
-                    <option key={s.skuId || s.id} value={s.skuId || s.id}>
-                      {s.skuCode || s.skuId} — {s.name || s.productName} ({s.uom || "Units"})
-                    </option>
-                  ))}
+                  {availableSkus.length > 0 ? (
+                    availableSkus.map((s) => (
+                      <option key={s.skuId || s.id || s.code} value={s.skuId || s.id || s.code}>
+                        {s.skuCode || s.code || s.skuId} — {s.name || s.productName} ({s.uom || "Units"})
+                      </option>
+                    ))
+                  ) : (
+                    <option value="">No Product SKUs provisioned yet (Add SKUs in Master Data)</option>
+                  )}
                 </select>
               </div>
 
@@ -874,11 +872,15 @@ export function CustomerOrders() {
                     cursor: "pointer"
                   }}
                 >
-                  {availableSkus.map((s) => (
-                    <option key={s.skuId || s.id} value={s.skuId || s.id}>
-                      {s.skuCode || s.skuId} — {s.name || s.productName} ({s.uom || "Units"})
-                    </option>
-                  ))}
+                  {availableSkus.length > 0 ? (
+                    availableSkus.map((s) => (
+                      <option key={s.skuId || s.id || s.code} value={s.skuId || s.id || s.code}>
+                        {s.skuCode || s.code || s.skuId} — {s.name || s.productName} ({s.uom || "Units"})
+                      </option>
+                    ))
+                  ) : (
+                    <option value="">No Product SKUs provisioned yet (Add SKUs in Master Data)</option>
+                  )}
                 </select>
               </div>
 

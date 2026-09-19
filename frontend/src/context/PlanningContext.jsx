@@ -11,72 +11,7 @@ const PlanningContext = createContext();
 // (Referencing Centralized Master IDs)
 // ==========================================
 
-export const INITIAL_DEMAND_ORDERS = [
-  {
-    id: "DO-2026-101",
-    orderNumber: "PO-WF-88901",
-    customer: "Whole Foods Market (National)",
-    skuId: "SKU-001",
-    productCode: "SKU-5001",
-    productName: "500ml Sparkling Citrus Soda",
-    quantity: 48000,
-    uom: "Bottles",
-    requestedShipDate: "2026-09-08",
-    priority: "High",
-    plantId: "PLT-01",
-    status: "Open",
-    notes: "Q3 Promotional Feature endcap stocking requirement.",
-    createdDate: "2026-08-28"
-  },
-  {
-    id: "DO-2026-102",
-    orderNumber: "PO-TJ-55412",
-    customer: "Trader Joe's Distribution",
-    skuId: "SKU-003",
-    productCode: "SKU-5003",
-    productName: "330ml Organic Ginger Beer",
-    quantity: 36000,
-    uom: "Cans",
-    requestedShipDate: "2026-09-12",
-    priority: "Normal",
-    plantId: "PLT-02",
-    status: "Open",
-    notes: "Standard weekly replenishment contract.",
-    createdDate: "2026-08-29"
-  },
-  {
-    id: "DO-2026-103",
-    orderNumber: "PO-KR-99321",
-    customer: "Kroger Mid-Atlantic",
-    skuId: "SKU-002",
-    productCode: "SKU-5002",
-    productName: "1L Tonic Water Natural Quinine",
-    quantity: 24000,
-    uom: "Bottles",
-    requestedShipDate: "2026-09-15",
-    priority: "Urgent",
-    plantId: "PLT-01",
-    status: "Open",
-    notes: "Expedited regional restock. Pallet shrink-wrap double layer.",
-    createdDate: "2026-08-30"
-  },
-  {
-    id: "DO-2026-104",
-    orderNumber: "PO-TGT-12490",
-    customer: "Target Retail Supply",
-    skuId: "SKU-001",
-    productCode: "SKU-5001",
-    productName: "500ml Sparkling Citrus Soda",
-    quantity: 30000,
-    uom: "Bottles",
-    requestedShipDate: "2026-09-18",
-    priority: "Normal",
-    plantId: "PLT-01",
-    status: "Allocated",
-    notes: "Scheduled against Line 1 batch BAT-2026-0892.",
-    createdDate: "2026-08-30"
-  }
-];
+export const INITIAL_DEMAND_ORDERS = [];
 
 export const INITIAL_FORECASTS = [
   {
