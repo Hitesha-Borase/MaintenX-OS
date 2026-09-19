@@ -1,29 +1,66 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Sparkles, AlertTriangle, ArrowRight, X, Clock } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useRole } from "../../context/RoleContext";
+import apiClient from "../../services/apiClient";
 
 export function TrialBanner() {
   const navigate = useNavigate();
   const { currentRole } = useRole();
+  const [liveTenant, setLiveTenant] = useState(null);
   const [dismissed, setDismissed] = useState(() => {
     return sessionStorage.getItem("maintenx_trial_banner_dismissed") === "true";
   });
+
+  // Fetch live tenant details directly from PostgreSQL on mount
+  useEffect(() => {
+    let isMounted = true;
+    (async () => {
+      try {
+        const token = localStorage.getItem("maintenx_auth_token") || localStorage.getItem("flowstate_token");
+        if (token) {
+          const res = await apiClient.get("/auth/me");
+          const data = res?.data || res;
+          if (isMounted && data?.tenant) {
+            setLiveTenant(data.tenant);
+            if (data.tenant.createdAt) {
+              localStorage.setItem("maintenx_tenant_created", data.tenant.createdAt);
+            }
+            if (data.tenant.plan) {
+              localStorage.setItem("maintenx_tenant_plan", data.tenant.plan);
+            }
+            if (data.tenant.subscriptionExpiryDate) {
+              localStorage.setItem("maintenx_trial_end", data.tenant.subscriptionExpiryDate);
+            }
+            if (data.tenant.subscriptionStatus) {
+              localStorage.setItem("maintenx_subscription_status", data.tenant.subscriptionStatus);
+            }
+          }
+        }
+      } catch (err) {
+        // ignore
+      }
+    })();
+    return () => { isMounted = false; };
+  }, []);
 
   // Only show for non-master admins
   if (currentRole?.id === "master_admin") return null;
   if (dismissed) return null;
 
+  const tenant = liveTenant || currentRole?.user?.tenant;
+
   // Determine if tenant has paid subscription or is on 7-day trial
-  const plan = (currentRole?.user?.tenant?.plan || currentRole?.user?.plan || localStorage.getItem("maintenx_tenant_plan") || "").toLowerCase();
-  const hasPaidSub = Boolean(currentRole?.user?.tenant?.hasSubscription || currentRole?.user?.hasSubscription);
+  const plan = (tenant?.plan || currentRole?.user?.plan || localStorage.getItem("maintenx_tenant_plan") || "").toLowerCase();
+  const subStatus = (tenant?.subscription?.status || tenant?.subscriptionStatus || localStorage.getItem("maintenx_subscription_status") || "").toUpperCase();
+  const hasPaidSub = Boolean(tenant?.hasSubscription || currentRole?.user?.hasSubscription) && subStatus !== "TRIAL";
   const isEnterprise = plan.includes("enterprise") || plan.includes("complete");
 
   if (hasPaidSub || isEnterprise) return null;
 
-  // Calculate remaining trial days using backend trial end date or registration date
-  const trialEndStr = currentRole?.user?.tenant?.subscription?.currentPeriodEnd || currentRole?.user?.tenant?.subscriptionExpiryDate || localStorage.getItem("maintenx_trial_end");
-  const registeredAtStr = currentRole?.user?.tenant?.createdAt || currentRole?.user?.createdAt || localStorage.getItem("maintenx_tenant_created");
+  // Calculate remaining trial days using backend trial end date or registration date from DB
+  const trialEndStr = tenant?.subscription?.currentPeriodEnd || tenant?.subscriptionExpiryDate || localStorage.getItem("maintenx_trial_end");
+  const registeredAtStr = tenant?.createdAt || currentRole?.user?.createdAt || localStorage.getItem("maintenx_tenant_created");
   
   const now = new Date();
   let remainingDays = 7;
@@ -46,10 +83,8 @@ export function TrialBanner() {
     remainingDays = Math.max(0, 7 - elapsedDays);
   }
 
-  // If Day 8+ (expired), TrialExpiredLockout handles it
-  if (remainingDays === 0) return null;
-
-  const isUrgent = remainingDays <= 2;
+  const isExpired = remainingDays <= 0;
+  const isUrgent = isExpired || remainingDays <= 2;
 
   const userRole = currentRole?.id || "";
   const roleName = (currentRole?.user?.role || currentRole?.label || "").toLowerCase();
@@ -86,24 +121,26 @@ export function TrialBanner() {
           }}
         >
           {isUrgent ? <AlertTriangle size={12} /> : <Sparkles size={12} />}
-          7-DAY TRIAL
+          {isExpired ? "TRIAL EXPIRED" : "7-DAY TRIAL"}
         </div>
 
         <span>
           {isCompanyAdmin ? (
             <>
-              You are on a 7-day evaluation trial{formattedRegDate ? ` (Registered: ${formattedRegDate})` : ""} with{" "}
-              <strong style={{ color: isUrgent ? "#B91C1C" : "#92400E", textDecoration: "underline" }}>
-                {remainingDays === 1 ? "1 day (last day)" : `${remainingDays} days`} remaining
-              </strong>.
+              You are on a 7-day evaluation trial{formattedRegDate ? ` (Registered: ${formattedRegDate})` : ""} {isExpired ? (
+                <>which has <strong style={{ color: "#B91C1C", textDecoration: "underline" }}>expired (0 days remaining)</strong>.</>
+              ) : (
+                <>with <strong style={{ color: isUrgent ? "#B91C1C" : "#92400E", textDecoration: "underline" }}>{remainingDays === 1 ? "1 day (last day)" : `${remainingDays} days`} remaining</strong>.</>
+              )}
               {" "}Please upgrade your subscription to ensure continuous plant operations.
             </>
           ) : (
             <>
-              Your organization is currently on a 7-day evaluation trial{formattedRegDate ? ` (Registered: ${formattedRegDate})` : ""} with{" "}
-              <strong style={{ color: isUrgent ? "#B91C1C" : "#92400E", textDecoration: "underline" }}>
-                {remainingDays === 1 ? "1 day (last day)" : `${remainingDays} days`} remaining
-              </strong>.
+              Your organization is currently on a 7-day evaluation trial{formattedRegDate ? ` (Registered: ${formattedRegDate})` : ""} {isExpired ? (
+                <>which has <strong style={{ color: "#B91C1C", textDecoration: "underline" }}>expired (0 days remaining)</strong>.</>
+              ) : (
+                <>with <strong style={{ color: isUrgent ? "#B91C1C" : "#92400E", textDecoration: "underline" }}>{remainingDays === 1 ? "1 day (last day)" : `${remainingDays} days`} remaining</strong>.</>
+              )}
             </>
           )}
         </span>

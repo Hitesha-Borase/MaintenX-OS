@@ -5,6 +5,8 @@ import { formatSuccess } from "../../shared/utils/responseFormatter.js";
 import { UnauthorizedError, ValidationError } from "../../shared/errors/AppError.js";
 import { logAuditTrail } from "../../middleware/auditContext.js";
 import { masterAdminService } from "../master/master.service.js";
+import { db, tenants, subscriptions } from "../../db/index.js";
+import { eq } from "drizzle-orm";
 
 export class AuthController {
   async register(request: FastifyRequest, reply: FastifyReply) {
@@ -107,9 +109,34 @@ export class AuthController {
   }
 
   async me(request: FastifyRequest, reply: FastifyReply) {
+    const user = request.user as any;
+    let tenantData = null;
+    if (user?.tenantId) {
+      try {
+        const [tenant] = await db.select().from(tenants).where(eq(tenants.id, user.tenantId)).limit(1);
+        if (tenant) {
+          const [sub] = await db.select().from(subscriptions).where(eq(subscriptions.tenantId, tenant.id)).limit(1);
+          tenantData = {
+            id: tenant.id,
+            name: tenant.name,
+            slug: tenant.slug,
+            plan: sub?.planName || tenant.plan,
+            createdAt: tenant.createdAt,
+            hasSubscription: Boolean(sub && sub.status === "ACTIVE" && new Date(sub.currentPeriodEnd) > new Date()),
+            subscriptionExpiryDate: sub?.currentPeriodEnd || null,
+            subscriptionStatus: sub?.status || "TRIAL",
+            subscription: sub || null,
+          };
+        }
+      } catch (e: any) {
+        console.warn("Could not fetch tenant in /auth/me:", e.message);
+      }
+    }
+
     return reply.send(
       formatSuccess({
         user: request.user,
+        tenant: tenantData,
       })
     );
   }
