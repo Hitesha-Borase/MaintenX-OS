@@ -68,7 +68,7 @@ class MasterDataService {
     async listCompanies(tenantId) {
         try {
             const res = await database_js_1.db.execute((0, drizzle_orm_1.sql) `
-        SELECT id, code, name, tax_id, currency, hq_location, fiscal_year_start, status
+        SELECT id, code, name, tax_id, currency, hq_location, fiscal_year_start, status, created_at
         FROM public.companies
         ORDER BY created_at DESC
       `);
@@ -88,30 +88,7 @@ class MasterDataService {
             }
         }
         catch (err) {
-            console.warn("DB listCompanies from companies table fallback:", err.message);
-        }
-        if (tenantId) {
-            try {
-                const [tenantRecord] = await database_js_1.db
-                    .select()
-                    .from(tenants_js_1.tenants)
-                    .where((0, drizzle_orm_1.eq)(tenants_js_1.tenants.id, tenantId))
-                    .limit(1);
-                if (tenantRecord) {
-                    return [{
-                            id: tenantRecord.id,
-                            companyId: tenantRecord.id,
-                            code: tenantRecord.slug ? tenantRecord.slug.substring(0, 8).toUpperCase() : "CMP",
-                            name: tenantRecord.name,
-                            taxId: "TAX-" + (tenantRecord.slug ? tenantRecord.slug.substring(0, 6).toUpperCase() : "001"),
-                            currency: tenantRecord.settings?.currency || "USD ($)",
-                            hqLocation: "Corporate Headquarters",
-                            fiscalYearStart: "January",
-                            status: tenantRecord.status === "ACTIVE" ? "Active" : "Suspended",
-                        }];
-                }
-            }
-            catch (_) { }
+            console.warn("DB listCompanies from companies table error:", err.message);
         }
         return [];
     }
@@ -150,47 +127,79 @@ class MasterDataService {
     }
     async updateCompany(tenantId, id, input) {
         try {
-            if (input.name) {
-                await database_js_1.db.execute((0, drizzle_orm_1.sql) `UPDATE public.companies SET name = ${input.name}, updated_at = NOW() WHERE id::text = ${id} OR code = ${id} OR lower(code) = lower(${id})`);
-            }
-            if (input.code) {
-                await database_js_1.db.execute((0, drizzle_orm_1.sql) `UPDATE public.companies SET code = ${input.code.toUpperCase()}, updated_at = NOW() WHERE id::text = ${id} OR code = ${id} OR lower(code) = lower(${id})`);
-            }
-            if (input.taxId) {
-                await database_js_1.db.execute((0, drizzle_orm_1.sql) `UPDATE public.companies SET tax_id = ${input.taxId}, updated_at = NOW() WHERE id::text = ${id} OR code = ${id} OR lower(code) = lower(${id})`);
-            }
-            if (input.currency) {
-                await database_js_1.db.execute((0, drizzle_orm_1.sql) `UPDATE public.companies SET currency = ${input.currency}, updated_at = NOW() WHERE id::text = ${id} OR code = ${id} OR lower(code) = lower(${id})`);
-            }
-            if (input.hqLocation || input.headquarters) {
-                await database_js_1.db.execute((0, drizzle_orm_1.sql) `UPDATE public.companies SET hq_location = ${input.hqLocation || input.headquarters}, updated_at = NOW() WHERE id::text = ${id} OR code = ${id} OR lower(code) = lower(${id})`);
-            }
-            if (input.fiscalYearStart) {
-                await database_js_1.db.execute((0, drizzle_orm_1.sql) `UPDATE public.companies SET fiscal_year_start = ${input.fiscalYearStart}, updated_at = NOW() WHERE id::text = ${id} OR code = ${id} OR lower(code) = lower(${id})`);
-            }
-            if (input.status) {
-                await database_js_1.db.execute((0, drizzle_orm_1.sql) `UPDATE public.companies SET status = ${input.status}, updated_at = NOW() WHERE id::text = ${id} OR code = ${id} OR lower(code) = lower(${id})`);
-            }
-            const res = await database_js_1.db.execute((0, drizzle_orm_1.sql) `SELECT id, code, name, tax_id, currency, hq_location, fiscal_year_start, status FROM public.companies WHERE id::text = ${id} OR code = ${id} OR lower(code) = lower(${id}) LIMIT 1`);
-            if (res.rows && res.rows[0]) {
-                const u = res.rows[0];
+            const existing = await database_js_1.db.execute((0, drizzle_orm_1.sql) `
+        SELECT id, code, name, tax_id, currency, hq_location, fiscal_year_start, status
+        FROM public.companies
+        WHERE id::text = ${id} OR code = ${id} OR lower(code) = lower(${id})
+        LIMIT 1
+      `);
+            const row = existing?.rows?.[0] || (Array.isArray(existing) ? existing[0] : null);
+            if (row) {
+                const newCode = (input.code !== undefined && input.code !== null && String(input.code).trim() !== "") ? String(input.code).trim().toUpperCase() : row.code;
+                const newName = (input.name !== undefined && input.name !== null && String(input.name).trim() !== "") ? String(input.name).trim() : row.name;
+                const newTaxId = (input.taxId !== undefined && input.taxId !== null) ? String(input.taxId).trim() : (row.tax_id || "TAX-001");
+                const newCurrency = (input.currency !== undefined && input.currency !== null) ? String(input.currency).trim() : (row.currency || "USD ($)");
+                const newHq = (input.hqLocation !== undefined ? input.hqLocation : input.headquarters) !== undefined ? String(input.hqLocation || input.headquarters).trim() : (row.hq_location || "Corporate Headquarters");
+                const newFiscal = (input.fiscalYearStart !== undefined && input.fiscalYearStart !== null) ? String(input.fiscalYearStart).trim() : (row.fiscal_year_start || "January");
+                const newStatus = (input.status !== undefined && input.status !== null) ? String(input.status).trim() : (row.status || "Active");
+                const updateRes = await database_js_1.db.execute((0, drizzle_orm_1.sql) `
+          UPDATE public.companies
+          SET code = ${newCode},
+              name = ${newName},
+              tax_id = ${newTaxId},
+              currency = ${newCurrency},
+              hq_location = ${newHq},
+              fiscal_year_start = ${newFiscal},
+              status = ${newStatus},
+              updated_at = NOW()
+          WHERE id = ${row.id}
+          RETURNING *
+        `);
+                const updatedRow = updateRes?.rows?.[0] || row;
                 return {
-                    id: String(u.id),
-                    companyId: String(u.id),
-                    code: u.code,
-                    name: u.name,
-                    taxId: u.tax_id || "TAX-001",
-                    currency: u.currency || "USD ($)",
-                    hqLocation: u.hq_location || "Corporate Headquarters",
-                    fiscalYearStart: u.fiscal_year_start || "January",
-                    status: u.status || "Active",
+                    id: String(updatedRow.id),
+                    companyId: String(updatedRow.id),
+                    code: updatedRow.code,
+                    name: updatedRow.name,
+                    taxId: updatedRow.tax_id || "TAX-001",
+                    currency: updatedRow.currency || "USD ($)",
+                    hqLocation: updatedRow.hq_location || "Corporate Headquarters",
+                    fiscalYearStart: updatedRow.fiscal_year_start || "January",
+                    status: updatedRow.status || "Active",
+                };
+            }
+            else {
+                const newCode = (input.code || `CMP-${Date.now().toString().slice(-4)}`).toUpperCase();
+                const newName = String(input.name || "Company").trim();
+                const newTaxId = input.taxId || "TAX-001";
+                const newCurrency = input.currency || "USD ($)";
+                const newHq = input.hqLocation || input.headquarters || "Corporate Headquarters";
+                const newFiscal = input.fiscalYearStart || "January";
+                const newStatus = input.status || "Active";
+                const insertRes = await database_js_1.db.execute((0, drizzle_orm_1.sql) `
+          INSERT INTO public.companies (code, name, tax_id, currency, hq_location, fiscal_year_start, status, created_at, updated_at)
+          VALUES (${newCode}, ${newName}, ${newTaxId}, ${newCurrency}, ${newHq}, ${newFiscal}, ${newStatus}, NOW(), NOW())
+          RETURNING *
+        `);
+                const insertedRow = insertRes?.rows?.[0];
+                const newId = insertedRow?.id ? String(insertedRow.id) : id;
+                return {
+                    id: newId,
+                    companyId: newId,
+                    code: newCode,
+                    name: newName,
+                    taxId: newTaxId,
+                    currency: newCurrency,
+                    hqLocation: newHq,
+                    fiscalYearStart: newFiscal,
+                    status: newStatus,
                 };
             }
         }
         catch (err) {
             console.warn("DB updateCompany error:", err.message);
+            return { id, ...input };
         }
-        return { id, ...input };
     }
     async deleteCompany(tenantId, id) {
         try {
@@ -198,7 +207,7 @@ class MasterDataService {
         DELETE FROM public.companies
         WHERE id::text = ${id} OR code = ${id} OR lower(code) = lower(${id})
       `);
-            return { id, message: "Company removed" };
+            return { id, message: "Company removed successfully" };
         }
         catch (err) {
             console.warn("DB deleteCompany error:", err.message);
@@ -210,10 +219,19 @@ class MasterDataService {
     // ==========================================
     async listPlants(tenantId) {
         try {
-            const dbPlants = tenantId
-                ? await database_js_1.db.select().from(tenants_js_1.plants).where((0, drizzle_orm_1.eq)(tenants_js_1.plants.tenantId, tenantId)).orderBy((0, drizzle_orm_1.desc)(tenants_js_1.plants.createdAt))
+            let validTenantId = tenantId;
+            if (validTenantId) {
+                const [t] = await database_js_1.db.select({ id: tenants_js_1.tenants.id }).from(tenants_js_1.tenants).where((0, drizzle_orm_1.eq)(tenants_js_1.tenants.id, validTenantId)).limit(1);
+                if (!t)
+                    validTenantId = undefined;
+            }
+            let dbPlants = validTenantId
+                ? await database_js_1.db.select().from(tenants_js_1.plants).where((0, drizzle_orm_1.eq)(tenants_js_1.plants.tenantId, validTenantId)).orderBy((0, drizzle_orm_1.desc)(tenants_js_1.plants.createdAt))
                 : await database_js_1.db.select().from(tenants_js_1.plants).orderBy((0, drizzle_orm_1.desc)(tenants_js_1.plants.createdAt));
-            if (dbPlants) {
+            if (!dbPlants || dbPlants.length === 0) {
+                dbPlants = await database_js_1.db.select().from(tenants_js_1.plants).orderBy((0, drizzle_orm_1.desc)(tenants_js_1.plants.createdAt));
+            }
+            if (dbPlants && dbPlants.length > 0) {
                 return dbPlants.map((p) => ({
                     id: p.id,
                     plantId: p.id,
@@ -222,13 +240,13 @@ class MasterDataService {
                     city: p.city,
                     state: p.state || "",
                     country: p.country || "India",
-                    timezone: p.timezone ? `${p.timezone} (IST)` : "Asia/Kolkata (IST)",
+                    timezone: p.timezone ? (p.timezone.includes("(") ? p.timezone : `${p.timezone} (IST)`) : "Asia/Kolkata (IST)",
                     location: `${p.city}, ${p.state || ""}, ${p.country || ""}`.replace(/,\s*,/g, ",").replace(/,\s*$/, ""),
                     status: p.isActive ? "Active" : "Inactive",
                     isActive: p.isActive,
                     capacity: "350,000 Units/Day",
                     dailyCapacity: "350,000 Units/Day",
-                    linesCount: 3,
+                    linesCount: 0,
                     createdAt: p.createdAt,
                     updatedAt: p.updatedAt,
                 }));
@@ -241,53 +259,70 @@ class MasterDataService {
         return [];
     }
     async createPlant(tenantId, input) {
+        let dbTenantId = tenantId;
+        try {
+            if (dbTenantId) {
+                const [validT] = await database_js_1.db.select({ id: tenants_js_1.tenants.id }).from(tenants_js_1.tenants).where((0, drizzle_orm_1.eq)(tenants_js_1.tenants.id, dbTenantId)).limit(1);
+                if (!validT)
+                    dbTenantId = undefined;
+            }
+            if (!dbTenantId) {
+                const [firstTenant] = await database_js_1.db.select({ id: tenants_js_1.tenants.id }).from(tenants_js_1.tenants).limit(1);
+                dbTenantId = firstTenant?.id;
+            }
+        }
+        catch (e) {
+            console.warn("createPlant resolve tenant error:", e.message);
+        }
         const newId = `PLT-0${inMemoryPlants.length + 1}`;
+        const plantCode = (input.code ? String(input.code).trim().toUpperCase() : `PLT-${Date.now().toString().slice(-4)}`);
+        const plantName = (input.name || "Main Manufacturing Plant").toString().trim();
+        const city = (input.city || (input.location ? input.location.split(',')[0]?.trim() : "Indore") || "Indore").toString().trim();
+        const state = (input.state || (input.location ? input.location.split(',')[1]?.trim() : "Madhya Pradesh") || "Madhya Pradesh").toString().trim();
+        const country = (input.country || (input.location ? input.location.split(',')[2]?.trim() : "India") || "India").toString().trim();
+        const timezone = ((input.timezone || "Asia/Kolkata").replace(/\s*\(.*\)/, "").trim()) || "Asia/Kolkata";
+        const loc = input.location || `${city}, ${state}, ${country}`;
+        const isActive = input.status !== "Inactive" && input.isActive !== false;
         const newPlant = {
             id: newId,
             plantId: newId,
             companyId: input.companyId || "CMP-01",
-            code: input.code ? input.code.toUpperCase() : `PLT-0${inMemoryPlants.length + 1}`,
-            name: input.name,
-            location: input.location || `${input.city || "Indore"}, ${input.country || "India"}`,
-            city: input.city || "Indore",
-            state: input.state || "MP",
-            country: input.country || "India",
-            timezone: input.timezone || "Asia/Kolkata (IST)",
-            capacity: input.dailyCapacity || input.capacity || "300,000 Units/Day",
-            dailyCapacity: input.dailyCapacity || input.capacity || "300,000 Units/Day",
+            code: plantCode,
+            name: plantName,
+            location: loc,
+            city,
+            state,
+            country,
+            timezone: `${timezone} (IST)`,
+            capacity: input.dailyCapacity || input.capacity || "350,000 Units/Day",
+            dailyCapacity: input.dailyCapacity || input.capacity || "350,000 Units/Day",
             operatingShifts: Number(input.operatingShifts) || 3,
-            linesCount: Number(input.linesCount) || 3,
-            status: input.status || "Active",
+            linesCount: Number(input.linesCount) || 0,
+            status: isActive ? "Active" : "Inactive",
         };
-        try {
-            let dbTenantId = tenantId;
-            if (!dbTenantId) {
-                const [t] = await database_js_1.db.select({ id: tenants_js_1.tenants.id }).from(tenants_js_1.tenants).limit(1);
-                dbTenantId = t?.id;
+        if (dbTenantId) {
+            try {
+                const [created] = await database_js_1.db.insert(tenants_js_1.plants).values({
+                    tenantId: dbTenantId,
+                    code: plantCode,
+                    name: plantName,
+                    city,
+                    state,
+                    country,
+                    timezone,
+                    isActive,
+                    createdAt: new Date(),
+                    updatedAt: new Date(),
+                }).returning();
+                if (created) {
+                    newPlant.id = created.id;
+                    newPlant.plantId = created.id;
+                }
             }
-            const city = input.city || (input.location ? input.location.split(',')[0]?.trim() : "Indore") || "Indore";
-            const state = input.state || (input.location ? input.location.split(',')[1]?.trim() : "Madhya Pradesh") || "Madhya Pradesh";
-            const country = input.country || (input.location ? input.location.split(',')[2]?.trim() : "India") || "India";
-            const timezone = (input.timezone || "Asia/Kolkata").replace(/\s*\(.*\)/, "").trim();
-            const [created] = await database_js_1.db.insert(tenants_js_1.plants).values({
-                tenantId: dbTenantId,
-                code: newPlant.code,
-                name: newPlant.name,
-                city,
-                state,
-                country,
-                timezone,
-                isActive: true,
-                createdAt: new Date(),
-                updatedAt: new Date(),
-            }).returning();
-            if (created) {
-                newPlant.id = created.id;
-                newPlant.plantId = created.id;
+            catch (err) {
+                console.error("DB createPlant error:", err.message);
+                throw new Error(`Database error saving plant: ${err.message}`);
             }
-        }
-        catch (err) {
-            console.warn("DB createPlant error:", err.message);
         }
         inMemoryPlants.unshift(newPlant);
         return newPlant;
@@ -356,9 +391,9 @@ class MasterDataService {
     // ==========================================
     async listDepartments(tenantId, plantId) {
         try {
-            let query = (0, drizzle_orm_1.sql) `SELECT id, plant_id, code, name, manager_name, dept_head, cost_center, operating_shifts, status FROM public.departments`;
+            let query = (0, drizzle_orm_1.sql) `SELECT id, plant_id, code, name, dept_head, cost_center, operating_shifts, status, created_at FROM public.departments`;
             if (plantId && plantId !== "ALL") {
-                query = (0, drizzle_orm_1.sql) `SELECT id, plant_id, code, name, manager_name, dept_head, cost_center, operating_shifts, status FROM public.departments WHERE plant_id::text = ${plantId}`;
+                query = (0, drizzle_orm_1.sql) `SELECT id, plant_id, code, name, dept_head, cost_center, operating_shifts, status, created_at FROM public.departments WHERE plant_id = ${plantId}`;
             }
             query = (0, drizzle_orm_1.sql) `${query} ORDER BY created_at ASC`;
             const res = await database_js_1.db.execute(query);
@@ -369,8 +404,8 @@ class MasterDataService {
                 plantId: d.plant_id || "",
                 code: d.code,
                 name: d.name,
-                deptHead: d.dept_head || d.manager_name || "Department Lead",
-                managerName: d.dept_head || d.manager_name || "Department Lead",
+                deptHead: d.dept_head || "Department Lead",
+                managerName: d.dept_head || "Department Lead",
                 costCenter: d.cost_center || "CC-101",
                 operatingShifts: d.operating_shifts || "3 Shifts (24/7 Continuous)",
                 status: d.status || "Active",
@@ -382,30 +417,26 @@ class MasterDataService {
         }
     }
     async createDepartment(tenantId, input) {
-        let resolvedTenantId = tenantId;
-        if (!resolvedTenantId) {
-            const [t] = await database_js_1.db.select({ id: tenants_js_1.tenants.id }).from(tenants_js_1.tenants).limit(1);
-            resolvedTenantId = t?.id;
-        }
         const code = input.code ? String(input.code).trim().toUpperCase() : `DEP-${Date.now().toString().slice(-4)}`;
         const name = String(input.name || "Department").trim();
         const deptHead = input.deptHead || input.managerName || "Department Lead";
         const costCenter = input.costCenter || "CC-101";
         const operatingShifts = input.operatingShifts || "3 Shifts (24/7 Continuous)";
         const status = input.status || "Active";
+        const targetId = input.id || input.departmentId || `DEP-${Date.now().toString().slice(-4)}`;
         const plantId = input.plantId || null;
         try {
             const res = await database_js_1.db.execute((0, drizzle_orm_1.sql) `
-        INSERT INTO public.departments (tenant_id, plant_id, code, name, manager_name, dept_head, cost_center, operating_shifts, status, is_active, created_at)
-        VALUES (${resolvedTenantId || null}, ${plantId}, ${code}, ${name}, ${deptHead}, ${deptHead}, ${costCenter}, ${operatingShifts}, ${status}, ${status === "Active"}, NOW())
+        INSERT INTO public.departments (id, plant_id, code, name, dept_head, cost_center, operating_shifts, status, created_at, updated_at)
+        VALUES (${targetId}, ${plantId}, ${code}, ${name}, ${deptHead}, ${costCenter}, ${operatingShifts}, ${status}, NOW(), NOW())
         RETURNING *
       `);
             const row = res?.rows?.[0] || (Array.isArray(res) ? res[0] : null);
-            const newId = row?.id ? String(row.id) : `DEP-${Date.now().toString().slice(-4)}`;
+            const newId = row?.id ? String(row.id) : targetId;
             return {
                 id: newId,
                 departmentId: newId,
-                plantId: plantId || "PLT-01",
+                plantId: plantId || "",
                 code,
                 name,
                 deptHead,
@@ -428,12 +459,11 @@ class MasterDataService {
           name = COALESCE(${input.name || null}, name),
           code = COALESCE(${input.code ? String(input.code).trim().toUpperCase() : null}, code),
           dept_head = COALESCE(${input.deptHead || input.managerName || null}, dept_head),
-          manager_name = COALESCE(${input.deptHead || input.managerName || null}, manager_name),
           cost_center = COALESCE(${input.costCenter || null}, cost_center),
           operating_shifts = COALESCE(${input.operatingShifts || null}, operating_shifts),
           status = COALESCE(${input.status || null}, status),
-          is_active = COALESCE(${input.status ? input.status === "Active" : null}, is_active),
-          plant_id = COALESCE(${input.plantId || null}, plant_id)
+          plant_id = COALESCE(${input.plantId || null}, plant_id),
+          updated_at = NOW()
         WHERE id::text = ${id} OR code = ${id} OR lower(code) = lower(${id})
       `);
             return { id, ...input };
@@ -482,11 +512,11 @@ class MasterDataService {
                 name: l.name || "Production Line",
                 plantId: l.plant_id ? String(l.plant_id) : "PLT-01",
                 plantName: l.plant_name || "Main Facility",
-                type: l.type || l.line_type || "Continuous Flow",
-                lineType: l.line_type || "BOTTLING",
+                type: l.line_type || l.type || "Continuous Flow",
+                lineType: l.line_type || l.type || "Continuous Flow",
                 nominalSpeedBpm: l.nominal_speed_bpm || 0,
-                ratedSpeed: l.rated_speed || (l.nominal_speed_bpm ? `${(l.nominal_speed_bpm * 60).toLocaleString()} BPH` : "38,000 BPH"),
-                ratedSpeedBPH: l.rated_speed_bph || (l.nominal_speed_bpm ? l.nominal_speed_bpm * 60 : 38000),
+                ratedSpeed: l.rated_speed || (l.nominal_speed_bpm ? `${(l.nominal_speed_bpm * 60).toLocaleString()} BPH` : "—"),
+                ratedSpeedBPH: l.rated_speed_bph || (l.nominal_speed_bpm ? l.nominal_speed_bpm * 60 : 0),
                 status: l.status || "Active",
                 healthScore: l.health_score ?? 95,
                 supervisorId: null,
@@ -518,7 +548,11 @@ class MasterDataService {
             }
             const nominalSpeedBpm = ratedSpeedBPH ? Math.round(ratedSpeedBPH / 60) : 250;
             const status = input.status || "RUNNING";
-            const plantId = (input.plantId && input.plantId.length === 36 && input.plantId.includes("-")) ? input.plantId : null;
+            let plantId = (input.plantId && input.plantId.length === 36 && input.plantId.includes("-")) ? input.plantId : null;
+            if (!plantId) {
+                const [firstPlant] = await database_js_1.db.select({ id: tenants_js_1.plants.id }).from(tenants_js_1.plants).limit(1);
+                plantId = firstPlant?.id || null;
+            }
             const res = await database_js_1.db.execute((0, drizzle_orm_1.sql) `
         INSERT INTO public.production_lines (
           tenant_id, plant_id, code, name, line_type, nominal_speed_bpm, status, health_score, created_at
@@ -529,6 +563,21 @@ class MasterDataService {
       `);
             const row = res?.rows?.[0] || (Array.isArray(res) ? res[0] : null);
             const newId = row?.id ? String(row.id) : `LIN-${Date.now().toString().slice(-4)}`;
+            // Sync to public.lines table as well
+            try {
+                await database_js_1.db.execute((0, drizzle_orm_1.sql) `
+          INSERT INTO public.lines (
+            id, plant_id, code, name, line_type, nominal_speed_bpm, status, health_score, created_at
+          ) VALUES (
+            ${newId}::uuid, ${plantId}, ${code}, ${name}, ${lineType}, ${nominalSpeedBpm}, ${status}, 95, NOW()
+          ) ON CONFLICT (id) DO UPDATE SET
+            plant_id = EXCLUDED.plant_id, name = EXCLUDED.name, code = EXCLUDED.code,
+            line_type = EXCLUDED.line_type, nominal_speed_bpm = EXCLUDED.nominal_speed_bpm, status = EXCLUDED.status;
+        `);
+            }
+            catch (syncErr) {
+                console.warn("Sync to public.lines failed:", syncErr.message);
+            }
             return {
                 id: newId,
                 lineId: newId,
@@ -554,24 +603,41 @@ class MasterDataService {
     async updateLine(tenantId, id, input) {
         try {
             let nominalSpeedBpm = null;
-            if (input.ratedSpeedBPH) {
-                nominalSpeedBpm = Math.round(Number(input.ratedSpeedBPH) / 60);
-            }
-            else if (input.ratedSpeed) {
+            if (input.ratedSpeed !== undefined && input.ratedSpeed !== null && String(input.ratedSpeed).trim() !== "") {
                 const parsed = parseInt(String(input.ratedSpeed).replace(/[^0-9]/g, ""), 10);
-                if (!isNaN(parsed) && parsed > 0)
+                if (!isNaN(parsed) && parsed >= 0)
                     nominalSpeedBpm = Math.round(parsed / 60);
             }
+            else if (input.ratedSpeedBPH !== undefined && input.ratedSpeedBPH !== null) {
+                nominalSpeedBpm = Math.round(Number(input.ratedSpeedBPH) / 60);
+            }
+            const newType = input.type || input.lineType || null;
             await database_js_1.db.execute((0, drizzle_orm_1.sql) `
         UPDATE public.production_lines
         SET 
           name = COALESCE(${input.name || null}, name),
           code = COALESCE(${input.code || input.lineCode || null}, code),
-          line_type = COALESCE(${input.lineType || input.type || null}, line_type),
+          line_type = COALESCE(${newType}, line_type),
           nominal_speed_bpm = COALESCE(${nominalSpeedBpm}, nominal_speed_bpm),
           status = COALESCE(${input.status || null}, status)
         WHERE id::text = ${id} OR code = ${id}
       `);
+            // Sync update to public.lines table
+            try {
+                await database_js_1.db.execute((0, drizzle_orm_1.sql) `
+          UPDATE public.lines
+          SET 
+            name = COALESCE(${input.name || null}, name),
+            code = COALESCE(${input.code || input.lineCode || null}, code),
+            line_type = COALESCE(${newType}, line_type),
+            nominal_speed_bpm = COALESCE(${nominalSpeedBpm}, nominal_speed_bpm),
+            status = COALESCE(${input.status || null}, status)
+          WHERE id::text = ${id} OR code = ${id}
+        `);
+            }
+            catch (syncErr) {
+                console.warn("Sync update to public.lines failed:", syncErr.message);
+            }
             return { id, ...input };
         }
         catch (err) {
@@ -585,6 +651,16 @@ class MasterDataService {
         DELETE FROM public.production_lines
         WHERE id::text = ${id} OR code = ${id}
       `);
+            // Sync delete from public.lines table
+            try {
+                await database_js_1.db.execute((0, drizzle_orm_1.sql) `
+          DELETE FROM public.lines
+          WHERE id::text = ${id} OR code = ${id}
+        `);
+            }
+            catch (syncErr) {
+                console.warn("Sync delete from public.lines failed:", syncErr.message);
+            }
             return { id, message: "Line deleted successfully" };
         }
         catch (err) {
@@ -3487,12 +3563,15 @@ class MasterDataService {
           qs.id,
           qs.tenant_id,
           qs.sku_id,
-          qs.parameter_name,
-          qs.target_value,
-          qs.min_tolerance,
-          qs.max_tolerance,
-          qs.uom,
-          qs.is_ccp,
+          COALESCE(qs.parameter_name, qs.parameter, qs.specification_title, 'Quality Parameter') AS parameter_name,
+          COALESCE(qs.target_value, 0) AS target_value,
+          COALESCE(qs.min_tolerance, 0) AS min_tolerance,
+          COALESCE(qs.max_tolerance, 0) AS max_tolerance,
+          COALESCE(qs.uom, '') AS uom,
+          COALESCE(qs.is_ccp, false) AS is_ccp,
+          COALESCE(qs.criticality, 'Quality Spec') AS criticality,
+          COALESCE(qs.approval_status, 'Approved') AS approval_status,
+          COALESCE(qs.revision, 'R1') AS revision,
           qs.created_at,
           s.sku_code,
           s.name AS sku_name
@@ -3503,7 +3582,7 @@ class MasterDataService {
             const rows = dbRows?.rows || (Array.isArray(dbRows) ? dbRows : []);
             return rows.map((r) => ({
                 id: String(r.id),
-                specId: String(r.id),
+                specId: String(r.id).slice(-8),
                 skuId: r.sku_id ? String(r.sku_id) : "",
                 skuCode: r.sku_code || "SKU-001",
                 skuName: r.sku_name || "Finished Good",
@@ -3513,11 +3592,12 @@ class MasterDataService {
                 min: String(r.min_tolerance ?? "0"),
                 max: String(r.max_tolerance ?? "0"),
                 uom: r.uom || "",
-                criticality: r.is_ccp ? "Critical CCP (HACCP-1)" : "Quality Spec",
+                criticality: r.is_ccp ? "Critical CCP (HACCP-1)" : (r.criticality || "Quality Spec"),
                 isCCP: Boolean(r.is_ccp),
                 testMethod: "Digital Instrument",
                 status: "Active",
-                approvalStatus: "Approved",
+                approvalStatus: r.approval_status || "Approved",
+                revision: r.revision || "R1",
                 createdAt: r.created_at,
             }));
         }
@@ -3552,19 +3632,22 @@ class MasterDataService {
             const min = String(input.min || "0");
             const max = String(input.max || "0");
             const uom = String(input.uom || "").trim();
+            const targetNum = Number(target) || 0;
+            const minNum = Number(min) || 0;
+            const maxNum = Number(max) || 0;
             const isCcp = Boolean(input.isCCP || (input.criticality || "").toLowerCase().includes("ccp"));
             const res = await database_js_1.db.execute((0, drizzle_orm_1.sql) `
         INSERT INTO public.quality_specs (
           tenant_id, sku_id, parameter_name, target_value, min_tolerance, max_tolerance, uom, is_ccp, created_at
         ) VALUES (
-          ${resolvedTenantId || null}, ${skuId}, ${param}, ${target}::numeric, ${min}::numeric, ${max}::numeric, ${uom}, ${isCcp}, NOW()
+          ${resolvedTenantId || null}, ${skuId || null}, ${param}, ${targetNum}, ${minNum}, ${maxNum}, ${uom}, ${isCcp}, NOW()
         ) RETURNING *
       `);
             const row = res?.rows?.[0] || (Array.isArray(res) ? res[0] : null);
             const newId = row?.id ? String(row.id) : `QSP-${Date.now().toString().slice(-4)}`;
             return {
                 id: newId,
-                specId: newId,
+                specId: newId.slice(-8),
                 skuId: skuId ? String(skuId) : "",
                 parameter: param,
                 specificationTitle: param,
@@ -3587,19 +3670,25 @@ class MasterDataService {
     }
     async updateQualitySpec(tenantId, id, input) {
         try {
-            const isUuid = id && id.length === 36 && id.includes("-");
-            const condition = isUuid ? (0, drizzle_orm_1.sql) `id = ${id}::uuid` : (0, drizzle_orm_1.sql) `parameter_name = ${id}`;
             const isCcp = input.criticality ? Boolean(input.criticality.toLowerCase().includes("ccp")) : undefined;
+            const targetVal = input.target !== undefined && input.target !== null ? (Number(input.target) || 0) : null;
+            const minVal = input.min !== undefined && input.min !== null ? (Number(input.min) || 0) : null;
+            const maxVal = input.max !== undefined && input.max !== null ? (Number(input.max) || 0) : null;
             await database_js_1.db.execute((0, drizzle_orm_1.sql) `
         UPDATE public.quality_specs
         SET
           parameter_name = COALESCE(${input.parameter || input.specificationTitle || null}, parameter_name),
-          target_value = COALESCE(${input.target !== undefined ? String(input.target) : null}::numeric, target_value),
-          min_tolerance = COALESCE(${input.min !== undefined ? String(input.min) : null}::numeric, min_tolerance),
-          max_tolerance = COALESCE(${input.max !== undefined ? String(input.max) : null}::numeric, max_tolerance),
+          target_value = COALESCE(${targetVal}, target_value),
+          min_tolerance = COALESCE(${minVal}, min_tolerance),
+          max_tolerance = COALESCE(${maxVal}, max_tolerance),
           uom = COALESCE(${input.uom || null}, uom),
-          is_ccp = COALESCE(${isCcp !== undefined ? isCcp : null}, is_ccp)
-        WHERE ${condition}
+          is_ccp = COALESCE(${isCcp !== undefined ? isCcp : null}, is_ccp),
+          approval_status = COALESCE(${input.approvalStatus || null}, approval_status),
+          updated_at = NOW()
+        WHERE id::text = ${id}
+           OR id::text LIKE '%' || ${id}
+           OR lower(COALESCE(parameter_name, '')) = lower(${id})
+           OR lower(COALESCE(parameter, '')) = lower(${id})
       `);
             return { id, ...input };
         }
@@ -3610,9 +3699,14 @@ class MasterDataService {
     }
     async deleteQualitySpec(tenantId, id) {
         try {
-            const isUuid = id && id.length === 36 && id.includes("-");
-            const condition = isUuid ? (0, drizzle_orm_1.sql) `id = ${id}::uuid` : (0, drizzle_orm_1.sql) `parameter_name = ${id}`;
-            await database_js_1.db.execute((0, drizzle_orm_1.sql) `DELETE FROM public.quality_specs WHERE ${condition}`);
+            await database_js_1.db.execute((0, drizzle_orm_1.sql) `
+        DELETE FROM public.quality_specs
+        WHERE id::text = ${id}
+           OR id::text LIKE '%' || ${id}
+           OR lower(COALESCE(parameter_name, '')) = lower(${id})
+           OR lower(COALESCE(parameter, '')) = lower(${id})
+           OR lower(COALESCE(specification_title, '')) = lower(${id})
+      `);
             return { id, message: "Quality specification deleted" };
         }
         catch (err) {

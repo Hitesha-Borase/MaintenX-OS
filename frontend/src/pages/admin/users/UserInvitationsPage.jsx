@@ -22,10 +22,13 @@ import { StatCard } from "../../../components/common/StatCard";
 import { useAdmin } from "../../../context/AdminContext";
 import { useApp } from "../../../context/AppContext";
 import adminService from "../../../services/adminService";
+import masterDataService from "../../../services/masterDataService";
 
 export function UserInvitationsPage() {
   const { invitations = [], setInvitations, addInvitation, updateInvitation, resendInvitation, deleteInvitation } = useAdmin() || {};
   const { addToast } = useApp ? useApp() : { addToast: () => {} };
+
+  const [departmentsList, setDepartmentsList] = useState([]);
 
   useEffect(() => {
     adminService
@@ -36,6 +39,14 @@ export function UserInvitationsPage() {
         }
       })
       .catch((err) => console.warn("Invitations load:", err.message));
+
+    masterDataService
+      .getDepartments()
+      .then((res) => {
+        const d = res?.data?.data || res?.data || res;
+        if (Array.isArray(d)) setDepartmentsList(d);
+      })
+      .catch((err) => console.warn("Depts load:", err.message));
   }, [setInvitations]);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -47,13 +58,13 @@ export function UserInvitationsPage() {
   const [newInvite, setNewInvite] = useState({
     email: "",
     role: "Quality Analyst",
-    department: "Quality"
+    department: ""
   });
 
   const [editForm, setEditForm] = useState({
     email: "",
     role: "Quality Analyst",
-    department: "Quality",
+    department: "",
     status: "Pending"
   });
 
@@ -62,7 +73,7 @@ export function UserInvitationsPage() {
     setEditForm({
       email: inv.email,
       role: inv.role,
-      department: inv.department || "Quality",
+      department: inv.department || "",
       status: inv.status || "Pending"
     });
   };
@@ -165,7 +176,7 @@ export function UserInvitationsPage() {
       }
       addToast(`Invitation sent to ${newInvite.email} and saved in database!`, "success");
       setIsModalOpen(false);
-      setNewInvite({ email: "", role: "Quality Analyst", department: "Quality" });
+      setNewInvite({ email: "", role: "Quality Analyst", department: "" });
     } catch (err) {
       addToast("Failed to send invitation: " + err.message, "error");
     } finally {
@@ -400,10 +411,21 @@ export function UserInvitationsPage() {
                   onChange={(e) => setNewInvite({ ...newInvite, department: e.target.value })}
                   style={{ backgroundColor: "#FFFFFF" }}
                 >
-                  <option value="Operations">Operations</option>
-                  <option value="Maintenance">Maintenance</option>
-                  <option value="Quality">Quality Assurance</option>
-                  <option value="Warehouse">Warehouse</option>
+                  {departmentsList && departmentsList.length > 0 ? (
+                    <>
+                      <option value="">-- Select Department --</option>
+                      {departmentsList.map((d) => {
+                        const val = typeof d === "string" ? d : (d.name || d.code);
+                        return (
+                          <option key={d.id || d.departmentId || val} value={val}>
+                            {val}
+                          </option>
+                        );
+                      })}
+                    </>
+                  ) : (
+                    <option value="">-- No Departments Registered --</option>
+                  )}
                 </select>
               </div>
 
@@ -571,13 +593,24 @@ export function UserInvitationsPage() {
                       fontSize: "13px"
                     }}
                   >
-                    <option value="Quality">Quality Assurance</option>
-                    <option value="Maintenance">Maintenance</option>
-                    <option value="Production">Production</option>
-                    <option value="Warehouse">Warehouse</option>
-                    <option value="Engineering">Engineering</option>
-                    <option value="Operations">Operations</option>
-                    <option value="Executive">Executive</option>
+                    {departmentsList && departmentsList.length > 0 ? (
+                      <>
+                        <option value="">-- Select Department --</option>
+                        {departmentsList.map((d) => {
+                          const val = typeof d === "string" ? d : (d.name || d.code);
+                          return (
+                            <option key={d.id || d.departmentId || val} value={val}>
+                              {val}
+                            </option>
+                          );
+                        })}
+                      </>
+                    ) : (
+                      <option value="">-- No Departments Registered --</option>
+                    )}
+                    {editForm.department && !departmentsList.some((d) => (d.name || d.code || d) === editForm.department) && (
+                      <option value={editForm.department}>{editForm.department}</option>
+                    )}
                   </select>
                 </div>
               </div>

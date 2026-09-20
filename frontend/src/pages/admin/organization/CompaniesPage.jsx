@@ -234,7 +234,9 @@ export function CompaniesPage() {
                       {c.hqLocation}
                     </td>
                     <td style={{ padding: "12px 16px" }}>
-                      <Badge variant="emerald">{c.status || "Active Primary"}</Badge>
+                      <Badge variant={c.status?.toLowerCase() === "suspended" ? "amber" : c.status?.toLowerCase() === "inactive" ? "rose" : "emerald"}>
+                        {(c.status || "Active").toUpperCase()}
+                      </Badge>
                     </td>
                     <td style={{ padding: "12px 16px", textAlign: "right" }}>
                       <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
@@ -348,6 +350,36 @@ export function CompaniesPage() {
                 />
               </div>
 
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div>
+                  <label className="form-label">Status</label>
+                  <select
+                    value={newComp.status || "Active"}
+                    onChange={(e) => setNewComp({ ...newComp, status: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  >
+                    <option value="Active">Active</option>
+                    <option value="Suspended">Suspended</option>
+                    <option value="Inactive">Inactive</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="form-label">Fiscal Year Start</label>
+                  <select
+                    value={newComp.fiscalYearStart || "January"}
+                    onChange={(e) => setNewComp({ ...newComp, fiscalYearStart: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  >
+                    <option value="January">January</option>
+                    <option value="April">April</option>
+                    <option value="July">July</option>
+                    <option value="October">October</option>
+                  </select>
+                </div>
+              </div>
+
               <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "8px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
                 <Button variant="secondary" onClick={() => setIsModalOpen(false)}>
                   Cancel
@@ -378,16 +410,29 @@ export function CompaniesPage() {
             </div>
 
             <form onSubmit={handleEditSubmit} style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
-              <div>
-                <label className="form-label">Legal Name *</label>
-                <input
-                  type="text"
-                  required
-                  value={editingComp.name}
-                  onChange={(e) => setEditingComp({ ...editingComp, name: e.target.value })}
-                  className="form-input"
-                  style={{ backgroundColor: "#FFFFFF" }}
-                />
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "12px" }}>
+                <div>
+                  <label className="form-label">Entity Code *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingComp.code || ""}
+                    onChange={(e) => setEditingComp({ ...editingComp, code: e.target.value.toUpperCase() })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+                <div>
+                  <label className="form-label">Legal Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingComp.name || ""}
+                    onChange={(e) => setEditingComp({ ...editingComp, name: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
@@ -395,7 +440,7 @@ export function CompaniesPage() {
                   <label className="form-label">Tax ID / EIN</label>
                   <input
                     type="text"
-                    value={editingComp.taxId}
+                    value={editingComp.taxId || ""}
                     onChange={(e) => setEditingComp({ ...editingComp, taxId: e.target.value })}
                     className="form-input"
                     style={{ backgroundColor: "#FFFFFF" }}
@@ -405,7 +450,7 @@ export function CompaniesPage() {
                   <label className="form-label">Functional Currency</label>
                   <input
                     type="text"
-                    value={editingComp.currency}
+                    value={editingComp.currency || ""}
                     onChange={(e) => setEditingComp({ ...editingComp, currency: e.target.value })}
                     className="form-input"
                     style={{ backgroundColor: "#FFFFFF" }}
@@ -417,11 +462,41 @@ export function CompaniesPage() {
                 <label className="form-label">Headquarters Address</label>
                 <input
                   type="text"
-                  value={editingComp.hqLocation}
+                  value={editingComp.hqLocation || ""}
                   onChange={(e) => setEditingComp({ ...editingComp, hqLocation: e.target.value })}
                   className="form-input"
                   style={{ backgroundColor: "#FFFFFF" }}
                 />
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div>
+                  <label className="form-label">Status</label>
+                  <select
+                    value={editingComp.status || "Active"}
+                    onChange={(e) => setEditingComp({ ...editingComp, status: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  >
+                    <option value="Active">Active</option>
+                    <option value="Suspended">Suspended</option>
+                    <option value="Inactive">Inactive</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="form-label">Fiscal Year Start</label>
+                  <select
+                    value={editingComp.fiscalYearStart || "January"}
+                    onChange={(e) => setEditingComp({ ...editingComp, fiscalYearStart: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  >
+                    <option value="January">January</option>
+                    <option value="April">April</option>
+                    <option value="July">July</option>
+                    <option value="October">October</option>
+                  </select>
+                </div>
               </div>
 
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "10px", marginTop: "8px", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px" }}>
@@ -437,8 +512,8 @@ export function CompaniesPage() {
                   <Button variant="secondary" onClick={() => setEditingComp(null)}>
                     Cancel
                   </Button>
-                  <Button variant="primary" type="submit">
-                    Update Entity
+                  <Button variant="primary" type="submit" disabled={isSubmitting}>
+                    {isSubmitting ? "Updating..." : "Update Entity"}
                   </Button>
                 </div>
               </div>
@@ -474,7 +549,9 @@ export function CompaniesPage() {
                 <div>
                   <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Status</div>
                   <div style={{ marginTop: "4px" }}>
-                    <Badge variant="emerald">{viewingComp.status || "Active Primary"}</Badge>
+                    <Badge variant={viewingComp.status?.toLowerCase() === "suspended" ? "amber" : viewingComp.status?.toLowerCase() === "inactive" ? "rose" : "emerald"}>
+                      {(viewingComp.status || "Active").toUpperCase()}
+                    </Badge>
                   </div>
                 </div>
               </div>

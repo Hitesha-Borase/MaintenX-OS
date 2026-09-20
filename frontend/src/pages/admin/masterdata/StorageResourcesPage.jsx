@@ -23,12 +23,47 @@ import { useApp } from "../../../context/AppContext";
 import masterDataService from "../../../services/masterDataService";
 
 export function StorageResourcesPage() {
-  const { storageResources = [], addStorageResource, updateStorageResource, deleteStorageResource, plants = [], activePlantId } = useMasterData();
+  const {
+    storageResources = [],
+    setStorageResources,
+    storageTypes = [],
+    setStorageTypes,
+    addStorageResource,
+    updateStorageResource,
+    deleteStorageResource,
+    plants = [],
+    activePlantId
+  } = useMasterData();
   const { addToast } = useApp();
 
+  const fetchStorageResources = React.useCallback(async () => {
+    try {
+      const res = await masterDataService.getStorageResources(activePlantId);
+      const data = res?.data?.data !== undefined ? res.data.data : (res?.data !== undefined ? res.data : res);
+      if (Array.isArray(data) && typeof setStorageResources === "function") {
+        setStorageResources(data);
+      }
+    } catch (err) {
+      console.warn("Storage resources load error:", err.message);
+    }
+  }, [activePlantId, setStorageResources]);
+
+  const fetchStorageTypes = React.useCallback(async () => {
+    try {
+      const res = await masterDataService.getStorageTypes();
+      const data = res?.data?.data !== undefined ? res.data.data : (res?.data !== undefined ? res.data : res);
+      if (Array.isArray(data) && typeof setStorageTypes === "function") {
+        setStorageTypes(data);
+      }
+    } catch (err) {
+      console.warn("Storage types load error:", err.message);
+    }
+  }, [setStorageTypes]);
+
   useEffect(() => {
-    masterDataService.getStorageResources(activePlantId).catch((err) => console.warn("Storage resources load:", err.message));
-  }, [activePlantId]);
+    fetchStorageResources();
+    fetchStorageTypes();
+  }, [fetchStorageResources, fetchStorageTypes]);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [plantFilter, setPlantFilter] = useState("ALL");
@@ -38,14 +73,28 @@ export function StorageResourcesPage() {
   const [viewingRes, setViewingRes] = useState(null);
 
   const [newRes, setNewRes] = useState({
-    plantId: activePlantId || "PLT-01",
-    resourceType: "Selective Pallet Rack",
+    plantId: plants[0]?.id || activePlantId || "",
+    resourceType: storageTypes[0]?.name || "Selective Pallet Rack",
     resourceCode: "",
     name: "",
     capacityUnit: "Pallet Positions",
     totalCapacity: 500,
     temperatureZone: "Ambient (18°C - 24°C)"
   });
+
+  const handleOpenAddModal = () => {
+    const nextCode = `STR-${(storageResources.length + 1).toString().padStart(2, "0")}`;
+    setNewRes({
+      plantId: plants[0]?.id || activePlantId || "",
+      resourceType: storageTypes[0]?.name || "Selective Pallet Rack",
+      resourceCode: nextCode,
+      name: "",
+      capacityUnit: "Pallet Positions",
+      totalCapacity: 500,
+      temperatureZone: "Ambient (18°C - 24°C)"
+    });
+    setIsModalOpen(true);
+  };
 
   const filteredResources = useMemo(() => {
     return storageResources.filter((r) => {
@@ -73,6 +122,7 @@ export function StorageResourcesPage() {
     try {
       const created = await addStorageResource({
         ...newRes,
+        plantId: newRes.plantId || plants[0]?.id || activePlantId,
         resourceCode: newRes.resourceCode || `STR-${(storageResources.length + 1).toString().padStart(2, "0")}`,
         totalCapacity: Number(newRes.totalCapacity) || 400
       });
@@ -80,14 +130,15 @@ export function StorageResourcesPage() {
       addToast(`Storage Resource "${created?.resourceCode || newRes.resourceCode}" registered!`, "success");
       setIsModalOpen(false);
       setNewRes({
-        plantId: activePlantId || "PLT-01",
-        resourceType: "Selective Pallet Rack",
+        plantId: plants[0]?.id || activePlantId || "",
+        resourceType: storageTypes[0]?.name || "Selective Pallet Rack",
         resourceCode: "",
         name: "",
         capacityUnit: "Pallet Positions",
         totalCapacity: 500,
         temperatureZone: "Ambient (18°C - 24°C)"
       });
+      fetchStorageResources();
     } catch (err) {
       addToast(`Failed to register storage resource: ${err.message}`, "error");
     }
@@ -138,7 +189,7 @@ export function StorageResourcesPage() {
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-          <Button variant="primary" icon={Plus} onClick={() => setIsModalOpen(true)} style={{ fontSize: "12px", padding: "7px 12px" }}>
+          <Button variant="primary" icon={Plus} onClick={handleOpenAddModal} style={{ fontSize: "12px", padding: "7px 12px" }}>
             + Add Storage Resource
           </Button>
         </div>
@@ -253,10 +304,18 @@ export function StorageResourcesPage() {
               style={{ fontSize: "12px", padding: "6px 10px", width: "auto", backgroundColor: "#FFFFFF" }}
             >
               <option value="ALL">All Storage Types</option>
-              <option value="Jacketed Silo">Jacketed Silo</option>
-              <option value="Selective Pallet Rack">Selective Pallet Rack</option>
-              <option value="Refrigerated Staging Bay">Refrigerated Staging Bay</option>
-              <option value="Packaging Mezzanine">Packaging Mezzanine</option>
+              {storageTypes.length > 0 ? (
+                storageTypes.map((t) => (
+                  <option key={t.id || t.typeCode} value={t.name}>{t.name}</option>
+                ))
+              ) : (
+                <>
+                  <option value="Jacketed Silo">Jacketed Silo</option>
+                  <option value="Selective Pallet Rack">Selective Pallet Rack</option>
+                  <option value="Refrigerated Staging Bay">Refrigerated Staging Bay</option>
+                  <option value="Packaging Mezzanine">Packaging Mezzanine</option>
+                </>
+              )}
             </select>
           </div>
         </div>
@@ -288,7 +347,7 @@ export function StorageResourcesPage() {
                   const code = r.resourceCode || r.code || r.storageId || r.id;
                   const type = r.resourceType || r.type;
                   const temp = r.temperatureZone || r.tempControl;
-                  const plantName = plants.find((p) => p.id === r.plantId)?.name?.split(" - ")[0] || "Indore Plant 1";
+                  const plantName = plants.find((p) => p.id === r.plantId)?.name?.split(" - ")[0] || r.plantName || (r.plantId ? `Plant (${r.plantId})` : "Default Plant");
                   return (
                     <tr key={r.resourceId || r.id} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
                       <td style={{ padding: "12px 16px", fontFamily: "var(--font-mono)", fontWeight: 800, color: "#8C5B23" }}>
@@ -414,10 +473,18 @@ export function StorageResourcesPage() {
                     className="form-input"
                     style={{ backgroundColor: "#FFFFFF" }}
                   >
-                    <option value="Selective Pallet Rack">Selective Pallet Rack</option>
-                    <option value="Jacketed Silo">Jacketed Silo</option>
-                    <option value="Refrigerated Staging Bay">Refrigerated Staging Bay</option>
-                    <option value="Packaging Mezzanine">Packaging Mezzanine</option>
+                    {storageTypes.length > 0 ? (
+                      storageTypes.map((t) => (
+                        <option key={t.id || t.typeCode} value={t.name}>{t.name}</option>
+                      ))
+                    ) : (
+                      <>
+                        <option value="Selective Pallet Rack">Selective Pallet Rack</option>
+                        <option value="Jacketed Silo">Jacketed Silo</option>
+                        <option value="Refrigerated Staging Bay">Refrigerated Staging Bay</option>
+                        <option value="Packaging Mezzanine">Packaging Mezzanine</option>
+                      </>
+                    )}
                   </select>
                 </div>
               </div>
@@ -506,15 +573,23 @@ export function StorageResourcesPage() {
                 <div>
                   <label className="form-label">Storage Type</label>
                   <select
-                    value={editingRes.resourceType || editingRes.type}
+                    value={editingRes.resourceType || editingRes.type || "Selective Pallet Rack"}
                     onChange={(e) => setEditingRes({ ...editingRes, resourceType: e.target.value, type: e.target.value })}
                     className="form-input"
                     style={{ backgroundColor: "#FFFFFF" }}
                   >
-                    <option value="Selective Pallet Rack">Selective Pallet Rack</option>
-                    <option value="Jacketed Silo">Jacketed Silo</option>
-                    <option value="Refrigerated Staging Bay">Refrigerated Staging Bay</option>
-                    <option value="Packaging Mezzanine">Packaging Mezzanine</option>
+                    {storageTypes.length > 0 ? (
+                      storageTypes.map((t) => (
+                        <option key={t.id || t.typeCode} value={t.name}>{t.name}</option>
+                      ))
+                    ) : (
+                      <>
+                        <option value="Selective Pallet Rack">Selective Pallet Rack</option>
+                        <option value="Jacketed Silo">Jacketed Silo</option>
+                        <option value="Refrigerated Staging Bay">Refrigerated Staging Bay</option>
+                        <option value="Packaging Mezzanine">Packaging Mezzanine</option>
+                      </>
+                    )}
                   </select>
                 </div>
                 <div>

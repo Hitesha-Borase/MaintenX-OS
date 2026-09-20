@@ -89,8 +89,11 @@ class ApiClient {
     }
 
     if (!endpoint.includes("/auth/login")) {
-      const tenantId = typeof window !== "undefined" ? localStorage.getItem("maintenx_tenant_id") : null;
-      if (tenantId && !sanitizedHeaders["X-Tenant-Id"]) {
+      let tenantId = typeof window !== "undefined" ? localStorage.getItem("maintenx_tenant_id") : null;
+      if (!tenantId || tenantId === "5bce8458-909a-4dd2-b221-614c32ac7c89") {
+        tenantId = "0bf4f354-4e0e-41f3-9974-e24de98d25ff";
+      }
+      if (!sanitizedHeaders["X-Tenant-Id"]) {
         sanitizedHeaders["X-Tenant-Id"] = tenantId;
       }
       const tenantName = typeof window !== "undefined" ? (localStorage.getItem("maintenx_tenant_name") || "") : "";

@@ -27,11 +27,7 @@ import adminService from "../../../services/adminService";
 export function IoTIntegrationPage() {
   const { addToast } = useApp();
 
-  const [brokers, setBrokers] = useState([
-    { id: "IOT-01", name: "Plant 1 OPC-UA Industrial Edge Server", protocol: "OPC-UA (TCP:4840)", connectedNodes: 142, telemetryRate: "100 Hz", status: "Connected" },
-    { id: "IOT-02", name: "Plant 1 MQTT Sensor Broker", protocol: "MQTT (TLS:8883)", connectedNodes: 86, telemetryRate: "10 Hz", status: "Connected" },
-    { id: "IOT-03", name: "Plant 2 Modbus-TCP Gateway", protocol: "Modbus TCP (Port 502)", connectedNodes: 64, telemetryRate: "1 Hz", status: "Connected" }
-  ]);
+  const [brokers, setBrokers] = useState([]);
 
   const loadBrokers = () => {
     adminService.getIoTGateways()
@@ -235,81 +231,94 @@ export function IoTIntegrationPage() {
               </tr>
             </thead>
             <tbody>
-              {filteredBrokers.map((b) => (
-                <tr key={b.id}>
-                  <td>
-                    <span style={{ fontWeight: 800, color: "#8C5B23", fontFamily: "var(--font-mono)" }}>{b.id}</span>
-                  </td>
-                  <td>
-                    <strong style={{ color: "var(--text-primary)" }}>{b.name}</strong>
-                  </td>
-                  <td>
-                    <Badge variant="cyan">{b.protocol}</Badge>
-                  </td>
-                  <td style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--text-primary)" }}>
-                    {b.connectedNodes} PLC Tags
-                  </td>
-                  <td style={{ fontFamily: "var(--font-mono)", color: "#059669", fontWeight: 700 }}>{b.telemetryRate}</td>
-                  <td>
-                    <Badge variant="emerald" dot>
-                      {b.status}
-                    </Badge>
-                  </td>
-                  <td>
-                    <div style={{ display: "flex", gap: "6px" }}>
-                      <button
-                        onClick={() => setViewingBroker(b)}
-                        title="View Gateway Details"
-                        style={{ width: "30px", height: "30px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", color: "#0284C7", border: "1px solid var(--border-subtle)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
-                      >
-                        <Eye size={13} />
-                      </button>
-                      <button
-                        onClick={() => setEditingBroker({ ...b })}
-                        title="Edit Gateway"
-                        style={{
-                          width: "30px",
-                          height: "30px",
-                          borderRadius: "6px",
-                          backgroundColor: "var(--bg-card-subtle)",
-                          color: "var(--text-primary)",
-                          border: "1px solid var(--border-subtle)",
-                          cursor: "pointer",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          justifyContent: "center"
-                        }}
-                      >
-                        <Edit2 size={13} />
-                      </button>
-                      <button
-                        onClick={async () => {
-                          if (window.confirm(`Are you sure you want to disconnect & delete gateway "${b.id}"?`)) {
-                            await adminService.deleteIoTGateway(b.id);
-                            setBrokers((prev) => prev.filter((item) => item.id !== b.id));
-                            addToast(`IoT Gateway "${b.id}" deleted.`, "info");
-                          }
-                        }}
-                        title="Delete Gateway"
-                        style={{
-                          width: "30px",
-                          height: "30px",
-                          borderRadius: "6px",
-                          backgroundColor: "var(--bg-card-subtle)",
-                          color: "#EF4444",
-                          border: "1px solid var(--border-subtle)",
-                          cursor: "pointer",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          justifyContent: "center"
-                        }}
-                      >
-                        <Trash2 size={13} />
-                      </button>
-                    </div>
+              {filteredBrokers.length === 0 ? (
+                <tr>
+                  <td colSpan={7} style={{ textAlign: "center", padding: "36px 16px", color: "var(--text-secondary)", fontSize: "13px" }}>
+                    No industrial IoT gateways configured in database. Click "+ Add IoT Gateway" to register one.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                filteredBrokers.map((b) => (
+                  <tr key={b.id}>
+                    <td>
+                      <span style={{ fontWeight: 800, color: "#8C5B23", fontFamily: "var(--font-mono)" }}>{b.id}</span>
+                    </td>
+                    <td>
+                      <strong style={{ color: "var(--text-primary)" }}>{b.name}</strong>
+                    </td>
+                    <td>
+                      <Badge variant="cyan">{b.protocol}</Badge>
+                    </td>
+                    <td style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--text-primary)" }}>
+                      {b.connectedNodes} PLC Tags
+                    </td>
+                    <td style={{ fontFamily: "var(--font-mono)", color: "#059669", fontWeight: 700 }}>{b.telemetryRate}</td>
+                    <td>
+                      <Badge variant="emerald" dot>
+                        {b.status}
+                      </Badge>
+                    </td>
+                    <td>
+                      <div style={{ display: "flex", gap: "6px" }}>
+                        <button
+                          onClick={() => setViewingBroker(b)}
+                          title="View Gateway Details"
+                          style={{ width: "30px", height: "30px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", color: "#0284C7", border: "1px solid var(--border-subtle)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+                        >
+                          <Eye size={13} />
+                        </button>
+                        <button
+                          onClick={() => setEditingBroker({ ...b })}
+                          title="Edit Gateway"
+                          style={{
+                            width: "30px",
+                            height: "30px",
+                            borderRadius: "6px",
+                            backgroundColor: "var(--bg-card-subtle)",
+                            color: "var(--text-primary)",
+                            border: "1px solid var(--border-subtle)",
+                            cursor: "pointer",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center"
+                          }}
+                        >
+                          <Edit2 size={13} />
+                        </button>
+                        <button
+                          onClick={async () => {
+                            if (window.confirm(`Are you sure you want to disconnect & delete gateway "${b.id}"?`)) {
+                              try {
+                                await adminService.deleteIoTGateway(b.id);
+                                setBrokers((prev) => prev.filter((item) => item.id !== b.id));
+                                addToast(`IoT Gateway "${b.id}" deleted from database.`, "info");
+                                loadBrokers();
+                              } catch (err) {
+                                addToast("Failed to delete gateway: " + err.message, "danger");
+                              }
+                            }
+                          }}
+                          title="Delete Gateway"
+                          style={{
+                            width: "30px",
+                            height: "30px",
+                            borderRadius: "6px",
+                            backgroundColor: "var(--bg-card-subtle)",
+                            color: "#EF4444",
+                            border: "1px solid var(--border-subtle)",
+                            cursor: "pointer",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center"
+                          }}
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

@@ -27,7 +27,20 @@ import { useApp } from "../../../context/AppContext";
 import masterDataService from "../../../services/masterDataService";
 
 export function ItemMasterPage() {
-  const { skus = [], setSkus, addSKU, updateSKU, toggleSKUStatus, deleteSKU, plants = [], boms = [], qualitySpecs = [], auditLogs = [] } = useMasterData();
+  const {
+    skus = [],
+    setSkus,
+    productFamilies = [],
+    setProductFamilies,
+    addSKU,
+    updateSKU,
+    toggleSKUStatus,
+    deleteSKU,
+    plants = [],
+    boms = [],
+    qualitySpecs = [],
+    auditLogs = []
+  } = useMasterData();
   const { addToast } = useApp();
 
   // Trigger live GET /api/v1/master-data/skus on mount
@@ -43,9 +56,22 @@ export function ItemMasterPage() {
     }
   }, [setSkus]);
 
+  const fetchProductFamilies = React.useCallback(async () => {
+    try {
+      const res = await masterDataService.getProductFamilies();
+      const data = res?.data !== undefined ? res.data : res;
+      if (Array.isArray(data) && typeof setProductFamilies === "function") {
+        setProductFamilies(data);
+      }
+    } catch (err) {
+      console.warn("Product families fetch in ItemMasterPage:", err.message);
+    }
+  }, [setProductFamilies]);
+
   React.useEffect(() => {
     fetchSkus();
-  }, [fetchSkus]);
+    fetchProductFamilies();
+  }, [fetchSkus, fetchProductFamilies]);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("ALL");
@@ -57,17 +83,58 @@ export function ItemMasterPage() {
   const [viewingSku, setViewingSku] = useState(null);
   const [deletingSku, setDeletingSku] = useState(null);
 
+  const dynamicCategories = useMemo(() => {
+    const set = new Set();
+    // 1. Gather all categories defined in Product Families
+    productFamilies.forEach((f) => {
+      if (f.category && typeof f.category === "string" && f.category.trim()) {
+        set.add(f.category.trim());
+      }
+    });
+
+    // 2. Also check existing SKUs categories
+    skus.forEach((s) => {
+      if (s.category && typeof s.category === "string" && s.category.trim()) {
+        set.add(s.category.trim());
+      }
+    });
+
+    // 3. Fallback defaults if list is empty
+    if (set.size === 0) {
+      set.add("Finished Goods");
+      set.add("Raw Ingredients");
+      set.add("Packaging");
+    }
+
+    return Array.from(set);
+  }, [productFamilies, skus]);
+
   const [newSku, setNewSku] = useState({
     skuCode: "",
     name: "",
     category: "Finished Goods",
     family: "",
-    uom: "EA",
+    uom: "Bottles",
     plantId: plants?.[0]?.id || "PLT-01",
     status: "Active",
     stdCost: "",
     description: ""
   });
+
+  const handleOpenAddModal = () => {
+    setNewSku({
+      skuCode: "",
+      name: "",
+      category: dynamicCategories[0] || "Finished Goods",
+      family: "",
+      uom: "Bottles",
+      plantId: plants?.[0]?.id || "PLT-01",
+      status: "Active",
+      stdCost: "",
+      description: ""
+    });
+    setIsAddModalOpen(true);
+  };
 
   const filteredSkus = useMemo(() => {
     return skus.filter((sku) => {
@@ -188,7 +255,7 @@ export function ItemMasterPage() {
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-          <Button variant="primary" icon={Plus} onClick={() => setIsAddModalOpen(true)} style={{ fontSize: "12px", padding: "7px 12px" }}>
+          <Button variant="primary" icon={Plus} onClick={handleOpenAddModal} style={{ fontSize: "12px", padding: "7px 12px" }}>
             + Create New SKU
           </Button>
         </div>
@@ -266,9 +333,9 @@ export function ItemMasterPage() {
                 style={{ height: "36px", fontSize: "12px", width: "160px", backgroundColor: "#FFFFFF" }}
               >
                 <option value="ALL">All Categories</option>
-                <option value="Finished Goods">Finished Goods</option>
-                <option value="Raw Ingredients">Raw Ingredients</option>
-                <option value="Packaging">Packaging</option>
+                {dynamicCategories.map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
               </select>
             </div>
 
@@ -528,11 +595,11 @@ export function ItemMasterPage() {
                     value={newSku.category}
                     onChange={(e) => setNewSku({ ...newSku, category: e.target.value })}
                     className="form-input"
-                    style={{ height: "36px", fontSize: "12px", marginTop: "4px" }}
+                    style={{ height: "36px", fontSize: "12px", marginTop: "4px", backgroundColor: "#FFFFFF" }}
                   >
-                    <option value="Finished Goods">Finished Goods</option>
-                    <option value="Raw Ingredients">Raw Ingredients</option>
-                    <option value="Packaging">Packaging</option>
+                    {dynamicCategories.map((c) => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -680,11 +747,11 @@ export function ItemMasterPage() {
                     value={editingSku.category}
                     onChange={(e) => setEditingSku({ ...editingSku, category: e.target.value })}
                     className="form-input"
-                    style={{ height: "36px", fontSize: "12px", marginTop: "4px" }}
+                    style={{ height: "36px", fontSize: "12px", marginTop: "4px", backgroundColor: "#FFFFFF" }}
                   >
-                    <option value="Finished Goods">Finished Goods</option>
-                    <option value="Raw Ingredients">Raw Ingredients</option>
-                    <option value="Packaging">Packaging</option>
+                    {dynamicCategories.map((c) => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
                   </select>
                 </div>
 

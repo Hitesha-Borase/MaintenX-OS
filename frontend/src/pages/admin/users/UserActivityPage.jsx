@@ -31,6 +31,7 @@ export function UserActivityPage() {
     setActivityLogs,
     fetchActivityLogs,
     deleteActivityLog,
+    clearAllActivityLogs,
     createActivityLog,
     updateActivityLog,
   } = useAdmin() || {};
@@ -38,6 +39,7 @@ export function UserActivityPage() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isClearingAll, setIsClearingAll] = useState(false);
   const [viewingLog, setViewingLog] = useState(null);
   const [deletingLog, setDeletingLog] = useState(null);
   const [editingLog, setEditingLog] = useState(null);
@@ -55,18 +57,28 @@ export function UserActivityPage() {
     category: "Security",
   });
 
-  useEffect(() => {
-    if (fetchActivityLogs) {
-      fetchActivityLogs(searchQuery);
+  const [localLogs, setLocalLogs] = useState([]);
+
+  const loadLogs = React.useCallback(async (q = "") => {
+    try {
+      const data = await adminService.getActivityLogs(q);
+      if (Array.isArray(data)) {
+        if (setActivityLogs) setActivityLogs(data);
+        setLocalLogs(data);
+      }
+    } catch (err) {
+      console.warn("Live activity logs fetch error:", err.message);
     }
-  }, [searchQuery]);
+  }, [setActivityLogs]);
+
+  useEffect(() => {
+    loadLogs(searchQuery);
+  }, [searchQuery, loadLogs]);
 
   const handleRefresh = async () => {
     try {
       setIsRefreshing(true);
-      if (fetchActivityLogs) {
-        await fetchActivityLogs(searchQuery);
-      }
+      await loadLogs(searchQuery);
     } finally {
       setTimeout(() => setIsRefreshing(false), 400);
     }
@@ -91,6 +103,27 @@ export function UserActivityPage() {
       addToast("Failed to delete log: " + err.message, "error");
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleClearAll = async () => {
+    if (!window.confirm("Are you sure you want to clear all user activity and audit stream logs? This will empty the activity log.")) {
+      return;
+    }
+    try {
+      setIsClearingAll(true);
+      if (clearAllActivityLogs) {
+        await clearAllActivityLogs();
+      } else {
+        await adminService.clearAllActivityLogs();
+        if (setActivityLogs) setActivityLogs([]);
+      }
+      if (fetchActivityLogs) await fetchActivityLogs("");
+      addToast("All user activity stream and audit logs cleared successfully!", "success");
+    } catch (err) {
+      addToast("Failed to clear activity logs: " + err.message, "error");
+    } finally {
+      setIsClearingAll(false);
     }
   };
 
@@ -147,7 +180,9 @@ export function UserActivityPage() {
     }
   };
 
-  const filteredLogs = activityLogs.filter((l) => {
+  const displayLogs = (activityLogs && activityLogs.length > 0) ? activityLogs : localLogs;
+
+  const filteredLogs = displayLogs.filter((l) => {
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
     return (
@@ -190,6 +225,17 @@ export function UserActivityPage() {
           >
             {isRefreshing ? "Refreshing..." : "Refresh Stream"}
           </Button>
+          {displayLogs.length > 0 && (
+            <Button
+              variant="danger"
+              icon={Trash2}
+              onClick={handleClearAll}
+              disabled={isClearingAll}
+              style={{ fontSize: "12px", padding: "7px 12px", backgroundColor: "#EF4444", color: "#FFFFFF" }}
+            >
+              {isClearingAll ? "Clearing..." : "Clear All Logs"}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -207,7 +253,7 @@ export function UserActivityPage() {
       >
         <StatCard
           title="Events Streamed"
-          value={activityLogs.length.toString()}
+          value={displayLogs.length.toString()}
           unit="Real-time"
           trend={{ value: "Immutable audit ledger", isPositive: true, text: "" }}
           icon={Activity}
@@ -299,7 +345,9 @@ export function UserActivityPage() {
                     <td style={{ fontFamily: "var(--font-mono)", fontSize: "11px", color: "var(--text-muted)" }}>
                       {l.ip}
                     </td>
-                    <td style={{ fontSize: "11px", color: "var(--text-secondary)" }}>{l.timestamp}</td>
+                    <td style={{ fontSize: "11px", color: "var(--text-secondary)" }}>
+                      {l.timestamp || (l.createdAt ? new Date(l.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "Just now")}
+                    </td>
                     <td>
                       <div style={{ display: "flex", gap: "5px" }}>
                         <button
@@ -411,7 +459,9 @@ export function UserActivityPage() {
 
               <div>
                 <span style={{ fontSize: "11px", color: "var(--text-muted)", display: "block" }}>Recorded Timestamp</span>
-                <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>{viewingLog.timestamp}</span>
+                <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
+                  {viewingLog.timestamp || (viewingLog.createdAt ? new Date(viewingLog.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "Just now")}
+                </span>
               </div>
 
               <div style={{ borderTop: "1px solid var(--border-subtle)", paddingTop: "14px", display: "flex", justifyContent: "flex-end" }}>

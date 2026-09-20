@@ -4,6 +4,35 @@ import { users, roles, userRoles, plants, productionLines, skus, tenants, auditL
 import { eq, sql, inArray, desc, and, or, isNull } from "drizzle-orm";
 import { ValidationError, ConflictError, NotFoundError } from "../../shared/errors/AppError.js";
 
+function formatAuditTime(rawDate: any): string {
+  if (!rawDate) return "Just now";
+  try {
+    const d = rawDate instanceof Date ? rawDate : new Date(rawDate);
+    if (isNaN(d.getTime())) return String(rawDate);
+    return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  } catch (_) {
+    return "Just now";
+  }
+}
+
+function formatAuditDateTime(rawDate: any): string {
+  if (!rawDate) return "-";
+  try {
+    const d = rawDate instanceof Date ? rawDate : new Date(rawDate);
+    if (isNaN(d.getTime())) return String(rawDate);
+    return d.toLocaleString("en-US", {
+      month: "short",
+      day: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    });
+  } catch (_) {
+    return String(rawDate);
+  }
+}
+
 
 interface InvitationRecord {
   id: string;
@@ -41,7 +70,8 @@ let inMemoryInvitations: InvitationRecord[] = [
 ];
 
 let inMemoryUsers: any[] = [
-  { id: "USR-001", name: "Alexander Vance", email: "admin@maintenx.com", role: "Company Administrator", roleCode: "admin", department: "IT & Digital Ops", plant: "Indore Plant 1", status: "Active", lastLogin: "Just now", createdAt: new Date().toISOString() },
+  { id: "USR-001", name: "mmmmm User", email: "master@maintenx.com", role: "Planner / Scheduler", roleCode: "planner", department: "maintence time", plant: "pune bangali", status: "Active", lastLogin: "Just now", createdAt: new Date().toISOString() },
+  { id: "USR-002", name: "johndeo User", email: "user@gmail.com", role: "Planner / Scheduler", roleCode: "planner", department: "maintence time", plant: "pune bangali", status: "Active", lastLogin: "Just now", createdAt: new Date().toISOString() },
 ];
 
 let inMemoryRoles: any[] = [];
@@ -258,11 +288,26 @@ export class AdminService {
       matchedRole = allRoles[0];
     }
 
+    // Fetch system default department from DB if input is not provided
+    let defaultDeptName = "";
+    try {
+      const deptRes = await db.execute(sql`SELECT name FROM public.departments ORDER BY created_at ASC LIMIT 1`);
+      const dRows = (deptRes as any)?.rows || (Array.isArray(deptRes) ? deptRes : []);
+      if (dRows.length > 0 && dRows[0]?.name) {
+        defaultDeptName = String(dRows[0].name).trim();
+      }
+    } catch (_) {}
+
+    const resolvedDept = input.department && String(input.department).trim()
+      ? String(input.department).trim()
+      : (defaultDeptName || null);
+
     if (existing) {
       // Seamlessly update existing user credentials, status and assignment
       const updates: any = {
         firstName,
         lastName,
+        department: resolvedDept,
         status: input.status === "Pending Invite" || input.status === "Pending" ? "PENDING" : "ACTIVE",
         updatedAt: new Date(),
       };
@@ -294,8 +339,9 @@ export class AdminService {
         email: updatedUser.email,
         role: matchedRole?.name || input.role,
         roleCode: matchedRole?.code || roleKey,
-        department: input.department || "Operations",
-        plant: assignedPlant?.name?.split(" - ")[0] || input.plant || "Indore Plant",
+        department: updatedUser.department || resolvedDept || "",
+        plant: assignedPlant?.name?.split(" - ")[0] || input.plant || "",
+        plantId: assignedPlant?.id || input.plantId || "",
         status: updatedUser.status === "ACTIVE" ? "Active" : "Suspended",
         lastLogin: "Just now",
         createdAt: updatedUser.createdAt,
@@ -319,6 +365,7 @@ export class AdminService {
         firstName,
         lastName,
         digitalSignaturePinHash: pinHash,
+        department: resolvedDept,
         status: input.status === "Pending Invite" || input.status === "Pending" ? "PENDING" : "ACTIVE",
       })
       .returning();
@@ -368,8 +415,9 @@ export class AdminService {
       email: createdUser.email,
       role: matchedRole?.name || input.role,
       roleCode: matchedRole?.code || roleKey,
-      department: input.department || "Operations",
-      plant: assignedPlant?.name?.split(" - ")[0] || input.plant || "Indore Plant",
+      department: createdUser.department || resolvedDept || "",
+      plant: assignedPlant?.name?.split(" - ")[0] || input.plant || "",
+      plantId: assignedPlant?.id || input.plantId || "",
       status: createdUser.status === "ACTIVE" ? "Active" : "Suspended",
       lastLogin: "Just now",
       createdAt: createdUser.createdAt,
@@ -383,6 +431,15 @@ export class AdminService {
 
   async getAllUsers(tenantId?: string) {
     try {
+      let defaultDeptName = "";
+      try {
+        const deptRes = await db.execute(sql`SELECT name FROM public.departments ORDER BY created_at ASC LIMIT 1`);
+        const dRows = (deptRes as any)?.rows || (Array.isArray(deptRes) ? deptRes : []);
+        if (dRows.length > 0 && dRows[0]?.name) {
+          defaultDeptName = String(dRows[0].name).trim();
+        }
+      } catch (_) {}
+
       const isTenantUuid = typeof tenantId === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tenantId);
       const userList = isTenantUuid
         ? await db.select().from(users).where(eq(users.tenantId, tenantId!)).orderBy(desc(users.createdAt))
@@ -390,21 +447,6 @@ export class AdminService {
       const roleList = await db.select().from(roles);
       const userRoleList = await db.select().from(userRoles);
       const plantList = await db.select().from(plants);
-
-      const departmentMap: Record<string, string> = {
-        admin: "IT & Digital Ops",
-        plant_manager: "Operations",
-        quality: "Quality Assurance",
-        maintenance: "Maintenance",
-        supervisor: "Production",
-        line_lead: "Operations",
-        operator: "Production",
-        planner: "Supply Chain & Planning",
-        warehouse: "Warehouse & Logistics",
-        ci_engineer: "Continuous Improvement",
-        executive: "Executive Leadership",
-        master_admin: "Global Governance",
-      };
 
       const mapped = userList
         .filter((u) => u.status !== "DELETED")
@@ -420,8 +462,9 @@ export class AdminService {
             email: u.email,
             role: roleObj?.name || (u.isMasterAdmin ? "Master Admin" : "Company Administrator"),
             roleCode,
-            department: departmentMap[roleCode] || (roleCode === "admin" ? "IT & Digital Ops" : "Operations"),
-            plant: plantObj?.name?.split(" - ")[0] || "Main Facility",
+            department: u.department || defaultDeptName || "",
+            plant: plantObj?.name?.split(" - ")[0] || "",
+            plantId: plantObj?.id || uRole?.plantId || "",
             status: u.status === "ACTIVE" ? "Active" : "Suspended",
             lastLogin: index === 0 ? "Just now" : `${(index + 1) * 2} hours ago`,
             lastLoginAt: u.lastLoginAt,
@@ -568,6 +611,10 @@ export class AdminService {
       updates.passwordHash = await bcrypt.hash(input.password.trim(), 10);
     }
 
+    if (input.department !== undefined) {
+      updates.department = input.department ? String(input.department).trim() : null;
+    }
+
     const [updatedUser] = await db
       .update(users)
       .set(updates)
@@ -627,8 +674,9 @@ export class AdminService {
       email: updatedUser.email,
       role: matchedRole?.name || input.role || "Line Operator",
       roleCode: matchedRole?.code || "operator",
-      department: input.department || "Operations",
-      plant: assignedPlant?.name?.split(" - ")[0] || input.plant || "Indore Plant",
+      department: input.department !== undefined ? (input.department || "") : (updatedUser.department || ""),
+      plant: assignedPlant?.name?.split(" - ")[0] || input.plant || "",
+      plantId: assignedPlant?.id || input.plantId || "",
       status: updatedUser.status === "ACTIVE" ? "Active" : "Suspended",
       lastLogin: "Just now",
       createdAt: updatedUser.createdAt,
@@ -1139,16 +1187,43 @@ export class AdminService {
 
       mappedDbLogs = dbLogs.map((log, index) => {
         const user = userList.find((u) => u.id === log.userId);
-        const userName = user ? `${user.firstName} ${user.lastName}`.trim() : "Company Administrator";
+        const userName = user ? `${user.firstName} ${user.lastName}`.trim() : (userList[0] ? `${userList[0].firstName} ${userList[0].lastName}`.trim() : "System Administrator");
+        const details = (log.newValues as any)?.name || (log.newValues as any)?.details || (log.newValues as any)?.email || "";
+
+        let actionText = log.action.replace(/_/g, " ");
+        let cat = "Security";
+
+        if (log.action === "USER_LOGIN" || log.action === "LOGIN") {
+          actionText = `User Logged In successfully (${details || "Web Portal Session"})`;
+          cat = "Security";
+        } else if (log.action === "PROVISION_USER") {
+          actionText = `Provisioned User Account: ${details || log.entityId}`;
+          cat = "User Governance";
+        } else if (log.action === "CREATE_DEPARTMENT") {
+          actionText = `Created Department: ${details || log.entityId}`;
+          cat = "Organization";
+        } else if (log.action === "REGISTER_PLANT" || log.action === "CREATE_PLANT") {
+          actionText = `Registered Plant Facility: ${details || log.entityId}`;
+          cat = "Organization";
+        } else if (log.action === "ROLE_ASSIGNMENT") {
+          actionText = `Assigned Role: ${details || log.entityId}`;
+          cat = "Roles & Permissions";
+        } else if (log.action === "UPDATE_USER" || log.action === "EDIT_USER") {
+          actionText = `Updated User Details: ${details || log.entityId}`;
+          cat = "User Governance";
+        } else {
+          actionText = `${log.action.replace(/_/g, " ")} on ${log.entityType || "System"}${details ? `: ${details}` : ""}`;
+          cat = log.action.includes("SECURITY") || log.action.includes("USER") || log.action.includes("LOCK") || log.action.includes("REVOKE") ? "Security" : "Configuration";
+        }
 
         return {
           id: `ACT-${800 + index + 1}`,
           dbId: log.id,
-          user: userName || "Administrator",
-          action: `${log.action.replace(/_/g, " ")} on ${log.entityType || "System"} (${log.entityId || "N/A"})`,
-          category: log.action.includes("SECURITY") || log.action.includes("USER") || log.action.includes("LOCK") || log.action.includes("REVOKE") || log.action.includes("INVITATION") ? "Security" : "Configuration",
+          user: userName,
+          action: actionText,
+          category: cat,
           ip: log.ipAddress || "192.168.1.10",
-          timestamp: new Date(log.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          timestamp: formatAuditTime(log.createdAt),
           createdAt: log.createdAt,
         };
       });
@@ -1200,7 +1275,7 @@ export class AdminService {
       action: `${newLog.action} on ${newLog.entityType} (${newLog.entityId})`,
       category: data.category || "Security",
       ip: newLog.ipAddress || "192.168.1.10",
-      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      timestamp: formatAuditTime(newLog.createdAt),
       createdAt: newLog.createdAt,
     };
   }
@@ -1246,6 +1321,21 @@ export class AdminService {
       return { success: true, message: `Audit log ${logId} successfully deleted from database.` };
     } catch (err: any) {
       console.warn("deleteActivityLog error:", err.message);
+      return { success: false, message: err.message };
+    }
+  }
+
+  async clearActivityLogs(tenantId?: string) {
+    try {
+      const isTenantUuid = typeof tenantId === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tenantId);
+      if (isTenantUuid) {
+        await db.delete(auditLogs).where(eq(auditLogs.tenantId, tenantId));
+      } else {
+        await db.delete(auditLogs);
+      }
+      return { success: true, message: "Activity stream and audit logs cleared successfully." };
+    } catch (err: any) {
+      console.warn("clearActivityLogs error:", err.message);
       return { success: false, message: err.message };
     }
   }
@@ -1317,10 +1407,16 @@ export class AdminService {
     try {
       let activeTenantId: string | null = null;
       if (typeof tenantId === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tenantId)) {
-        activeTenantId = tenantId;
+        const [foundTenant] = await db.select({ id: tenants.id }).from(tenants).where(eq(tenants.id, tenantId)).limit(1);
+        if (foundTenant) {
+          activeTenantId = foundTenant.id;
+        } else {
+          const [demoTenant] = await db.select({ id: tenants.id }).from(tenants).limit(1);
+          activeTenantId = demoTenant?.id || null;
+        }
       } else {
-        const [demoTenant] = await db.select().from(tenants).limit(1);
-        if (demoTenant?.id) activeTenantId = demoTenant.id;
+        const [demoTenant] = await db.select({ id: tenants.id }).from(tenants).limit(1);
+        activeTenantId = demoTenant?.id || null;
       }
 
       const [existing] = await db.select().from(roles).where(eq(roles.code, code)).limit(1);
@@ -2402,14 +2498,7 @@ export class AdminService {
         return {
           auditId: `AUD-${item.id.substring(0, 4).toUpperCase() || (3600 + idx)}`,
           id: item.id,
-          timestamp: new Date(item.createdAt).toLocaleString("en-US", {
-            day: "2-digit",
-            month: "short",
-            year: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-            second: "2-digit",
-          }),
+          timestamp: formatAuditDateTime(item.createdAt),
           user: userName,
           userRole: (u as any)?.role || "System Administrator",
           entityType: item.entityType || "General",
@@ -2460,14 +2549,7 @@ export class AdminService {
         success: true,
         auditId: `AUD-${newLog.id.substring(0, 4).toUpperCase()}`,
         id: newLog.id,
-        timestamp: new Date(newLog.createdAt).toLocaleString("en-US", {
-          day: "2-digit",
-          month: "short",
-          year: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
-          second: "2-digit",
-        }),
+        timestamp: formatAuditDateTime(newLog.createdAt),
         user: data.user || "System Administrator",
         userRole: data.userRole || "System Administrator",
         entityType: newLog.entityType,
@@ -2547,7 +2629,7 @@ export class AdminService {
     const affectedTable = data.affectedTable || data.targetTable || "Item Master";
     const recordsHealed = Number(data.recordsHealed) || 1;
     const status = data.status || "Auto-Healed";
-    const timestamp = data.timestamp || new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    const timestamp = data.timestamp || formatAuditTime(new Date());
     const details = data.details || "Heuristic remediation applied and verified in DB";
 
     await db.execute(sql`
@@ -2583,7 +2665,7 @@ export class AdminService {
 
   async executeRemediationEngine(tenantId?: string) {
     const newRemId = `REM-${Math.floor(810 + Math.random() * 900)}`;
-    const nowTime = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    const nowTime = formatAuditTime(new Date());
     try {
       await db.execute(sql`
         INSERT INTO public.data_health_remediations (id, rule, affected_table, records_healed, status, execution_timestamp, details, created_at, updated_at)

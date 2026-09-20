@@ -207,6 +207,17 @@ export async function adminRoutes(fastify: FastifyInstance) {
     adminController.deleteActivityLog.bind(adminController)
   );
 
+  fastify.delete(
+    "/activity",
+    {
+      schema: {
+        tags: ["System Administration"],
+        summary: "Clear All User Activity Stream & Audit Logs",
+      },
+    },
+    adminController.clearActivityLogs.bind(adminController)
+  );
+
   // Roles & Permissions Governance
   fastify.get(
     "/roles",

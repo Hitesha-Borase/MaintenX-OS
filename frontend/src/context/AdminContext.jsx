@@ -45,16 +45,8 @@ export function AdminProvider({ children }) {
   const hasAuthToken = Boolean(typeof window !== "undefined" && (localStorage.getItem("maintenx_auth_token") || localStorage.getItem("flowstate_token")));
   const hasTenant = Boolean(typeof window !== "undefined" && (localStorage.getItem("maintenx_tenant_name") || localStorage.getItem("maintenx_tenant_id")));
 
-  // 1. Users (Directly synchronized with PostgreSQL users table with offline/mock fallback)
-  const [users, setUsers] = useState(() => {
-    if (hasAuthToken || hasTenant) return [];
-    const saved = typeof window !== "undefined" ? localStorage.getItem("admin_users") : null;
-    return saved
-      ? JSON.parse(saved)
-      : [
-          { id: "USR-001", name: "Alexander Vance", email: "admin@maintenx.com", role: "Company Administrator", department: "IT & Digital Ops", status: "Active", lastLogin: "Just now", plant: "Indore Plant 1" }
-        ];
-  });
+  // 1. Users (Directly synchronized with PostgreSQL users table)
+  const [users, setUsers] = useState(() => []);
 
   // 2. User Invitations
   const [invitations, setInvitations] = useState(() => []);
@@ -329,6 +321,16 @@ export function AdminProvider({ children }) {
     }
   };
 
+  const clearAllActivityLogs = async () => {
+    try {
+      await adminService.clearAllActivityLogs();
+      setActivityLogs([]);
+    } catch (err) {
+      console.warn("clearAllActivityLogs error:", err);
+      setActivityLogs([]);
+    }
+  };
+
   const createActivityLog = async (data) => {
     try {
       const newLog = await adminService.createActivityLog(data);
@@ -356,20 +358,18 @@ export function AdminProvider({ children }) {
   const addRole = async (roleData) => {
     try {
       const created = await adminService.createRole(roleData);
-      setRoles((prev) => [...prev, created]);
+      const liveRoles = await adminService.getRoles();
+      if (Array.isArray(liveRoles) && liveRoles.length > 0) {
+        setRoles(liveRoles);
+      } else if (created) {
+        setRoles((prev) => [...prev, created]);
+      }
       // refresh activity
-      adminService.getActivityLogs().then((logs) => Array.isArray(logs) && setActivityLogs(logs));
+      adminService.getActivityLogs().then((logs) => Array.isArray(logs) && setActivityLogs(logs)).catch(() => {});
       return created;
     } catch (err) {
-      const fallback = {
-        id: `ROL-0${roles.length + 1}`,
-        name: roleData.name,
-        description: roleData.description || "Custom enterprise operational scope",
-        userCount: 0,
-        isSystem: false,
-      };
-      setRoles((prev) => [...prev, fallback]);
-      return fallback;
+      console.warn("addRole failed:", err.message);
+      throw err;
     }
   };
 
@@ -456,6 +456,7 @@ export function AdminProvider({ children }) {
         setActivityLogs,
         fetchActivityLogs,
         deleteActivityLog,
+        clearAllActivityLogs,
         createActivityLog,
         updateActivityLog,
         refreshAll,

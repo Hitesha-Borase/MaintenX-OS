@@ -148,23 +148,9 @@ export async function runQualityChecksMigration() {
       console.log("✅ Seeded initial operational parameters into process_checks");
     }
 
-    // 6. Seed operational Quality Specifications if empty
+    // 6. Quality Specifications table check (no auto-seeding dummy data)
     const specRes = await client.query(`SELECT COUNT(*)::int as count FROM public.quality_specs;`);
     console.log(`📊 Current quality_specs count: ${specRes.rows[0].count}`);
-    if (specRes.rows[0].count === 0) {
-      console.log("🌱 Seeding initial master specifications into quality_specs...");
-      await client.query(`
-        INSERT INTO public.quality_specs (
-          parameter, range, sku, ccp, uom, min, max, is_ccp, status, criticality, approval_status
-        ) VALUES
-        ('Brix Sugar Level (Concentration)', '11.6 - 12.2 °Bx', 'Sparkling Citrus & Cola 500ml', 'No', '°Bx', '11.6', '12.2', false, 'ACTIVE', 'STANDARD', 'APPROVED'),
-        ('Pasteurizer Heat Exchanger Temperature', '≥ 83.1 °C', 'All Bottled / Aseptic SKUs', 'Yes (CCP-01)', '°C', '83.1', '88.0', true, 'ACTIVE', 'CRITICAL', 'APPROVED'),
-        ('Net Volume Fill Tolerance', '330.0 ± 2.5 ml', '330ml Aluminum Cans', 'No', 'ml', '327.5', '332.5', false, 'ACTIVE', 'STANDARD', 'APPROVED'),
-        ('Dissolved Carbon Dioxide (CO2)', '3.60 - 3.80 Vol', 'Sparkling Sodas', 'No', 'Vol', '3.60', '3.80', false, 'ACTIVE', 'STANDARD', 'APPROVED'),
-        ('End-of-Line Metal Detector Sensitivity', 'Fe 2.0mm / Non-Fe 2.5mm / SS 3.0mm', 'All Packaged SKUs', 'Yes (CCP-02)', 'mm', '0', '0', true, 'ACTIVE', 'CRITICAL', 'APPROVED');
-      `);
-      console.log("✅ Seeded initial master specifications into quality_specs");
-    }
 
     console.log("🎉 Quality Checks DB Migration finished successfully!");
   } catch (err: any) {

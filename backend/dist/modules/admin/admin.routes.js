@@ -118,6 +118,12 @@ async function adminRoutes(fastify) {
             summary: "Delete Audit Activity Log",
         },
     }, admin_controller_js_1.adminController.deleteActivityLog.bind(admin_controller_js_1.adminController));
+    fastify.delete("/activity", {
+        schema: {
+            tags: ["System Administration"],
+            summary: "Clear All User Activity Stream & Audit Logs",
+        },
+    }, admin_controller_js_1.adminController.clearActivityLogs.bind(admin_controller_js_1.adminController));
     // Roles & Permissions Governance
     fastify.get("/roles", {
         schema: {

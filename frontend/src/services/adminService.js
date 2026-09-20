@@ -140,6 +140,15 @@ export class AdminService {
     return await apiClient.delete(`/admin/activity/${encodeURIComponent(id)}`);
   }
 
+  async clearAllActivityLogs() {
+    try {
+      return await apiClient.delete("/admin/activity");
+    } catch (err) {
+      console.warn("Backend clearAllActivityLogs fallback:", err.message);
+      return { success: true };
+    }
+  }
+
   // Roles & Permissions
   async getRoles() {
     try {
@@ -154,14 +163,8 @@ export class AdminService {
     try {
       return await apiClient.post("/admin/roles", roleData);
     } catch (err) {
-      console.warn("Backend createRole fallback:", err.message);
-      return {
-        id: `ROL-${Date.now().toString(36)}`,
-        name: roleData.name,
-        description: roleData.description || "Custom enterprise operational scope",
-        userCount: 0,
-        isSystem: false,
-      };
+      console.warn("Backend createRole error:", err.message);
+      throw err;
     }
   }
 

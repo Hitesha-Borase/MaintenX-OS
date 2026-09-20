@@ -16,7 +16,7 @@ exports.auditLogs = (0, pg_core_1.pgTable)("audit_logs", {
     newValues: (0, pg_core_1.jsonb)("new_values"),
     ipAddress: (0, pg_core_1.varchar)("ip_address", { length: 50 }),
     userAgent: (0, pg_core_1.text)("user_agent"),
-    createdAt: (0, pg_core_1.timestamp)("created_at").defaultNow().notNull(),
+    createdAt: (0, pg_core_1.timestamp)("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 exports.digitalSignatures = (0, pg_core_1.pgTable)("digital_signatures", {
     id: (0, pg_core_1.uuid)("id").defaultRandom().primaryKey(),
@@ -27,5 +27,5 @@ exports.digitalSignatures = (0, pg_core_1.pgTable)("digital_signatures", {
     entityId: (0, pg_core_1.varchar)("entity_id", { length: 255 }).notNull(),
     meaning: (0, pg_core_1.varchar)("meaning", { length: 255 }).notNull(), // "Author of Batch Record", "QA Release Disposition"
     comments: (0, pg_core_1.text)("comments"),
-    signedAt: (0, pg_core_1.timestamp)("signed_at").defaultNow().notNull(),
+    signedAt: (0, pg_core_1.timestamp)("signed_at", { withTimezone: true }).defaultNow().notNull(),
 });

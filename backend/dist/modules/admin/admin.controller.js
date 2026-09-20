@@ -82,8 +82,10 @@ class AdminController {
     }
     async getActivityLogs(request, reply) {
         const user = request.user;
+        const headerTenantId = request.headers["x-tenant-id"];
+        const tenantId = user?.tenantId || (headerTenantId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(headerTenantId) ? headerTenantId : undefined);
         const { query } = request.query || {};
-        const logs = await admin_service_js_1.adminService.getActivityLogs(user?.tenantId, query);
+        const logs = await admin_service_js_1.adminService.getActivityLogs(tenantId, query);
         return reply.status(200).send(logs);
     }
     async createActivityLog(request, reply) {
@@ -103,6 +105,11 @@ class AdminController {
         const user = request.user;
         const { id } = request.params;
         const res = await admin_service_js_1.adminService.deleteActivityLog(user?.tenantId, id);
+        return reply.status(200).send(res);
+    }
+    async clearActivityLogs(request, reply) {
+        const user = request.user;
+        const res = await admin_service_js_1.adminService.clearActivityLogs(user?.tenantId);
         return reply.status(200).send(res);
     }
     // Roles & Permissions

@@ -79,19 +79,21 @@ export function PlantsPage() {
     const loc = `${newPlant.city || ""}${newPlant.state ? `, ${newPlant.state}` : ""}${newPlant.country ? `, ${newPlant.country}` : ""}`.replace(/^,\s*/, "") || newPlant.location || "Primary Facility";
     const plantPayload = {
       ...newPlant,
+      code: newPlant.code.trim().toUpperCase(),
+      name: newPlant.name.trim(),
+      city: newPlant.city.trim() || "Indore",
+      state: (newPlant.state || "").trim(),
+      country: (newPlant.country || "India").trim(),
       location: loc
     };
     try {
-      let created = null;
-      try {
-        created = await masterDataService.createPlant(plantPayload);
-      } catch (apiErr) {
-        console.warn("API createPlant fallback:", apiErr);
-      }
+      const res = await masterDataService.createPlant(plantPayload);
+      const created = res?.data || res || plantPayload;
       if (typeof addPlant === "function") {
-        addPlant(created ? { ...plantPayload, ...created } : plantPayload);
+        addPlant(created);
       }
-      addToast(`Plant "${plantPayload.name}" registered!`, "success");
+      setLocalPlants((prev) => [created, ...(prev || []).filter((p) => p.id !== created.id && p.code !== created.code)]);
+      addToast(`Plant "${plantPayload.name}" registered successfully!`, "success");
       setIsModalOpen(false);
       setNewPlant({
         code: "",
@@ -283,7 +285,7 @@ export function PlantsPage() {
                         {p.timezone || "Asia/Kolkata (IST)"}
                       </td>
                       <td style={{ padding: "12px 16px" }}>
-                        <Badge variant="cyan">{plantLines || 3} Active Lines</Badge>
+                        <Badge variant="cyan">{plantLines} Active Lines</Badge>
                       </td>
                       <td style={{ padding: "12px 16px" }}>
                         <Badge variant={p.status === "Inactive" || p.isActive === false ? "amber" : "emerald"}>
@@ -768,7 +770,7 @@ export function PlantsPage() {
                 <div>
                   <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Configured Lines</div>
                   <div style={{ fontSize: "13px", fontWeight: 600, color: "var(--text-primary)", marginTop: "4px" }}>
-                    {lines.filter((l) => l.plantId === viewingPlant.id).length || viewingPlant.linesCount || 3} Active Lines
+                    {lines.filter((l) => l.plantId === (viewingPlant.id || viewingPlant.plantId)).length || viewingPlant.linesCount || 0} Active Lines
                   </div>
                 </div>
                 <div>
