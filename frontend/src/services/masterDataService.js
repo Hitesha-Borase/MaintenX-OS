@@ -431,6 +431,24 @@ export const masterDataService = {
     return apiClient.delete(`/master-data/storage-resources/${enc(id)}`);
   },
 
+  // 18. Storage Types Master
+  async getStorageTypes() {
+    return apiClient.get("/master-data/storage-types");
+  },
+
+  async createStorageType(data) {
+    return apiClient.post("/master-data/storage-types", data);
+  },
+
+  async updateStorageType(id, data) {
+    return apiClient.put(`/master-data/storage-types/${enc(id)}`, data);
+  },
+
+  async deleteStorageType(id) {
+    return apiClient.delete(`/master-data/storage-types/${enc(id)}`);
+  },
+
+
   // 17. Employee Skills & Qualifications Matrix
   async getEmployeeSkills(plantId) {
     const query = plantId && plantId !== "ALL" ? `?plantId=${enc(plantId)}` : "";

@@ -31,7 +31,7 @@ export function ProductFamiliesPage() {
     try {
       const res = await masterDataService.getProductFamilies();
       const data = res?.data !== undefined ? res.data : res;
-      if (Array.isArray(data) && data.length > 0 && typeof setProductFamilies === "function") {
+      if (Array.isArray(data) && typeof setProductFamilies === "function") {
         setProductFamilies(data);
       }
     } catch (err) {
@@ -55,16 +55,38 @@ export function ProductFamiliesPage() {
     name: "",
     category: "Finished Goods",
     description: "",
-    plantId: activePlantId || "PLT-01",
+    plantId: plants[0]?.id || activePlantId || "",
     allergenRisk: "None",
     standardMargin: "55.0%",
     effectiveFrom: new Date().toISOString().substring(0, 10),
     effectiveTo: "2030-12-31"
   });
 
+  useEffect(() => {
+    if (plants.length > 0 && (!newFamily.plantId || newFamily.plantId === "PLT-01")) {
+      setNewFamily((prev) => ({ ...prev, plantId: plants[0].id }));
+    }
+  }, [plants]);
+
+  const handleOpenAddModal = () => {
+    const defaultPlant = (plants && plants.length > 0) ? plants[0].id : (activePlantId || "");
+    setNewFamily({
+      code: "",
+      name: "",
+      category: "Finished Goods",
+      description: "",
+      plantId: defaultPlant,
+      allergenRisk: "None",
+      standardMargin: "55.0%",
+      effectiveFrom: new Date().toISOString().substring(0, 10),
+      effectiveTo: "2030-12-31"
+    });
+    setIsModalOpen(true);
+  };
+
   const totalSKUs = useMemo(() => {
     return productFamilies.reduce((sum, f) => {
-      const linked = skus.filter((s) => s.familyId === f.familyId || s.family === f.name).length;
+      const linked = skus.filter((s) => s.familyId === (f.familyId || f.id) || s.family === f.name).length;
       return sum + linked;
     }, 0);
   }, [productFamilies, skus]);
@@ -97,21 +119,31 @@ export function ProductFamiliesPage() {
       return;
     }
 
+    const resolvedPlantId = newFamily.plantId && newFamily.plantId !== "PLT-01" 
+      ? newFamily.plantId 
+      : (plants[0]?.id || activePlantId || "");
+    const payload = { ...newFamily, plantId: resolvedPlantId };
+
     try {
-      await masterDataService.createProductFamily(newFamily);
+      if (typeof addProductFamily === "function") {
+        await addProductFamily(payload);
+      } else {
+        await masterDataService.createProductFamily(payload);
+      }
       addToast(`Product family "${newFamily.name}" registered in database!`, "success");
       await fetchFamilies();
     } catch (err) {
       console.warn("Add family error:", err);
-      addProductFamily(newFamily);
+      addToast(`Failed to register product family: ${err.message}`, "error");
     }
     setIsModalOpen(false);
+
     setNewFamily({
       code: "",
       name: "",
       category: "Finished Goods",
       description: "",
-      plantId: activePlantId || "PLT-01",
+      plantId: plants[0]?.id || activePlantId || "",
       allergenRisk: "None",
       standardMargin: "55.0%",
       effectiveFrom: new Date().toISOString().substring(0, 10),
@@ -128,12 +160,16 @@ export function ProductFamiliesPage() {
 
     const targetId = editingFamily.familyId || editingFamily.id || editingFamily.code;
     try {
-      await masterDataService.updateProductFamily(targetId, editingFamily);
+      const updatedRes = await masterDataService.updateProductFamily(targetId, editingFamily);
+      const updated = updatedRes?.data !== undefined ? updatedRes.data : updatedRes;
       addToast(`Product family "${editingFamily.name}" updated in database!`, "success");
+      if (updated && typeof updateProductFamily === "function") {
+        updateProductFamily(targetId, updated);
+      }
       await fetchFamilies();
     } catch (err) {
       console.warn("Update family error:", err);
-      updateProductFamily(targetId, editingFamily);
+      if (typeof updateProductFamily === "function") updateProductFamily(targetId, editingFamily);
     }
     setEditingFamily(null);
   };
@@ -173,7 +209,7 @@ export function ProductFamiliesPage() {
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-          <Button variant="primary" icon={Plus} onClick={() => setIsModalOpen(true)} style={{ fontSize: "12px", padding: "7px 12px" }}>
+          <Button variant="primary" icon={Plus} onClick={handleOpenAddModal} style={{ fontSize: "12px", padding: "7px 12px" }}>
             + Add Product Family
           </Button>
         </div>
@@ -318,16 +354,21 @@ export function ProductFamiliesPage() {
                 </tr>
               ) : (
                 filteredFamilies.map((f) => {
-                  const linkedCount = skus.filter((s) => s.familyId === f.familyId || s.family === f.name).length;
-                  const plantName = plants.find((p) => p.id === f.plantId)?.name?.split(" - ")[0] || "Global / Enterprise";
+                  const fid = f.familyId || f.id;
+                  const linkedCount = skus.filter((s) => s.familyId === fid || s.family === f.name).length;
+                  const plant = plants.find((p) => p.id === f.plantId || p.code === f.plantId || p.name === f.plantId);
+                  const plantName = plant ? plant.name.split(" - ")[0] : (f.plantId || "Plant Facility");
                   return (
-                    <tr key={f.familyId} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+                    <tr key={fid || f.code} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
                       <td style={{ padding: "12px 16px", fontFamily: "var(--font-mono)", fontWeight: 800, color: "#8C5B23" }}>
                         {f.code}
                       </td>
                       <td style={{ padding: "12px 16px" }}>
                         <div style={{ fontWeight: 800, color: "var(--text-primary)", fontSize: "13px" }}>{f.name}</div>
-                        {f.description && <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>{f.description}</div>}
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "4px" }}>
+                          <Badge variant="cyan">{f.category || "Finished Goods"}</Badge>
+                          {f.description && <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>{f.description}</span>}
+                        </div>
                       </td>
                       <td style={{ padding: "12px 16px", fontSize: "12px", color: "var(--text-secondary)" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
@@ -350,7 +391,7 @@ export function ProductFamiliesPage() {
                       </td>
                       <td style={{ padding: "12px 16px" }}>
                         <button
-                          onClick={() => toggleProductFamilyStatus(f.familyId)}
+                          onClick={() => toggleProductFamilyStatus(fid)}
                           style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}
                           title="Click to toggle status"
                         >
@@ -360,7 +401,7 @@ export function ProductFamiliesPage() {
                       <td style={{ padding: "12px 16px", textAlign: "right" }}>
                         <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
                           <button
-                            onClick={() => setViewingFamily({ ...f })}
+                            onClick={() => setViewingFamily({ ...f, familyId: fid, id: fid })}
                             title="View Product Family Details"
                             style={{
                               width: "30px",
@@ -378,7 +419,7 @@ export function ProductFamiliesPage() {
                             <Eye size={13} />
                           </button>
                           <button
-                            onClick={() => setEditingFamily({ ...f })}
+                            onClick={() => setEditingFamily({ ...f, familyId: fid, id: fid })}
                             title="Edit Product Family"
                             style={{
                               width: "30px",
@@ -396,7 +437,7 @@ export function ProductFamiliesPage() {
                             <Edit2 size={13} />
                           </button>
                           <button
-                            onClick={() => handleDelete(f.familyId, f.name)}
+                            onClick={() => handleDelete(fid, f.name)}
                             title="Delete Product Family"
                             style={{
                               width: "30px",
@@ -483,6 +524,31 @@ export function ProductFamiliesPage() {
                   </select>
                 </div>
                 <div>
+                  <label className="form-label">Category / Classification *</label>
+                  <input
+                    type="text"
+                    required
+                    list="family-category-suggestions"
+                    placeholder="e.g. Finished Goods or Beverages"
+                    value={newFamily.category}
+                    onChange={(e) => setNewFamily({ ...newFamily, category: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                  <datalist id="family-category-suggestions">
+                    <option value="Finished Goods" />
+                    <option value="Raw Ingredients" />
+                    <option value="Packaging" />
+                    <option value="Beverages" />
+                    <option value="Dairy & Frozen" />
+                    <option value="Bakery & Snacks" />
+                    <option value="Work-In-Progress" />
+                  </datalist>
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div>
                   <label className="form-label">Target Gross Margin</label>
                   <input
                     type="text"
@@ -493,18 +559,17 @@ export function ProductFamiliesPage() {
                     style={{ backgroundColor: "#FFFFFF" }}
                   />
                 </div>
-              </div>
-
-              <div>
-                <label className="form-label">Allergen Risk Profile</label>
-                <input
-                  type="text"
-                  placeholder="e.g. None or Ginger Extract / Citrus Terpenes"
-                  value={newFamily.allergenRisk}
-                  onChange={(e) => setNewFamily({ ...newFamily, allergenRisk: e.target.value })}
-                  className="form-input"
-                  style={{ backgroundColor: "#FFFFFF" }}
-                />
+                <div>
+                  <label className="form-label">Allergen Risk Profile</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. None or Ginger Extract"
+                    value={newFamily.allergenRisk}
+                    onChange={(e) => setNewFamily({ ...newFamily, allergenRisk: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
               </div>
 
               <div>
@@ -612,6 +677,21 @@ export function ProductFamiliesPage() {
                   </select>
                 </div>
                 <div>
+                  <label className="form-label">Category / Classification *</label>
+                  <input
+                    type="text"
+                    required
+                    list="family-category-suggestions"
+                    value={editingFamily.category || "Finished Goods"}
+                    onChange={(e) => setEditingFamily({ ...editingFamily, category: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div>
                   <label className="form-label">Target Gross Margin</label>
                   <input
                     type="text"
@@ -621,17 +701,16 @@ export function ProductFamiliesPage() {
                     style={{ backgroundColor: "#FFFFFF" }}
                   />
                 </div>
-              </div>
-
-              <div>
-                <label className="form-label">Allergen Risk Profile</label>
-                <input
-                  type="text"
-                  value={editingFamily.allergenRisk}
-                  onChange={(e) => setEditingFamily({ ...editingFamily, allergenRisk: e.target.value })}
-                  className="form-input"
-                  style={{ backgroundColor: "#FFFFFF" }}
-                />
+                <div>
+                  <label className="form-label">Allergen Risk Profile</label>
+                  <input
+                    type="text"
+                    value={editingFamily.allergenRisk}
+                    onChange={(e) => setEditingFamily({ ...editingFamily, allergenRisk: e.target.value })}
+                    className="form-input"
+                    style={{ backgroundColor: "#FFFFFF" }}
+                  />
+                </div>
               </div>
 
               <div>
@@ -707,7 +786,7 @@ export function ProductFamiliesPage() {
                   <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Plant Facility</div>
                   <div style={{ fontSize: "13px", fontWeight: 600, color: "var(--text-secondary)", marginTop: "4px", display: "flex", alignItems: "center", gap: "4px" }}>
                     <Building2 size={13} color="#C89547" />
-                    <span>{plants.find((p) => p.id === viewingFamily.plantId)?.name?.split(" - ")[0] || "Global / Enterprise"}</span>
+                    <span>{(plants.find((p) => p.id === viewingFamily.plantId || p.code === viewingFamily.plantId || p.name === viewingFamily.plantId)?.name?.split(" - ")[0]) || viewingFamily.plantId || "Plant Facility"}</span>
                   </div>
                 </div>
                 <div>

@@ -1597,84 +1597,131 @@ export class MasterDataService {
   // ==========================================
   async listProductFamilies(tenantId?: string) {
     try {
-      const query = tenantId
+      const isTenantUuid = typeof tenantId === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tenantId);
+      const query = isTenantUuid
         ? sql`
-            SELECT id, code, name, category, description, plant_id, allergen_risk, standard_margin, status, created_at
+            SELECT id, tenant_id, code, name, category, description, plant_id, allergen_risk, standard_margin, status, effective_from, effective_to, created_at
             FROM public.product_families
-            WHERE tenant_id = ${tenantId}
-            ORDER BY created_at ASC
+            WHERE tenant_id = ${tenantId} OR tenant_id IS NULL
+            ORDER BY created_at DESC
           `
         : sql`
-            SELECT id, code, name, category, description, plant_id, allergen_risk, standard_margin, status, created_at
+            SELECT id, tenant_id, code, name, category, description, plant_id, allergen_risk, standard_margin, status, effective_from, effective_to, created_at
             FROM public.product_families
-            ORDER BY created_at ASC
+            ORDER BY created_at DESC
           `;
       const dbFamilies = await db.execute(query);
       const rows = (dbFamilies as any)?.rows || (Array.isArray(dbFamilies) ? dbFamilies : []);
-      if (rows.length > 0) {
+      if (rows && rows.length > 0) {
         return rows.map((r: any) => ({
           id: String(r.id),
           familyId: String(r.id),
           code: r.code,
           name: r.name,
-          category: r.category || "BEVERAGE",
+          category: r.category || "Finished Goods",
           description: r.description || "",
           plantId: r.plant_id || "PLT-01",
           allergenRisk: r.allergen_risk || "None",
           standardMargin: r.standard_margin || "55.0%",
           status: r.status || "Active",
+          effectiveFrom: r.effective_from || "",
+          effectiveTo: r.effective_to || "",
           skusCount: 0,
         }));
       }
     } catch (err: any) {
       console.warn("DB listProductFamilies error:", err.message);
     }
-    return tenantId ? [] : inMemoryProductFamilies;
+    return [];
   }
 
   async createProductFamily(tenantId: string | undefined, input: any) {
-    const code = (input.code ? String(input.code).trim().toUpperCase() : `PF-${Date.now()}`);
+    const code = (input.code ? String(input.code).trim().toUpperCase() : `FAM-${Date.now().toString().slice(-4)}`);
     const name = String(input.name || "Product Family").trim();
-    const category = input.category || "BEVERAGE";
+    const category = input.category || "Finished Goods";
     const description = input.description || "";
     const plantId = input.plantId || "PLT-01";
     const allergenRisk = input.allergenRisk || "None";
     const standardMargin = input.standardMargin || "55.0%";
     const status = input.status || "Active";
+    const effectiveFrom = input.effectiveFrom || new Date().toISOString().substring(0, 10);
+    const effectiveTo = input.effectiveTo || "2030-12-31";
 
-    let dbId: string | null = null;
+    let activeTenantId: string | null = null;
+    if (typeof tenantId === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tenantId)) {
+      activeTenantId = tenantId;
+    } else {
+      try {
+        const [demoTenant] = await db.select().from(tenants).limit(1);
+        if (demoTenant?.id) activeTenantId = demoTenant.id;
+      } catch (_) {}
+    }
+
     try {
       const res = await db.execute(sql`
-        INSERT INTO public.product_families (code, name, category, description, plant_id, allergen_risk, standard_margin, status)
-        VALUES (${code}, ${name}, ${category}, ${description}, ${plantId}, ${allergenRisk}, ${standardMargin}, ${status})
-        RETURNING id, code, name, category, description, plant_id, allergen_risk, standard_margin, status
+        INSERT INTO public.product_families (
+          tenant_id, code, name, category, description, plant_id, allergen_risk, standard_margin, status, effective_from, effective_to
+        )
+        VALUES (
+          ${activeTenantId}, ${code}, ${name}, ${category}, ${description}, ${plantId}, ${allergenRisk}, ${standardMargin}, ${status}, ${effectiveFrom}, ${effectiveTo}
+        )
+        ON CONFLICT (code) DO UPDATE SET
+          name = EXCLUDED.name,
+          category = EXCLUDED.category,
+          description = EXCLUDED.description,
+          plant_id = EXCLUDED.plant_id,
+          allergen_risk = EXCLUDED.allergen_risk,
+          standard_margin = EXCLUDED.standard_margin,
+          status = EXCLUDED.status,
+          effective_from = EXCLUDED.effective_from,
+          effective_to = EXCLUDED.effective_to,
+          updated_at = NOW()
+        RETURNING id, tenant_id, code, name, category, description, plant_id, allergen_risk, standard_margin, status, effective_from, effective_to
       `);
       const row = (res as any)?.rows?.[0] || (Array.isArray(res) ? res[0] : null);
+
       if (row?.id) {
-        dbId = String(row.id);
+        return {
+          id: String(row.id),
+          familyId: String(row.id),
+          code: row.code,
+          name: row.name,
+          category: row.category,
+          description: row.description,
+          plantId: row.plant_id,
+          allergenRisk: row.allergen_risk,
+          standardMargin: row.standard_margin,
+          status: row.status,
+          effectiveFrom: row.effective_from,
+          effectiveTo: row.effective_to,
+          skusCount: Number(input.skusCount) || 0,
+        };
       }
     } catch (err: any) {
       console.warn("DB insert public.product_families error:", err.message);
+      throw err;
     }
 
-    const newId = dbId || `PF-0${inMemoryProductFamilies.length + 1}`;
-    const newFamily: ProductFamilyEntity = {
-      id: newId,
-      familyId: newId,
+    return {
+      id: `PF-${Date.now()}`,
+      familyId: `PF-${Date.now()}`,
       code,
       name,
       category,
       description,
+      plantId,
+      allergenRisk,
+      standardMargin,
       status,
-      skusCount: Number(input.skusCount) || 0,
+      effectiveFrom,
+      effectiveTo,
+      skusCount: 0
     };
-    inMemoryProductFamilies.unshift(newFamily);
-    return newFamily;
   }
 
   async updateProductFamily(tenantId: string | undefined, id: string, input: any) {
     try {
-      await db.execute(sql`
+      const res = await db.execute(sql`
         UPDATE public.product_families
         SET 
           name = COALESCE(${input.name || null}, name),
@@ -1685,27 +1732,34 @@ export class MasterDataService {
           allergen_risk = COALESCE(${input.allergenRisk || null}, allergen_risk),
           standard_margin = COALESCE(${input.standardMargin || null}, standard_margin),
           status = COALESCE(${input.status || null}, status),
+          effective_from = COALESCE(${input.effectiveFrom || null}, effective_from),
+          effective_to = COALESCE(${input.effectiveTo || null}, effective_to),
           updated_at = now()
         WHERE id::text = ${id} OR code = ${id}
+        RETURNING id, code, name, category, description, plant_id, allergen_risk, standard_margin, status, effective_from, effective_to
       `);
+      const row = (res as any)?.rows?.[0] || (Array.isArray(res) ? res[0] : null);
+      if (row) {
+        return {
+          id: String(row.id),
+          familyId: String(row.id),
+          code: row.code,
+          name: row.name,
+          category: row.category,
+          description: row.description,
+          plantId: row.plant_id,
+          allergenRisk: row.allergen_risk,
+          standardMargin: row.standard_margin,
+          status: row.status,
+          effectiveFrom: row.effective_from,
+          effectiveTo: row.effective_to,
+        };
+      }
     } catch (err: any) {
       console.warn("DB update public.product_families error:", err.message);
+      throw err;
     }
-    const idx = inMemoryProductFamilies.findIndex((f) => matchKey(f, id, ["id", "familyId", "code", "name"]));
-    if (idx === -1) {
-      const fallback: ProductFamilyEntity = {
-        id,
-        familyId: id,
-        code: input.code || id,
-        name: input.name || "Product Family",
-        category: input.category || "BEVERAGE",
-        status: input.status || "Active",
-      };
-      inMemoryProductFamilies.push(fallback);
-      return fallback;
-    }
-    inMemoryProductFamilies[idx] = { ...inMemoryProductFamilies[idx], ...input };
-    return inMemoryProductFamilies[idx];
+    return { id, familyId: id, ...input };
   }
 
   async deleteProductFamily(tenantId: string | undefined, id: string) {
@@ -1714,15 +1768,11 @@ export class MasterDataService {
         DELETE FROM public.product_families
         WHERE id::text = ${id} OR code = ${id} OR name = ${id}
       `);
+      return { success: true, id, message: "Product Family deleted from database" };
     } catch (err: any) {
       console.warn("DB delete public.product_families error:", err.message);
+      throw err;
     }
-    const idx = inMemoryProductFamilies.findIndex((f) => matchKey(f, id, ["id", "familyId", "code", "name"]));
-    if (idx !== -1) {
-      const deleted = inMemoryProductFamilies.splice(idx, 1);
-      return deleted[0];
-    }
-    return { id, message: "Product Family deleted" };
   }
 
   // ==========================================
@@ -2840,7 +2890,7 @@ export class MasterDataService {
         tId = firstTenant?.id;
       }
       if (!tId) throw new Error("No tenantId available to persist SKU");
-      const cat = (newSku.category.toUpperCase().includes("RAW")) ? "RAW_MATERIAL" : (newSku.category.toUpperCase().includes("PACK") ? "PACKAGING" : "FINISHED_GOODS");
+      const cat = input.category || newSku.category || "Finished Goods";
       const costRaw = String(newSku.stdCost || "0").replace(/[^\d.]/g, "");
       const [insertedSku] = await db.insert(skus).values({
         tenantId: tId,
@@ -2871,15 +2921,12 @@ export class MasterDataService {
     }
     // Persist to PostgreSQL by matching on skuCode or id
     try {
-      const cat = input.category
-        ? input.category.toUpperCase().includes("RAW") ? "RAW_MATERIAL"
-          : input.category.toUpperCase().includes("PACK") ? "PACKAGING"
-          : "FINISHED_GOODS"
-        : undefined;
+      const cat = input.category !== undefined ? input.category : undefined;
       const updates: Record<string, any> = {};
       if (input.name) updates.name = input.name;
       if (input.skuCode || input.code) updates.skuCode = input.skuCode || input.code;
       if (cat) updates.category = cat;
+
       if (input.uom) updates.uom = input.uom;
       if (input.plantId && input.plantId.includes("-") && input.plantId.length > 20) updates.plantId = input.plantId;
       if (input.description !== undefined) updates.description = input.description;
@@ -4546,6 +4593,112 @@ export class MasterDataService {
     }
     return { id, message: "Storage resource deleted from database" };
   }
+
+  // ==========================================
+  // 20. STORAGE TYPES (STRICTLY public.storage_types)
+  // ==========================================
+  async listStorageTypes(tenantId?: string) {
+    try {
+      const res = await db.execute(sql`
+        SELECT 
+          id,
+          type_code AS "typeCode",
+          name,
+          category,
+          description,
+          status,
+          created_at AS "createdAt",
+          updated_at AS "updatedAt"
+        FROM public.storage_types
+        ORDER BY created_at ASC
+      `);
+      if (Array.isArray(res?.rows)) {
+        return res.rows.map((r: any) => ({
+          id: r.id,
+          typeCode: r.typeCode || `ST-${String(r.id).slice(0, 6)}`,
+          name: r.name,
+          category: r.category || "Warehouse Storage",
+          description: r.description || "",
+          status: r.status || "Active",
+          createdAt: r.createdAt,
+          updatedAt: r.updatedAt,
+        }));
+      }
+    } catch (err: any) {
+      console.warn("DB listStorageTypes error:", err.message);
+    }
+    return [];
+  }
+
+  async createStorageType(tenantId: string | undefined, input: any) {
+    const rawCode = (input.typeCode || input.code || `ST-${Date.now().toString().slice(-4)}`).toUpperCase().trim();
+    const nameVal = (input.name || "New Storage Type").trim();
+    const categoryVal = input.category || "Warehouse Storage";
+    const descVal = input.description || "";
+    const statusVal = input.status || "Active";
+
+    try {
+      const res = await db.execute(sql`
+        INSERT INTO public.storage_types (
+          type_code, name, category, description, status, created_at, updated_at
+        ) VALUES (
+          ${rawCode}, ${nameVal}, ${categoryVal}, ${descVal}, ${statusVal}, NOW(), NOW()
+        )
+        RETURNING id, type_code AS "typeCode", name, category, description, status, created_at AS "createdAt", updated_at AS "updatedAt"
+      `);
+      if (res.rows?.[0]) {
+        return res.rows[0];
+      }
+    } catch (err: any) {
+      console.warn("DB createStorageType error:", err.message);
+    }
+    return {
+      id: `st-${Date.now()}`,
+      typeCode: rawCode,
+      name: nameVal,
+      category: categoryVal,
+      description: descVal,
+      status: statusVal,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+  }
+
+  async updateStorageType(tenantId: string | undefined, id: string, input: any) {
+    try {
+      const res = await db.execute(sql`
+        UPDATE public.storage_types
+        SET
+          name = COALESCE(${input.name || null}, name),
+          type_code = COALESCE(${input.typeCode ? input.typeCode.toUpperCase().trim() : null}, type_code),
+          category = COALESCE(${input.category || null}, category),
+          description = COALESCE(${input.description !== undefined ? input.description : null}, description),
+          status = COALESCE(${input.status || null}, status),
+          updated_at = NOW()
+        WHERE id::text = ${id} OR type_code = ${id} OR lower(type_code) = lower(${id})
+        RETURNING id, type_code AS "typeCode", name, category, description, status, created_at AS "createdAt", updated_at AS "updatedAt"
+      `);
+      if (res.rows?.[0]) {
+        return res.rows[0];
+      }
+    } catch (err: any) {
+      console.warn("DB updateStorageType error:", err.message);
+    }
+    return { id, ...input, updatedAt: new Date().toISOString() };
+  }
+
+  async deleteStorageType(tenantId: string | undefined, id: string) {
+    try {
+      await db.execute(sql`
+        DELETE FROM public.storage_types
+        WHERE id::text = ${id} OR type_code = ${id} OR lower(type_code) = lower(${id})
+      `);
+    } catch (err: any) {
+      console.warn("DB deleteStorageType error:", err.message);
+    }
+    return { id, message: "Storage type deleted from database" };
+  }
 }
 
 export const masterDataService = new MasterDataService();
+

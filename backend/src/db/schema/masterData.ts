@@ -3,9 +3,16 @@ import { tenants, plants } from "./tenants";
 
 export const productFamilies = pgTable("product_families", {
   id: uuid("id").defaultRandom().primaryKey(),
-  tenantId: uuid("tenant_id").references(() => tenants.id, { onDelete: "cascade" }).notNull(),
+  tenantId: uuid("tenant_id").references(() => tenants.id, { onDelete: "cascade" }),
   code: varchar("code", { length: 50 }).notNull(),
   name: varchar("name", { length: 255 }).notNull(),
+  category: varchar("category", { length: 100 }).default("Finished Goods"),
+  plantId: varchar("plant_id", { length: 100 }),
+  allergenRisk: varchar("allergen_risk", { length: 100 }).default("None"),
+  standardMargin: varchar("standard_margin", { length: 50 }).default("55.0%"),
+  status: varchar("status", { length: 50 }).default("Active"),
+  effectiveFrom: varchar("effective_from", { length: 50 }),
+  effectiveTo: varchar("effective_to", { length: 50 }),
   description: text("description"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -424,4 +431,16 @@ export const storageResources = pgTable("storage_resources", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
+
+export const storageTypes = pgTable("storage_types", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  typeCode: varchar("type_code", { length: 50 }).notNull().unique(),
+  name: varchar("name", { length: 255 }).notNull(),
+  category: varchar("category", { length: 100 }).default("Warehouse Storage"),
+  description: text("description"),
+  status: varchar("status", { length: 50 }).default("Active").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 

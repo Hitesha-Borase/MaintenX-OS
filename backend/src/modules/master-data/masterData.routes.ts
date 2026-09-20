@@ -186,7 +186,14 @@ export async function masterDataRoutes(fastify: FastifyInstance) {
   fastify.put("/storage-resources/:id", { schema: { tags: ["Master Data"], summary: "Update Storage Resource" } }, masterDataController.updateStorageResource.bind(masterDataController));
   fastify.delete("/storage-resources/:id", { schema: { tags: ["Master Data"], summary: "Delete Storage Resource" } }, masterDataController.deleteStorageResource.bind(masterDataController));
 
+  // 20. Storage Types Master
+  fastify.get("/storage-types", { schema: { tags: ["Master Data"], summary: "List Storage Types" } }, masterDataController.getStorageTypes.bind(masterDataController));
+  fastify.post("/storage-types", { schema: { tags: ["Master Data"], summary: "Create Storage Type" } }, masterDataController.createStorageType.bind(masterDataController));
+  fastify.put("/storage-types/:id", { schema: { tags: ["Master Data"], summary: "Update Storage Type" } }, masterDataController.updateStorageType.bind(masterDataController));
+  fastify.delete("/storage-types/:id", { schema: { tags: ["Master Data"], summary: "Delete Storage Type" } }, masterDataController.deleteStorageType.bind(masterDataController));
+
   // 15. Labour Standards
+
   fastify.get("/labour-standards", { schema: { tags: ["Master Data"], summary: "List Labour Standards" } }, masterDataController.getLabourStandards.bind(masterDataController));
   fastify.post("/labour-standards", { schema: { tags: ["Master Data"], summary: "Create Labour Standard" } }, masterDataController.createLabourStandard.bind(masterDataController));
   fastify.put("/labour-standards/:id", { schema: { tags: ["Master Data"], summary: "Update Labour Standard" } }, masterDataController.updateLabourStandard.bind(masterDataController));

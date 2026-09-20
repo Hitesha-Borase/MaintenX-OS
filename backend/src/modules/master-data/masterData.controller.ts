@@ -606,7 +606,33 @@ export class MasterDataController {
     const data = await masterDataService.deleteStorageResource(request.user?.tenantId, id);
     return reply.send(formatSuccess(data, "Storage resource deleted successfully"));
   }
+
+  // ==========================================
+  // 20. STORAGE TYPES
+  // ==========================================
+  async getStorageTypes(request: FastifyRequest, reply: FastifyReply) {
+    const data = await masterDataService.listStorageTypes(request.user?.tenantId);
+    return reply.send(formatSuccess(data));
+  }
+
+  async createStorageType(request: FastifyRequest, reply: FastifyReply) {
+    const data = await masterDataService.createStorageType(request.user?.tenantId, request.body);
+    return reply.status(201).send(formatSuccess(data, "Storage type created successfully"));
+  }
+
+  async updateStorageType(request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) {
+    const { id } = request.params;
+    const data = await masterDataService.updateStorageType(request.user?.tenantId, id, request.body);
+    return reply.send(formatSuccess(data, "Storage type updated successfully"));
+  }
+
+  async deleteStorageType(request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) {
+    const { id } = request.params;
+    const data = await masterDataService.deleteStorageType(request.user?.tenantId, id);
+    return reply.send(formatSuccess(data, "Storage type deleted successfully"));
+  }
 }
 
 export const masterDataController = new MasterDataController();
+
 

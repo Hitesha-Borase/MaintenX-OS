@@ -581,9 +581,13 @@ export function Sidebar() {
                       <NavLink to="/master-data/machine-capability" end style={subNavItemStyle}>
                         <span>Machine Capability</span>
                       </NavLink>
+                      <NavLink to="/master-data/storage-types" end style={subNavItemStyle}>
+                        <span>Storage Types</span>
+                      </NavLink>
                       <NavLink to="/master-data/storage-resources" end style={subNavItemStyle}>
                         <span>Storage Resources</span>
                       </NavLink>
+
                     </div>
                   )}
                 </div>

@@ -80,6 +80,7 @@ import { QualitySpecsPage } from "./pages/admin/masterdata/QualitySpecsPage";
 import { CCPLimitsPage } from "./pages/admin/masterdata/CCPLimitsPage";
 import { MachineCapabilityPage } from "./pages/admin/masterdata/MachineCapabilityPage";
 import { StorageResourcesPage } from "./pages/admin/masterdata/StorageResourcesPage";
+import { StorageTypesPage } from "./pages/admin/masterdata/StorageTypesPage";
 
 // 6. Integrations
 import { ERPIntegrationPage } from "./pages/admin/integrations/ERPIntegrationPage";
@@ -535,6 +536,7 @@ export function AppContent() {
           <Route path="/master-data/ccp-limits" element={<CCPLimitsPage />} />
           <Route path="/master-data/machine-capability" element={<MachineCapabilityPage />} />
           <Route path="/master-data/storage-resources" element={<StorageResourcesPage />} />
+          <Route path="/master-data/storage-types" element={<StorageTypesPage />} />
 
           {/* Integrations */}
           <Route path="/integrations" element={<Navigate to="/integrations/erp" replace />} />

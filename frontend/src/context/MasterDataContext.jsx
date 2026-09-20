@@ -435,6 +435,8 @@ export function MasterDataProvider({ children }) {
     return INITIAL_STORAGE_RESOURCES;
   });
 
+  const [storageTypes, setStorageTypes] = useState([]);
+
   const [ccpLimits, setCcpLimits] = useState(() => {
     const saved = localStorage.getItem("mx_master_ccp_limits");
     if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
@@ -523,6 +525,7 @@ export function MasterDataProvider({ children }) {
           liveSpecs,
           liveCCPs,
           liveStorage,
+          liveStorageTypes,
         ] = await Promise.allSettled([
           masterDataService.getCompanies(),
           masterDataService.getPlants(),
@@ -546,6 +549,7 @@ export function MasterDataProvider({ children }) {
           masterDataService.getQualitySpecs(),
           masterDataService.getCCPLimits(),
           masterDataService.getStorageResources(activePlantId),
+          masterDataService.getStorageTypes(),
         ]);
 
         const safeArr = (item) => {
@@ -660,6 +664,9 @@ export function MasterDataProvider({ children }) {
 
         const storArr = safeArr(liveStorage);
         if (storArr) setStorageResources(storArr);
+
+        const strTypeArr = safeArr(liveStorageTypes);
+        if (strTypeArr) setStorageTypes(strTypeArr);
 
         try {
           const liveMatrix = await adminService.getPermissionMatrix();
@@ -860,27 +867,19 @@ export function MasterDataProvider({ children }) {
   // ============================================================================
   // 1. PRODUCT FAMILY MUTATIONS
   // ============================================================================
-  const addProductFamily = (familyData) => {
-    const newId = `FAM-0${productFamilies.length + 1}`;
-    const newRecord = {
-      id: newId,
-      familyId: newId,
-      code: familyData.code || `FAM-${productFamilies.length + 1}`,
-      name: familyData.name,
-      category: familyData.category || "Finished Goods",
-      description: familyData.description || "",
-      plantId: familyData.plantId || activePlantId,
-      allergenRisk: familyData.allergenRisk || "None",
-      standardMargin: familyData.standardMargin || "55.0%",
-      status: familyData.status || "Active",
-      effectiveFrom: familyData.effectiveFrom || new Date().toISOString().substring(0, 10),
-      effectiveTo: familyData.effectiveTo || "2030-12-31"
-    };
-    setProductFamilies((prev) => [newRecord, ...prev]);
-    masterDataService.createProductFamily(newRecord).catch((err) => console.warn("API createProductFamily:", err.message));
-    logAudit({ entityId: newRecord.code, entityType: "Product Family", action: "Created", newValue: `${newRecord.name} (${newRecord.code})` });
-    return newRecord;
+  const addProductFamily = async (familyData) => {
+    try {
+      const res = await masterDataService.createProductFamily(familyData);
+      const created = res?.data !== undefined ? res.data : (res || familyData);
+      setProductFamilies((prev) => [created, ...prev.filter((f) => f.id !== created.id && f.code !== created.code)]);
+      logAudit({ entityId: created.code || created.id, entityType: "Product Family", action: "Created", newValue: `${created.name} (${created.code})` });
+      return created;
+    } catch (err) {
+      console.warn("API createProductFamily error:", err.message);
+      throw err;
+    }
   };
+
 
   const updateProductFamily = (familyId, updated) => {
     setProductFamilies((prev) => prev.map((f) => (f.familyId === familyId || f.id === familyId ? { ...f, ...updated } : f)));
@@ -2020,6 +2019,58 @@ export function MasterDataProvider({ children }) {
   };
 
   // ============================================================================
+  // 14.1 STORAGE TYPES MUTATIONS
+  // ============================================================================
+  const addStorageType = async (typeData) => {
+    try {
+      const res = await masterDataService.createStorageType(typeData);
+      const created = res?.data || res;
+      setStorageTypes((prev) => [created, ...prev.filter((t) => t.id !== created.id && t.typeCode !== created.typeCode)]);
+      logAudit({ entityId: created.typeCode || created.id, entityType: "Storage Types", action: "Created", newValue: created.name });
+      return created;
+    } catch (err) {
+      console.warn("API createStorageType error:", err.message);
+      throw err;
+    }
+  };
+
+  const updateStorageType = async (id, updated) => {
+    try {
+      const res = await masterDataService.updateStorageType(id, updated);
+      const returned = res?.data || res;
+      setStorageTypes((prev) =>
+        prev.map((t) => (t.id === id || t.typeCode === id ? { ...t, ...returned } : t))
+      );
+      logAudit({ entityId: id, entityType: "Storage Types", action: "Updated" });
+      return returned;
+    } catch (err) {
+      console.warn("API updateStorageType error:", err.message);
+      throw err;
+    }
+  };
+
+  const deleteStorageType = async (id) => {
+    try {
+      await masterDataService.deleteStorageType(id);
+      setStorageTypes((prev) => prev.filter((t) => t.id !== id && t.typeCode !== id));
+      logAudit({ entityId: id, entityType: "Storage Types", action: "Deleted" });
+    } catch (err) {
+      console.warn("API deleteStorageType error:", err.message);
+      throw err;
+    }
+  };
+
+  const refreshStorageTypes = async () => {
+    try {
+      const res = await masterDataService.getStorageTypes();
+      const arr = res?.data?.data || res?.data || res;
+      if (Array.isArray(arr)) setStorageTypes(arr);
+    } catch (err) {
+      console.warn("Failed to refresh storage types:", err.message);
+    }
+  };
+
+  // ============================================================================
   // 15. USER & ROLE ADMINISTRATION
   // ============================================================================
   const addUser = (userData) => {
@@ -2365,6 +2416,14 @@ export function MasterDataProvider({ children }) {
         updateStorageResource,
         toggleStorageResourceStatus,
         deleteStorageResource,
+
+        // 14.1 Storage Types Master
+        storageTypes,
+        setStorageTypes,
+        addStorageType,
+        updateStorageType,
+        deleteStorageType,
+        refreshStorageTypes,
 
         // 15. User & Role Administration
         users,
