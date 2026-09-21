@@ -73,7 +73,7 @@ export function QuickActionDrawer() {
   }, [masterEmployees]);
 
   // Current logged-in user name for "Reported By" / "Created By"
-  const currentUserName = currentRole?.user?.name || "Arthur Sterling (Plant Manager)";
+  const currentUserName = currentRole?.user?.name || "Stefan Crawford (Plant Manager)";
 
   // ─── WORK ORDER FORM STATES ───
   const [woAssetId, setWoAssetId] = useState("");
@@ -774,15 +774,15 @@ export function QuickActionDrawer() {
               list="drawer-owners"
               value={excOwner}
               onChange={(e) => setExcOwner(e.target.value)}
-              placeholder="e.g. Arthur Sterling, Duty Supervisor..."
+              placeholder="e.g. Stefan Crawford, Duty Supervisor..."
               style={{ width: "100%", padding: "8px 10px", borderRadius: "6px", border: "1px solid var(--border-subtle)", boxSizing: "border-box" }}
             />
             <datalist id="drawer-owners">
               {technicians.map((t) => (
                 <option key={t.id} value={t.name} />
               ))}
-              <option value="Arthur Sterling" />
-              <option value="Sarah Jenkins" />
+              <option value="Stefan Crawford" />
+              <option value="Ronald Robinson" />
             </datalist>
           </div>
 

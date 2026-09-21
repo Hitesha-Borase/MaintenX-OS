@@ -198,8 +198,8 @@ export function RevisionHistoryModal({ isOpen, onClose, entityTitle, entityCode,
                     </div>
 
                     <div style={{ marginTop: "12px", display: "flex", gap: "16px", flexWrap: "wrap", fontSize: "12px", color: "var(--text-secondary)", borderTop: "1px dashed var(--border-subtle)", paddingTop: "8px" }}>
-                      <div>Author: <strong style={{ color: "var(--text-primary)" }}>{rev.createdBy || "Alexander Vance"}</strong></div>
-                      <div>Approved By: <strong style={{ color: "#0284C7" }}>{rev.approvedBy || "Sarah Jenkins"}</strong></div>
+                      <div>Author: <strong style={{ color: "var(--text-primary)" }}>{rev.createdBy || "Ronald Robinson"}</strong></div>
+                      <div>Approved By: <strong style={{ color: "#0284C7" }}>{rev.approvedBy || "Stephanie Kuzmych"}</strong></div>
                     </div>
                   </div>
                 );

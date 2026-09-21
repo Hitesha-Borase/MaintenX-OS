@@ -4,7 +4,7 @@
   "description": "Production-Ready Manufacturing Execution System (MES) & Operations SaaS Backend for MaintenX OS",
   "main": "dist/server.js",
   "scripts": {
-    "dev": "tsx watch src/server.ts",
+    "dev": "node --max-old-space-size=4096 ./node_modules/tsx/dist/cli.mjs watch src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
     "db:generate": "drizzle-kit generate",

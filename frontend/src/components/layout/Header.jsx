@@ -1,4 +1,5 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
+import { apiClient } from "../../services/apiClient";
 import {
   Search,
   Plus,
@@ -23,7 +24,29 @@ import { useApp } from "../../context/AppContext";
 import { useRole } from "../../context/RoleContext";
 import { useMasterData } from "../../context/MasterDataContext";
 
+
+// ── Notification helpers ─────────────────────────────────────────────
+function timeAgo(dateStr) {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return "just now";
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  return `${Math.floor(h / 24)}d ago`;
+}
+
+function severityToType(severity) {
+  if (!severity) return "info";
+  const s = severity.toUpperCase();
+  if (s === "CRITICAL") return "warning";
+  if (s === "WARNING") return "warning";
+  if (s === "INFO") return "info";
+  return "info";
+}
+
 export function Header() {
+
   const {
     setIsSearchOpen,
     setIsQuickActionOpen,
@@ -42,11 +65,35 @@ export function Header() {
   const [showRoleSubmenu, setShowRoleSubmenu] = useState(false);
   const [showNotificationsMenu, setShowNotificationsMenu] = useState(false);
 
-  const [notifications, setNotifications] = useState([
-    { id: 1, title: "Line 1 PM Task Alert", desc: "High-Speed Rotary Filler PM due in 30 mins", time: "2m ago", type: "warning", unread: true },
-    { id: 2, title: "Batch Formulation Completed", desc: "BAT-2026-0892 bottle filling at 77% attainment", time: "15m ago", type: "success", unread: false },
-    { id: 3, title: "CCP Thermal Check", desc: "Limit 83.5°C thermal threshold check verified", time: "1h ago", type: "info", unread: false }
-  ]);
+  const [notifications, setNotifications] = useState([]);
+  const [notifLoading, setNotifLoading] = useState(false);
+
+  // Fetch notifications from backend and normalise shape
+  const fetchNotifications = useCallback(async () => {
+    try {
+      const raw = await apiClient.get("/notifications");
+      const list = Array.isArray(raw) ? raw : (Array.isArray(raw?.data) ? raw.data : []);
+      setNotifications(list.map((n) => ({
+        id: n.id,
+        title: n.title,
+        desc: n.message,
+        time: n.createdAt ? timeAgo(n.createdAt) : "",
+        type: severityToType(n.severity),
+        unread: !n.isRead,
+        linkUrl: n.linkUrl,
+        category: n.category,
+      })));
+    } catch {
+      // Silently ignore — keep previous state
+    }
+  }, []);
+
+  // Initial fetch + 30-second polling
+  useEffect(() => {
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 30000);
+    return () => clearInterval(interval);
+  }, [fetchNotifications]);
 
   const profileDropdownRef = useRef(null);
   const notificationsDropdownRef = useRef(null);
@@ -80,9 +127,16 @@ export function Header() {
     navigate("/login");
   };
 
-  const markAllRead = () => {
+  const markAllRead = async () => {
+    // Optimistic update
     setNotifications((prev) => prev.map((n) => ({ ...n, unread: false })));
     addToast("All notifications marked as read.", "success");
+    try {
+      await apiClient.patch("/notifications/read-all", {});
+    } catch {
+      // Revert on failure
+      fetchNotifications();
+    }
   };
 
   const unreadCount = notifications.filter((n) => n.unread).length;
@@ -302,11 +356,23 @@ export function Header() {
               </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: "6px", maxHeight: "240px", overflowY: "auto" }}>
-                {notifications.map((n) => (
+                {notifications.length === 0 ? (
+                    <div style={{ textAlign: "center", padding: "20px 0", color: "var(--text-muted, #8C7B6E)", fontSize: "12px" }}>
+                      No notifications
+                    </div>
+                  ) : notifications.map((n) => (
                   <div
                     key={n.id}
-                    onClick={() => {
+                    onClick={async () => {
+                      // Optimistic mark-as-read
                       setNotifications((prev) => prev.map((item) => item.id === n.id ? { ...item, unread: false } : item));
+                      try {
+                        await apiClient.patch(`/notifications/${n.id}/read`, {});
+                      } catch { /* ignore */ }
+                      if (n.linkUrl) {
+                        setShowNotificationsMenu(false);
+                        navigate(n.linkUrl);
+                      }
                     }}
                     style={{
                       padding: "8px 10px",
@@ -331,6 +397,7 @@ export function Header() {
                     </p>
                   </div>
                 ))}
+
               </div>
 
               <div style={{ borderTop: "1px solid var(--border-subtle, #EFEAE2)", paddingTop: "8px", textAlign: "center" }}>
