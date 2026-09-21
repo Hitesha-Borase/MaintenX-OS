@@ -39,7 +39,7 @@ export function CalibrationSchedulePage() {
     lastCalibrationDate: new Date().toISOString().substring(0, 10),
     nextDueDate: "2026-12-31",
     calibrationIntervalMonths: 6,
-    technician: "Sarah Jenkins",
+    technician: "Stephanie Kuzmych",
     standardUsed: "Vaisala Reference Hygrometer"
   });
 
@@ -79,7 +79,7 @@ export function CalibrationSchedulePage() {
       lastCalibrationDate: new Date().toISOString().substring(0, 10),
       nextDueDate: "2026-12-31",
       calibrationIntervalMonths: 6,
-      technician: "Sarah Jenkins",
+      technician: "Stephanie Kuzmych",
       standardUsed: "Vaisala Reference Hygrometer"
     });
   };

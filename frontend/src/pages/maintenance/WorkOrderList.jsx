@@ -102,7 +102,7 @@ export function WorkOrderList() {
     issue: "",
     priority: "P2 - High",
     type: "Corrective",
-    technician: "Marcus Vance",
+    technician: "David Markov",
     dueDate: "2026-09-12"
   });
 
@@ -111,13 +111,13 @@ export function WorkOrderList() {
     issue: "",
     priority: "P2 - High",
     status: "Open",
-    technician: "Marcus Vance",
+    technician: "David Markov",
     dueDate: "2026-09-12",
     actualHours: "0.0",
     estimatedHours: "2.0"
   });
 
-  const [assignTech, setAssignTech] = useState("Marcus Vance");
+  const [assignTech, setAssignTech] = useState("David Markov");
 
   const [resolveForm, setResolveForm] = useState({
     resolution: "",
@@ -159,7 +159,7 @@ export function WorkOrderList() {
       issue: "",
       priority: "P2 - High",
       type: "Corrective",
-      technician: "Marcus Vance",
+      technician: "David Markov",
       dueDate: new Date(Date.now() + 7 * 86400000).toISOString().substring(0, 10),
       estimatedHours: "2.0"
     });
@@ -195,7 +195,7 @@ export function WorkOrderList() {
         issue: "",
         priority: "P2 - High",
         type: "Corrective",
-        technician: "Marcus Vance",
+        technician: "David Markov",
         dueDate: new Date().toISOString().substring(0, 10),
         estimatedHours: "2.0"
       });
@@ -216,7 +216,7 @@ export function WorkOrderList() {
       issue: wo.description || wo.symptom || "",
       priority: wo.priority || "P2 - High",
       status: wo.status || "Open",
-      technician: wo.assignedTechnician || "Marcus Vance",
+      technician: wo.assignedTechnician || "David Markov",
       dueDate: wo.dueDate || "2026-09-12",
       actualHours: wo.actualHours != null && wo.actualHours !== "" ? String(wo.actualHours) : "0.0",
       estimatedHours: wo.estimatedHours != null && wo.estimatedHours !== "" ? String(wo.estimatedHours) : "2.0"
@@ -276,7 +276,7 @@ export function WorkOrderList() {
 
   const handleOpenAssign = (wo) => {
     setSelectedWO(wo);
-    setAssignTech(wo.assignedTechnician || "Marcus Vance");
+    setAssignTech(wo.assignedTechnician || "David Markov");
     setIsAssignModalOpen(true);
   };
 
@@ -852,10 +852,10 @@ export function WorkOrderList() {
                 value={createForm.technician}
                 onChange={(e) => setCreateForm({ ...createForm, technician: e.target.value })}
               >
-                <option value="Marcus Vance">Marcus Vance (Senior Reliability Tech)</option>
+                <option value="David Markov">David Markov (Senior Reliability Tech)</option>
                 <option value="David Kim">David Kim (Hydraulic & Thermal Tech)</option>
-                <option value="Elena Rostova">Elena Rostova (Electrical Specialist)</option>
-                <option value="Carlos Mendez">Carlos Mendez (Mechanical Lead)</option>
+                <option value="Ronald Robinson">Ronald Robinson (Electrical Specialist)</option>
+                <option value="Ashley Kulcar">David Markov (Maintenance Lead)</option>
               </select>
             </div>
             <div className="form-group">
@@ -1120,10 +1120,10 @@ export function WorkOrderList() {
                 value={assignTech}
                 onChange={(e) => setAssignTech(e.target.value)}
               >
-                <option value="Marcus Vance">Marcus Vance (Senior Reliability Tech)</option>
+                <option value="David Markov">David Markov (Senior Reliability Tech)</option>
                 <option value="David Kim">David Kim (Hydraulic & Thermal Tech)</option>
-                <option value="Elena Rostova">Elena Rostova (Electrical Specialist)</option>
-                <option value="Carlos Mendez">Carlos Mendez (Mechanical Lead)</option>
+                <option value="Ronald Robinson">Ronald Robinson (Electrical Specialist)</option>
+                <option value="Ashley Kulcar">David Markov (Maintenance Lead)</option>
               </select>
             </div>
 

@@ -63,7 +63,7 @@ export const INITIAL_AUDIT_LOGS = [
   {
     auditId: "AUD-9901",
     timestamp: "02 Sep 2026 10:15:30",
-    user: "Alexander Vance",
+    user: "Ronald Robinson",
     userRole: "System Administrator",
     entityId: "SKU-001",
     entityType: "SKU Master",
@@ -76,8 +76,8 @@ export const INITIAL_AUDIT_LOGS = [
   {
     auditId: "AUD-9902",
     timestamp: "02 Sep 2026 09:40:12",
-    user: "Sarah Jenkins",
-    userRole: "QA Manager",
+    user: "Stephanie Kuzmych",
+    userRole: "QA Manager & HACCP Lead",
     entityId: "QSP-001",
     entityType: "Quality Specification",
     action: "Approved",
@@ -89,7 +89,7 @@ export const INITIAL_AUDIT_LOGS = [
   {
     auditId: "AUD-9903",
     timestamp: "01 Sep 2026 16:22:05",
-    user: "Marcus Vance",
+    user: "David Markov",
     userRole: "Maintenance Lead",
     entityId: "AST-001",
     entityType: "Machine Asset",
@@ -115,7 +115,7 @@ export const INITIAL_AUDIT_LOGS = [
   {
     auditId: "AUD-9905",
     timestamp: "31 Aug 2026 11:05:18",
-    user: "Alexander Vance",
+    user: "Ronald Robinson",
     userRole: "System Administrator",
     entityId: "LIN-01",
     entityType: "Work Center Line",
@@ -279,93 +279,93 @@ export function MasterDataProvider({ children }) {
         }
       } catch (e) { }
     }
-    return isTenantActive ? [] : INITIAL_PLANTS;
+    return INITIAL_PLANTS;
   });
   const [activePlantId, setActivePlantId] = useState("");
   const [departments, setDepartments] = useState(() => {
     const saved = localStorage.getItem("mx_master_departments");
-    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p)) return p; } catch (e) { } }
-    return isTenantActive ? [] : INITIAL_DEPARTMENTS;
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
+    return INITIAL_DEPARTMENTS;
   });
   const [workCenters, setWorkCenters] = useState(() => {
     const saved = localStorage.getItem("mx_master_workcenters");
-    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p)) return p; } catch (e) { } }
-    return isTenantActive ? [] : INITIAL_WORK_CENTERS;
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
+    return INITIAL_WORK_CENTERS;
   });
 
   // 1. Core Master Datasets with Cache Initialization & Live DB Sync
   const [productFamilies, setProductFamilies] = useState(() => {
     const saved = localStorage.getItem("mx_master_families");
-    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p)) return p; } catch (e) { } }
-    return isTenantActive ? [] : INITIAL_PRODUCT_FAMILIES;
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
+    return INITIAL_PRODUCT_FAMILIES;
   });
 
   const [uoms, setUoms] = useState(() => {
     const saved = localStorage.getItem("mx_master_uoms");
-    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p)) return p; } catch (e) { } }
-    return isTenantActive ? [] : INITIAL_UOMS;
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
+    return INITIAL_UOMS;
   });
 
   const [skus, setSkus] = useState(() => {
     const saved = localStorage.getItem("mx_master_skus");
-    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p)) return p; } catch (e) { } }
-    return isTenantActive ? [] : INITIAL_SKUS;
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
+    return INITIAL_SKUS;
   });
 
   const [packConfigs, setPackConfigs] = useState(() => {
     const saved = localStorage.getItem("mx_master_pack_configs");
-    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p)) return p; } catch (e) { } }
-    return isTenantActive ? [] : INITIAL_PACK_CONFIGS;
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
+    return INITIAL_PACK_CONFIGS;
   });
 
   const [shelfLifeRecords, setShelfLifeRecords] = useState(() => {
     const saved = localStorage.getItem("mx_master_shelflife");
-    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p)) return p; } catch (e) { } }
-    return isTenantActive ? [] : INITIAL_SHELF_LIFE;
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
+    return INITIAL_SHELF_LIFE;
   });
 
-  const [customers, setCustomers] = useState(isTenantActive ? [] : INITIAL_CUSTOMERS);
+  const [customers, setCustomers] = useState(INITIAL_CUSTOMERS);
 
   const [customerSkuMappings, setCustomerSkuMappings] = useState(() => {
     const saved = localStorage.getItem("mx_master_csm");
-    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p)) return p; } catch (e) { } }
-    return isTenantActive ? [] : INITIAL_CUSTOMER_SKU_MAPPINGS;
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
+    return INITIAL_CUSTOMER_SKU_MAPPINGS;
   });
 
   const [boms, setBoms] = useState(() => {
     const saved = localStorage.getItem("mx_master_boms");
-    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p)) return p; } catch (e) { } }
-    return isTenantActive ? [] : INITIAL_BOMS;
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
+    return INITIAL_BOMS;
   });
 
   const [operations, setOperations] = useState(() => {
     const saved = localStorage.getItem("mx_master_operations");
-    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p)) return p; } catch (e) { } }
-    return isTenantActive ? [] : INITIAL_OPERATIONS;
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
+    return INITIAL_OPERATIONS;
   });
 
   const [routings, setRoutings] = useState(() => {
     const saved = localStorage.getItem("mx_master_routings");
-    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p)) return p; } catch (e) { } }
-    return isTenantActive ? [] : INITIAL_ROUTINGS;
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
+    return INITIAL_ROUTINGS;
   });
 
   const [lines, setLines] = useState(() => {
     const saved = localStorage.getItem("mx_master_lines");
-    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p)) return p; } catch (e) { } }
-    return isTenantActive ? [] : INITIAL_LINES;
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
+    return INITIAL_LINES;
   });
 
   const [lineTargets, setLineTargets] = useState(() => {
     const saved = localStorage.getItem("mx_master_line_targets");
-    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p)) return p; } catch (e) { } }
-    return isTenantActive ? [] : INITIAL_LINE_TARGETS;
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
+    return INITIAL_LINE_TARGETS;
   });
 
   const [changeoverMatrix, setChangeoverMatrix] = useState(() => {
     const saved = localStorage.getItem("mx_master_changeovers");
-    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p)) return p; } catch (e) { } }
-    return isTenantActive ? [] : INITIAL_CHANGEOVER_MATRIX;
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
+    return INITIAL_CHANGEOVER_MATRIX;
   });
 
   const [sanitationClasses, setSanitationClasses] = useState(() => {
@@ -378,7 +378,7 @@ export function MasterDataProvider({ children }) {
         }
       } catch (_) { }
     }
-    return isTenantActive ? [] : INITIAL_SANITATION_CLASSES;
+    return INITIAL_SANITATION_CLASSES;
   });
 
   const [allergenRules, setAllergenRules] = useState(() => {
@@ -391,7 +391,7 @@ export function MasterDataProvider({ children }) {
         }
       } catch (_) { }
     }
-    return isTenantActive ? [] : INITIAL_ALLERGEN_RULES;
+    return INITIAL_ALLERGEN_RULES;
   });
 
   const [labourStandards, setLabourStandards] = useState(() => {
@@ -402,65 +402,66 @@ export function MasterDataProvider({ children }) {
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       } catch (_) { }
     }
-    return isTenantActive ? [] : INITIAL_LABOUR_STANDARDS;
+    return INITIAL_LABOUR_STANDARDS;
   });
 
   const [assets, setAssets] = useState(() => {
     const saved = localStorage.getItem("mx_master_assets");
-    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p)) return p; } catch (e) { } }
-    return isTenantActive ? [] : INITIAL_ASSETS;
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
+    return INITIAL_ASSETS;
   });
 
   const [employees, setEmployees] = useState(() => {
     const saved = localStorage.getItem("mx_master_employees");
-    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p)) return p; } catch (e) { } }
-    return isTenantActive ? [] : INITIAL_EMPLOYEES;
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
+    return INITIAL_EMPLOYEES;
   });
 
   const [trainingRecords, setTrainingRecords] = useState(() => {
     const saved = localStorage.getItem("mx_master_training");
-    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p)) return p; } catch (e) { } }
-    return isTenantActive ? [] : INITIAL_TRAINING_RECORDS;
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
+    return INITIAL_TRAINING_RECORDS;
   });
 
   const [qualitySpecs, setQualitySpecs] = useState(() => {
     const saved = localStorage.getItem("mx_master_quality_specs");
-    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p)) return p; } catch (e) { } }
-    return isTenantActive ? [] : INITIAL_QUALITY_SPECS;
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
+    return INITIAL_QUALITY_SPECS;
   });
 
   const [storageResources, setStorageResources] = useState(() => {
     const saved = localStorage.getItem("mx_master_storage");
-    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p)) return p; } catch (e) { } }
-    return isTenantActive ? [] : INITIAL_STORAGE_RESOURCES;
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
+    return INITIAL_STORAGE_RESOURCES;
   });
 
   const [storageTypes, setStorageTypes] = useState([]);
+  const [assetTypes, setAssetTypes] = useState([]);
 
   const [ccpLimits, setCcpLimits] = useState(() => {
     const saved = localStorage.getItem("mx_master_ccp_limits");
-    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p)) return p; } catch (e) { } }
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
     return [];
   });
 
   const [users, setUsers] = useState(() => {
     const saved = localStorage.getItem("mx_admin_users");
-    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p)) return p; } catch (e) { } }
-    return isTenantActive ? [] : INITIAL_USERS;
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
+    return INITIAL_USERS;
   });
 
-  const [userInvitations, setUserInvitations] = useState(isTenantActive ? [] : INITIAL_USER_INVITATIONS);
+  const [userInvitations, setUserInvitations] = useState(INITIAL_USER_INVITATIONS);
 
   const [auditLogs, setAuditLogs] = useState(() => {
     const saved = localStorage.getItem("mx_master_audit_logs");
-    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p)) return p; } catch (e) { } }
-    return isTenantActive ? [] : INITIAL_AUDIT_LOGS;
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
+    return INITIAL_AUDIT_LOGS;
   });
 
   const [rolePermissions, setRolePermissions] = useState(() => {
     const saved = localStorage.getItem("mx_master_permissions");
-    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p)) return p; } catch (e) { } }
-    return isTenantActive ? [] : INITIAL_ROLE_PERMISSIONS;
+    if (saved) { try { const p = JSON.parse(saved); if (Array.isArray(p) && p.length > 0) return p; } catch (e) { } }
+    return INITIAL_ROLE_PERMISSIONS;
   });
 
   // Local Storage Synchronization
@@ -526,6 +527,7 @@ export function MasterDataProvider({ children }) {
           liveCCPs,
           liveStorage,
           liveStorageTypes,
+          liveAssetTypes,
         ] = await Promise.allSettled([
           masterDataService.getCompanies(),
           masterDataService.getPlants(),
@@ -550,12 +552,16 @@ export function MasterDataProvider({ children }) {
           masterDataService.getCCPLimits(),
           masterDataService.getStorageResources(activePlantId),
           masterDataService.getStorageTypes(),
+          masterDataService.getAssetTypes(),
         ]);
 
         const safeArr = (item) => {
           if (item?.status !== "fulfilled") return null;
           let v = item.value?.data !== undefined ? item.value.data : item.value;
-          if (v && v.status === "success" && v.data !== undefined) {
+          if (v && (v.status === "success" || v.success === true || v.data !== undefined) && v.data !== undefined) {
+            v = v.data;
+          }
+          if (v && v.data !== undefined && Array.isArray(v.data)) {
             v = v.data;
           }
           return Array.isArray(v) ? v : null;
@@ -668,6 +674,9 @@ export function MasterDataProvider({ children }) {
         const strTypeArr = safeArr(liveStorageTypes);
         if (strTypeArr) setStorageTypes(strTypeArr);
 
+        const assetTypeArr = safeArr(liveAssetTypes);
+        if (assetTypeArr) setAssetTypes(assetTypeArr);
+
         try {
           const liveMatrix = await adminService.getPermissionMatrix();
           if (liveMatrix && typeof liveMatrix === "object" && Object.keys(liveMatrix).length > 0) {
@@ -728,7 +737,7 @@ export function MasterDataProvider({ children }) {
   // ============================================================================
   // CENTRALIZED AUDIT LOGGING HELPER
   // ============================================================================
-  const logAudit = useCallback(({ entityId, entityType, action, field = "-", oldValue = "-", newValue = "-", notes = "", user = "Alexander Vance", userRole = "System Administrator" }) => {
+  const logAudit = useCallback(({ entityId, entityType, action, field = "-", oldValue = "-", newValue = "-", notes = "", user = "Ronald Robinson", userRole = "System Administrator" }) => {
     const newEntry = {
       auditId: `AUD-${Math.floor(1000 + Math.random() * 9000)}`,
       timestamp: new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit" }),
@@ -1196,7 +1205,7 @@ export function MasterDataProvider({ children }) {
     }
   };
 
-  const approveBOM = async (bomId, approver = "Sarah Jenkins") => {
+  const approveBOM = async (bomId, approver = "Stephanie Kuzmych") => {
     try {
       await masterDataService.updateBom(bomId, { status: "Active", approvalStatus: "Approved" });
       setBoms((prev) =>
@@ -1771,7 +1780,7 @@ export function MasterDataProvider({ children }) {
       departmentId: empData.departmentId || "DEP-01",
       role: empData.role || "Line Operator",
       plantId: empData.plantId || activePlantId,
-      plantName: plants.find((p) => p.id === (empData.plantId || activePlantId))?.name || "Indore Plant",
+      plantName: plants.find((p) => p.id === (empData.plantId || activePlantId))?.name || "Plant 1 - Meat Processing & Smokehouse Facility",
       skills: Array.isArray(empData.skills) ? empData.skills : ["Standard Operating Procedures"],
       skillLevel: empData.skillLevel || "Level 2 (Certified Operator)",
       certifications: Array.isArray(empData.certifications) ? empData.certifications : ["Plant Safety GMP"],
@@ -1825,7 +1834,7 @@ export function MasterDataProvider({ children }) {
       employeeId: trnData.employeeId,
       employeeName: trnData.employeeName || employees.find((e) => e.employeeId === trnData.employeeId)?.name || "Technician",
       courseTitle: trnData.courseTitle,
-      trainer: trnData.trainer || "Alexander Vance",
+      trainer: trnData.trainer || "Ronald Robinson",
       completionDate: trnData.completionDate || new Date().toISOString().substring(0, 10),
       expiryDate: trnData.expiryDate || "2027-12-31",
       score: trnData.score || "100%",
@@ -2071,6 +2080,58 @@ export function MasterDataProvider({ children }) {
   };
 
   // ============================================================================
+  // 14.2 ASSET CATEGORIES & MACHINE TYPES MUTATIONS
+  // ============================================================================
+  const addAssetType = async (typeData) => {
+    try {
+      const res = await masterDataService.createAssetType(typeData);
+      const created = res?.data || res;
+      setAssetTypes((prev) => [created, ...prev.filter((t) => t.id !== created.id && t.code !== created.code)]);
+      logAudit({ entityId: created.code || created.id, entityType: "Asset Types", action: "Created", newValue: created.name });
+      return created;
+    } catch (err) {
+      console.warn("API createAssetType error:", err.message);
+      throw err;
+    }
+  };
+
+  const updateAssetType = async (id, updated) => {
+    try {
+      const res = await masterDataService.updateAssetType(id, updated);
+      const returned = res?.data || res;
+      setAssetTypes((prev) =>
+        prev.map((t) => (t.id === id || t.code === id ? { ...t, ...returned } : t))
+      );
+      logAudit({ entityId: id, entityType: "Asset Types", action: "Updated" });
+      return returned;
+    } catch (err) {
+      console.warn("API updateAssetType error:", err.message);
+      throw err;
+    }
+  };
+
+  const deleteAssetType = async (id) => {
+    try {
+      await masterDataService.deleteAssetType(id);
+      setAssetTypes((prev) => prev.filter((t) => t.id !== id && t.code !== id));
+      logAudit({ entityId: id, entityType: "Asset Types", action: "Deleted" });
+    } catch (err) {
+      console.warn("API deleteAssetType error:", err.message);
+      throw err;
+    }
+  };
+
+  const refreshAssetTypes = async () => {
+    try {
+      const res = await masterDataService.getAssetTypes();
+      const arr = res?.data?.data || res?.data || res;
+      if (Array.isArray(arr)) setAssetTypes(arr);
+    } catch (err) {
+      console.warn("Failed to refresh asset types:", err.message);
+    }
+  };
+
+  // ============================================================================
   // 15. USER & ROLE ADMINISTRATION
   // ============================================================================
   const addUser = (userData) => {
@@ -2118,7 +2179,7 @@ export function MasterDataProvider({ children }) {
       email: inv.email,
       role: inv.role || "Line Operator",
       department: inv.department || "Production",
-      invitedBy: "Alexander Vance",
+      invitedBy: "Ronald Robinson",
       sentDate: new Date().toISOString().substring(0, 10),
       status: "Pending"
     };
@@ -2424,6 +2485,14 @@ export function MasterDataProvider({ children }) {
         updateStorageType,
         deleteStorageType,
         refreshStorageTypes,
+
+        // 14.2 Asset Types Master
+        assetTypes,
+        setAssetTypes,
+        addAssetType,
+        updateAssetType,
+        deleteAssetType,
+        refreshAssetTypes,
 
         // 15. User & Role Administration
         users,

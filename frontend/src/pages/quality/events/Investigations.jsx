@@ -317,7 +317,7 @@ export function Investigations() {
                       )}
                     </td>
                     <td style={{ padding: "16px 20px", color: "#6B5B4E", fontWeight: 600 }}>
-                      {inv.leadInvestigator || "Dr. Rachel Thorne"}
+                      {inv.leadInvestigator || "Stephanie Kuzmych"}
                     </td>
                     <td style={{ padding: "16px 20px" }}>
                       <span style={{

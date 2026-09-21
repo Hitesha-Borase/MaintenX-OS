@@ -18,7 +18,8 @@ import {
   Edit2,
   Trash2,
   Eye,
-  EyeOff
+  EyeOff,
+  AlertCircle
 } from "lucide-react";
 import { Card } from "../../../components/common/Card";
 import { Badge } from "../../../components/common/Badge";
@@ -75,7 +76,15 @@ export function UsersPage() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("ALL");
+
+  const availableRoles = useMemo(() => {
+    return (roles || []).filter(
+      (r) => r.code !== "master_admin" && r.name !== "Master Admin"
+    );
+  }, [roles]);
+
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [addModalError, setAddModalError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showModalPassword, setShowModalPassword] = useState(false);
   const [showEditModalPassword, setShowEditModalPassword] = useState(false);
@@ -205,6 +214,7 @@ export function UsersPage() {
 
     try {
       setIsSubmitting(true);
+      setAddModalError("");
       const selectedPlant = plants.find((p) => p.id === formData.plantId);
       const plantName = selectedPlant ? selectedPlant.name.split(" - ")[0] : (plants[0]?.name?.split(" - ")[0] || "");
       const deptToSubmit = formData.department || defaultDeptName;
@@ -224,6 +234,7 @@ export function UsersPage() {
 
       addToast(`User ${formData.name} successfully provisioned!`, "success");
       setIsAddModalOpen(false);
+      setAddModalError("");
       setFormData({
         name: "",
         email: "",
@@ -234,7 +245,9 @@ export function UsersPage() {
         status: "Active"
       });
     } catch (err) {
-      addToast("Failed to provision user: " + err.message, "error");
+      const msg = err.message || "Failed to provision user";
+      setAddModalError(msg);
+      addToast(msg, "error");
     } finally {
       setIsSubmitting(false);
     }
@@ -507,6 +520,25 @@ export function UsersPage() {
             </div>
 
             <form onSubmit={handleAddSubmit} style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
+              {addModalError && (
+                <div
+                  style={{
+                    padding: "10px 14px",
+                    backgroundColor: "rgba(239, 68, 68, 0.12)",
+                    border: "1.5px solid #EF4444",
+                    borderRadius: "8px",
+                    color: "#DC2626",
+                    fontSize: "13px",
+                    fontWeight: 600,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                  }}
+                >
+                  <AlertCircle size={18} style={{ flexShrink: 0 }} />
+                  <span>{addModalError}</span>
+                </div>
+              )}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                 <div>
                   <label className="form-label">Full Name *</label>
@@ -543,8 +575,8 @@ export function UsersPage() {
                     className="form-input"
                     style={{ backgroundColor: "#FFFFFF" }}
                   >
-                    {roles && roles.length > 0 ? (
-                      roles.map((r) => (
+                    {availableRoles && availableRoles.length > 0 ? (
+                      availableRoles.map((r) => (
                         <option key={r.id || r.name} value={r.name}>{r.name}</option>
                       ))
                     ) : (
@@ -809,13 +841,21 @@ export function UsersPage() {
                     className="form-input"
                     style={{ backgroundColor: "#FFFFFF" }}
                   >
-                    <option value="System Administrator">System Administrator</option>
-                    <option value="Plant Manager">Plant Manager</option>
-                    <option value="Quality Manager">Quality Manager</option>
-                    <option value="Maintenance Lead">Maintenance Lead</option>
-                    <option value="Line Operator">Line Operator</option>
-                    <option value="Planner / Scheduler">Planner / Scheduler</option>
-                    <option value="Warehouse / Receiver">Warehouse / Receiver</option>
+                    {availableRoles && availableRoles.length > 0 ? (
+                      availableRoles.map((r) => (
+                        <option key={r.id || r.name} value={r.name}>{r.name}</option>
+                      ))
+                    ) : (
+                      <>
+                        <option value="System Administrator">System Administrator</option>
+                        <option value="Plant Manager">Plant Manager</option>
+                        <option value="Quality Manager">Quality Manager</option>
+                        <option value="Maintenance Lead">Maintenance Lead</option>
+                        <option value="Line Operator">Line Operator</option>
+                        <option value="Planner / Scheduler">Planner / Scheduler</option>
+                        <option value="Warehouse / Receiver">Warehouse / Receiver</option>
+                      </>
+                    )}
                   </select>
                 </div>
                 <div>

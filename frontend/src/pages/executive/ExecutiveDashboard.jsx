@@ -113,7 +113,7 @@ Quarterly Enterprise Operations & Financial Intelligence
 =====================================================
 Report Scope: ${selectedPlantId === "ALL" ? "Enterprise (All Plants)" : "Plant ID: " + selectedPlantId}
 Generated At: ${new Date().toISOString()}
-Author: Victoria Sterling (Executive VP Operations)
+Author: Pete Vanslyke (President) & Stefan Crawford (Plant Manager)
 -----------------------------------------------------
 1. EXECUTIVE PERFORMANCE SUMMARY
    - Production Attainment: ${dashboardData?.productionAttainment || '88.4%'}
@@ -122,13 +122,11 @@ Author: Victoria Sterling (Executive VP Operations)
    - Manufacturing Cost (MTD): ${dashboardData?.manufacturingCostMTD || '$273.4K'}
 -----------------------------------------------------
 2. ACTIVE PLANT PERFORMANCE PORTFOLIO
-   - Indore Mega Bottling: 88.4% Attainment (Optimal)
-   - Pune Aseptic Packaging: 76.2% Attainment (Attention Required)
-   - Bengaluru Brewery & Kegging: 92.1% Attainment (Optimal)
+   - Plant 1 - Meat Processing & Smokehouse Facility: 88.4% Attainment (Optimal)
 -----------------------------------------------------
 3. STRATEGIC RISKS & AI RECOMMENDATIONS
-   - Recommendation: AI Routing to Austin Skid 2 (94.8% confidence)
-   - Strategic Risk: Supply Price Variance on organic concentrate (+4.1%)
+   - Recommendation: Schedule Smokehouse #3 damper seal preventative inspection
+   - Strategic Risk: Winpak vacuum film lead time variance (+2.1%)
 =====================================================`;
 
     const blob = new Blob([reportContent], { type: "text/plain" });

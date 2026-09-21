@@ -1,5 +1,20 @@
 import { FastifyReply, FastifyRequest } from "fastify";
 import { masterAdminService, ActorContext } from "./master.service.js";
+import {
+  createCompanySchema,
+  updateCompanySchema,
+  updateCompanyStatusSchema,
+  createCompanyAdminSchema,
+  updateCompanyAdminSchema,
+  updateAdminStatusSchema,
+  createPlanSchema,
+  updatePlanSchema,
+  updatePlanStatusSchema,
+  toggleCompanyModuleSchema,
+  updateUserStatusSchema,
+  createSupportTicketSchema,
+  updateTicketStatusSchema,
+} from "./master.schema.js";
 
 function getActor(req: FastifyRequest): ActorContext {
   const user = (req as any).user;
@@ -32,20 +47,23 @@ export class MasterAdminController {
 
   async createCompany(req: FastifyRequest<{ Body: any }>, reply: FastifyReply) {
     const actor = getActor(req);
-    const data = await masterAdminService.createCompany(req.body as any, actor);
+    const input = createCompanySchema.parse(req.body);
+    const data = await masterAdminService.createCompany(input as any, actor);
     return reply.status(201).send({ success: true, message: "Company created successfully", data });
   }
 
   async updateCompany(req: FastifyRequest<{ Params: { id: string }; Body: any }>, reply: FastifyReply) {
     const actor = getActor(req);
-    const data = await masterAdminService.updateCompanyDetails(req.params.id, req.body as any, actor);
+    const input = updateCompanySchema.parse(req.body);
+    const data = await masterAdminService.updateCompanyDetails(req.params.id, input as any, actor);
     return reply.send({ success: true, message: "Company updated successfully", data });
   }
 
   async updateCompanyStatus(req: FastifyRequest<{ Params: { id: string }; Body: { status: string } }>, reply: FastifyReply) {
     const actor = getActor(req);
-    const data = await masterAdminService.updateCompanyStatus(req.params.id, req.body.status, actor);
-    return reply.send({ success: true, message: `Company status updated to ${req.body.status}`, data });
+    const input = updateCompanyStatusSchema.parse(req.body);
+    const data = await masterAdminService.updateCompanyStatus(req.params.id, input.status, actor);
+    return reply.send({ success: true, message: `Company status updated to ${input.status}`, data });
   }
 
   async deleteCompany(req: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) {
@@ -60,21 +78,24 @@ export class MasterAdminController {
     return reply.send({ success: true, data });
   }
 
-  async createCompanyAdmin(req: FastifyRequest<{ Body: { name: string; email?: string; password?: string; company?: string; companyId?: string } }>, reply: FastifyReply) {
+  async createCompanyAdmin(req: FastifyRequest<{ Body: any }>, reply: FastifyReply) {
     const actor = getActor(req);
-    const data = await masterAdminService.createCompanyAdmin(req.body, actor);
+    const input = createCompanyAdminSchema.parse(req.body);
+    const data = await masterAdminService.createCompanyAdmin(input, actor);
     return reply.status(201).send({ success: true, message: "Company administrator created successfully", data });
   }
 
-  async updateCompanyAdmin(req: FastifyRequest<{ Params: { id: string }; Body: { name?: string } }>, reply: FastifyReply) {
+  async updateCompanyAdmin(req: FastifyRequest<{ Params: { id: string }; Body: any }>, reply: FastifyReply) {
     const actor = getActor(req);
-    const data = await masterAdminService.updateCompanyAdmin(req.params.id, req.body, actor);
+    const input = updateCompanyAdminSchema.parse(req.body);
+    const data = await masterAdminService.updateCompanyAdmin(req.params.id, input, actor);
     return reply.send({ success: true, message: "Company administrator updated successfully", data });
   }
 
   async updateAdminStatus(req: FastifyRequest<{ Params: { id: string }; Body: { status: string } }>, reply: FastifyReply) {
     const actor = getActor(req);
-    const data = await masterAdminService.updateAdminStatus(req.params.id, req.body.status, actor);
+    const input = updateAdminStatusSchema.parse(req.body);
+    const data = await masterAdminService.updateAdminStatus(req.params.id, input.status, actor);
     return reply.send({ success: true, message: "Admin status updated", data });
   }
 
@@ -92,20 +113,23 @@ export class MasterAdminController {
 
   async createPlan(req: FastifyRequest<{ Body: any }>, reply: FastifyReply) {
     const actor = getActor(req);
-    const data = await masterAdminService.createPlan(req.body, actor);
+    const input = createPlanSchema.parse(req.body);
+    const data = await masterAdminService.createPlan(input, actor);
     return reply.status(201).send({ success: true, message: "Plan created successfully", data });
   }
 
   async updatePlan(req: FastifyRequest<{ Params: { id: string }; Body: any }>, reply: FastifyReply) {
     const actor = getActor(req);
-    const data = await masterAdminService.updatePlan(req.params.id, req.body, actor);
+    const input = updatePlanSchema.parse(req.body);
+    const data = await masterAdminService.updatePlan(req.params.id, input, actor);
     return reply.send({ success: true, message: "Plan updated successfully", data });
   }
 
   async updatePlanStatus(req: FastifyRequest<{ Params: { id: string }; Body: { status: string } }>, reply: FastifyReply) {
     const actor = getActor(req);
-    const data = await masterAdminService.updatePlanStatus(req.params.id, req.body.status, actor);
-    return reply.send({ success: true, message: `Plan status changed to ${req.body.status}`, data });
+    const input = updatePlanStatusSchema.parse(req.body);
+    const data = await masterAdminService.updatePlanStatus(req.params.id, input.status, actor);
+    return reply.send({ success: true, message: `Plan status changed to ${input.status}`, data });
   }
 
   async deletePlan(req: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) {
@@ -156,14 +180,15 @@ export class MasterAdminController {
   }
 
   async toggleCompanyModule(
-    req: FastifyRequest<{ Params: { companyId: string; moduleKey: string }; Body?: { isEnabled?: boolean } }>,
+    req: FastifyRequest<{ Params: { companyId: string; moduleKey: string }; Body?: any }>,
     reply: FastifyReply
   ) {
     const actor = getActor(req);
+    const input = toggleCompanyModuleSchema.parse(req.body || {});
     const data = await masterAdminService.toggleCompanyModule(
       req.params.companyId,
       req.params.moduleKey,
-      req.body?.isEnabled,
+      input.isEnabled,
       actor
     );
     return reply.send({ success: true, message: `Module ${req.params.moduleKey} updated`, data });
@@ -175,9 +200,10 @@ export class MasterAdminController {
     return reply.send({ success: true, data });
   }
 
-  async updateUserStatus(req: FastifyRequest<{ Params: { id: string }; Body: { status: string } }>, reply: FastifyReply) {
+  async updateUserStatus(req: FastifyRequest<{ Params: { id: string }; Body: any }>, reply: FastifyReply) {
     const actor = getActor(req);
-    const data = await masterAdminService.updateUserStatus(req.params.id, req.body.status, actor);
+    const input = updateUserStatusSchema.parse(req.body);
+    const data = await masterAdminService.updateUserStatus(req.params.id, input.status, actor);
     return reply.send({ success: true, message: "User status updated", data });
   }
 
@@ -218,16 +244,18 @@ export class MasterAdminController {
 
   async createSupportTicket(req: FastifyRequest<{ Body: any }>, reply: FastifyReply) {
     const actor = getActor(req);
-    const data = await masterAdminService.createSupportTicket(req.body as any, actor);
+    const input = createSupportTicketSchema.parse(req.body);
+    const data = await masterAdminService.createSupportTicket(input as any, actor);
     return reply.status(201).send({ success: true, message: "Support ticket created", data });
   }
 
   async updateTicketStatus(
-    req: FastifyRequest<{ Params: { id: string }; Body: { status: string; resolution?: string } }>,
+    req: FastifyRequest<{ Params: { id: string }; Body: any }>,
     reply: FastifyReply
   ) {
     const actor = getActor(req);
-    const data = await masterAdminService.updateTicketStatus(req.params.id, req.body.status, req.body.resolution, actor);
+    const input = updateTicketStatusSchema.parse(req.body);
+    const data = await masterAdminService.updateTicketStatus(req.params.id, input.status, input.resolution, actor);
     return reply.send({ success: true, message: "Ticket updated", data });
   }
 

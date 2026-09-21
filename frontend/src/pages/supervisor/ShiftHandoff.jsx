@@ -55,7 +55,7 @@ export function ShiftHandoff() {
     const handoffData = {
       shiftFrom,
       shiftTo,
-      handedOverBy: "Alexander Vance (Operations Supervisor)",
+      handedOverBy: "Ronald Robinson (Operations Supervisor)",
       receivedBy: incomingSuper,
       notes: fullNotes,
       stage
@@ -283,7 +283,7 @@ export function ShiftHandoff() {
         isOpen={isSignModalOpen}
         onClose={() => setIsSignModalOpen(false)}
         title="Electronic Signature & Handoff Lock"
-        subtitle={`Stage: ${stage} | Signee: Alexander Vance`}
+        subtitle={`Stage: ${stage} | Signee: Ronald Robinson`}
         maxWidth="480px"
         footer={
           <>

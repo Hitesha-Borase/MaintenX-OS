@@ -48,7 +48,7 @@ export function PMPlans() {
     name: "",
     targetAssetType: "Packaging & Bottling",
     linkedAssetId: "FM-001",
-    leadTechnician: "Marcus Vance",
+    leadTechnician: "David Markov",
     frequency: "Weekly / Monthly",
     description: "",
     estimatedLaborHoursPerMonth: 8.0,
@@ -96,7 +96,7 @@ export function PMPlans() {
       name: "",
       targetAssetType: "Packaging & Bottling",
       linkedAssetId: "FM-001",
-      leadTechnician: "Marcus Vance",
+      leadTechnician: "David Markov",
       frequency: "Weekly / Monthly",
       description: "",
       estimatedLaborHoursPerMonth: 8.0,
@@ -390,7 +390,7 @@ export function PMPlans() {
                 <div>
                   <span style={{ color: "var(--text-muted)", fontSize: "10px", fontWeight: 700, textTransform: "uppercase" }}>Lead Tech:</span>
                   <div style={{ fontWeight: 700, color: "var(--text-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", fontSize: "12px" }}>
-                    {plan.leadTechnician || "Marcus Vance"}
+                    {plan.leadTechnician || "David Markov"}
                   </div>
                 </div>
 

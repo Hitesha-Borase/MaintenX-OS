@@ -39,7 +39,7 @@ export function PMSchedulePage() {
     frequency: "Weekly",
     checklistTemplateId: "CHK-FM-DAILY",
     dueNext: new Date().toISOString().replace("T", " ").substring(0, 16),
-    assignedTechnician: "Marcus Vance",
+    assignedTechnician: "David Markov",
     department: "Packaging",
     priority: "P2 - High",
     estimatedMinutes: 30
@@ -86,7 +86,7 @@ export function PMSchedulePage() {
       frequency: "Weekly",
       checklistTemplateId: "CHK-FM-DAILY",
       dueNext: new Date().toISOString().replace("T", " ").substring(0, 16),
-      assignedTechnician: "Marcus Vance",
+      assignedTechnician: "David Markov",
       department: "Packaging",
       priority: "P2 - High",
       estimatedMinutes: 30

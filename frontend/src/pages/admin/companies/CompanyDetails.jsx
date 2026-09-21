@@ -251,7 +251,7 @@ export function CompanyDetails() {
 
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "16px" }}>
                 {(company.plantsList || [
-                  { id: "PLT-01", name: "Primary Production Facility", code: "INDORE-01", location: "Indore, MP, India", lines: 3, capacity: "250,000 Units/Day", status: "Operational" },
+                  { id: "PLT-MEAT-01", name: "Plant 1 - Meat Processing & Smokehouse Facility", code: "PLT-MEAT-01", location: "410 Bloor St W, Oshawa, ON L1J 5Y6, Canada", lines: 3, capacity: "15,000 lbs/Day", status: "Operational" },
                 ]).map((plant) => (
                   <div
                     key={plant.id}

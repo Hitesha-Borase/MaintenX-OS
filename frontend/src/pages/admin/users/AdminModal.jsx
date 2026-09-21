@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Modal } from "../../../components/common/Modal";
 import { Button } from "../../../components/common/Button";
-import { User, Building2, Mail, Lock, Eye, EyeOff } from "lucide-react";
+import { User, Building2, Mail, Lock, Eye, EyeOff, AlertCircle } from "lucide-react";
 import { useMasterAdmin } from "../../../context/MasterAdminContext";
 import { useApp } from "../../../context/AppContext";
 
@@ -10,6 +10,7 @@ export function AdminModal({ isOpen, onClose, adminToEdit = null, availableCompa
   const { addToast } = useApp();
   const [submitting, setSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
   
   const [formData, setFormData] = useState({
     name: "",
@@ -39,15 +40,20 @@ export function AdminModal({ isOpen, onClose, adminToEdit = null, availableCompa
 
   const handleSubmit = async () => {
     if (!formData.name.trim() || !formData.company) {
-      addToast("Please fill in all required fields", "warning");
+      const msg = "Please fill in all required fields";
+      setErrorMessage(msg);
+      addToast(msg, "warning");
       return;
     }
     if (!adminToEdit && (!formData.password || formData.password.length < 6)) {
-      addToast("Administrator password is required (min 6 characters)", "warning");
+      const msg = "Administrator password is required (min 6 characters)";
+      setErrorMessage(msg);
+      addToast(msg, "warning");
       return;
     }
     
     setSubmitting(true);
+    setErrorMessage("");
     try {
       if (adminToEdit) {
         await editUser(adminToEdit.id, formData.name);
@@ -64,7 +70,9 @@ export function AdminModal({ isOpen, onClose, adminToEdit = null, availableCompa
       }
       onClose();
     } catch (err) {
-      addToast(err?.message || "Failed to save administrator", "error");
+      const msg = err?.message || "Failed to save administrator";
+      setErrorMessage(msg);
+      addToast(msg, "error");
     } finally {
       setSubmitting(false);
     }
@@ -86,6 +94,25 @@ export function AdminModal({ isOpen, onClose, adminToEdit = null, availableCompa
       }
     >
       <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+        {errorMessage && (
+          <div
+            style={{
+              padding: "10px 14px",
+              backgroundColor: "rgba(239, 68, 68, 0.12)",
+              border: "1.5px solid #EF4444",
+              borderRadius: "8px",
+              color: "#DC2626",
+              fontSize: "13px",
+              fontWeight: 600,
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+            }}
+          >
+            <AlertCircle size={18} style={{ flexShrink: 0 }} />
+            <span>{errorMessage}</span>
+          </div>
+        )}
         
         <div style={{ padding: "16px", backgroundColor: "var(--bg-main)", borderRadius: "var(--radius-lg)", border: "1px solid var(--border-subtle)" }}>
           <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)", marginBottom: "12px", textTransform: "uppercase", letterSpacing: "0.04em" }}>

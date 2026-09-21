@@ -19,13 +19,8 @@ import qualityService from "../../../services/qualityService";
 export function QualitySpecifications() {
   const { addToast } = useApp();
 
-  const [specs, setSpecs] = useState([
-    { id: 1, parameter: "Brix Sugar Level (Concentration)", range: "11.6 - 12.2 °Bx", sku: "Sparkling Citrus & Cola 500ml", ccp: "No", uom: "°Bx", min: 11.6, max: 12.2 },
-    { id: 2, parameter: "Pasteurizer Heat Exchanger Temperature", range: "≥ 83.1 °C", sku: "All Bottled / Aseptic SKUs", ccp: "Yes (CCP-01)", uom: "°C", min: 83.1, max: 88.0 },
-    { id: 3, parameter: "Net Volume Fill Tolerance", range: "330.0 ± 2.5 ml", sku: "330ml Aluminum Cans", ccp: "No", uom: "ml", min: 327.5, max: 332.5 },
-    { id: 4, parameter: "Dissolved Carbon Dioxide (CO2)", range: "3.60 - 3.80 Vol", sku: "Sparkling Sodas", ccp: "No", uom: "Vol", min: 3.60, max: 3.80 },
-    { id: 5, parameter: "End-of-Line Metal Detector Sensitivity", range: "Fe 2.0mm / Non-Fe 2.5mm / SS 3.0mm", sku: "All Packaged SKUs", ccp: "Yes (CCP-02)", uom: "mm", min: 0, max: 0 }
-  ]);
+  const [specs, setSpecs] = useState([]);
+
 
   const [isLoading, setIsLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
@@ -38,11 +33,12 @@ export function QualitySpecifications() {
     setIsLoading(true);
     try {
       const res = await qualityService.getQualitySpecs();
-      if (res.data?.data && Array.isArray(res.data.data)) {
-        setSpecs(res.data.data);
+      const list = res?.data?.data ?? res?.data ?? res;
+      if (Array.isArray(list)) {
+        setSpecs(list);
       }
     } catch (err) {
-      console.warn("Quality specs fallback:", err.message);
+      console.warn("Quality specs fetch:", err.message);
     } finally {
       setIsLoading(false);
     }

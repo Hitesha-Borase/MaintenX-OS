@@ -6,7 +6,7 @@ async function testHandoffSubmit() {
   const postData = JSON.stringify({
     shiftFrom: 'Shift A (Day - 06:00 - 14:30)',
     shiftTo: 'Shift B (Evening - 14:30 - 23:00)',
-    receivedBy: 'Carlos Mendez',
+    receivedBy: 'Ashley Kulcar',
     notes: 'Line 1 running smoothly. All quality CCP checks passed.',
     pin: '1234'
   });

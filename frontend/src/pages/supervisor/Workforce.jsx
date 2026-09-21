@@ -107,7 +107,7 @@ export function Workforce() {
   const [trainingForm, setTrainingForm] = useState({
     trainingProgram: "Annual HACCP & Critical Control Point Refresh",
     trainingType: "Mandatory Safety",
-    trainer: "Sarah Jenkins",
+    trainer: "Stephanie Kuzmych",
     targetDate: "2026-10-15"
   });
 
@@ -225,7 +225,7 @@ export function Workforce() {
       unitsPerHour: 150,
       efficiency: "96.0%",
       hoursWorkedMonth: 160,
-      plant: "Indore Mega Bottling Facility",
+      plant: "Plant 1 - Meat Processing & Smokehouse Facility",
       activeStation: `${newEmployee.department || "Packaging"} Station`,
       shiftTiming: (newEmployee.shift || "").includes("Day") ? "06:00 - 14:30" : "14:30 - 22:30",
       certifications: ["HACCP Safety", "OSHA 10"],

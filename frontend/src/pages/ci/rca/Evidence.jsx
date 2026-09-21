@@ -58,12 +58,12 @@ export function Evidence() {
   }, [refreshEvidence, refreshInvestigations]);
 
   const [newEvidence, setNewEvidence] = useState({
-    rcaId: investigations[0]?.id || "RCA-2026-003",
+    rcaId: investigations[0]?.id || "RCA-2026-01",
     type: "Physical Photo",
     title: "",
     details: "",
     fileUrl: "",
-    uploadedBy: currentUser?.name || currentUser || "Viktor Hayes"
+    uploadedBy: currentUser?.name || currentUser || "Stefan Crawford"
   });
 
   // Keep default RCA in sync
@@ -91,18 +91,18 @@ export function Evidence() {
         title: newEvidence.title.trim(),
         details: newEvidence.details.trim(),
         fileUrl: newEvidence.fileUrl || null,
-        uploadedBy: newEvidence.uploadedBy || currentUser?.name || "Viktor Hayes",
+        uploadedBy: newEvidence.uploadedBy || currentUser?.name || "Stefan Crawford",
         date: new Date().toISOString().substring(0, 10)
       });
 
       setIsAddModalOpen(false);
       setNewEvidence({
-        rcaId: investigations[0]?.id || "RCA-2026-003",
+        rcaId: investigations[0]?.id || "RCA-2026-01",
         type: "Physical Photo",
         title: "",
         details: "",
         fileUrl: "",
-        uploadedBy: currentUser?.name || "Viktor Hayes"
+        uploadedBy: currentUser?.name || "Stefan Crawford"
       });
       await refreshEvidence?.();
     } catch (err) {
@@ -118,7 +118,7 @@ export function Evidence() {
       title: ev.title || "",
       details: ev.details || "",
       fileUrl: ev.fileUrl || "",
-      uploadedBy: ev.uploadedBy || "Viktor Hayes"
+      uploadedBy: ev.uploadedBy || "Stefan Crawford"
     });
   };
 

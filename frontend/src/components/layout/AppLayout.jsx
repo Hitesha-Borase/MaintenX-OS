@@ -24,9 +24,9 @@ export function AppLayout() {
     const plan = (tenant?.plan || currentRole?.user?.plan || localStorage.getItem("maintenx_tenant_plan") || "").toLowerCase();
     const isEnterprise = plan.includes("enterprise") || plan.includes("complete") || currentRole?.user?.companyName?.includes("BeverageCorp");
 
-    const hasPaidSub = Boolean(tenant?.hasSubscription || currentRole?.user?.hasSubscription);
-    const subExpiryStr = tenant?.subscriptionExpiryDate;
-    const subStatus = (tenant?.subscriptionStatus || "").toUpperCase();
+    const subStatus = (tenant?.subscription?.status || tenant?.subscriptionStatus || localStorage.getItem("maintenx_subscription_status") || "").toUpperCase();
+    const hasPaidSub = Boolean(tenant?.hasSubscription || currentRole?.user?.hasSubscription || subStatus === "ACTIVE") && subStatus !== "TRIAL";
+    const subExpiryStr = tenant?.subscriptionExpiryDate || tenant?.subscription?.currentPeriodEnd || localStorage.getItem("maintenx_trial_end");
 
     // 1. Paid plan expiration check
     const isPaidSubExpired = hasPaidSub && (
@@ -50,16 +50,9 @@ export function AppLayout() {
     }
 
     if (isPaidSubExpired || isTrialPeriodExpired) {
-      const userRole = currentRole?.id || "";
-      const roleName = (currentRole?.user?.role || currentRole?.label || "").toLowerCase();
-      const isCompanyAdmin = userRole === "admin" || roleName.includes("admin") || roleName.includes("administrator");
-
-      // Company Admin is allowed into /pricing and /support to renew or buy plans
-      if (isCompanyAdmin && (location.pathname.startsWith("/pricing") || location.pathname.startsWith("/support"))) {
-        isSubscriptionExpired = false;
-      }
-      // Sub-users/employees are allowed only on /support if needed, but blocked on dashboards
-      else if (!isCompanyAdmin && location.pathname.startsWith("/support")) {
+      // When subscription or free trial has expired, all operational dashboards and console screens are strictly locked out.
+      // Only /pricing (to renew or upgrade plan) and /support (to contact support) remain accessible.
+      if (location.pathname.startsWith("/pricing") || location.pathname.startsWith("/support")) {
         isSubscriptionExpired = false;
       } else {
         isSubscriptionExpired = true;

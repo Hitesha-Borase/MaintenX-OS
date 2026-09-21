@@ -11,11 +11,11 @@ export const ROLES = [
     step: "0. Platform",
     module: "admin",
     user: {
-      name: "Elena Vance",
+      name: "Stefan Crawford",
       email: "master@maintenx.com",
       role: "Platform Chief Administrator",
-      avatar: "EV",
-      plant: "Global Cloud HQ"
+      avatar: "SC",
+      plant: "Plant 1 - Meat Processing & Smokehouse Facility"
     }
   },
   {
@@ -26,11 +26,11 @@ export const ROLES = [
     step: "1. Setup",
     module: "admin",
     user: {
-      name: "Alexander Vance",
+      name: "Michael Levin",
       email: "admin@maintenx.com",
-      role: "System Administrator",
-      avatar: "AV",
-      plant: "Indore Mega Facility"
+      role: "Vice President & General Operations",
+      avatar: "ML",
+      plant: "Plant 1 - Meat Processing & Smokehouse Facility"
     }
   },
   {
@@ -41,11 +41,11 @@ export const ROLES = [
     step: "2. Plan",
     module: "plan",
     user: {
-      name: "Elena Rostova",
+      name: "Stefan Crawford",
       email: "planner@maintenx.com",
-      role: "Lead Production Planner & Scheduler",
-      avatar: "ER",
-      plant: "Indore Mega Facility"
+      role: "Lead Meat Production Planner & Scheduler",
+      avatar: "SC",
+      plant: "Plant 1 - Meat Processing & Smokehouse Facility"
     }
   },
   {
@@ -56,11 +56,11 @@ export const ROLES = [
     step: "3. Materials",
     module: "move",
     user: {
-      name: "Carlos Mendez",
+      name: "Ashley Kulcar",
       email: "warehouse@maintenx.com",
-      role: "Warehouse & Logistics Manager",
-      avatar: "CM",
-      plant: "Indore Mega Facility"
+      role: "Purchasing & Materials Inventory Manager",
+      avatar: "AK",
+      plant: "Plant 1 - Meat Processing & Smokehouse Facility"
     }
   },
   {
@@ -71,11 +71,11 @@ export const ROLES = [
     step: "4. Machines",
     module: "maintain",
     user: {
-      name: "Dave Miller",
+      name: "David Markov",
       email: "maintenance@maintenx.com",
-      role: "Senior Reliability Technician & Maintenance Lead",
+      role: "Senior Plant Maintenance & Refrigeration Lead",
       avatar: "DM",
-      plant: "Indore Mega Facility"
+      plant: "Plant 1 - Meat Processing & Smokehouse Facility"
     }
   },
   {
@@ -86,11 +86,11 @@ export const ROLES = [
     step: "5. Shift",
     module: "produce",
     user: {
-      name: "Sarah Jenkins",
+      name: "Ronald Robinson",
       email: "supervisor@maintenx.com",
-      role: "Shift Operations Supervisor",
-      avatar: "SJ",
-      plant: "Indore Mega Facility"
+      role: "Shift Operations & Processing Supervisor",
+      avatar: "RR",
+      plant: "Plant 1 - Meat Processing & Smokehouse Facility"
     }
   },
   {
@@ -101,11 +101,11 @@ export const ROLES = [
     step: "6. Line",
     module: "produce",
     user: {
-      name: "Devang Patel",
+      name: "Douglas Andrew",
       email: "linelead@maintenx.com",
-      role: "Line Lead - Packaging & Bottling",
-      avatar: "DP",
-      plant: "Indore Mega Facility"
+      role: "Lead Hand - Smokehouse & Processing Line",
+      avatar: "DA",
+      plant: "Plant 1 - Meat Processing & Smokehouse Facility"
     }
   },
   {
@@ -116,11 +116,11 @@ export const ROLES = [
     step: "7. Production",
     module: "produce",
     user: {
-      name: "Marcus Chen",
+      name: "Josiah Leyland",
       email: "operator@maintenx.com",
-      role: "Line Operator (HMI Console)",
-      avatar: "MC",
-      plant: "Indore Mega Facility"
+      role: "Packaging & Slicing Line Operator",
+      avatar: "JL",
+      plant: "Plant 1 - Meat Processing & Smokehouse Facility"
     }
   },
   {
@@ -131,11 +131,11 @@ export const ROLES = [
     step: "8. Quality",
     module: "verify",
     user: {
-      name: "Dr. Rachel Thorne",
+      name: "Stephanie Kuzmych",
       email: "qa@maintenx.com",
-      role: "Quality Assurance Lead",
-      avatar: "RT",
-      plant: "Indore Mega Facility"
+      role: "Quality Assurance & HACCP Lead",
+      avatar: "SK",
+      plant: "Plant 1 - Meat Processing & Smokehouse Facility"
     }
   },
   {
@@ -146,11 +146,11 @@ export const ROLES = [
     step: "9. Kaizen",
     module: "improve",
     user: {
-      name: "Viktor Hayes",
+      name: "Stefan Crawford",
       email: "ci@maintenx.com",
-      role: "Continuous Improvement Engineer",
-      avatar: "VH",
-      plant: "Indore Mega Facility"
+      role: "Continuous Improvement & RCA Director",
+      avatar: "SC",
+      plant: "Plant 1 - Meat Processing & Smokehouse Facility"
     }
   },
   {
@@ -161,11 +161,11 @@ export const ROLES = [
     step: "10. Plant",
     module: "intelligence",
     user: {
-      name: "Arthur Sterling",
+      name: "Stefan Crawford",
       email: "plant.manager@maintenx.com",
-      role: "Indore Plant Director",
-      avatar: "AS",
-      plant: "Indore Mega Facility"
+      role: "Meat Processing Plant Manager",
+      avatar: "SC",
+      plant: "Plant 1 - Meat Processing & Smokehouse Facility"
     }
   },
   {
@@ -176,11 +176,11 @@ export const ROLES = [
     step: "11. Enterprise",
     module: "intelligence",
     user: {
-      name: "Victoria Sterling",
+      name: "Pete Vanslyke",
       email: "executive@maintenx.com",
-      role: "Chief Operating Officer",
-      avatar: "VS",
-      plant: "Global Executive Suite"
+      role: "President & Chief Executive Officer",
+      avatar: "PV",
+      plant: "meat company 1 Corporate HQ"
     }
   }
 ];
@@ -663,13 +663,78 @@ export function RoleProvider({ children }) {
     }
   }, [currentRole]);
 
+  // Background synchronization on mount to fetch live tenant & subscription status from PostgreSQL
+  useEffect(() => {
+    let isMounted = true;
+    const syncSession = async () => {
+      const token = localStorage.getItem("maintenx_auth_token") || localStorage.getItem("flowstate_token");
+      if (!token) return;
+      try {
+        const res = await apiClient.get("/auth/me");
+        const data = res?.data || res;
+        if (isMounted && data?.tenant) {
+          const t = data.tenant;
+          if (t.name) localStorage.setItem("maintenx_tenant_name", t.name);
+          if (t.id) localStorage.setItem("maintenx_tenant_id", t.id);
+          if (t.createdAt) localStorage.setItem("maintenx_tenant_created", t.createdAt);
+          if (t.plan) localStorage.setItem("maintenx_tenant_plan", t.plan);
+          if (t.modules) localStorage.setItem("maintenx_tenant_modules", JSON.stringify(t.modules));
+          if (t.subscriptionExpiryDate) localStorage.setItem("maintenx_trial_end", t.subscriptionExpiryDate);
+          if (t.subscriptionStatus) localStorage.setItem("maintenx_subscription_status", t.subscriptionStatus);
+
+          setCurrentRole(prev => {
+            if (!prev) return prev;
+            return {
+              ...prev,
+              user: {
+                ...prev.user,
+                tenant: {
+                  ...prev.user?.tenant,
+                  ...t,
+                },
+                company: t.name || prev.user?.company,
+                companyName: t.name || prev.user?.companyName,
+              }
+            };
+          });
+        }
+      } catch (err) {
+        // ignore
+      }
+    };
+    syncSession();
+    return () => { isMounted = false; };
+  }, []);
+
   const setRoleById = (roleId) => {
     const found = ROLES.find((r) => r.id === roleId);
     if (found) {
-      setCurrentRole(found);
-      localStorage.setItem("flowstate_current_role", JSON.stringify(found));
-      if (found.user) {
-        localStorage.setItem("flowstate_user_profile", JSON.stringify(found.user));
+      const tenantObj = currentRole?.user?.tenant || (localStorage.getItem("maintenx_tenant_name") ? {
+        id: localStorage.getItem("maintenx_tenant_id"),
+        name: localStorage.getItem("maintenx_tenant_name"),
+        plan: localStorage.getItem("maintenx_tenant_plan"),
+        createdAt: localStorage.getItem("maintenx_tenant_created"),
+        hasSubscription: localStorage.getItem("maintenx_subscription_status") === "ACTIVE",
+        subscriptionStatus: localStorage.getItem("maintenx_subscription_status"),
+        modules: (() => {
+          try { return JSON.parse(localStorage.getItem("maintenx_tenant_modules") || "null"); } catch { return null; }
+        })()
+      } : null);
+
+      const mergedRole = {
+        ...found,
+        user: {
+          ...found.user,
+          tenant: tenantObj,
+          company: tenantObj?.name || currentRole?.user?.company || found.user?.company,
+          companyName: tenantObj?.name || currentRole?.user?.companyName || found.user?.company,
+          createdAt: currentRole?.user?.createdAt || tenantObj?.createdAt || found.user?.createdAt,
+        }
+      };
+      setCurrentRole(mergedRole);
+      localStorage.setItem("flowstate_current_role", JSON.stringify(mergedRole));
+      if (mergedRole.user) {
+        localStorage.setItem("flowstate_user_profile", JSON.stringify(mergedRole.user));
       }
     }
   };
@@ -750,6 +815,9 @@ export function RoleProvider({ children }) {
         if (tenantObj.subscriptionStatus) {
           localStorage.setItem("maintenx_subscription_status", tenantObj.subscriptionStatus);
         }
+        if (tenantObj.modules) {
+          localStorage.setItem("maintenx_tenant_modules", JSON.stringify(tenantObj.modules));
+        }
       } else {
         localStorage.removeItem("maintenx_tenant_name");
         localStorage.removeItem("maintenx_tenant_id");
@@ -758,6 +826,7 @@ export function RoleProvider({ children }) {
         localStorage.removeItem("maintenx_trial_end");
         localStorage.removeItem("maintenx_subscription_status");
         localStorage.removeItem("maintenx_tenant_plan");
+        localStorage.removeItem("maintenx_tenant_modules");
       }
 
       window.dispatchEvent(new CustomEvent("maintenx:tenant_changed", { detail: tenantObj }));
@@ -829,6 +898,11 @@ export function RoleProvider({ children }) {
         "mx_admin_users",
         "maintenx_tenant_name",
         "maintenx_tenant_id",
+        "maintenx_tenant_plan",
+        "maintenx_tenant_created",
+        "maintenx_subscription_status",
+        "maintenx_trial_end",
+        "maintenx_tenant_modules",
         "mx_current_company_name",
         "mx_master_companies",
         "mx_master_plants",
@@ -855,7 +929,31 @@ export function RoleProvider({ children }) {
         "mx_master_training",
         "mx_master_quality_specs",
         "mx_master_storage",
-        "mx_master_permissions"
+        "mx_master_permissions",
+        "flowstate_assets",
+        "flowstate_asset_hierarchy",
+        "flowstate_work_orders",
+        "flowstate_pm_plans",
+        "flowstate_pm_schedules",
+        "flowstate_checklists",
+        "flowstate_checklists_v2",
+        "flowstate_checklist_history",
+        "flowstate_breakdowns",
+        "flowstate_solutions",
+        "flowstate_spare_parts",
+        "flowstate_parts_requests",
+        "flowstate_calibrations",
+        "flowstate_calibration_history",
+        "flowstate_failure_codes",
+        "flowstate_employees",
+        "flowstate_notifications",
+        "flowstate_inventory_lots",
+        "flowstate_planning_versions",
+        "flowstate_planning_schedules",
+        "flowstate_planning_reservations",
+        "flowstate_quality_checks",
+        "flowstate_deviations",
+        "flowstate_exceptions"
       ];
       staleKeys.forEach(k => localStorage.removeItem(k));
       window.dispatchEvent(new CustomEvent("maintenx:tenant_changed", { detail: null }));
@@ -881,8 +979,76 @@ export function RoleProvider({ children }) {
       }
     }
 
-    // 2. All active evaluation trials (7-day trial, Plant Pilot, Enterprise) grant access to all operational modules
-    return true;
+    // 2. Canonical Plan Fallback
+    const plan = (currentRole?.user?.tenant?.plan || currentRole?.user?.plan || localStorage.getItem("maintenx_tenant_plan") || "Plant Pilot").toLowerCase().trim();
+    const CANONICAL_PLAN_MODULES = {
+      "plant pilot": ["produce"],
+      "pilot": ["produce"],
+      "trial": ["produce"],
+      "starter": ["produce", "verify"],
+      "individual modules": ["produce", "verify"],
+      "bundles": ["plan", "produce", "verify", "maintain", "move"],
+      "standard": ["plan", "produce", "verify", "maintain", "move"],
+      "advanced": ["plan", "produce", "verify", "maintain", "move"],
+      "enterprise": ["plan", "produce", "verify", "maintain", "move", "people", "improve", "intelligence"],
+      "maintenx os complete": ["plan", "produce", "verify", "maintain", "move", "people", "improve", "intelligence"],
+    };
+
+    const allowed = CANONICAL_PLAN_MODULES[plan] || (
+      plan.includes("complete") || plan.includes("enterprise")
+        ? ["plan", "produce", "verify", "maintain", "move", "people", "improve", "intelligence"]
+        : plan.includes("bundle")
+        ? ["plan", "produce", "verify", "maintain", "move"]
+        : plan.includes("individual") || plan.includes("starter")
+        ? ["produce", "verify"]
+        : ["produce"]
+    );
+
+    return allowed.includes(moduleKey);
+  };
+
+  const upgradePlan = async (planId) => {
+    try {
+      const res = await apiClient.post("/billing/upgrade", { planId });
+      const data = res?.data || res;
+      if (data?.tenant) {
+        const t = data.tenant;
+        if (t.name) localStorage.setItem("maintenx_tenant_name", t.name);
+        if (t.id) localStorage.setItem("maintenx_tenant_id", t.id);
+        if (t.plan) localStorage.setItem("maintenx_tenant_plan", t.plan);
+        if (t.modules) localStorage.setItem("maintenx_tenant_modules", JSON.stringify(t.modules));
+        if (data.subscription?.currentPeriodEnd) {
+          localStorage.setItem("maintenx_trial_end", data.subscription.currentPeriodEnd);
+        }
+        if (data.subscription?.status) {
+          localStorage.setItem("maintenx_subscription_status", data.subscription.status);
+        }
+
+        setCurrentRole(prev => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            user: {
+              ...prev.user,
+              tenant: {
+                ...prev.user?.tenant,
+                ...t,
+                modules: t.modules,
+                subscription: data.subscription,
+                hasSubscription: true,
+                subscriptionStatus: "ACTIVE",
+              },
+            },
+          };
+        });
+
+        window.dispatchEvent(new CustomEvent("maintenx:plan_upgraded", { detail: data }));
+      }
+      return data;
+    } catch (err) {
+      console.error("Failed to upgrade plan:", err);
+      throw err;
+    }
   };
 
   const getPathModule = (path) => {
@@ -1037,6 +1203,7 @@ export function RoleProvider({ children }) {
         loginWithCredentials,
         digitalSignOff,
         logout,
+        upgradePlan,
         NAVIGATION_CONFIG
       }}
     >

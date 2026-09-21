@@ -35,7 +35,10 @@ export function RolesPage() {
       .getRoles()
       .then((data) => {
         if (Array.isArray(data) && setRoles) {
-          setRoles(data);
+          const filtered = data.filter(
+            (r) => r.code !== "master_admin" && r.name !== "Master Admin"
+          );
+          setRoles(filtered);
         }
       })
       .catch((err) => console.warn("Live roles fetch:", err.message));
@@ -121,7 +124,13 @@ export function RolesPage() {
   };
 
 
-  const totalUsers = roles.reduce((sum, r) => sum + (r.userCount || 0), 0);
+  const displayRoles = React.useMemo(() => {
+    return (roles || []).filter(
+      (r) => r.code !== "master_admin" && r.name !== "Master Admin"
+    );
+  }, [roles]);
+
+  const totalUsers = displayRoles.reduce((sum, r) => sum + (r.userCount || 0), 0);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%", maxWidth: "1200px", margin: "0 auto", minWidth: 0 }}>
@@ -132,7 +141,7 @@ export function RolesPage() {
             <h1 style={{ fontSize: "clamp(18px, 4vw, 24px)", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.3px", lineHeight: 1.2 }}>
               Role-Based Access Control (RBAC) Roles
             </h1>
-            <Badge variant="emerald">{roles.length} DEFINED ROLES</Badge>
+            <Badge variant="emerald">{displayRoles.length} DEFINED ROLES</Badge>
           </div>
         </div>
 
@@ -159,7 +168,7 @@ export function RolesPage() {
       >
         <StatCard
           title="Active Roles"
-          value={roles.length.toString()}
+          value={displayRoles.length.toString()}
           unit="Profiles"
           trend={{ value: "100% RBAC coverage", isPositive: true, text: "" }}
           icon={ShieldCheck}
@@ -175,7 +184,7 @@ export function RolesPage() {
         />
         <StatCard
           title="System Roles"
-          value={roles.filter(r => r.isSystem).length.toString()}
+          value={displayRoles.filter(r => r.isSystem).length.toString()}
           unit="Built-in"
           trend={{ value: "Protected core profiles", isPositive: true, text: "" }}
           icon={Lock}
@@ -192,8 +201,8 @@ export function RolesPage() {
       </div>
 
       {/* Roles Grid */}
-      <div className="grid-2" style={{ display: "grid", gridTemplateColumns: roles.length === 0 ? "1fr" : "repeat(auto-fit, minmax(320px, 1fr))", gap: "16px", width: "100%", minWidth: 0 }}>
-        {roles.length === 0 ? (
+      <div className="grid-2" style={{ display: "grid", gridTemplateColumns: displayRoles.length === 0 ? "1fr" : "repeat(auto-fit, minmax(320px, 1fr))", gap: "16px", width: "100%", minWidth: 0 }}>
+        {displayRoles.length === 0 ? (
           <Card style={{ padding: "48px 24px", textAlign: "center", border: "1px dashed var(--border-subtle)", background: "var(--bg-card)" }}>
             <div style={{ display: "inline-flex", padding: "16px", borderRadius: "50%", background: "rgba(16, 185, 129, 0.1)", marginBottom: "16px" }}>
               <ShieldCheck size={36} color="#10B981" />
@@ -209,7 +218,7 @@ export function RolesPage() {
             </Button>
           </Card>
         ) : (
-          roles.map((r) => (
+          displayRoles.map((r) => (
             <Card key={r.id || r.name} style={{ padding: "18px", minWidth: 0, width: "100%", boxSizing: "border-box" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "10px", flexWrap: "wrap", gap: "8px" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>

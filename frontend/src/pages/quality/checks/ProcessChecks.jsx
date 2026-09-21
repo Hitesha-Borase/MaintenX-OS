@@ -18,12 +18,7 @@ import qualityService from "../../../services/qualityService";
 export function ProcessChecks() {
   const { addToast } = useApp();
 
-  const [processes, setProcesses] = useState([
-    { id: 1, name: "Blending agitator speed (Tank TK-02)", parameter: "Agitator Speed", target: "450 RPM", actual: "448 RPM", line: "Line 1 - Blending Area", status: "OK", timestamp: "14:15" },
-    { id: 2, name: "Intake Manifold Header Pressure", parameter: "Header Pressure", target: "3.2 - 3.8 bar", actual: "3.52 bar", line: "Line 1 - Infeed", status: "OK", timestamp: "13:45" },
-    { id: 3, name: "Carbonation Dissolved CO2 Level", parameter: "CO2 Gas Volume", target: "3.60 - 3.80 Vol", actual: "3.71 Vol", line: "Line 2 - Carbonator", status: "OK", timestamp: "13:10" },
-    { id: 4, name: "Bottle Rinser De-aerated Water Flush", parameter: "Rinse Temp & Flow", target: "≥65°C • 12 LPM", actual: "66.4°C • 12.2 LPM", line: "Line 1 - Rinser", status: "OK", timestamp: "12:30" }
-  ]);
+  const [processes, setProcesses] = useState([]);
 
   const [isLoading, setIsLoading] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -37,11 +32,10 @@ export function ProcessChecks() {
     setIsLoading(true);
     try {
       const res = await qualityService.getProcessChecks();
-      if (res.data?.data && Array.isArray(res.data.data)) {
-        setProcesses(res.data.data);
-      }
+      const list = res?.data?.data ?? res?.data ?? res;
+      if (Array.isArray(list)) setProcesses(list);
     } catch (err) {
-      console.warn("Process checks fallback:", err.message);
+      console.warn("Process checks fetch:", err.message);
     } finally {
       setIsLoading(false);
     }

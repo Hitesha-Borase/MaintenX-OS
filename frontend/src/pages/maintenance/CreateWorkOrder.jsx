@@ -16,7 +16,7 @@ export function CreateWorkOrder() {
   const [title, setTitle] = useState("");
   const [type, setType] = useState("Corrective");
   const [priority, setPriority] = useState("P2 - High");
-  const [technician, setTechnician] = useState("Marcus Vance (Senior Tech)");
+  const [technician, setTechnician] = useState("David Markov (Maintenance Lead)");
   const [failureCode, setFailureCode] = useState(failureCodes[0]?.code || "MEC-004");
   const [dueDate, setDueDate] = useState("2026-09-01 16:00");
   const [symptom, setSymptom] = useState("");
@@ -120,10 +120,10 @@ export function CreateWorkOrder() {
             <div className="form-group">
               <label className="form-label">Assigned Technician</label>
               <select className="form-select" value={technician} onChange={(e) => setTechnician(e.target.value)}>
-                <option value="Marcus Vance (Senior Tech)">Marcus Vance (Senior Tech)</option>
+                <option value="David Markov (Maintenance Lead)">David Markov (Maintenance Lead)</option>
                 <option value="David Kim (Thermal Tech)">David Kim (Thermal Tech)</option>
-                <option value="Sarah Jenkins (Lead Tech)">Sarah Jenkins (Lead Tech)</option>
-                <option value="Elena Rostova (Operator)">Elena Rostova (Autonomous Care)</option>
+                <option value="David Markov (Maintenance Lead)">David Markov (Maintenance Lead)</option>
+                <option value="Josiah Leyland (Operator)">Josiah Leyland (Machine Operator)</option>
               </select>
             </div>
           </div>

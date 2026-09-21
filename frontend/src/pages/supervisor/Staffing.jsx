@@ -147,16 +147,16 @@ export function Staffing() {
 
   // Handlers
   const handleCreateShift = async (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     try {
       const res = await dashboardService.addSupervisorStaffing(newShift);
-      addToast(res.message || `Shift "${newShift.shiftName}" saved successfully.`, "success");
+      addToast(res?.message || `Shift "${newShift.shiftName}" saved successfully.`, "success");
       await fetchStaffingShifts();
+      setIsCreateShiftModalOpen(false);
     } catch (err) {
-      addToast(`Shift "${newShift.shiftName}" created.`, "success");
-      await fetchStaffingShifts();
+      console.error("Failed to create shift:", err);
+      addToast(err?.response?.data?.message || err?.message || `Failed to create shift "${newShift.shiftName}".`, "error");
     }
-    setIsCreateShiftModalOpen(false);
   };
 
   const handleSaveEditShift = async (e) => {
@@ -542,30 +542,24 @@ export function Staffing() {
                         icon={Eye}
                         title="View Shift Details"
                         onClick={() => setViewShiftModal(s)}
-                        style={{ padding: "4px 7px", fontSize: "11px", height: "28px" }}
-                      >
-                        View
-                      </Button>
+                        style={{ padding: "6px", width: "28px", height: "28px", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+                      />
                       <Button
                         variant="ghost"
                         size="xs"
                         icon={Edit2}
                         title="Edit Shift"
                         onClick={() => setEditShiftModal(s)}
-                        style={{ padding: "4px 7px", fontSize: "11px", height: "28px" }}
-                      >
-                        Edit
-                      </Button>
+                        style={{ padding: "6px", width: "28px", height: "28px", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+                      />
                       <Button
                         variant="ghost"
                         size="xs"
                         icon={Trash2}
                         title="Delete Shift"
                         onClick={() => setDeleteShiftModal(s)}
-                        style={{ padding: "4px 7px", fontSize: "11px", height: "28px", color: "#DC2626" }}
-                      >
-                        Delete
-                      </Button>
+                        style={{ padding: "6px", width: "28px", height: "28px", display: "inline-flex", alignItems: "center", justifyContent: "center", color: "#DC2626" }}
+                      />
                       <Button
                         variant="secondary"
                         size="xs"
@@ -1016,13 +1010,16 @@ export function Staffing() {
               Select Available Employee
             </label>
             <select
-              value={selectedEmployeeToAssign}
+              value={selectedEmployeeToAssign || (availableEmployees[0]?.name || "")}
               onChange={(e) => setSelectedEmployeeToAssign(e.target.value)}
               className="input-field"
             >
+              {availableEmployees.length === 0 && (
+                <option value="">No employees available</option>
+              )}
               {availableEmployees.map((e, idx) => (
                 <option key={idx} value={e.name}>
-                  {e.name} — {e.role} ({e.shift || e.department || "Indore Plant"})
+                  {e.name} — {e.role} ({e.shift || e.department || "Packaging"})
                 </option>
               ))}
             </select>

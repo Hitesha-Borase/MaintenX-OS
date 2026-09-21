@@ -326,7 +326,7 @@ export function UserStatusPage() {
                 </div>
                 <div>
                   <span style={{ fontSize: "11px", color: "var(--text-muted)", display: "block" }}>Plant Facility</span>
-                  <span style={{ color: "var(--text-primary)", fontSize: "13px" }}>{viewingUser.plant || "Indore Plant"}</span>
+                  <span style={{ color: "var(--text-primary)", fontSize: "13px" }}>{viewingUser.plant || "Plant 1 - Meat Processing & Smokehouse Facility"}</span>
                 </div>
                 <div>
                   <span style={{ fontSize: "11px", color: "var(--text-muted)", display: "block" }}>Last Login</span>

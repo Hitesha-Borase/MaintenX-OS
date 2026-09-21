@@ -28,37 +28,12 @@ export function InventoryProvider({ children }) {
 
   const [zones, setZones] = useState(WAREHOUSE_ZONES);
   
-  const [shipments, setShipments] = useState(() => {
-    if (isTenantActive) return [];
-    return [
-      { id: "SHP-001", item: "Glass Bottles 1L", volume: "20,000 Pcs", status: "TRANSIT", supplier: "GlassCorp", expected: "2026-09-02" },
-      { id: "SHP-002", item: "Liquid Cane Sugar 500L", volume: "2 Drums", status: "ARRIVED", supplier: "Sugar Valley", expected: "2026-09-02" }
-    ];
-  });
+  const [shipments, setShipments] = useState([]);
   
-  const [pickLists, setPickLists] = useState(() => {
-    if (isTenantActive) return [];
-    return [
-      { id: "PL-101", order: "ORD-991", status: "PENDING", items: 2 },
-      { id: "PL-102", order: "ORD-992", status: "IN_PROGRESS", items: 5 }
-    ];
-  });
+  const [pickLists, setPickLists] = useState([]);
 
-  const [putAwayHistory, setPutAwayHistory] = useState(() => {
-    if (isTenantActive) return [];
-    return [
-      {
-        lotNumber: "LOT-RM-GNG-0092",
-        materialName: "Organic Ginger Root Extract Fluid 20:1",
-        quantity: 120,
-        unit: "kg",
-        fromLocation: "Dock 02 - Receiving Staging",
-        toLocation: "Ambient Storage Bay 2 - Bin G-12",
-        timestamp: "2026-09-03 07:30 AM",
-        operator: "Alexander Vance"
-      }
-    ];
-  });
+
+  const [putAwayHistory, setPutAwayHistory] = useState([]);
 
   const [isLoading, setIsLoading] = useState(false);
 
@@ -149,7 +124,7 @@ export function InventoryProvider({ children }) {
           fromLocation: targetLot.location,
           toLocation: newLocation,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          operator: "Alexander Vance"
+          operator: "Ronald Robinson"
         },
         ...prev
       ]);

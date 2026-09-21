@@ -168,13 +168,9 @@ export function RoutingsPage() {
     };
 
     try {
-      const res = await masterDataService.createRouting(routingPayload);
-      const created = res?.data?.data || res?.data || routingPayload;
-      if (typeof addRouting === "function") {
-        addRouting(created);
-      }
+      await masterDataService.createRouting(routingPayload);
       fetchLiveRoutings();
-      addToast(`Routing master "${created.routingCode}" registered successfully in PostgreSQL!`, "success");
+      addToast(`Routing master "${routingPayload.routingCode}" registered successfully in PostgreSQL!`, "success");
       setIsModalOpen(false);
       setNewRouting({
         routingCode: "",

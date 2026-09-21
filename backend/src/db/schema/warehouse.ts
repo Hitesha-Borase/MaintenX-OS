@@ -7,7 +7,7 @@ export const warehouses = pgTable("warehouses", {
   id: uuid("id").defaultRandom().primaryKey(),
   tenantId: uuid("tenant_id").references(() => tenants.id, { onDelete: "cascade" }).notNull(),
   plantId: uuid("plant_id").references(() => plants.id, { onDelete: "cascade" }).notNull(),
-  code: varchar("code", { length: 50 }).notNull(), // "WH-MAIN-INDORE"
+  code: varchar("code", { length: 50 }).notNull(), // "WH-MEAT-01"
   name: varchar("name", { length: 255 }).notNull(), // "Main Ambient & Cold Storage Warehouse"
   type: varchar("type", { length: 100 }).default("RAW_AND_FINISHED"),
   isActive: boolean("is_active").default(true).notNull(),

@@ -448,6 +448,23 @@ export const masterDataService = {
     return apiClient.delete(`/master-data/storage-types/${enc(id)}`);
   },
 
+  // 19. Asset Categories & Machine Types Master
+  async getAssetTypes() {
+    return apiClient.get("/master-data/asset-types");
+  },
+
+  async createAssetType(data) {
+    return apiClient.post("/master-data/asset-types", data);
+  },
+
+  async updateAssetType(id, data) {
+    return apiClient.put(`/master-data/asset-types/${enc(id)}`, data);
+  },
+
+  async deleteAssetType(id) {
+    return apiClient.delete(`/master-data/asset-types/${enc(id)}`);
+  },
+
 
   // 17. Employee Skills & Qualifications Matrix
   async getEmployeeSkills(plantId) {
@@ -495,6 +512,41 @@ export const masterDataService = {
 
   async deleteDeviationCategory(id) {
     return apiClient.delete(`/quality/deviation-categories/${enc(id)}`);
+  },
+
+  // 18. Storage Resources & Warehouse Master
+  async getStorageResources(plantId) {
+    const query = plantId && plantId !== "ALL" ? `?plantId=${enc(plantId)}` : "";
+    return apiClient.get(`/master-data/storage-resources${query}`);
+  },
+
+  async createStorageResource(data) {
+    return apiClient.post("/master-data/storage-resources", data);
+  },
+
+  async updateStorageResource(id, data) {
+    return apiClient.put(`/master-data/storage-resources/${enc(id)}`, data);
+  },
+
+  async deleteStorageResource(id) {
+    return apiClient.delete(`/master-data/storage-resources/${enc(id)}`);
+  },
+
+  // 19. Storage Types Master
+  async getStorageTypes() {
+    return apiClient.get("/master-data/storage-types");
+  },
+
+  async createStorageType(data) {
+    return apiClient.post("/master-data/storage-types", data);
+  },
+
+  async updateStorageType(id, data) {
+    return apiClient.put(`/master-data/storage-types/${enc(id)}`, data);
+  },
+
+  async deleteStorageType(id) {
+    return apiClient.delete(`/master-data/storage-types/${enc(id)}`);
   },
 };
 

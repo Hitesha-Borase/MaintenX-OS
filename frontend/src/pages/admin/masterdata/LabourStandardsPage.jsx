@@ -40,9 +40,13 @@ export function LabourStandardsPage() {
     try {
       localStorage.removeItem("mx_master_labour_standards");
       const res = await masterDataService.getLabourStandards();
-      const data = res?.data?.data || res?.data || res;
-      if (Array.isArray(data) && typeof setLabourStandards === "function") {
-        setLabourStandards(data);
+      const raw = res?.data?.data !== undefined ? res.data.data : (res?.data !== undefined ? res.data : res);
+      const list = Array.isArray(raw) ? raw : (Array.isArray(raw?.data) ? raw.data : []);
+      console.log("DEBUG fetchLiveLabourStandards res:", res);
+      console.log("DEBUG fetchLiveLabourStandards raw:", raw);
+      console.log("DEBUG fetchLiveLabourStandards list:", list);
+      if (typeof setLabourStandards === "function") {
+        setLabourStandards(list);
       }
     } catch (err) {
       console.warn("Labour standards load:", err.message);
@@ -120,7 +124,7 @@ export function LabourStandardsPage() {
         stdLaborHoursPer1kUnits: 2.0,
         directCostPerHour: "$25.00"
       });
-      fetchLiveLabourStandards();
+      await fetchLiveLabourStandards();
     } catch (err) {
       addToast("Failed to create labour standard: " + err.message, "error");
     }
@@ -140,7 +144,7 @@ export function LabourStandardsPage() {
       await updateLabourStandard(editingStandard.id || editingStandard.standardId, updated);
       addToast(`Labour standard for ${updated.lineName} updated!`, "success");
       setEditingStandard(null);
-      fetchLiveLabourStandards();
+      await fetchLiveLabourStandards();
     } catch (err) {
       addToast("Failed to update labour standard: " + err.message, "error");
     }
@@ -151,7 +155,7 @@ export function LabourStandardsPage() {
       try {
         await deleteLabourStandard(id);
         addToast(`Labour standard removed for ${lineName}`, "info");
-        fetchLiveLabourStandards();
+        await fetchLiveLabourStandards();
       } catch (err) {
         addToast("Failed to delete labour standard: " + err.message, "error");
       }

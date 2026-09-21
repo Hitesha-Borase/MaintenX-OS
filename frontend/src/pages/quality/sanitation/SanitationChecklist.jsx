@@ -85,9 +85,9 @@ const INITIAL_SANITATION_STEPS = [
 export function SanitationChecklist() {
   const { addToast } = useApp();
 
-  const [selectedLoop, setSelectedLoop] = useState("CIP Loop 01 (Rotary Filler & Intake Manifold)");
-  const [sanitationType, setSanitationType] = useState("5-Step Full Thermal & Chemical CIP Cycle");
-  const [operatorName, setOperatorName] = useState("Dr. Rachel Thorne (QA Lead)");
+  const [selectedLoop, setSelectedLoop] = useState("Smokehouse & Injector Sanitation Loop 01 (Ruhle & Smokehouse Racks)");
+  const [sanitationType, setSanitationType] = useState("Thermal Wash & Alkaline Foam Sanitization Cycle (RC-21)");
+  const [operatorName, setOperatorName] = useState("Stephanie Kuzmych (QA Manager)");
   const [steps, setSteps] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loading, setLoading] = useState(false);

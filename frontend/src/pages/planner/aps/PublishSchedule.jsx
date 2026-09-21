@@ -111,7 +111,7 @@ export function PublishSchedule() {
     try {
       const res = await planningService.publishSchedule({
         versionId: selectedVersion,
-        publishedBy: "Alexander Vance (Lead Scheduler)"
+        publishedBy: "Stefan Crawford (Plant Manager)"
       });
       
       setScheduleVersions((prev) =>
@@ -119,7 +119,7 @@ export function PublishSchedule() {
       );
 
       if (publishScheduleVersion) {
-        publishScheduleVersion(selectedVersion, "Alexander Vance (Lead Scheduler)");
+        publishScheduleVersion(selectedVersion, "Stefan Crawford (Plant Manager)");
       }
 
       addToast(res?.message || `Master Schedule ${selectedVersion} published and dispatched to plant floor!`, "success");
@@ -366,7 +366,7 @@ export function PublishSchedule() {
                 >
                   <div>
                     <div style={{ fontSize: "13px", fontWeight: 800, color: "var(--text-primary)" }}>{l?.name || l?.lineName || "Production Line"}</div>
-                    <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>{l?.plantName || "Indore Plant Facility"} • IP: 192.168.10.{lineCode || "01"}</div>
+                    <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>{l?.plantName || "Plant 1 - Meat Processing & Smokehouse Facility"} • IP: 192.168.10.{lineCode || "01"}</div>
                   </div>
 
                   <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>

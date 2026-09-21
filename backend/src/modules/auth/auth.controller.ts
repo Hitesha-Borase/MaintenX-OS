@@ -1,30 +1,22 @@
 import { FastifyReply, FastifyRequest } from "fastify";
 import { authService } from "./auth.service.js";
-import { loginSchema, digitalSignOffSchema } from "./auth.schema.js";
+import { loginSchema, digitalSignOffSchema, tenantRegistrationSchema } from "./auth.schema.js";
 import { formatSuccess } from "../../shared/utils/responseFormatter.js";
 import { UnauthorizedError, ValidationError } from "../../shared/errors/AppError.js";
 import { logAuditTrail } from "../../middleware/auditContext.js";
 import { masterAdminService } from "../master/master.service.js";
-import { db, tenants, subscriptions } from "../../db/index.js";
-import { eq } from "drizzle-orm";
+import { db, tenants, subscriptions, tenantModules } from "../../db/index.js";
+import { eq, desc } from "drizzle-orm";
 
 export class AuthController {
   async register(request: FastifyRequest, reply: FastifyReply) {
-    const body = (request.body || {}) as any;
-    const name = (body.name || body.company || body.companyName || "").trim();
-    const admin = (body.admin || body.adminName || body.ownerName || body.fullName || "").trim();
-    const adminEmail = (body.adminEmail || body.email || "").trim().toLowerCase();
-    const adminPhone = (body.adminPhone || body.phone || "").trim();
-    const password = (body.password || "").trim();
-    const subscription = (body.subscription || body.plan || "Plant Pilot").trim();
-
-    if (!name || !admin || !adminEmail || !password) {
-      throw new ValidationError("Company name, company owner name, email, and password are required");
-    }
-
-    if (password.length < 6) {
-      throw new ValidationError("Password must be at least 6 characters");
-    }
+    const input = tenantRegistrationSchema.parse(request.body || {});
+    const name = (input.name || input.company || input.companyName || "").trim();
+    const admin = (input.admin || input.adminName || input.ownerName || input.fullName || "").trim();
+    const adminEmail = (input.adminEmail || input.email || "").trim().toLowerCase();
+    const adminPhone = (input.adminPhone || input.phone || "").trim();
+    const password = input.password.trim();
+    const subscription = (input.subscription || input.plan || "Plant Pilot").trim();
 
     const company = await masterAdminService.createCompany({
       name,
@@ -115,17 +107,67 @@ export class AuthController {
       try {
         const [tenant] = await db.select().from(tenants).where(eq(tenants.id, user.tenantId)).limit(1);
         if (tenant) {
-          const [sub] = await db.select().from(subscriptions).where(eq(subscriptions.tenantId, tenant.id)).limit(1);
+          const [sub] = await db
+            .select()
+            .from(subscriptions)
+            .where(eq(subscriptions.tenantId, tenant.id))
+            .orderBy(desc(subscriptions.createdAt))
+            .limit(1);
+
+          const activePlan = sub?.planName || tenant.plan || "Plant Pilot";
+          const planKey = activePlan.toLowerCase().trim();
+
+          const CANONICAL_PLAN_MODULES: Record<string, string[]> = {
+            "plant pilot": ["produce"],
+            "pilot": ["produce"],
+            "trial": ["produce"],
+            "starter": ["produce", "verify"],
+            "individual modules": ["produce", "verify"],
+            "bundles": ["plan", "produce", "verify", "maintain", "move"],
+            "advanced": ["plan", "produce", "verify", "maintain", "move"],
+            "maintenx os complete": ["plan", "produce", "verify", "maintain", "move", "people", "improve", "intelligence"],
+            "enterprise": ["plan", "produce", "verify", "maintain", "move", "people", "improve", "intelligence"],
+          };
+
+          const allowed = CANONICAL_PLAN_MODULES[planKey] || (
+            activePlan.toUpperCase() === "ENTERPRISE" || planKey.includes("complete")
+              ? ["plan", "produce", "verify", "maintain", "move", "people", "improve", "intelligence"]
+              : planKey.includes("bundle")
+              ? ["plan", "produce", "verify", "maintain", "move"]
+              : ["produce"]
+          );
+
+          const modulesMap: Record<string, boolean> = {
+            plan: allowed.includes("plan"),
+            produce: allowed.includes("produce"),
+            verify: allowed.includes("verify"),
+            maintain: allowed.includes("maintain"),
+            move: allowed.includes("move"),
+            people: allowed.includes("people"),
+            improve: allowed.includes("improve"),
+            intelligence: allowed.includes("intelligence"),
+          };
+
+          try {
+            const explicitMods = await db.select().from(tenantModules).where(eq(tenantModules.tenantId, tenant.id));
+            for (const m of explicitMods) {
+              modulesMap[m.moduleKey] = m.isEnabled;
+            }
+          } catch (e: any) {
+            // ignore
+          }
+
           tenantData = {
             id: tenant.id,
             name: tenant.name,
             slug: tenant.slug,
-            plan: sub?.planName || tenant.plan,
+            plan: activePlan,
             createdAt: tenant.createdAt,
             hasSubscription: Boolean(sub && sub.status === "ACTIVE" && new Date(sub.currentPeriodEnd) > new Date()),
             subscriptionExpiryDate: sub?.currentPeriodEnd || null,
             subscriptionStatus: sub?.status || "TRIAL",
             subscription: sub || null,
+            modules: modulesMap,
           };
         }
       } catch (e: any) {

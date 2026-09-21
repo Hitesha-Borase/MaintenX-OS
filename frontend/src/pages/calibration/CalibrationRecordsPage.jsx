@@ -37,7 +37,7 @@ export function CalibrationRecordsPage() {
     errorVal: "+0.01",
     passed: true,
     certNo: `CERT-NIST-2026-${Math.floor(1000 + Math.random() * 9000)}`,
-    technician: "Marcus Vance",
+    technician: "David Markov",
     standardUsed: "Fluke 754 Documenting Process Calibrator"
   });
 

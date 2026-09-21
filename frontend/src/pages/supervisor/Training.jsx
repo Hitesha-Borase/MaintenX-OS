@@ -42,7 +42,7 @@ export function Training() {
     trainingType: "Technical Qualification",
     completionDate: "Pending",
     expiryDate: "2027-09-30",
-    trainer: "Safety Lead (Indore Plant)",
+    trainer: "Stephanie Kuzmych (QA & Safety Lead)",
     status: "In Progress",
     certification: "Pending Certification Exam"
   });
@@ -100,7 +100,7 @@ export function Training() {
       trainingType: "Technical Qualification",
       completionDate: "Pending",
       expiryDate: "2027-09-30",
-      trainer: "Safety Lead (Indore Plant)",
+      trainer: "Stephanie Kuzmych (QA & Safety Lead)",
       status: "In Progress",
       certification: "Pending Certification Exam"
     });

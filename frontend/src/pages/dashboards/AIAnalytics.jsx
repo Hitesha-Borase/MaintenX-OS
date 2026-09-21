@@ -139,9 +139,11 @@ export function AIAnalytics() {
             <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)" }}>
               AI & Predictive Decision Support
             </h1>
-            <Badge variant="purple" dot>
-              3 Autonomous Edge Agents Active
-            </Badge>
+            {AI_AGENTS.length > 0 && (
+              <Badge variant="purple" dot>
+                {AI_AGENTS.length} Autonomous Edge Agents Active
+              </Badge>
+            )}
           </div>
           <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>
             Neural anomaly detection, predictive failure models, yield optimizers, and natural language shop-floor assistant.
@@ -150,32 +152,34 @@ export function AIAnalytics() {
       </div>
 
       {/* AI Agents Operational Status Grid */}
-      <div className="grid-3">
-        {AI_AGENTS.map((agent) => (
-          <Card key={agent.id} style={{ display: "flex", flexDirection: "column", gap: "10px", borderLeft: "3px solid #A855F7" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <Bot size={18} color="#A855F7" />
-                <span style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)" }}>
-                  {agent.name}
-                </span>
+      {AI_AGENTS.length > 0 && (
+        <div className="grid-3">
+          {AI_AGENTS.map((agent) => (
+            <Card key={agent.id} style={{ display: "flex", flexDirection: "column", gap: "10px", borderLeft: "3px solid #A855F7" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <Bot size={18} color="#A855F7" />
+                  <span style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)" }}>
+                    {agent.name}
+                  </span>
+                </div>
+                <Badge variant="emerald" dot>
+                  Online
+                </Badge>
               </div>
-              <Badge variant="emerald" dot>
-                Online
-              </Badge>
-            </div>
 
-            <p style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-              {agent.specialty}
-            </p>
+              <p style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
+                {agent.specialty}
+              </p>
 
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", color: "var(--text-muted)", paddingTop: "8px", borderTop: "1px solid var(--border-subtle)" }}>
-              <span>Inference Accuracy: <strong style={{ color: "#34D399" }}>{agent.accuracyRating}</strong></span>
-              <span>Telemetry: <strong>{agent.telemetryPointsAnalyzed.toLocaleString()} pts</strong></span>
-            </div>
-          </Card>
-        ))}
-      </div>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", color: "var(--text-muted)", paddingTop: "8px", borderTop: "1px solid var(--border-subtle)" }}>
+                <span>Inference Accuracy: <strong style={{ color: "#34D399" }}>{agent.accuracyRating}</strong></span>
+                <span>Telemetry: <strong>{agent.telemetryPointsAnalyzed.toLocaleString()} pts</strong></span>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
 
       {/* Predictive Insights Cards (Tagged with Fact / Calculation / Estimate / AI Recommendation) */}
       <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
@@ -192,7 +196,15 @@ export function AIAnalytics() {
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-          {insights.map((ins) => {
+          {insights.length === 0 ? (
+            <Card style={{ padding: "32px 24px", textAlign: "center" }}>
+              <BrainCircuit size={40} style={{ color: "var(--text-muted)", margin: "0 auto 12px" }} />
+              <h3 style={{ fontSize: "15px", fontWeight: 700, color: "var(--text-primary)" }}>No Active Predictive Insights</h3>
+              <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "6px", maxWidth: "480px", margin: "6px auto 0" }}>
+                AI anomaly detection and yield optimization insights will appear here as equipment telemetry and production data flows in.
+              </p>
+            </Card>
+          ) : insights.map((ins) => {
             const isApproved = ins.approvalStatus.includes("Approved");
             const isRejected = ins.approvalStatus.includes("Rejected");
 

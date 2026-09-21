@@ -72,6 +72,10 @@ export function OccurrenceCause() {
 
   const handleConfirm = async (e) => {
     e.preventDefault();
+    if (!currentInv) {
+      addToast("No active investigation selected.", "warning");
+      return;
+    }
     if (!causeStatement.trim()) {
       addToast("Please provide a root occurrence cause statement.", "warning");
       return;
@@ -81,7 +85,7 @@ export function OccurrenceCause() {
       whyTree,
       status: "Root Cause Validated",
       eightD: {
-        ...(currentInv.eightD || {}),
+        ...(currentInv?.eightD || {}),
         d4RootCause: causeStatement.trim()
       }
     });
@@ -90,20 +94,26 @@ export function OccurrenceCause() {
   };
 
   const handleAdvance = async () => {
-    await advanceRcaPhase(activeCase, "Escape Cause");
+    if (activeCase) {
+      await advanceRcaPhase(activeCase, "Escape Cause");
+    }
     navigate("/ci/rca/escape");
   };
 
   const handleExportCSV = () => {
+    if (!currentInv) {
+      addToast("No active investigation selected to export.", "warning");
+      return;
+    }
     const headers = "Investigation,Case Title,Why Level,Question,Answer\n";
     const rows = whyTree
-      .map((w, idx) => `"${activeCase}","${currentInv.title}","Why ${idx + 1}","${w.question}","${w.answer}"`)
+      .map((w, idx) => `"${activeCase}","${currentInv?.title || "N/A"}","Why ${idx + 1}","${w.question}","${w.answer}"`)
       .join("\n");
     const blob = new Blob([headers + rows], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `RCA_Occurrence_Cause_${activeCase}_${new Date().toISOString().substring(0, 10)}.csv`;
+    a.download = `RCA_Occurrence_Cause_${activeCase || "export"}_${new Date().toISOString().substring(0, 10)}.csv`;
     a.click();
     addToast("Occurrence Cause 5-Why analysis exported to CSV.", "info");
   };
@@ -232,7 +242,7 @@ export function OccurrenceCause() {
               5-Why Root Cause Drill-Down Tree ({activeCase})
             </h3>
           </div>
-          <Badge variant="cyan">{currentInv.severity || "High"} Severity</Badge>
+          <Badge variant="cyan">{currentInv?.severity || "High"} Severity</Badge>
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>

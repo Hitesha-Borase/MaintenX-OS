@@ -29,18 +29,20 @@ export function ChangeoverMatrixPage() {
 
   const [loading, setLoading] = useState(false);
 
-  const fetchLiveChangeover = () => {
+  const fetchLiveChangeover = async () => {
     setLoading(true);
     localStorage.removeItem("mx_master_changeover");
-    masterDataService.getChangeoverRules()
-      .then((res) => {
-        const data = res?.data?.data || res?.data || res;
-        if (Array.isArray(data) && typeof setChangeoverMatrix === "function") {
-          setChangeoverMatrix(data);
-        }
-      })
-      .catch((err) => console.warn("Changeover database live load:", err.message))
-      .finally(() => setLoading(false));
+    try {
+      const res = await masterDataService.getChangeoverRules();
+      const data = res?.data?.data !== undefined ? res.data.data : (res?.data !== undefined ? res.data : res);
+      if (Array.isArray(data) && typeof setChangeoverMatrix === "function") {
+        setChangeoverMatrix(data);
+      }
+    } catch (err) {
+      console.warn("Changeover database live load:", err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Live fetch from PostgreSQL database on mount
@@ -105,21 +107,26 @@ export function ChangeoverMatrixPage() {
 
   const handleAddSubmit = async (e) => {
     e.preventDefault();
-    const fromSku = skus.find((s) => (s.skuId || s.id) === newRule.fromSkuId);
-    const toSku = skus.find((s) => (s.skuId || s.id) === newRule.toSkuId);
+    const fromSku = skus.find((s) => (s.skuId || s.id || s.skuCode || s.sku_code) === newRule.fromSkuId);
+    const toSku = skus.find((s) => (s.skuId || s.id || s.skuCode || s.sku_code) === newRule.toSkuId);
+
+    const fromCode = fromSku ? (fromSku.skuCode || fromSku.sku_code || fromSku.code || fromSku.name) : (newRule.fromSkuId || "SKU-5001");
+    const fromFam = fromSku ? (fromSku.family || fromSku.productFamily || fromSku.name || fromSku.category) : "Finished Goods";
+    const toCode = toSku ? (toSku.skuCode || toSku.sku_code || toSku.code || toSku.name) : (newRule.toSkuId || "SKU-5002");
+    const toFam = toSku ? (toSku.family || toSku.productFamily || toSku.name || toSku.category) : "Finished Goods";
 
     const rulePayload = {
       ...newRule,
-      fromSkuCode: fromSku ? (fromSku.skuCode || fromSku.code) : "SKU-5001",
-      fromFamily: fromSku ? (fromSku.family || fromSku.productFamily || fromSku.category) : "Sparkling Flavors",
-      toSkuCode: toSku ? (toSku.skuCode || toSku.code) : "SKU-5002",
-      toFamily: toSku ? (toSku.family || toSku.productFamily || toSku.category) : "Tonics & Mixers",
+      fromSkuCode: fromCode,
+      fromFamily: fromFam,
+      toSkuCode: toCode,
+      toFamily: toFam,
       changeoverDurationMin: Number(newRule.changeoverDurationMin) || 0
     };
 
     try {
-      const created = await addChangeoverRule(rulePayload);
-      fetchLiveChangeover();
+      await addChangeoverRule(rulePayload);
+      await fetchLiveChangeover();
       addToast("Changeover standard rule saved to PostgreSQL database!", "success");
       setIsModalOpen(false);
       setNewRule({
@@ -137,20 +144,20 @@ export function ChangeoverMatrixPage() {
 
   const handleEditSubmit = async (e) => {
     e.preventDefault();
-    const fromSku = skus.find((s) => (s.skuId || s.id) === editingRule.fromSkuId);
-    const toSku = skus.find((s) => (s.skuId || s.id) === editingRule.toSkuId);
+    const fromSku = skus.find((s) => (s.skuId || s.id || s.skuCode || s.sku_code) === editingRule.fromSkuId);
+    const toSku = skus.find((s) => (s.skuId || s.id || s.skuCode || s.sku_code) === editingRule.toSkuId);
 
     try {
       await updateChangeoverRule(editingRule.matrixId || editingRule.id, {
         ...editingRule,
-        fromSkuCode: fromSku ? (fromSku.skuCode || fromSku.code) : editingRule.fromSkuCode,
-        fromFamily: fromSku ? (fromSku.family || fromSku.productFamily || fromSku.category) : editingRule.fromFamily,
-        toSkuCode: toSku ? (toSku.skuCode || toSku.code) : editingRule.toSkuCode,
-        toFamily: toSku ? (toSku.family || toSku.productFamily || toSku.category) : editingRule.toFamily,
+        fromSkuCode: fromSku ? (fromSku.skuCode || fromSku.sku_code || fromSku.code || fromSku.name) : editingRule.fromSkuCode,
+        fromFamily: fromSku ? (fromSku.family || fromSku.productFamily || fromSku.name || fromSku.category) : editingRule.fromFamily,
+        toSkuCode: toSku ? (toSku.skuCode || toSku.sku_code || toSku.code || toSku.name) : editingRule.toSkuCode,
+        toFamily: toSku ? (toSku.family || toSku.productFamily || toSku.name || toSku.category) : editingRule.toFamily,
         changeoverDurationMin: Number(editingRule.changeoverDurationMin) || 0
       });
 
-      fetchLiveChangeover();
+      await fetchLiveChangeover();
       addToast("Changeover rule successfully updated in PostgreSQL database!", "success");
       setEditingRule(null);
     } catch (err) {
@@ -163,7 +170,7 @@ export function ChangeoverMatrixPage() {
     if (window.confirm("Are you sure you want to permanently delete this changeover rule from the PostgreSQL database?")) {
       try {
         await deleteChangeoverRule(matrixId);
-        fetchLiveChangeover();
+        await fetchLiveChangeover();
         addToast("Changeover rule deleted from PostgreSQL database.", "success");
       } catch (err) {
         addToast(`Failed to delete changeover rule: ${err.message}`, "error");

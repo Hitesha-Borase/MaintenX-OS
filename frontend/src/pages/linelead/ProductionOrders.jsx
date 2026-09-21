@@ -139,7 +139,7 @@ export function ProductionOrders() {
                 </div>
                 <div>
                   <span style={{ color: "var(--text-muted)", display: "block", fontSize: "11px" }}>Shift Lead:</span>
-                  <span style={{ fontWeight: 700, color: "var(--text-primary)", wordBreak: "break-word" }}>{order.leadOperator || "Elena Rostova"}</span>
+                  <span style={{ fontWeight: 700, color: "var(--text-primary)", wordBreak: "break-word" }}>{order.leadOperator || "Ronald Robinson"}</span>
                 </div>
               </div>
             </Card>

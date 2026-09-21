@@ -69,7 +69,7 @@ export function AdminDashboard() {
     password: "",
     role: "Maintenance Lead",
     department: "Maintenance",
-    plant: "Indore Mega Facility",
+    plant: "Plant 1 - Meat Processing & Smokehouse Facility",
     status: "Active"
   });
 
@@ -127,7 +127,7 @@ export function AdminDashboard() {
         password: "",
         role: "Maintenance Lead",
         department: "Maintenance",
-        plant: "Indore Mega Facility",
+        plant: "Plant 1 - Meat Processing & Smokehouse Facility",
         status: "Active"
       });
     } catch (err) {

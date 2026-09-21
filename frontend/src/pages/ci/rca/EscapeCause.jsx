@@ -69,7 +69,7 @@ export function EscapeCause() {
         name: "Automation SCADA Interlocks",
         type: "System Control",
         status: "Failed",
-        description: `PLC monitored temperature without predictive sensor feedback for ${currentInv.assetName || "the equipment"}.`
+        description: `PLC monitored temperature without predictive sensor feedback for ${currentInv?.assetName || "the equipment"}.`
       },
       {
         id: "B2",
@@ -90,6 +90,10 @@ export function EscapeCause() {
 
   const handleConfirm = async (e) => {
     e.preventDefault();
+    if (!currentInv) {
+      addToast("No active investigation selected.", "warning");
+      return;
+    }
     if (!escapeStatement.trim()) {
       addToast("Please specify the escape cause statement.", "warning");
       return;
@@ -97,7 +101,7 @@ export function EscapeCause() {
 
     await updateRCA(activeCase, {
       eightD: {
-        ...(currentInv.eightD || {}),
+        ...(currentInv?.eightD || {}),
         d7Prevention: escapeStatement.trim(),
         d5CorrectiveAction: preventiveAction.trim()
       }
@@ -107,20 +111,26 @@ export function EscapeCause() {
   };
 
   const handleTriggerCapa = async () => {
-    await advanceRcaPhase(activeCase, "CAPA");
+    if (activeCase) {
+      await advanceRcaPhase(activeCase, "CAPA");
+    }
     navigate("/ci/capa/preventive");
   };
 
   const handleExportCSV = () => {
+    if (!currentInv) {
+      addToast("No active investigation selected to export.", "warning");
+      return;
+    }
     const headers = "Investigation,Case Title,Barrier ID,Barrier Name,Category,Status,Failure Mode Description\n";
     const rows = barriers
-      .map((b) => `"${activeCase}","${currentInv.title}","${b.id}","${b.name}","${b.type}","${b.status}","${b.description}"`)
+      .map((b) => `"${activeCase}","${currentInv?.title || "N/A"}","${b.id}","${b.name}","${b.type}","${b.status}","${b.description}"`)
       .join("\n");
     const blob = new Blob([headers + rows], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `RCA_Escape_Cause_${activeCase}_${new Date().toISOString().substring(0, 10)}.csv`;
+    a.download = `RCA_Escape_Cause_${activeCase || "export"}_${new Date().toISOString().substring(0, 10)}.csv`;
     a.click();
     addToast("Escape Cause barrier analysis exported to CSV.", "info");
   };

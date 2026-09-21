@@ -21,7 +21,7 @@ export async function resolvePlantId(tenantId: string, providedPlantId?: string)
   } catch {
     // Database query fallback
   }
-  return "bead41e2-b735-41b8-bd00-bdba1682fb6a"; // Seeded Indore Mega Facility UUID
+  return "6869789b-32d4-4911-bf29-74a9e338f14a"; // Plant 1 - Meat Processing & Smokehouse Facility
 }
 
 export function isValidUuid(val?: string): boolean {

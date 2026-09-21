@@ -29,7 +29,7 @@ export function OrgWorkCentersPage() {
     try {
       const res = await masterDataService.getWorkCenters();
       const data = res?.data !== undefined ? res.data : res;
-      if (Array.isArray(data) && data.length > 0 && typeof setWorkCenters === "function") {
+      if (Array.isArray(data) && typeof setWorkCenters === "function") {
         setWorkCenters(data);
       }
     } catch (err) {

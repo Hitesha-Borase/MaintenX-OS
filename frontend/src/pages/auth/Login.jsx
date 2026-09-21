@@ -7,69 +7,26 @@ import {
   Lock,
   User,
   Sparkles,
-  Briefcase,
-  Building2,
-  FolderKanban,
-  Users,
-  Activity,
-  ShieldCheck,
-  Wrench,
-  Package,
-  ShoppingBag,
-  CalendarRange,
-  GraduationCap,
-  ShieldAlert,
-  CheckCircle2,
-  Settings,
   Flame,
   Eye,
   EyeOff,
   ArrowLeft,
-  Zap,
   AlertCircle,
-  X
+  X,
+  ShieldCheck
 } from "lucide-react";
-import { Button } from "../../components/common/Button";
-
-// Dynamic Lucide Icon Mapper
-const iconMap = {
-  Briefcase: Briefcase,
-  Building2: Building2,
-  FolderKanban: FolderKanban,
-  Users: Users,
-  Activity: Activity,
-  ShieldCheck: ShieldCheck,
-  Wrench: Wrench,
-  Package: Package,
-  ShoppingBag: ShoppingBag,
-  CalendarRange: CalendarRange,
-  GraduationCap: GraduationCap,
-  ShieldAlert: ShieldAlert,
-  Settings: Settings
-};
 
 export function Login() {
   const navigate = useNavigate();
-  const { login, loginWithCredentials, ROLES } = useRole();
+  const { loginWithCredentials } = useRole();
   const { addToast } = useApp();
 
-  const [selectedRole, setSelectedRole] = useState("admin");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [hoveredRole, setHoveredRole] = useState(null);
+  const [rememberMe, setRememberMe] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [authError, setAuthError] = useState(null);
-
-  const handleRoleSelect = (roleId) => {
-    setSelectedRole(roleId);
-    setAuthError(null);
-    const targetRole = ROLES.find((r) => r.id === roleId);
-    if (targetRole?.user?.email) {
-      setUsername(targetRole.user.email);
-      setPassword("Password@123");
-    }
-  };
 
   // Generate warm floating particles
   const [particles, setParticles] = useState([]);
@@ -95,7 +52,7 @@ export function Login() {
     if (!username.trim() || !password) {
       setAuthError({
         title: "Required Credentials Missing",
-        message: "Please enter both your corporate username and security password."
+        message: "Please enter both your corporate email and security password."
       });
       return;
     }
@@ -106,7 +63,7 @@ export function Login() {
       if (res?.success) {
         const displayName = res.user?.name || (res.user?.firstName ? `${res.user.firstName} ${res.user.lastName || ""}`.trim() : "User");
         addToast(`Authenticated as ${res.role?.label || "User"} (${displayName})! Welcome to MaintenX OS.`, "success");
-        navigate(res.role?.defaultRoute || "/admin/console");
+        navigate(res.role?.defaultRoute || "/command-center");
         return;
       }
     } catch (err) {
@@ -150,15 +107,6 @@ export function Login() {
     }
   };
 
-  // 1-Click Quick Demo Login (for developers/testers)
-  const handleQuickDemoLogin = () => {
-    setAuthError(null);
-    const roleObj = ROLES.find((r) => r.id === selectedRole) || ROLES[10];
-    login(selectedRole);
-    addToast(`Quick Demo Session: Authenticated as ${roleObj.label} (${roleObj.user?.name || "User"})!`, "success");
-    navigate(roleObj?.defaultRoute || "/dashboard");
-  };
-
   return (
     <div className="login-page-wrapper">
       {/* Inline styles for custom amber glassmorphism keyframes and responsive layout */}
@@ -199,8 +147,9 @@ export function Login() {
         }
         .login-card-container {
           width: 100%;
-          max-width: 1280px;
-          background-color: rgba(255, 255, 255, 0.9);
+          max-width: 1020px;
+          min-height: 580px;
+          background-color: rgba(255, 255, 255, 0.94);
           backdrop-filter: blur(20px);
           -webkit-backdrop-filter: blur(20px);
           border-radius: 24px;
@@ -208,7 +157,7 @@ export function Login() {
           box-shadow: 0 25px 60px rgba(70, 45, 15, 0.12), 0 0 60px rgba(200, 149, 71, 0.08);
           overflow: hidden;
           display: grid;
-          grid-template-columns: 1.1fr 1.3fr;
+          grid-template-columns: 1fr 1.15fr;
           position: relative;
           z-index: 10;
         }
@@ -218,47 +167,39 @@ export function Login() {
           display: flex;
           flex-direction: column;
           justify-content: flex-end;
-          padding: 48px;
-          min-height: 720px;
+          padding: 44px;
+          min-height: 580px;
           border-right: 1px solid var(--border-subtle);
         }
         .login-hero-title {
-          font-size: 36px;
+          font-size: 34px;
           font-weight: 900;
           color: #FFFFFF;
           letter-spacing: -0.02em;
           margin: 0;
         }
         .login-hero-desc {
-          font-size: 14px;
-          color: rgba(255, 245, 235, 0.85);
+          font-size: 13.5px;
+          color: rgba(255, 245, 235, 0.88);
           line-height: 1.6;
-          max-width: 420px;
+          max-width: 380px;
           margin: 0;
         }
         .login-right-panel {
-          padding: 48px 56px;
+          padding: 44px 48px;
           display: flex;
           flex-direction: column;
-          gap: 28px;
+          gap: 24px;
           justify-content: center;
           background-color: #FCFAF7;
         }
-        .login-inputs-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
+        .login-inputs-stack {
+          display: flex;
+          flex-direction: column;
           gap: 18px;
         }
-        .login-roles-grid {
-          display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          gap: 10px;
-          max-height: 260px;
-          overflow-y: auto;
-          padding: 2px;
-        }
 
-        @media (max-width: 960px) {
+        @media (max-width: 900px) {
           .login-page-wrapper {
             padding: 12px;
             align-items: flex-start;
@@ -269,6 +210,7 @@ export function Login() {
             flex-direction: column;
             border-radius: 18px;
             margin: 8px 0;
+            min-height: auto;
           }
           .login-left-panel {
             min-height: 200px;
@@ -284,34 +226,8 @@ export function Login() {
             line-height: 1.4;
           }
           .login-right-panel {
-            padding: 24px 18px;
+            padding: 28px 20px;
             gap: 20px;
-          }
-          .login-inputs-grid {
-            grid-template-columns: 1fr;
-            gap: 14px;
-          }
-          .login-roles-grid {
-            grid-template-columns: repeat(2, 1fr);
-            gap: 8px;
-            max-height: 220px;
-          }
-        }
-        @media (max-width: 480px) {
-          .login-left-panel {
-            min-height: 160px;
-            padding: 18px 14px;
-          }
-          .login-hero-title {
-            font-size: 20px;
-          }
-          .login-right-panel {
-            padding: 18px 12px;
-          }
-          .login-roles-grid {
-            grid-template-columns: repeat(2, 1fr);
-            gap: 6px;
-          }
           }
         }
       `}</style>
@@ -334,7 +250,7 @@ export function Login() {
 
       {/* Main Amber Glassmorphism Frame */}
       <div className="custom-glass-card login-card-container">
-        {/* Left Panel: Translucent Astro Smart Factory Analytics Layout */}
+        {/* Left Panel: Translucent Factory Analytics Layout */}
         <div className="login-left-panel">
           {/* Amber-Tinted Warm Frosted Glass Overlay */}
           <div
@@ -344,51 +260,64 @@ export function Login() {
               left: 0,
               right: 0,
               bottom: 0,
-              background: "linear-gradient(to top, rgba(43, 29, 17, 0.92) 15%, rgba(43, 29, 17, 0.3) 100%)",
+              background: "linear-gradient(to top, rgba(43, 29, 17, 0.92) 20%, rgba(43, 29, 17, 0.35) 100%)",
               zIndex: 1
             }}
           />
 
           {/* Info Overlay */}
           <div style={{ position: "relative", zIndex: 2, display: "flex", flexDirection: "column", gap: "12px" }}>
-            <div
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "8px",
-                padding: "6px 14px",
-                borderRadius: "50px",
-                backgroundColor: "rgba(200, 149, 71, 0.25)",
-                border: "1px solid rgba(226, 182, 112, 0.6)",
-                color: "#E2B670",
-                fontSize: "11px",
-                fontWeight: 800,
-                alignSelf: "flex-start",
-                boxShadow: "0 0 12px rgba(200, 149, 71, 0.3)"
-              }}
-            >
-              <Cpu size={14} /> ZERO-GRAVITY ENTERPRISE PORTAL
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <img
+                src="/great_canadian_meat_logo.png"
+                alt="The Great Canadian Meat Company"
+                style={{
+                  height: "38px",
+                  objectFit: "contain",
+                  filter: "drop-shadow(0 2px 8px rgba(0,0,0,0.4))"
+                }}
+              />
+              <div
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  padding: "4px 12px",
+                  borderRadius: "50px",
+                  backgroundColor: "rgba(200, 149, 71, 0.25)",
+                  border: "1px solid rgba(226, 182, 112, 0.6)",
+                  color: "#E2B670",
+                  fontSize: "10.5px",
+                  fontWeight: 800,
+                  boxShadow: "0 0 12px rgba(200, 149, 71, 0.3)"
+                }}
+              >
+                <Cpu size={13} /> OPERATIONS PORTAL
+              </div>
             </div>
 
             <h2 className="login-hero-title">
               MaintenX OS
             </h2>
+
+            <p className="login-hero-desc">
+              Next-generation manufacturing execution, autonomous maintenance, quality governance, and continuous improvement platform for The Great Canadian Meat Company Inc.
+            </p>
           </div>
         </div>
 
-        {/* Right Panel: Floating Warm Acrylic Glass Login Box */}
+        {/* Right Panel: Clean Direct Credentials Login Box */}
         <div className="login-right-panel">
-          {/* Header section with small back arrow button above MaintenX OS */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-            {/* Small Back Arrow Button to Landing Page */}
+          {/* Header section with back button */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
             <button
               type="button"
               onClick={() => navigate("/")}
               title="Back to Landing Page"
               aria-label="Back to Landing Page"
               style={{
-                width: "28px",
-                height: "28px",
+                width: "30px",
+                height: "30px",
                 borderRadius: "8px",
                 backgroundColor: "rgba(200, 149, 71, 0.08)",
                 border: "1px solid rgba(200, 149, 71, 0.25)",
@@ -413,40 +342,47 @@ export function Login() {
                 e.currentTarget.style.transform = "translateX(0)";
               }}
             >
-              <ArrowLeft size={14} strokeWidth={2.5} />
+              <ArrowLeft size={15} strokeWidth={2.5} />
             </button>
 
-            {/* Logo & Sub-Branding Header */}
+            {/* Logo & Client Branding Header */}
             <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
               <div
                 style={{
-                  width: "46px",
-                  height: "46px",
+                  padding: "4px 8px",
                   borderRadius: "12px",
-                  background: "linear-gradient(135deg, #E2B670 0%, #C89547 50%, #B27E33 100%)",
+                  backgroundColor: "#FFFFFF",
+                  border: "1px solid rgba(200, 149, 71, 0.25)",
+                  boxShadow: "0 2px 8px rgba(70, 45, 15, 0.06)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  color: "#261603",
-                  boxShadow: "0 4px 14px rgba(200, 149, 71, 0.35)",
                   flexShrink: 0
                 }}
               >
-                <Flame size={24} />
+                <img
+                  src="/great_canadian_meat_logo.png"
+                  alt="The Great Canadian Meat Company"
+                  style={{
+                    height: "46px",
+                    maxWidth: "78px",
+                    objectFit: "contain"
+                  }}
+                />
               </div>
               <div>
-                <h1 style={{ fontSize: "22px", fontWeight: 900, color: "#2B1D11", letterSpacing: "-0.3px", margin: 0 }}>
-                  MaintenX <span style={{ color: "#B27E33" }}>OS</span>
+                <h1 style={{ fontSize: "21px", fontWeight: 900, color: "#2B1D11", letterSpacing: "-0.4px", margin: 0, lineHeight: 1.15 }}>
+                  The Great Canadian <span style={{ color: "#B27E33" }}>Meat Co.</span>
                 </h1>
-                <span style={{ fontSize: "10px", color: "var(--text-muted)", letterSpacing: "0.08em", textTransform: "uppercase", fontWeight: 800 }}>
-                  Operations Console
-                </span>
+                <p style={{ fontSize: "11.5px", color: "var(--text-secondary)", margin: "3px 0 0 0", fontWeight: 600 }}>
+                  MaintenX OS Operations Portal • Oshawa/Whitby
+                </p>
               </div>
             </div>
           </div>
 
-          <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
-            {/* Prominent Top Error Alert Banner */}
+          <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+            {/* Error Alert Banner */}
             {authError && (
               <div
                 style={{
@@ -505,15 +441,18 @@ export function Login() {
               </div>
             )}
 
-            {/* Inputs Row */}
-            <div className="login-inputs-grid">
+            {/* Direct Credentials Stack */}
+            <div className="login-inputs-stack">
+              {/* Corporate Email */}
               <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label" style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: "6px" }}>
-                  <User size={12} color="#B27E33" /> Corporate Username
+                <label className="form-label" style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "11.5px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: "7px" }}>
+                  <User size={13} color="#B27E33" /> Corporate Email
                 </label>
                 <input
                   type="email"
                   className="form-input-amber"
+                  placeholder="e.g. plant.manager@maintenx.com"
+                  autoComplete="email"
                   value={username}
                   onChange={(e) => {
                     setUsername(e.target.value);
@@ -521,13 +460,13 @@ export function Login() {
                   }}
                   style={{
                     width: "100%",
-                    padding: "11px 14px",
-                    borderRadius: "10px",
+                    padding: "13px 15px",
+                    borderRadius: "12px",
                     backgroundColor: "#FFFFFF",
                     border: authError ? "1.5px solid #F87171" : "1px solid var(--border-subtle)",
                     boxShadow: authError ? "0 0 0 3px rgba(239, 68, 68, 0.12)" : "none",
                     color: "var(--text-primary)",
-                    fontSize: "13px",
+                    fontSize: "13.5px",
                     fontWeight: 600,
                     outline: "none",
                     transition: "all 0.2s ease"
@@ -536,14 +475,17 @@ export function Login() {
                 />
               </div>
 
+              {/* Security Password */}
               <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label" style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: "6px" }}>
-                  <Lock size={12} color="#B27E33" /> Security Password
+                <label className="form-label" style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "11.5px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: "7px" }}>
+                  <Lock size={13} color="#B27E33" /> Security Password
                 </label>
                 <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
                   <input
                     type={showPassword ? "text" : "password"}
                     className="form-input-amber"
+                    placeholder="Enter security password"
+                    autoComplete="current-password"
                     value={password}
                     onChange={(e) => {
                       setPassword(e.target.value);
@@ -551,13 +493,13 @@ export function Login() {
                     }}
                     style={{
                       width: "100%",
-                      padding: "11px 40px 11px 14px",
-                      borderRadius: "10px",
+                      padding: "13px 44px 13px 15px",
+                      borderRadius: "12px",
                       backgroundColor: "#FFFFFF",
                       border: authError ? "1.5px solid #F87171" : "1px solid var(--border-subtle)",
                       boxShadow: authError ? "0 0 0 3px rgba(239, 68, 68, 0.12)" : "none",
                       color: "var(--text-primary)",
-                      fontSize: "13px",
+                      fontSize: "13.5px",
                       fontWeight: 600,
                       outline: "none",
                       transition: "all 0.2s ease"
@@ -577,179 +519,68 @@ export function Login() {
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      padding: "4px"
+                      padding: "6px"
                     }}
                     title={showPassword ? "Hide password" : "Show password"}
                   >
-                    {showPassword ? <EyeOff size={16} color="#8C5B23" /> : <Eye size={16} color="var(--text-muted)" />}
+                    {showPassword ? <EyeOff size={18} color="#8C5B23" /> : <Eye size={18} color="var(--text-muted)" />}
                   </button>
                 </div>
               </div>
-            </div>
 
-            {/* Interactive Grid: Sequential End-to-End Lifecycle Flow */}
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
-                <label className="form-label" style={{ fontSize: "11px", fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase", margin: 0, display: "block" }}>
-                  Select Dashboard Perspective
+              {/* Auxiliary Row: Remember Me & Security Status */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "2px" }}>
+                <label style={{ display: "flex", alignItems: "center", gap: "7px", cursor: "pointer", fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)" }}>
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    style={{ accentColor: "#C89547", cursor: "pointer", width: "14px", height: "14px" }}
+                  />
+                  Remember on this device
                 </label>
-                <span style={{ fontSize: "10px", fontWeight: 700, color: "#8C5B23", backgroundColor: "rgba(200, 149, 71, 0.12)", padding: "2px 8px", borderRadius: "10px" }}>
-                  Data Flow: Step 1 ➔ Step 11
+                <span style={{ fontSize: "11.5px", color: "#8C5B23", fontWeight: 700, display: "flex", alignItems: "center", gap: "4px" }}>
+                  <ShieldCheck size={14} color="#C89547" /> Encrypted Session
                 </span>
               </div>
-
-              <div className="login-roles-grid">
-                {ROLES.map((role, idx) => {
-                  const IconComponent = iconMap[role.icon] || ShieldCheck;
-                  const isSelected = selectedRole === role.id;
-                  const isHovered = hoveredRole === role.id;
-
-                  return (
-                    <div
-                      key={role.id}
-                      onClick={() => handleRoleSelect(role.id)}
-                      onMouseEnter={() => setHoveredRole(role.id)}
-                      onMouseLeave={() => setHoveredRole(null)}
-                      style={{
-                        padding: "10px 8px",
-                        borderRadius: "12px",
-                        backgroundColor: isSelected 
-                          ? "rgba(200, 149, 71, 0.15)" 
-                          : isHovered
-                            ? "var(--bg-card-subtle)"
-                            : "#FFFFFF",
-                        border: isSelected 
-                          ? "2px solid #C89547" 
-                          : isHovered 
-                            ? "1px solid #DCCFBF" 
-                            : "1px solid var(--border-subtle)",
-                        boxShadow: isSelected 
-                          ? "0 2px 10px rgba(200, 149, 71, 0.25)" 
-                          : "0 1px 3px rgba(70, 45, 15, 0.03)",
-                        cursor: "pointer",
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        gap: "5px",
-                        textAlign: "center",
-                        transition: "all 0.18s ease",
-                        position: "relative"
-                      }}
-                    >
-                      {/* Step Indicator Pill */}
-                      <span
-                        style={{
-                          fontSize: "9px",
-                          fontWeight: 800,
-                          color: isSelected ? "#8C5B23" : "var(--text-muted)",
-                          letterSpacing: "0.03em",
-                          textTransform: "uppercase"
-                        }}
-                      >
-                        {role.step || `Step ${idx + 1}`}
-                      </span>
-
-                      <div
-                        style={{
-                          width: "28px",
-                          height: "28px",
-                          borderRadius: "50%",
-                          background: isSelected 
-                            ? "linear-gradient(135deg, #E2B670 0%, #C89547 100%)" 
-                            : "var(--bg-card-subtle)",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          color: isSelected ? "#261603" : "var(--text-secondary)",
-                          boxShadow: isSelected ? "0 2px 6px rgba(178, 126, 51, 0.25)" : "none"
-                        }}
-                      >
-                        <IconComponent size={13} />
-                      </div>
-                      <span style={{ fontSize: "11px", fontWeight: isSelected ? 800 : 600, color: isSelected ? "#2B1D11" : "var(--text-secondary)", lineHeight: 1.15 }}>
-                        {role.label}
-                      </span>
-                      {isSelected && (
-                        <div style={{ position: "absolute", top: "5px", right: "5px", color: "#B27E33" }}>
-                          <CheckCircle2 size={12} />
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
             </div>
 
-            {/* Action Buttons: Real Secure Login + Quick Demo Login */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "6px" }}>
-              {/* Metallic Amber Gold Submit Button for Real Email/Password Auth */}
+            {/* Sign In Button */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "4px" }}>
               <button
                 type="submit"
                 disabled={isSubmitting}
                 style={{
                   width: "100%",
-                  height: "48px",
+                  height: "50px",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  gap: "8px",
-                  fontSize: "14px",
+                  gap: "9px",
+                  fontSize: "14.5px",
                   fontWeight: 800,
                   background: isSubmitting
                     ? "#DCCFBF"
                     : "linear-gradient(180deg, #E2B670 0%, #C89547 50%, #B27E33 100%)",
                   border: "1px solid #E8C182",
-                  boxShadow: "0 4px 14px rgba(178, 126, 51, 0.35)",
+                  boxShadow: "0 4px 16px rgba(178, 126, 51, 0.35)",
                   borderRadius: "50px",
                   color: "#261603",
                   cursor: isSubmitting ? "not-allowed" : "pointer",
-                  transition: "transform 0.15s ease",
+                  transition: "all 0.18s ease",
                   outline: "none",
                   opacity: isSubmitting ? 0.7 : 1
                 }}
                 onMouseEnter={(e) => !isSubmitting && (e.currentTarget.style.transform = "scale(1.012)")}
                 onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
               >
-                <Sparkles size={16} /> {isSubmitting ? "Verifying Credentials..." : "Authenticate & Start Session"}
-              </button>
-
-              {/* 1-Click Quick Demo Login Button */}
-              <button
-                type="button"
-                onClick={handleQuickDemoLogin}
-                style={{
-                  width: "100%",
-                  height: "40px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "6px",
-                  fontSize: "12px",
-                  fontWeight: 700,
-                  backgroundColor: "rgba(200, 149, 71, 0.08)",
-                  border: "1px dashed #C89547",
-                  borderRadius: "50px",
-                  color: "#8C5B23",
-                  cursor: "pointer",
-                  transition: "all 0.15s ease",
-                  outline: "none"
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = "rgba(200, 149, 71, 0.18)";
-                  e.currentTarget.style.borderColor = "#B27E33";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = "rgba(200, 149, 71, 0.08)";
-                  e.currentTarget.style.borderColor = "#C89547";
-                }}
-              >
-                <Zap size={14} color="#C89547" /> 1-Click Quick Demo Login ({ROLES.find((r) => r.id === selectedRole)?.label || "Selected Persona"})
+                <Sparkles size={16} /> {isSubmitting ? "Verifying Credentials..." : "Sign In to MaintenX OS"}
               </button>
             </div>
           </form>
 
-          <div style={{ textAlign: "center", fontSize: "11px", color: "var(--text-muted)", borderTop: "1px solid var(--border-subtle)", paddingTop: "12px", fontWeight: 600 }}>
-            ISO 27001 Secured • Authorized Access Only
+          <div style={{ textAlign: "center", fontSize: "11px", color: "var(--text-muted)", borderTop: "1px solid var(--border-subtle)", paddingTop: "14px", fontWeight: 600 }}>
+            ISO 27001 Secured • Authorized Corporate Access Only
           </div>
         </div>
       </div>

@@ -37,30 +37,21 @@ export function detectEquipmentStage(name?: string | null, category?: string | n
 
 export class MaintenanceService {
   async listWorkOrders(tenantId: string, plantId?: string) {
+    if (!isValidUuid(tenantId)) return [];
     let rows: any[] = [];
     try {
       rows = await db.query.workOrders.findMany({
-        where: isValidUuid(tenantId) ? eq(workOrders.tenantId, tenantId) : undefined,
+        where: eq(workOrders.tenantId, tenantId),
         with: {
           asset: true,
           assignedUser: true,
         },
         orderBy: (workOrders, { desc }) => [desc(workOrders.createdAt)],
       });
-
-      if (!rows || rows.length === 0) {
-        rows = await db.query.workOrders.findMany({
-          with: {
-            asset: true,
-            assignedUser: true,
-          },
-          orderBy: (workOrders, { desc }) => [desc(workOrders.createdAt)],
-        });
-      }
     } catch (queryErr: any) {
-      console.warn("Falling back to raw work_orders query:", queryErr.message);
+      console.warn("Work orders query error:", queryErr.message);
       try {
-        const rawWOs = await db.select().from(workOrders);
+        const rawWOs = await db.select().from(workOrders).where(eq(workOrders.tenantId, tenantId));
         rows = rawWOs.map(wo => ({
           ...wo,
           asset: { id: wo.assetId, name: "Packaging Asset", assetCode: "EQ-001" },
@@ -78,13 +69,14 @@ export class MaintenanceService {
   }
 
   async listBreakdowns(tenantId: string, plantId?: string) {
+    if (!isValidUuid(tenantId)) return [];
     // 1. Fetch real downtime logs from PostgreSQL
     let dtLogs: any[] = [];
     try {
       dtLogs = await db
         .select()
         .from(downtimeLogs)
-        .where(isValidUuid(tenantId) ? eq(downtimeLogs.tenantId, tenantId) : sql`1=1`)
+        .where(eq(downtimeLogs.tenantId, tenantId))
         .orderBy(desc(downtimeLogs.startTime));
     } catch (dtErr: any) {
       console.warn("Downtime logs query warning:", dtErr.message);
@@ -95,7 +87,7 @@ export class MaintenanceService {
     try {
       emergencyWOs = await db.query.workOrders.findMany({
         where: and(
-          isValidUuid(tenantId) ? eq(workOrders.tenantId, tenantId) : sql`1=1`,
+          eq(workOrders.tenantId, tenantId),
           or(
             eq(workOrders.type, "EMERGENCY_BREAKDOWN"),
             ilike(workOrders.title, "%breakdown%"),
@@ -114,7 +106,7 @@ export class MaintenanceService {
 
     let allAssets: any[] = [];
     try {
-      allAssets = await db.select().from(assets).where(isValidUuid(tenantId) ? eq(assets.tenantId, tenantId) : sql`1=1`);
+      allAssets = await db.select().from(assets).where(eq(assets.tenantId, tenantId));
     } catch (astErr: any) {
       console.warn("Assets query in listBreakdowns failed:", astErr.message);
     }
@@ -122,7 +114,7 @@ export class MaintenanceService {
 
     let allLines: any[] = [];
     try {
-      allLines = await db.select().from(productionLines).where(isValidUuid(tenantId) ? eq(productionLines.tenantId, tenantId) : sql`1=1`);
+      allLines = await db.select().from(productionLines).where(eq(productionLines.tenantId, tenantId));
     } catch (lineErr: any) {
       console.warn("Lines query failed:", lineErr.message);
     }
@@ -130,7 +122,7 @@ export class MaintenanceService {
 
     let allUsers: any[] = [];
     try {
-      allUsers = await db.select().from(users).where(isValidUuid(tenantId) ? eq(users.tenantId, tenantId) : sql`1=1`);
+      allUsers = await db.select().from(users).where(eq(users.tenantId, tenantId));
     } catch (userErr: any) {
       console.warn("Users query failed:", userErr.message);
     }
@@ -671,7 +663,7 @@ export class MaintenanceService {
 
     for (const wo of completedWOs) {
       const ast = wo.asset || (wo.assetId ? assetMap.get(wo.assetId) : null);
-      const tech = wo.assignedUser ? `${wo.assignedUser.firstName} ${wo.assignedUser.lastName}` : "Marcus Vance";
+      const tech = wo.assignedUser ? `${wo.assignedUser.firstName} ${wo.assignedUser.lastName}` : "David Markov";
       const dateObj = wo.completedAt || wo.updatedAt || wo.createdAt;
       const dStr = dateObj ? new Date(dateObj).toISOString().split("T")[0] : new Date().toISOString().split("T")[0];
       const tStr = dateObj ? new Date(dateObj).toTimeString().slice(0, 5) : "10:00";
@@ -702,7 +694,7 @@ export class MaintenanceService {
       if (dt.assetId && emergencyWoAssets.has(dt.assetId)) continue;
       const ast = dt.assetId ? assetMap.get(dt.assetId) : null;
       const loggedUser = dt.loggedBy ? userMap.get(dt.loggedBy) : null;
-      const tech = loggedUser ? `${loggedUser.firstName} ${loggedUser.lastName}` : "Dave Miller";
+      const tech = loggedUser ? `${loggedUser.firstName} ${loggedUser.lastName}` : "David Markov";
       const dateObj = dt.endTime || dt.startTime;
       const dStr = dateObj ? new Date(dateObj).toISOString().split("T")[0] : new Date().toISOString().split("T")[0];
       const tStr = dateObj ? new Date(dateObj).toTimeString().slice(0, 5) : "12:00";
@@ -770,9 +762,11 @@ export class MaintenanceService {
   }
 
   async listTroubleshooting(tenantId: string) {
+    if (!isValidUuid(tenantId)) return [];
     try {
       const res = await pool.query(
-        "SELECT * FROM ci_verified_solutions ORDER BY created_at DESC"
+        "SELECT * FROM ci_verified_solutions WHERE tenant_id = $1::uuid ORDER BY created_at DESC",
+        [tenantId]
       );
       if (res.rows && res.rows.length > 0) {
         return res.rows.map((r: any) => ({
@@ -960,7 +954,7 @@ export class MaintenanceService {
       if (user) return user.id;
     }
 
-    // Clean out parenthesized role/specialty, e.g. "Elena Rostova (Electrical Specialist)" -> "Elena Rostova"
+    // Clean out parenthesized role/specialty, e.g. "Ronald Robinson (Electrical Specialist)" -> "Ronald Robinson"
     const cleanName = raw.replace(/\(.*?\)/g, "").trim();
     if (!cleanName) return null;
 
@@ -1234,20 +1228,17 @@ export class MaintenanceService {
   }
 
   async listPMSchedules(tenantId: string) {
-    const tId = tenantId || "aa3183d2-709b-42a8-add1-b2e4b2d873b0";
+    if (!isValidUuid(tenantId)) return [];
     let rows: any[] = [];
     try {
-      rows = await db.select().from(pmSchedules).where(isValidUuid(tId) ? eq(pmSchedules.tenantId, tId) : sql`1=1`);
-      if (!rows || rows.length === 0) {
-        rows = await db.select().from(pmSchedules);
-      }
+      rows = await db.select().from(pmSchedules).where(eq(pmSchedules.tenantId, tenantId));
     } catch (pmErr: any) {
       console.warn("pmSchedules query warning:", pmErr.message);
     }
 
     let allAssets: any[] = [];
     try {
-      allAssets = await db.select().from(assets);
+      allAssets = await db.select().from(assets).where(eq(assets.tenantId, tenantId));
     } catch (astErr: any) {
       console.warn("Could not query assets for PM schedules:", astErr.message);
     }
@@ -1272,7 +1263,7 @@ export class MaintenanceService {
       const freq = s.frequency ? s.frequency.charAt(0).toUpperCase() + s.frequency.slice(1).toLowerCase() : "Weekly";
       const dueStr = s.nextDueDate ? new Date(s.nextDueDate).toISOString().substring(0, 10) : new Date().toISOString().substring(0, 10);
       const lastCompStr = s.lastPerformedDate ? new Date(s.lastPerformedDate).toISOString().substring(0, 10) : "-";
-      const assignedTo = (s.checklistTemplate as any)?.assignedTo || "Marcus Vance (Senior Tech)";
+      const assignedTo = (s.checklistTemplate as any)?.assignedTo || "David Markov (Maintenance Lead)";
 
       return {
         id: s.scheduleCode || s.id,
@@ -1357,7 +1348,7 @@ export class MaintenanceService {
         nextDueDate,
         status: statusValue,
         checklistTemplate: {
-          assignedTo: input.assignedTo || "Marcus Vance (Senior Tech)",
+          assignedTo: input.assignedTo || "David Markov (Maintenance Lead)",
           templateId: input.templateId || "CHK-001",
           priority: input.priority || "P2 - High",
           estimatedMinutes: 45,
@@ -1381,8 +1372,8 @@ export class MaintenanceService {
       dueNext: `${dueStr} 08:00`,
       lastCompleted: "-",
       status: schedule.status,
-      assignedTo: input.assignedTo || "Marcus Vance (Senior Tech)",
-      assignedTechnician: input.assignedTo || "Marcus Vance (Senior Tech)",
+      assignedTo: input.assignedTo || "David Markov (Maintenance Lead)",
+      assignedTechnician: input.assignedTo || "David Markov (Maintenance Lead)",
       templateId: input.templateId || "CHK-001",
       priority: input.priority || "P2 - High",
       isActive: true,
@@ -1441,7 +1432,7 @@ export class MaintenanceService {
       dueDate: dueStr,
       dueNext: `${dueStr} 08:00`,
       status: updated.status,
-      assignedTo: input.assignedTo || (updated.checklistTemplate as any)?.assignedTo || "Marcus Vance",
+      assignedTo: input.assignedTo || (updated.checklistTemplate as any)?.assignedTo || "David Markov",
       isActive: updated.isActive,
     };
   }
@@ -1475,29 +1466,24 @@ export class MaintenanceService {
     const histId = `EXEC-${Date.now()}`;
     const tId = tenantId || "aa3183d2-709b-42a8-add1-b2e4b2d873b0";
 
-    // 1. Find matching PM schedule
+    // 1. Find matching PM schedule for this tenant
     let existingSchedule: any = null;
-    if (input.scheduleId || input.id) {
+    if (isValidUuid(tenantId) && (input.scheduleId || input.id)) {
       const isUuid = isValidUuid(input.scheduleId || input.id);
       const [s] = isUuid
-        ? await db.select().from(pmSchedules).where(or(eq(pmSchedules.id, input.scheduleId || input.id), eq(pmSchedules.scheduleCode, input.scheduleId || input.id))).limit(1)
-        : await db.select().from(pmSchedules).where(eq(pmSchedules.scheduleCode, input.scheduleId || input.id)).limit(1);
+        ? await db.select().from(pmSchedules).where(and(eq(pmSchedules.tenantId, tenantId), or(eq(pmSchedules.id, input.scheduleId || input.id), eq(pmSchedules.scheduleCode, input.scheduleId || input.id)))).limit(1)
+        : await db.select().from(pmSchedules).where(and(eq(pmSchedules.tenantId, tenantId), eq(pmSchedules.scheduleCode, input.scheduleId || input.id))).limit(1);
       existingSchedule = s;
     }
 
-    if (!existingSchedule && input.assetId) {
+    if (!existingSchedule && input.assetId && isValidUuid(tenantId)) {
       const [a] = isValidUuid(input.assetId)
-        ? await db.select().from(assets).where(eq(assets.id, input.assetId)).limit(1)
-        : await db.select().from(assets).where(or(eq(assets.assetCode, input.assetId), eq(assets.name, input.assetId))).limit(1);
+        ? await db.select().from(assets).where(and(eq(assets.tenantId, tenantId), eq(assets.id, input.assetId))).limit(1)
+        : await db.select().from(assets).where(and(eq(assets.tenantId, tenantId), or(eq(assets.assetCode, input.assetId), eq(assets.name, input.assetId)))).limit(1);
       if (a) {
-        const [s] = await db.select().from(pmSchedules).where(eq(pmSchedules.assetId, a.id)).limit(1);
+        const [s] = await db.select().from(pmSchedules).where(and(eq(pmSchedules.tenantId, tenantId), eq(pmSchedules.assetId, a.id))).limit(1);
         existingSchedule = s;
       }
-    }
-
-    if (!existingSchedule) {
-      const [fallback] = await db.select().from(pmSchedules).limit(1);
-      existingSchedule = fallback;
     }
 
     const hasFailures = Boolean(
@@ -1513,7 +1499,7 @@ export class MaintenanceService {
       const updatedTemplate = {
         templateId: input.templateId || (existingSchedule.checklistTemplate as any)?.templateId || "CHK-001",
         templateName: input.templateName || (existingSchedule.checklistTemplate as any)?.templateName || existingSchedule.title,
-        technician: input.technician || (existingSchedule.checklistTemplate as any)?.assignedTo || "Marcus Vance",
+        technician: input.technician || (existingSchedule.checklistTemplate as any)?.assignedTo || "David Markov",
         technicianNotes: input.technicianNotes || "",
         status: executionStatus,
         executedAt: new Date().toISOString(),
@@ -1647,11 +1633,9 @@ export class MaintenanceService {
       acknowledged: true,
       data: input,
     };
-  }
-
-  async listSpareParts(tenantId: string) {
-    const tId = tenantId || "aa3183d2-709b-42a8-add1-b2e4b2d873b0";
-    const parts = await db.select().from(spareParts).where(eq(spareParts.tenantId, tId));
+  }  async listSpareParts(tenantId: string) {
+    if (!isValidUuid(tenantId)) return [];
+    const parts = await db.select().from(spareParts).where(eq(spareParts.tenantId, tenantId));
     return parts.map((p) => {
       const stock = Number(p.currentStock ?? 0);
       const minStock = Number(p.minStockLevel ?? 5);
@@ -1681,8 +1665,8 @@ export class MaintenanceService {
   }
 
   async createSparePart(tenantId: string, input: any) {
-    const tId = tenantId || "aa3183d2-709b-42a8-add1-b2e4b2d873b0";
-    const plantList = await db.select().from(plants).where(eq(plants.tenantId, tId)).limit(1);
+    if (!isValidUuid(tenantId)) throw new Error("Valid tenant UUID required");
+    const plantList = await db.select().from(plants).where(eq(plants.tenantId, tenantId)).limit(1);
     const pId = plantList[0]?.id || "bead41e2-b735-41b8-bd00-bdba1682fb6a";
 
     const partNumber = (input.partNo || input.partNumber || `SP-${Math.floor(1000 + Math.random() * 9000)}`).trim();
@@ -1702,7 +1686,7 @@ export class MaintenanceService {
     const [created] = await db
       .insert(spareParts)
       .values({
-        tenantId: tId,
+        tenantId,
         plantId: pId,
         partNumber,
         name: input.name || "Spare Part",
@@ -1716,8 +1700,6 @@ export class MaintenanceService {
       })
       .returning();
 
-    const createdStock = Number(created.currentStock ?? 0);
-    const createdMinStock = Number(created.minStockLevel ?? 5);
     const createdLinked = created.linkedAssets ? created.linkedAssets.split(',').map((s: string) => s.trim()).filter(Boolean) : [];
 
     return {
@@ -1727,23 +1709,23 @@ export class MaintenanceService {
       partNumber: created.partNumber,
       name: created.name,
       category: created.category,
-      stock: createdStock,
-      currentStock: createdStock,
-      minStock: createdMinStock,
-      minStockLevel: createdMinStock,
+      stock: Number(created.currentStock ?? 0),
+      currentStock: Number(created.currentStock ?? 0),
+      minStock: Number(created.minStockLevel ?? 5),
+      minStockLevel: Number(created.minStockLevel ?? 5),
       unitCost: Number(created.unitCost ?? 0),
       location: created.binLocation,
       binLocation: created.binLocation,
       supplier: created.supplierName,
       supplierName: created.supplierName,
-      status: createdStock <= createdMinStock ? "Low Stock" : "In Stock",
+      status: Number(created.currentStock ?? 0) <= Number(created.minStockLevel ?? 5) ? "Low Stock" : "In Stock",
       linkedAssets: createdLinked,
       linkedAsset: createdLinked[0] || null,
     };
   }
 
   async updateSparePart(tenantId: string, partId: string, input: any) {
-    const tId = tenantId || "aa3183d2-709b-42a8-add1-b2e4b2d873b0";
+    if (!isValidUuid(tenantId)) throw new Error("Valid tenant UUID required");
     const updateData: any = {};
 
     if (input.name !== undefined) updateData.name = input.name;
@@ -1779,7 +1761,7 @@ export class MaintenanceService {
       .set(updateData)
       .where(
         and(
-          eq(spareParts.tenantId, tId),
+          eq(spareParts.tenantId, tenantId),
           isUuid ? eq(spareParts.id, partId) : eq(spareParts.partNumber, partId)
         )
       )
@@ -1815,14 +1797,14 @@ export class MaintenanceService {
   }
 
   async deleteSparePart(tenantId: string, partId: string) {
-    const tId = tenantId || "aa3183d2-709b-42a8-add1-b2e4b2d873b0";
+    if (!isValidUuid(tenantId)) return { id: partId, success: false };
     const isUuid = isValidUuid(partId);
 
     const [deleted] = await db
       .delete(spareParts)
       .where(
         and(
-          eq(spareParts.tenantId, tId),
+          eq(spareParts.tenantId, tenantId),
           isUuid ? eq(spareParts.id, partId) : eq(spareParts.partNumber, partId)
         )
       )
@@ -1832,6 +1814,7 @@ export class MaintenanceService {
   }
 
   async listCalibrations(tenantId: string) {
+    if (!isValidUuid(tenantId)) return [];
     try {
       const records = await db
         .select({
@@ -1839,7 +1822,8 @@ export class MaintenanceService {
           assetCode: assets.assetCode,
         })
         .from(calibrations)
-        .leftJoin(assets, eq(calibrations.assetId, assets.id));
+        .leftJoin(assets, eq(calibrations.assetId, assets.id))
+        .where(eq(calibrations.tenantId, tenantId));
 
       return records.map(({ cal, assetCode }) => ({
         id: cal.id,
@@ -1863,30 +1847,30 @@ export class MaintenanceService {
   }
 
   async createCalibration(tenantId: string, input: any) {
-    const tId = tenantId || "aa3183d2-709b-42a8-add1-b2e4b2d873b0";
+    if (!isValidUuid(tenantId)) throw new Error("Valid tenant UUID required");
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(input.assetId || "");
     let targetAsset = isUuid
-      ? await db.select().from(assets).where(or(eq(assets.id, input.assetId), eq(assets.assetCode, input.assetId))).limit(1)
-      : await db.select().from(assets).where(eq(assets.assetCode, input.assetId)).limit(1);
+      ? await db.select().from(assets).where(and(eq(assets.tenantId, tenantId), or(eq(assets.id, input.assetId), eq(assets.assetCode, input.assetId)))).limit(1)
+      : await db.select().from(assets).where(and(eq(assets.tenantId, tenantId), eq(assets.assetCode, input.assetId))).limit(1);
     
     if (!targetAsset[0]) {
-      const fallback = await db.select().from(assets).limit(1);
-      targetAsset = fallback;
+      const [fallback] = await db.select().from(assets).where(eq(assets.tenantId, tenantId)).limit(1);
+      if (fallback) targetAsset = [fallback];
     }
-    const aId = targetAsset[0]?.id;
-    const pId = targetAsset[0]?.plantId || "bead41e2-b735-41b8-bd00-bdba1682fb6a";
+    const aId = targetAsset[0]?.id || null;
+    const pId = targetAsset[0]?.plantId || null;
     const resolvedCode = targetAsset[0]?.assetCode || input.assetId;
 
     const [created] = await db.insert(calibrations).values({
-      tenantId: tId,
-      plantId: pId,
-      assetId: aId,
+      tenantId,
+      plantId: pId as any,
+      assetId: aId as any,
       instrumentName: input.name || input.instrumentName || "Precision Instrument",
       certificateNumber: input.certificate || input.certificateNumber || `CERT-${Math.floor(10000 + Math.random() * 90000)}`,
       calibrationDate: input.lastCalibration ? new Date(input.lastCalibration) : new Date(),
       nextDueDate: input.nextDueDate ? new Date(input.nextDueDate) : new Date(Date.now() + 90 * 86400000),
       status: input.status || "VALID"
-    }).returning();
+    } as any).returning();
 
     return {
       id: created.id,
@@ -1914,11 +1898,12 @@ export class MaintenanceService {
   }
 
   async listNotifications(tenantId: string) {
+    if (!isValidUuid(tenantId)) return [];
     // 1. Fetch real assets
     const assetRows = await db
       .select()
       .from(assets)
-      .where(isValidUuid(tenantId) ? eq(assets.tenantId, tenantId) : sql`1=1`);
+      .where(eq(assets.tenantId, tenantId));
     const assetMap = new Map<string, any>();
     for (const a of assetRows) {
       assetMap.set(a.id, a);
@@ -1928,14 +1913,14 @@ export class MaintenanceService {
     const dtRows = await db
       .select()
       .from(downtimeLogs)
-      .where(isValidUuid(tenantId) ? eq(downtimeLogs.tenantId, tenantId) : sql`1=1`)
+      .where(eq(downtimeLogs.tenantId, tenantId))
       .orderBy(desc(downtimeLogs.createdAt));
 
     // 3. Fetch real work orders
     const woRows = await db
       .select()
       .from(workOrders)
-      .where(isValidUuid(tenantId) ? eq(workOrders.tenantId, tenantId) : sql`1=1`)
+      .where(eq(workOrders.tenantId, tenantId))
       .orderBy(desc(workOrders.createdAt));
 
     // 4. Fetch notifications from notifications table
@@ -1944,7 +1929,7 @@ export class MaintenanceService {
       .from(notifications)
       .where(
         and(
-          isValidUuid(tenantId) ? eq(notifications.tenantId, tenantId) : sql`1=1`,
+          eq(notifications.tenantId, tenantId),
           or(
             eq(notifications.targetRole, "MAINTENANCE"),
             inArray(notifications.category, ["Breakdowns", "Work Orders", "Preventive Maintenance"])
@@ -1955,7 +1940,7 @@ export class MaintenanceService {
 
     // If notifications table has fewer than 2 items, synchronize with actual live database events
     if (!dbNotifs || dbNotifs.length < 2) {
-      const validTenant = isValidUuid(tenantId) ? tenantId : (assetRows[0]?.tenantId || "aa3183d2-709b-42a8-add1-b2e4b2d873b0");
+      const validTenant = tenantId;
 
       for (const dt of dtRows.slice(0, 3)) {
         const ast = dt.assetId ? assetMap.get(dt.assetId) : null;
@@ -2091,75 +2076,81 @@ export class MaintenanceService {
   }
 
   async markAllNotificationsRead(tenantId: string) {
-    return await db.update(notifications).set({ isRead: true }).where(isValidUuid(tenantId) ? eq(notifications.tenantId, tenantId) : sql`1=1`);
+    if (!isValidUuid(tenantId)) return { count: 0 };
+    return await db.update(notifications).set({ isRead: true }).where(eq(notifications.tenantId, tenantId));
   }
 
   async clearNotifications(tenantId: string) {
-    return await db.delete(notifications).where(isValidUuid(tenantId) ? eq(notifications.tenantId, tenantId) : sql`1=1`);
+    if (!isValidUuid(tenantId)) return { count: 0 };
+    return await db.delete(notifications).where(eq(notifications.tenantId, tenantId));
   }
 
   async listProfile(tenantId: string, userId?: string, userEmail?: string) {
-    // 1. Resolve real user from users table
+    // 1. Resolve real user from users table for this tenant
     let targetUser: any = null;
-    if (userId && isValidUuid(userId)) {
-      const [u] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
-      targetUser = u;
-    }
-    if (!targetUser && userEmail) {
-      const [u] = await db.select().from(users).where(eq(users.email, userEmail)).limit(1);
-      targetUser = u;
-    }
-    if (!targetUser) {
-      const [u] = await db.select().from(users).where(eq(users.email, "maintenance@maintenx.com")).limit(1);
-      targetUser = u;
-    }
-    if (!targetUser) {
-      const [firstU] = await db.select().from(users).limit(1);
-      targetUser = firstU;
+    if (isValidUuid(tenantId)) {
+      if (userId && isValidUuid(userId)) {
+        const [u] = await db.select().from(users).where(and(eq(users.tenantId, tenantId), eq(users.id, userId))).limit(1);
+        targetUser = u;
+      }
+      if (!targetUser && userEmail) {
+        const [u] = await db.select().from(users).where(and(eq(users.tenantId, tenantId), eq(users.email, userEmail))).limit(1);
+        targetUser = u;
+      }
+      if (!targetUser) {
+        const [firstU] = await db.select().from(users).where(eq(users.tenantId, tenantId)).limit(1);
+        targetUser = firstU;
+      }
     }
 
     // 2. Resolve Plant name
-    const [plant] = await db.select().from(plants).where(
-      targetUser?.plantId ? eq(plants.id, targetUser.plantId) : (isValidUuid(tenantId) ? eq(plants.tenantId, tenantId) : sql`1=1`)
-    ).limit(1);
-    const plantDisplay = plant ? `${plant.name} (${plant.code})` : "Indore Mega Bottling & Canning Facility (INDORE-01)";
+    const [plant] = isValidUuid(tenantId)
+      ? await db.select().from(plants).where(
+          targetUser?.plantId ? eq(plants.id, targetUser.plantId) : eq(plants.tenantId, tenantId)
+        ).limit(1)
+      : [null];
+    const plantDisplay = plant ? `${plant.name} (${plant.code})` : "Main Facility";
 
     // 3. Resolve Staff details (shift, bio, certifications)
     let staffRec: any = null;
-    if (targetUser) {
+    if (targetUser && isValidUuid(tenantId)) {
       const [s] = await db.select().from(staff).where(
-        or(
-          ilike(staff.name, `%${targetUser.firstName}%`),
-          eq(staff.employeeCode, "EMP-DM01")
+        and(
+          eq(staff.tenantId, tenantId),
+          ilike(staff.name, `%${targetUser.firstName}%`)
         )
       ).limit(1);
       staffRec = s;
     }
 
     // 4. Compute real live KPIs from PostgreSQL
-    const activeWos = await db.select().from(workOrders).where(
-      and(
-        isValidUuid(tenantId) ? eq(workOrders.tenantId, tenantId) : sql`1=1`,
-        or(eq(workOrders.status, "OPEN"), eq(workOrders.status, "IN_PROGRESS"))
-      )
-    );
+    const activeWos = isValidUuid(tenantId)
+      ? await db.select().from(workOrders).where(
+          and(
+            eq(workOrders.tenantId, tenantId),
+            or(eq(workOrders.status, "OPEN"), eq(workOrders.status, "IN_PROGRESS"))
+          )
+        )
+      : [];
 
-    const completedWos = await db.select().from(workOrders).where(
-      and(
-        isValidUuid(tenantId) ? eq(workOrders.tenantId, tenantId) : sql`1=1`,
-        or(eq(workOrders.status, "COMPLETED"), eq(workOrders.status, "CLOSED"))
-      )
-    );
+    const completedWos = isValidUuid(tenantId)
+      ? await db.select().from(workOrders).where(
+          and(
+            eq(workOrders.tenantId, tenantId),
+            or(eq(workOrders.status, "COMPLETED"), eq(workOrders.status, "CLOSED"))
+          )
+        )
+      : [];
 
-    const pmList = await db.select().from(pmSchedules).where(
-      isValidUuid(tenantId) ? eq(pmSchedules.tenantId, tenantId) : sql`1=1`
-    );
+    const pmList = isValidUuid(tenantId)
+      ? await db.select().from(pmSchedules).where(eq(pmSchedules.tenantId, tenantId))
+      : [];
     const completedPms = pmList.filter(p => p.status === "Completed").length;
     const pmCompliance = pmList.length > 0
       ? `${Math.round((completedPms / pmList.length) * 100)}%`
       : "100%";
 
-    const fullName = targetUser ? `${targetUser.firstName} ${targetUser.lastName}`.trim() : "Dave Miller";
+    const fullName = targetUser ? `${targetUser.firstName} ${targetUser.lastName}`.trim() : "David Markov";
     const initials = targetUser
       ? `${targetUser.firstName?.[0] || 'D'}${targetUser.lastName?.[0] || 'M'}`.toUpperCase()
       : "DM";
@@ -2224,7 +2215,7 @@ export class MaintenanceService {
 
       if (existingStaff[0]) {
         await db.update(staff).set({
-          name: input.name || "Dave Miller",
+          name: input.name || "David Markov",
           phone: input.phone || null,
           shiftCode: input.shift || "Shift A",
           designation: input.role || "Senior Maintenance Technician",
@@ -2236,7 +2227,7 @@ export class MaintenanceService {
           tenantId: isValidUuid(tenantId) ? tenantId : "aa3183d2-709b-42a8-add1-b2e4b2d873b0",
           plantId: firstPlant?.id || "bead41e2-b735-41b8-bd00-bdba1682fb6a",
           employeeCode: "EMP-DM01",
-          name: input.name || "Dave Miller",
+          name: input.name || "David Markov",
           phone: input.phone || null,
           shiftCode: input.shift || "Shift A",
           designation: input.role || "Senior Maintenance Technician",
@@ -2256,17 +2247,20 @@ export class MaintenanceService {
   }
 
   async getReliabilityMetrics(tenantId: string, plantId?: string) {
+    if (!isValidUuid(tenantId)) {
+      return {
+        plantOverall: { mttrHours: "0.0", mtbfHours: "720.0", downtimeHours: "0.0", availability: "100.0%", oee: "95.0%" },
+        byStage: [],
+        repeatFailures: [],
+      };
+    }
     // 1. Fetch real assets from PostgreSQL
     let assetRows: any[] = [];
     try {
       assetRows = await db
         .select()
         .from(assets)
-        .where(isValidUuid(tenantId) ? eq(assets.tenantId, tenantId) : sql`1=1`);
-
-      if (!assetRows || assetRows.length === 0) {
-        assetRows = await db.select().from(assets);
-      }
+        .where(eq(assets.tenantId, tenantId));
     } catch (astErr: any) {
       console.warn("Asset query in getReliabilityMetrics warning:", astErr.message);
     }
@@ -2277,11 +2271,7 @@ export class MaintenanceService {
       dtRows = await db
         .select()
         .from(downtimeLogs)
-        .where(isValidUuid(tenantId) ? eq(downtimeLogs.tenantId, tenantId) : sql`1=1`);
-
-      if (!dtRows || dtRows.length === 0) {
-        dtRows = await db.select().from(downtimeLogs);
-      }
+        .where(eq(downtimeLogs.tenantId, tenantId));
     } catch (dtErr: any) {
       console.warn("Downtime logs query warning:", dtErr.message);
     }
@@ -2294,7 +2284,7 @@ export class MaintenanceService {
         .from(workOrders)
         .where(
           and(
-            isValidUuid(tenantId) ? eq(workOrders.tenantId, tenantId) : sql`1=1`,
+            eq(workOrders.tenantId, tenantId),
             or(
               eq(workOrders.status, "COMPLETED"),
               eq(workOrders.status, "CLOSED"),
@@ -2536,7 +2526,7 @@ export class MaintenanceService {
         plantId: "PLT-01",
         sourceBreakdownId: "BD-2026-092",
         leadInvestigator: "David Kim (Lead CI)",
-        teamMembers: ["Marcus Vance (Maint)", "Sarah Jenkins (Prod)", "Dr. Aris Thorne (QA)"],
+        teamMembers: ["David Markov (Maint)", "Ronald Robinson (Prod)", "Stephanie Kuzmych (QA)"],
         currentPhase: "Occurrence Cause",
         status: "Active Root Cause Analysis",
         severity: "Critical",
@@ -2552,7 +2542,7 @@ export class MaintenanceService {
         lineName: "Line 1 — Aseptic Bottling",
         plantId: "PLT-01",
         sourceBreakdownId: "BD-2026-088",
-        leadInvestigator: "Marcus Vance (Senior Reliability)",
+        leadInvestigator: "David Markov (Senior Reliability)",
         teamMembers: ["Devang Patel (Line Lead)", "David Kim (Lead CI)"],
         currentPhase: "Hypothesis & Tests",
         status: "Active Root Cause Analysis",

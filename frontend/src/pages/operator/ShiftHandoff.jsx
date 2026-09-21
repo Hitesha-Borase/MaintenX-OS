@@ -13,7 +13,7 @@ export function ShiftHandoff() {
 
   const [shiftFrom, setShiftFrom] = useState("Shift A (Day)");
   const [shiftTo, setShiftTo] = useState("Shift B (Evening)");
-  const [incomingOp, setIncomingOp] = useState("Carlos Mendez");
+  const [incomingOp, setIncomingOp] = useState("Ashley Kulcar");
   const [notes, setNotes] = useState("");
 
   const [isSignModalOpen, setIsSignModalOpen] = useState(false);
@@ -25,8 +25,8 @@ export function ShiftHandoff() {
       id: "HO-991",
       shiftFrom: "Shift C (Night)",
       shiftTo: "Shift A (Day)",
-      handedOverBy: "Carlos Mendez",
-      receivedBy: "Elena Rostova",
+      handedOverBy: "Ashley Kulcar",
+      receivedBy: "Ronald Robinson",
       notes: "Line 1 running at 580 BPM. Clean In Place (CIP) passed at 04:30. Filler head #7 seal replaced.",
       status: "SIGNED OFF",
       timestamp: "2026-08-31 05:55"
@@ -72,7 +72,7 @@ export function ShiftHandoff() {
         id: res?.id || `HO-${Math.floor(100 + Math.random() * 900)}`,
         shiftFrom,
         shiftTo,
-        handedOverBy: "Elena Rostova",
+        handedOverBy: "Ronald Robinson",
         receivedBy: incomingOp,
         notes,
         status: "SIGNED OFF",
@@ -88,7 +88,7 @@ export function ShiftHandoff() {
         id: `HO-${Math.floor(100 + Math.random() * 900)}`,
         shiftFrom,
         shiftTo,
-        handedOverBy: "Elena Rostova",
+        handedOverBy: "Ronald Robinson",
         receivedBy: incomingOp,
         notes,
         status: "SIGNED OFF",

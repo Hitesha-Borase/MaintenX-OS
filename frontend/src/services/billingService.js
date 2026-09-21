@@ -18,6 +18,10 @@ export const billingService = {
     });
   },
 
+  async upgradePlan(planId) {
+    return apiClient.post("/billing/upgrade", { planId });
+  },
+
   async getSubscription() {
     return apiClient.get("/billing/subscription");
   },

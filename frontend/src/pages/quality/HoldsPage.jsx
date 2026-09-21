@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   AlertTriangle,
   ShieldCheck,
@@ -18,21 +18,35 @@ import { Button } from "../../components/common/Button";
 import { StatCard } from "../../components/common/StatCard";
 import { useQuality } from "../../context/QualityContext";
 import { useApp } from "../../context/AppContext";
+import qualityService from "../../services/qualityService";
 
 export function HoldsPage() {
   const { holds, deviations, updateDeviationStatus } = useQuality();
   const { addToast } = useApp();
 
-  const [holdList, setHoldList] = useState([
-    { id: "HLD-2026-081", lotNumber: "LOT-CIT-0828", product: "Sparkling Citrus Soda 500ml", units: 2400, reason: "Cap torque reading lower than 12 in-lbs limit", date: "2026-08-30", status: "Under Quarantine" },
-    { id: "HLD-2026-082", lotNumber: "LOT-TON-0829", product: "Tonic Water Natural 1L", units: 1200, reason: "Minor fill volume variance ±8ml", date: "2026-08-31", status: "Under Quarantine" }
-  ]);
+  const [holdList, setHoldList] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const fetchHolds = async () => {
+    setIsLoading(true);
+    try {
+      const res = await qualityService.getQualityHolds();
+      const data = res?.data?.data ?? res?.data ?? res;
+      if (Array.isArray(data)) setHoldList(data);
+    } catch (err) {
+      console.warn("Holds fetch:", err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchHolds(); }, []);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newHold, setNewHold] = useState({
     lotNumber: "",
-    product: "Sparkling Citrus Soda 500ml",
-    units: 1000,
+    product: "",
+    units: "",
     reason: ""
   });
 
@@ -50,23 +64,21 @@ export function HoldsPage() {
     addToast(`Lot hold ${id} disposition set to Scrap.`, "warning");
   };
 
-  const handleAddSubmit = (e) => {
+  const handleAddSubmit = async (e) => {
     e.preventDefault();
     if (!newHold.lotNumber || !newHold.reason) {
       addToast("Please provide lot number and hold reason", "warning");
       return;
     }
-    const created = {
-      id: `HLD-2026-08${holdList.length + 3}`,
-      ...newHold,
-      units: Number(newHold.units),
-      date: new Date().toISOString().substring(0, 10),
-      status: "Under Quarantine"
-    };
-    setHoldList([...holdList, created]);
-    addToast(`Quality Hold ${created.id} issued! Lot placed in Quarantine.`, "success");
-    setIsModalOpen(false);
-    setNewHold({ lotNumber: "", product: "Sparkling Citrus Soda 500ml", units: 1000, reason: "" });
+    try {
+      await qualityService.createQualityHold(newHold);
+      addToast(`Quality Hold issued for ${newHold.lotNumber}. Lot placed in Quarantine.`, "success");
+      setIsModalOpen(false);
+      setNewHold({ lotNumber: "", product: "", units: "", reason: "" });
+      await fetchHolds();
+    } catch (err) {
+      addToast(err.message || "Could not create hold", "error");
+    }
   };
 
   return (

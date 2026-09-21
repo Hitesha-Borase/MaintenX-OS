@@ -76,7 +76,7 @@ export function ServiceRisk() {
         riskId: id,
         riskTitle: title,
         actionProtocol: "Expedited vendor dispatch / Pre-stage CIP Washout",
-        authorizedBy: "Elena Rostova (Lead Planner)"
+        authorizedBy: "Stefan Crawford (Plant Manager)"
       });
       setMitigations((prev) => ({ ...prev, [id]: true }));
       addToast(

@@ -21,9 +21,9 @@ export function CCPChecks() {
   const [isLoading, setIsLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [newVal, setNewVal] = useState("");
-  const [selectedCcpType, setSelectedCcpType] = useState("Pasteurizer HTST Critical Limit Temperature");
-  const [batchNo, setBatchNo] = useState("BAT-2026-ORD2511");
-  const [operator, setOperator] = useState("Arthur Sterling (Plant Manager)");
+  const [selectedCcpType, setSelectedCcpType] = useState("Thermal Lethality Critical Core Temperature (CCP-1)");
+  const [batchNo, setBatchNo] = useState("BAT-MEAT-2026-01");
+  const [operator, setOperator] = useState("Stefan Crawford (Plant Manager)");
   const [selectedDetail, setSelectedDetail] = useState(null);
 
   const formatCheckTimeAndDate = (checkedAt) => {
@@ -67,21 +67,21 @@ export function CCPChecks() {
           const { time, date } = formatCheckTimeAndDate(c.checkedAt);
           return {
             id: c.id || idx + 1,
-            name: c.ccpName || "Pasteurizer HTST Critical Limit",
+            name: c.ccpName || "Thermal Lethality Core Temp (CCP-1)",
             ccpCode: c.ccpCode || `CCP-0${idx + 1}`,
-            target: c.targetValue ? `Target: ${c.targetValue} ${c.uom || '°C'}` : "≥ 83.1°C",
+            target: c.targetValue ? `Target: ${c.targetValue} ${c.uom || '°C'}` : "≥ 57.8°C",
             actual: `${c.actualValue || ''} ${c.uom || ''}`.trim(),
             status: c.status || "PASS",
             time,
             date,
-            operator: c.operator || "Arthur Sterling",
-            equipment: c.lineName || "LINE-2 (abc)",
-            location: c.lineName ? `${c.lineName} — Processing Area` : "LINE-2 Processing Area",
-            method: "Automated Sensor & QA Titration",
-            criticalLimit: c.targetValue ? `Critical Threshold: ${c.targetValue} ${c.uom || '°C'}` : "≥ 83.1°C",
+            operator: c.operator || "Stephanie Kuzmych",
+            equipment: c.lineName || "LINE-SMK-01 (Thermal Smokehouse Line)",
+            location: c.lineName ? `${c.lineName} — Processing Area` : "LINE-SMK-01 Smokehouse Facility",
+            method: "Dual Core Thermal Probe & Data Logger",
+            criticalLimit: c.targetValue ? `Critical Threshold: ${c.targetValue} ${c.uom || '°C'}` : "≥ 57.8°C (12 min hold)",
             corrective: c.status === "PASS" ? "N/A — Within limits" : "Quarantine & Corrective Action",
             notes: c.notes || "Recorded via QA Control Center",
-            batchId: c.batchNumber || "BAT-2026-ORD2511"
+            batchId: c.batchNumber || "BAT-MEAT-2026-01"
           };
         });
         setCcps(mapped);

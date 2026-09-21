@@ -32,7 +32,7 @@ export function WorkOrderDetail() {
   const isPlantManager = currentRole?.id === "plant_manager";
   const managerName = currentRole?.user?.name
     ? `${currentRole.user.name} (${currentRole.label || "Plant Manager"})`
-    : "Arthur Sterling (Plant Manager)";
+    : "Stefan Crawford (Plant Manager)";
 
   const {
     workOrders,
@@ -108,7 +108,7 @@ export function WorkOrderDetail() {
   const handleAddComment = async (e) => {
     e.preventDefault();
     if (!commentText.trim()) return;
-    const author = isPlantManager ? managerName : (currentRole?.user?.name || "Marcus Vance (Senior Tech)");
+    const author = isPlantManager ? managerName : (currentRole?.user?.name || "David Markov (Maintenance Lead)");
     try {
       await maintenanceService.addWorkOrderComment(wo.id, {
         text: commentText,
@@ -393,7 +393,7 @@ export function WorkOrderDetail() {
               <h3 style={{ fontSize: "15px", fontWeight: 700, color: "var(--text-primary)", margin: 0 }}>
                 Execution & Verification Results
               </h3>
-              <Badge variant="cyan">Tech Scope: {wo.assignedTechnician || "Marcus Vance"}</Badge>
+              <Badge variant="cyan">Tech Scope: {wo.assignedTechnician || "David Markov"}</Badge>
             </div>
 
             {isPlantManager && (

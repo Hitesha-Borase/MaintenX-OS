@@ -50,7 +50,7 @@ export function SkillsMasterPage() {
     department: "Maintenance & Reliability",
     role: "",
     plantId: plants[0]?.id || "",
-    plantName: plants[0]?.name || "Indore Plant",
+    plantName: plants[0]?.name || "Plant 1 - Meat Processing & Smokehouse Facility",
     skillLevel: "Level 2 (Autonomous Operator)",
     skills: [],
     certifications: [],
@@ -68,7 +68,7 @@ export function SkillsMasterPage() {
   const fetchLiveStaff = useCallback(async () => {
     try {
       setIsLoading(true);
-      const res = await masterDataService.getStaff();
+      const res = await masterDataService.getEmployeeSkills();
       let raw = [];
       if (Array.isArray(res)) {
         raw = res;
@@ -90,10 +90,10 @@ export function SkillsMasterPage() {
 
   useEffect(() => {
     fetchLiveStaff();
-  }, [fetchLiveStaff]);
+  }, []); // Run on mount only
 
-  // The single source of truth is the live database records with mock/context fallback
-  const displayEmployees = (liveEmployees && liveEmployees.length > 0) ? liveEmployees : employees;
+  const hasTenantActive = Boolean(typeof window !== "undefined" && (localStorage.getItem("maintenx_tenant_name") || localStorage.getItem("maintenx_tenant_id")));
+  const displayEmployees = Array.isArray(liveEmployees) ? liveEmployees : (hasTenantActive ? [] : employees);
 
   // Dynamic KPI 1: Level 4 Master Trainers
   const level4Count = useMemo(() => {
@@ -234,14 +234,15 @@ export function SkillsMasterPage() {
     try {
       setIsSubmitting(true);
       let created = null;
-      try {
-        const res = await masterDataService.createStaff(newEmp);
-        created = res?.data?.data || res?.data || res;
-      } catch (apiErr) {
-        console.warn("API createStaff fallback:", apiErr);
-      }
       if (typeof addEmployee === "function") {
-        await addEmployee({ ...newEmp, ...(created || {}) });
+        created = await addEmployee(newEmp);
+      } else {
+        try {
+          const res = await masterDataService.createStaff(newEmp);
+          created = res?.data?.data || res?.data || res;
+        } catch (apiErr) {
+          console.warn("API createStaff fallback:", apiErr);
+        }
       }
       addToast(`Employee ${created?.employeeId || newEmp.name} onboarded successfully!`, "success");
       setIsAddModalOpen(false);
@@ -513,7 +514,7 @@ export function SkillsMasterPage() {
 
                       <td style={{ padding: "12px 14px", whiteSpace: "nowrap" }}>
                         <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-                          {emp.plantName || "Indore Plant"}
+                          {emp.plantName || "Plant 1 - Meat Processing Facility"}
                         </span>
                       </td>
 
@@ -943,7 +944,7 @@ export function SkillsMasterPage() {
                 </div>
                 <div>
                   <div style={{ fontSize: "11px", color: "var(--text-muted)", fontWeight: 700, textTransform: "uppercase" }}>Assigned Facility</div>
-                  <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)", marginTop: "4px" }}>{viewingEmp.plantName || "Indore Plant"}</div>
+                  <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)", marginTop: "4px" }}>{viewingEmp.plantName || "Plant 1 - Meat Processing Facility"}</div>
                 </div>
               </div>
 

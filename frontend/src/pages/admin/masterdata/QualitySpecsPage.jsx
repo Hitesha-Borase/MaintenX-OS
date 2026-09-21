@@ -33,7 +33,8 @@ export function QualitySpecsPage() {
   const fetchLiveSpecs = async () => {
     try {
       const res = await masterDataService.getQualitySpecs();
-      const list = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
+      const raw = res?.data?.data !== undefined ? res.data.data : (res?.data !== undefined ? res.data : res);
+      const list = Array.isArray(raw) ? raw : (Array.isArray(raw?.data) ? raw.data : []);
       if (typeof setQualitySpecs === "function") {
         setQualitySpecs(list);
       }
@@ -182,7 +183,7 @@ export function QualitySpecsPage() {
         ...blankSpecState,
         skuId: defaultSku
       });
-      fetchLiveSpecs();
+      await fetchLiveSpecs();
     } catch (err) {
       console.error("Add quality spec error:", err);
       addToast(`Failed to register quality specification: ${err.message}`, "error");
@@ -195,7 +196,7 @@ export function QualitySpecsPage() {
     if (window.confirm("Are you sure you want to delete this specification?")) {
       await deleteQualitySpec(id);
       addToast("Specification removed successfully!", "info");
-      fetchLiveSpecs();
+      await fetchLiveSpecs();
     }
   };
 

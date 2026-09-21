@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import { 
   Search, 
@@ -42,6 +42,7 @@ import { Modal } from "../../components/common/Modal";
 export function Traceability() {
   const { addToast } = useApp();
   const location = useLocation();
+  const traceResultsRef = useRef(null);
 
   // Live Database States
   const [batchesList, setBatchesList] = useState([]);
@@ -119,35 +120,33 @@ export function Traceability() {
 
   const [availableLots, setAvailableLots] = useState([]);
 
-  // Load available lots from database for quick reference
+  // Load available lots & initial traceability cleanly without race conditions
   useEffect(() => {
-    const loadLots = async () => {
+    let isCancelled = false;
+    const loadInitialTraceability = async () => {
       try {
         const res = await warehouseService.getLots();
         const lots = res?.data || res || [];
-        if (Array.isArray(lots) && lots.length > 0) {
+        if (!isCancelled && Array.isArray(lots) && lots.length > 0) {
           setAvailableLots(lots.slice(0, 6));
-          const params = new URLSearchParams(location.search);
-          if (!params.get("lot")) {
-            fetchTraceabilityData(lots[0].lotNumber);
-          }
+        }
+        const params = new URLSearchParams(location.search);
+        const lotParam = params.get("lot") || "";
+        if (lotParam) {
+          if (!isCancelled) setLotInput(lotParam);
+          await fetchTraceabilityData(lotParam);
+        } else if (Array.isArray(lots) && lots.length > 0 && lots[0]?.lotNumber) {
+          await fetchTraceabilityData(lots[0].lotNumber);
+        } else {
+          await fetchTraceabilityData();
         }
       } catch (err) {
-        console.warn("Could not load lots from DB:", err);
+        console.warn("Could not initialize traceability:", err);
+        if (!isCancelled) fetchTraceabilityData();
       }
     };
-    loadLots();
-  }, []);
-
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const lotParam = params.get("lot") || "";
-    if (lotParam) {
-      setLotInput(lotParam);
-      fetchTraceabilityData(lotParam);
-    } else {
-      fetchTraceabilityData();
-    }
+    loadInitialTraceability();
+    return () => { isCancelled = true; };
   }, [location.search]);
 
   // Search handler
@@ -250,6 +249,10 @@ export function Traceability() {
   const handleSelectBatch = (batchNumber) => {
     setLotInput(batchNumber);
     fetchTraceabilityData(batchNumber);
+    // Scroll to trace results after a short delay (let data load first)
+    setTimeout(() => {
+      traceResultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 400);
   };
 
   const handleOpenQuarantineModal = () => {
@@ -768,6 +771,7 @@ export function Traceability() {
       </div>
 
       {/* Mode View Tabs (Forward Traceability vs Backward Genealogy vs Mock Recall) */}
+      <div ref={traceResultsRef} />
       {currentTrace && (
         <>
           <div style={{ display: "flex", gap: "10px", borderBottom: "1px solid #E8DDCF", paddingBottom: "10px", flexWrap: "wrap" }}>

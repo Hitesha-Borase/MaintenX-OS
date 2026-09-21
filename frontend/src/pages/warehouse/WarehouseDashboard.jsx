@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Package,
   Boxes,
@@ -24,29 +24,31 @@ import {
 import { Card } from "../../components/common/Card";
 import { StatCard } from "../../components/common/StatCard";
 import { Badge } from "../../components/common/Badge";
-import { Button } from "../../components/common/Button";
 import { Modal } from "../../components/common/Modal";
+import { Button } from "../../components/common/Button";
 import { useApp } from "../../context/AppContext";
 import warehouseService from "../../services/warehouseService";
+import productionService from "../../services/productionService";
 
 export function WarehouseDashboard() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { addToast } = useApp();
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
 
   // Original Approved KPIs & Stats
   const [stats, setStats] = useState({
-    incomingDeliveries: "4 Deliveries",
-    activePickLists: "2 Lists",
-    finishedGoodsPallets: "32 Pallets",
+    incomingDeliveries: "0 Deliveries",
+    activePickLists: "0 Lists",
+    finishedGoodsPallets: "0 Pallets",
     activeLotHolds: "0 Holds",
     activeStage: "STG-L1-IN",
-    sweetenerStageStatus: "Sweetener stages: Staging requested",
-    rawMaterialsCount: "14 SKUs",
-    packagingCount: "8 SKUs",
-    shipmentOrdersCount: "2 Orders",
-    freightStatus: "Carrier allocated"
+    sweetenerStageStatus: "All stages nominal",
+    rawMaterialsCount: "0 SKUs",
+    packagingCount: "0 SKUs",
+    shipmentOrdersCount: "0 Orders",
+    freightStatus: "No Active Shipments"
   });
 
   // End-to-End Flow Telemetry State (Real DB)
@@ -60,8 +62,20 @@ export function WarehouseDashboard() {
     finishedGoods: []
   });
 
-  const [activeFlowTab, setActiveFlowTab] = useState("rm-issue"); // "rm-issue" | "wip-tanks" | "pkg-stage" | "movements" | "pkg-run" | "stock"
+  const [activeFlowTab, setActiveFlowTab] = useState(() => searchParams.get("tab") || "rm-issue"); // "rm-issue" | "wip-tanks" | "pkg-stage" | "movements" | "pkg-run" | "stock"
   const [movementCategoryFilter, setMovementCategoryFilter] = useState("all");
+  const [activeProductionOrders, setActiveProductionOrders] = useState([]);
+
+  useEffect(() => {
+    const tabParam = searchParams.get("tab");
+    if (tabParam) {
+      setActiveFlowTab(tabParam);
+      setTimeout(() => {
+        const el = document.getElementById("material-flow-hub");
+        if (el) el.scrollIntoView({ behavior: "smooth" });
+      }, 150);
+    }
+  }, [searchParams]);
 
   // Modals State
   const [isIssueRmModalOpen, setIsIssueRmModalOpen] = useState(false);
@@ -90,25 +104,25 @@ export function WarehouseDashboard() {
 
   const [stagePkgForm, setStagePkgForm] = useState({
     lotNumber: "",
-    packagingLine: "Canning Line 1",
+    packagingLine: "PET line",
     quantity: "",
-    uom: "Cans",
-    runNumber: "PKG-RUN-885",
-    notes: "Staged cans for high-speed canning run"
+    uom: "Bottles",
+    runNumber: "PO-2026-3531",
+    notes: "Staged packaging for planned bottling run"
   });
 
   const [createFgForm, setCreateFgForm] = useState({
-    batchNumber: "BAT-2026-0885",
-    wipLotNumber: "LOT-WIP-BAT-0885",
-    sku: "SKU-5001",
-    productName: "500ml Sparkling Citrus Soda",
+    batchNumber: "PO-2026-3531",
+    wipLotNumber: "",
+    sku: "SKU-004",
+    productName: "SD HD",
     finishedLot: `LOT-FG-2026-${Math.floor(1000 + Math.random() * 9000)}`,
-    palletSerial: `PLT-CAN-2026-${Math.floor(1000 + Math.random() * 9000)}`,
-    quantity: "24,000 cans (24 Pallets)",
-    storageLocation: "Zone C - High Bay Rack H02-B1",
+    palletSerial: `PLT-PET-2026-${Math.floor(1000 + Math.random() * 9000)}`,
+    quantity: "25,000 Bottles (25 Pallets)",
+    storageLocation: "Zone D - High Bay Rack H01",
     qaStatus: "QA Released",
     destination: "Main Logistics Distribution Center",
-    notes: "Automated high-bay pallet put-away"
+    notes: "Finished output from PET line"
   });
 
   const loadStats = async (showToast = false) => {
@@ -126,18 +140,39 @@ export function WarehouseDashboard() {
       if (data) {
         setStats((prev) => ({
           ...prev,
-          incomingDeliveries: data.incomingDeliveries || prev.incomingDeliveries,
-          activePickLists: data.activePickLists || prev.activePickLists,
-          finishedGoodsPallets: data.finishedGoodsPallets || prev.finishedGoodsPallets,
-          activeLotHolds: data.activeLotHolds || prev.activeLotHolds,
+          incomingDeliveries: data.incomingDeliveries ?? "0 Deliveries",
+          activePickLists: data.activePickLists ?? "0 Lists",
+          finishedGoodsPallets: data.finishedGoodsPallets ?? "0 Pallets",
+          activeLotHolds: data.activeLotHolds ?? "0 Holds",
           activeStage: data.activeStage || prev.activeStage,
-          sweetenerStageStatus: data.sweetenerStageStatus || prev.sweetenerStageStatus,
-          rawMaterialsCount: data.rawMaterialsCount || prev.rawMaterialsCount,
-          packagingCount: data.packagingCount || prev.packagingCount,
-          shipmentOrdersCount: data.shipmentOrdersCount || prev.shipmentOrdersCount,
-          freightStatus: data.freightStatus || prev.freightStatus,
+          sweetenerStageStatus: data.sweetenerStageStatus || "All stages nominal",
+          rawMaterialsCount: data.rawMaterialsCount ?? "0 SKUs",
+          packagingCount: data.packagingCount ?? "0 SKUs",
+          shipmentOrdersCount: data.shipmentOrdersCount ?? "0 Orders",
+          freightStatus: data.freightStatus || "No Active Shipments",
         }));
       }
+
+      // Fetch live production work orders from Planner
+      productionService.getOrders().then(ordersRes => {
+        const list = Array.isArray(ordersRes) ? ordersRes : (Array.isArray(ordersRes?.data) ? ordersRes.data : []);
+        if (Array.isArray(list) && list.length > 0) {
+          setActiveProductionOrders(list);
+          const firstOrder = list[0];
+          setStagePkgForm(prev => ({
+            ...prev,
+            packagingLine: firstOrder.line?.name || prev.packagingLine,
+            runNumber: firstOrder.orderNumber || prev.runNumber,
+            uom: firstOrder.sku?.uom || prev.uom,
+          }));
+          setCreateFgForm(prev => ({
+            ...prev,
+            batchNumber: firstOrder.orderNumber || prev.batchNumber,
+            sku: firstOrder.sku?.skuCode || prev.sku,
+            productName: firstOrder.sku?.name || prev.productName,
+          }));
+        }
+      }).catch(() => null);
 
       const flow = flowRes?.data || flowRes;
       if (flow) {
@@ -335,7 +370,11 @@ export function WarehouseDashboard() {
 
     try {
       setActionLoading(true);
-      const res = await warehouseService.createPackagingFinishedGoods(createFgForm);
+      const payload = {
+        ...createFgForm,
+        wipLotNumber: createFgForm.wipLotNumber || `WIP-${createFgForm.batchNumber}`
+      };
+      const res = await warehouseService.createPackagingFinishedGoods(payload);
       const data = res?.data || res;
       addToast(data.message || `Finished Goods Pallet ${createFgForm.palletSerial} created with QA Status ${createFgForm.qaStatus}`, "success");
       setIsCreateFgModalOpen(false);
@@ -438,6 +477,109 @@ export function WarehouseDashboard() {
         />
       </div>
 
+      {/* Active Production Orders from Plant Planner Highlight Banner */}
+      {activeProductionOrders.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+          {activeProductionOrders.map((order) => (
+            <Card key={order.id} style={{ 
+              padding: "16px 20px", 
+              backgroundColor: order.status === "RUNNING" ? "rgba(16, 185, 129, 0.06)" : "rgba(56, 189, 248, 0.06)", 
+              border: order.status === "RUNNING" ? "1px solid rgba(16, 185, 129, 0.3)" : "1px solid rgba(56, 189, 248, 0.3)",
+              borderRadius: "12px",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "16px"
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+                <div style={{ 
+                  width: "42px", 
+                  height: "42px", 
+                  borderRadius: "10px", 
+                  backgroundColor: order.status === "RUNNING" ? "rgba(16, 185, 129, 0.15)" : "rgba(56, 189, 248, 0.15)", 
+                  display: "flex", 
+                  alignItems: "center", 
+                  justifyContent: "center", 
+                  color: order.status === "RUNNING" ? "#10B981" : "#38BDF8" 
+                }}>
+                  <Boxes size={22} />
+                </div>
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                    <span style={{ 
+                      fontSize: "11px", 
+                      fontWeight: 800, 
+                      padding: "2px 8px", 
+                      backgroundColor: order.status === "RUNNING" ? "#10B981" : "#38BDF8", 
+                      color: "#0F172A", 
+                      borderRadius: "4px", 
+                      letterSpacing: "0.5px" 
+                    }}>
+                      {order.status === "RUNNING" ? "PRODUCTION LINE RUNNING" : "PLANNER WORK ORDER SCHEDULED"}
+                    </span>
+                    <strong style={{ fontSize: "16px", color: "var(--text-primary)" }}>
+                      {order.orderNumber}
+                    </strong>
+                    <span style={{ fontSize: "14px", color: order.status === "RUNNING" ? "#10B981" : "#38BDF8", fontWeight: 600 }}>
+                      — {order.sku?.name || "SD HD"} ({order.sku?.skuCode || "SKU-004"})
+                    </span>
+                  </div>
+                  <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "4px" }}>
+                    Assigned Production Line: <strong style={{ color: "var(--text-primary)" }}>{order.line?.name || "PET line"}</strong> &nbsp;|&nbsp; 
+                    Target Volume: <strong style={{ color: "var(--text-primary)" }}>{Number(order.targetQuantity).toLocaleString()} {order.sku?.uom || "Bottles"}</strong>
+                    {Number(order.producedQuantity) > 0 && (
+                      <> &nbsp;|&nbsp; Produced: <strong style={{ color: "#10B981" }}>{Number(order.producedQuantity).toLocaleString()} (45%)</strong></>
+                    )}
+                    &nbsp;|&nbsp; Status: <span style={{ color: order.status === "RUNNING" ? "#10B981" : "#F59E0B", fontWeight: 700 }}>{order.status}</span>
+                  </div>
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  icon={Boxes}
+                  onClick={() => {
+                    setActiveFlowTab("pkg-stage");
+                    setStagePkgForm(prev => ({
+                      ...prev,
+                      packagingLine: order.line?.name || "PET line",
+                      runNumber: order.orderNumber,
+                      notes: `Staging packaging for Planner Order ${order.orderNumber}`
+                    }));
+                    setIsStagePkgModalOpen(true);
+                  }}
+                >
+                  Stage Packaging for {order.line?.name || "PET line"}
+                </Button>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  icon={ShieldCheck}
+                  style={{ backgroundColor: "#10B981", borderColor: "#10B981" }}
+                  onClick={() => {
+                    setActiveFlowTab("pkg-run");
+                    setCreateFgForm(prev => ({
+                      ...prev,
+                      sku: order.sku?.skuCode || "SKU-004",
+                      productName: order.sku?.name || "SD HD",
+                      batchNumber: order.orderNumber,
+                      wipLotNumber: `WIP-${order.orderNumber}`,
+                      quantity: `${Number(order.targetQuantity).toLocaleString()} ${order.sku?.uom || "Bottles"}`,
+                      notes: `Packaging output for ${order.orderNumber}`
+                    }));
+                    setIsCreateFgModalOpen(true);
+                  }}
+                >
+                  Receive Finished Goods Pallets
+                </Button>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
+
       {/* 3. Operational Sections (PRESERVED) */}
       <div className="grid-3">
         {/* Receiving Card */}
@@ -492,7 +634,7 @@ export function WarehouseDashboard() {
       {/* 4. END-TO-END MATERIAL PROCESSING & PACKAGING EXECUTION HUB               */}
       {/* Flow: Raw Material → Processing Batch → WIP Lot → Packaging Run → FG Pallet */}
       {/* ========================================================================= */}
-      <Card style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
+      <Card id="material-flow-hub" style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
         {/* Flow Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "14px" }}>
           <div>
@@ -612,7 +754,7 @@ export function WarehouseDashboard() {
                   {(flowSummary.rawMaterials || []).length === 0 ? (
                     <tr>
                       <td colSpan="6" style={{ padding: "24px", textAlign: "center", color: "var(--text-muted)" }}>
-                        No raw material lots found in database. Click "Refresh Live KPIs" to initialize.
+                        No raw material lots found in inventory. Receive material via Inbound Receiving or click "Issue Raw Material" to record stock.
                       </td>
                     </tr>
                   ) : (
@@ -628,7 +770,7 @@ export function WarehouseDashboard() {
                           {Number(lot.initialQuantity).toLocaleString()} {lot.uom}
                         </td>
                         <td style={{ padding: "12px", color: "var(--text-secondary)" }}>
-                          {lot.supplier || "Citrus Valley Farms Co."}
+                          {lot.supplier || "—"}
                         </td>
                         <td style={{ padding: "12px" }}>
                           <Badge variant={lot.status === "RELEASED" ? "emerald" : "warning"} size="sm">
@@ -749,6 +891,42 @@ export function WarehouseDashboard() {
         {/* TAB 3: PACKAGING MATERIAL STAGING / ISSUE */}
         {activeFlowTab === "pkg-stage" && (
           <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+            {/* Live Planned Production Orders from Planner requiring Packaging Staging */}
+            {activeProductionOrders.length > 0 && (
+              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                {activeProductionOrders.map((order) => (
+                  <div key={order.id} style={{ backgroundColor: "rgba(56, 189, 248, 0.08)", border: "1px solid rgba(56, 189, 248, 0.25)", borderRadius: "10px", padding: "14px 18px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
+                    <div>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <Badge variant="primary" size="sm">PLANNER WORK ORDER</Badge>
+                        <strong style={{ color: "#FFFFFF", fontSize: "14px" }}>{order.orderNumber}</strong>
+                        <span style={{ color: "#38BDF8", fontSize: "13px" }}>— {order.sku?.name || "SD HD"} ({order.sku?.skuCode || "SKU-004"})</span>
+                      </div>
+                      <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "4px" }}>
+                        Assigned Line: <strong style={{ color: "#FFFFFF" }}>{order.line?.name || "PET line"}</strong> | Target Volume: <strong style={{ color: "#FFFFFF" }}>{Number(order.targetQuantity).toLocaleString()} {order.sku?.uom || "Bottles"}</strong> | Status: <strong style={{ color: order.status === "RUNNING" ? "#10B981" : "#F59E0B" }}>{order.status}</strong>
+                      </div>
+                    </div>
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      icon={Boxes}
+                      onClick={() => {
+                        setStagePkgForm(prev => ({
+                          ...prev,
+                          packagingLine: order.line?.name || "PET line",
+                          runNumber: order.orderNumber,
+                          notes: `Staging packaging for Planner Order ${order.orderNumber}`
+                        }));
+                        setIsStagePkgModalOpen(true);
+                      }}
+                    >
+                      Stage Packaging for {order.line?.name || "PET line"}
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
               <div style={{ fontSize: "13px", color: "var(--text-secondary)" }}>
                 Packaging components (cans, bottles, corrugated boxes, closures) available for staging directly to canning & bottling lines.
@@ -891,6 +1069,51 @@ export function WarehouseDashboard() {
         {/* TAB 5: PACKAGING RUN → FINISHED GOODS & PALLET CREATION */}
         {activeFlowTab === "pkg-run" && (
           <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+            {/* Live Planned Output from Planner ready for FG Pallet Creation */}
+            {activeProductionOrders.length > 0 && (
+              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                {activeProductionOrders.map((order) => (
+                  <div key={order.id} style={{ backgroundColor: "rgba(16, 185, 129, 0.08)", border: "1px solid rgba(16, 185, 129, 0.25)", borderRadius: "10px", padding: "14px 18px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
+                    <div>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <Badge variant="emerald" size="sm">
+                          {order.status === "RUNNING" ? "PRODUCTION OUTPUT ACTIVE" : "PLANNER OUTPUT SCHEDULED"}
+                        </Badge>
+                        <strong style={{ color: "#FFFFFF", fontSize: "14px" }}>{order.orderNumber}</strong>
+                        <span style={{ color: "#10B981", fontSize: "13px" }}>— {order.sku?.name || "SD HD"}</span>
+                      </div>
+                      <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "4px" }}>
+                        Target Output: <strong style={{ color: "#FFFFFF" }}>{Number(order.targetQuantity).toLocaleString()} {order.sku?.uom || "Bottles"}</strong> on {order.line?.name || "PET line"}
+                        {Number(order.producedQuantity) > 0 && (
+                          <> &nbsp;|&nbsp; Produced so far: <strong style={{ color: "#10B981" }}>{Number(order.producedQuantity).toLocaleString()} Bottles</strong></>
+                        )}
+                      </div>
+                    </div>
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      icon={ShieldCheck}
+                      style={{ backgroundColor: "#10B981", borderColor: "#10B981" }}
+                      onClick={() => {
+                        setCreateFgForm(prev => ({
+                          ...prev,
+                          sku: order.sku?.skuCode || "SKU-004",
+                          productName: order.sku?.name || "SD HD",
+                          batchNumber: order.orderNumber,
+                          wipLotNumber: `WIP-${order.orderNumber}`,
+                          quantity: `${Number(order.targetQuantity).toLocaleString()} ${order.sku?.uom || "Bottles"}`,
+                          notes: `Packaging output for ${order.orderNumber}`
+                        }));
+                        setIsCreateFgModalOpen(true);
+                      }}
+                    >
+                      Create Finished Pallet for {order.sku?.name || "SD HD"}
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
               <div>
                 <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)" }}>
@@ -1320,7 +1543,7 @@ export function WarehouseDashboard() {
                 Source WIP Blend Lot *
               </label>
               <select
-                value={createFgForm.wipLotNumber}
+                value={createFgForm.wipLotNumber || `WIP-${createFgForm.batchNumber}`}
                 onChange={(e) => {
                   const selWip = (flowSummary.wipLots || []).find(w => w.lotNumber === e.target.value);
                   setCreateFgForm({
@@ -1338,8 +1561,10 @@ export function WarehouseDashboard() {
                   color: "#FFFFFF",
                   fontSize: "13px"
                 }}
-                required
               >
+                <option value={`WIP-${createFgForm.batchNumber}`} style={{ backgroundColor: "#1E293B" }}>
+                  Direct Bottling Run (Batch: {createFgForm.batchNumber})
+                </option>
                 {(flowSummary.wipLots || []).map(w => (
                   <option key={w.id} value={w.lotNumber} style={{ backgroundColor: "#1E293B" }}>
                     {w.lotNumber} ({w.batchNumber} - {Number(w.quantity).toLocaleString()} {w.uom})

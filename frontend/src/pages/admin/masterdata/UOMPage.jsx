@@ -40,7 +40,7 @@ export function UOMPage() {
 
   useEffect(() => {
     fetchUoms();
-  }, [fetchUoms]);
+  }, []); // Run on mount only
 
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("ALL");

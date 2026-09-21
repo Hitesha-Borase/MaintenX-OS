@@ -12,586 +12,27 @@ import { NotFoundError, BusinessRuleError } from "../../shared/errors/AppError.j
 
 import { isValidUuid } from "../../shared/utils/tenantContext.js";
 
-// Initial In-Memory Persistent Stores
-let purchaseOrdersStore: any[] = [
-  {
-    poNumber: "PO-SUP-2026-441",
-    supplierName: "Citrus Valley Farms Co.",
-    supplierCode: "VND-CVF-01",
-    orderDate: "2026-08-28",
-    deliveryDueDate: "2026-09-02",
-    totalAmountUSD: 28800.00,
-    itemsCount: 2,
-    status: "In Transit",
-    receivingStatus: "Pending Dock Arrival",
-    buyer: "Alex Morgan (Procurement Lead)",
-    priority: "High",
-    lines: [
-      { item: "Organic Valencia Orange Juice Concentrate 65° Brix", qty: "6,000 kg", unitPrice: 4.80, total: 28800.00 }
-    ]
-  },
-  {
-    poNumber: "PO-SUP-2026-438",
-    supplierName: "Alfa Laval Parts Global",
-    supplierCode: "VND-ALF-02",
-    orderDate: "2026-08-30",
-    deliveryDueDate: "2026-08-31",
-    totalAmountUSD: 2250.00,
-    itemsCount: 1,
-    status: "Confirmed",
-    receivingStatus: "Dock Inspected (Pre-Check)",
-    buyer: "David Kim (Maintenance Lead)",
-    priority: "Urgent P1",
-    lines: [
-      { item: "Clip-on EPDM High-Temp Gasket Pack (50pk)", qty: "5 packs", unitPrice: 450.00, total: 2250.00 }
-    ]
-  },
-  {
-    poNumber: "PO-SUP-2026-429",
-    supplierName: "Amcor Rigid Packaging",
-    supplierCode: "VND-AMC-03",
-    orderDate: "2026-08-22",
-    deliveryDueDate: "2026-08-29",
-    totalAmountUSD: 14000.00,
-    itemsCount: 1,
-    status: "Received",
-    receivingStatus: "Received Full (Put-Away Complete)",
-    buyer: "Alex Morgan (Procurement Lead)",
-    priority: "Standard",
-    lines: [
-      { item: "500ml Multi-Layer Oxygen Barrier PET Bottles", qty: "100,000 units", unitPrice: 0.14, total: 14000.00 }
-    ]
-  },
-  {
-    poNumber: "PO-SUP-2026-422",
-    supplierName: "Ball Metal Beverage Packaging",
-    supplierCode: "VND-BLL-04",
-    orderDate: "2026-08-18",
-    deliveryDueDate: "2026-08-25",
-    totalAmountUSD: 13200.00,
-    itemsCount: 1,
-    status: "Received",
-    receivingStatus: "Received Full (QA Released)",
-    buyer: "Alex Morgan (Procurement Lead)",
-    priority: "Standard",
-    lines: [
-      { item: "330ml Sleek Aluminum Cans w/ Matte Varnish", qty: "120,000 cans", unitPrice: 0.11, total: 13200.00 }
-    ]
-  },
-  {
-    poNumber: "PO-SUP-2026-415",
-    supplierName: "Sugar Valley Refining Ltd.",
-    supplierCode: "VND-SVR-05",
-    orderDate: "2026-08-15",
-    deliveryDueDate: "2026-08-22",
-    totalAmountUSD: 6000.00,
-    itemsCount: 1,
-    status: "Received",
-    receivingStatus: "Received Full (Silo Pumped)",
-    buyer: "Elena Rostova (Batch Supervisor)",
-    priority: "Standard",
-    lines: [
-      { item: "Non-GMO Liquid Cane Sugar 67.5° Brix", qty: "4,800 L", unitPrice: 1.25, total: 6000.00 }
-    ]
-  }
-];
-
+// Runtime Stores (Initialized clean for live database operations and real user transactions)
+let purchaseOrdersStore: any[] = [];
 let suppliersStore: any[] = [];
-
-
-let wmsReceivingStore: any[] = [
-  { id: "RCV-2026-901", poNumber: "PO-SUP-2026-441", supplier: "Citrus Valley Farms Co.", item: "Valencia Orange Concentrate", qty: "6,000 kg", dock: "Dock Bay 01", status: "Dock Arrived", tempCheck: "3.4°C" },
-  { id: "RCV-2026-902", poNumber: "PO-SUP-2026-438", supplier: "Alfa Laval Parts Global", item: "High-Temp Gasket Pack", qty: "5 packs", dock: "Dock Bay 03", status: "Inspected", tempCheck: "Ambient" },
-  { id: "RCV-2026-903", poNumber: "PO-SUP-2026-429", supplier: "Amcor Rigid Packaging", item: "500ml PET Bottles", qty: "100,000 units", dock: "Dock Bay 04", status: "Pending Arrival", tempCheck: "Dry Clean" }
-];
-
-let wmsPutAwayStore: any[] = [
-  { id: "PTA-441", lot: "LOT-RM-ORG-4402", material: "Valencia Organic Orange Concentrate", qty: "3,800 kg (5 Plts)", source: "Dock STG-01", targetBin: "Cold Zone A - Rack R04-B2", priority: "High", status: "Ready for Put-Away" },
-  { id: "PTA-442", lot: "LOT-PKG-CAN-9140", material: "330ml Aluminum Cans", qty: "120,000 cans (12 Plts)", source: "Dock STG-03", targetBin: "Packaging Bay 3 - Racks P01-P06", priority: "Standard", status: "In Progress" },
-  { id: "PTA-443", lot: "LOT-RM-SGR-1108", material: "Non-GMO Liquid Cane Sugar", qty: "4,800 L (4 Drums)", source: "Dock STG-02", targetBin: "Ambient Bay 2 - Bin G-12", priority: "Standard", status: "Ready for Put-Away" }
-];
-
-let wmsMovementStore: any[] = [
-  { id: "MOV-8801", lot: "LOT-RM-GNG-0092", material: "Organic Ginger Root Extract", qty: "60 kg", fromBin: "Ambient Bay 2 - Bin G-12", toBin: "Weighing Station Aisle 1", operator: "J. Henderson", time: "10:15 AM", reason: "Batch Kitting" },
-  { id: "MOV-8802", lot: "LOT-PKG-BX-5520", material: "24-Pack Master Cartons", qty: "500 trays", fromBin: "Packaging Bay 3 - P02", toBin: "Packaging Line 2 Infeed", operator: "M. Ramirez", time: "09:40 AM", reason: "Line Replenishment" }
-];
-
-let wmsTransfersStore: any[] = [
-  { id: "TRF-701", fromFacility: "Main Plant WH-01", toFacility: "Distribution Center WH-02", item: "Finished Sparkling Yuzu Tea", qty: "18,000 cans (15 Plts)", carrier: "Titan Logistics", eta: "Today 14:00", status: "In Transit" },
-  { id: "TRF-702", fromFacility: "Distribution Center WH-02", toFacility: "Main Plant WH-01", item: "Empty Returnable Plastic Pallets", qty: "200 Pallets", carrier: "In-House Shunt", eta: "Today 16:30", status: "Scheduled" }
-];
-
-let wmsPickOrdersStore: any[] = [
-  { id: "PCK-501", orderRef: "WO-BATCH-2026-0891", lineItem: "Orange Concentrate + Citric Acid", targetWorkCenter: "Blending Tank T-101", itemsCount: 4, pickedItems: 3, status: "Picking Active" },
-  { id: "PCK-502", orderRef: "WO-BATCH-2026-0892", lineItem: "Natural Terpene Emulsion", targetWorkCenter: "Flavor Add Skid S-04", itemsCount: 2, pickedItems: 0, status: "Pending Release" },
-  { id: "PCK-503", orderRef: "SO-CUST-8819", lineItem: "Finished Yuzu Cans 330ml", targetWorkCenter: "Outbound Bay 2", itemsCount: 1, pickedItems: 1, status: "Pick Complete" }
-];
-
-let wmsStagingStore: any[] = [
-  { bay: "Stage Bay STG-PROD-01", destination: "Canning Line 1", stagedItem: "330ml Aluminum Cans + Ends", lot: "LOT-PKG-CAN-9140", pallets: 6, stagedBy: "K. Vance", status: "Staged Ready" },
-  { bay: "Stage Bay STG-PROD-02", destination: "Batch Blending Tank 2", stagedItem: "Liquid Cane Sugar 67.5° Brix", lot: "LOT-RM-SGR-1108", pallets: 4, stagedBy: "D. Kim", status: "Staged Ready" },
-  { bay: "Stage Bay STG-DOCK-04", destination: "Dock Outbound 4", stagedItem: "Yuzu Sparkling Tea Cases", lot: "LOT-FG-2026-0885", pallets: 10, stagedBy: "M. Ramirez", status: "Awaiting Dispatch" }
-];
-
-let wmsDispatchStore: any[] = [
-  { id: "DSP-1041", shipmentId: "SHP-2026-881", customer: "Metro Supermarkets Distribution", destination: "Toronto Hub, ON", carrier: "Challenger Freight", trailerNo: "TR-5510", sealNo: "SL-99410", pallets: 24, status: "Loading Complete" },
-  { id: "DSP-1042", shipmentId: "SHP-2026-882", customer: "Costco Wholesale East Depot", destination: "Brampton Depot, ON", carrier: "Bison Transport", trailerNo: "TR-8822", sealNo: "SL-99411", pallets: 26, status: "Dispatched" }
-];
-
-let locationsHierarchyStore: any[] = [
-  {
-    id: "LOC-WH1-ZA-R04-B1",
-    warehouse: "Main Plant WH-01",
-    zone: "Zone A (Cold Storage +4°C)",
-    rack: "Rack R04",
-    location: "Bin R04-B1",
-    fullHierarchy: "WH-01 > Zone A > Rack R04 > Bin B1",
-    capacityPallets: 40,
-    occupiedPallets: 36,
-    material: "Valencia Organic Orange Juice Concentrate 65° Brix",
-    materialCode: "RM-ORG-CONC",
-    batchLot: "LOT-RM-ORG-4402",
-    quantity: "3,800 kg",
-    status: "Near Capacity",
-    temp: "3.4°C"
-  },
-  {
-    id: "LOC-WH1-ZA-R04-B2",
-    warehouse: "Main Plant WH-01",
-    zone: "Zone A (Cold Storage +4°C)",
-    rack: "Rack R04",
-    location: "Bin R04-B2",
-    fullHierarchy: "WH-01 > Zone A > Rack R04 > Bin B2",
-    capacityPallets: 40,
-    occupiedPallets: 28,
-    material: "Natural Blood Orange & Mandarin Terpene Emulsion",
-    materialCode: "RM-NAT-FLV",
-    batchLot: "LOT-RM-FLV-0312",
-    quantity: "160 kg",
-    status: "Optimal",
-    temp: "3.8°C"
-  },
-  {
-    id: "LOC-WH1-ZB-R02-G12",
-    warehouse: "Main Plant WH-01",
-    zone: "Zone B (Ambient Raw)",
-    rack: "Rack R02",
-    location: "Bin G-12",
-    fullHierarchy: "WH-01 > Zone B > Rack R02 > Bin G-12",
-    capacityPallets: 60,
-    occupiedPallets: 45,
-    material: "Organic Ginger Root Extract Fluid 20:1",
-    materialCode: "RM-GNG-EXT",
-    batchLot: "LOT-RM-GNG-0092",
-    quantity: "120 kg",
-    status: "Optimal",
-    temp: "21.2°C"
-  },
-  {
-    id: "LOC-WH1-ZB-R03-G04",
-    warehouse: "Main Plant WH-01",
-    zone: "Zone B (Ambient Raw)",
-    rack: "Rack R03",
-    location: "Bin G-04",
-    fullHierarchy: "WH-01 > Zone B > Rack R03 > Bin G-04",
-    capacityPallets: 50,
-    occupiedPallets: 48,
-    material: "Non-GMO Liquid Cane Sugar 67.5° Brix",
-    materialCode: "RM-SWT-SUCR",
-    batchLot: "LOT-RM-SGR-1108",
-    quantity: "4,800 L",
-    status: "Near Capacity",
-    temp: "21.0°C"
-  },
-  {
-    id: "LOC-WH1-ZC-R01-P02",
-    warehouse: "Main Plant WH-01",
-    zone: "Zone C (Packaging High-Bay)",
-    rack: "Rack P01",
-    location: "Bin P01-A",
-    fullHierarchy: "WH-01 > Zone C > Rack P01 > Bin P01-A",
-    capacityPallets: 100,
-    occupiedPallets: 85,
-    material: "330ml Sleek Aluminum Cans w/ Matte Varnish",
-    materialCode: "PKG-CAN-330",
-    batchLot: "LOT-PKG-CAN-9140",
-    quantity: "120,000 cans",
-    status: "Optimal",
-    temp: "22.5°C"
-  },
-  {
-    id: "LOC-WH1-ZC-R02-P05",
-    warehouse: "Main Plant WH-01",
-    zone: "Zone C (Packaging High-Bay)",
-    rack: "Rack P02",
-    location: "Bin P02-B",
-    fullHierarchy: "WH-01 > Zone C > Rack P02 > Bin P02-B",
-    capacityPallets: 80,
-    occupiedPallets: 40,
-    material: "24-Pack Kraft Corrugated Master Shipping Trays",
-    materialCode: "PKG-CRTN-24",
-    batchLot: "LOT-PKG-BX-5520",
-    quantity: "6,500 trays",
-    status: "Optimal",
-    temp: "22.0°C"
-  },
-  {
-    id: "LOC-WH2-ZD-R01-FG44",
-    warehouse: "Distribution Center WH-02",
-    zone: "Zone D (Finished Goods Log Bay)",
-    rack: "High-Bay Rack 01",
-    location: "Bin FG-44",
-    fullHierarchy: "WH-02 > Zone D > High-Bay 01 > Bin FG-44",
-    capacityPallets: 120,
-    occupiedPallets: 95,
-    material: "Sparkling Yuzu Sparkling Tea 330ml Can",
-    materialCode: "SKU-CAN-330ML-LEM",
-    batchLot: "LOT-FG-2026-0885",
-    quantity: "36,000 cans",
-    status: "Optimal",
-    temp: "18.5°C"
-  },
-  {
-    id: "LOC-WH2-ZD-R02-FG48",
-    warehouse: "Distribution Center WH-02",
-    zone: "Zone D (Finished Goods Log Bay)",
-    rack: "High-Bay Rack 02",
-    location: "Bin FG-48",
-    fullHierarchy: "WH-02 > Zone D > High-Bay 02 > Bin FG-48",
-    capacityPallets: 120,
-    occupiedPallets: 0,
-    material: "Unoccupied Available Staging Bay",
-    materialCode: "BIN-EMPTY",
-    batchLot: "N/A",
-    quantity: "0 units",
-    status: "Available",
-    temp: "18.5°C"
-  }
-];
-
-let incomingDeliveriesStore: any[] = [
-  {
-    id: "DLV-001",
-    supplier: "GlassCorp",
-    item: "Glass Bottles 1L",
-    volume: "20,000 Pcs",
-    status: "TRANSIT",
-    carrier: "FedEx Freight",
-    trackingNo: "TRK-992140",
-    eta: "Today 15:30",
-    dockBay: "Dock Bay 02"
-  },
-  {
-    id: "DLV-002",
-    supplier: "Sugar Valley",
-    item: "Liquid Cane Sugar 500L",
-    volume: "2 Drums",
-    status: "ARRIVED",
-    carrier: "Titan Shunt",
-    trackingNo: "TRK-881204",
-    eta: "Arrived at 10:15 AM",
-    dockBay: "Dock Bay 01"
-  },
-  {
-    id: "DLV-003",
-    supplier: "Citrus Valley Farms Co.",
-    item: "Valencia Orange Concentrate 65° Brix",
-    volume: "6,000 kg",
-    status: "ARRIVED",
-    carrier: "Swift Logistics",
-    trackingNo: "TRK-440192",
-    eta: "Arrived at 08:30 AM",
-    dockBay: "Dock Bay 01"
-  },
-  {
-    id: "DLV-004",
-    supplier: "Amcor Rigid Packaging",
-    item: "500ml PET Bottles",
-    volume: "100,000 units",
-    status: "TRANSIT",
-    carrier: "Challenger Freight",
-    trackingNo: "TRK-109482",
-    eta: "Tomorrow 09:00 AM",
-    dockBay: "Dock Bay 04"
-  }
-];
-
-let scannerLogsStore: any[] = [
-  {
-    id: "SCN-101",
-    barcode: "(01)00890281940212(10)LOT-RM-ORG-4402(17)261231",
-    symbology: "GS1-128",
-    lotCode: "LOT-RM-ORG-4402",
-    materialName: "Valencia Organic Orange Concentrate 65° Brix",
-    dockBay: "Dock Bay 01",
-    qaStatus: "CoA Verified - PASSED",
-    scannedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-  },
-  {
-    id: "SCN-102",
-    barcode: "(00)308902810091402218(10)LOT-PKG-CAN-9140",
-    symbology: "SSCC-18",
-    lotCode: "LOT-PKG-CAN-9140",
-    materialName: "500ml Clear PET Preforms (28mm PCO)",
-    dockBay: "Dock Bay 04",
-    qaStatus: "CoA Verified - PASSED",
-    scannedAt: new Date(Date.now() - 1000 * 60 * 15).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-  }
-];
-
+let wmsReceivingStore: any[] = [];
+let wmsPutAwayStore: any[] = [];
+let wmsMovementStore: any[] = [];
+let wmsTransfersStore: any[] = [];
+let wmsPickOrdersStore: any[] = [];
+let wmsStagingStore: any[] = [];
+let wmsDispatchStore: any[] = [];
+let locationsHierarchyStore: any[] = [];
+let incomingDeliveriesStore: any[] = [];
+let scannerLogsStore: any[] = [];
 let finishedGoodsStore: any[] = [];
-
 let shipmentOrdersStore: any[] = [];
-
-// Traceability data is now read from real DB (inventory_lots + lot_genealogies tables)
-
-let rawMaterialsStore: any[] = [
-  {
-    id: "RM-LOT-001",
-    lotNumber: "LOT-SW-982",
-    materialName: "Liquid Cane Sugar 67°Bx",
-    sku: "ING-1001",
-    quantity: "8,500 Liters (4 Bulk Tanks)",
-    onHand: "2 Drums",
-    unit: "Drums",
-    location: "Receiving Dock - Staging Area",
-    status: "STAGED",
-    category: "Raw Material",
-    supplier: "ADM Sweetener Direct",
-    lastUpdated: new Date().toISOString()
-  },
-  {
-    id: "RM-LOT-002",
-    lotNumber: "LOT-CA-841",
-    materialName: "Citric Acid Anhydrous USP",
-    sku: "ING-1002",
-    quantity: "1,200 Kg (48 Bags)",
-    onHand: "1,200 Kg",
-    unit: "Kg",
-    location: "Aisle B - Ambient Rack 04",
-    status: "SECURE STOCK",
-    category: "Raw Material",
-    supplier: "Cargill Biochemicals",
-    lastUpdated: new Date().toISOString()
-  },
-  {
-    id: "RM-LOT-003",
-    lotNumber: "LOT-OF-319",
-    materialName: "Natural Orange Flavor Extract 100x",
-    sku: "FLV-2001",
-    quantity: "450 Liters (9 Carboys)",
-    onHand: "450 Liters",
-    unit: "Liters",
-    location: "Cold Storage Room 02",
-    status: "ALLOCATED",
-    category: "Raw Material",
-    supplier: "Firmenich Citrus Labs",
-    lastUpdated: new Date().toISOString()
-  }
-];
-
-let packagingMaterialsStore: any[] = [
-  {
-    id: 1,
-    sku: "SKU-BOT-1L-01",
-    name: "Aseptic Glass Bottles 1L",
-    category: "Packaging",
-    qty: "42,000 Pcs",
-    onHand: 42000,
-    unit: "Pcs",
-    reorderPoint: 15000,
-    location: "High-Bay Packaging Zone P-01",
-    status: "Secure Stock",
-    supplier: "Owens-Illinois Glass Corp",
-    lastAudited: "Today, 08:30 AM"
-  },
-  {
-    id: 2,
-    sku: "SKU-CAP-ORG-01",
-    name: "Orange Cap SKU-CAP-ORG-01",
-    category: "Packaging",
-    qty: "2,500 Pcs",
-    onHand: 2500,
-    unit: "Pcs",
-    reorderPoint: 5000,
-    location: "Packaging Rack P-04-B",
-    status: "Low Stock Alert",
-    supplier: "Berry Global Plastics",
-    lastAudited: "Today, 09:15 AM"
-  },
-  {
-    id: 3,
-    sku: "SKU-LBL-ORG-01",
-    name: "Pressure-Sensitive Waterproof Labels",
-    category: "Packaging",
-    qty: "65,000 Pcs",
-    onHand: 65000,
-    unit: "Pcs",
-    reorderPoint: 20000,
-    location: "Label Storage Vault L-02",
-    status: "Secure Stock",
-    supplier: "Avery Dennison Labeling",
-    lastAudited: "Yesterday, 04:00 PM"
-  },
-  {
-    id: 4,
-    sku: "SKU-CORR-12PK",
-    name: "Corrugated Master Shipping Cartons 12x1L",
-    category: "Packaging",
-    qty: "3,800 Pcs",
-    onHand: 3800,
-    unit: "Pcs",
-    reorderPoint: 4000,
-    location: "Packaging Mezzanine M-01",
-    status: "Low Stock Alert",
-    supplier: "International Paper Co",
-    lastAudited: "Today, 10:00 AM"
-  }
-];
-
-let inventoryStatusStore: any[] = [
-  {
-    id: 1,
-    sku: "SKU-AJ-500ML-ORG",
-    name: "Organic Valencia Orange Juice 500ml",
-    level: "4 Pallets staged",
-    quantity: 4,
-    unit: "Pallets",
-    bufferStatus: "OK",
-    safetyThreshold: "2 Pallets",
-    reorderLevel: "3 Pallets",
-    category: "Finished Good / Buffer Stock",
-    location: "Finished Goods High-Bay FG-44",
-    lastAudited: new Date().toISOString()
-  },
-  {
-    id: 2,
-    sku: "SKU-BLK-SYRUP-1000L",
-    name: "Liquid Cane Sugar Heavy Syrup 1000L",
-    level: "4 Drums",
-    quantity: 4,
-    unit: "Drums",
-    bufferStatus: "Under Safety Buffer",
-    safetyThreshold: "6 Drums",
-    reorderLevel: "8 Drums",
-    category: "Raw Material",
-    location: "Receiving Dock - Staging Area",
-    lastAudited: new Date().toISOString()
-  },
-  {
-    id: 3,
-    sku: "SKU-BOT-1L-01",
-    name: "Aseptic Glass Bottles 1L",
-    level: "42,000 Pcs",
-    quantity: 42000,
-    unit: "Pcs",
-    bufferStatus: "OK",
-    safetyThreshold: "15,000 Pcs",
-    reorderLevel: "20,000 Pcs",
-    category: "Packaging",
-    location: "High-Bay Packaging Zone P-01",
-    lastAudited: new Date().toISOString()
-  },
-  {
-    id: 4,
-    sku: "SKU-CAP-ORG-01",
-    name: "Orange Oxygen Barrier Caps 28mm",
-    level: "2,500 Pcs",
-    quantity: 2500,
-    unit: "Pcs",
-    bufferStatus: "Under Safety Buffer",
-    safetyThreshold: "5,000 Pcs",
-    reorderLevel: "10,000 Pcs",
-    category: "Packaging",
-    location: "Packaging Rack P-04-B",
-    lastAudited: new Date().toISOString()
-  }
-];
-
-let pickListsStore: any[] = [
-  {
-    id: "PL-101",
-    order: "ORD-991",
-    items: 2,
-    payload: "2 Items",
-    status: "PENDING",
-    destination: "Blending Work Center Line 1",
-    lines: [
-      { item: "Organic Orange Concentrate 65° Brix", sku: "RM-ORG-CONC", qty: "1,500 Pcs", bin: "Bin A-01-B", picked: false },
-      { item: "Citric Acid Anhydrous USP", sku: "ING-1002", qty: "500 Kg", bin: "Bin G-12", picked: false }
-    ],
-    assignedTo: "Carlos Mendez",
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: "PL-102",
-    order: "ORD-992",
-    items: 5,
-    payload: "5 Items",
-    status: "IN_PROGRESS",
-    destination: "Canning High-Speed Line 2",
-    lines: [
-      { item: "330ml Aluminum Sleek Cans", sku: "PKG-CAN-330", qty: "12,000 Units", bin: "Racks P01-P06", picked: true },
-      { item: "Liquid Cane Sugar 67.5° Brix", sku: "RM-SGR-01", qty: "2 Drums", bin: "Bin G-12", picked: false }
-    ],
-    assignedTo: "Carlos Mendez",
-    createdAt: new Date().toISOString()
-  }
-];
-
-let pickingExecutionQueueStore: any[] = [
-  {
-    id: 1,
-    name: "Organic Orange Caps SKU-CAP-ORG-01",
-    sku: "SKU-CAP-ORG-01",
-    bin: "Bin A-01-B",
-    qty: "1,500 Pcs",
-    pickTarget: "1,500 Pcs",
-    status: "Pending",
-    pickListId: "PL-101",
-    orderRef: "ORD-991",
-    stageDestination: "STG-L1-IN"
-  },
-  {
-    id: 2,
-    name: "Citric Acid USP Grade",
-    sku: "ING-1002",
-    bin: "Bin G-12",
-    qty: "500 Kg",
-    pickTarget: "500 Kg",
-    status: "Pending",
-    pickListId: "PL-101",
-    orderRef: "ORD-991",
-    stageDestination: "STG-L1-IN"
-  }
-];
-
-let palletsContainersStore: any[] = [
-  {
-    id: "PLT-1020",
-    sku: "SKU-AJ-1L-ORG",
-    description: "Organic Orange Juice 1L (1,000 Bottles)",
-    status: "Staged WH-B",
-    location: "Dock Staging Bay 02",
-    loadedCarrier: null,
-    sealNumber: null,
-    totalBottles: 1000,
-    weightKg: 1050,
-    updatedAt: new Date().toISOString()
-  },
-  {
-    id: "PLT-1021",
-    sku: "SKU-AJ-500ML-ORG",
-    description: "Organic Orange Juice 500ml (2,000 Bottles)",
-    status: "Loaded Carrier",
-    location: "Outbound Trailer TR-5510",
-    loadedCarrier: "Titan Freight Lines",
-    sealNumber: "SL-99410",
-    totalBottles: 2000,
-    weightKg: 1100,
-    updatedAt: new Date().toISOString()
-  }
-];
+let rawMaterialsStore: any[] = [];
+let packagingMaterialsStore: any[] = [];
+let inventoryStatusStore: any[] = [];
+let pickListsStore: any[] = [];
+let pickingExecutionQueueStore: any[] = [];
+let palletsContainersStore: any[] = [];
 
 export class WarehouseService {
   async listLots(tenantId: string, plantId?: string) {
@@ -863,203 +304,8 @@ export class WarehouseService {
   }
 
   async ensureWarehouseDataSeeded(tenantId: string, plantId?: string) {
-    if (!isValidUuid(tenantId)) return;
-    try {
-      const existingLots = await db.select().from(inventoryLots).where(eq(inventoryLots.tenantId, tenantId)).limit(5);
-      if (existingLots.length >= 3) return;
-
-      // Seed core SKUs if missing
-      let [rmJuice] = await db.select().from(skus).where(and(eq(skus.tenantId, tenantId), eq(skus.skuCode, "RM-ORG-101"))).limit(1);
-      if (!rmJuice) {
-        [rmJuice] = await db.insert(skus).values({
-          tenantId,
-          skuCode: "RM-ORG-101",
-          name: "Valencia Organic Orange Juice Concentrate 65° Brix",
-          category: "RAW_MATERIAL",
-          uom: "Liters",
-          standardCost: "85.00",
-        }).returning();
-      }
-
-      let [rmSugar] = await db.select().from(skus).where(and(eq(skus.tenantId, tenantId), eq(skus.skuCode, "RM-SGR-201"))).limit(1);
-      if (!rmSugar) {
-        [rmSugar] = await db.insert(skus).values({
-          tenantId,
-          skuCode: "RM-SGR-201",
-          name: "Non-GMO Liquid Cane Sugar 67.5° Brix",
-          category: "RAW_MATERIAL",
-          uom: "Liters",
-          standardCost: "1.25",
-        }).returning();
-      }
-
-      let [pkgCan] = await db.select().from(skus).where(and(eq(skus.tenantId, tenantId), eq(skus.skuCode, "PKG-CAN-330"))).limit(1);
-      if (!pkgCan) {
-        [pkgCan] = await db.insert(skus).values({
-          tenantId,
-          skuCode: "PKG-CAN-330",
-          name: "330ml Sleek Aluminum Beverage Cans",
-          category: "PACKAGING",
-          uom: "Can",
-          standardCost: "0.12",
-        }).returning();
-      }
-
-      let [pkgBox] = await db.select().from(skus).where(and(eq(skus.tenantId, tenantId), eq(skus.skuCode, "PKG-BOX-024"))).limit(1);
-      if (!pkgBox) {
-        [pkgBox] = await db.insert(skus).values({
-          tenantId,
-          skuCode: "PKG-BOX-024",
-          name: "24-Pack Master Corrugated Shipping Trays",
-          category: "PACKAGING",
-          uom: "Tray",
-          standardCost: "0.85",
-        }).returning();
-      }
-
-      let [fgSku] = await db.select().from(skus).where(and(eq(skus.tenantId, tenantId), eq(skus.skuCode, "SKU-5001"))).limit(1);
-      if (!fgSku) {
-        [fgSku] = await db.insert(skus).values({
-          tenantId,
-          skuCode: "SKU-5001",
-          name: "500ml Sparkling Citrus Soda",
-          category: "FINISHED_GOODS",
-          uom: "Cases",
-          standardCost: "14.50",
-        }).returning();
-      }
-
-      const effectivePlantId = isValidUuid(plantId) ? plantId : (await db.select().from(plants).where(eq(plants.tenantId, tenantId)).limit(1))[0]?.id;
-
-      if (effectivePlantId) {
-        await db.insert(inventoryLots).values([
-          {
-            tenantId,
-            plantId: effectivePlantId,
-            skuId: rmJuice.id,
-            lotNumber: "LOT-RM-ORG-4402",
-            lotType: "RAW_MATERIAL",
-            supplierName: "Citrus Valley Farms Co.",
-            supplierLotNumber: "VND-CVF-9021",
-            initialQuantity: "4500.0000",
-            currentQuantity: "4500.0000",
-            uom: "Liters",
-            status: "RELEASED",
-          },
-          {
-            tenantId,
-            plantId: effectivePlantId,
-            skuId: rmSugar.id,
-            lotNumber: "LOT-RM-SGR-1108",
-            lotType: "RAW_MATERIAL",
-            supplierName: "Sugar Valley Refining Ltd.",
-            supplierLotNumber: "VND-SVR-4410",
-            initialQuantity: "6200.0000",
-            currentQuantity: "6200.0000",
-            uom: "Liters",
-            status: "RELEASED",
-          },
-          {
-            tenantId,
-            plantId: effectivePlantId,
-            skuId: pkgCan.id,
-            lotNumber: "LOT-PKG-CAN-9140",
-            lotType: "PACKAGING",
-            supplierName: "Ball Metal Beverage Packaging",
-            supplierLotNumber: "VND-BLL-1192",
-            initialQuantity: "120000.0000",
-            currentQuantity: "120000.0000",
-            uom: "Cans",
-            status: "RELEASED",
-          },
-          {
-            tenantId,
-            plantId: effectivePlantId,
-            skuId: pkgBox.id,
-            lotNumber: "LOT-PKG-BX-5520",
-            lotType: "PACKAGING",
-            supplierName: "International Paper Co.",
-            supplierLotNumber: "VND-IPC-7712",
-            initialQuantity: "4500.0000",
-            currentQuantity: "4500.0000",
-            uom: "Trays",
-            status: "RELEASED",
-          },
-          {
-            tenantId,
-            plantId: effectivePlantId,
-            skuId: rmJuice.id,
-            lotNumber: "LOT-WIP-BAT-0885",
-            lotType: "WIP_SEMI_FINISHED",
-            supplierName: "Internal Blending Line",
-            supplierLotNumber: "BAT-2026-0885",
-            initialQuantity: "8500.0000",
-            currentQuantity: "8500.0000",
-            uom: "Liters",
-            status: "RELEASED",
-          },
-        ]).onConflictDoNothing().catch(e => console.warn("Seed inventoryLots error:", e));
-
-        const existingTanks = await db.select().from(warehouseLocations).where(eq(warehouseLocations.tenantId, tenantId)).limit(1);
-        if (existingTanks.length === 0) {
-          await db.insert(warehouseLocations).values([
-            {
-              id: "LOC-TANK-T01",
-              tenantId,
-              warehouse: "Main Plant WH-01",
-              zone: "Liquid Processing Bay",
-              rack: "Tank Array Row 1",
-              location: "Tank T-01",
-              fullHierarchy: "WH-01 > Processing > Tank Array > Tank T-01",
-              capacityPallets: 10000,
-              occupiedPallets: 8500,
-              material: "Semi-Finished Citrus Blend Base",
-              materialCode: "WIP-CIT-BASE",
-              batchLot: "LOT-WIP-BAT-0885",
-              quantity: "8,500 Liters",
-              status: "Occupied",
-              temp: "4.2°C",
-            },
-            {
-              id: "LOC-TANK-T02",
-              tenantId,
-              warehouse: "Main Plant WH-01",
-              zone: "Liquid Processing Bay",
-              rack: "Tank Array Row 1",
-              location: "Tank T-02",
-              fullHierarchy: "WH-01 > Processing > Tank Array > Tank T-02",
-              capacityPallets: 10000,
-              occupiedPallets: 0,
-              material: "Empty (CIP Cleaned & Sanitized)",
-              materialCode: "BIN-EMPTY",
-              batchLot: "N/A",
-              quantity: "0 Liters",
-              status: "Available",
-              temp: "18.0°C",
-            },
-            {
-              id: "LOC-SILO-S01",
-              tenantId,
-              warehouse: "Main Plant WH-01",
-              zone: "Bulk Ingredients Silo Yard",
-              rack: "Silo Cluster East",
-              location: "Silo S-01",
-              fullHierarchy: "WH-01 > Bulk Yard > Silo Cluster > Silo S-01",
-              capacityPallets: 25000,
-              occupiedPallets: 6200,
-              material: "Liquid Cane Sugar 67.5° Brix",
-              materialCode: "RM-SGR-201",
-              batchLot: "LOT-RM-SGR-1108",
-              quantity: "6,200 Liters",
-              status: "Occupied",
-              temp: "21.5°C",
-            }
-          ]).onConflictDoNothing().catch(e => console.warn("Seed warehouseLocations error:", e));
-        }
-      }
-    } catch (err) {
-      console.warn("ensureWarehouseDataSeeded fallback:", err);
-    }
+    // Disabled: Running in live database mode, no dummy or mock lots injected
+    return;
   }
 
   async listWarehouses(tenantId: string) {
@@ -1074,11 +320,9 @@ export class WarehouseService {
   }
 
   async getDashboardStats(tenantId: string, plantId?: string) {
-    await this.ensureWarehouseDataSeeded(tenantId, plantId);
-
     let lots: any[] = [];
     try {
-      lots = await db.select().from(inventoryLots).where(eq(inventoryLots.tenantId, tenantId));
+      lots = await db.select().from(inventoryLots).where(isValidUuid(tenantId) ? eq(inventoryLots.tenantId, tenantId) : sql`1=1`);
     } catch (err) {
       console.warn("DB query inventoryLots fallback:", err);
     }
@@ -1091,42 +335,40 @@ export class WarehouseService {
 
     let totalFgPallets = 0;
     try {
-      const fgRows = await db.select().from(finishedGoods);
-      totalFgPallets = fgRows.length > 0
-        ? fgRows.reduce((sum, item) => sum + (parseInt(item.palletSerial?.match(/\d+/)?.[0] || "1")), 0)
-        : (fgLots || 32);
+      const fgRows = await db.select().from(finishedGoods).where(isValidUuid(tenantId) ? eq(finishedGoods.tenantId, tenantId) : sql`1=1`);
+      totalFgPallets = fgRows.length > 0 ? fgRows.length : fgLots;
     } catch {
-      totalFgPallets = fgLots || 32;
+      totalFgPallets = fgLots;
     }
 
     let ordersCount = 0;
     try {
-      const orders = await db.select().from(shipmentOrders);
+      const orders = await db.select().from(shipmentOrders).where(isValidUuid(tenantId) ? eq(shipmentOrders.tenantId, tenantId) : sql`1=1`);
       ordersCount = orders.length;
     } catch {
-      ordersCount = 2;
+      ordersCount = 0;
     }
 
     let deliveriesCount = 0;
     try {
-      const rcvRows = await db.select().from(wmsReceiving);
+      const rcvRows = await db.select().from(wmsReceiving).where(isValidUuid(tenantId) ? eq(wmsReceiving.tenantId, tenantId) : sql`1=1`);
       deliveriesCount = rcvRows.length;
     } catch {
-      deliveriesCount = 4;
+      deliveriesCount = 0;
     }
 
     return {
-      incomingDeliveries: `${deliveriesCount || 4} Deliveries`,
-      activePickLists: `${wmsPickOrdersStore.length || 2} Lists`,
+      incomingDeliveries: `${deliveriesCount} Deliveries`,
+      activePickLists: `${wmsPickOrdersStore.length} Lists`,
       finishedGoodsPallets: `${totalFgPallets} Pallets`,
       activeLotHolds: `${activeHolds} Holds`,
       activeStage: "STG-L1-IN",
-      sweetenerStageStatus: "Sweetener stages: Staging verified in Silo S-01",
-      rawMaterialsCount: `${rawMaterials || 14} SKUs`,
-      packagingCount: `${packaging || 8} SKUs`,
-      wipLotsCount: `${wipCount || 1} Lots`,
-      shipmentOrdersCount: `${ordersCount || 2} Orders`,
-      freightStatus: ordersCount > 0 ? "Carrier allocated" : "Ready for Pickup",
+      sweetenerStageStatus: "All stages nominal",
+      rawMaterialsCount: `${rawMaterials} SKUs`,
+      packagingCount: `${packaging} SKUs`,
+      wipLotsCount: `${wipCount} Lots`,
+      shipmentOrdersCount: `${ordersCount} Orders`,
+      freightStatus: ordersCount > 0 ? "Carrier allocated" : "No Active Shipments",
       totalLots: lots.length,
       lastUpdated: new Date().toISOString()
     };
@@ -1722,8 +964,7 @@ export class WarehouseService {
     }
     const targetSkuId: string = targetSku?.id || "00000000-0000-0000-0000-000000000001";
 
-    const palletMatch = palletSerial.match(/\d+/);
-    const parsedPalletQty = palletMatch ? parseInt(palletMatch[0]) : 24;
+    const parsedPalletQty = 1;
 
     let [fgLot] = await db
       .insert(inventoryLots)
@@ -1921,19 +1162,20 @@ export class WarehouseService {
 
   // Inbound Material Receipt API
   async quickReceive(tenantId: string, plantId: string, data: any) {
-    const newLotNumber = data.lotNumber || data.lotNum || `LOT-SW-${Math.floor(900 + Math.random() * 99)}`;
+    const newLotNumber = data.lotNumber || data.lotNum || `LOT-${Date.now().toString().slice(-6)}`;
+    const isPackaging = (data.category || "").toUpperCase().includes("PACK");
     const newLot = {
       lotNumber: newLotNumber,
-      materialCode: data.materialCode || "RM-SGR-01",
-      materialName: data.materialName || data.material || "Liquid Cane Sugar",
-      category: data.category || "Raw Material",
-      quantity: Number(data.quantity || data.qty || 2),
-      unit: data.unit || "Drums",
+      materialCode: data.materialCode || `MAT-${Date.now().toString().slice(-4)}`,
+      materialName: data.materialName || data.material || "Raw Material",
+      category: data.category || (isPackaging ? "Packaging" : "Raw Material"),
+      quantity: Number(data.quantity || data.qty || 1),
+      unit: data.unit || (isPackaging ? "Pcs" : "Liters"),
       location: data.location || "Receiving Dock - Staging Area",
-      supplier: data.supplier || data.vendor || "ADM Sweetener Lots",
+      supplier: data.supplier || data.vendor || "Supplier Vendor",
       supplierLot: data.supplierLot || `VND-${Math.floor(1000 + Math.random() * 9000)}`,
-      qaStatus: data.qaStatus || "Quarantine",
-      costPerUnitUSD: data.costPerUnitUSD || 45.00,
+      qaStatus: data.qaStatus || "Released",
+      costPerUnitUSD: data.costPerUnitUSD || 10.00,
       barcode: data.barcode || `890281${Math.floor(100000 + Math.random() * 900000)}`,
       receivedAt: new Date().toISOString()
     };
@@ -1972,19 +1214,85 @@ export class WarehouseService {
       ...rawMaterialsStore
     ];
 
+    let effectiveTenantId: string = isValidUuid(tenantId) ? tenantId : "0f63be8b-52aa-4e6b-ab83-1d5477328262";
+    let effectivePlantId: string = (isValidUuid(plantId) && plantId) ? plantId : "";
+    if (!effectivePlantId) {
+      const pRows = await db.select().from(plants).where(eq(plants.tenantId, effectiveTenantId)).limit(1);
+      effectivePlantId = pRows[0]?.id || "6869789b-32d4-4911-bf29-74a9e338f14a";
+    }
+
     try {
-      if (isValidUuid(tenantId)) {
-        await db.insert(goodsReceipts).values({
-          tenantId,
-          plantId: isValidUuid(plantId) ? plantId : tenantId,
-          grnNumber: `GRN-2026-${Math.floor(1000 + Math.random() * 9000)}`,
-          poNumber: data.poNumber || `PO-2026-${Math.floor(100 + Math.random() * 900)}`,
-          vendorName: newLot.supplier,
-          items: [newLot]
+      // 1. Find or create matching SKU
+      let [matchedSku] = await db
+        .select()
+        .from(skus)
+        .where(
+          and(
+            eq(skus.tenantId, effectiveTenantId),
+            or(eq(skus.skuCode, newLot.materialCode), eq(skus.name, newLot.materialName))
+          )
+        )
+        .limit(1);
+
+      if (!matchedSku) {
+        [matchedSku] = await db
+          .insert(skus)
+          .values({
+            tenantId: effectiveTenantId,
+            skuCode: newLot.materialCode,
+            name: newLot.materialName,
+            category: isPackaging ? "PACKAGING" : "RAW_MATERIAL",
+            uom: newLot.unit,
+            standardCost: (newLot.costPerUnitUSD || 10).toString(),
+          })
+          .returning();
+      }
+
+      // 2. Insert into inventory_lots
+      const [insertedLot] = await db
+        .insert(inventoryLots)
+        .values({
+          tenantId: effectiveTenantId,
+          plantId: effectivePlantId,
+          skuId: matchedSku.id,
+          lotNumber: newLotNumber,
+          lotType: isPackaging ? "PACKAGING" : "RAW_MATERIAL",
+          supplierName: newLot.supplier,
+          supplierLotNumber: newLot.supplierLot,
+          initialQuantity: newLot.quantity.toString(),
+          currentQuantity: newLot.quantity.toString(),
+          uom: newLot.unit,
+          status: newLot.qaStatus === "QA Released" || newLot.qaStatus === "Released" ? "RELEASED" : "QUARANTINED",
+        })
+        .onConflictDoNothing()
+        .returning();
+
+      // 3. Log transaction
+      if (insertedLot) {
+        await db.insert(inventoryTransactions).values({
+          tenantId: effectiveTenantId,
+          plantId: effectivePlantId,
+          lotId: insertedLot.id,
+          type: "RECEIPT",
+          quantity: newLot.quantity.toString(),
+          uom: newLot.unit,
+          referenceType: "INBOUND_RECEIPT",
+          referenceId: newLotNumber,
+          notes: `Inbound receipt from ${newLot.supplier}`,
         }).catch(() => null);
       }
+
+      // 4. Record goods receipt
+      await db.insert(goodsReceipts).values({
+        tenantId: effectiveTenantId,
+        plantId: effectivePlantId,
+        grnNumber: `GRN-2026-${Math.floor(1000 + Math.random() * 9000)}`,
+        poNumber: data.poNumber || `PO-2026-${Math.floor(100 + Math.random() * 900)}`,
+        vendorName: newLot.supplier,
+        items: [newLot]
+      }).catch(() => null);
     } catch (e) {
-      // safe fallback
+      console.warn("quickReceive DB persistence error:", e);
     }
 
     return {
@@ -1992,7 +1300,7 @@ export class WarehouseService {
       lot: newLot,
       status: "STAGED",
       receivedAt: new Date().toISOString(),
-      message: `Material lot ${newLotNumber} received and moved to Staging for Put-Away.`
+      message: `Material lot ${newLotNumber} received and saved into inventory.`
     };
   }
 
@@ -2802,8 +2110,8 @@ export class WarehouseService {
       transfers: wmsTransfersStore,
       locations: locationsHierarchyStore,
       recentTransfers: [
-        { id: "TRF-901", lotCode: "LOT-ORG-442", from: "WH-A Rack 1", to: "WH-A Rack 4", operator: "Carlos Mendez", timestamp: new Date().toISOString() },
-        { id: "TRF-902", lotCode: "LOT-SW-982", from: "Receiving Dock", to: "Ambient Bay 2", operator: "Carlos Mendez", timestamp: new Date().toISOString() }
+        { id: "TRF-901", lotCode: "LOT-ORG-442", from: "WH-A Rack 1", to: "WH-A Rack 4", operator: "Ashley Kulcar", timestamp: new Date().toISOString() },
+        { id: "TRF-902", lotCode: "LOT-SW-982", from: "Receiving Dock", to: "Ambient Bay 2", operator: "Ashley Kulcar", timestamp: new Date().toISOString() }
       ]
     };
   }
@@ -2818,7 +2126,7 @@ export class WarehouseService {
       lotCode,
       from: fromLoc,
       to: toLoc,
-      operator: input.operator || "Carlos Mendez",
+      operator: input.operator || "Ashley Kulcar",
       status: "COMPLETED",
       timestamp: new Date().toISOString()
     };
@@ -3261,10 +2569,7 @@ export class WarehouseService {
       createdAt: r.createdAt
     }));
 
-    const totalPalletsCount = rows.reduce((acc, item) => {
-      const match = (item.palletSerial || "").match(/(\d+)/);
-      return acc + (match ? parseInt(match[1]) : 1);
-    }, 0);
+    const totalPalletsCount = rows.length;
 
     const readyCount = rows.filter(g => g.shipmentStatus === "Ready to Ship" || g.shipmentStatus === "Allocated").length;
     const qaReleasedCount = rows.filter(g => g.qaStatus === "QA Released").length;

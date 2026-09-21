@@ -286,7 +286,7 @@ export function Asset360() {
     nextDueDate: "",
     result: "PASS - Within Tolerance",
     standardUsed: "NIST-Cal-Traceable Standard",
-    technician: currentRole?.name || "Marcus Vance"
+    technician: currentRole?.name || "David Markov"
   });
 
   // Log Troubleshooting Solution Modal
@@ -296,7 +296,7 @@ export function Asset360() {
     rootCause: "",
     solutionSteps: "",
     failureCode: "MEC-004",
-    verifiedBy: currentRole?.name || "Carlos Mendez"
+    verifiedBy: currentRole?.name || "Ashley Kulcar"
   });
 
   // View Audit Detail Modal
@@ -501,7 +501,7 @@ export function Asset360() {
       rootCause: "",
       solutionSteps: "",
       failureCode: "MEC-004",
-      verifiedBy: currentRole?.name || "Carlos Mendez"
+      verifiedBy: currentRole?.name || "Ashley Kulcar"
     });
   };
 
@@ -572,7 +572,7 @@ export function Asset360() {
         timestamp: b.startTime || b.date || "2026-08-20 14:15",
         status: b.status,
         badgeVariant: "rose",
-        details: `Failure Code: ${b.failureCode || "MEC-004"} • Duration: ${b.durationMinutes !== undefined ? b.durationMinutes : 0} mins • Tech: ${b.technician || b.assignedTechnician || "Marcus Vance"}`
+        details: `Failure Code: ${b.failureCode || "MEC-004"} • Duration: ${b.durationMinutes !== undefined ? b.durationMinutes : 0} mins • Tech: ${b.technician || b.assignedTechnician || "David Markov"}`
       });
     });
 
@@ -957,7 +957,7 @@ export function Asset360() {
                 <Badge variant="cyan">{linkedPMs.length} Schedules</Badge>
               </div>
               <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "6px" }}>
-                Next scheduled PM: {linkedPMs[0]?.dueDate || "Upcoming"} • Assigned: {linkedPMs[0]?.assignedTo || "Marcus Vance"}
+                Next scheduled PM: {linkedPMs[0]?.dueDate || "Upcoming"} • Assigned: {linkedPMs[0]?.assignedTo || "David Markov"}
               </div>
               <div style={{ marginTop: "10px", fontSize: "12px", color: "var(--accent-blue)", fontWeight: 600 }}>
                 Manage PM Schedules →
@@ -1788,7 +1788,7 @@ export function Asset360() {
                         {pm.title || pm.name}
                       </div>
                       <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "2px" }}>
-                        Last PM: {pm.lastExecuted || asset.lastPM || "2026-08-15"} • Next PM Due: <strong style={{ color: "var(--text-primary)" }}>{pm.dueNext || asset.nextPM || "2026-09-10"}</strong> • Assigned: {pm.assignedTo || pm.assignedTechnician || "Marcus Vance"}
+                        Last PM: {pm.lastExecuted || asset.lastPM || "2026-08-15"} • Next PM Due: <strong style={{ color: "var(--text-primary)" }}>{pm.dueNext || asset.nextPM || "2026-09-10"}</strong> • Assigned: {pm.assignedTo || pm.assignedTechnician || "David Markov"}
                       </div>
                     </div>
 
@@ -2038,7 +2038,7 @@ export function Asset360() {
                   {linkedWOs[0]?.actualHours || linkedWOs[0]?.actual_hours || "0.0"} hrs
                 </div>
                 <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>
-                  {linkedWOs[0]?.assignedTechnician || "Marcus Vance"} ({linkedWOs[0]?.id || "WO-2026-001"})
+                  {linkedWOs[0]?.assignedTechnician || "David Markov"} ({linkedWOs[0]?.id || "WO-2026-001"})
                 </div>
               </div>
 
@@ -2442,7 +2442,7 @@ export function Asset360() {
                           {log.timestamp}
                         </td>
                         <td>
-                          <div style={{ fontWeight: 600, color: "var(--text-primary)" }}>{log.user || "Alexander Vance"}</div>
+                          <div style={{ fontWeight: 600, color: "var(--text-primary)" }}>{log.user || "Ronald Robinson"}</div>
                           <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>{log.userRole || "Administrator"}</div>
                         </td>
                         <td>

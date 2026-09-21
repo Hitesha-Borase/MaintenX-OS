@@ -41,7 +41,7 @@ export function PalletsContainers() {
       const res = await warehouseService.loadPalletContainer(id, {
         carrier: "Titan Freight Lines",
         trailerNo: "TR-4401",
-        operator: "Carlos Mendez"
+        operator: "Ashley Kulcar"
       });
       const msg = res.data?.message || `Pallet ${id} marked as Loaded. Outbound dispatch updated.`;
       addToast(msg, "success");

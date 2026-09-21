@@ -385,12 +385,12 @@ async function runPlantManagerTests() {
       method: "PATCH",
       headers,
       body: JSON.stringify({
-        owner: "Marcus Vance (Maint Lead)",
+        owner: "David Markov (Maint Lead)",
         escalationLevel: "L2 - Engineering",
       }),
     });
     const json = (await res.json()) as any;
-    if (!res.ok || json.data?.owner !== "Marcus Vance (Maint Lead)") throw new Error(JSON.stringify(json));
+    if (!res.ok || json.data?.owner !== "David Markov (Maint Lead)") throw new Error(JSON.stringify(json));
   });
 
   await testEndpoint("PATCH /exceptions/:id/resolve (Resolve Exception)", async () => {

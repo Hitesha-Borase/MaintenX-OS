@@ -40,7 +40,7 @@ export function PMExecutionPage() {
     templateIdParam || checklistTemplates[0]?.id || "CHK-FM-DAILY"
   );
   const [selectedAssetId, setSelectedAssetId] = useState(assetIdParam || "FM-001");
-  const [technicianName, setTechnicianName] = useState("Marcus Vance");
+  const [technicianName, setTechnicianName] = useState("David Markov");
   const [notes, setNotes] = useState("");
 
   const activeTemplate =

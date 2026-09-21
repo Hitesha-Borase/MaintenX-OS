@@ -33,16 +33,16 @@ async function runMigration() {
           id, shift, line, required, assigned, supervisor, status, notes
         ) VALUES 
         (
-          'ALC-01', 'Shift A', 'Line 1 — Aseptic Bottling', 10, 10, 'Marcus Vance', 'Full Coverage', 'Standard nominal staffing for high-speed aseptic bottling line.'
+          'ALC-01', 'Shift A', 'Line 1 — Aseptic Bottling', 10, 10, 'David Markov', 'Full Coverage', 'Standard nominal staffing for high-speed aseptic bottling line.'
         ),
         (
-          'ALC-02', 'Shift A', 'Line 2 — Formulation & CIP', 6, 6, 'Elena Rostova', 'Full Coverage', 'Sanitation and continuous formulation staffing active.'
+          'ALC-02', 'Shift A', 'Line 2 — Formulation & CIP', 6, 6, 'Ronald Robinson', 'Full Coverage', 'Sanitation and continuous formulation staffing active.'
         ),
         (
           'ALC-03', 'Shift A', 'Line 3 — Canning & Seaming', 8, 8, 'David Kim', 'Full Coverage', 'High-speed canning line with automated seamer operators.'
         ),
         (
-          'ALC-04', 'Shift A', 'Quality & In-Line Testing Lab', 4, 4, 'Sarah Jenkins', 'Full Coverage', 'In-line QA and microbiological testing specialists present.'
+          'ALC-04', 'Shift A', 'Quality & In-Line Testing Lab', 4, 4, 'Stephanie Kuzmych', 'Full Coverage', 'In-line QA and microbiological testing specialists present.'
         );
       `);
       console.log("🌱 Seeded initial line labour allocations into public.labour_allocations!");

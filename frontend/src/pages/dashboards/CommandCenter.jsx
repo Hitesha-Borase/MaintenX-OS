@@ -263,7 +263,7 @@ export function CommandCenter() {
         scrapCount: 180,
         efficiencyPercent: "94.20",
         currentOrder: "PO-2026-8801",
-        operator: "Elena Rostova",
+        operator: "Ronald Robinson",
         processParameters: {
           runId: "RUN-PET-500ML",
           speedBpm: 100,
@@ -283,7 +283,7 @@ export function CommandCenter() {
         scrapCount: 50,
         efficiencyPercent: "96.10",
         currentOrder: "PO-2026-8801",
-        operator: "Carlos Mendez",
+        operator: "Ashley Kulcar",
         processParameters: {
           runId: "RUN-PET-500ML",
           visionPassPct: 99.8,
@@ -450,11 +450,11 @@ export function CommandCenter() {
               Plant Manager Command Center
             </h1>
             <Badge variant="emerald" dot>
-              {selectedPlant?.name?.split(" - ")[0] || "Indore Plant"} • PROCESSING + PACKAGING LIVE
+              {selectedPlant?.name?.split(" - ")[0] || "Plant 1"} • PROCESSING + PACKAGING LIVE
             </Badge>
           </div>
           <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "4px" }}>
-            Unified operational command: Bulk formulation, aseptic holding vessels, and high-speed bottling/canning lines.
+            Unified operational command: Meat trimming, injection curing, smokehouse thermal processing, and high-speed thermoforming packaging lines.
           </div>
         </div>
 
@@ -888,7 +888,7 @@ export function CommandCenter() {
 
                     {/* Operator and Efficiency */}
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "11px", borderTop: "1px dashed var(--border-subtle)", paddingTop: "8px", color: "var(--text-secondary)" }}>
-                      <span>Operator: <strong>{m.operator || "Elena Rostova"}</strong></span>
+                      <span>Operator: <strong>{m.operator || "Ronald Robinson"}</strong></span>
                       <span>Efficiency: <strong style={{ color: "#059669", fontFamily: "var(--font-mono)" }}>{m.efficiencyPercent}%</strong></span>
                     </div>
                   </Card>

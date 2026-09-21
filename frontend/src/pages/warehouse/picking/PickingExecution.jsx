@@ -39,7 +39,7 @@ export function PickingExecution() {
         item: name,
         binLocation: bin || "Bin A-01-B",
         quantity: qty || "1,500 Pcs",
-        operator: "Carlos Mendez"
+        operator: "Ashley Kulcar"
       });
       const msg = res.data?.message || `Material pick confirmed: ${name}. Staged at STG-L1-IN.`;
       addToast(msg, "success");

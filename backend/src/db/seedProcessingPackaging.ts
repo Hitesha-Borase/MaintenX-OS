@@ -14,22 +14,22 @@ export async function seedProcessingPackaging() {
       ) VALUES
       (
         gen_random_uuid(), 'RES-TK-101', 'HT-101', 'Holding Tank 01 — Organic Orange Juice',
-        'Aseptic Holding Tank', 'PLT-01', 'Indore Plant', 'Processing WIP Buffer',
+        'Aseptic Holding Tank', 'PLT-01', 'Plant 1 - Meat Processing & Smokehouse Facility', 'Processing WIP Buffer',
         'Liters', 20000, '20,000 Liters', '16,400 L (82%)', 'Chilled (2°C - 4°C)', 'Active'
       ),
       (
         gen_random_uuid(), 'RES-TK-102', 'HT-102', 'Holding Tank 02 — Mango Nectar Blend',
-        'Jacketed Storage Tank', 'PLT-01', 'Indore Plant', 'Processing WIP Buffer',
+        'Jacketed Storage Tank', 'PLT-01', 'Plant 1 - Meat Processing & Smokehouse Facility', 'Processing WIP Buffer',
         'Liters', 15000, '15,000 Liters', '12,300 L (82%)', 'Chilled (2°C - 4°C)', 'Active'
       ),
       (
         gen_random_uuid(), 'RES-TK-201', 'ST-201', 'Aseptic Surge Tank 01 — Line 1 Feed',
-        'Buffer Surge Vessel', 'PLT-01', 'Indore Plant', 'Packaging Infeed Zone',
+        'Buffer Surge Vessel', 'PLT-01', 'Plant 1 - Meat Processing & Smokehouse Facility', 'Packaging Infeed Zone',
         'Liters', 5000, '5,000 Liters', '4,100 L (82%)', 'Cold Sterile (4°C)', 'Active'
       ),
       (
         gen_random_uuid(), 'RES-TK-301', 'SILO-01', 'Bulk Liquid Sugar & Invert Silo',
-        'Stainless Storage Silo', 'PLT-01', 'Indore Plant', 'Raw Influx Storage',
+        'Stainless Storage Silo', 'PLT-01', 'Plant 1 - Meat Processing & Smokehouse Facility', 'Raw Influx Storage',
         'Liters', 50000, '50,000 Liters', '38,500 L (77%)', 'Ambient (20°C - 24°C)', 'Active'
       );
     `);
@@ -62,13 +62,13 @@ export async function seedProcessingPackaging() {
       (
         'MC-PACK-01', 'PLT-01', 'PACK-FILL-01', 'Rotary Aseptic Monobloc Filler', 'LINE-1',
         'PACKAGING', 'RUNNING', 6000, 6000, 30000, 28400, 180, '6.80', 18, '94.20',
-        'PO-2026-8801', 'Elena Rostova',
+        'PO-2026-8801', 'Ronald Robinson',
         '{"runId": "RUN-PET-500ML", "speedBpm": 100, "fillVolumeMl": 500, "torqueNm": 1.82, "rejectRatePct": 0.63}'::jsonb
       ),
       (
         'MC-PACK-02', 'PLT-01', 'PACK-CAPP-01', 'High-Speed Capper & Vision Inspector', 'LINE-1',
         'PACKAGING', 'RUNNING', 6000, 6000, 30000, 28350, 50, '6.70', 12, '96.10',
-        'PO-2026-8801', 'Carlos Mendez',
+        'PO-2026-8801', 'Ashley Kulcar',
         '{"runId": "RUN-PET-500ML", "visionPassPct": 99.8, "capTorqueMinNm": 1.6, "capTorqueMaxNm": 2.0}'::jsonb
       ),
       (
@@ -159,13 +159,13 @@ export async function seedProcessingPackaging() {
         'EX-PACK-01', 'PLT-01', 'Filler Infeed Starwheel Jam & Micro-Stops', 'PACKAGING', 'P1',
         'Equipment Stoppage', 'PACK-FILL-01',
         'PET bottle preform distortion caused starwheel jam, losing 18 minutes production time.',
-        'Elena Rostova (Packaging Lead)', 'L1 - Shift Supervisor', 'Active'
+        'Ronald Robinson (Packaging Lead)', 'L1 - Shift Supervisor', 'Active'
       ),
       (
         'EX-PACK-02', 'PLT-01', 'Cap Vision Reject Rate Threshold Exceeded', 'PACKAGING', 'P2',
         'Quality Deviation', 'PACK-CAPP-01',
         'Optical inspection rejecting 1.2% caps due to supplier liner ovality. Lot quarantined.',
-        'Carlos Mendez (Capper Op)', 'L2 - Plant Quality Manager', 'Active'
+        'Ashley Kulcar (Capper Op)', 'L2 - Plant Quality Manager', 'Active'
       )
       ON CONFLICT (id) DO UPDATE SET
         title = EXCLUDED.title,
@@ -289,7 +289,7 @@ export async function seedProcessingPackaging() {
         'PACKAGING', 'PACK-CAPP-01', 'Magnetic Chuck Capping Turret', 'LINE-1', 'Bottling Line 1',
         'High', 'Root Cause Validated', 'Occurrence Cause',
         'Cap orientation optical sensor blinded by washdown foam residue, causing false queue backups and line stops.',
-        'Elena Rostova (Packaging Lead)', CURRENT_DATE::text
+        'Ronald Robinson (Packaging Lead)', CURRENT_DATE::text
       )
       ON CONFLICT (id) DO UPDATE SET
         title = EXCLUDED.title,

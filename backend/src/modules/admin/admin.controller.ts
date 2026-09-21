@@ -1,5 +1,16 @@
 import { FastifyRequest, FastifyReply } from "fastify";
 import { adminService } from "./admin.service.js";
+import {
+  provisionUserSchema,
+  updateUserStatusSchema,
+  editUserSchema,
+  bulkUpdateUserStatusSchema,
+  createInvitationSchema,
+  createRoleSchema,
+  updateRoleSchema,
+  createApprovalRuleSchema,
+  updateApprovalRuleSchema,
+} from "./admin.schema.js";
 
 export class AdminController {
   async getDashboard(request: FastifyRequest, reply: FastifyReply) {
@@ -16,8 +27,8 @@ export class AdminController {
 
   async provisionUser(request: FastifyRequest, reply: FastifyReply) {
     const user = (request as any).user;
-    const body = request.body as any;
-    const newUser = await adminService.provisionUser(user?.tenantId, body);
+    const input = provisionUserSchema.parse(request.body);
+    const newUser = await adminService.provisionUser(user?.tenantId, input);
     return reply.status(201).send(newUser);
   }
 
@@ -30,16 +41,16 @@ export class AdminController {
   async updateUserStatus(request: FastifyRequest, reply: FastifyReply) {
     const user = (request as any).user;
     const { id } = request.params as { id: string };
-    const { status } = (request.body as any) || {};
-    const updated = await adminService.updateUserStatus(user?.tenantId, id, status);
+    const input = updateUserStatusSchema.parse(request.body);
+    const updated = await adminService.updateUserStatus(user?.tenantId, id, input.status);
     return reply.status(200).send(updated);
   }
 
   async editUser(request: FastifyRequest, reply: FastifyReply) {
     const user = (request as any).user;
     const { id } = request.params as { id: string };
-    const body = request.body as any;
-    const updated = await adminService.editUser(user?.tenantId, id, body);
+    const input = editUserSchema.parse(request.body);
+    const updated = await adminService.editUser(user?.tenantId, id, input);
     return reply.status(200).send(updated);
   }
 
@@ -52,8 +63,8 @@ export class AdminController {
 
   async bulkUpdateUserStatus(request: FastifyRequest, reply: FastifyReply) {
     const user = (request as any).user;
-    const { action } = (request.body as any) || {};
-    const result = await adminService.bulkUpdateUserStatus(user?.tenantId, action);
+    const input = bulkUpdateUserStatusSchema.parse(request.body);
+    const result = await adminService.bulkUpdateUserStatus(user?.tenantId, input.action);
     return reply.status(200).send(result);
   }
 
@@ -65,8 +76,8 @@ export class AdminController {
 
   async createInvitation(request: FastifyRequest, reply: FastifyReply) {
     const user = (request as any).user;
-    const body = request.body as any;
-    const invite = await adminService.createInvitation(user?.tenantId, body);
+    const input = createInvitationSchema.parse(request.body);
+    const invite = await adminService.createInvitation(user?.tenantId, input);
     return reply.status(201).send(invite);
   }
 
@@ -132,22 +143,23 @@ export class AdminController {
   // Roles & Permissions
   async getRoles(request: FastifyRequest, reply: FastifyReply) {
     const user = (request as any).user;
-    const roles = await adminService.getRoles(user?.tenantId);
+    const isMasterAdmin = Boolean(user?.isMasterAdmin || user?.role === "master_admin");
+    const roles = await adminService.getRoles(user?.tenantId, isMasterAdmin);
     return reply.status(200).send(roles);
   }
 
   async createRole(request: FastifyRequest, reply: FastifyReply) {
     const user = (request as any).user;
-    const body = request.body as any;
-    const newRole = await adminService.createRole(user?.tenantId, body);
+    const input = createRoleSchema.parse(request.body);
+    const newRole = await adminService.createRole(user?.tenantId, input);
     return reply.status(201).send(newRole);
   }
 
   async updateRole(request: FastifyRequest, reply: FastifyReply) {
     const user = (request as any).user;
     const { id } = request.params as { id: string };
-    const body = request.body as any;
-    const updated = await adminService.updateRole(user?.tenantId, id, body);
+    const input = updateRoleSchema.parse(request.body);
+    const updated = await adminService.updateRole(user?.tenantId, id, input);
     return reply.status(200).send(updated);
   }
 
@@ -160,7 +172,8 @@ export class AdminController {
 
   async getPermissionMatrix(request: FastifyRequest, reply: FastifyReply) {
     const user = (request as any).user;
-    const matrix = await adminService.getPermissionMatrix(user?.tenantId);
+    const isMasterAdmin = Boolean(user?.isMasterAdmin || user?.role === "master_admin");
+    const matrix = await adminService.getPermissionMatrix(user?.tenantId, isMasterAdmin);
     return reply.status(200).send(matrix);
   }
 
@@ -193,16 +206,16 @@ export class AdminController {
 
   async createApprovalRule(request: FastifyRequest, reply: FastifyReply) {
     const user = (request as any).user;
-    const body = request.body as any;
-    const created = await adminService.createApprovalRule(user?.tenantId, body);
+    const input = createApprovalRuleSchema.parse(request.body);
+    const created = await adminService.createApprovalRule(user?.tenantId, input);
     return reply.status(201).send(created);
   }
 
   async updateApprovalRule(request: FastifyRequest, reply: FastifyReply) {
     const user = (request as any).user;
     const { id } = request.params as { id: string };
-    const body = request.body as any;
-    const updated = await adminService.updateApprovalRule(user?.tenantId, id, body);
+    const input = updateApprovalRuleSchema.parse(request.body);
+    const updated = await adminService.updateApprovalRule(user?.tenantId, id, input);
     return reply.status(200).send(updated);
   }
 

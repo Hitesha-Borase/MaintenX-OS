@@ -53,7 +53,7 @@ let inMemoryInvitations: InvitationRecord[] = [
     email: "clara.oswald@flowstate.io",
     role: "Quality Analyst",
     department: "Quality",
-    invitedBy: "Alexander Vance",
+    invitedBy: "Ronald Robinson",
     sentDate: "2026-08-30",
     status: "Pending",
   },
@@ -63,7 +63,7 @@ let inMemoryInvitations: InvitationRecord[] = [
     email: "james.holden@flowstate.io",
     role: "Controls Engineer",
     department: "Maintenance",
-    invitedBy: "Alexander Vance",
+    invitedBy: "Ronald Robinson",
     sentDate: "2026-08-31",
     status: "Pending",
   },
@@ -883,7 +883,7 @@ export class AdminService {
       email,
       role: input.role || "Quality Analyst",
       department: input.department || "Quality",
-      invitedBy: input.invitedBy || "Alexander Vance",
+      invitedBy: input.invitedBy || "Ronald Robinson",
       sentDate,
       status: "Pending",
     };
@@ -898,7 +898,7 @@ export class AdminService {
           email,
           role: input.role || "Quality Analyst",
           department: input.department || "Quality",
-          invitedBy: input.invitedBy || "Alexander Vance",
+          invitedBy: input.invitedBy || "Ronald Robinson",
           sentDate,
           status: "Pending",
         })
@@ -987,7 +987,7 @@ export class AdminService {
             email: cleanId.includes("@") ? cleanId : `${cleanId.toLowerCase()}@example.com`,
             role: "Quality Analyst",
             department: "Quality",
-            invitedBy: "Alexander Vance",
+            invitedBy: "Ronald Robinson",
             sentDate: todayDate,
             status: "Pending",
           })
@@ -1587,12 +1587,12 @@ export class AdminService {
           .insert(plants)
           .values({
             tenantId: demoTenant.id,
-            code: "INDORE-01",
-            name: "Indore Mega Bottling & Canning Facility",
-            city: "Indore",
-            state: "Madhya Pradesh",
-            country: "India",
-            timezone: "Asia/Kolkata",
+            code: "PLT-MEAT-01",
+            name: "Plant 1 - Meat Processing & Smokehouse Facility",
+            city: "Oshawa",
+            state: "Ontario",
+            country: "Canada",
+            timezone: "America/Toronto",
           })
           .returning();
       }
@@ -2494,7 +2494,7 @@ export class AdminService {
 
       logs = dbLogs.map((item, idx) => {
         const u = userList.find((usr) => usr.id === item.userId);
-        const userName = u ? `${u.firstName} ${u.lastName}` : "Alexander Vance";
+        const userName = u ? `${u.firstName} ${u.lastName}` : "Ronald Robinson";
         return {
           auditId: `AUD-${item.id.substring(0, 4).toUpperCase() || (3600 + idx)}`,
           id: item.id,
@@ -2972,7 +2972,7 @@ export class AdminService {
       tier: data.tier || "ENTERPRISE TIER ACTIVE",
       edgeHealth: data.edgeHealth || "99.99% HEALTH",
       status: data.status || "PUBLISHED",
-      generatedBy: data.generatedBy || "Alexander Vance",
+      generatedBy: data.generatedBy || "Ronald Robinson",
       metrics: data.metrics || {},
     };
 
@@ -3034,7 +3034,7 @@ export class AdminService {
         tier: reports.tenantTier,
         edgeHealth: reports.edgeTelemetryHealth,
         status: "AUDITED",
-        generatedBy: "Alexander Vance",
+        generatedBy: "Ronald Robinson",
         metrics: reports,
       }).onConflictDoNothing();
 

@@ -96,7 +96,7 @@ export function PMScheduleList({ initialViewMode }) {
     assetId: "",
     frequency: "Weekly",
     status: "Upcoming",
-    assignedTo: "Marcus Vance",
+    assignedTo: "David Markov",
     dueDate: new Date().toISOString().substring(0, 10),
     templateId: "CHK-001"
   });
@@ -133,7 +133,7 @@ export function PMScheduleList({ initialViewMode }) {
         assetId: assets[0]?.id || "",
         frequency: "Weekly",
         status: "Upcoming",
-        assignedTo: "Marcus Vance",
+        assignedTo: "David Markov",
         dueDate: new Date().toISOString().substring(0, 10),
         templateId: "CHK-001"
       });
@@ -272,7 +272,7 @@ export function PMScheduleList({ initialViewMode }) {
             frequency: pm.frequency,
             priority: (pm.status || "").includes("Overdue") ? "P1 - Critical" : (pm.priority || "P2 - High"),
             duration: pm.estimatedMinutes ? `${pm.estimatedMinutes}m` : "45m",
-            assignedTo: pm.assignedTo || pm.assignedTechnician || "Marcus Vance",
+            assignedTo: pm.assignedTo || pm.assignedTechnician || "David Markov",
             status: pm.status || "Upcoming",
             checklistId: pm.templateId || "CHK-001",
             spareParts: "OEM Specified Service Parts",
@@ -437,7 +437,7 @@ export function PMScheduleList({ initialViewMode }) {
                 title: row.title || "",
                 frequency: row.frequency || "Weekly",
                 dueDate: row.dueDate || (row.dueNext ? row.dueNext.substring(0, 10) : new Date().toISOString().substring(0, 10)),
-                assignedTo: row.assignedTo || row.assignedTechnician || "Marcus Vance",
+                assignedTo: row.assignedTo || row.assignedTechnician || "David Markov",
                 status: row.status || "Upcoming",
               });
               setIsEditModalOpen(true);

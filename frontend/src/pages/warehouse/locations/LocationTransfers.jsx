@@ -45,7 +45,7 @@ export function LocationTransfers() {
         lotCode: lot,
         sourceLocation: fromLoc,
         targetLocation: toLoc,
-        operator: "Carlos Mendez"
+        operator: "Ashley Kulcar"
       });
       addToast(`Material lot ${lot} successfully transferred to location ${toLoc}.`, "success");
       transferLotLocation(lot, toLoc);

@@ -25,6 +25,32 @@ import { useAdmin } from "../../../context/AdminContext";
 import { useApp } from "../../../context/AppContext";
 import adminService from "../../../services/adminService";
 
+export function formatActionTitle(action) {
+  if (!action) return "System Activity Recorded";
+  const str = String(action).trim();
+  const upper = str.toUpperCase();
+  if (upper.includes("LOGIN") && (upper.includes("USERSESSION") || upper.includes("SESSION"))) {
+    return "User Sign-In • Session Authenticated";
+  }
+  if (upper.includes("REGISTER") && upper.includes("TENANT")) {
+    return "Account Registration • Workspace Joined";
+  }
+  if (upper.includes("COMPANY CREATED") || upper.includes("COMPANY_CREATED")) {
+    return "Company Workspace Created";
+  }
+  if (upper.includes("PROVISION_USER") || upper.includes("PROVISION USER")) {
+    return "New User Account Provisioned";
+  }
+  if (upper.includes("UPDATE_USER") || upper.includes("UPDATE USER")) {
+    return "User Profile Updated";
+  }
+  if (upper.includes("DIGITAL_SIGNATURE")) {
+    return "21 CFR Part 11 Electronic Signature Applied";
+  }
+  // Strip raw UUIDs in parentheses like (e417da82-e464-427c-a771-f2d155949b99)
+  return str.replace(/\s*\([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\)/gi, "");
+}
+
 export function UserActivityPage() {
   const {
     activityLogs = [],
@@ -337,7 +363,9 @@ export function UserActivityPage() {
                       <strong style={{ color: "var(--text-primary)" }}>{l.user}</strong>
                     </td>
                     <td style={{ fontSize: "12px", color: "var(--text-secondary)", maxWidth: "340px" }}>
-                      {l.action}
+                      <span style={{ fontWeight: 600, color: "var(--text-primary)" }}>
+                        {formatActionTitle(l.action)}
+                      </span>
                     </td>
                     <td>
                       <Badge variant={l.category === "Security" ? "cyan" : "amber"}>{l.category}</Badge>
@@ -452,8 +480,8 @@ export function UserActivityPage() {
 
               <div>
                 <span style={{ fontSize: "11px", color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>Action & Operation</span>
-                <div style={{ fontSize: "13px", color: "var(--text-primary)", padding: "10px 12px", backgroundColor: "var(--bg-card-subtle)", borderRadius: "6px", border: "1px solid var(--border-subtle)" }}>
-                  {viewingLog.action}
+                <div style={{ fontSize: "13px", color: "var(--text-primary)", fontWeight: 600, padding: "10px 12px", backgroundColor: "var(--bg-card-subtle)", borderRadius: "6px", border: "1px solid var(--border-subtle)" }}>
+                  {formatActionTitle(viewingLog.action)}
                 </div>
               </div>
 
@@ -494,7 +522,7 @@ export function UserActivityPage() {
 
             <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
               <p style={{ fontSize: "13px", color: "var(--text-primary)", lineHeight: 1.5, margin: 0 }}>
-                Are you sure you want to delete audit log <strong>{deletingLog.id}</strong> ({deletingLog.action}) from the database?
+                Are you sure you want to delete audit log <strong>{deletingLog.id}</strong> ({formatActionTitle(deletingLog.action)}) from the database?
               </p>
               <div style={{ fontSize: "12px", color: "var(--text-secondary)", backgroundColor: "var(--bg-card-subtle)", padding: "10px 12px", borderRadius: "6px", border: "1px solid var(--border-subtle)" }}>
                 This record will be permanently removed from the <code>audit_logs</code> table.

@@ -6,14 +6,22 @@ import { StatCard } from "../../components/common/StatCard";
 import { Button } from "../../components/common/Button";
 import { Modal } from "../../components/common/Modal";
 import { Badge } from "../../components/common/Badge";
-import { Gauge, Target, TrendingUp, Sliders, PieChart, Send, Play } from "lucide-react";
+import { Gauge, Target, TrendingUp, Sliders, PieChart, Send, Play, RefreshCw } from "lucide-react";
 import dashboardService from "../../services/dashboardService";
 
 export function ProductionPerformance() {
   const { productionOrders, syncWithBackend } = useProduction();
   const { addToast } = useApp();
 
-  const activeOrder = productionOrders[0];
+  const [selectedOrderId, setSelectedOrderId] = useState("");
+
+  const runningOrder = productionOrders.find(
+    (o) => (o.status || "").toUpperCase() === "RUNNING" || (o.status || "").toUpperCase() === "IN PROGRESS"
+  );
+
+  const activeOrder = (selectedOrderId ? productionOrders.find((o) => o.id === selectedOrderId || o.orderNumber === selectedOrderId) : null)
+    || runningOrder
+    || productionOrders[0];
 
   const [isSpeedModalOpen, setIsSpeedModalOpen] = useState(false);
   const [isParetoModalOpen, setIsParetoModalOpen] = useState(false);
@@ -21,6 +29,7 @@ export function ProductionPerformance() {
   const [speedLimit, setSpeedLimit] = useState(600);
   const [paretoData, setParetoData] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const [runForm, setRunForm] = useState({
     status: "RUNNING",
@@ -90,6 +99,8 @@ export function ProductionPerformance() {
     setIsSubmitting(true);
     try {
       const res = await dashboardService.updateSupervisorProductionRun({
+        orderId: activeOrder?.id,
+        orderNumber: activeOrder?.orderNumber,
         status: runForm.status,
         producedQuantity: Number(runForm.producedQuantity),
         scrapQuantity: Number(runForm.scrapQuantity),
@@ -104,6 +115,18 @@ export function ProductionPerformance() {
       addToast(`Error updating production run: ${err.message}`, "danger");
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      if (syncWithBackend) {
+        await syncWithBackend();
+      }
+      addToast("Floor telemetry and order progress refreshed!", "info");
+    } finally {
+      setIsRefreshing(false);
     }
   };
 
@@ -129,13 +152,48 @@ export function ProductionPerformance() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
-        <div>
-          <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
-            Departmental OEE & Performance
-          </h1>
+        <div style={{ display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap" }}>
+          <div>
+            <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
+              Departmental OEE & Performance
+            </h1>
+            <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
+              Live Telemetry & Shift Performance Tracking
+            </p>
+          </div>
+
+          {productionOrders && productionOrders.length > 0 && (
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", background: "var(--bg-surface)", padding: "4px 10px", borderRadius: "8px", border: "1px solid var(--border-subtle)" }}>
+              <span style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)" }}>
+                Active Order:
+              </span>
+              <select
+                value={activeOrder?.id || ""}
+                onChange={(e) => setSelectedOrderId(e.target.value)}
+                style={{
+                  border: "none",
+                  background: "transparent",
+                  color: "var(--text-primary)",
+                  fontSize: "13px",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  outline: "none"
+                }}
+              >
+                {productionOrders.map((ord) => (
+                  <option key={ord.id} value={ord.id}>
+                    {ord.orderNumber || ord.id} • {ord.productName || ord.sku?.name || "Sparkling Spring Water"} ({ord.status || "Scheduled"})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
 
         <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+          <Button variant="secondary" icon={RefreshCw} onClick={handleRefresh} disabled={isRefreshing}>
+            {isRefreshing ? "Refreshing..." : "Refresh"}
+          </Button>
           <Button variant="secondary" icon={Play} onClick={handleOpenUpdateModal}>
             Update Production Run
           </Button>

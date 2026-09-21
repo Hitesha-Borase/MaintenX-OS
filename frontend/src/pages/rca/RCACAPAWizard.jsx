@@ -26,18 +26,18 @@ export function RCACAPAWizard() {
   const [currentStep, setCurrentStep] = useState(0);
 
   // RCA form state
-  const [eventName, setEventName] = useState("Pasteurizer HTST-300 Loop Gasket Rupture & Thermal Excursion");
-  const [assetId, setAssetId] = useState("HT-105");
-  const [occurrenceCause, setOccurrenceCause] = useState("Standard EPDM gasket material degraded due to high-temperature nitric acid CIP rinse cycles exceeding 75°C.");
-  const [escapeCause, setEscapeCause] = useState("In-line diversion valve latency of 420ms allowed 18 Liters of sub-pasteurized product into the buffer manifold before auto-diversion engaged.");
-  const [why1, setWhy1] = useState("Why did product temperature drop? → Gasket ruptured causing loop steam pressure drop.");
-  const [why2, setWhy2] = useState("Why did the gasket rupture? → Elastomer lost tensile elasticity and cracked under 8 bar.");
-  const [why3, setWhy3] = useState("Why did the elastomer crack? → Exposed to 85°C caustic CIP solution for 30 cycles.");
-  const [why4, setWhy4] = useState("Why was standard EPDM used? → BOM specification had not been upgraded to high-temp Viton.");
-  const [why5, setWhy5] = useState("Why was BOM not upgraded? → PM revision change management loop was not triggered after last recipe temperature increase.");
-  const [capaAction, setCapaAction] = useState("1. Convert all Section 3 gaskets to fluoroelastomer Viton.\n2. Install automated ramped temperature cooldown valve curve.\n3. Recalibrate diversion valve solenoid response to < 100ms.");
-  const [owner, setOwner] = useState("Sarah Jenkins (Lead Quality & Reliability)");
-  const [verificationDate, setVerificationDate] = useState("2026-09-30");
+  const [eventName, setEventName] = useState("Smokehouse #3 Draft Damper Thermal Excursion & Lethality Hold Extension");
+  const [assetId, setAssetId] = useState("EQ-SMK-03");
+  const [occurrenceCause, setOccurrenceCause] = useState("Smokehouse #3 draft damper pneumatic actuator experienced mechanical binding in high-temperature grease seal.");
+  const [escapeCause, setEscapeCause] = useState("Pre-shift PM checklist lacked mandatory thermal application inspection for exhaust damper actuator prior to batch feed.");
+  const [why1, setWhy1] = useState("Why did cook cycle extend by 24 min? → Draft damper failed to open to full exhaust position.");
+  const [why2, setWhy2] = useState("Why did damper fail to open? → Pneumatic rotary actuator bound in high-temp grease seal.");
+  const [why3, setWhy3] = useState("Why did grease seal bind? → Standard grease degraded under continuous 85°C steam washdown.");
+  const [why4, setWhy4] = useState("Why was standard grease used? → Lubrication spec lacked explicit high-temp rating requirement.");
+  const [why5, setWhy5] = useState("Why was spec missing high-temp rating? → PM standard RC-12 lacked thermal application classification matrix.");
+  const [capaAction, setCapaAction] = useState("1. Upgrade damper actuator to high-temp PTFE sealed cylinder.\n2. Purge assembly with Krytox food-grade synthetic grease.\n3. Codify 30-day thermal linkage inspection into PM standard RC-12.");
+  const [owner, setOwner] = useState("David Markov (Maintenance Lead)");
+  const [verificationDate, setVerificationDate] = useState("2026-10-05");
 
   const steps = [
     { title: "1. Incident Event", subtitle: "Problem statement" },

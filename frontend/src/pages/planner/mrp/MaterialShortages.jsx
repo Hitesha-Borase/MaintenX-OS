@@ -72,7 +72,7 @@ export function MaterialShortages() {
         name,
         expediteMode: "Air/Express Freight",
         leadTimeReductionHours: 48,
-        vendorName: "Indore Packaging & Beverage Ingredients Ltd"
+        vendorName: "Winpak Packaging & Specialty Films Ltd"
       });
       const data = res?.data || res;
       setExpeditedItems((prev) => ({ ...prev, [skuId]: true, [skuCode]: true }));
@@ -178,7 +178,7 @@ export function MaterialShortages() {
                     </div>
 
                     <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "4px" }}>
-                      Supplier Contract: <strong>Indore Packaging & Beverage Ingredients Ltd</strong> • Standard Lead Time: 5 Days
+                      Supplier Contract: <strong>Winpak Packaging & Specialty Films Ltd</strong> • Standard Lead Time: 5 Days
                     </div>
                   </div>
                 </div>

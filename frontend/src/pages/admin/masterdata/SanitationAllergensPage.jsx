@@ -44,12 +44,12 @@ export function SanitationAllergensPage() {
         masterDataService.getSanitationClasses(),
         masterDataService.getAllergenRules()
       ]);
-      const sanData = sanRes?.data?.data || sanRes?.data || sanRes;
-      if (Array.isArray(sanData) && sanData.length > 0 && typeof setSanitationClasses === "function") {
+      const sanData = sanRes?.data?.data !== undefined ? sanRes.data.data : (sanRes?.data !== undefined ? sanRes.data : sanRes);
+      if (Array.isArray(sanData) && typeof setSanitationClasses === "function") {
         setSanitationClasses(sanData);
       }
-      const algData = algRes?.data?.data || algRes?.data || algRes;
-      if (Array.isArray(algData) && algData.length > 0 && typeof setAllergenRules === "function") {
+      const algData = algRes?.data?.data !== undefined ? algRes.data.data : (algRes?.data !== undefined ? algRes.data : algRes);
+      if (Array.isArray(algData) && typeof setAllergenRules === "function") {
         setAllergenRules(algData);
       }
     } catch (err) {
@@ -131,7 +131,7 @@ export function SanitationAllergensPage() {
         riskLevel: "Critical / Allergen Elimination",
         applicableProducts: "Tonics, Fruit Sodas, Ginger Extract"
       });
-      fetchLiveSanitationAndAllergens();
+      await fetchLiveSanitationAndAllergens();
     } catch (err) {
       addToast("Failed to create sanitation class: " + err.message, "error");
     }
@@ -143,22 +143,22 @@ export function SanitationAllergensPage() {
       addToast("Please provide allergen name.", "warning");
       return;
     }
-    const selSku = skus.find((s) => s.skuId === newAllergen.skuId);
+    const selSku = skus.find((s) => (s.skuId || s.id) === newAllergen.skuId);
     try {
       const created = await addAllergenRule({
         ...newAllergen,
-        skuCode: selSku ? selSku.skuCode : "SKU-5001"
+        skuCode: selSku ? (selSku.skuCode || selSku.code) : "SKU-5001"
       });
       addToast(`Allergen rule "${created?.allergenName || newAllergen.allergenName}" registered!`, "success");
       setIsModalOpen(false);
       setNewAllergen({
         allergenName: "",
-        skuId: skus[0]?.skuId || "SKU-001",
+        skuId: skus[0]?.skuId || skus[0]?.id || "SKU-001",
         riskLevel: "High Regulatory CCP",
         cleaningProtocol: "Class A Full CIP + ATP Swab Validation < 10 RLU",
         changeoverRestriction: "Mandatory QA clearance sign-off before starting non-allergen SKU"
       });
-      fetchLiveSanitationAndAllergens();
+      await fetchLiveSanitationAndAllergens();
     } catch (err) {
       addToast("Failed to create allergen rule: " + err.message, "error");
     }
@@ -174,7 +174,7 @@ export function SanitationAllergensPage() {
       await updateSanitationClass(editingSanitation.id || editingSanitation.sanitationId || editingSanitation.classId, editingSanitation);
       addToast(`Sanitation Class "${editingSanitation.sanitationClass}" updated!`, "success");
       setEditingSanitation(null);
-      fetchLiveSanitationAndAllergens();
+      await fetchLiveSanitationAndAllergens();
     } catch (err) {
       addToast("Failed to update sanitation class: " + err.message, "error");
     }
@@ -186,16 +186,16 @@ export function SanitationAllergensPage() {
       addToast("Please provide allergen name.", "warning");
       return;
     }
-    const selSku = skus.find((s) => s.skuId === editingAllergen.skuId);
+    const selSku = skus.find((s) => (s.skuId || s.id) === editingAllergen.skuId);
     const updated = {
       ...editingAllergen,
-      skuCode: selSku ? selSku.skuCode : editingAllergen.skuCode || "SKU-5001"
+      skuCode: selSku ? (selSku.skuCode || selSku.code) : editingAllergen.skuCode || "SKU-5001"
     };
     try {
       await updateAllergenRule(editingAllergen.id || editingAllergen.allergenId || editingAllergen.ruleId, updated);
       addToast(`Allergen rule "${editingAllergen.allergenName}" updated!`, "success");
       setEditingAllergen(null);
-      fetchLiveSanitationAndAllergens();
+      await fetchLiveSanitationAndAllergens();
     } catch (err) {
       addToast("Failed to update allergen rule: " + err.message, "error");
     }
@@ -209,7 +209,7 @@ export function SanitationAllergensPage() {
           setViewingSanitation(null);
         }
         addToast(`Sanitation class "${s.sanitationClass}" deleted`, "info");
-        fetchLiveSanitationAndAllergens();
+        await fetchLiveSanitationAndAllergens();
       } catch (err) {
         addToast("Failed to delete sanitation class: " + err.message, "error");
       }
@@ -224,7 +224,7 @@ export function SanitationAllergensPage() {
           setViewingAllergen(null);
         }
         addToast(`Allergen rule "${a.allergenName}" deleted`, "info");
-        fetchLiveSanitationAndAllergens();
+        await fetchLiveSanitationAndAllergens();
       } catch (err) {
         addToast("Failed to delete allergen rule: " + err.message, "error");
       }

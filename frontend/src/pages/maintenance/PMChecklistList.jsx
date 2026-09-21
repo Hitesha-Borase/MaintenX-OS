@@ -29,7 +29,7 @@ export function PMChecklistList() {
     name: "",
     applicableAsset: "Rotary Bottling Filler (Aseptic)",
     frequency: "Weekly",
-    author: "Marcus Vance",
+    author: "David Markov",
     sections: [
       {
         title: "Pneumatics & Drive Inspection",
@@ -64,7 +64,7 @@ export function PMChecklistList() {
       name: "",
       applicableAsset: "Rotary Bottling Filler (Aseptic)",
       frequency: "Weekly",
-      author: "Marcus Vance",
+      author: "David Markov",
       sections: []
     });
   };

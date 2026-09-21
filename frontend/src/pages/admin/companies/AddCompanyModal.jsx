@@ -3,7 +3,7 @@ import { Modal } from "../../../components/common/Modal";
 import { Button } from "../../../components/common/Button";
 import { useMasterAdmin } from "../../../context/MasterAdminContext";
 import { useApp } from "../../../context/AppContext";
-import { Building2, User, Mail, Phone, CreditCard } from "lucide-react";
+import { Building2, User, Mail, Phone, CreditCard, AlertCircle } from "lucide-react";
 
 export function AddCompanyModal({ isOpen, onClose }) {
   const { addCompany, plans } = useMasterAdmin();
@@ -29,6 +29,7 @@ export function AddCompanyModal({ isOpen, onClose }) {
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   // Sync subscription field with live database plans
   React.useEffect(() => {
@@ -37,21 +38,35 @@ export function AddCompanyModal({ isOpen, onClose }) {
     }
   }, [plans]);
 
-  const set = (field) => (e) => setFormData((prev) => ({ ...prev, [field]: e.target.value }));
+  React.useEffect(() => {
+    if (isOpen) {
+      setErrorMessage("");
+    }
+  }, [isOpen]);
+
+  const set = (field) => (e) => {
+    setErrorMessage("");
+    setFormData((prev) => ({ ...prev, [field]: e.target.value }));
+  };
 
   const handleCreate = async () => {
     if (!formData.name || !formData.admin || !formData.adminEmail) {
-      addToast("Company name, company owner name, and email are required", "warning");
+      const msg = "Company name, company owner name, and email are required";
+      setErrorMessage(msg);
+      addToast(msg, "warning");
       return;
     }
     setIsSubmitting(true);
+    setErrorMessage("");
     try {
       await addCompany(formData);
       addToast(`${formData.name} created successfully!`, "success");
       onClose();
       setFormData({ name: "", admin: "", adminEmail: "", adminPhone: "", subscription: planOptions[0]?.value || "Plant Pilot" });
     } catch (err) {
-      addToast(err.message || "Failed to create company", "destructive");
+      const msg = err.message || "Failed to create company";
+      setErrorMessage(msg);
+      addToast(msg, "destructive");
     } finally {
       setIsSubmitting(false);
     }
@@ -100,6 +115,25 @@ export function AddCompanyModal({ isOpen, onClose }) {
       }
     >
       <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+        {errorMessage && (
+          <div
+            style={{
+              padding: "10px 14px",
+              backgroundColor: "rgba(239, 68, 68, 0.12)",
+              border: "1.5px solid #EF4444",
+              borderRadius: "8px",
+              color: "#DC2626",
+              fontSize: "13px",
+              fontWeight: 600,
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+            }}
+          >
+            <AlertCircle size={18} style={{ flexShrink: 0 }} />
+            <span>{errorMessage}</span>
+          </div>
+        )}
 
         {/* Company Details */}
         <div style={sectionStyle}>

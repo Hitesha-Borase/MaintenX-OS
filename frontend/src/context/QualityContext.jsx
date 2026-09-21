@@ -9,17 +9,8 @@ export function QualityProvider({ children }) {
   const hasTenant = Boolean(typeof window !== "undefined" && (localStorage.getItem("maintenx_tenant_name") || localStorage.getItem("maintenx_tenant_id")));
   const isTenantActive = Boolean(hasTenant || hasAuthToken);
 
-  const [qualityChecks, setQualityChecks] = useState(() => {
-    if (isTenantActive) return [];
-    const saved = localStorage.getItem("flowstate_quality_checks");
-    return saved ? JSON.parse(saved) : INITIAL_QUALITY_CHECKS;
-  });
-
-  const [deviations, setDeviations] = useState(() => {
-    if (isTenantActive) return [];
-    const saved = localStorage.getItem("flowstate_deviations");
-    return saved ? JSON.parse(saved) : DEVIATIONS_HOLDS;
-  });
+  const [qualityChecks, setQualityChecks] = useState([]);
+  const [deviations, setDeviations] = useState([]);
 
   const [releaseQueue, setReleaseQueue] = useState([]);
   const [isLoading, setIsLoading] = useState(false);

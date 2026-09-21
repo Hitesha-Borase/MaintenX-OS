@@ -191,7 +191,7 @@ export function ProductionEntry() {
       const newLogEntry = {
         id: res?.logId || `LOG-${Math.floor(100 + Math.random() * 900)}`,
         time: timeStr,
-        operator: "Alexander Vance (Line Operator)",
+        operator: "Josiah Leyland (Line Operator)",
         goodUnits: addGood,
         scrapUnits: addScrap,
         runningTotal: newTotal,
@@ -879,7 +879,7 @@ export function ProductionEntry() {
                 recentLogs.map((log) => (
                   <tr key={log.id} style={{ borderBottom: "1px solid #F3F4F6" }}>
                     <td style={{ padding: "8px", fontWeight: 700 }}>{log.time}</td>
-                    <td style={{ padding: "8px" }}>{getSafeString(log.operator, "Alexander Vance")}</td>
+                    <td style={{ padding: "8px" }}>{getSafeString(log.operator, "Ronald Robinson")}</td>
                     <td style={{ padding: "8px", color: "#B27E33", fontWeight: 800 }}>+{log.goodUnits}</td>
                     <td style={{ padding: "8px", color: "#DC2626", fontWeight: 700 }}>+{log.scrapUnits}</td>
                     <td style={{ padding: "8px", fontWeight: 900 }}>{log.runningTotal?.toLocaleString()}</td>

@@ -28,7 +28,7 @@ export const INITIAL_FORECASTS = [
     finalForecast: 55000,
     method: "Historical Average + Promo Uplift",
     reason: "Labor Day Weekend Retail Promotion Campaign",
-    owner: "Alexander Vance",
+    owner: "Ronald Robinson",
     status: "Approved",
     createdDate: "2026-08-25",
     lastUpdated: "2026-08-30"
@@ -47,7 +47,7 @@ export const INITIAL_FORECASTS = [
     finalForecast: 24000,
     method: "Moving Average (4-Week)",
     reason: "Standard seasonal demand baseline",
-    owner: "Alexander Vance",
+    owner: "Ronald Robinson",
     status: "Approved",
     createdDate: "2026-08-26",
     lastUpdated: "2026-08-28"
@@ -66,7 +66,7 @@ export const INITIAL_FORECASTS = [
     finalForecast: 39000,
     method: "Trend Analysis",
     reason: "Fall seasonal uptick in organic carbonated mixers",
-    owner: "Sarah Jenkins",
+    owner: "Stephanie Kuzmych",
     status: "Submitted",
     createdDate: "2026-08-29",
     lastUpdated: "2026-08-30"
@@ -78,7 +78,7 @@ export const INITIAL_SCHEDULE_VERSIONS = [
     versionId: "V4.2",
     title: "Master Weekly Production Schedule V4.2",
     createdDate: "2026-08-30 18:30",
-    createdBy: "Alexander Vance (Lead Scheduler)",
+    createdBy: "Stefan Crawford (Plant Manager)",
     reason: "Optimized Line 1 changeovers & scheduled Aseptic CIP rinse.",
     status: "Published",
     ordersCount: 4,
@@ -90,7 +90,7 @@ export const INITIAL_SCHEDULE_VERSIONS = [
     versionId: "V4.3-DRAFT",
     title: "Draft Production Schedule Revision V4.3",
     createdDate: "2026-09-01 10:15",
-    createdBy: "Alexander Vance (Lead Scheduler)",
+    createdBy: "Stefan Crawford (Plant Manager)",
     reason: "Incorporated Whole Foods urgent demand PO-WF-88901 into Line 1.",
     status: "Validated",
     ordersCount: 5,
@@ -338,7 +338,7 @@ export function PlanningProvider({ children }) {
                   mapeAccuracy: Number(f.mapeAccuracy || 94.6),
                   method: f.method || f.modelType || "Exponential Smoothing",
                   status: f.status || "Approved",
-                  owner: f.owner || "Elena Rostova",
+                  owner: f.owner || "Ronald Robinson",
                   reason: f.reason || f.justification || "",
                   justification: f.justification || f.reason || "",
                   createdDate: f.createdDate || (f.createdAt ? new Date(f.createdAt).toISOString().substring(0, 10) : ""),
@@ -570,7 +570,7 @@ export function PlanningProvider({ children }) {
       finalQty: final,
       method: fcData.method || fcData.modelType || "Historical Moving Average",
       reason: fcData.reason || fcData.justification || "Baseline Forecast generation",
-      owner: fcData.owner || "Alexander Vance",
+      owner: fcData.owner || "Ronald Robinson",
       status: fcData.status || "Draft",
       createdDate: fcData.createdDate || new Date().toISOString().substring(0, 10),
       lastUpdated: new Date().toISOString().substring(0, 10)
@@ -580,7 +580,7 @@ export function PlanningProvider({ children }) {
     return newRecord;
   };
 
-  const applyForecastOverride = (id, overrideQty, reason, owner = "Alexander Vance") => {
+  const applyForecastOverride = (id, overrideQty, reason, owner = "Ronald Robinson") => {
     setForecasts((prev) =>
       prev.map((f) => {
         if (f.id === id) {
@@ -611,7 +611,7 @@ export function PlanningProvider({ children }) {
     );
   };
 
-  const approveForecast = async (id, approver = "Sarah Jenkins") => {
+  const approveForecast = async (id, approver = "Stephanie Kuzmych") => {
     setForecasts((prev) =>
       prev.map((f) => (f.id === id ? { ...f, status: "Approved", lastUpdated: new Date().toISOString().substring(0, 10) } : f))
     );
@@ -764,13 +764,13 @@ export function PlanningProvider({ children }) {
         lineId: line.lineId,
         lineCode: line.lineCode || line.lineId,
         name: line.name,
-        plantName: line.plantName || "Indore Plant",
+        plantName: line.plantName || "Plant 1 - Meat Processing & Smokehouse Facility",
         availableHours: availableWeeklyHours,
         plannedHours: Math.round(plannedHours * 10) / 10,
         remainingHours: Math.round(remainingHours * 10) / 10,
         utilizationPercent: utilization,
         hasConflict,
-        runRateSpec: line.capacity || "42,000 BPH",
+        runRateSpec: line.capacity || "2,500 LBS/HR",
         assignedOrdersCount: assignedSchedules.length,
         status: line.status || "Active"
       };
@@ -979,7 +979,7 @@ export function PlanningProvider({ children }) {
       versionId: nextVer,
       title: title || `Master Production Schedule ${nextVer}`,
       createdDate: new Date().toISOString().substring(0, 16).replace("T", " "),
-      createdBy: "Alexander Vance (Lead Scheduler)",
+      createdBy: "Stefan Crawford (Plant Manager)",
       reason: reason || "New Schedule Revision Baseline Generated",
       status: "Validated",
       ordersCount: schedules.length,
@@ -993,7 +993,7 @@ export function PlanningProvider({ children }) {
     return newVersion;
   };
 
-  const publishScheduleVersion = (versionId, publisher = "Alexander Vance") => {
+  const publishScheduleVersion = (versionId, publisher = "Ronald Robinson") => {
     if (!validateActiveSchedule.isPublishable) {
       addToast("Cannot publish schedule with blocking ERRORS. Resolve capacity/BOM issues first.", "error");
       return false;

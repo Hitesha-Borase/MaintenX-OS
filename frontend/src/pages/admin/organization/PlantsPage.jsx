@@ -81,18 +81,13 @@ export function PlantsPage() {
       ...newPlant,
       code: newPlant.code.trim().toUpperCase(),
       name: newPlant.name.trim(),
-      city: newPlant.city.trim() || "Indore",
-      state: (newPlant.state || "").trim(),
-      country: (newPlant.country || "India").trim(),
+      city: newPlant.city.trim() || "Oshawa",
+      state: (newPlant.state || "Ontario").trim(),
+      country: (newPlant.country || "Canada").trim(),
       location: loc
     };
     try {
-      const res = await masterDataService.createPlant(plantPayload);
-      const created = res?.data || res || plantPayload;
-      if (typeof addPlant === "function") {
-        addPlant(created);
-      }
-      setLocalPlants((prev) => [created, ...(prev || []).filter((p) => p.id !== created.id && p.code !== created.code)]);
+      await masterDataService.createPlant(plantPayload);
       addToast(`Plant "${plantPayload.name}" registered successfully!`, "success");
       setIsModalOpen(false);
       setNewPlant({
@@ -762,7 +757,7 @@ export function PlantsPage() {
                 <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Geographic Location</div>
                 <div style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px", display: "flex", alignItems: "center", gap: "6px" }}>
                   <MapPin size={14} color="#C89547" />
-                  <span>{viewingPlant.location || "Indore, Madhya Pradesh, India"}</span>
+                  <span>{viewingPlant.location || "410 Bloor St W, Oshawa, ON L1J 5Y6, Canada"}</span>
                 </div>
               </div>
 

@@ -43,7 +43,7 @@ export function AuditLogsPage() {
 
   // Form states for creating a new log
   const [newLog, setNewLog] = useState({
-    user: "Alexander Vance",
+    user: "Ronald Robinson",
     userRole: "System Administrator",
     entityType: "SKU Master",
     entityId: "",
@@ -106,7 +106,7 @@ export function AuditLogsPage() {
       }
       setIsAddModalOpen(false);
       setNewLog({
-        user: "Alexander Vance",
+        user: "Ronald Robinson",
         userRole: "System Administrator",
         entityType: "SKU Master",
         entityId: "",

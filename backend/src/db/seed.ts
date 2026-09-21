@@ -90,7 +90,7 @@ export async function runDatabaseSeed() {
       { code: "operator", name: "Line Operator", description: "Certified HMI Line Operator" },
       { code: "quality", name: "Quality / QA", description: "Quality Assurance & Food Safety Lead" },
       { code: "ci_engineer", name: "CI / Engineering", description: "Continuous Improvement & RCA Engineer" },
-      { code: "plant_manager", name: "Plant Manager", description: "Indore Plant Director & Operations Lead" },
+      { code: "plant_manager", name: "Plant Manager", description: "Plant 1 - Meat Processing & Smokehouse Facility Director & Operations Lead" },
       { code: "executive", name: "Executive", description: "Chief Operating Officer & Enterprise Executive" },
     ];
 

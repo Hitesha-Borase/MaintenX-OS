@@ -63,33 +63,33 @@ export function CostingAnalytics() {
       <div className="grid-4">
         <StatCard
           title="Actual Cost Per Unit"
-          value={`$${summary.costPerUnitUSD.toFixed(2)}`}
+          value={`$${(summary.costPerUnitUSD || 0).toFixed(2)}`}
           unit="/ unit"
-          trend={{ value: `+$${summary.varianceUSD.toFixed(2)}`, isPositive: false, text: "vs $0.76 budget" }}
+          trend={{ value: `$${(summary.varianceUSD || 0).toFixed(2)}`, isPositive: (summary.varianceUSD || 0) <= 0, text: "vs budget" }}
           icon={DollarSign}
-          colorVariant="rose"
+          colorVariant="blue"
         />
         <StatCard
           title="Total Batch Actual Spend"
-          value={`$${summary.totalBatchCostUSD.toLocaleString(undefined, { minimumFractionDigits: 2 })}`}
+          value={`$${(summary.totalBatchCostUSD || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`}
           unit="USD"
-          trend={{ value: `+${summary.variancePercentage}% Variance`, isPositive: false, text: "absorbed" }}
+          trend={{ value: `${summary.variancePercentage || 0}% Variance`, isPositive: (summary.variancePercentage || 0) <= 0, text: "absorbed" }}
           icon={TrendingDown}
           colorVariant="amber"
         />
         <StatCard
           title="Raw & Packaging Material"
-          value="$14,270"
+          value={`$${(summary.materialCostUSD || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`}
           unit="USD"
-          trend={{ value: "Direct Match", isPositive: true, text: "ERP invoices" }}
+          trend={{ value: "ERP Invoices", isPositive: true, text: "material" }}
           icon={CheckCircle2}
           colorVariant="emerald"
         />
         <StatCard
           title="Downtime & Scrap Waste"
-          value="$980"
+          value={`$${(summary.wasteCostUSD || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`}
           unit="absorbed"
-          trend={{ value: "+$730 over budget", isPositive: false, text: "Line 1 micro-stops" }}
+          trend={{ value: "$0 over budget", isPositive: true, text: "waste impact" }}
           icon={AlertCircle}
           colorVariant="rose"
         />
@@ -122,24 +122,32 @@ export function CostingAnalytics() {
               </tr>
             </thead>
             <tbody>
-              {summary.costBreakdown.map((row, idx) => (
-                <tr key={idx}>
-                  <td style={{ fontWeight: 700, color: "#FFFFFF" }}>{row.category}</td>
-                  <td>{getTagBadge(row.tag)}</td>
-                  <td style={{ fontFamily: "var(--font-mono)", fontWeight: 700 }}>
-                    ${row.actualCostUSD.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+              {(summary.costBreakdown || []).length === 0 ? (
+                <tr>
+                  <td colSpan={6} style={{ textAlign: "center", padding: "32px", color: "var(--text-muted)" }}>
+                    No batch cost records recorded yet. Manufacturing costs will calculate automatically upon batch logging.
                   </td>
-                  <td style={{ fontFamily: "var(--font-mono)", color: "var(--text-secondary)" }}>
-                    ${row.budgetCostUSD.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                  </td>
-                  <td>
-                    <Badge variant={row.varianceUSD <= 0 ? "emerald" : "rose"}>
-                      {row.varianceUSD > 0 ? `+$${row.varianceUSD.toFixed(2)}` : `$${row.varianceUSD.toFixed(2)}`} ({row.variancePercent}%)
-                    </Badge>
-                  </td>
-                  <td style={{ fontSize: "12px", color: "var(--text-muted)" }}>{row.notes}</td>
                 </tr>
-              ))}
+              ) : (
+                summary.costBreakdown.map((row, idx) => (
+                  <tr key={idx}>
+                    <td style={{ fontWeight: 700, color: "#FFFFFF" }}>{row.category}</td>
+                    <td>{getTagBadge(row.tag)}</td>
+                    <td style={{ fontFamily: "var(--font-mono)", fontWeight: 700 }}>
+                      ${(row.actualCostUSD || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </td>
+                    <td style={{ fontFamily: "var(--font-mono)", color: "var(--text-secondary)" }}>
+                      ${(row.budgetCostUSD || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </td>
+                    <td>
+                      <Badge variant={row.varianceUSD <= 0 ? "emerald" : "rose"}>
+                        {row.varianceUSD > 0 ? `+$${row.varianceUSD.toFixed(2)}` : `$${row.varianceUSD.toFixed(2)}`} ({row.variancePercent}%)
+                      </Badge>
+                    </td>
+                    <td style={{ fontSize: "12px", color: "var(--text-muted)" }}>{row.notes}</td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -155,7 +163,12 @@ export function CostingAnalytics() {
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-          {summary.aiCostOptimizations.map((opt, i) => (
+          {(summary.aiCostOptimizations || []).length === 0 ? (
+            <p style={{ fontSize: "13px", color: "var(--text-secondary)", padding: "12px 0" }}>
+              No cost anomalies detected. AI optimization suggestions will appear when variance thresholds are exceeded.
+            </p>
+          ) : (
+            summary.aiCostOptimizations.map((opt, i) => (
             <div
               key={i}
               style={{

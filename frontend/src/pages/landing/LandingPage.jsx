@@ -28,6 +28,8 @@ import {
   Boxes,
   MapPin,
   Phone,
+  HelpCircle,
+  AlertCircle,
   Mail,
   Factory
 } from "lucide-react";
@@ -43,8 +45,18 @@ export function LandingPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { addToast } = useApp();
-  const { isAuthenticated, currentRole, login, loginWithCredentials } = useRole();
+  const { isAuthenticated, currentRole, login, loginWithCredentials, upgradePlan } = useRole();
   const { plans } = useMasterAdmin();
+
+  const isExistingCompany = Boolean(
+    isAuthenticated && (
+      currentRole?.user?.tenant?.id || 
+      currentRole?.user?.tenantId || 
+      localStorage.getItem("maintenx_tenant_name")
+    )
+  );
+  const currentCompanyName = currentRole?.user?.tenant?.name || currentRole?.user?.companyName || localStorage.getItem("maintenx_tenant_name") || "Your Company";
+  const currentPlanName = currentRole?.user?.tenant?.plan || currentRole?.user?.plan || localStorage.getItem("maintenx_tenant_plan") || "Plant Pilot";
 
   // Demo Modal State
   const [isDemoModalOpen, setIsDemoModalOpen] = useState(false);
@@ -52,6 +64,7 @@ export function LandingPage() {
 
   // Plan Registration & Checkout Modal State
   const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
+  const [planModalError, setPlanModalError] = useState("");
   const [selectedPlan, setSelectedPlan] = useState({
     id: "pilot",
     name: "Plant Pilot",
@@ -99,6 +112,29 @@ export function LandingPage() {
 
   const handlePlanSubmit = async (e) => {
     e.preventDefault();
+
+    // If user is already authenticated with a tenant, perform upgrade!
+    if (isExistingCompany) {
+      setIsSubmittingPlan(true);
+      try {
+        if (upgradePlan) {
+          await upgradePlan(selectedPlan.id || "standard");
+        } else {
+          await billingService.upgradePlan(selectedPlan.id || "standard");
+        }
+        addToast(`Subscription successfully upgraded to ${selectedPlan.name}! All entitled modules are now unlocked.`, "success");
+        setIsPlanModalOpen(false);
+        navigate("/admin/console");
+      } catch (err) {
+        console.error("Upgrade error:", err);
+        const errMsg = err?.response?.data?.message || err?.message || "Failed to upgrade subscription. Please try again.";
+        addToast(errMsg, "destructive");
+      } finally {
+        setIsSubmittingPlan(false);
+      }
+      return;
+    }
+
     const companyName = planForm.company.trim();
     const ownerName = planForm.name.trim();
     const ownerEmail = planForm.email.trim();
@@ -116,6 +152,7 @@ export function LandingPage() {
     }
 
     setIsSubmittingPlan(true);
+    setPlanModalError("");
     try {
       // 1. Provision Tenant & Company Owner directly in PostgreSQL with hashed password
       await authService.register({
@@ -127,22 +164,7 @@ export function LandingPage() {
         subscription: selectedPlan.name,
       });
 
-      // 2. If it's a paid plan, initiate payment order & verification
-      if (!selectedPlan.isFree) {
-        try {
-          const orderRes = await billingService.createOrder(selectedPlan.id || "standard", "CAD");
-          await billingService.verifyPayment({
-            orderId: orderRes?.orderId || `ord_${Date.now().toString(36)}`,
-            paymentId: `pay_${Date.now().toString(36)}`,
-            signature: `sig_${Date.now().toString(36)}`,
-            planId: selectedPlan.id || "standard"
-          });
-        } catch (billingErr) {
-          console.warn("Billing checkout note:", billingErr.message);
-        }
-      }
-
-      // 3. Log in with newly created credentials
+      // 2. Log in with newly created credentials
       if (loginWithCredentials) {
         await loginWithCredentials(ownerEmail, password);
       } else if (login) {
@@ -151,12 +173,14 @@ export function LandingPage() {
 
       addToast(`Account created for ${ownerName}! Welcome to MaintenX OS.`, "success");
       setIsPlanModalOpen(false);
+      setPlanModalError("");
       setPlanForm({ name: "", email: "", phone: "", password: "", company: "", planId: "pilot" });
       setShowPlanPassword(false);
       navigate("/admin/console");
     } catch (err) {
       console.error("Registration error:", err);
       const errMsg = err?.response?.data?.message || err?.message || "Failed to register company. Please try again.";
+      setPlanModalError(errMsg);
       addToast(errMsg, "destructive");
     } finally {
       setIsSubmittingPlan(false);
@@ -242,31 +266,40 @@ export function LandingPage() {
       {/* --------------------------------------------------------- */}
       <nav className="landing-nav">
         <div className="landing-nav-container">
-          {/* MaintenX OS Theme Logo */}
+          {/* MaintenX OS & The Great Canadian Meat Co. Logo */}
           <div 
             className="landing-brand-logo" 
             onClick={() => handleNavClick("/", "home")}
+            style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer" }}
           >
             <div
               style={{
-                width: "34px",
-                height: "34px",
-                borderRadius: "10px",
-                background: "linear-gradient(135deg, #E2B670 0%, #C89547 50%, #B27E33 100%)",
+                height: "36px",
+                padding: "2px 6px",
+                borderRadius: "8px",
+                backgroundColor: "#FFFFFF",
+                border: "1px solid rgba(200, 149, 71, 0.25)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                color: "#261603",
-                boxShadow: "0 3px 10px rgba(200, 149, 71, 0.35)",
+                boxShadow: "0 2px 6px rgba(70, 45, 15, 0.06)",
                 flexShrink: 0
               }}
             >
-              <Flame size={18} />
+              <img
+                src="/great_canadian_meat_logo.png"
+                alt="The Great Canadian Meat Company"
+                style={{
+                  height: "30px",
+                  maxWidth: "54px",
+                  objectFit: "contain"
+                }}
+              />
             </div>
             <div style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
               <span
                 style={{
-                  fontSize: "16px",
+                  fontSize: "15px",
                   fontWeight: 900,
                   letterSpacing: "-0.3px",
                   color: "var(--text-primary, #261603)",
@@ -286,7 +319,7 @@ export function LandingPage() {
                   marginTop: "2px"
                 }}
               >
-                MANUFACTURING CLOUD
+                THE GREAT CANADIAN MEAT CO.
               </span>
             </div>
           </div>
@@ -712,34 +745,41 @@ export function LandingPage() {
               <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "14px" }}>
                 <div
                   style={{
-                    width: "32px",
-                    height: "32px",
+                    padding: "3px 6px",
                     borderRadius: "8px",
-                    background: "linear-gradient(135deg, #E2B670 0%, #C89547 100%)",
+                    backgroundColor: "#FFFFFF",
+                    border: "1px solid rgba(200, 149, 71, 0.25)",
                     display: "flex",
                     alignItems: "center",
-                    justifyContent: "center",
-                    color: "#261603"
+                    justifyContent: "center"
                   }}
                 >
-                  <Flame size={16} />
+                  <img
+                    src="/great_canadian_meat_logo.png"
+                    alt="The Great Canadian Meat Company"
+                    style={{
+                      height: "28px",
+                      maxWidth: "50px",
+                      objectFit: "contain"
+                    }}
+                  />
                 </div>
                 <span style={{ fontSize: "16px", fontWeight: 900, color: "#261603" }}>
                   MaintenX <span style={{ color: "#B27E33" }}>OS</span>
                 </span>
               </div>
               <p style={{ fontSize: "13px", color: "var(--text-secondary, #6B5B4E)", lineHeight: 1.6, marginBottom: "18px" }}>
-                Enterprise Manufacturing Execution System & SCADA Industrial Cloud for high-speed autonomous factories.
+                Enterprise Manufacturing Execution System & SCADA Industrial Cloud for The Great Canadian Meat Company Inc.
               </p>
               <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
                 <span style={{ fontSize: "10px", fontWeight: 750, color: "#B27E33", background: "rgba(200, 149, 71, 0.1)", border: "1px solid rgba(200, 149, 71, 0.25)", padding: "2px 8px", borderRadius: "4px" }}>
+                  CFIA HACCP
+                </span>
+                <span style={{ fontSize: "10px", fontWeight: 750, color: "#B27E33", background: "rgba(200, 149, 71, 0.1)", border: "1px solid rgba(200, 149, 71, 0.25)", padding: "2px 8px", borderRadius: "4px" }}>
+                  SQF LEVEL 3
+                </span>
+                <span style={{ fontSize: "10px", fontWeight: 750, color: "#B27E33", background: "rgba(200, 149, 71, 0.1)", border: "1px solid rgba(200, 149, 71, 0.25)", padding: "2px 8px", borderRadius: "4px" }}>
                   21 CFR PART 11
-                </span>
-                <span style={{ fontSize: "10px", fontWeight: 750, color: "#B27E33", background: "rgba(200, 149, 71, 0.1)", border: "1px solid rgba(200, 149, 71, 0.25)", padding: "2px 8px", borderRadius: "4px" }}>
-                  ISA-95
-                </span>
-                <span style={{ fontSize: "10px", fontWeight: 750, color: "#B27E33", background: "rgba(200, 149, 71, 0.1)", border: "1px solid rgba(200, 149, 71, 0.25)", padding: "2px 8px", borderRadius: "4px" }}>
-                  SOC 2
                 </span>
               </div>
             </div>
@@ -770,18 +810,18 @@ export function LandingPage() {
 
             {/* Column 4: Contact & Facilities */}
             <div>
-              <div className="saas-footer-col-title">Plant Contact</div>
+              <div className="saas-footer-col-title">Plant Facility</div>
               <div className="saas-footer-contact-item">
                 <MapPin size={15} color="#B27E33" style={{ marginTop: "3px", flexShrink: 0 }} />
-                <span>Austin Smart Manufacturing Complex 07, Industrial Pkwy, TX</span>
+                <span>1390 Hopkins Street, Whitby, Ontario, L1N 2C3, Canada</span>
               </div>
               <div className="saas-footer-contact-item">
                 <Phone size={15} color="#B27E33" style={{ flexShrink: 0 }} />
-                <span>+1 (512) 890-FLOW</span>
+                <span>+1 (905) 666-2005</span>
               </div>
               <div className="saas-footer-contact-item">
                 <Mail size={15} color="#B27E33" style={{ flexShrink: 0 }} />
-                <span>operations@maintenx.ops</span>
+                <span>operations@greatcanadianmeat.com</span>
               </div>
             </div>
           </div>
@@ -871,7 +911,7 @@ export function LandingPage() {
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Marcus Vance"
+                  placeholder="e.g. David Markov"
                   value={demoForm.name}
                   onChange={(e) => setDemoForm({ ...demoForm, name: e.target.value })}
                   style={{
@@ -1010,7 +1050,7 @@ export function LandingPage() {
                   MaintenX OS • Tenant Registration
                 </span>
                 <h3 style={{ fontSize: "20px", fontWeight: 850, color: "#2B1D11", margin: "4px 0 0 0" }}>
-                  Register Company – {selectedPlan.name}
+                  {isExistingCompany ? `Upgrade Subscription – ${selectedPlan.name}` : `Register Company – ${selectedPlan.name}`}
                 </h3>
               </div>
               <button
@@ -1029,10 +1069,143 @@ export function LandingPage() {
             </div>
 
             <p style={{ fontSize: "13px", color: "#6B5B4E", lineHeight: 1.5, marginBottom: "16px" }}>
-              Register your company on MaintenX OS with your chosen subscription plan.
+              {isExistingCompany 
+                ? "Upgrade your organization's subscription to instantly activate entitled manufacturing modules." 
+                : "Register your company on MaintenX OS with your chosen subscription plan."}
             </p>
 
-            <form onSubmit={handlePlanSubmit} style={{ display: "flex", flexDirection: "column", gap: "12px", maxHeight: "75vh", overflowY: "auto", paddingRight: "4px" }}>
+            {planModalError && (
+              <div
+                style={{
+                  padding: "10px 14px",
+                  backgroundColor: "rgba(239, 68, 68, 0.12)",
+                  border: "1.5px solid #EF4444",
+                  borderRadius: "8px",
+                  color: "#DC2626",
+                  fontSize: "13px",
+                  fontWeight: 600,
+                  marginBottom: "16px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                }}
+              >
+                <AlertCircle size={18} style={{ flexShrink: 0 }} />
+                <span>{planModalError}</span>
+              </div>
+            )}
+
+            {isExistingCompany ? (
+              <form onSubmit={handlePlanSubmit} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                <div style={{
+                  padding: "16px",
+                  backgroundColor: "var(--bg-main, #F6F3EE)",
+                  borderRadius: "12px",
+                  border: "1px solid var(--border-subtle, #E8DDCF)",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "12px"
+                }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div>
+                      <span style={{ fontSize: "11px", fontWeight: 700, color: "#8C7B6E", textTransform: "uppercase" }}>Organization</span>
+                      <div style={{ fontSize: "15px", fontWeight: 800, color: "#2B1D11" }}>{currentCompanyName}</div>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <span style={{ fontSize: "11px", fontWeight: 700, color: "#8C7B6E", textTransform: "uppercase" }}>Current Plan</span>
+                      <div style={{ fontSize: "13px", fontWeight: 700, color: "#B27E33" }}>{currentPlanName}</div>
+                    </div>
+                  </div>
+
+                  <div style={{
+                    padding: "12px",
+                    backgroundColor: "#FFFFFF",
+                    borderRadius: "8px",
+                    border: "1.5px solid var(--accent-amber, #C89547)",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center"
+                  }}>
+                    <div>
+                      <span style={{ fontSize: "10px", fontWeight: 800, color: "#059669", textTransform: "uppercase" }}>Target Plan</span>
+                      <div style={{ fontSize: "16px", fontWeight: 800, color: "#2B1D11" }}>{selectedPlan.name}</div>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <span style={{ fontSize: "15px", fontWeight: 800, color: "#B27E33" }}>{selectedPlan.price}</span>
+                      <span style={{ fontSize: "12px", color: "#6B5B4E" }}> {selectedPlan.period}</span>
+                    </div>
+                  </div>
+
+                  <div style={{ backgroundColor: "#F0FDF4", border: "1px solid #BBF7D0", borderRadius: "8px", padding: "12px" }}>
+                    <div style={{ fontSize: "12px", fontWeight: 800, color: "#166534", marginBottom: "6px", display: "flex", alignItems: "center", gap: "6px" }}>
+                      <CheckCircle2 size={14} color="#16A34A" /> Entitled Manufacturing Modules:
+                    </div>
+                    <ul style={{ margin: 0, paddingLeft: "18px", fontSize: "11.5px", color: "#15803D", lineHeight: 1.6 }}>
+                      {(selectedPlan.id === "pilot" || (selectedPlan.name || "").toLowerCase().includes("pilot")) ? (
+                        <li>Produce Module (HMI Touchscreen Console, Shift Execution, Operator & Supervisor)</li>
+                      ) : (selectedPlan.id === "starter" || (selectedPlan.name || "").toLowerCase().includes("individual")) ? (
+                        <>
+                          <li>Produce Module (Operator, Line Lead, Shift Supervisor)</li>
+                          <li>Verify Module (Quality Gates, Inline QA Inspection, CCP Validation)</li>
+                        </>
+                      ) : (selectedPlan.id === "standard" || (selectedPlan.name || "").toLowerCase().includes("bundle")) ? (
+                        <>
+                          <li>Plan Module (APS Capacity Scheduling, Batch Sequencing)</li>
+                          <li>Produce Module (Shopfloor Execution & SCADA Telemetry)</li>
+                          <li>Verify Module (Inline Quality & CCP Validation Gates)</li>
+                          <li>Maintain Module (CMMS, Breakdown Tracking, PM Schedules, Spares)</li>
+                          <li>Move Module (Warehouse Inbound/Outbound, Inventory FIFO)</li>
+                        </>
+                      ) : (
+                        <>
+                          <li>All 8 Core Manufacturing Modules (Plan, Produce, Verify, Maintain, Move, People, Improve, Intelligence)</li>
+                          <li>Full Cloud Suite with Multi-Plant Corporate SLA</li>
+                        </>
+                      )}
+                    </ul>
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", gap: "10px" }}>
+                  <button
+                    type="button"
+                    onClick={() => setIsPlanModalOpen(false)}
+                    disabled={isSubmittingPlan}
+                    style={{
+                      flex: 1,
+                      padding: "12px",
+                      borderRadius: "8px",
+                      border: "1px solid #E8DDCF",
+                      backgroundColor: "#FFFFFF",
+                      color: "#6B5B4E",
+                      fontSize: "13px",
+                      fontWeight: 700,
+                      cursor: "pointer"
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmittingPlan}
+                    className="landing-btn-login"
+                    style={{
+                      flex: 2,
+                      padding: "12px",
+                      fontSize: "13px",
+                      borderRadius: "8px",
+                      justifyContent: "center",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px"
+                    }}
+                  >
+                    {isSubmittingPlan ? "Activating Plan..." : `Confirm Upgrade to ${selectedPlan.name} →`}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <form onSubmit={handlePlanSubmit} style={{ display: "flex", flexDirection: "column", gap: "12px", maxHeight: "75vh", overflowY: "auto", paddingRight: "4px" }}>
               {/* Section 1: Company Details */}
               <div style={{
                 padding: "14px",
@@ -1312,6 +1485,7 @@ export function LandingPage() {
                 </button>
               </div>
             </form>
+          )}
           </div>
         </div>
       )}

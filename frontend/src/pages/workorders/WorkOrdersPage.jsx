@@ -75,7 +75,7 @@ export function WorkOrdersPage() {
     type: "Corrective",
     priority: "P2 - High",
     department: "Packaging",
-    assignedTechnician: "Marcus Vance (Senior Tech)",
+    assignedTechnician: "David Markov (Maintenance Lead)",
     failureCode: "MEC-004",
     symptom: "",
     description: "",
@@ -133,7 +133,7 @@ export function WorkOrdersPage() {
       type: "Corrective",
       priority: "P2 - High",
       department: "Packaging",
-      assignedTechnician: "Marcus Vance (Senior Tech)",
+      assignedTechnician: "David Markov (Maintenance Lead)",
       failureCode: "MEC-004",
       symptom: "",
       description: "",
@@ -153,7 +153,7 @@ export function WorkOrdersPage() {
       comments: [
         ...(prev.comments || []),
         {
-          user: "Marcus Vance",
+          user: "David Markov",
           time: new Date().toISOString().replace("T", " ").substring(0, 16),
           text: newCommentText
         }

@@ -38,10 +38,10 @@ export function AppProvider({ children }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const openQuickAction = (form = null) => {
+  const openQuickAction = React.useCallback((form = null) => {
     setQuickActionForm(form);
     setIsQuickActionOpen(true);
-  };
+  }, []);
 
   // Keyboard shortcut for Global Search (Cmd+K / Ctrl+K)
   useEffect(() => {
@@ -55,59 +55,76 @@ export function AppProvider({ children }) {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  const addToast = (message, type = "success", duration = 4000) => {
+  const removeToast = React.useCallback((id) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  }, []);
+
+  const addToast = React.useCallback((message, type = "success", duration = 4000) => {
     const id = Date.now() + Math.random();
     setToasts((prev) => [...prev, { id, message, type }]);
     setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id));
     }, duration);
-  };
+  }, []);
 
-  const removeToast = (id) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
-  };
-
-  const openQrModal = (title, code, meta = {}) => {
+  const openQrModal = React.useCallback((title, code, meta = {}) => {
     setQrModalData({ title, code, meta });
-  };
+  }, []);
 
-  const closeQrModal = () => {
+  const closeQrModal = React.useCallback(() => {
     setQrModalData(null);
-  };
+  }, []);
+
+  const contextValue = React.useMemo(() => ({
+    selectedPlant,
+    setSelectedPlant,
+    PLANTS,
+    selectedDepartment,
+    setSelectedDepartment,
+    DEPARTMENTS,
+    selectedShift,
+    setSelectedShift,
+    SHIFTS,
+    selectedDate,
+    setSelectedDate,
+    isSearchOpen,
+    setIsSearchOpen,
+    isQuickActionOpen,
+    setIsQuickActionOpen,
+    quickActionForm,
+    setQuickActionForm,
+    openQuickAction,
+    qrModalData,
+    openQrModal,
+    closeQrModal,
+    toasts,
+    addToast,
+    removeToast,
+    sidebarCollapsed,
+    setSidebarCollapsed,
+    mobileMenuOpen,
+    setMobileMenuOpen
+  }), [
+    selectedPlant,
+    selectedDepartment,
+    selectedShift,
+    selectedDate,
+    isSearchOpen,
+    isQuickActionOpen,
+    quickActionForm,
+    qrModalData,
+    toasts,
+    sidebarCollapsed,
+    mobileMenuOpen,
+    openQuickAction,
+    openQrModal,
+    closeQrModal,
+    addToast,
+    removeToast
+  ]);
 
   return (
-    <AppContext.Provider
-      value={{
-        selectedPlant,
-        setSelectedPlant,
-        PLANTS,
-        selectedDepartment,
-        setSelectedDepartment,
-        DEPARTMENTS,
-        selectedShift,
-        setSelectedShift,
-        SHIFTS,
-        selectedDate,
-        setSelectedDate,
-        isSearchOpen,
-        setIsSearchOpen,
-        isQuickActionOpen,
-        setIsQuickActionOpen,
-        quickActionForm,
-        setQuickActionForm,
-        openQuickAction,
-        qrModalData,
-        openQrModal,
-        closeQrModal,
-        toasts,
-        addToast,
-        removeToast,
-        sidebarCollapsed,
-        setSidebarCollapsed,
-        mobileMenuOpen,
-        setMobileMenuOpen
-      }}
-    >
+    <AppContext.Provider value={contextValue}>
       {children}
     </AppContext.Provider>
   );

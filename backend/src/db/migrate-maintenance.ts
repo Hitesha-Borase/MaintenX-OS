@@ -55,6 +55,19 @@ export async function runMaintenanceMigration() {
     `);
     console.log("✅ Verified public.work_orders table");
 
+    // 6. Ensure tenant_id column on CI and Exception tables for multi-tenant isolation
+    await client.query(`
+      ALTER TABLE public.ci_verified_solutions ADD COLUMN IF NOT EXISTS tenant_id UUID REFERENCES public.tenants(id) ON DELETE CASCADE;
+      ALTER TABLE public.ci_capa_actions ADD COLUMN IF NOT EXISTS tenant_id UUID REFERENCES public.tenants(id) ON DELETE CASCADE;
+      ALTER TABLE public.ci_losses ADD COLUMN IF NOT EXISTS tenant_id UUID REFERENCES public.tenants(id) ON DELETE CASCADE;
+      ALTER TABLE public.ci_standards ADD COLUMN IF NOT EXISTS tenant_id UUID REFERENCES public.tenants(id) ON DELETE CASCADE;
+      ALTER TABLE public.ci_projects ADD COLUMN IF NOT EXISTS tenant_id UUID REFERENCES public.tenants(id) ON DELETE CASCADE;
+      ALTER TABLE public.ci_capex_projects ADD COLUMN IF NOT EXISTS tenant_id UUID REFERENCES public.tenants(id) ON DELETE CASCADE;
+      ALTER TABLE public.ci_reliability_records ADD COLUMN IF NOT EXISTS tenant_id UUID REFERENCES public.tenants(id) ON DELETE CASCADE;
+      ALTER TABLE public.pm_exceptions ADD COLUMN IF NOT EXISTS tenant_id UUID REFERENCES public.tenants(id) ON DELETE CASCADE;
+    `);
+    console.log("✅ Verified tenant_id columns on CI and Exception tables");
+
     console.log("🎉 Maintenance DB Migration finished successfully!");
   } catch (err: any) {
     console.error("❌ Migration error in maintenance:", err.message);

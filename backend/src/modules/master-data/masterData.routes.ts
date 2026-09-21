@@ -150,6 +150,7 @@ export async function masterDataRoutes(fastify: FastifyInstance) {
   // 13. Assets, Categories & Machine Capability
   fastify.get("/asset-types", { schema: { tags: ["Master Data"], summary: "List Asset Categories / Types" } }, masterDataController.getAssetTypes.bind(masterDataController));
   fastify.post("/asset-types", { schema: { tags: ["Master Data"], summary: "Create Asset Category / Type" } }, masterDataController.createAssetType.bind(masterDataController));
+  fastify.put("/asset-types/:id", { schema: { tags: ["Master Data"], summary: "Update Asset Category / Type" } }, masterDataController.updateAssetType.bind(masterDataController));
   fastify.delete("/asset-types/:id", { schema: { tags: ["Master Data"], summary: "Delete Asset Category / Type" } }, masterDataController.deleteAssetType.bind(masterDataController));
 
   fastify.get("/criticality-levels", { schema: { tags: ["Master Data"], summary: "List Criticality Ratings" } }, masterDataController.getCriticalityLevels.bind(masterDataController));

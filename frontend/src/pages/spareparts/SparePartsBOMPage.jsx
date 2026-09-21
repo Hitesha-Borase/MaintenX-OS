@@ -40,7 +40,7 @@ export function SparePartsBOMPage() {
         partName: part.name,
         quantity: 1,
         assetId: selectedAssetId,
-        requestedBy: "Marcus Vance"
+        requestedBy: "David Markov"
       });
     }
     addToast(`Requisition order submitted for ${part.name} (${part.partNo})!`, "success");

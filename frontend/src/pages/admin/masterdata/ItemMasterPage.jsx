@@ -71,7 +71,7 @@ export function ItemMasterPage() {
   React.useEffect(() => {
     fetchSkus();
     fetchProductFamilies();
-  }, [fetchSkus, fetchProductFamilies]);
+  }, []); // Run on mount only
 
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("ALL");
@@ -965,7 +965,7 @@ export function ItemMasterPage() {
                     ))}
                   </div>
                 ) : (
-                  <div style={{ fontSize: "12px", color: "var(--text-muted)" }}>Created on {viewingSku.createdDate || "2026-08-01"} by {viewingSku.createdBy || "Alexander Vance"}.</div>
+                  <div style={{ fontSize: "12px", color: "var(--text-muted)" }}>Created on {viewingSku.createdDate || "2026-08-01"} by {viewingSku.createdBy || "Ronald Robinson"}.</div>
                 )}
               </div>
             </div>

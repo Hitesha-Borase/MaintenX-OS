@@ -427,6 +427,11 @@ export class MasterDataController {
     return reply.status(201).send(formatSuccess(data, "Asset category created successfully"));
   }
 
+  async updateAssetType(request: FastifyRequest<{ Params: { id: string }; Body: any }>, reply: FastifyReply) {
+    const data = await masterDataService.updateAssetType(request.user?.tenantId, request.params.id, request.body);
+    return reply.send(formatSuccess(data, "Asset category updated successfully"));
+  }
+
   async deleteAssetType(request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) {
     const data = await masterDataService.deleteAssetType(request.user?.tenantId, request.params.id);
     return reply.send(formatSuccess(data, "Asset category deleted successfully"));

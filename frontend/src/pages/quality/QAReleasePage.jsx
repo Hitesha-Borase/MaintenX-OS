@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   FileCheck,
   ShieldCheck,
@@ -15,22 +15,38 @@ import { Badge } from "../../components/common/Badge";
 import { Button } from "../../components/common/Button";
 import { StatCard } from "../../components/common/StatCard";
 import { useApp } from "../../context/AppContext";
+import qualityService from "../../services/qualityService";
 
 export function QAReleasePage() {
   const { addToast } = useApp();
 
-  const [releaseQueue, setReleaseQueue] = useState([
-    { id: "REL-401", lotNo: "LOT-CIT-0830", product: "Sparkling Citrus Soda 500ml", units: 48000, coaStatus: "CoA Complete", microStatus: "Negative (Pass)", releaseStatus: "Pending Release" },
-    { id: "REL-402", lotNo: "LOT-GIN-0830", product: "Organic Ginger Beer 330ml Can", units: 36000, coaStatus: "CoA Complete", microStatus: "Negative (Pass)", releaseStatus: "Released by QA" }
-  ]);
-
+  const [releaseQueue, setReleaseQueue] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
   const [selectedLotForSignoff, setSelectedLotForSignoff] = useState(null);
 
-  const handleSignoff = (lot) => {
-    setReleaseQueue((prev) =>
-      prev.map((r) => (r.id === lot.id ? { ...r, releaseStatus: "Released by QA" } : r))
-    );
-    addToast(`Batch Lot ${lot.lotNo} officially released for global distribution!`, "success");
+  const fetchQueue = async () => {
+    setIsLoading(true);
+    try {
+      const res = await qualityService.getReleaseQueue();
+      const data = res?.data?.data ?? res?.data ?? res;
+      if (Array.isArray(data)) setReleaseQueue(data);
+    } catch (err) {
+      console.warn("Release queue fetch:", err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchQueue(); }, []);
+
+  const handleSignoff = async (lot) => {
+    try {
+      await qualityService.authorizeBatchRelease({ batchId: lot.requestId || lot.id, disposition: "RELEASED" });
+      addToast(`Batch ${lot.batchNumber || lot.lotNo} officially released!`, "success");
+      await fetchQueue();
+    } catch (err) {
+      addToast(err.message || "Release failed", "error");
+    }
     setSelectedLotForSignoff(null);
   };
 

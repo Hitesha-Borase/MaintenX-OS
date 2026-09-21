@@ -68,7 +68,7 @@ export function BinsRacks() {
       await warehouseService.completeBinPutAway({
         lotNumber: lotNum,
         destinationBin: bin,
-        operator: "Carlos Mendez"
+        operator: "Ashley Kulcar"
       }).catch(err => console.warn("completeBinPutAway offline:", err.message));
     } catch (e) {
       console.warn("Putaway API err:", e);
@@ -85,7 +85,7 @@ export function BinsRacks() {
         await warehouseService.completePutAway({
           lotNumber: lot.lotNumber,
           destinationBin: bin,
-          operator: "Carlos Mendez"
+          operator: "Ashley Kulcar"
         }).catch(err => console.warn("completePutAway offline:", err.message));
       } catch (e) {
         console.warn("Putaway API err:", e);
@@ -443,7 +443,7 @@ export function BinsRacks() {
               </p>
             </div>
             <span style={{ fontSize: "12px", fontWeight: 750, color: "#059669", background: "rgba(5, 150, 105, 0.1)", padding: "4px 10px", borderRadius: "20px" }}>
-              Logged by Alexander Vance
+              Logged by Ronald Robinson
             </span>
           </div>
 

@@ -47,7 +47,7 @@ export function StorageTypesPage() {
 
   useEffect(() => {
     fetchStorageTypes();
-  }, [fetchStorageTypes]);
+  }, []); // Run on mount only
 
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("ALL");

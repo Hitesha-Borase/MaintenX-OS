@@ -264,7 +264,7 @@ export const mitigateServiceRiskSchema = z.object({
   riskId: z.string(),
   riskTitle: z.string().optional(),
   actionProtocol: z.string().optional(),
-  authorizedBy: z.string().default("Elena Rostova (Lead Planner)"),
+  authorizedBy: z.string().default("Stefan Crawford (Plant Manager)"),
   notes: z.string().optional(),
 });
 
@@ -273,7 +273,7 @@ export type MitigateServiceRiskInput = z.infer<typeof mitigateServiceRiskSchema>
 export const createScheduleVersionSchema = z.object({
   title: z.string().min(1, "Title is required"),
   reason: z.string().optional(),
-  createdBy: z.string().default("Alexander Vance (Lead Scheduler)"),
+  createdBy: z.string().default("Stefan Crawford (Plant Manager)"),
   status: z.string().default("Draft"),
 });
 
@@ -289,7 +289,7 @@ export type ValidateScheduleInput = z.infer<typeof validateScheduleSchema>;
 
 export const publishScheduleSchema = z.object({
   versionId: z.string().min(1, "Version ID is required"),
-  publishedBy: z.string().default("Alexander Vance (Lead Scheduler)"),
+  publishedBy: z.string().default("Stefan Crawford (Plant Manager)"),
   notes: z.string().optional(),
 });
 

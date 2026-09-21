@@ -32,12 +32,12 @@ export function QualityStatusPage() {
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [formData, setFormData] = useState({
-    parameter: "Brix Sugar Level",
-    line: "Line 1 (Aseptic Bottling)",
-    readingValue: "11.9 °Bx",
-    specRange: "11.8 ± 0.3 °Bx",
+    parameter: "Internal Thermal Core Temp (CCP-1)",
+    line: "LINE-SMK-01 (Thermal Smokehouse Line)",
+    readingValue: "62.4 °C",
+    specRange: "≥ 57.8 °C (Lethality Hold)",
     status: "PASS",
-    inspector: "QA Lead Sarah Jenkins"
+    inspector: "Stephanie Kuzmych (QA Manager)"
   });
 
   const getParamSummary = (q) => {

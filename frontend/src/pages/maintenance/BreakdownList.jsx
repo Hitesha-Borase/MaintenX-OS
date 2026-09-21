@@ -113,7 +113,7 @@ export function BreakdownList() {
     failureCode: "MEC-004",
     severity: "Critical",
     reportedBy: "Operator John Smith",
-    technician: "Marcus Vance",
+    technician: "David Markov",
     durationMinutes: 0,
     productionLossUnits: 3000,
     downtimeCostUSD: 4500
@@ -126,20 +126,20 @@ export function BreakdownList() {
     failureCode: "MEC-004",
     severity: "Critical",
     status: "Open",
-    technician: "Marcus Vance",
+    technician: "David Markov",
     reportedBy: "Operator",
     durationMinutes: 0
   });
 
   // Assign Tech Form State
-  const [assignTech, setAssignTech] = useState("Marcus Vance");
+  const [assignTech, setAssignTech] = useState("David Markov");
 
   // Create WO Form State
   const [woForm, setWoForm] = useState({
     title: "",
     priority: "P1 - Critical",
     type: "Emergency",
-    technician: "Marcus Vance"
+    technician: "David Markov"
   });
 
   // Resolve Form State
@@ -252,7 +252,7 @@ export function BreakdownList() {
       failureCode: "MEC-004",
       severity: "Critical",
       reportedBy: "Operator John Smith",
-      technician: "Marcus Vance",
+      technician: "David Markov",
       productionLossUnits: 3000,
       downtimeCostUSD: 4500
     });
@@ -309,7 +309,7 @@ export function BreakdownList() {
       failureCode: bd.failureCode || "MEC-004",
       severity: getSeverity(bd),
       status: bd.status || "Open",
-      technician: bd.technician || "Marcus Vance",
+      technician: bd.technician || "David Markov",
       reportedBy: getReportedBy(bd),
       durationMinutes: bd.durationMinutes !== undefined ? bd.durationMinutes : 0
     });
@@ -329,7 +329,7 @@ export function BreakdownList() {
 
   const handleOpenAssign = (bd) => {
     setSelectedBreakdown(bd);
-    setAssignTech(bd.technician || "Marcus Vance");
+    setAssignTech(bd.technician || "David Markov");
     setIsAssignModalOpen(true);
   };
 
@@ -350,7 +350,7 @@ export function BreakdownList() {
       title: `Emergency Repair: ${bd.symptom || bd.assetName}`,
       priority: getSeverity(bd) === "Critical" ? "P1 - Critical" : "P2 - High",
       type: "Emergency",
-      technician: bd.technician || "Marcus Vance"
+      technician: bd.technician || "David Markov"
     });
     setIsCreateWOModalOpen(true);
   };
@@ -986,10 +986,10 @@ export function BreakdownList() {
                 value={newForm.technician}
                 onChange={(e) => setNewForm({ ...newForm, technician: e.target.value })}
               >
-                <option value="Marcus Vance">Marcus Vance (Senior Reliability Tech)</option>
+                <option value="David Markov">David Markov (Senior Reliability Tech)</option>
                 <option value="David Kim">David Kim (Hydraulic & Thermal Tech)</option>
-                <option value="Elena Rostova">Elena Rostova (Electrical Specialist)</option>
-                <option value="Carlos Mendez">Carlos Mendez (Mechanical Lead)</option>
+                <option value="Ronald Robinson">Ronald Robinson (Electrical Specialist)</option>
+                <option value="Ashley Kulcar">David Markov (Maintenance Lead)</option>
               </select>
             </div>
             <div className="form-group">
@@ -1296,11 +1296,11 @@ export function BreakdownList() {
                 value={assignTech}
                 onChange={(e) => setAssignTech(e.target.value)}
               >
-                <option value="Marcus Vance">Marcus Vance (Senior Reliability Tech)</option>
+                <option value="David Markov">David Markov (Senior Reliability Tech)</option>
                 <option value="David Kim">David Kim (Hydraulic & Thermal Tech)</option>
-                <option value="Elena Rostova">Elena Rostova (Electrical Specialist)</option>
-                <option value="Carlos Mendez">Carlos Mendez (Mechanical Lead)</option>
-                <option value="Sarah Jenkins">Sarah Jenkins (Quality Tech)</option>
+                <option value="Ronald Robinson">Ronald Robinson (Electrical Specialist)</option>
+                <option value="Ashley Kulcar">David Markov (Maintenance Lead)</option>
+                <option value="Stephanie Kuzmych">Beth Simpson (QA Tech)</option>
               </select>
             </div>
 

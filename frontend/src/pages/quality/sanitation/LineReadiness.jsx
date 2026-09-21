@@ -17,52 +17,8 @@ import qualityService from "../../../services/qualityService";
 export function LineReadiness() {
   const { addToast } = useApp();
 
-  const [lines, setLines] = useState([
-    { 
-      id: 1, 
-      line: "Line 1 (Aseptic Bottling & Rotary Filler 580 BPM)", 
-      lineCode: "LINE-01",
-      safety: "PASSED", 
-      sanitation: "PASSED", 
-      mechanical: "PASSED", 
-      status: "READY",
-      speedTarget: "580 BPM",
-      lastInspection: "10 mins ago"
-    },
-    { 
-      id: 2, 
-      line: "Line 2 (High-Speed Aluminum Canner 800 CPM)", 
-      lineCode: "LINE-02",
-      safety: "PASSED", 
-      sanitation: "PASSED", 
-      mechanical: "PASSED", 
-      status: "READY",
-      speedTarget: "800 CPM",
-      lastInspection: "25 mins ago"
-    },
-    { 
-      id: 3, 
-      line: "Line 3 (Tetra Pak Aseptic Carton 250ml)", 
-      lineCode: "LINE-03",
-      safety: "PASSED", 
-      sanitation: "PENDING", 
-      mechanical: "PASSED", 
-      status: "NOT READY",
-      speedTarget: "350 CPM",
-      lastInspection: "1 hour ago"
-    },
-    { 
-      id: 4, 
-      line: "Line 4 (Stainless Kegging & Bulk Racking)", 
-      lineCode: "LINE-04",
-      safety: "PASSED", 
-      sanitation: "PASSED", 
-      mechanical: "PASSED", 
-      status: "READY",
-      speedTarget: "120 BPH",
-      lastInspection: "40 mins ago"
-    }
-  ]);
+  const [lines, setLines] = useState([]);
+
 
   const [isLoading, setIsLoading] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);

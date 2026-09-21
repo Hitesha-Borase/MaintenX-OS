@@ -68,7 +68,7 @@ export function PMChecklistExecute() {
   const [sections, setSections] = useState(() => sanitizeSections(template?.sections));
   const [failedCheckModalData, setFailedCheckModalData] = useState(null); // When a check fails
   const [technicianNotes, setTechnicianNotes] = useState("");
-  const [supervisorName, setSupervisorName] = useState("Marcus Vance (Lead Tech)");
+  const [supervisorName, setSupervisorName] = useState("David Markov (Maintenance Lead)");
 
   useEffect(() => {
     if (template?.sections) {

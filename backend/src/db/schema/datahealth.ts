@@ -99,7 +99,7 @@ export const systemGovernanceReports = pgTable("system_governance_reports", {
   tier: varchar("tier", { length: 100 }).default("ENTERPRISE TIER ACTIVE"),
   edgeHealth: varchar("edge_health", { length: 100 }).default("99.99% HEALTH"),
   status: varchar("status", { length: 50 }).default("PUBLISHED"),
-  generatedBy: varchar("generated_by", { length: 128 }).default("Alexander Vance"),
+  generatedBy: varchar("generated_by", { length: 128 }).default("Ronald Robinson"),
   metrics: jsonb("metrics"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),

@@ -24,13 +24,15 @@ import traceabilityService from "../../services/traceabilityService";
 
 export function Batch360Traceability() {
   const { addToast } = useApp();
-  const [selectedBatchId, setSelectedBatchId] = useState("BAT-2026-0892");
+  const batchKeys = Object.keys(TRACEABILITY_RECORDS);
+  const [selectedBatchId, setSelectedBatchId] = useState(batchKeys[0] || "");
   const [activeDirection, setActiveDirection] = useState("forward"); // forward | backward
   const [isRecallSimOpen, setIsRecallSimOpen] = useState(false);
 
-  const currentRecord = TRACEABILITY_RECORDS[selectedBatchId] || TRACEABILITY_RECORDS["BAT-2026-0892"];
+  const currentRecord = selectedBatchId ? TRACEABILITY_RECORDS[selectedBatchId] : null;
 
   const handleSimulateRecall = async () => {
+    if (!selectedBatchId) return;
     try {
       await traceabilityService.simulateRecall(selectedBatchId);
       addToast(`Mock Recall Simulation: 100% of affected lots identified for ${selectedBatchId} and logged in PostgreSQL.`, "warning");
@@ -57,10 +59,10 @@ export function Batch360Traceability() {
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-          <Button variant="danger" icon={AlertTriangle} onClick={handleSimulateRecall}>
+          <Button variant="danger" icon={AlertTriangle} onClick={handleSimulateRecall} disabled={!currentRecord}>
             Simulate Mock Recall
           </Button>
-          <Button variant="secondary" icon={Download} onClick={() => addToast("Exporting FDA / FSMA 204 Regulatory Traceability Report (PDF)...")}>
+          <Button variant="secondary" icon={Download} onClick={() => addToast("Exporting FDA / FSMA 204 Regulatory Traceability Report (PDF)...")} disabled={!currentRecord}>
             Export Audit Tree
           </Button>
         </div>
@@ -77,11 +79,16 @@ export function Batch360Traceability() {
               value={selectedBatchId}
               onChange={(e) => {
                 setSelectedBatchId(e.target.value);
-                addToast(`Loaded Genealogical Trace Tree for ${e.target.value}`);
+                if (e.target.value) addToast(`Loaded Genealogical Trace Tree for ${e.target.value}`);
               }}
             >
-              <option value="BAT-2026-0892">BAT-2026-0892 (Organic Orange Juice 500ml)</option>
-              <option value="BAT-2026-0885">BAT-2026-0885 (Sparkling Yuzu Tea 330ml Can)</option>
+              {batchKeys.length > 0 ? (
+                batchKeys.map((k) => (
+                  <option key={k} value={k}>{k} {TRACEABILITY_RECORDS[k]?.productName ? `(${TRACEABILITY_RECORDS[k].productName})` : ""}</option>
+                ))
+              ) : (
+                <option value="">No Batches Recorded</option>
+              )}
             </select>
           </div>
 
@@ -120,58 +127,71 @@ export function Batch360Traceability() {
         </div>
       </Card>
 
-      {/* Batch Overview Tickers */}
-      <div className="grid-4">
-        <StatCard
-          title="Product Code"
-          value={currentRecord.sku}
-          unit=""
-          trend={{ value: currentRecord.productName, isPositive: true, text: "SKU" }}
-          icon={Boxes}
-          colorVariant="blue"
-        />
-        <StatCard
-          title="Manufacturing Bay"
-          value={currentRecord.line}
-          unit=""
-          trend={{ value: currentRecord.plant, isPositive: true, text: "facility" }}
-          icon={Factory}
-          colorVariant="cyan"
-        />
-        <StatCard
-          title="Production Volume"
-          value={currentRecord.totalUnits.toLocaleString()}
-          unit="units"
-          trend={{ value: "12 Pallets", isPositive: true, text: "sealed" }}
-          icon={PackageCheck}
-          colorVariant="emerald"
-        />
-        <StatCard
-          title="Regulatory Compliance"
-          value="100%"
-          unit="FSMA 204"
-          trend={{ value: "0 Trace Gaps", isPositive: true, text: "verified" }}
-          icon={ShieldCheck}
-          colorVariant="emerald"
-        />
-      </div>
-
-      {/* Interactive Traceability Tree Graph */}
-      <Card>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-          <div>
-            <h3 style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-primary)" }}>
-              Genealogical Node Network Graph: {selectedBatchId}
-            </h3>
-            <p style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-              Click on any node in the chain to inspect certificates, process telemetry, and shipping waybills
-            </p>
+      {!currentRecord ? (
+        <Card style={{ padding: "48px 24px", textAlign: "center" }}>
+          <Boxes size={48} style={{ color: "var(--text-muted)", margin: "0 auto 16px" }} />
+          <h3 style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-primary)" }}>No Traceability Records Available</h3>
+          <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "6px", maxWidth: "480px", margin: "6px auto 0" }}>
+            Chain of custody, lot genealogies, and forward/backward node trees will automatically populate as production batches are logged.
+          </p>
+        </Card>
+      ) : (
+        <>
+          {/* Batch Overview Tickers */}
+          <div className="grid-4">
+            <StatCard
+              title="Product Code"
+              value={currentRecord.sku || "—"}
+              unit=""
+              trend={{ value: currentRecord.productName || "—", isPositive: true, text: "SKU" }}
+              icon={Boxes}
+              colorVariant="blue"
+            />
+            <StatCard
+              title="Manufacturing Bay"
+              value={currentRecord.line || "—"}
+              unit=""
+              trend={{ value: currentRecord.plant || "—", isPositive: true, text: "facility" }}
+              icon={Factory}
+              colorVariant="cyan"
+            />
+            <StatCard
+              title="Production Volume"
+              value={currentRecord.totalUnits ? currentRecord.totalUnits.toLocaleString() : "0"}
+              unit="units"
+              trend={{ value: "Live Batches", isPositive: true, text: "sealed" }}
+              icon={PackageCheck}
+              colorVariant="emerald"
+            />
+            <StatCard
+              title="Regulatory Compliance"
+              value="100%"
+              unit="FSMA 204"
+              trend={{ value: "0 Trace Gaps", isPositive: true, text: "verified" }}
+              icon={ShieldCheck}
+              colorVariant="emerald"
+            />
           </div>
-          <Badge variant="cyan">6 Stage Verification Chain</Badge>
-        </div>
 
-        <TraceabilityNodeGraph stages={currentRecord.traceabilityGraph.forwardTree} />
-      </Card>
+          {/* Interactive Traceability Tree Graph */}
+          <Card>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+              <div>
+                <h3 style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-primary)" }}>
+                  Genealogical Node Network Graph: {selectedBatchId}
+                </h3>
+                <p style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
+                  Click on any node in the chain to inspect certificates, process telemetry, and shipping waybills
+                </p>
+              </div>
+              <Badge variant="cyan">6 Stage Verification Chain</Badge>
+            </div>
+
+            <TraceabilityNodeGraph stages={currentRecord.traceabilityGraph?.forwardTree || []} />
+          </Card>
+        </>
+      )}
+
 
       {/* Mock Recall Simulator Result Banner */}
       {isRecallSimOpen && (

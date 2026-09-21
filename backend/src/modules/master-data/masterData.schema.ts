@@ -1,19 +1,39 @@
 import { z } from "zod";
 
 export const createSkuSchema = z.object({
-  skuCode: z.string().min(2),
-  name: z.string().min(2),
-  category: z.enum(["FINISHED_GOODS", "RAW_MATERIAL", "PACKAGING"]),
-  familyId: z.string().uuid().optional(),
-  uom: z.string().default("Units"),
+  name: z.string({ required_error: "SKU name is required" }).min(2, "SKU name must be at least 2 characters"),
+  skuCode: z.string().min(2).optional(),
+  code: z.string().min(2).optional(),
+  category: z.string().default("FINISHED_GOODS").optional(),
+  familyId: z.string().optional(),
+  uom: z.string().default("Units").optional(),
   barcode: z.string().optional(),
-  standardCost: z.coerce.number().default(0),
-  shelfLifeDays: z.coerce.number().default(365),
-  minStockLevel: z.coerce.number().default(1000),
-  maxStockLevel: z.coerce.number().default(50000),
-});
+  standardCost: z.coerce.number().default(0).optional(),
+  shelfLifeDays: z.coerce.number().default(365).optional(),
+  minStockLevel: z.coerce.number().default(1000).optional(),
+  maxStockLevel: z.coerce.number().default(50000).optional(),
+}).passthrough();
 
 export type CreateSkuInput = z.infer<typeof createSkuSchema>;
+
+export const createPlantSchema = z.object({
+  name: z.string({ required_error: "Plant name is required" }).min(2, "Plant name must be at least 2 characters"),
+  code: z.string().optional(),
+  city: z.string().optional(),
+  state: z.string().optional(),
+  country: z.string().optional(),
+  timezone: z.string().optional(),
+}).passthrough();
+
+export type CreatePlantInput = z.infer<typeof createPlantSchema>;
+
+export const createDepartmentSchema = z.object({
+  name: z.string({ required_error: "Department name is required" }).min(2, "Department name must be at least 2 characters"),
+  code: z.string().optional(),
+  plantId: z.string().optional(),
+}).passthrough();
+
+export type CreateDepartmentInput = z.infer<typeof createDepartmentSchema>;
 
 export const createBomSchema = z.object({
   skuId: z.string().uuid(),

@@ -26,10 +26,10 @@ export function AllergenChecks() {
   const [newAuditData, setNewAuditData] = useState({
     name: "",
     sku: "",
-    line: "Line 1 Aseptic Bottling",
+    line: "LINE-PKG-01 Slicing & Packaging Line",
     testMethod: "Lateral Flow Strip (Neogen)",
-    targetAllergen: "Soy Free (<2.5 ppm)",
-    auditor: "Dr. Rachel Thorne"
+    targetAllergen: "Mustard & Gluten Free (<5 ppm)",
+    auditor: "Stephanie Kuzmych"
   });
 
   const fetchAudits = async () => {
@@ -98,10 +98,10 @@ export function AllergenChecks() {
       setNewAuditData({
         name: "",
         sku: "",
-        line: "Line 1 Aseptic Bottling",
+        line: "LINE-PKG-01 Slicing & Packaging Line",
         testMethod: "Lateral Flow Strip (Neogen)",
-        targetAllergen: "Soy Free (<2.5 ppm)",
-        auditor: "Dr. Rachel Thorne"
+        targetAllergen: "Mustard & Gluten Free (<5 ppm)",
+        auditor: "Stephanie Kuzmych"
       });
       await fetchAudits();
       addToast("New allergen verification check saved to database.", "success");

@@ -111,7 +111,7 @@ export function ExceptionControlTower() {
     setResolutionNotes(existingCleanNotes);
     const defaultSigner = currentRole?.user?.name 
       ? `${currentRole.user.name} (${currentRole.label || "Plant Manager"})` 
-      : "Arthur Sterling (Plant Manager)";
+      : "Stefan Crawford (Plant Manager)";
     setResolverName(defaultSigner);
   };
 
@@ -149,7 +149,7 @@ export function ExceptionControlTower() {
   const handleResolve = (e) => {
     e.preventDefault();
     if (!resolveModalException) return;
-    const author = resolverName.trim() || currentRole?.user?.name || "Arthur Sterling";
+    const author = resolverName.trim() || currentRole?.user?.name || "Stefan Crawford";
     const fullNotes = `[Resolved by ${author}]: ${resolutionNotes.trim()}`;
     const nowIso = new Date().toISOString();
     updateExceptionStatus(resolveModalException.id, "Resolved", fullNotes);
@@ -609,7 +609,7 @@ export function ExceptionControlTower() {
               className="form-input"
               value={resolverName}
               onChange={(e) => setResolverName(e.target.value)}
-              placeholder="e.g. Arthur Sterling (Plant Manager)"
+              placeholder="e.g. Stefan Crawford (Plant Manager)"
               required
             />
           </div>

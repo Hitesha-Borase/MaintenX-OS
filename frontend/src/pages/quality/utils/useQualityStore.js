@@ -1,25 +1,15 @@
 import { useState, useEffect } from "react";
 
-// Mock initial state
+// Initial state (always empty — data comes from live DB via quality service)
 const initialState = {
-  checks: [
-    { id: "CHK-1001", batch: "BAT-2026-0891", type: "Hourly CCP", status: "Pending", time: "14:00" },
-    { id: "CHK-1002", batch: "BAT-2026-0891", type: "Brix Test", status: "Pending", time: "15:00" }
-  ],
-  holds: [
-    { id: "HLD-401", batch: "BAT-2026-0890", reason: "Temperature Deviation", status: "Active", date: "2026-09-02" }
-  ],
-  deviations: [
-    { id: "DEV-802", holdId: "HLD-401", description: "Pasteurizer dropped below 83.1C", status: "Open" }
-  ],
-  investigations: [
-    { id: "INV-901", devId: "DEV-802", finding: "", action: "", status: "Pending" }
-  ],
+  checks: [],
+  holds: [],
+  deviations: [],
+  investigations: [],
   capas: [],
-  releases: [
-    { id: "REL-201", batch: "BAT-2026-0889", status: "Pending Review" }
-  ]
+  releases: []
 };
+
 
 // Global event name for syncing across components
 const QUALITY_UPDATE_EVENT = "quality_store_updated";

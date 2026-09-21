@@ -270,7 +270,7 @@ async function resolvePlantId(tenantId: string, plantIdOrCode?: string): Promise
   if (!plantIdOrCode) return undefined;
   if (UUID_REGEX.test(plantIdOrCode)) return plantIdOrCode;
 
-  // Try to find plant by code (e.g. "INDORE-01", "PUNE-02", "PLT-01")
+  // Try to find plant by code (e.g. "PLT-MEAT-01", "PLT-01")
   const [plant] = await db
     .select({ id: plants.id })
     .from(plants)
@@ -510,10 +510,10 @@ export class MasterDataService {
     const newId = `PLT-0${inMemoryPlants.length + 1}`;
     const plantCode = (input.code ? String(input.code).trim().toUpperCase() : `PLT-${Date.now().toString().slice(-4)}`);
     const plantName = (input.name || "Main Manufacturing Plant").toString().trim();
-    const city = (input.city || (input.location ? input.location.split(',')[0]?.trim() : "Indore") || "Indore").toString().trim();
-    const state = (input.state || (input.location ? input.location.split(',')[1]?.trim() : "Madhya Pradesh") || "Madhya Pradesh").toString().trim();
-    const country = (input.country || (input.location ? input.location.split(',')[2]?.trim() : "India") || "India").toString().trim();
-    const timezone = ((input.timezone || "Asia/Kolkata").replace(/\s*\(.*\)/, "").trim()) || "Asia/Kolkata";
+    const city = (input.city || (input.location ? input.location.split(',')[0]?.trim() : "Oshawa") || "Oshawa").toString().trim();
+    const state = (input.state || (input.location ? input.location.split(',')[1]?.trim() : "Ontario") || "Ontario").toString().trim();
+    const country = (input.country || (input.location ? input.location.split(',')[2]?.trim() : "Canada") || "Canada").toString().trim();
+    const timezone = ((input.timezone || "America/Toronto").replace(/\s*\(.*\)/, "").trim()) || "America/Toronto";
     const loc = input.location || `${city}, ${state}, ${country}`;
     const isActive = input.status !== "Inactive" && input.isActive !== false;
 
@@ -2274,9 +2274,6 @@ export class MasterDataService {
   // 12. CHANGEOVER MATRIX
   // ==========================================
   async listChangeoverRules(tenantId?: string) {
-    if (tenantId) {
-      return [];
-    }
     try {
       const res = await db.execute(sql`
         SELECT 
@@ -2296,36 +2293,35 @@ export class MasterDataService {
           created_at AS "createdAt",
           updated_at AS "updatedAt"
         FROM public.changeover_rules
-        ORDER BY created_at ASC
+        ORDER BY created_at DESC
       `);
-      if (res.rows) {
-        return res.rows.map((r: any) => ({
-          id: r.id,
-          matrixId: r.matrixId || r.id,
-          fromSkuId: r.fromSkuId || "SKU-001",
-          fromSkuCode: r.fromSkuCode || "SKU-5001",
-          fromFamily: r.fromFamily || "All Families",
-          toSkuId: r.toSkuId || "SKU-002",
-          toSkuCode: r.toSkuCode || "SKU-5002",
-          toFamily: r.toFamily || "All Families",
-          changeoverDurationMin: Number(r.changeoverDurationMin) || 0,
-          sanitationClass: r.sanitationClass || "Standard Rinse",
-          allergenCleaningRequired: Boolean(r.allergenCleaningRequired),
-          notes: r.notes || "",
-          status: r.status || "Active",
-          createdAt: r.createdAt,
-          updatedAt: r.updatedAt,
-        }));
-      }
+      const rows = (res as any)?.rows || (Array.isArray(res) ? res : []);
+      return rows.map((r: any) => ({
+        id: r.id,
+        matrixId: r.matrixId || r.id,
+        fromSkuId: r.fromSkuId || "SKU-001",
+        fromSkuCode: r.fromSkuCode || "SKU-5001",
+        fromFamily: r.fromFamily || "All Families",
+        toSkuId: r.toSkuId || "SKU-002",
+        toSkuCode: r.toSkuCode || "SKU-5002",
+        toFamily: r.toFamily || "All Families",
+        changeoverDurationMin: Number(r.changeoverDurationMin) || 0,
+        sanitationClass: r.sanitationClass || "Standard Rinse",
+        allergenCleaningRequired: Boolean(r.allergenCleaningRequired),
+        notes: r.notes || "",
+        status: r.status || "Active",
+        createdAt: r.createdAt,
+        updatedAt: r.updatedAt,
+      }));
     } catch (err: any) {
       console.warn("DB listChangeoverRules error:", err.message);
+      return inMemoryChangeoverRules;
     }
-    return inMemoryChangeoverRules;
   }
 
   async createChangeoverRule(tenantId: string | undefined, input: any) {
-    const newId = input.id || input.matrixId || `CO-0${inMemoryChangeoverRules.length + 1}`;
-    const matrixId = input.matrixId || newId;
+    const rawId = input.id || input.matrixId || `CO-${Date.now().toString().slice(-6)}`;
+    const matrixId = input.matrixId || input.id || rawId;
     const fromSkuId = input.fromSkuId || "SKU-001";
     const fromSkuCode = input.fromSkuCode || "SKU-5001";
     const fromFamily = input.fromFamily || "All Families";
@@ -2339,14 +2335,14 @@ export class MasterDataService {
     const status = input.status || "Active";
 
     try {
-      await db.execute(sql`
+      const res = await db.execute(sql`
         INSERT INTO public.changeover_rules (
           id, matrix_id, from_sku_id, from_sku_code, from_family,
           to_sku_id, to_sku_code, to_family, changeover_duration_min,
           sanitation_class, allergen_cleaning_required, notes, status,
           created_at, updated_at
         ) VALUES (
-          ${newId}, ${matrixId}, ${fromSkuId}, ${fromSkuCode}, ${fromFamily},
+          ${rawId}, ${matrixId}, ${fromSkuId}, ${fromSkuCode}, ${fromFamily},
           ${toSkuId}, ${toSkuCode}, ${toFamily}, ${duration},
           ${sanitation}, ${allergen}, ${notes}, ${status},
           NOW(), NOW()
@@ -2365,13 +2361,52 @@ export class MasterDataService {
           notes = EXCLUDED.notes,
           status = EXCLUDED.status,
           updated_at = NOW()
+        RETURNING 
+          id,
+          matrix_id AS "matrixId",
+          from_sku_id AS "fromSkuId",
+          from_sku_code AS "fromSkuCode",
+          from_family AS "fromFamily",
+          to_sku_id AS "toSkuId",
+          to_sku_code AS "toSkuCode",
+          to_family AS "toFamily",
+          changeover_duration_min AS "changeoverDurationMin",
+          sanitation_class AS "sanitationClass",
+          allergen_cleaning_required AS "allergenCleaningRequired",
+          notes,
+          status,
+          created_at AS "createdAt",
+          updated_at AS "updatedAt"
       `);
+      if ((res as any)?.rows?.[0]) {
+        const r = (res as any).rows[0];
+        const record = {
+          id: r.id,
+          matrixId: r.matrixId || r.id,
+          fromSkuId: r.fromSkuId,
+          fromSkuCode: r.fromSkuCode,
+          fromFamily: r.fromFamily,
+          toSkuId: r.toSkuId,
+          toSkuCode: r.toSkuCode,
+          toFamily: r.toFamily,
+          changeoverDurationMin: Number(r.changeoverDurationMin) || 0,
+          sanitationClass: r.sanitationClass,
+          allergenCleaningRequired: Boolean(r.allergenCleaningRequired),
+          notes: r.notes || "",
+          status: r.status || "Active",
+          createdAt: r.createdAt,
+          updatedAt: r.updatedAt,
+        };
+        inMemoryChangeoverRules = [record, ...inMemoryChangeoverRules.filter((x) => x.id !== rawId && x.matrixId !== matrixId)];
+        return record;
+      }
     } catch (err: any) {
       console.warn("DB createChangeoverRule error:", err.message);
+      throw err;
     }
 
     const newRule: ChangeoverRuleEntity = {
-      id: newId,
+      id: rawId,
       matrixId,
       fromSkuId,
       fromSkuCode,
@@ -2386,7 +2421,7 @@ export class MasterDataService {
       status,
     };
 
-    inMemoryChangeoverRules = [newRule, ...inMemoryChangeoverRules.filter((r) => r.id !== newId && r.matrixId !== matrixId)];
+    inMemoryChangeoverRules = [newRule, ...inMemoryChangeoverRules.filter((r) => r.id !== rawId && r.matrixId !== matrixId)];
     return newRule;
   }
 
@@ -2404,7 +2439,7 @@ export class MasterDataService {
     const status = input.status;
 
     try {
-      await db.execute(sql`
+      const res = await db.execute(sql`
         UPDATE public.changeover_rules SET
           from_sku_id = COALESCE(${fromSkuId}, from_sku_id),
           from_sku_code = COALESCE(${fromSkuCode}, from_sku_code),
@@ -2419,9 +2454,29 @@ export class MasterDataService {
           status = COALESCE(${status}, status),
           updated_at = NOW()
         WHERE id::text = ${id} OR matrix_id = ${id} OR lower(matrix_id) = lower(${id})
+        RETURNING 
+          id,
+          matrix_id AS "matrixId",
+          from_sku_id AS "fromSkuId",
+          from_sku_code AS "fromSkuCode",
+          from_family AS "fromFamily",
+          to_sku_id AS "toSkuId",
+          to_sku_code AS "toSkuCode",
+          to_family AS "toFamily",
+          changeover_duration_min AS "changeoverDurationMin",
+          sanitation_class AS "sanitationClass",
+          allergen_cleaning_required AS "allergenCleaningRequired",
+          notes,
+          status,
+          created_at AS "createdAt",
+          updated_at AS "updatedAt"
       `);
+      if ((res as any)?.rows?.[0]) {
+        return (res as any).rows[0];
+      }
     } catch (err: any) {
       console.warn("DB updateChangeoverRule error:", err.message);
+      throw err;
     }
 
     const idx = inMemoryChangeoverRules.findIndex((r) => r.id === id || r.matrixId === id);
@@ -2440,6 +2495,7 @@ export class MasterDataService {
       `);
     } catch (err: any) {
       console.warn("DB deleteChangeoverRule error:", err.message);
+      throw err;
     }
 
     const idx = inMemoryChangeoverRules.findIndex((r) => r.id === id || r.matrixId === id);
@@ -2454,9 +2510,6 @@ export class MasterDataService {
   // 13. SANITATION & ALLERGENS
   // ==========================================
   async listSanitationClasses(tenantId?: string) {
-    if (tenantId) {
-      return [];
-    }
     try {
       const res = await db.execute(sql`
         SELECT 
@@ -2653,9 +2706,6 @@ export class MasterDataService {
   }
 
   async listAllergenRules(tenantId?: string) {
-    if (tenantId) {
-      return [];
-    }
     try {
       const res = await db.execute(sql`
         SELECT
@@ -3049,18 +3099,18 @@ export class MasterDataService {
             bomNumber: r.bom_number || `BOM-${String(r.id).substring(0, 4)}`,
             finishedSkuId: r.sku_id ? String(r.sku_id) : "SKU-001",
             finishedSkuCode: r.sku_code || "SKU-5001",
-            finishedSkuName: r.name || r.sku_name || "Finished Beverage",
+            finishedSkuName: r.name || r.sku_name || "Finished Meat Product",
             revision: r.version || "R1",
-            batchSize: `${Number(r.batch_size || 10000).toLocaleString()} ${r.batch_uom || 'Liters'}`,
+            batchSize: `${Number(r.batch_size || 10000).toLocaleString()} ${r.batch_uom || 'LBS'}`,
             yieldTarget: `${Number(r.yield_percent || 99.0).toFixed(1)}%`,
             expectedYieldPct: Number(r.yield_percent) || 99.0,
             status: statusDisplay,
             approvalStatus: r.approval_status || "Approved",
-            createdBy: r.created_by || "Alexander Vance",
+            createdBy: r.created_by || "Stefan Crawford",
             lastUpdated: r.updated_at ? new Date(r.updated_at).toISOString().substring(0, 10) : new Date().toISOString().substring(0, 10),
             components,
             revisionHistory: [
-              { revision: r.version || "R1", status: r.approval_status || "Approved", createdBy: r.created_by || "Alexander Vance", date: new Date(r.created_at).toISOString().substring(0, 10), changes: "Formulation active in PostgreSQL public.boms", approvedBy: "Sarah Jenkins" }
+              { revision: r.version || "R1", status: r.approval_status || "Approved", createdBy: r.created_by || "Stefan Crawford", date: new Date(r.created_at).toISOString().substring(0, 10), changes: "Formulation active in PostgreSQL public.boms", approvedBy: "Stephanie Kuzmych" }
             ]
           };
         });
@@ -3126,7 +3176,7 @@ export class MasterDataService {
       const yieldNum = Number(String(input.yieldTarget || input.yieldPercent || "99.0").replace(/[^\d.]/g, "")) || 99.0;
       const status = input.status || "Draft";
       const approvalStatus = input.approvalStatus || (status === "Active" ? "Approved" : "Draft");
-      const createdBy = input.createdBy || "Alexander Vance";
+      const createdBy = input.createdBy || "Ronald Robinson";
 
       // 4. Insert into public.boms
       const [inserted] = await db.insert(boms).values({
@@ -3222,7 +3272,7 @@ export class MasterDataService {
         createdBy,
         lastUpdated: new Date().toISOString().substring(0, 10),
         revisionHistory: [
-          { revision: version, status: approvalStatus, createdBy, date: new Date().toISOString().substring(0, 10), changes: "Initial BOM Draft Formulation registered in DB.", approvedBy: approvalStatus === "Approved" ? "Sarah Jenkins" : "-" }
+          { revision: version, status: approvalStatus, createdBy, date: new Date().toISOString().substring(0, 10), changes: "Initial BOM Draft Formulation registered in DB.", approvedBy: approvalStatus === "Approved" ? "Stephanie Kuzmych" : "-" }
         ]
       };
     } catch (err: any) {
@@ -3351,6 +3401,35 @@ export class MasterDataService {
     }
   }
 
+  async updateAssetType(tenantId: string | undefined, id: string, input: any) {
+    try {
+      const name = String(input.name || "").trim();
+      if (!name) {
+        throw new Error("Asset type name is required");
+      }
+      const code = (input.code || name.replace(/[^A-Z0-9]/gi, "").substring(0, 8)).toUpperCase();
+      const description = input.description || "";
+      const res = await db.execute(sql`
+        UPDATE public.asset_types 
+        SET name = ${name}, code = ${code}, description = ${description}, updated_at = NOW()
+        WHERE id::text = ${id} OR code = ${id}
+        RETURNING *
+      `);
+      const row = (res as any)?.rows?.[0] || (Array.isArray(res) ? res[0] : null);
+      return {
+        id: String(row?.id || id),
+        name: row?.name || name,
+        code: row?.code || code,
+        description: row?.description || description,
+        createdAt: row?.created_at,
+        updatedAt: row?.updated_at || new Date().toISOString()
+      };
+    } catch (err: any) {
+      console.warn("DB updateAssetType error:", err.message);
+      throw err;
+    }
+  }
+
   async deleteAssetType(tenantId: string | undefined, id: string) {
     try {
       await db.execute(sql`DELETE FROM public.asset_types WHERE id::text = ${id} OR code = ${id} OR name = ${id}`);
@@ -3448,8 +3527,8 @@ export class MasterDataService {
       });
 
       return rows.map((r) => {
-        const plantName = (r.plantId && plantMap.get(r.plantId)) || "Indore Mega Bottling & Canning Facility";
-        const lineName = (r.lineId && lineMap.get(r.lineId)) || "Line 1 Bottling & Canning (250 BPM)";
+        const plantName = (r.plantId && plantMap.get(r.plantId)) || "Plant 1 - Meat Processing & Smokehouse Facility";
+        const lineName = (r.lineId && lineMap.get(r.lineId)) || "Line 1 - Smokehouse & Grinder Line";
         const rawStatus = (r.status || "Operational").trim();
         const formattedStatus = rawStatus.charAt(0).toUpperCase() + rawStatus.slice(1).toLowerCase();
         const rawCrit = (r.criticalLevel || "Medium").replace(/^CRITICAL_/i, "").replace(/_P[1-3]$/i, "");
@@ -3567,9 +3646,9 @@ export class MasterDataService {
       name: inserted.name,
       type: inserted.modelNumber,
       department: input.department || "Packaging",
-      plant: input.plant || "Indore Mega Facility",
+      plant: input.plant || "Plant 1 - Meat Processing & Smokehouse Facility",
       plantId,
-      line: input.line || "Line 1 Bottling & Canning",
+      line: input.line || "Line 1 - Smokehouse & Grinder Line",
       lineId,
       location: input.location || "Bay 4A - Main Hall",
       status: input.status || "Operational",
@@ -3882,7 +3961,7 @@ export class MasterDataService {
           qs.id,
           qs.tenant_id,
           qs.sku_id,
-          COALESCE(qs.parameter_name, qs.parameter, qs.specification_title, 'Quality Parameter') AS parameter_name,
+          COALESCE(qs.parameter_name, 'Quality Parameter') AS parameter_name,
           COALESCE(qs.target_value, 0) AS target_value,
           COALESCE(qs.min_tolerance, 0) AS min_tolerance,
           COALESCE(qs.max_tolerance, 0) AS max_tolerance,
@@ -4010,7 +4089,6 @@ export class MasterDataService {
         WHERE id::text = ${id}
            OR id::text LIKE '%' || ${id}
            OR lower(COALESCE(parameter_name, '')) = lower(${id})
-           OR lower(COALESCE(parameter, '')) = lower(${id})
       `);
       return { id, ...input };
     } catch (err: any) {
@@ -4026,8 +4104,6 @@ export class MasterDataService {
         WHERE id::text = ${id}
            OR id::text LIKE '%' || ${id}
            OR lower(COALESCE(parameter_name, '')) = lower(${id})
-           OR lower(COALESCE(parameter, '')) = lower(${id})
-           OR lower(COALESCE(specification_title, '')) = lower(${id})
       `);
       return { id, message: "Quality specification deleted" };
     } catch (err: any) {
@@ -4040,59 +4116,134 @@ export class MasterDataService {
   // 15. LABOUR STANDARDS & CREW MANNING
   // ==========================================
   async listLabourStandards(tenantId?: string) {
-    if (tenantId) {
+    try {
+      const res = await db.execute(sql`
+        SELECT 
+          id,
+          standard_id AS "standardId",
+          line_id AS "lineId",
+          line_name AS "lineName",
+          standard_crew AS "standardCrew",
+          std_labor_hours_per_1k_units AS "stdLaborHoursPer1kUnits",
+          direct_cost_per_hour AS "directCostPerHour",
+          status,
+          created_at AS "createdAt",
+          updated_at AS "updatedAt"
+        FROM public.labour_standards
+        ORDER BY created_at DESC
+      `);
+      const rows = (res as any)?.rows || (Array.isArray(res) ? res : []);
+      return rows.map((r: any) => ({
+        id: String(r.id),
+        standardId: r.standardId || `LBR-${String(r.id).slice(-4)}`,
+        lineId: r.lineId || "LIN-01",
+        lineName: r.lineName || "Production Line",
+        standardCrew: Number(r.standardCrew) || 8,
+        stdLaborHoursPer1kUnits: Number(r.stdLaborHoursPer1kUnits) || 2.0,
+        directCostPerHour: r.directCostPerHour || "$25.00",
+        status: r.status || "Active",
+        createdAt: r.createdAt,
+        updatedAt: r.updatedAt,
+      }));
+    } catch (err: any) {
+      console.warn("DB listLabourStandards error:", err.message);
       return [];
     }
-    return inMemoryLabourStandards;
   }
 
   async createLabourStandard(tenantId: string | undefined, input: any) {
-    const newId = `LBR-0${inMemoryLabourStandards.length + 1}`;
-    const rawCost = input.directCostPerHour !== undefined ? input.directCostPerHour.toString().trim() : "$25.00";
-    const costStr = rawCost.startsWith("$") ? rawCost : `$${rawCost}`;
-    const newStandard: LabourStandardEntity = {
-      id: input.id || newId,
-      lineId: input.lineId || "LIN-01",
-      lineName: input.lineName || "Production Line",
-      standardCrew: Number(input.standardCrew) || 8,
-      stdLaborHoursPer1kUnits: Number(input.stdLaborHoursPer1kUnits) || 2.0,
-      directCostPerHour: costStr,
-      status: input.status || "Active",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-    inMemoryLabourStandards.unshift(newStandard);
-    return newStandard;
+    try {
+      const standardIdVal = String(input.standardId || input.id || `LBR-${Date.now().toString().slice(-4)}`).trim();
+      const lineIdVal = String(input.lineId || "LIN-01").trim();
+      const lineNameVal = String(input.lineName || "Production Line").trim();
+      const crewVal = Number(input.standardCrew) || 8;
+      const hoursVal = Number(input.stdLaborHoursPer1kUnits) || 2.0;
+      const rawCost = input.directCostPerHour !== undefined ? input.directCostPerHour.toString().trim() : "$25.00";
+      const costStr = rawCost.startsWith("$") ? rawCost : `$${rawCost}`;
+      const statusVal = String(input.status || "Active").trim();
+
+      const res = await db.execute(sql`
+        INSERT INTO public.labour_standards (
+          standard_id, line_id, line_name, standard_crew,
+          std_labor_hours_per_1k_units, direct_cost_per_hour, status,
+          created_at, updated_at
+        ) VALUES (
+          ${standardIdVal}, ${lineIdVal}, ${lineNameVal}, ${crewVal},
+          ${hoursVal}, ${costStr}, ${statusVal},
+          NOW(), NOW()
+        )
+        ON CONFLICT (standard_id) DO UPDATE SET
+          line_id = EXCLUDED.line_id,
+          line_name = EXCLUDED.line_name,
+          standard_crew = EXCLUDED.standard_crew,
+          std_labor_hours_per_1k_units = EXCLUDED.std_labor_hours_per_1k_units,
+          direct_cost_per_hour = EXCLUDED.direct_cost_per_hour,
+          status = EXCLUDED.status,
+          updated_at = NOW()
+        RETURNING *
+      `);
+      const row = (res as any)?.rows?.[0] || (Array.isArray(res) ? res[0] : null);
+      return {
+        id: row?.id ? String(row.id) : standardIdVal,
+        standardId: row?.standard_id || standardIdVal,
+        lineId: row?.line_id || lineIdVal,
+        lineName: row?.line_name || lineNameVal,
+        standardCrew: Number(row?.standard_crew ?? crewVal),
+        stdLaborHoursPer1kUnits: Number(row?.std_labor_hours_per_1k_units ?? hoursVal),
+        directCostPerHour: row?.direct_cost_per_hour || costStr,
+        status: row?.status || statusVal,
+        createdAt: row?.created_at || new Date().toISOString(),
+        updatedAt: row?.updated_at || new Date().toISOString(),
+      };
+    } catch (err: any) {
+      console.error("DB createLabourStandard error:", err.message);
+      throw err;
+    }
   }
 
   async updateLabourStandard(tenantId: string | undefined, id: string, input: any) {
-    const idx = inMemoryLabourStandards.findIndex((s) => s.id === id);
-    if (idx !== -1) {
-      let costStr = inMemoryLabourStandards[idx].directCostPerHour;
-      if (input.directCostPerHour !== undefined) {
-        const raw = input.directCostPerHour.toString().trim();
+    try {
+      let costStr = input.directCostPerHour;
+      if (costStr !== undefined) {
+        const raw = costStr.toString().trim();
         costStr = raw.startsWith("$") ? raw : `$${raw}`;
       }
-      inMemoryLabourStandards[idx] = {
-        ...inMemoryLabourStandards[idx],
-        ...input,
-        standardCrew: input.standardCrew !== undefined ? Number(input.standardCrew) : inMemoryLabourStandards[idx].standardCrew,
-        stdLaborHoursPer1kUnits: input.stdLaborHoursPer1kUnits !== undefined ? Number(input.stdLaborHoursPer1kUnits) : inMemoryLabourStandards[idx].stdLaborHoursPer1kUnits,
-        directCostPerHour: costStr,
-        updatedAt: new Date().toISOString()
-      };
-      return inMemoryLabourStandards[idx];
+      const crewVal = input.standardCrew !== undefined ? Number(input.standardCrew) : null;
+      const hoursVal = input.stdLaborHoursPer1kUnits !== undefined ? Number(input.stdLaborHoursPer1kUnits) : null;
+
+      await db.execute(sql`
+        UPDATE public.labour_standards
+        SET
+          line_id = COALESCE(${input.lineId || null}, line_id),
+          line_name = COALESCE(${input.lineName || null}, line_name),
+          standard_crew = COALESCE(${crewVal}, standard_crew),
+          std_labor_hours_per_1k_units = COALESCE(${hoursVal}, std_labor_hours_per_1k_units),
+          direct_cost_per_hour = COALESCE(${costStr || null}, direct_cost_per_hour),
+          status = COALESCE(${input.status || null}, status),
+          updated_at = NOW()
+        WHERE id::text = ${id}
+           OR standard_id = ${id}
+           OR lower(line_id) = lower(${id})
+      `);
+      return { id, ...input };
+    } catch (err: any) {
+      console.warn("DB updateLabourStandard error:", err.message);
+      return { id, ...input };
     }
-    return { id, ...input };
   }
 
   async deleteLabourStandard(tenantId: string | undefined, id: string) {
-    const idx = inMemoryLabourStandards.findIndex((s) => s.id === id);
-    if (idx !== -1) {
-      const deleted = inMemoryLabourStandards.splice(idx, 1);
-      return deleted[0];
+    try {
+      await db.execute(sql`
+        DELETE FROM public.labour_standards
+        WHERE id::text = ${id}
+           OR standard_id = ${id}
+      `);
+      return { id, message: "Labour standard deleted" };
+    } catch (err: any) {
+      console.warn("DB deleteLabourStandard error:", err.message);
+      return { id, message: "Labour standard deleted" };
     }
-    return { id, message: "Labour standard deleted" };
   }
 
   // ==========================================
@@ -4131,7 +4282,7 @@ export class MasterDataService {
             departmentId: r.departmentId || "DEP-01",
             role: r.role || "Line Operator",
             plantId: r.plantId || "PLT-01",
-            plantName: r.plantName || "Indore Plant",
+            plantName: r.plantName || "Plant 1 - Meat Processing & Smokehouse Facility",
             skillLevel: r.skillLevel || "Level 2 (Certified Operator)",
             skills: Array.isArray(r.skills) ? r.skills : [],
             certifications: Array.isArray(r.certifications) ? r.certifications : [],
@@ -4158,7 +4309,7 @@ export class MasterDataService {
               departmentId: "DEP-02",
               role: s.designation || "Maintenance Technician",
               plantId: s.plantId,
-              plantName: "Indore Plant",
+              plantName: "Plant 1 - Meat Processing & Smokehouse Facility",
               skillLevel: "Level 2 (Certified Operator)",
               skills: ["Preventive Maintenance", "Floor Diagnostics"],
               certifications: Array.isArray(s.certifications) ? s.certifications : ["GMP Plant Safety"],
@@ -4189,7 +4340,7 @@ export class MasterDataService {
     const deptIdVal = input.departmentId || "DEP-01";
     const roleVal = input.role || "Line Operator";
     const plantIdVal = input.plantId || "PLT-01";
-    const plantNameVal = input.plantName || "Indore Plant";
+    const plantNameVal = input.plantName || "Plant 1 - Meat Processing & Smokehouse Facility";
     const levelVal = input.skillLevel || "Level 2 (Certified Operator)";
     const skillsJson = JSON.stringify(Array.isArray(input.skills) ? input.skills : ["Standard Operating Procedures"]);
     const certsJson = JSON.stringify(Array.isArray(input.certifications) ? input.certifications : ["Plant Safety GMP"]);
@@ -4457,7 +4608,7 @@ export class MasterDataService {
           resourceType: r.resourceType || "Selective Pallet Rack",
           type: r.resourceType || "Selective Pallet Rack",
           plantId: r.plantId || "PLT-01",
-          plantName: r.plantName || "Indore Plant",
+          plantName: r.plantName || "Plant 1 - Meat Processing & Smokehouse Facility",
           zone: r.zone || "General Staging",
           capacityUnit: r.capacityUnit || "Pallet Positions",
           totalCapacity: r.totalCapacity !== null && r.totalCapacity !== undefined ? Number(r.totalCapacity) : 500,
@@ -4484,7 +4635,7 @@ export class MasterDataService {
     const nameVal = input.name || "Storage Resource Bay";
     const typeVal = input.resourceType || input.type || "Selective Pallet Rack";
     const plantIdVal = input.plantId || "PLT-01";
-    const plantNameVal = input.plantName || "Indore Plant";
+    const plantNameVal = input.plantName || "Plant 1 - Meat Processing & Smokehouse Facility";
     const zoneVal = input.zone || "General Staging";
     const unitVal = input.capacityUnit || "Pallet Positions";
     const totalCap = Number(input.totalCapacity) || 500;

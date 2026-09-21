@@ -235,13 +235,14 @@ export function MachineCapabilityPage() {
         status: "Operational"
       };
       let created = null;
-      try {
-        created = await masterDataService.createAsset(payload);
-      } catch (err) {
-        console.warn("API createAsset fallback:", err);
-      }
       if (typeof addAsset === "function") {
-        await addAsset({ ...payload, ...(created || {}) });
+        created = await addAsset(payload);
+      } else {
+        try {
+          created = await masterDataService.createAsset(payload);
+        } catch (err) {
+          console.warn("API createAsset fallback:", err);
+        }
       }
       addToast(`Asset ${created?.assetId || newAsset.name} commissioned!`, "success");
       setIsAddModalOpen(false);
@@ -1229,7 +1230,7 @@ export function MachineCapabilityPage() {
                   ) : (
                     <div style={{ backgroundColor: "var(--bg-card-subtle)", borderRadius: "8px", padding: "10px", fontSize: "12px" }}>
                       <div style={{ display: "flex", justifyContent: "space-between" }}>
-                        <strong>Commissioned into Asset Register by Alexander Vance</strong>
+                        <strong>Commissioned into Asset Register by Ronald Robinson</strong>
                         <span style={{ color: "var(--text-muted)" }}>{viewingAsset.installDate || "2024-03-15"}</span>
                       </div>
                     </div>

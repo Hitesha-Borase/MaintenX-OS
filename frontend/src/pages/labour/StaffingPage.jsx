@@ -111,7 +111,7 @@ export function StaffingPage() {
       line: availableLines[0] || "Warehouse & Material Staging",
       required: 4,
       assigned: 4,
-      supervisor: availableSupervisors[0] || "Carlos Mendez",
+      supervisor: availableSupervisors[0] || "Ashley Kulcar",
       shift: selectedShift,
       notes: ""
     });
@@ -559,11 +559,11 @@ export function StaffingPage() {
                   <datalist id="supervisors-datalist">
                     {Array.from(new Set([
                       ...availableSupervisors,
-                      "Marcus Vance",
-                      "Elena Rostova",
+                      "David Markov",
+                      "Ronald Robinson",
                       "David Kim",
-                      "Sarah Jenkins",
-                      "Carlos Mendez",
+                      "Stephanie Kuzmych",
+                      "Ashley Kulcar",
                       "Thomas Sterling"
                     ])).map((sup, idx) => (
                       <option key={idx} value={sup} />

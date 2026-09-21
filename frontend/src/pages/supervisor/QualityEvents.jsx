@@ -43,7 +43,7 @@ export function QualityEvents() {
       checkType,
       samplePoint,
       status,
-      inspector: "Supervisor Elena Rostova",
+      inspector: "Supervisor Ronald Robinson",
       parameters: [
         { name: "Brix Sugar Content", target: "11.8 ± 0.3 °Bx", actual: `${brix} °Bx`, status: status === "PASS" ? "PASS" : "FAIL" },
         { name: "pH Value", target: "3.65 - 3.85 pH", actual: `${pH} pH`, status: status === "PASS" ? "PASS" : "FAIL" },

@@ -30,7 +30,7 @@ export function PackagingMasterPage() {
     try {
       const res = await masterDataService.getPackConfigs();
       const data = res?.data !== undefined ? res.data : res;
-      if (Array.isArray(data) && data.length > 0 && typeof setPackConfigs === "function") {
+      if (Array.isArray(data) && typeof setPackConfigs === "function") {
         setPackConfigs(data);
       }
     } catch (err) {
@@ -40,7 +40,7 @@ export function PackagingMasterPage() {
 
   useEffect(() => {
     fetchPackConfigs();
-  }, [fetchPackConfigs]);
+  }, []); // Run on mount only
 
   const [searchQuery, setSearchQuery] = useState("");
   const [skuFilter, setSkuFilter] = useState("ALL");
@@ -54,7 +54,7 @@ export function PackagingMasterPage() {
       const cat = (s.category || s.itemType || s.type || "").toLowerCase();
       return (
         cat.includes("finish") ||
-        cat.includes("bev") ||
+        cat.includes("meat") ||
         cat.includes("good") ||
         cat.includes("product") ||
         cat === "finished_goods"

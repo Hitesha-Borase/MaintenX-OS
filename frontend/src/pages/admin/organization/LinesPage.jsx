@@ -28,7 +28,7 @@ export function LinesPage() {
     try {
       const res = await masterDataService.getLines();
       const data = res?.data !== undefined ? res.data : res;
-      if (Array.isArray(data) && data.length > 0 && typeof setLines === "function") {
+      if (Array.isArray(data) && typeof setLines === "function") {
         setLines(data);
       }
     } catch (err) {
@@ -130,7 +130,7 @@ export function LinesPage() {
     if (matched?.name) return matched.name.split(" - ")[0];
     if (line.plantName && line.plantName !== "Main Facility") return line.plantName;
     if (plants.length > 0 && plants[0]?.name) return plants[0].name.split(" - ")[0];
-    return "Indore Facility";
+    return "Plant 1 - Meat Processing Facility";
   };
 
   const filteredLines = useMemo(() => {

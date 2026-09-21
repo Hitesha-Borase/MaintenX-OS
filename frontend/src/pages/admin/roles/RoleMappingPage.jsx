@@ -25,6 +25,12 @@ export function RoleMappingPage() {
   const { users = [], setUsers, updateUserRole, editUser, deleteUser, roles = [], setRoles } = useAdmin() || {};
   const { addToast } = (useApp ? useApp() : null) || { addToast: () => {} };
 
+  const displayRoles = React.useMemo(() => {
+    return (roles || []).filter(
+      (r) => r.code !== "master_admin" && r.name !== "Master Admin"
+    );
+  }, [roles]);
+
   const [viewingUser, setViewingUser] = useState(null);
   const [deletingUser, setDeletingUser] = useState(null);
   const [editingUser, setEditingUser] = useState(null);
@@ -34,7 +40,12 @@ export function RoleMappingPage() {
   useEffect(() => {
     adminService.getRoles()
       .then((data) => {
-        if (Array.isArray(data) && setRoles) setRoles(data);
+        if (Array.isArray(data) && setRoles) {
+          const filtered = data.filter(
+            (r) => r.code !== "master_admin" && r.name !== "Master Admin"
+          );
+          setRoles(filtered);
+        }
       })
       .catch((err) => console.warn("Roles load:", err.message));
 
@@ -62,7 +73,7 @@ export function RoleMappingPage() {
       name: u.name || "",
       role: u.role || (roles[0]?.name || "Line Operator"),
       department: u.department || "Operations",
-      plant: u.plant || "Indore Plant"
+      plant: u.plant || "Plant 1 - Meat Processing & Smokehouse Facility"
     });
   };
 
@@ -135,7 +146,7 @@ export function RoleMappingPage() {
         />
         <StatCard
           title="Available Profiles"
-          value={roles.length.toString()}
+          value={displayRoles.length.toString()}
           unit="Profiles"
           trend={{ value: "Granular access tiers", isPositive: true, text: "" }}
           icon={ShieldCheck}
@@ -196,8 +207,8 @@ export function RoleMappingPage() {
                       value={u.role}
                       onChange={(e) => handleRoleChange(u.id, e.target.value, u.name)}
                     >
-                      {roles.length > 0 ? (
-                        roles.map((r) => (
+                      {displayRoles.length > 0 ? (
+                        displayRoles.map((r) => (
                           <option key={r.id || r.code || r.name} value={r.name}>{r.name}</option>
                         ))
                       ) : (
@@ -389,7 +400,7 @@ export function RoleMappingPage() {
                 </div>
                 <div>
                   <span style={{ fontSize: "11px", color: "var(--text-muted)", display: "block" }}>Plant Facility Scope</span>
-                  <span style={{ color: "var(--text-primary)", fontSize: "13px" }}>{viewingUser.plant || "Indore Plant"}</span>
+                  <span style={{ color: "var(--text-primary)", fontSize: "13px" }}>{viewingUser.plant || "Plant 1 - Meat Processing & Smokehouse Facility"}</span>
                 </div>
               </div>
 

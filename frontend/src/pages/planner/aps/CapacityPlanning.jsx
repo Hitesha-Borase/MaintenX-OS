@@ -42,17 +42,17 @@ export function CapacityPlanning() {
     loadCapacity();
   }, []);
 
-  // Baseline capacity resources (combining Processing Vessels & Packaging Lines)
+  // Baseline capacity resources (combining Meat Processing & Packaging Lines)
   const defaultResources = useMemo(() => {
     return [
       {
-        lineId: "VESSEL-01",
-        lineCode: "VES-101",
-        name: "5,000L Agitated Processing Vessel Tank-01",
-        type: "PROCESSING_VESSEL",
-        plantName: "Indore Processing Facility",
-        runRateSpec: "2,500 L/hr (Agitation: 120 RPM)",
-        turnaroundSpec: "CIP-04 Sanitization: 45 min wash",
+        lineId: "LINE-RAW-01",
+        lineCode: "RAW-PREP-01",
+        name: "Raw Meat Trimming, Injection & Tumbler Line",
+        type: "PROCESSING_LINE",
+        plantName: "Plant 1 - Meat Processing & Smokehouse Facility",
+        runRateSpec: "1,800 lbs/hr (Ruhle IR 56 Injector)",
+        turnaroundSpec: "Sanitation Pre-Op RC-3: 30 min wash",
         availableHours: 120,
         plannedHours: 85,
         remainingHours: 35,
@@ -61,48 +61,33 @@ export function CapacityPlanning() {
         hasConflict: false
       },
       {
-        lineId: "VESSEL-02",
-        lineCode: "VES-102",
-        name: "10,000L High-Shear Mixing Vessel Tank-02",
-        type: "PROCESSING_VESSEL",
-        plantName: "Indore Processing Facility",
-        runRateSpec: "4,000 L/hr (High Shear Blender)",
-        turnaroundSpec: "CIP-02 Alkaline Wash: 60 min wash",
+        lineId: "LINE-SMK-01",
+        lineCode: "SMK-LINE-01",
+        name: "Thermal Smokehouse Cook & Cure Line (Smokehouses 1-5)",
+        type: "PROCESSING_LINE",
+        plantName: "Plant 1 - Meat Processing & Smokehouse Facility",
+        runRateSpec: "2,500 lbs/cook cycle (Enviro-Pak Thermal)",
+        turnaroundSpec: "Sawdust Purge & CCP-1 Clean: 45 min",
         availableHours: 120,
-        plannedHours: 110,
-        remainingHours: 10,
-        utilizationPercent: 92,
-        assignedOrdersCount: 16,
-        hasConflict: true
+        plannedHours: 102,
+        remainingHours: 18,
+        utilizationPercent: 85,
+        assignedOrdersCount: 14,
+        hasConflict: false
       },
       {
-        lineId: "LIN-01",
-        lineCode: "LINE-1",
-        name: "High-Speed Bottling Line 1",
+        lineId: "LINE-PKG-01",
+        lineCode: "PKG-LINE-01",
+        name: "High-Speed Slicing & Thermoforming Packaging Line",
         type: "PACKAGING_LINE",
-        plantName: "Indore Facility",
-        runRateSpec: "500 Bottles/min",
-        turnaroundSpec: "Guide Plate Swap: 30 min changeover",
+        plantName: "Plant 1 - Meat Processing & Smokehouse Facility",
+        runRateSpec: "85 Packs/min (Multivac R535 + Weber Slicer)",
+        turnaroundSpec: "Rollstock Film Swap RC-40A: 20 min",
         availableHours: 120,
         plannedHours: 96,
         remainingHours: 24,
         utilizationPercent: 80,
         assignedOrdersCount: 8,
-        hasConflict: false
-      },
-      {
-        lineId: "LIN-02",
-        lineCode: "LINE-2",
-        name: "Canning & Beverage Line 2",
-        type: "PACKAGING_LINE",
-        plantName: "Indore Facility",
-        runRateSpec: "600 Cans/min",
-        turnaroundSpec: "Format Adjust: 45 min changeover",
-        availableHours: 120,
-        plannedHours: 72,
-        remainingHours: 48,
-        utilizationPercent: 60,
-        assignedOrdersCount: 5,
         hasConflict: false
       }
     ];

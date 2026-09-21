@@ -34,7 +34,7 @@ export function ShiftHandoff() {
     addShiftHandoff({
       shiftFrom,
       shiftTo,
-      handedOverBy: "Elena Rostova (Line Lead)",
+      handedOverBy: "Ronald Robinson (Line Lead)",
       receivedBy: incomingOp,
       notes
     });
@@ -167,7 +167,7 @@ export function ShiftHandoff() {
         isOpen={isSignModalOpen}
         onClose={() => setIsSignModalOpen(false)}
         title="Electronic Signature & Handoff Lock"
-        subtitle="Signee: Elena Rostova (Line Lead)"
+        subtitle="Signee: Ronald Robinson (Line Lead)"
         maxWidth="480px"
         footer={
           <>

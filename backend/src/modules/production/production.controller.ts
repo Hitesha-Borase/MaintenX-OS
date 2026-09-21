@@ -5,7 +5,7 @@ import { resolvePlantId } from "../../shared/utils/tenantContext.js";
 
 export class ProductionController {
   async getOrders(request: FastifyRequest, reply: FastifyReply) {
-    const tenantId = (request as any).user?.tenantId || (request.headers["x-tenant-id"] as string) || "5bce8458-909a-4dd2-b221-614c32ac7c89";
+    const tenantId = (request as any).user?.tenantId || (request.headers["x-tenant-id"] as string) || "0f63be8b-52aa-4e6b-ab83-1d5477328262";
     const plantId = await resolvePlantId(tenantId, (request as any).user?.plantId);
     const data = await productionService.listOrders(tenantId, plantId);
     return reply.send(formatSuccess(data));
@@ -13,7 +13,7 @@ export class ProductionController {
 
   async createOrder(request: FastifyRequest, reply: FastifyReply) {
     const body = request.body as any;
-    const tenantId = (request as any).user?.tenantId || (request.headers["x-tenant-id"] as string) || "5bce8458-909a-4dd2-b221-614c32ac7c89";
+    const tenantId = (request as any).user?.tenantId || (request.headers["x-tenant-id"] as string) || "0f63be8b-52aa-4e6b-ab83-1d5477328262";
     const plantId = await resolvePlantId(tenantId, (request as any).user?.plantId);
     const data = await productionService.createOrder(tenantId, plantId, body);
     return reply.status(201).send(formatSuccess(data, "Production Order created & eBR Batch initialized"));
@@ -21,13 +21,13 @@ export class ProductionController {
 
   async updateOrderStatus(request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) {
     const { status } = request.body as any;
-    const tenantId = (request as any).user?.tenantId || (request.headers["x-tenant-id"] as string) || "5bce8458-909a-4dd2-b221-614c32ac7c89";
+    const tenantId = (request as any).user?.tenantId || (request.headers["x-tenant-id"] as string) || "0f63be8b-52aa-4e6b-ab83-1d5477328262";
     const data = await productionService.updateOrderStatus(tenantId, request.params.id, status);
     return reply.send(formatSuccess(data, `Order status advanced to ${status}`));
   }
 
   async deleteOrder(request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) {
-    const tenantId = (request as any).user?.tenantId || (request.headers["x-tenant-id"] as string) || "5bce8458-909a-4dd2-b221-614c32ac7c89";
+    const tenantId = (request as any).user?.tenantId || (request.headers["x-tenant-id"] as string) || "0f63be8b-52aa-4e6b-ab83-1d5477328262";
     const data = await productionService.deleteOrder(tenantId, request.params.id);
     return reply.send(formatSuccess(data, "Order deleted successfully"));
   }

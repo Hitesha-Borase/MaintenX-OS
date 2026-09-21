@@ -12,7 +12,7 @@ import planningService from "../../../services/planningService";
 
 export function ForecastOverrides() {
   const { currentRole } = useRole();
-  const currentUserName = currentRole?.user?.name || "Elena Rostova";
+  const currentUserName = currentRole?.user?.name || "Ronald Robinson";
   const { forecasts: contextForecasts = [], applyForecastOverride, approveForecast, rejectForecast, addForecast, deleteForecast } = usePlanning();
   const { skus = [] } = useMasterData();
   const { addToast } = useApp();
@@ -813,7 +813,7 @@ export function ForecastOverrides() {
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Elena Rostova"
+                  placeholder="e.g. Ronald Robinson"
                   value={newRecord.owner}
                   onChange={(e) => setNewRecord({ ...newRecord, owner: e.target.value })}
                   className="form-input"

@@ -210,6 +210,9 @@ export interface CIReliabilityRecordEntity {
   createdAt?: string;
 }
 
+const isUuid = (str?: string | null): boolean =>
+  typeof str === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+
 export class CIService {
   // ============================================================================
   // AUDIT LOG HELPER
@@ -224,9 +227,6 @@ export class CIService {
     oldValues?: any;
     newValues?: any;
   }) {
-    const isUuid = (str?: string | null) =>
-      typeof str === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
-
     try {
       await pool.query(
         `INSERT INTO audit_logs (id, tenant_id, plant_id, user_id, action, entity_type, entity_id, old_values, new_values, created_at)
@@ -250,30 +250,43 @@ export class CIService {
   // ============================================================================
   // 1. DASHBOARD SUMMARY
   // ============================================================================
-  async getDashboardSummary(plantId?: string, stage?: string) {
+  async getDashboardSummary(plantId?: string, stage?: string, tenantId?: string) {
     const isPlantFilter = plantId && plantId !== "ALL" && plantId !== "PLT-01";
     const isStageFilter = stage && stage !== "ALL";
+    const validTenant = isUuid(tenantId) ? tenantId : null;
 
-    let plantClause = isPlantFilter ? "WHERE plant_id = $1" : "";
-    const params: any[] = isPlantFilter ? [plantId] : [];
+    const whereConditions: string[] = [];
+    const params: any[] = [];
+    let idx = 1;
+
+    if (validTenant) {
+      whereConditions.push(`tenant_id = $${idx++}::uuid`);
+      params.push(validTenant);
+    }
+    if (isPlantFilter) {
+      whereConditions.push(`plant_id = $${idx++}`);
+      params.push(plantId);
+    }
+
+    const baseClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(" AND ")}` : "";
 
     // Filter clauses for stage-aware tables
-    let stageRcaClause = "";
-    let stageRelClause = "";
-    let stageLossClause = "";
-
+    let stageRcaClause = baseClause;
+    let stageRelClause = baseClause;
+    let stageLossClause = baseClause;
     const stageParams: any[] = [...params];
+
     if (isStageFilter) {
       stageParams.push(stage);
-      const stageParamIdx = stageParams.length;
-      stageRcaClause = isPlantFilter ? `WHERE plant_id = $1 AND stage = $${stageParamIdx}` : `WHERE stage = $${stageParamIdx}`;
-      stageRelClause = isPlantFilter ? `WHERE plant_id = $1 AND stage = $${stageParamIdx}` : `WHERE stage = $${stageParamIdx}`;
-      stageLossClause = isPlantFilter ? `WHERE plant_id = $1 AND stage = $${stageParamIdx}` : `WHERE stage = $${stageParamIdx}`;
-    } else {
-      stageRcaClause = plantClause;
-      stageRelClause = plantClause;
-      stageLossClause = plantClause;
+      const stageIdx = stageParams.length;
+      const stageCond = `stage = $${stageIdx}`;
+      stageRcaClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(" AND ")} AND ${stageCond}` : `WHERE ${stageCond}`;
+      stageRelClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(" AND ")} AND ${stageCond}` : `WHERE ${stageCond}`;
+      stageLossClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(" AND ")} AND ${stageCond}` : `WHERE ${stageCond}`;
     }
+
+    const tenantOnlyClause = validTenant ? `WHERE tenant_id = $1::uuid` : "";
+    const tenantOnlyParams = validTenant ? [validTenant] : [];
 
     // Projects savings
     const projRes = await pool.query(
@@ -283,7 +296,7 @@ export class CIService {
         COUNT(*) AS total_projects,
         COUNT(CASE WHEN status = 'Completed' OR benefit_status = 'Verified & Locked' THEN 1 END) AS completed_projects,
         COUNT(CASE WHEN benefit_status = 'Pending Verification' THEN 1 END) AS pending_benefits
-      FROM ci_projects ${plantClause}`,
+      FROM ci_projects ${baseClause}`,
       params
     );
 
@@ -317,7 +330,7 @@ export class CIService {
         COUNT(CASE WHEN is_bad_actor = true THEN 1 END) AS bad_actors_count,
         COALESCE(AVG(mtbf_hrs), 0) AS avg_mtbf,
         COALESCE(AVG(mttr_min), 0) AS avg_mttr
-      FROM ci_reliability_records ${plantClause}
+      FROM ci_reliability_records ${baseClause}
       GROUP BY stage`,
       params
     );
@@ -339,7 +352,7 @@ export class CIService {
         COALESCE(SUM(hours_lost), 0) AS hours_lost,
         COALESCE(SUM(financial_impact_usd), 0) AS loss_usd,
         COALESCE(SUM(units_lost), 0) AS units_lost
-      FROM ci_losses ${plantClause}
+      FROM ci_losses ${baseClause}
       GROUP BY stage`,
       params
     );
@@ -353,7 +366,8 @@ export class CIService {
         COUNT(CASE WHEN status = 'Open' OR status = 'In Progress' THEN 1 END) AS pending_capa,
         COUNT(CASE WHEN status = 'Verified' THEN 1 END) AS verified_capa,
         COUNT(CASE WHEN status NOT IN ('Completed', 'Verified', 'Closed') AND due_date < CURRENT_DATE::text THEN 1 END) AS overdue_capa
-      FROM ci_capa_actions`
+      FROM ci_capa_actions ${tenantOnlyClause}`,
+      tenantOnlyParams
     );
 
     // Capex projects
@@ -361,7 +375,7 @@ export class CIService {
       `SELECT 
         COUNT(*) AS total_capex,
         COUNT(CASE WHEN status NOT IN ('Closed', 'Commissioned') THEN 1 END) AS open_capex
-      FROM ci_capex_projects ${plantClause}`,
+      FROM ci_capex_projects ${baseClause}`,
       params
     );
 
@@ -370,13 +384,14 @@ export class CIService {
       `SELECT 
         COUNT(*) AS total_standards,
         COUNT(CASE WHEN status = 'Active' THEN 1 END) AS active_standards
-      FROM ci_standards ${plantClause}`,
+      FROM ci_standards ${baseClause}`,
       params
     );
 
     // Verified Solutions
     const solRes = await pool.query(
-      `SELECT COUNT(*) AS total_solutions FROM ci_verified_solutions`
+      `SELECT COUNT(*) AS total_solutions FROM ci_verified_solutions ${tenantOnlyClause}`,
+      tenantOnlyParams
     );
 
     const proj = projRes.rows[0] || {};
@@ -479,10 +494,14 @@ export class CIService {
     };
   }
 
-  async listInvestigations(plantId?: string, stage?: string): Promise<RCAInvestigationEntity[]> {
+  async listInvestigations(plantId?: string, stage?: string, tenantId?: string): Promise<RCAInvestigationEntity[]> {
     let query = "SELECT * FROM ci_rca_investigations WHERE 1=1";
     const params: any[] = [];
     let idx = 1;
+    if (isUuid(tenantId)) {
+      query += ` AND tenant_id = $${idx++}::uuid`;
+      params.push(tenantId);
+    }
     if (plantId && plantId !== "ALL" && plantId !== "PLT-01") {
       query += ` AND plant_id = $${idx++}`;
       params.push(plantId);
@@ -508,14 +527,15 @@ export class CIService {
     const year = new Date().getFullYear();
     const newId = data.id || `RCA-${year}-${String(count).padStart(3, "0")}`;
     const userName = userContext?.userName || "Lead CI Engineer";
+    const tId = isUuid(userContext?.tenantId) ? userContext!.tenantId : null;
 
     const res = await pool.query(
       `INSERT INTO ci_rca_investigations (
         id, plant_id, title, stage, asset_id, asset_name, line_id, line_name,
         source_breakdown_id, source_work_order_id, severity, status,
         current_phase, problem_statement, lead_investigator, team_members,
-        event_date, days_active, why_tree, eight_d
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+        event_date, days_active, why_tree, eight_d, tenant_id
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
       RETURNING *`,
       [
         newId,
@@ -538,6 +558,7 @@ export class CIService {
         data.daysActive || 0,
         JSON.stringify(data.whyTree || []),
         JSON.stringify(data.eightD || {}),
+        tId,
       ]
     );
 
@@ -668,8 +689,8 @@ export class CIService {
     return { id, message: "Investigation and linked items deleted successfully" };
   }
 
-  async getRCASummary(plantId?: string) {
-    const list = await this.listInvestigations(plantId);
+  async getRCASummary(plantId?: string, tenantId?: string) {
+    const list = await this.listInvestigations(plantId, undefined, tenantId);
     const total = list.length;
     const closed = list.filter((i) => i.status === "Closed" || i.currentPhase === "Closed").length;
     const active = total - closed;
@@ -957,11 +978,16 @@ export class CIService {
     actionType?: string;
     status?: string;
     stage?: string;
+    tenantId?: string;
   }): Promise<CapaActionEntity[]> {
     let query = "SELECT * FROM ci_capa_actions WHERE 1=1";
     const params: any[] = [];
     let idx = 1;
 
+    if (isUuid(filters?.tenantId)) {
+      query += ` AND tenant_id = $${idx++}::uuid`;
+      params.push(filters!.tenantId);
+    }
     if (filters?.rcaId && filters.rcaId !== "ALL") {
       query += ` AND rca_id = $${idx++}`;
       params.push(filters.rcaId);
@@ -993,13 +1019,14 @@ export class CIService {
     const count = Number(seq.rows[0].count) + 1;
     const year = new Date().getFullYear();
     const newId = data.id || `CAPA-${year}-${String(count).padStart(3, "0")}`;
+    const tId = isUuid(userContext?.tenantId) ? userContext!.tenantId : null;
 
     const res = await pool.query(
       `INSERT INTO ci_capa_actions (
         id, rca_id, project_id, description, action_type, owner,
         due_date, priority, stage, status, completion_date, evidence_notes,
-        effectiveness_result, verified_by, verified_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+        effectiveness_result, verified_by, verified_at, tenant_id
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
       RETURNING *`,
       [
         newId,
@@ -1017,6 +1044,7 @@ export class CIService {
         data.effectivenessResult || null,
         data.verifiedBy || null,
         data.verifiedAt || null,
+        tId,
       ]
     );
 
@@ -1208,11 +1236,15 @@ export class CIService {
     };
   }
 
-  async listLosses(plantId?: string, category?: string, stage?: string): Promise<CILossEntity[]> {
+  async listLosses(plantId?: string, category?: string, stage?: string, tenantId?: string): Promise<CILossEntity[]> {
     let query = "SELECT * FROM ci_losses WHERE 1=1";
     const params: any[] = [];
     let idx = 1;
 
+    if (isUuid(tenantId)) {
+      query += ` AND tenant_id = $${idx++}::uuid`;
+      params.push(tenantId);
+    }
     if (plantId && plantId !== "ALL" && plantId !== "PLT-01") {
       query += ` AND plant_id = $${idx++}`;
       params.push(plantId);
@@ -1235,13 +1267,14 @@ export class CIService {
     const seq = await pool.query("SELECT COUNT(*) FROM ci_losses");
     const count = Number(seq.rows[0].count) + 1;
     const newId = data.id || `LOSS-${String(count).padStart(2, "0")}`;
+    const tId = isUuid(userContext?.tenantId) ? userContext!.tenantId : null;
 
     const res = await pool.query(
       `INSERT INTO ci_losses (
         id, category, plant_id, line_id, asset_id, stage, event_name,
         hours_lost, units_lost, financial_impact_usd, linked_rca_id,
-        linked_project_id, trend, date
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+        linked_project_id, trend, date, tenant_id
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
       RETURNING *`,
       [
         newId,
@@ -1258,6 +1291,7 @@ export class CIService {
         data.linkedProjectId || null,
         data.trend || "Tracked",
         data.date || new Date().toISOString().substring(0, 10),
+        tId,
       ]
     );
 
@@ -1287,8 +1321,8 @@ export class CIService {
     return { id, message: "Loss incident deleted" };
   }
 
-  async getLossSummary(plantId?: string) {
-    const list = await this.listLosses(plantId);
+  async getLossSummary(plantId?: string, tenantId?: string) {
+    const list = await this.listLosses(plantId, undefined, undefined, tenantId);
     const totalUSD = list.reduce((acc, l) => acc + l.financialImpactUSD, 0);
     const totalHours = list.reduce((acc, l) => acc + l.hoursLost, 0);
     const totalUnits = list.reduce((acc, l) => acc + l.unitsLost, 0);
@@ -1345,11 +1379,17 @@ export class CIService {
     };
   }
 
-  async listProjects(plantId?: string): Promise<CIProjectEntity[]> {
-    let query = "SELECT * FROM ci_projects";
+  async listProjects(plantId?: string, tenantId?: string): Promise<CIProjectEntity[]> {
+    let query = "SELECT * FROM ci_projects WHERE 1=1";
     const params: any[] = [];
+    let idx = 1;
+
+    if (isUuid(tenantId)) {
+      query += ` AND tenant_id = $${idx++}::uuid`;
+      params.push(tenantId);
+    }
     if (plantId && plantId !== "ALL") {
-      query += " WHERE plant_id = $1";
+      query += ` AND plant_id = $${idx++}`;
       params.push(plantId);
     }
     query += " ORDER BY created_at DESC";
@@ -1367,6 +1407,7 @@ export class CIService {
     const seq = await pool.query("SELECT COUNT(*) FROM ci_projects");
     const count = Number(seq.rows[0].count) + 1;
     const newId = input.id || `PRJ-CI-${String(count).padStart(3, "0")}`;
+    const tId = isUuid(userContext?.tenantId) ? userContext!.tenantId : null;
 
     const res = await pool.query(
       `INSERT INTO ci_projects (
@@ -1374,8 +1415,8 @@ export class CIService {
         sponsor, owner, start_date, target_date, status, progress,
         baseline_metric, target_metric, current_metric,
         projected_savings_annual, realized_savings_ytd, benefit_status,
-        locked_by, locked_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
+        locked_by, locked_at, tenant_id
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
       RETURNING *`,
       [
         newId,
@@ -1399,6 +1440,7 @@ export class CIService {
         input.benefitStatus || "Draft",
         input.lockedBy || null,
         input.lockedAt || null,
+        tId,
       ]
     );
 
@@ -1536,8 +1578,8 @@ export class CIService {
     return this.mapProject(res.rows[0]);
   }
 
-  async getBenefitsSummary(plantId?: string) {
-    const projects = await this.listProjects(plantId);
+  async getBenefitsSummary(plantId?: string, tenantId?: string) {
+    const projects = await this.listProjects(plantId, tenantId);
     const verified = projects.filter((p) => p.benefitStatus === "Verified & Locked");
     const pending = projects.filter((p) => p.benefitStatus === "Pending Verification");
     const realizedSavingsTotal = verified.reduce((sum, p) => sum + (p.realizedSavingsYTD || 0), 0);
@@ -1577,11 +1619,15 @@ export class CIService {
     };
   }
 
-  async listStandards(plantId?: string, type?: string): Promise<CIStandardEntity[]> {
+  async listStandards(plantId?: string, type?: string, tenantId?: string): Promise<CIStandardEntity[]> {
     let query = "SELECT * FROM ci_standards WHERE 1=1";
     const params: any[] = [];
     let idx = 1;
 
+    if (isUuid(tenantId)) {
+      query += ` AND tenant_id = $${idx++}::uuid`;
+      params.push(tenantId);
+    }
     if (plantId && plantId !== "ALL") {
       query += ` AND plant_id = $${idx++}`;
       params.push(plantId);
@@ -1600,13 +1646,14 @@ export class CIService {
     const seq = await pool.query("SELECT COUNT(*) FROM ci_standards");
     const count = Number(seq.rows[0].count) + 1;
     const newId = data.id || `STD-SOP-${String(count).padStart(3, "0")}`;
+    const tId = isUuid(userContext?.tenantId) ? userContext!.tenantId : null;
 
     const res = await pool.query(
       `INSERT INTO ci_standards (
         id, title, type, version, plant_id, line_id, asset_id,
         source_project_id, source_rca_id, owner, status,
-        effective_date, review_date, approved_by
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+        effective_date, review_date, approved_by, tenant_id
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
       RETURNING *`,
       [
         newId,
@@ -1623,6 +1670,7 @@ export class CIService {
         data.effectiveDate || new Date().toISOString().substring(0, 10),
         data.reviewDate || new Date(Date.now() + 365 * 86400000).toISOString().substring(0, 10),
         data.approvedBy || userContext?.userName || "Lead CI Engineer",
+        tId,
       ]
     );
 
@@ -1705,11 +1753,15 @@ export class CIService {
     };
   }
 
-  async listSolutions(assetId?: string, search?: string): Promise<CIVerifiedSolutionEntity[]> {
+  async listSolutions(assetId?: string, search?: string, tenantId?: string): Promise<CIVerifiedSolutionEntity[]> {
     let query = "SELECT * FROM ci_verified_solutions WHERE 1=1";
     const params: any[] = [];
     let idx = 1;
 
+    if (isUuid(tenantId)) {
+      query += ` AND tenant_id = $${idx++}::uuid`;
+      params.push(tenantId);
+    }
     if (assetId && assetId !== "ALL") {
       query += ` AND asset_id = $${idx++}`;
       params.push(assetId);
@@ -1729,13 +1781,14 @@ export class CIService {
     const seq = await pool.query("SELECT COUNT(*) FROM ci_verified_solutions");
     const count = Number(seq.rows[0].count) + 1;
     const newId = data.id || `VS-${String(count).padStart(3, "0")}`;
+    const tId = isUuid(userContext?.tenantId) ? userContext!.tenantId : null;
 
     const res = await pool.query(
       `INSERT INTO ci_verified_solutions (
         id, asset_id, asset_name, failure_mode, symptom, root_cause,
         solution_steps, parts_used, source_rca_id, verified_by,
-        verified_date, status
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        verified_date, status, tenant_id
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
       RETURNING *`,
       [
         newId,
@@ -1750,6 +1803,7 @@ export class CIService {
         data.verifiedBy || userContext?.userName || "Lead CI Specialist",
         data.verifiedDate || new Date().toISOString().substring(0, 10),
         data.status || "Published",
+        tId,
       ]
     );
 
@@ -1804,11 +1858,17 @@ export class CIService {
     };
   }
 
-  async listCapex(plantId?: string): Promise<CICapexProjectEntity[]> {
-    let query = "SELECT * FROM ci_capex_projects";
+  async listCapex(plantId?: string, tenantId?: string): Promise<CICapexProjectEntity[]> {
+    let query = "SELECT * FROM ci_capex_projects WHERE 1=1";
     const params: any[] = [];
+    let idx = 1;
+
+    if (isUuid(tenantId)) {
+      query += ` AND tenant_id = $${idx++}::uuid`;
+      params.push(tenantId);
+    }
     if (plantId && plantId !== "ALL") {
-      query += " WHERE plant_id = $1";
+      query += ` AND plant_id = $${idx++}`;
       params.push(plantId);
     }
     query += " ORDER BY created_at DESC";
@@ -1821,14 +1881,15 @@ export class CIService {
     const count = Number(seq.rows[0].count) + 1;
     const year = new Date().getFullYear();
     const newId = data.id || `CPX-${year}-${String(count).padStart(3, "0")}`;
+    const tId = isUuid(userContext?.tenantId) ? userContext!.tenantId : null;
 
     const res = await pool.query(
       `INSERT INTO ci_capex_projects (
         id, name, plant_id, line_id, asset_id, linked_rca_id,
         linked_project_id, budget, estimated_cost, actual_cost,
         engineering_justification, status, owner,
-        target_commission_date, dossier_ref, approval_status
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+        target_commission_date, dossier_ref, approval_status, tenant_id
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
       RETURNING *`,
       [
         newId,
@@ -1847,6 +1908,7 @@ export class CIService {
         data.targetCommissionDate || new Date(Date.now() + 90 * 86400000).toISOString().substring(0, 10),
         data.dossierRef || `DOS-ENG-${newId}`,
         data.approvalStatus || "Approved by Plant GM",
+        tId,
       ]
     );
 
@@ -1901,11 +1963,15 @@ export class CIService {
     };
   }
 
-  async listReliabilityRecords(plantId?: string, onlyBadActors?: boolean, stage?: string): Promise<CIReliabilityRecordEntity[]> {
+  async listReliabilityRecords(plantId?: string, onlyBadActors?: boolean, stage?: string, tenantId?: string): Promise<CIReliabilityRecordEntity[]> {
     let query = "SELECT * FROM ci_reliability_records WHERE 1=1";
     const params: any[] = [];
     let idx = 1;
 
+    if (isUuid(tenantId)) {
+      query += ` AND tenant_id = $${idx++}::uuid`;
+      params.push(tenantId);
+    }
     if (plantId && plantId !== "ALL" && plantId !== "PLT-01") {
       query += ` AND plant_id = $${idx++}`;
       params.push(plantId);

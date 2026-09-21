@@ -36,7 +36,7 @@ export function BreakdownLog() {
     failureCategory: "Hydraulic / Pressure Loss",
     failureCode: "HYD-002",
     symptom: "",
-    technician: "Marcus Vance"
+    technician: "David Markov"
   });
 
   // Resolve Modal
@@ -45,7 +45,7 @@ export function BreakdownLog() {
   const [resolveForm, setResolveForm] = useState({
     repairAction: "",
     rootCause: "",
-    technician: "Marcus Vance",
+    technician: "David Markov",
     productionLossUnits: 2000,
     downtimeCostUSD: 4500
   });
@@ -102,7 +102,7 @@ export function BreakdownLog() {
       failureCategory: "Hydraulic / Pressure Loss",
       failureCode: "HYD-002",
       symptom: "",
-      technician: "Marcus Vance"
+      technician: "David Markov"
     });
   };
 

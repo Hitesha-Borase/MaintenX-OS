@@ -94,7 +94,7 @@ export const reviewBatchSchema = z.object({
 export const submitPreOpSchema = z.object({
   line: z.string().default("Line 1 (High-Speed Rotary 580 BPM)"),
   batchRun: z.string().default("BAT-2026-0885"),
-  officer: z.string().default("Dr. Rachel Thorne (QA Lead)"),
+  officer: z.string().default("Stephanie Kuzmych (QA Manager & HACCP Lead)"),
   checkpoints: z.array(z.any()).optional(),
   clearanceStatus: z.string().default("CLEARED"),
 });
@@ -102,7 +102,7 @@ export const submitPreOpSchema = z.object({
 export const submitSanitationSchema = z.object({
   loop: z.string().default("CIP Loop 01"),
   protocol: z.string().default("5-Step Full Thermal & Chemical CIP Cycle"),
-  operator: z.string().default("Dr. Rachel Thorne (QA Lead)"),
+  operator: z.string().default("Stephanie Kuzmych (QA Manager & HACCP Lead)"),
   steps: z.array(z.any()).optional(),
   status: z.string().default("VERIFIED"),
 });

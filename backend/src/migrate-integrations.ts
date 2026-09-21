@@ -156,7 +156,7 @@ export async function migrateIntegrations() {
         email VARCHAR(255) NOT NULL,
         role VARCHAR(255) NOT NULL DEFAULT 'Quality Analyst',
         department VARCHAR(255) DEFAULT 'Quality',
-        invited_by VARCHAR(255) DEFAULT 'Alexander Vance',
+        invited_by VARCHAR(255) DEFAULT 'Ronald Robinson',
         sent_date VARCHAR(20) NOT NULL,
         status VARCHAR(50) DEFAULT 'Pending' NOT NULL,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,

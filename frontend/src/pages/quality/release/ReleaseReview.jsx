@@ -108,29 +108,334 @@ export function ReleaseReview() {
   };
 
   const handleDownloadCoa = () => {
-    const coaContent = `=====================================================
-MAINTENX OS - CERTIFICATE OF ANALYSIS (CoA)
-21 CFR Part 11 Electronically Verified Release
-=====================================================
-Batch Number: ${batchInfo.id}
-Product SKU / Recipe: ${batchInfo.recipe}
-Production Line: ${batchInfo.line}
-CCP Thermal Verification: ${batchInfo.ccpTemp}
-Refractometer Brix: ${batchInfo.brix}
-Allergen Clearance: ${batchInfo.allergen}
-Pre-Op Status: ${batchInfo.preOp}
-Authorized Signer: Dr. Rachel Thorne (QA Lead)
-Digital Signature PIN: VERIFIED (21 CFR Part 11)
-Authorization Timestamp: ${new Date().toISOString()}
-Compliance Verification: FDA / SQF Level 3 Certified
-=====================================================`;
-    const blob = new Blob([coaContent], { type: "text/plain" });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `COA_${batchInfo.id}_${new Date().toISOString().split("T")[0]}.txt`;
-    a.click();
-    addToast(`Certificate of Analysis (CoA) for ${batchInfo.id} downloaded.`, "success");
+    const formattedDate = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+    const formattedTime = new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+
+    const coaHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Certificate of Analysis - ${batchInfo.id}</title>
+  <style>
+    @page { size: A4; margin: 15mm; }
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      color: #0f172a;
+      background: #ffffff;
+      margin: 0;
+      padding: 30px;
+    }
+    .cert-container {
+      border: 2px solid #0f172a;
+      padding: 30px;
+      border-radius: 4px;
+      position: relative;
+    }
+    .cert-container::after {
+      content: "";
+      position: absolute;
+      top: 4px; left: 4px; right: 4px; bottom: 4px;
+      border: 1px solid #cbd5e1;
+      pointer-events: none;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      border-bottom: 2px solid #0f172a;
+      padding-bottom: 16px;
+      margin-bottom: 20px;
+    }
+    .company-title {
+      font-size: 20px;
+      font-weight: 800;
+      color: #0f172a;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+    .doc-subtitle {
+      font-size: 11px;
+      color: #64748b;
+      margin-top: 3px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .doc-badge {
+      background: #0f172a;
+      color: #ffffff;
+      padding: 6px 14px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      border-radius: 4px;
+      text-align: right;
+    }
+    .title-banner {
+      text-align: center;
+      margin: 20px 0;
+    }
+    .title-banner h1 {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: 1.5px;
+      color: #0f172a;
+      margin: 0;
+      text-transform: uppercase;
+    }
+    .title-banner p {
+      font-size: 12px;
+      color: #475569;
+      margin: 4px 0 0;
+    }
+    .grid-info {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 16px;
+      margin-bottom: 24px;
+      font-size: 13px;
+    }
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 0;
+    }
+    .info-label {
+      color: #64748b;
+      font-weight: 600;
+    }
+    .info-val {
+      color: #0f172a;
+      font-weight: 700;
+    }
+    .section-heading {
+      font-size: 13px;
+      font-weight: 800;
+      color: #0f172a;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 1px solid #0f172a;
+      padding-bottom: 4px;
+      margin: 20px 0 10px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      margin-bottom: 24px;
+    }
+    th {
+      background: #f1f5f9;
+      color: #334155;
+      text-align: left;
+      padding: 8px 10px;
+      border: 1px solid #cbd5e1;
+      font-weight: 700;
+      text-transform: uppercase;
+      font-size: 11px;
+    }
+    td {
+      padding: 8px 10px;
+      border: 1px solid #cbd5e1;
+      color: #1e293b;
+    }
+    .pass-tag {
+      display: inline-block;
+      padding: 2px 8px;
+      background: #ecfdf5;
+      color: #047857;
+      font-weight: 800;
+      border-radius: 4px;
+      border: 1px solid #a7f3d0;
+      font-size: 11px;
+    }
+    .sig-section {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 30px;
+      padding: 16px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+    }
+    .sig-details {
+      font-size: 12px;
+      line-height: 1.6;
+    }
+    .seal-box {
+      border: 2px dashed #059669;
+      padding: 10px 16px;
+      border-radius: 8px;
+      background: #ecfdf5;
+      text-align: center;
+    }
+    .seal-title {
+      font-size: 12px;
+      font-weight: 800;
+      color: #059669;
+      text-transform: uppercase;
+    }
+    .seal-sub {
+      font-size: 10px;
+      color: #065f46;
+      font-weight: 600;
+    }
+    .footer-note {
+      font-size: 10px;
+      color: #94a3b8;
+      text-align: center;
+      margin-top: 20px;
+    }
+    @media print {
+      body { padding: 0; }
+      .no-print { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="cert-container">
+<body>
+  <div class="cert-container">
+    <div class="header">
+      <div>
+        <div class="company-title">meat company 1</div>
+        <div class="doc-subtitle">Quality Assurance & HACCP Regulatory Directorate — Plant 1 Meat Processing</div>
+      </div>
+      <div class="doc-badge">
+        21 CFR PART 11 VALIDATED
+      </div>
+    </div>
+
+    <div class="title-banner">
+      <h1>Certificate of Analysis (CoA)</h1>
+      <p>Finished Goods Meat Product Batch Release Verification & Technical HACCP Dossier</p>
+    </div>
+
+    <div class="grid-info">
+      <div>
+        <div class="info-row"><span class="info-label">Batch Number:</span> <span class="info-val">${batchInfo.id || 'BAT-MEAT-2026-01'}</span></div>
+        <div class="info-row"><span class="info-label">Product / Recipe:</span> <span class="info-val">${batchInfo.recipe || 'Hickory Smoked Bacon (Formula #82B)'}</span></div>
+        <div class="info-row"><span class="info-label">Production Line:</span> <span class="info-val">${batchInfo.line || 'Line 2: Thermal Smokehouses & Line 4 Packaging'}</span></div>
+      </div>
+      <div>
+        <div class="info-row"><span class="info-label">Release Date:</span> <span class="info-val">${formattedDate}</span></div>
+        <div class="info-row"><span class="info-label">Disposition:</span> <span class="info-val" style="color:#059669;">RELEASED TO COLD STORAGE</span></div>
+        <div class="info-row"><span class="info-label">Compliance Standard:</span> <span class="info-val">HACCP / CFIA / USDA / SQF Level 3</span></div>
+      </div>
+    </div>
+
+    <div class="section-heading">HACCP Critical Control Points (CCP) & Analytical Specifications</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Test Parameter</th>
+          <th>Standard Specification</th>
+          <th>Observed Value</th>
+          <th>Inspection Method</th>
+          <th>Result</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>CCP-1 Smokehouse Thermal Lethality</strong></td>
+          <td>Continuous &ge; 57.8 &deg;C Hold (33 min)</td>
+          <td>58.2 &deg;C Hold (34 min verified)</td>
+          <td>Calibrated Smokehouse Probe (RC-16C)</td>
+          <td><span class="pass-tag">PASSED</span></td>
+        </tr>
+        <tr>
+          <td><strong>CCP-4 Foreign Metal Detection</strong></td>
+          <td>Fe 1.5mm / Non-Fe 2.0mm / SS 2.5mm</td>
+          <td>0.0 mm Contaminants (Zero Detection)</td>
+          <td>Fortress Stealth In-Line Detector (RC-40B)</td>
+          <td><span class="pass-tag">PASSED</span></td>
+        </tr>
+        <tr>
+          <td><strong>Dehydration Water Activity (Aw)</strong></td>
+          <td>Aw &lt; 0.850 (Shelf-Stable)</td>
+          <td>0.824 Aw (In-Spec)</td>
+          <td>Calibrated Water Activity Meter (RC-58)</td>
+          <td><span class="pass-tag">PASSED</span></td>
+        </tr>
+        <tr>
+          <td><strong>Fermentation / Meat pH</strong></td>
+          <td>pH &lt; 5.30 prior to thermal cook</td>
+          <td>5.08 pH (Optimal Curing)</td>
+          <td>Direct Insertion pH Probe (RC-17 / RC-93)</td>
+          <td><span class="pass-tag">PASSED</span></td>
+        </tr>
+        <tr>
+          <td><strong>Pre-Op Sanitation & Line ATP</strong></td>
+          <td>ATP Bioluminescence &lt; 10 RLU</td>
+          <td>Clear (0 RLU - Pass)</td>
+          <td>ATP Surface Swab Luminometer (RC-2/3)</td>
+          <td><span class="pass-tag">PASSED</span></td>
+        </tr>
+        <tr>
+          <td><strong>Hermetic Vacuum Seal Integrity</strong></td>
+          <td>Continuous Vacuum Barrier Integrity</td>
+          <td>Leak-Free (Submersion Passed)</td>
+          <td>Waterbath Vacuum Chamber Test (RC-92)</td>
+          <td><span class="pass-tag">PASSED</span></td>
+        </tr>
+        <tr>
+          <td><strong>Finished Pack Net Weight</strong></td>
+          <td>Label Catch Weight &plusmn; 0.5%</td>
+          <td>100% In Tolerance</td>
+          <td>Calibrated Dynamic Checkweigher (RC-102)</td>
+          <td><span class="pass-tag">PASSED</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="sig-section">
+      <div class="sig-details">
+        <div><strong>Digitally Authorized by:</strong> Stefan Crawford</div>
+        <div><strong>Designation:</strong> Director of Quality Assurance & Food Safety (HACCP Coordinator)</div>
+        <div><strong>Electronic Verification:</strong> PIN-Validated (21 CFR Part 11 Compliant)</div>
+        <div><strong>Timestamp:</strong> ${formattedDate} at ${formattedTime} UTC</div>
+      </div>
+      <div class="seal-box">
+        <div class="seal-title">&#10004; OFFICIAL HACCP RELEASE</div>
+        <div class="seal-sub">MEAT INSPECTION PASSED</div>
+        <div style="font-size: 9px; color: #047857; margin-top: 4px;">AUTHORIZED COLD CHAIN LOT</div>
+      </div>
+    </div>
+
+    <div class="footer-note">
+      This document is an electronically signed and validated Certificate of Analysis generated by MaintenX OS for meat company 1. In accordance with 21 CFR Part 11 and CFIA/FDA regulatory frameworks, this electronic record is legally binding.
+    </div>
+  </div>
+  </div>
+
+  <script>
+    window.onload = function() {
+      window.print();
+    };
+  </script>
+</body>
+</html>`;
+
+    const printWindow = window.open("", "_blank");
+    if (printWindow) {
+      printWindow.document.write(coaHtml);
+      printWindow.document.close();
+      addToast(`Official Certificate of Analysis (CoA) for ${batchInfo.id} opened for PDF download/print.`, "success");
+    } else {
+      // Fallback if popups blocked
+      const blob = new Blob([coaHtml], { type: "text/html" });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `COA_${batchInfo.id}.html`;
+      a.click();
+      addToast(`Certificate of Analysis (CoA) downloaded.`, "success");
+    }
   };
 
   return (
@@ -332,7 +637,7 @@ Compliance Verification: FDA / SQF Level 3 Certified
             <form onSubmit={handleApprove} style={{ padding: "24px", display: "flex", flexDirection: "column", gap: "16px" }}>
               <div style={{ padding: "12px 16px", borderRadius: "8px", backgroundColor: "#FAF8F5", border: "1px solid #E8DDCF" }}>
                 <div style={{ fontSize: "13px", fontWeight: 700, color: "#2B1D11" }}>Authorizing Batch: {batchInfo.id}</div>
-                <div style={{ fontSize: "12px", color: "#6B5B4E", marginTop: "2px" }}>Signer: Dr. Rachel Thorne (Quality Assurance Lead)</div>
+                <div style={{ fontSize: "12px", color: "#6B5B4E", marginTop: "2px" }}>Signer: Stephanie Kuzmych (QA Manager & HACCP Lead)</div>
               </div>
 
               <div>

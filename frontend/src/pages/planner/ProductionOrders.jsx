@@ -157,7 +157,8 @@ export function ProductionOrders() {
       clearInterval(interval);
       window.removeEventListener("focus", handleFocus);
     };
-  }, [fetchOrders, fetchProcessingBatches]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleCreateBatch = async (e) => {
     e.preventDefault();

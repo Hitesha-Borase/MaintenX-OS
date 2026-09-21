@@ -109,7 +109,7 @@ export function MaintenanceHistory() {
         stage: w.stage || detectDowntimeStage(w),
         type: w.type === "Preventive" ? "Preventive Maintenance" : "Breakdown Repair",
         taskTitle: w.title,
-        technician: w.assignedTechnician || "Marcus Vance",
+        technician: w.assignedTechnician || "David Markov",
         downtimeMinutes: w.durationMinutes || 45,
         partsUsed: w.partsUsed || "Standard Maintenance Supplies",
         costUSD: w.cost || 250.00,

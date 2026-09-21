@@ -57,7 +57,7 @@ export function Dispatch() {
         shipmentId: d.id || d.realId,
         id: d.realId || d.id,
         bolNumber: d.bolNumber || `BOL-${d.id}`,
-        driver: "Carlos Mendez",
+        driver: "Ashley Kulcar",
         trailerNo: d.trailerNo || "TR-5510"
       });
       addToast(`Shipment ${d.id} dispatched! BoL issued to carrier.`, "success");

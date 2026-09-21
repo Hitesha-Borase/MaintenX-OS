@@ -102,15 +102,8 @@ export function MasterAdminProvider({ children }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Real Database Entities with default administrators fallback
-  const defaultAdmins = [
-    { id: "U-1", name: "Alice Smith", email: "alice.smith@example.com", company: "Global Foods Inc.", role: "Company Admin", status: "Active", lastLogin: "2026-09-02 08:30" },
-    { id: "U-2", name: "Bob Johnson", email: "bob.johnson@example.com", company: "Sunrise Beverages", role: "Company Admin", status: "Active", lastLogin: "2026-09-01 14:15" },
-    { id: "U-3", name: "Charlie Davis", email: "charlie.davis@example.com", company: "Valley Dairies", role: "Company Admin", status: "Inactive", lastLogin: "2026-08-15 09:00" },
-  ];
-
   const [companies, setCompanies] = useState([]);
-  const [users, setUsers] = useState(defaultAdmins);
+  const [users, setUsers] = useState([]);
   const [activityLogs, setActivityLogs] = useState([]);
   const [auditLogs, setAuditLogs] = useState([]);
   const [supportTickets, setSupportTickets] = useState([]);

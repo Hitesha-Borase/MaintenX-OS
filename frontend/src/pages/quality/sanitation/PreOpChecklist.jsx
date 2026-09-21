@@ -36,7 +36,7 @@ export function PreOpChecklist() {
   const [selectedLine, setSelectedLine] = useState("");
   const [selectedBatch, setSelectedBatch] = useState("");
   const [inspectorName, setInspectorName] = useState(
-    currentRole?.user?.name || currentRole?.name || "Arthur Sterling (Plant Manager)"
+    currentRole?.user?.name || currentRole?.name || "Stefan Crawford (Plant Manager)"
   );
   const [items, setItems] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -166,8 +166,8 @@ export function PreOpChecklist() {
     try {
       await qualityService.createPreOpItem({
         ...newItemData,
-        line: selectedLine || (lines[0]?.displayName) || "LINE-2 (abc)",
-        batch: selectedBatch || (batches[0]?.displayName) || "BAT-2026-ORD2511",
+        line: selectedLine || (lines[0]?.displayName) || "",
+        batch: selectedBatch || (batches[0]?.displayName) || "",
         inspectorName
       });
       await fetchPreOp();

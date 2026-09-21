@@ -63,7 +63,7 @@ export function StorageResourcesPage() {
   useEffect(() => {
     fetchStorageResources();
     fetchStorageTypes();
-  }, [fetchStorageResources, fetchStorageTypes]);
+  }, []); // Run on mount only to prevent re-fetch blinking loop
 
   const [searchQuery, setSearchQuery] = useState("");
   const [plantFilter, setPlantFilter] = useState("ALL");
@@ -175,6 +175,31 @@ export function StorageResourcesPage() {
     }
   };
 
+  const totalPallets = useMemo(() => {
+    return storageResources
+      .filter((r) => (r.capacityUnit || "").toLowerCase().includes("pallet") || (r.resourceType || "").toLowerCase().includes("pallet"))
+      .reduce((sum, r) => sum + (Number(r.totalCapacity) || 0), 0);
+  }, [storageResources]);
+
+  const bulkLiquidCapacity = useMemo(() => {
+    return storageResources
+      .filter((r) => {
+        const u = (r.capacityUnit || "").toLowerCase();
+        const t = (r.resourceType || "").toLowerCase();
+        return u.includes("litre") || u.includes("liter") || u === "l" || t.includes("silo");
+      })
+      .reduce((sum, r) => sum + (Number(r.totalCapacity) || 0), 0);
+  }, [storageResources]);
+
+  const coldChainPercentage = useMemo(() => {
+    if (storageResources.length === 0) return 0;
+    const coldCount = storageResources.filter((r) => {
+      const z = (r.temperatureZone || r.tempControl || "").toLowerCase();
+      return z.includes("cold") || z.includes("chilled") || z.includes("freeze") || z.includes("refrigerat");
+    }).length;
+    return Math.round((coldCount / storageResources.length) * 100);
+  }, [storageResources]);
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%", maxWidth: "1200px", margin: "0 auto", minWidth: 0 }}>
       {/* Header */}
@@ -215,21 +240,21 @@ export function StorageResourcesPage() {
         />
         <StatCard
           title="Total Pallet Positions"
-          value="1,450"
-          unit="High-Bay / Floor"
+          value={totalPallets.toLocaleString()}
+          unit="Positions"
           icon={Boxes}
           colorVariant="cyan"
         />
         <StatCard
           title="Bulk Liquid Capacity"
-          value="40,000 L"
-          unit="Silo Farm"
+          value={bulkLiquidCapacity > 0 ? `${bulkLiquidCapacity.toLocaleString()} L` : "0 L"}
+          unit="Liquid / Silo"
           icon={Layers}
           colorVariant="amber"
         />
         <StatCard
           title="Cold-Chain Monitored"
-          value="100%"
+          value={`${coldChainPercentage}%`}
           unit="Audited"
           icon={ShieldCheck}
           colorVariant="emerald"
@@ -309,12 +334,7 @@ export function StorageResourcesPage() {
                   <option key={t.id || t.typeCode} value={t.name}>{t.name}</option>
                 ))
               ) : (
-                <>
-                  <option value="Jacketed Silo">Jacketed Silo</option>
-                  <option value="Selective Pallet Rack">Selective Pallet Rack</option>
-                  <option value="Refrigerated Staging Bay">Refrigerated Staging Bay</option>
-                  <option value="Packaging Mezzanine">Packaging Mezzanine</option>
-                </>
+                <option value="" disabled>No storage types available</option>
               )}
             </select>
           </div>
@@ -478,12 +498,7 @@ export function StorageResourcesPage() {
                         <option key={t.id || t.typeCode} value={t.name}>{t.name}</option>
                       ))
                     ) : (
-                      <>
-                        <option value="Selective Pallet Rack">Selective Pallet Rack</option>
-                        <option value="Jacketed Silo">Jacketed Silo</option>
-                        <option value="Refrigerated Staging Bay">Refrigerated Staging Bay</option>
-                        <option value="Packaging Mezzanine">Packaging Mezzanine</option>
-                      </>
+                      <option value="" disabled>No storage types configured</option>
                     )}
                   </select>
                 </div>
@@ -583,12 +598,7 @@ export function StorageResourcesPage() {
                         <option key={t.id || t.typeCode} value={t.name}>{t.name}</option>
                       ))
                     ) : (
-                      <>
-                        <option value="Selective Pallet Rack">Selective Pallet Rack</option>
-                        <option value="Jacketed Silo">Jacketed Silo</option>
-                        <option value="Refrigerated Staging Bay">Refrigerated Staging Bay</option>
-                        <option value="Packaging Mezzanine">Packaging Mezzanine</option>
-                      </>
+                      <option value="" disabled>No storage types configured</option>
                     )}
                   </select>
                 </div>

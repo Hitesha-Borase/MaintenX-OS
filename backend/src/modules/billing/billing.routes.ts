@@ -53,6 +53,17 @@ export async function billingRoutes(fastify: FastifyInstance) {
       billingController.verifyPayment.bind(billingController)
     );
 
+    authScope.post(
+      "/upgrade",
+      {
+        schema: {
+          tags: ["Billing & Subscriptions (Razorpay)"],
+          summary: "Upgrade Tenant Plan & Synchronize Entitled Modules",
+        },
+      },
+      billingController.upgradePlan.bind(billingController)
+    );
+
     authScope.get(
       "/subscription",
       {

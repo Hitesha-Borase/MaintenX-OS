@@ -504,13 +504,34 @@ export class MasterAdminService {
     try {
       await client.query("BEGIN");
 
-      // Check if user email already exists
+      // 1. Enforce unique company name
+      const { rows: existingTenants } = await client.query(
+        "SELECT id FROM tenants WHERE LOWER(TRIM(name)) = LOWER(TRIM($1)) LIMIT 1",
+        [input.name.trim()]
+      );
+      if (existingTenants.length > 0) {
+        throw new ValidationError(`A company with name "${input.name.trim()}" already exists. Duplicate company name is not allowed.`);
+      }
+
+      // 2. Enforce unique admin email
       const { rows: existingUsers } = await client.query(
-        "SELECT id FROM users WHERE LOWER(email) = LOWER($1) LIMIT 1",
+        "SELECT id FROM users WHERE LOWER(TRIM(email)) = LOWER(TRIM($1)) LIMIT 1",
         [input.adminEmail.trim()]
       );
       if (existingUsers.length > 0) {
-        throw new ValidationError(`A user with email "${input.adminEmail}" already exists. Please use a different email.`);
+        throw new ValidationError(`A user with email "${input.adminEmail.trim()}" already exists. Duplicate email is not allowed.`);
+      }
+
+      // 3. Enforce unique admin mobile number (if provided)
+      if (input.adminPhone && input.adminPhone.trim()) {
+        const cleanPhone = input.adminPhone.trim();
+        const { rows: existingPhones } = await client.query(
+          "SELECT id FROM users WHERE TRIM(phone) = TRIM($1) AND phone != '' LIMIT 1",
+          [cleanPhone]
+        );
+        if (existingPhones.length > 0) {
+          throw new ValidationError(`A user with mobile number "${cleanPhone}" already exists. Duplicate mobile number is not allowed.`);
+        }
       }
 
       const slug = input.name
@@ -704,11 +725,54 @@ export class MasterAdminService {
     await db.update(tenants).set(patch).where(eq(tenants.id, id));
 
     if (updates.subscription) {
-      // Update active subscription plan name as well
+      const planName = updates.subscription;
+      const isTrialPlan = planName.toLowerCase().includes("pilot") || planName.toLowerCase().includes("trial");
+      const thirtyDaysLater = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+      // Update active subscription plan name and status
       await db
         .update(subscriptions)
-        .set({ planName: updates.subscription, updatedAt: new Date() })
+        .set({
+          planName,
+          status: isTrialPlan ? "TRIAL" : "ACTIVE",
+          currentPeriodEnd: thirtyDaysLater,
+          updatedAt: new Date(),
+        })
         .where(eq(subscriptions.tenantId, id));
+
+      const CANONICAL_PLAN_MODULES: Record<string, string[]> = {
+        "plant pilot": ["produce"],
+        "pilot": ["produce"],
+        "trial": ["produce"],
+        "starter": ["produce", "verify"],
+        "individual modules": ["produce", "verify"],
+        "individual-modules": ["produce", "verify"],
+        "bundles": ["plan", "produce", "verify", "maintain", "move"],
+        "advanced": ["plan", "produce", "verify", "maintain", "move"],
+        "maintenx os complete": ["plan", "produce", "verify", "maintain", "move", "people", "improve", "intelligence"],
+        "maintenx-complete": ["plan", "produce", "verify", "maintain", "move", "people", "improve", "intelligence"],
+        "enterprise": ["plan", "produce", "verify", "maintain", "move", "people", "improve", "intelligence"],
+      };
+
+      const planKey = (planName || "").toLowerCase().trim();
+      const planAllowedMods = CANONICAL_PLAN_MODULES[planKey] || (
+        planName.toUpperCase() === "ENTERPRISE" || planKey.includes("complete")
+          ? ["plan", "produce", "verify", "maintain", "move", "people", "improve", "intelligence"]
+          : planKey.includes("bundle")
+          ? ["plan", "produce", "verify", "maintain", "move"]
+          : ["produce"]
+      );
+
+      const coreModules = ["plan", "produce", "verify", "maintain", "move", "people", "improve", "intelligence"];
+      for (const mod of coreModules) {
+        const isModEnabled = planAllowedMods.includes(mod);
+        await pool.query(
+          `INSERT INTO tenant_modules (tenant_id, module_key, is_enabled)
+           VALUES ($1, $2, $3)
+           ON CONFLICT (tenant_id, module_key) DO UPDATE SET is_enabled = EXCLUDED.is_enabled, updated_at = NOW()`,
+          [id, mod, isModEnabled]
+        );
+      }
     }
 
     // Update Primary Admin user details if supplied
@@ -853,6 +917,16 @@ export class MasterAdminService {
     const client = await pool.connect();
     try {
       await client.query("BEGIN");
+
+      // Check if email already exists
+      const { rows: existingUsers } = await client.query(
+        "SELECT id FROM users WHERE LOWER(TRIM(email)) = LOWER(TRIM($1)) LIMIT 1",
+        [email]
+      );
+      if (existingUsers.length > 0) {
+        throw new ValidationError(`A user with email "${email}" already exists. Duplicate email is not allowed.`);
+      }
+
       const { rows: userRows } = await client.query(
         `INSERT INTO users (tenant_id, email, password_hash, first_name, last_name, digital_signature_pin_hash, status)
          VALUES ($1, $2, $3, $4, $5, $6, 'ACTIVE')

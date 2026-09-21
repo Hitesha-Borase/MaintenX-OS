@@ -27,7 +27,7 @@ export function Profile() {
   const [verifyingCertId, setVerifyingCertId] = useState(null);
 
   const [profileData, setProfileData] = useState({
-    name: "Dr. Rachel Thorne",
+    name: "Stephanie Kuzmych",
     role: "Quality Assurance Lead",
     badgeTitle: "QA SIGNATORY AUTHORITY",
     subBadge: "CCP AUDITOR",

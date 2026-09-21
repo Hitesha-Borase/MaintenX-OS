@@ -68,7 +68,7 @@ export const userInvitations = pgTable("user_invitations", {
   email: varchar("email", { length: 255 }).notNull(),
   role: varchar("role", { length: 255 }).notNull().default("Quality Analyst"),
   department: varchar("department", { length: 255 }).default("Quality"),
-  invitedBy: varchar("invited_by", { length: 255 }).default("Alexander Vance"),
+  invitedBy: varchar("invited_by", { length: 255 }).default("Ronald Robinson"),
   sentDate: varchar("sent_date", { length: 20 }).notNull(), // ISO date string YYYY-MM-DD
   status: varchar("status", { length: 50 }).default("Pending").notNull(), // "Pending" | "Accepted" | "Revoked"
   createdAt: timestamp("created_at").defaultNow().notNull(),

@@ -83,20 +83,20 @@ export class MaintenanceController {
   }
 
   async updateWorkOrderStatus(request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) {
-    const tenantId = (request.user as any)?.tenantId || "aa3183d2-709b-42a8-add1-b2e4b2d873b0";
+    const tenantId = (request.user as any)?.tenantId;
     const input = updateWorkOrderStatusSchema.parse(request.body);
     const data = await maintenanceService.updateWorkOrderStatus(tenantId, request.params.id, input);
     return reply.send(formatSuccess(data, `Work Order status updated to ${input.status}`));
   }
 
   async updateWorkOrder(request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) {
-    const tenantId = (request.user as any)?.tenantId || "aa3183d2-709b-42a8-add1-b2e4b2d873b0";
+    const tenantId = (request.user as any)?.tenantId;
     const data = await maintenanceService.updateWorkOrder(tenantId, request.params.id, request.body);
     return reply.send(formatSuccess(data, `Work Order ${request.params.id} updated successfully`));
   }
 
   async deleteWorkOrder(request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) {
-    const tenantId = (request.user as any)?.tenantId || "aa3183d2-709b-42a8-add1-b2e4b2d873b0";
+    const tenantId = (request.user as any)?.tenantId;
     const data = await maintenanceService.deleteWorkOrder(tenantId, request.params.id);
     return reply.send(formatSuccess(data, `Work Order ${request.params.id} deleted successfully`));
   }
@@ -181,37 +181,37 @@ export class MaintenanceController {
   }
 
   async getSpareParts(request: FastifyRequest, reply: FastifyReply) {
-    const tenantId = (request.user as any)?.tenantId || "aa3183d2-709b-42a8-add1-b2e4b2d873b0";
+    const tenantId = (request.user as any)?.tenantId;
     const data = await maintenanceService.listSpareParts(tenantId);
     return reply.send(formatSuccess(data));
   }
 
   async createSparePart(request: FastifyRequest, reply: FastifyReply) {
-    const tenantId = (request.user as any)?.tenantId || "aa3183d2-709b-42a8-add1-b2e4b2d873b0";
+    const tenantId = (request.user as any)?.tenantId;
     const data = await maintenanceService.createSparePart(tenantId, request.body);
     return reply.status(201).send(formatSuccess(data, "Spare part created successfully"));
   }
 
   async updateSparePart(request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) {
-    const tenantId = (request.user as any)?.tenantId || "aa3183d2-709b-42a8-add1-b2e4b2d873b0";
+    const tenantId = (request.user as any)?.tenantId;
     const data = await maintenanceService.updateSparePart(tenantId, request.params.id, request.body);
     return reply.send(formatSuccess(data, "Spare part updated successfully"));
   }
 
   async deleteSparePart(request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) {
-    const tenantId = (request.user as any)?.tenantId || "aa3183d2-709b-42a8-add1-b2e4b2d873b0";
+    const tenantId = (request.user as any)?.tenantId;
     const data = await maintenanceService.deleteSparePart(tenantId, request.params.id);
     return reply.send(formatSuccess(data, "Spare part deleted successfully"));
   }
 
   async getCalibrations(request: FastifyRequest, reply: FastifyReply) {
-    const tenantId = (request.user as any)?.tenantId || "aa3183d2-709b-42a8-add1-b2e4b2d873b0";
+    const tenantId = (request.user as any)?.tenantId;
     const data = await maintenanceService.listCalibrations(tenantId);
     return reply.send(formatSuccess(data));
   }
 
   async createCalibration(request: FastifyRequest, reply: FastifyReply) {
-    const tenantId = (request.user as any)?.tenantId || "aa3183d2-709b-42a8-add1-b2e4b2d873b0";
+    const tenantId = (request.user as any)?.tenantId;
     const data = await maintenanceService.createCalibration(tenantId, request.body);
     return reply.status(201).send(formatSuccess(data, "Calibration recorded successfully"));
   }
@@ -238,14 +238,14 @@ export class MaintenanceController {
 
   async saveWorkOrderExecution(request: FastifyRequest, reply: FastifyReply) {
     const { id } = request.params as { id: string };
-    const tenantId = (request.user as any)?.tenantId || "aa3183d2-709b-42a8-add1-b2e4b2d873b0";
+    const tenantId = (request.user as any)?.tenantId;
     const data = await maintenanceService.saveWorkOrderExecution(tenantId, id, request.body);
     return reply.send(formatSuccess(data, "Repair actions and verification test results saved successfully"));
   }
 
   async issueWorkOrderPart(request: FastifyRequest, reply: FastifyReply) {
     const { id } = (request.params || {}) as { id?: string };
-    const tenantId = (request.user as any)?.tenantId || "aa3183d2-709b-42a8-add1-b2e4b2d873b0";
+    const tenantId = (request.user as any)?.tenantId;
     const body = (request.body || {}) as any;
     const data = await maintenanceService.issueWorkOrderPart(tenantId, { workOrderId: id, ...body });
     return reply.status(201).send(formatSuccess(data, "Spare part issued successfully to work order"));
@@ -253,14 +253,14 @@ export class MaintenanceController {
 
   async signOffWorkOrder(request: FastifyRequest, reply: FastifyReply) {
     const { id } = request.params as { id: string };
-    const tenantId = (request.user as any)?.tenantId || "aa3183d2-709b-42a8-add1-b2e4b2d873b0";
+    const tenantId = (request.user as any)?.tenantId;
     const data = await maintenanceService.signOffWorkOrder(tenantId, id, request.body);
     return reply.send(formatSuccess(data, "Work order verified and signed off successfully"));
   }
 
   async addWorkOrderComment(request: FastifyRequest, reply: FastifyReply) {
     const { id } = request.params as { id: string };
-    const tenantId = (request.user as any)?.tenantId || "aa3183d2-709b-42a8-add1-b2e4b2d873b0";
+    const tenantId = (request.user as any)?.tenantId;
     const data = await maintenanceService.addWorkOrderComment(tenantId, id, request.body);
     return reply.status(201).send(formatSuccess(data, "Comment logged to work order activity trail"));
   }

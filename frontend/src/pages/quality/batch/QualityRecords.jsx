@@ -130,7 +130,7 @@ export function QualityRecords() {
             2 Leads
           </div>
           <div style={{ fontSize: "12px", color: "#8B6914", marginTop: "4px" }}>
-            Dr. Rachel Thorne & Marcus Vance
+            Stephanie Kuzmych & David Markov
           </div>
         </Card>
       </div>

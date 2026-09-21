@@ -18,7 +18,8 @@ export class CIController {
   // ============================================================================
   async getDashboardSummary(request: FastifyRequest<{ Querystring: { plantId?: string; stage?: string } }>, reply: FastifyReply) {
     const { plantId, stage } = request.query || {};
-    const data = await ciService.getDashboardSummary(plantId, stage);
+    const tenantId = (request.user as any)?.tenantId;
+    const data = await ciService.getDashboardSummary(plantId, stage, tenantId);
     return reply.send(formatSuccess(data));
   }
 
@@ -27,7 +28,8 @@ export class CIController {
   // ============================================================================
   async getInvestigations(request: FastifyRequest<{ Querystring: { plantId?: string; stage?: string } }>, reply: FastifyReply) {
     const { plantId, stage } = request.query || {};
-    const data = await ciService.listInvestigations(plantId, stage);
+    const tenantId = (request.user as any)?.tenantId;
+    const data = await ciService.listInvestigations(plantId, stage, tenantId);
     return reply.send(formatSuccess(data));
   }
 
@@ -69,7 +71,8 @@ export class CIController {
 
   async getRCASummary(request: FastifyRequest<{ Querystring: { plantId?: string } }>, reply: FastifyReply) {
     const plantId = request.query?.plantId;
-    const data = await ciService.getRCASummary(plantId);
+    const tenantId = (request.user as any)?.tenantId;
+    const data = await ciService.getRCASummary(plantId, tenantId);
     return reply.send(formatSuccess(data));
   }
 
@@ -144,7 +147,8 @@ export class CIController {
     request: FastifyRequest<{ Querystring: { rcaId?: string; projectId?: string; actionType?: string; status?: string; stage?: string } }>,
     reply: FastifyReply
   ) {
-    const data = await ciService.listCapaActions(request.query);
+    const tenantId = (request.user as any)?.tenantId;
+    const data = await ciService.listCapaActions({ ...(request.query || {}), tenantId });
     return reply.send(formatSuccess(data));
   }
 
@@ -197,7 +201,8 @@ export class CIController {
   // ============================================================================
   async getLosses(request: FastifyRequest<{ Querystring: { plantId?: string; category?: string; stage?: string } }>, reply: FastifyReply) {
     const { plantId, category, stage } = request.query || {};
-    const data = await ciService.listLosses(plantId, category, stage);
+    const tenantId = (request.user as any)?.tenantId;
+    const data = await ciService.listLosses(plantId, category, stage, tenantId);
     return reply.send(formatSuccess(data));
   }
 
@@ -215,7 +220,8 @@ export class CIController {
 
   async getLossSummary(request: FastifyRequest<{ Querystring: { plantId?: string } }>, reply: FastifyReply) {
     const plantId = request.query?.plantId;
-    const data = await ciService.getLossSummary(plantId);
+    const tenantId = (request.user as any)?.tenantId;
+    const data = await ciService.getLossSummary(plantId, tenantId);
     return reply.send(formatSuccess(data));
   }
 
@@ -224,7 +230,8 @@ export class CIController {
   // ============================================================================
   async getProjects(request: FastifyRequest<{ Querystring: { plantId?: string } }>, reply: FastifyReply) {
     const plantId = request.query?.plantId;
-    const data = await ciService.listProjects(plantId);
+    const tenantId = (request.user as any)?.tenantId;
+    const data = await ciService.listProjects(plantId, tenantId);
     return reply.send(formatSuccess(data));
   }
 
@@ -269,7 +276,8 @@ export class CIController {
 
   async getBenefitsSummary(request: FastifyRequest<{ Querystring: { plantId?: string } }>, reply: FastifyReply) {
     const plantId = request.query?.plantId;
-    const data = await ciService.getBenefitsSummary(plantId);
+    const tenantId = (request.user as any)?.tenantId;
+    const data = await ciService.getBenefitsSummary(plantId, tenantId);
     return reply.send(formatSuccess(data));
   }
 
@@ -278,7 +286,8 @@ export class CIController {
   // ============================================================================
   async getStandards(request: FastifyRequest<{ Querystring: { plantId?: string; type?: string } }>, reply: FastifyReply) {
     const { plantId, type } = request.query || {};
-    const data = await ciService.listStandards(plantId, type);
+    const tenantId = (request.user as any)?.tenantId;
+    const data = await ciService.listStandards(plantId, type, tenantId);
     return reply.send(formatSuccess(data));
   }
 
@@ -305,7 +314,8 @@ export class CIController {
   // ============================================================================
   async getSolutions(request: FastifyRequest<{ Querystring: { assetId?: string; search?: string } }>, reply: FastifyReply) {
     const { assetId, search } = request.query || {};
-    const data = await ciService.listSolutions(assetId, search);
+    const tenantId = (request.user as any)?.tenantId;
+    const data = await ciService.listSolutions(assetId, search, tenantId);
     return reply.send(formatSuccess(data));
   }
 
@@ -326,7 +336,8 @@ export class CIController {
   // ============================================================================
   async getCapex(request: FastifyRequest<{ Querystring: { plantId?: string } }>, reply: FastifyReply) {
     const plantId = request.query?.plantId;
-    const data = await ciService.listCapex(plantId);
+    const tenantId = (request.user as any)?.tenantId;
+    const data = await ciService.listCapex(plantId, tenantId);
     return reply.send(formatSuccess(data));
   }
 
@@ -350,7 +361,8 @@ export class CIController {
     reply: FastifyReply
   ) {
     const { plantId, onlyBadActors, stage } = request.query || {};
-    const data = await ciService.listReliabilityRecords(plantId, onlyBadActors === "true", stage);
+    const tenantId = (request.user as any)?.tenantId;
+    const data = await ciService.listReliabilityRecords(plantId, onlyBadActors === "true", stage, tenantId);
     return reply.send(formatSuccess(data));
   }
 

@@ -41,7 +41,7 @@ export function ProductFamiliesPage() {
 
   useEffect(() => {
     fetchFamilies();
-  }, [fetchFamilies]);
+  }, []); // Run on mount only
 
   const [searchQuery, setSearchQuery] = useState("");
   const [plantFilter, setPlantFilter] = useState("ALL");
@@ -119,9 +119,10 @@ export function ProductFamiliesPage() {
       return;
     }
 
-    const resolvedPlantId = newFamily.plantId && newFamily.plantId !== "PLT-01" 
-      ? newFamily.plantId 
-      : (plants[0]?.id || activePlantId || "");
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const resolvedPlantId = (newFamily.plantId && uuidRegex.test(String(newFamily.plantId)))
+      ? newFamily.plantId
+      : (plants[0]?.id && uuidRegex.test(String(plants[0].id)) ? plants[0].id : null);
     const payload = { ...newFamily, plantId: resolvedPlantId };
 
     try {

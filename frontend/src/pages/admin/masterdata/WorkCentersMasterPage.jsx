@@ -105,9 +105,9 @@ export function WorkCentersMasterPage() {
 
   // Safe helper for plant display name without throwing runtime exceptions
   const getPlantDisplayName = (p) => {
-    if (!p) return "Indore Plant";
+    if (!p) return "Plant 1 - Meat Processing Facility";
     if (typeof p === "string") return p.split(" - ")[0];
-    const rawName = p.name || p.plantName || p.code || p.id || "Indore Plant";
+    const rawName = p.name || p.plantName || p.code || p.id || "Plant 1 - Meat Processing Facility";
     return typeof rawName === "string" ? rawName.split(" - ")[0] : String(rawName);
   };
 
@@ -1119,7 +1119,7 @@ export function WorkCentersMasterPage() {
                     {viewingLine.name} ({viewingLine.lineCode || viewingLine.code})
                   </h3>
                   <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>
-                    Plant: {viewingLine.plantName || "Indore Plant"} • Capacity: {viewingLine.capacity}
+                    Plant: {viewingLine.plantName || "Plant 1 - Meat Processing Facility"} • Capacity: {viewingLine.capacity}
                   </div>
                 </div>
               </div>

@@ -130,10 +130,21 @@ class ApiClient {
       }
 
       if (!response.ok) {
-        const error = new Error(data?.error?.message || data?.message || `HTTP ${response.status} Error`);
+        let errorMsg = "";
+        if (data?.error?.details && Array.isArray(data.error.details) && data.error.details.length > 0) {
+          errorMsg = data.error.details.map((d) => d.message || d.msg).filter(Boolean).join(". ");
+        }
+        if (!errorMsg && typeof data?.error?.details === "string") {
+          errorMsg = data.error.details;
+        }
+        if (!errorMsg) {
+          errorMsg = data?.error?.message || data?.message || `HTTP ${response.status} Error`;
+        }
+        const error = new Error(errorMsg);
         error.status = response.status;
         error.code = data?.error?.code || "API_ERROR";
         error.data = data;
+        error.details = data?.error?.details;
         throw error;
       }
 

@@ -243,7 +243,7 @@ export function DepartmentsPage() {
             </thead>
             <tbody>
               {filteredDepts.map((d) => {
-                const plantName = plants.find((p) => p.id === d.plantId)?.name?.split(" - ")[0] || "Indore Plant 1";
+                const plantName = plants.find((p) => p.id === d.plantId)?.name?.split(" - ")[0] || "Plant 1 (Meat Processing)";
                 return (
                   <tr key={d.departmentId || d.id || d.code} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
                     <td style={{ padding: "12px 16px", fontFamily: "var(--font-mono)", fontWeight: 800, color: "#8C5B23" }}>

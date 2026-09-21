@@ -30,7 +30,7 @@ export function MultiPlantKPIs() {
 
   // Form State for Audit Modal
   const [auditType, setAuditType] = useState("Full Operational & Quality Audit");
-  const [leadAuditor, setLeadAuditor] = useState("Alexander Vance");
+  const [leadAuditor, setLeadAuditor] = useState("Ronald Robinson");
   const [auditDate, setAuditDate] = useState("2026-09-02");
   const [checklist, setChecklist] = useState({
     oee: true,

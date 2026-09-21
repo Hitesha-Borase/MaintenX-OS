@@ -52,7 +52,7 @@ export function NetRequirements() {
   // MRP Run State
   const [isMRPRunModalOpen, setIsMRPRunModalOpen] = useState(false);
   const [mrpPeriod, setMrpPeriod] = useState("Next 7 Days (W36 - W37)");
-  const [mrpPlant, setMrpPlant] = useState("PLT-01 (Indore Facility)");
+  const [mrpPlant, setMrpPlant] = useState("PLT-MEAT-01 (Meat Processing Facility)");
   const [mrpProduct, setMrpProduct] = useState("ALL");
   const [isCalculatingMRP, setIsCalculatingMRP] = useState(false);
   const [mrpRunResults, setMrpRunResults] = useState(null);
@@ -800,8 +800,7 @@ export function NetRequirements() {
                     className="form-input"
                     style={{ height: "34px", fontSize: "12px", backgroundColor: "#FFFFFF" }}
                   >
-                    <option value="PLT-01 (Indore Facility)">Indore Facility (PLT-01)</option>
-                    <option value="PLT-02 (Pune Beverage Plant)">Pune Beverage Plant (PLT-02)</option>
+                    <option value="PLT-MEAT-01 (Meat Processing Facility)">Plant 1 - Meat Processing & Smokehouse Facility (PLT-MEAT-01)</option>
                   </select>
                 </div>
 

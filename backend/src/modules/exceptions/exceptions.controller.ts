@@ -5,7 +5,8 @@ import { formatSuccess } from "../../shared/utils/responseFormatter.js";
 export class ExceptionsController {
   async getExceptions(request: FastifyRequest, reply: FastifyReply) {
     const { plantId, severity, category } = request.query as any;
-    const data = await exceptionsService.listExceptions(plantId || request.user?.plantId, severity, category);
+    const tenantId = (request.user as any)?.tenantId;
+    const data = await exceptionsService.listExceptions(tenantId, plantId || request.user?.plantId, severity, category);
     return reply.send(formatSuccess(data));
   }
 
@@ -16,7 +17,9 @@ export class ExceptionsController {
 
   async createException(request: FastifyRequest, reply: FastifyReply) {
     const body = request.body as any;
+    const tenantId = (request.user as any)?.tenantId;
     const data = await exceptionsService.createException({
+      tenantId,
       title: body.title,
       severity: body.severity,
       category: body.category,

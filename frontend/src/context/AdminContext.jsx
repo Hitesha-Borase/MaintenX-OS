@@ -48,6 +48,7 @@ export function AdminProvider({ children }) {
   // 1. Users (Directly synchronized with PostgreSQL users table)
   const [users, setUsers] = useState(() => []);
 
+
   // 2. User Invitations
   const [invitations, setInvitations] = useState(() => []);
 
@@ -94,7 +95,10 @@ export function AdminProvider({ children }) {
         setActivityLogs(backendLogs.value);
       }
       if (backendRoles.status === "fulfilled" && Array.isArray(backendRoles.value)) {
-        setRoles(backendRoles.value);
+        const filtered = backendRoles.value.filter(
+          (r) => r.code !== "master_admin" && r.name !== "Master Admin"
+        );
+        setRoles(filtered);
       }
     } catch (err) {
       console.warn("Failed to load initial admin data from API:", err);

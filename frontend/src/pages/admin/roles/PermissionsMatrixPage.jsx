@@ -71,7 +71,10 @@ export function PermissionsMatrixPage() {
   useEffect(() => {
     adminService.getRoles()
       .then((data) => {
-        const roles = Array.isArray(data) ? data : data?.roles;
+        const rawRoles = Array.isArray(data) ? data : data?.roles;
+        const roles = (rawRoles || []).filter(
+          (r) => r.code !== "master_admin" && r.name !== "Master Admin"
+        );
         if (roles && roles.length > 0) {
           const formatted = roles.map((r) => ({
             id: r.code || r.id,
@@ -80,7 +83,7 @@ export function PermissionsMatrixPage() {
           const seen = new Set();
           const unique = [];
           for (const item of [...formatted, ...ROLES_LIST]) {
-            if (!seen.has(item.id)) {
+            if (item.id !== "master_admin" && !seen.has(item.id)) {
               seen.add(item.id);
               unique.push(item);
             }

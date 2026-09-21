@@ -52,7 +52,7 @@ export function TroubleshootingWizard() {
   const [selectedCause, setSelectedCause] = useState("");
   const [repairProcedure, setRepairProcedure] = useState("");
   const [testResult, setTestResult] = useState("");
-  const [verifiedBy, setVerifiedBy] = useState("Marcus Vance (Reliability Specialist)");
+  const [verifiedBy, setVerifiedBy] = useState("David Markov (Maintenance Lead)");
 
   const handleLoadSample = () => {
     setSelectedAssetId(assets[0]?.id || "FM-001");
@@ -62,7 +62,7 @@ export function TroubleshootingWizard() {
     setSelectedCause("Bearing race pitting and micro-spalling due to moisture ingress past degraded labyrinth seal.");
     setRepairProcedure("1. Lock out main electrical supply.\n2. Use hydraulic puller to remove worn bearing BRG-6208.\n3. Install new SKF bearing with induction heater.\n4. Replace Viton shaft seal and laser align to 0.02mm.");
     setTestResult("Conducted 30-min dry run at 300 BPM, followed by 30-min run at 600 BPM. Vibration dropped to 1.1 mm/s RMS. Temperature stable at 54°C.");
-    setVerifiedBy("Senior Reliability Specialist Marcus Vance");
+    setVerifiedBy("Maintenance Lead David Markov");
     addToast("Sample scenario loaded into wizard.", "info");
   };
 

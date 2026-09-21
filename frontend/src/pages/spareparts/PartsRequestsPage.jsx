@@ -34,7 +34,7 @@ export function PartsRequestsPage() {
     assetId: "FM-001",
     workOrderId: "WO-2026-8891",
     urgency: "High",
-    requestedBy: "Marcus Vance"
+    requestedBy: "David Markov"
   });
 
   const pendingCount = partsRequests.filter((r) => r.status === "Pending").length;

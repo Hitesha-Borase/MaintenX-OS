@@ -130,7 +130,7 @@ export function Staging() {
       await warehouseService.completePutAway({
         lotNumber: quickPutAwayLot.lotNumber,
         destinationBin: targetBin,
-        operator: "Carlos Mendez"
+        operator: "Ashley Kulcar"
       }).catch(err => console.warn("completePutAway offline:", err.message));
     } catch (e) {
       console.warn("Putaway API err:", e);

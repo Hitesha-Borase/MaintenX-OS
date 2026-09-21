@@ -141,10 +141,6 @@ export function BOMRecipesPage() {
       console.warn("masterDataService.createBom error:", e);
     }
 
-    if (typeof addBOM === "function") {
-      await addBOM(payload);
-    }
-
     await fetchLiveBoms();
 
     if (status === "Submitted") {
@@ -704,7 +700,7 @@ export function BOMRecipesPage() {
           entityTitle={`BOM Formula: ${approvalModalBOM.finishedSkuName}`}
           currentStatus={approvalModalBOM.status}
           onSubmitForApproval={() => submitBOMForApproval(approvalModalBOM.bomId)}
-          onApprove={() => approveBOM(approvalModalBOM.bomId, "Sarah Jenkins")}
+          onApprove={() => approveBOM(approvalModalBOM.bomId, "Stephanie Kuzmych")}
           onReject={(reason) => rejectBOM(approvalModalBOM.bomId, reason)}
           onRequestChanges={(note) => {
             rejectBOM(approvalModalBOM.bomId, note);

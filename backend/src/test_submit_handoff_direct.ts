@@ -8,7 +8,7 @@ async function testSubmitHandoffDirect() {
     const res = await dashboardsService.submitShiftHandoff('5bce8458-909a-4dd2-b221-614c32ac7c89', {
       shiftFrom: 'Shift A (Day)',
       shiftTo: 'Shift B (Evening)',
-      receivedBy: 'Carlos Mendez',
+      receivedBy: 'Ashley Kulcar',
       notes: 'Direct test notes for handoff'
     });
     console.log('Result:', res);
