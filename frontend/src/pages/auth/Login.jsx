@@ -297,7 +297,7 @@ export function Login() {
             </div>
 
             <h2 className="login-hero-title">
-              MaintenX OS
+              The Great Canadian Meat Company
             </h2>
 
             <p className="login-hero-desc">

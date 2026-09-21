@@ -306,7 +306,7 @@ export function LandingPage() {
                   lineHeight: 1.1
                 }}
               >
-                MaintenX <span style={{ color: "#B27E33" }}>OS</span>
+                The Great Canadian <span style={{ color: "#B27E33" }}>Meat Co.</span>
               </span>
               <span
                 style={{
@@ -328,7 +328,7 @@ export function LandingPage() {
           <ul className="landing-nav-links">
             <li><span onClick={() => handleNavClick("/", "home")} className="landing-nav-link">Home</span></li>
             <li><span onClick={() => handleNavClick("/features", "features")} className="landing-nav-link">Features</span></li>
-            <li><span onClick={() => handleNavClick("/why-us", "why-us")} className="landing-nav-link">Why MaintenX</span></li>
+            <li><span onClick={() => handleNavClick("/why-us", "why-us")} className="landing-nav-link">Why GCM</span></li>
             <li><span onClick={() => handleNavClick("/pricing", "pricing")} className="landing-nav-link">Pricing</span></li>
             <li><span onClick={() => handleNavClick("/contact", "contact")} className="landing-nav-link">Contact</span></li>
           </ul>
@@ -364,7 +364,7 @@ export function LandingPage() {
             </div>
 
             <h1 className="saas-hero-title">
-              MaintenX OS —
+              The Great Canadian Meat Company —
               <span className="saas-hero-gradient-text"> Manufacturing Operating System</span>
             </h1>
 
@@ -765,7 +765,7 @@ export function LandingPage() {
                   />
                 </div>
                 <span style={{ fontSize: "16px", fontWeight: 900, color: "#261603" }}>
-                  MaintenX <span style={{ color: "#B27E33" }}>OS</span>
+                  The Great Canadian <span style={{ color: "#B27E33" }}>Meat Co.</span>
                 </span>
               </div>
               <p style={{ fontSize: "13px", color: "var(--text-secondary, #6B5B4E)", lineHeight: 1.6, marginBottom: "18px" }}>
