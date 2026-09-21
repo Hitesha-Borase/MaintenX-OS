@@ -88,7 +88,7 @@ export function SanitationChecklist() {
   const [selectedLoop, setSelectedLoop] = useState("Smokehouse & Injector Sanitation Loop 01 (Ruhle & Smokehouse Racks)");
   const [sanitationType, setSanitationType] = useState("Thermal Wash & Alkaline Foam Sanitization Cycle (RC-21)");
   const [operatorName, setOperatorName] = useState("Stephanie Kuzmych (QA Manager)");
-  const [steps, setSteps] = useState([]);
+  const [steps, setSteps] = useState(INITIAL_SANITATION_STEPS);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -98,17 +98,20 @@ export function SanitationChecklist() {
       const res = await qualityService.getSanitationChecklist();
       const data = res?.steps ? res : (res?.data?.steps ? res.data : (res?.data?.data?.steps ? res.data.data : (res?.data || res)));
       if (data) {
-        if (Array.isArray(data.steps)) setSteps(data.steps);
+        if (Array.isArray(data.steps) && data.steps.length > 0) setSteps(data.steps);
+        else setSteps(INITIAL_SANITATION_STEPS);
         if (data.loop) setSelectedLoop(data.loop);
         if (data.protocol) setSanitationType(data.protocol);
         if (data.operator) setOperatorName(data.operator);
       }
     } catch (err) {
       console.warn("Could not load Sanitation checklist from API:", err.message);
+      // Keep INITIAL_SANITATION_STEPS as fallback
     } finally {
       setLoading(false);
     }
   };
+
 
   useEffect(() => {
     fetchSanitation();

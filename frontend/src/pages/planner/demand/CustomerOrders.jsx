@@ -3,6 +3,7 @@ import { usePlanning } from "../../../context/PlanningContext";
 import { useMasterData } from "../../../context/MasterDataContext";
 import { useApp } from "../../../context/AppContext";
 import planningService from "../../../services/planningService";
+import masterDataService from "../../../services/masterDataService";
 import { Card } from "../../../components/common/Card";
 import { Button } from "../../../components/common/Button";
 import { Badge } from "../../../components/common/Badge";
@@ -33,8 +34,11 @@ export function CustomerOrders() {
     cancelDemandOrder,
     deleteDemandOrder 
   } = usePlanning();
-  const { skus = [], plants = [] } = useMasterData();
+  const { skus: contextSkus = [], plants = [] } = useMasterData();
   const { addToast } = useApp();
+
+  // Local SKU state — populated from context OR direct API fetch
+  const [localSkus, setLocalSkus] = useState(contextSkus);
 
   const [orders, setOrders] = useState(contextDemandOrders);
   const [loading, setLoading] = useState(false);
@@ -46,6 +50,30 @@ export function CustomerOrders() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Keep localSkus in sync with context (context loads async)
+  useEffect(() => {
+    if (Array.isArray(contextSkus) && contextSkus.length > 0) {
+      setLocalSkus(contextSkus);
+    }
+  }, [contextSkus]);
+
+  // If context SKUs are still empty after 500ms, fetch directly from API
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      if (localSkus.length === 0) {
+        try {
+          const res = await masterDataService.getSkus();
+          const arr = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
+          if (arr.length > 0) setLocalSkus(arr);
+        } catch { /* silent */ }
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [localSkus.length]);
+
+  // Use localSkus everywhere (fallback to contextSkus alias)
+  const skus = localSkus;
 
   const availableSkus = useMemo(() => {
     if (!skus || !Array.isArray(skus)) return [];
@@ -63,13 +91,20 @@ export function CustomerOrders() {
   const [newOrder, setNewOrder] = useState({
     orderNumber: `PO-CUST-${Math.floor(10000 + Math.random() * 90000)}`,
     customer: "",
-    skuId: defaultSku?.skuId || defaultSku?.id || "",
+    skuId: "",
     quantity: 24000,
     requestedShipDate: new Date(Date.now() + 7 * 86400000).toISOString().substring(0, 10),
     priority: "High",
     plantId: availablePlants[0]?.id || "PLT-01",
     notes: ""
   });
+
+  // Auto-select first SKU once loaded
+  useEffect(() => {
+    if (defaultSku && !newOrder.skuId) {
+      setNewOrder((prev) => ({ ...prev, skuId: defaultSku.skuId || defaultSku.id || "" }));
+    }
+  }, [defaultSku]);
 
   // Fetch live demand orders from Backend REST API
   const fetchOrders = async () => {
