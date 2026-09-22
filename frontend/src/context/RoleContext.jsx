@@ -1144,7 +1144,7 @@ export function RoleProvider({ children }) {
     } else if (currentRole.id === "warehouse") {
       allowedPaths.push("/warehouse", "/inventory", "/traceability");
     } else if (currentRole.id === "quality") {
-      allowedPaths.push("/quality", "/traceability", "/exception-control-tower", "/exceptions", "/control-tower");
+      allowedPaths.push("/quality", "/traceability", "/exception-control-tower", "/exceptions", "/control-tower", "/maintenance/breakdowns");
     } else if (currentRole.id === "supervisor") {
       allowedPaths.push("/supervisor", "/labour", "/traceability", "/production", "/exception-control-tower", "/exceptions", "/control-tower");
     } else if (currentRole.id === "line_lead") {

@@ -77,14 +77,14 @@ exports.reviewBatchSchema = zod_1.z.object({
 exports.submitPreOpSchema = zod_1.z.object({
     line: zod_1.z.string().default("Line 1 (High-Speed Rotary 580 BPM)"),
     batchRun: zod_1.z.string().default("BAT-2026-0885"),
-    officer: zod_1.z.string().default("Dr. Rachel Thorne (QA Lead)"),
+    officer: zod_1.z.string().default("Stephanie Kuzmych (QA Manager & HACCP Lead)"),
     checkpoints: zod_1.z.array(zod_1.z.any()).optional(),
     clearanceStatus: zod_1.z.string().default("CLEARED"),
 });
 exports.submitSanitationSchema = zod_1.z.object({
     loop: zod_1.z.string().default("CIP Loop 01"),
     protocol: zod_1.z.string().default("5-Step Full Thermal & Chemical CIP Cycle"),
-    operator: zod_1.z.string().default("Dr. Rachel Thorne (QA Lead)"),
+    operator: zod_1.z.string().default("Stephanie Kuzmych (QA Manager & HACCP Lead)"),
     steps: zod_1.z.array(zod_1.z.any()).optional(),
     status: zod_1.z.string().default("VERIFIED"),
 });

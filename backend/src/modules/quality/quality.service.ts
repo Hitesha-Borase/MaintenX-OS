@@ -2316,8 +2316,9 @@ export class QualityService {
 
     const batchesList = holds.map(h => ({
       id: h.batch || h.id,
-      name: `${h.batch || h.lotNumber} Ã¢â‚¬â€ ${h.reason ? h.reason.slice(0, 32) : ''} (Hold: ${h.holdId || ''})`.trim(),
+      name: `${h.batch || h.lotNumber} Ã¢â‚¬â€  ${h.reason ? h.reason.slice(0, 32) : ''} (Hold: ${h.holdId || ''})`.trim(),
       holdId: h.holdId || "",
+      recordId: h.id,
       lotNumber: h.lotNumber || ""
     }));
 
@@ -2465,7 +2466,7 @@ export class QualityService {
 
   async submitReworkInstruction(tenantId: string, plantId: string, input: any, userId: string) {
     const batchId = input.batch || "";
-    const instruction = input.instruction || "Re-pasteurize at 84Ã‚Â°C for 30 seconds to satisfy CCP thermal kill protocol";
+    const instruction = input.instruction || "Re-pasteurize at 84°C for 30 seconds to satisfy CCP thermal kill protocol";
     const protocol = input.protocol || "THERMAL_REPASTEURIZE";
 
     // 1. Insert into qa_disposition_records in PostgreSQL
@@ -2475,7 +2476,7 @@ export class QualityService {
         plantId: isValidUuid(plantId) ? plantId : null,
         dispositionType: "REWORK",
         batchId: batchId,
-        holdId: input.holdId || "HLD-401",
+        holdId: input.holdId || null,
         protocol: protocol,
         instructionNotes: instruction,
         status: "COMPLETED",
@@ -2488,13 +2489,23 @@ export class QualityService {
 
     // 2. Update quality_holds in PostgreSQL
     try {
-      await db
-        .update(qualityHolds)
-        .set({
-          status: "REWORK_SCHEDULED",
-          updatedAt: new Date()
-        })
-        .where(eq(qualityHolds.batch, batchId));
+      if (input.recordId) {
+        await db
+          .update(qualityHolds)
+          .set({
+            status: "REWORK_SCHEDULED",
+            updatedAt: new Date()
+          })
+          .where(eq(qualityHolds.id, input.recordId));
+      } else {
+        await db
+          .update(qualityHolds)
+          .set({
+            status: "REWORK_SCHEDULED",
+            updatedAt: new Date()
+          })
+          .where(eq(qualityHolds.batch, batchId));
+      }
     } catch (e: any) {
       console.warn("Update quality_holds rework error:", e.message);
     }

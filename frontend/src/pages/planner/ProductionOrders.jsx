@@ -268,10 +268,10 @@ export function ProductionOrders() {
 
       const matchesSearch =
         !q ||
-        ordNum.toLowerCase().includes(q) ||
-        prodName.toLowerCase().includes(q) ||
-        prodCode.toLowerCase().includes(q) ||
-        lineStr.toLowerCase().includes(q);
+        (ordNum || "").toLowerCase().includes(q) ||
+        (prodName || "").toLowerCase().includes(q) ||
+        (prodCode || "").toLowerCase().includes(q) ||
+        (lineStr || "").toLowerCase().includes(q);
 
       return matchesStatus && matchesSearch;
     });

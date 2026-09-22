@@ -155,6 +155,7 @@ async function masterDataRoutes(fastify) {
     // 13. Assets, Categories & Machine Capability
     fastify.get("/asset-types", { schema: { tags: ["Master Data"], summary: "List Asset Categories / Types" } }, masterData_controller_js_1.masterDataController.getAssetTypes.bind(masterData_controller_js_1.masterDataController));
     fastify.post("/asset-types", { schema: { tags: ["Master Data"], summary: "Create Asset Category / Type" } }, masterData_controller_js_1.masterDataController.createAssetType.bind(masterData_controller_js_1.masterDataController));
+    fastify.put("/asset-types/:id", { schema: { tags: ["Master Data"], summary: "Update Asset Category / Type" } }, masterData_controller_js_1.masterDataController.updateAssetType.bind(masterData_controller_js_1.masterDataController));
     fastify.delete("/asset-types/:id", { schema: { tags: ["Master Data"], summary: "Delete Asset Category / Type" } }, masterData_controller_js_1.masterDataController.deleteAssetType.bind(masterData_controller_js_1.masterDataController));
     fastify.get("/criticality-levels", { schema: { tags: ["Master Data"], summary: "List Criticality Ratings" } }, masterData_controller_js_1.masterDataController.getCriticalityLevels.bind(masterData_controller_js_1.masterDataController));
     fastify.post("/criticality-levels", { schema: { tags: ["Master Data"], summary: "Create Criticality Rating" } }, masterData_controller_js_1.masterDataController.createCriticalityLevel.bind(masterData_controller_js_1.masterDataController));
@@ -184,6 +185,11 @@ async function masterDataRoutes(fastify) {
     fastify.post("/storage-resources", { schema: { tags: ["Master Data"], summary: "Create Storage Resource" } }, masterData_controller_js_1.masterDataController.createStorageResource.bind(masterData_controller_js_1.masterDataController));
     fastify.put("/storage-resources/:id", { schema: { tags: ["Master Data"], summary: "Update Storage Resource" } }, masterData_controller_js_1.masterDataController.updateStorageResource.bind(masterData_controller_js_1.masterDataController));
     fastify.delete("/storage-resources/:id", { schema: { tags: ["Master Data"], summary: "Delete Storage Resource" } }, masterData_controller_js_1.masterDataController.deleteStorageResource.bind(masterData_controller_js_1.masterDataController));
+    // 20. Storage Types Master
+    fastify.get("/storage-types", { schema: { tags: ["Master Data"], summary: "List Storage Types" } }, masterData_controller_js_1.masterDataController.getStorageTypes.bind(masterData_controller_js_1.masterDataController));
+    fastify.post("/storage-types", { schema: { tags: ["Master Data"], summary: "Create Storage Type" } }, masterData_controller_js_1.masterDataController.createStorageType.bind(masterData_controller_js_1.masterDataController));
+    fastify.put("/storage-types/:id", { schema: { tags: ["Master Data"], summary: "Update Storage Type" } }, masterData_controller_js_1.masterDataController.updateStorageType.bind(masterData_controller_js_1.masterDataController));
+    fastify.delete("/storage-types/:id", { schema: { tags: ["Master Data"], summary: "Delete Storage Type" } }, masterData_controller_js_1.masterDataController.deleteStorageType.bind(masterData_controller_js_1.masterDataController));
     // 15. Labour Standards
     fastify.get("/labour-standards", { schema: { tags: ["Master Data"], summary: "List Labour Standards" } }, masterData_controller_js_1.masterDataController.getLabourStandards.bind(masterData_controller_js_1.masterDataController));
     fastify.post("/labour-standards", { schema: { tags: ["Master Data"], summary: "Create Labour Standard" } }, masterData_controller_js_1.masterDataController.createLabourStandard.bind(masterData_controller_js_1.masterDataController));

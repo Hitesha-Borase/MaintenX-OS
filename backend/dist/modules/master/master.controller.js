@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.masterAdminController = exports.MasterAdminController = void 0;
 const master_service_js_1 = require("./master.service.js");
+const master_schema_js_1 = require("./master.schema.js");
 function getActor(req) {
     const user = req.user;
     return {
@@ -29,18 +30,21 @@ class MasterAdminController {
     }
     async createCompany(req, reply) {
         const actor = getActor(req);
-        const data = await master_service_js_1.masterAdminService.createCompany(req.body, actor);
+        const input = master_schema_js_1.createCompanySchema.parse(req.body);
+        const data = await master_service_js_1.masterAdminService.createCompany(input, actor);
         return reply.status(201).send({ success: true, message: "Company created successfully", data });
     }
     async updateCompany(req, reply) {
         const actor = getActor(req);
-        const data = await master_service_js_1.masterAdminService.updateCompanyDetails(req.params.id, req.body, actor);
+        const input = master_schema_js_1.updateCompanySchema.parse(req.body);
+        const data = await master_service_js_1.masterAdminService.updateCompanyDetails(req.params.id, input, actor);
         return reply.send({ success: true, message: "Company updated successfully", data });
     }
     async updateCompanyStatus(req, reply) {
         const actor = getActor(req);
-        const data = await master_service_js_1.masterAdminService.updateCompanyStatus(req.params.id, req.body.status, actor);
-        return reply.send({ success: true, message: `Company status updated to ${req.body.status}`, data });
+        const input = master_schema_js_1.updateCompanyStatusSchema.parse(req.body);
+        const data = await master_service_js_1.masterAdminService.updateCompanyStatus(req.params.id, input.status, actor);
+        return reply.send({ success: true, message: `Company status updated to ${input.status}`, data });
     }
     async deleteCompany(req, reply) {
         const actor = getActor(req);
@@ -54,17 +58,20 @@ class MasterAdminController {
     }
     async createCompanyAdmin(req, reply) {
         const actor = getActor(req);
-        const data = await master_service_js_1.masterAdminService.createCompanyAdmin(req.body, actor);
+        const input = master_schema_js_1.createCompanyAdminSchema.parse(req.body);
+        const data = await master_service_js_1.masterAdminService.createCompanyAdmin(input, actor);
         return reply.status(201).send({ success: true, message: "Company administrator created successfully", data });
     }
     async updateCompanyAdmin(req, reply) {
         const actor = getActor(req);
-        const data = await master_service_js_1.masterAdminService.updateCompanyAdmin(req.params.id, req.body, actor);
+        const input = master_schema_js_1.updateCompanyAdminSchema.parse(req.body);
+        const data = await master_service_js_1.masterAdminService.updateCompanyAdmin(req.params.id, input, actor);
         return reply.send({ success: true, message: "Company administrator updated successfully", data });
     }
     async updateAdminStatus(req, reply) {
         const actor = getActor(req);
-        const data = await master_service_js_1.masterAdminService.updateAdminStatus(req.params.id, req.body.status, actor);
+        const input = master_schema_js_1.updateAdminStatusSchema.parse(req.body);
+        const data = await master_service_js_1.masterAdminService.updateAdminStatus(req.params.id, input.status, actor);
         return reply.send({ success: true, message: "Admin status updated", data });
     }
     async resetAdminPassword(req, reply) {
@@ -79,18 +86,21 @@ class MasterAdminController {
     }
     async createPlan(req, reply) {
         const actor = getActor(req);
-        const data = await master_service_js_1.masterAdminService.createPlan(req.body, actor);
+        const input = master_schema_js_1.createPlanSchema.parse(req.body);
+        const data = await master_service_js_1.masterAdminService.createPlan(input, actor);
         return reply.status(201).send({ success: true, message: "Plan created successfully", data });
     }
     async updatePlan(req, reply) {
         const actor = getActor(req);
-        const data = await master_service_js_1.masterAdminService.updatePlan(req.params.id, req.body, actor);
+        const input = master_schema_js_1.updatePlanSchema.parse(req.body);
+        const data = await master_service_js_1.masterAdminService.updatePlan(req.params.id, input, actor);
         return reply.send({ success: true, message: "Plan updated successfully", data });
     }
     async updatePlanStatus(req, reply) {
         const actor = getActor(req);
-        const data = await master_service_js_1.masterAdminService.updatePlanStatus(req.params.id, req.body.status, actor);
-        return reply.send({ success: true, message: `Plan status changed to ${req.body.status}`, data });
+        const input = master_schema_js_1.updatePlanStatusSchema.parse(req.body);
+        const data = await master_service_js_1.masterAdminService.updatePlanStatus(req.params.id, input.status, actor);
+        return reply.send({ success: true, message: `Plan status changed to ${input.status}`, data });
     }
     async deletePlan(req, reply) {
         const actor = getActor(req);
@@ -133,7 +143,8 @@ class MasterAdminController {
     }
     async toggleCompanyModule(req, reply) {
         const actor = getActor(req);
-        const data = await master_service_js_1.masterAdminService.toggleCompanyModule(req.params.companyId, req.params.moduleKey, req.body?.isEnabled, actor);
+        const input = master_schema_js_1.toggleCompanyModuleSchema.parse(req.body || {});
+        const data = await master_service_js_1.masterAdminService.toggleCompanyModule(req.params.companyId, req.params.moduleKey, input.isEnabled, actor);
         return reply.send({ success: true, message: `Module ${req.params.moduleKey} updated`, data });
     }
     // 8. Platform Users
@@ -143,7 +154,8 @@ class MasterAdminController {
     }
     async updateUserStatus(req, reply) {
         const actor = getActor(req);
-        const data = await master_service_js_1.masterAdminService.updateUserStatus(req.params.id, req.body.status, actor);
+        const input = master_schema_js_1.updateUserStatusSchema.parse(req.body);
+        const data = await master_service_js_1.masterAdminService.updateUserStatus(req.params.id, input.status, actor);
         return reply.send({ success: true, message: "User status updated", data });
     }
     async deleteUser(req, reply) {
@@ -177,12 +189,14 @@ class MasterAdminController {
     }
     async createSupportTicket(req, reply) {
         const actor = getActor(req);
-        const data = await master_service_js_1.masterAdminService.createSupportTicket(req.body, actor);
+        const input = master_schema_js_1.createSupportTicketSchema.parse(req.body);
+        const data = await master_service_js_1.masterAdminService.createSupportTicket(input, actor);
         return reply.status(201).send({ success: true, message: "Support ticket created", data });
     }
     async updateTicketStatus(req, reply) {
         const actor = getActor(req);
-        const data = await master_service_js_1.masterAdminService.updateTicketStatus(req.params.id, req.body.status, req.body.resolution, actor);
+        const input = master_schema_js_1.updateTicketStatusSchema.parse(req.body);
+        const data = await master_service_js_1.masterAdminService.updateTicketStatus(req.params.id, input.status, input.resolution, actor);
         return reply.send({ success: true, message: "Ticket updated", data });
     }
     async deleteSupportTicket(req, reply) {

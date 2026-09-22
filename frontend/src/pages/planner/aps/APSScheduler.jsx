@@ -135,9 +135,9 @@ export function APSScheduler() {
 
   const filtered = schedules.filter((s) => {
     const matchesSearch =
-      s.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.productName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.lineName.toLowerCase().includes(searchQuery.toLowerCase());
+      (s.orderNumber || "").toLowerCase().includes((searchQuery || "").toLowerCase()) ||
+      (s.productName || "").toLowerCase().includes((searchQuery || "").toLowerCase()) ||
+      (s.lineName || "").toLowerCase().includes((searchQuery || "").toLowerCase());
     const matchesLine = selectedLineFilter === "ALL" || s.lineId === selectedLineFilter;
     return matchesSearch && matchesLine;
   });

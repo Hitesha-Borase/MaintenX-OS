@@ -6,26 +6,26 @@ const responseFormatter_js_1 = require("../../shared/utils/responseFormatter.js"
 const tenantContext_js_1 = require("../../shared/utils/tenantContext.js");
 class ProductionController {
     async getOrders(request, reply) {
-        const tenantId = request.user?.tenantId || request.headers["x-tenant-id"] || "5bce8458-909a-4dd2-b221-614c32ac7c89";
+        const tenantId = request.user?.tenantId || request.headers["x-tenant-id"] || "0f63be8b-52aa-4e6b-ab83-1d5477328262";
         const plantId = await (0, tenantContext_js_1.resolvePlantId)(tenantId, request.user?.plantId);
         const data = await production_service_js_1.productionService.listOrders(tenantId, plantId);
         return reply.send((0, responseFormatter_js_1.formatSuccess)(data));
     }
     async createOrder(request, reply) {
         const body = request.body;
-        const tenantId = request.user?.tenantId || request.headers["x-tenant-id"] || "5bce8458-909a-4dd2-b221-614c32ac7c89";
+        const tenantId = request.user?.tenantId || request.headers["x-tenant-id"] || "0f63be8b-52aa-4e6b-ab83-1d5477328262";
         const plantId = await (0, tenantContext_js_1.resolvePlantId)(tenantId, request.user?.plantId);
         const data = await production_service_js_1.productionService.createOrder(tenantId, plantId, body);
         return reply.status(201).send((0, responseFormatter_js_1.formatSuccess)(data, "Production Order created & eBR Batch initialized"));
     }
     async updateOrderStatus(request, reply) {
         const { status } = request.body;
-        const tenantId = request.user?.tenantId || request.headers["x-tenant-id"] || "5bce8458-909a-4dd2-b221-614c32ac7c89";
+        const tenantId = request.user?.tenantId || request.headers["x-tenant-id"] || "0f63be8b-52aa-4e6b-ab83-1d5477328262";
         const data = await production_service_js_1.productionService.updateOrderStatus(tenantId, request.params.id, status);
         return reply.send((0, responseFormatter_js_1.formatSuccess)(data, `Order status advanced to ${status}`));
     }
     async deleteOrder(request, reply) {
-        const tenantId = request.user?.tenantId || request.headers["x-tenant-id"] || "5bce8458-909a-4dd2-b221-614c32ac7c89";
+        const tenantId = request.user?.tenantId || request.headers["x-tenant-id"] || "0f63be8b-52aa-4e6b-ab83-1d5477328262";
         const data = await production_service_js_1.productionService.deleteOrder(tenantId, request.params.id);
         return reply.send((0, responseFormatter_js_1.formatSuccess)(data, "Order deleted successfully"));
     }

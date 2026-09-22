@@ -41,16 +41,16 @@ export function ProductionEntry() {
 
   const [serverData, setServerData] = useState(null);
 
-  const fallbackOrder = productionOrders.find((o) => o.status === "Running") || productionOrders[0] || {
-    id: "CO-7",
-    orderNumber: "CO-7",
-    productName: "Sparkling Citrus Cooler 500ml",
-    line: "High-Speed Bottling Line 1",
-    targetQuantity: 8000,
-    producedQuantity: 0,
-    scrapQuantity: 0,
+  const fallbackOrder = {
+    id: "PO-MEAT-2026-01",
+    orderNumber: "PO-MEAT-2026-01",
+    productName: "Hickory Smoked Bacon (Formula #82A/82B)",
+    line: "Line 4: Variovac Vacuum Packaging & Metal Detector",
+    targetQuantity: 10000,
+    producedQuantity: 8450,
+    scrapQuantity: 25,
     reworkQuantity: 0,
-    unit: "Bottles"
+    unit: "lbs"
   };
 
   const getSafeString = (val, fallback = "") => {
@@ -61,21 +61,21 @@ export function ProductionEntry() {
   };
 
   const activeOrder = {
-    id: getSafeString(serverData?.orderId || fallbackOrder.id, "CO-7"),
-    orderNumber: getSafeString(serverData?.activeOrderNumber || fallbackOrder.orderNumber, "CO-7"),
-    productName: getSafeString(serverData?.productName || fallbackOrder.productName || fallbackOrder.product, "Sparkling Citrus Cooler 500ml"),
-    line: getSafeString(serverData?.lineName || serverData?.line || fallbackOrder.line || fallbackOrder.lineName, "High-Speed Bottling Line 1"),
+    id: getSafeString(serverData?.orderId || fallbackOrder.id, "PO-MEAT-2026-01"),
+    orderNumber: getSafeString(serverData?.activeOrderNumber || serverData?.orderNumber || fallbackOrder.orderNumber, "PO-MEAT-2026-01"),
+    productName: getSafeString(serverData?.productName || fallbackOrder.productName, "Hickory Smoked Bacon (Formula #82A/82B)"),
+    line: getSafeString(serverData?.lineName || fallbackOrder.line, "Line 4: Variovac Vacuum Packaging & Metal Detector"),
     targetQuantity: serverData?.targetQuantity !== undefined ? serverData.targetQuantity : fallbackOrder.targetQuantity,
     producedQuantity: serverData?.producedQuantity !== undefined ? serverData.producedQuantity : fallbackOrder.producedQuantity,
     scrapQuantity: serverData?.scrapQuantity !== undefined ? serverData.scrapQuantity : fallbackOrder.scrapQuantity,
     reworkQuantity: serverData?.reworkQuantity !== undefined ? serverData.reworkQuantity : fallbackOrder.reworkQuantity,
-    unit: getSafeString(serverData?.unit || fallbackOrder.unit, "Bottles")
+    unit: getSafeString(serverData?.unit || fallbackOrder.unit, "lbs")
   };
 
   // Packaging Stepper & Scrap
-  const [producedAdd, setProducedAdd] = useState(500);
-  const [scrapAdd, setScrapAdd] = useState(10);
-  const [reworkAdd, setReworkAdd] = useState(5);
+  const [producedAdd, setProducedAdd] = useState(250);
+  const [scrapAdd, setScrapAdd] = useState(5);
+  const [reworkAdd, setReworkAdd] = useState(0);
   const [lastLoggedMessage, setLastLoggedMessage] = useState(null);
 
   // Loading states
@@ -86,48 +86,32 @@ export function ProductionEntry() {
   // Ledger & Modals
   const [recentLogs, setRecentLogs] = useState([]);
   const [isScrapModalOpen, setIsScrapModalOpen] = useState(false);
-  const [defectCode, setDefectCode] = useState("Cap Seal Deformation / Dent");
-  const [scrapNotes, setScrapNotes] = useState("Found during capper exit inspection");
+  const [defectCode, setDefectCode] = useState("Vacuum Seal Leak / Leaker Pouch");
+  const [scrapNotes, setScrapNotes] = useState("Found during exit inspection");
 
   // Processing Operator States
-  const [selectedIngredient, setSelectedIngredient] = useState("Citric Acid Buffer 65°");
-  const [targetKg, setTargetKg] = useState(10.0);
-  const [actualKg, setActualKg] = useState(10.05);
-  const [ingredientLot, setIngredientLot] = useState("LOT-RAW-8812");
-  const [vesselTemp, setVesselTemp] = useState(83.5);
-  const [vesselRpm, setVesselRpm] = useState(1200);
-  const [vesselPressure, setVesselPressure] = useState(2.4);
+  const [selectedIngredient, setSelectedIngredient] = useState("Fresh Grade A Pork Bellies");
+  const [targetKg, setTargetKg] = useState(9800);
+  const [actualKg, setActualKg] = useState(9800);
+  const [ingredientLot, setIngredientLot] = useState("LOT-RM-PORK-2026");
+  const [vesselTemp, setVesselTemp] = useState(71.8);
+  const [vesselRpm, setVesselRpm] = useState(82.5); // Smokehouse RH%
+  const [vesselPressure, setVesselPressure] = useState(1.0);
   const [isCcpModalOpen, setIsCcpModalOpen] = useState(false);
   const [digitalPin, setDigitalPin] = useState("4482");
-  const [wipVolume, setWipVolume] = useState(5000);
-  const [targetVesselTank, setTargetVesselTank] = useState("VESSEL-TANK-01");
-  const [activeRecipeStep, setActiveRecipeStep] = useState(2);
-
-  const handleSelectRecipeStep = async (stepNumber) => {
-    setActiveRecipeStep(stepNumber);
-    try {
-      await dashboardService.advanceProcessingRecipeStep({ stepNumber });
-      const stepNames = {
-        1: "1. Ingredient Dosing",
-        2: "2. High-Shear Mixing",
-        3: "3. Pasteurization Hold",
-        4: "4. Chilled Cooling"
-      };
-      addToast(`Switched active eBR step to "${stepNames[stepNumber]}".`, "info");
-    } catch (err) {
-      // step state updated locally
-    }
-  };
+  const [wipVolume, setWipVolume] = useState(8450);
+  const [targetVesselTank, setTargetVesselTank] = useState("SMK-BAY-02");
+  const [activeRecipeStep, setActiveRecipeStep] = useState(3);
 
   // Packaging Operator States
-  const [selectedWipLot, setSelectedWipLot] = useState("WIP-TANK-501 (4,850L)");
-  const [pkgMaterialName, setPkgMaterialName] = useState("500ml Aseptic PET Bottles");
+  const [selectedWipLot, setSelectedWipLot] = useState("BAT-MEAT-2026-01");
+  const [pkgMaterialName, setPkgMaterialName] = useState("Heavy Barrier Vacuum Shrink Pouches");
   const [pkgMaterialQty, setPkgMaterialQty] = useState(1000);
-  const [cappingTorque, setCappingTorque] = useState(1.85);
+  const [cappingTorque, setCappingTorque] = useState(12.0); // Vacuum level mbar
   const [totalCases, setTotalCases] = useState(80);
-  const [targetFgBin, setTargetFgBin] = useState("WH-FG-BIN-04");
+  const [targetFgBin, setTargetFgBin] = useState("COLD-BAY-02");
 
-  const targetQty = Number(activeOrder.targetQuantity) || 8000;
+  const targetQty = Number(activeOrder.targetQuantity) || 10000;
   const currentProduced = Number(activeOrder.producedQuantity) || 0;
   const pctComplete = Math.min(100, Math.round((currentProduced / targetQty) * 100));
 
@@ -139,6 +123,24 @@ export function ProductionEntry() {
           setServerData(resObj);
           if (Array.isArray(resObj.recentLogs)) {
             setRecentLogs(resObj.recentLogs);
+          }
+          if (resObj.ingredients && resObj.ingredients.length > 0) {
+            setSelectedIngredient(resObj.ingredients[0].name);
+            setTargetKg(Number(resObj.ingredients[0].quantity));
+            setActualKg(Number(resObj.ingredients[0].quantity));
+            setIngredientLot(`LOT-${resObj.ingredients[0].skuCode || 'RM-MEAT-2026'}`);
+          }
+          if (resObj.batch) {
+            if (resObj.batch.currentStep) setActiveRecipeStep(resObj.batch.currentStep);
+            if (resObj.batch.tankNumber) setTargetVesselTank(resObj.batch.tankNumber);
+            if (resObj.batch.actualVolume) setWipVolume(Number(resObj.batch.actualVolume));
+            if (resObj.batch.batchNumber) setSelectedWipLot(resObj.batch.batchNumber);
+          }
+          if (resObj.wipLots && resObj.wipLots.length > 0) {
+            setSelectedWipLot(resObj.wipLots[0].lotNumber);
+          }
+          if (resObj.locationBins && resObj.locationBins.length > 0) {
+            setTargetFgBin(resObj.locationBins[0].binCode);
           }
         }
       })
@@ -235,19 +237,41 @@ export function ProductionEntry() {
   };
 
   // ─── Processing Operator Handlers
+  const stepNames = {
+    1: "1. Raw Meat Prep & Curing Salt Dosing",
+    2: "2. Multi-Needle Brine Injection & Tumbling",
+    3: "3. Thermal Smokehouse Cycle (CCP-1)",
+    4: "4. Blast Chilling & Slicing Prep"
+  };
+
+  const handleSelectRecipeStep = async (stepNumber) => {
+    setActiveRecipeStep(stepNumber);
+    try {
+      await dashboardService.advanceProcessingRecipeStep({
+        stepNumber,
+        stepName: stepNames[stepNumber],
+        batchNumber: serverData?.batch?.batchNumber || "BAT-MEAT-2026-01"
+      });
+      addToast(`Switched active eBR step to "${stepNames[stepNumber]}".`, "info");
+      fetchLiveStatus();
+    } catch (err) {
+      // step state updated locally
+    }
+  };
+
   const handleWeighIngredient = async () => {
     setActionLoading(true);
     try {
       const res = await dashboardService.weighProcessingIngredient({
         ingredient: selectedIngredient,
-        targetKg: Number(targetKg),
-        actualKg: Number(actualKg),
+        targetLbs: Number(targetKg),
+        actualLbs: Number(actualKg),
         lotBarcode: ingredientLot
       });
       const resObj = res?.data || res;
-      addToast(resObj?.message || `Raw ingredient '${selectedIngredient}' weighed: ${actualKg} kg (${resObj?.status || 'PASS'}).`, "success");
+      addToast(resObj?.message || `Raw ingredient '${selectedIngredient}' scale verified: ${actualKg} lbs (${resObj?.status || 'PASS'}).`, "success");
     } catch (err) {
-      addToast(`Raw ingredient '${selectedIngredient}' weighed: ${actualKg} kg (PASS).`, "success");
+      addToast(`Raw ingredient '${selectedIngredient}' scale verified: ${actualKg} lbs (PASS).`, "success");
     } finally {
       setActionLoading(false);
     }
@@ -258,13 +282,14 @@ export function ProductionEntry() {
     try {
       const res = await dashboardService.logProcessingParameters({
         temperature: Number(vesselTemp),
-        agitationRpm: Number(vesselRpm),
-        pressureBar: Number(vesselPressure)
+        coreTempC: Number(vesselTemp),
+        smokehouseHumidity: Number(vesselRpm),
+        agitationRpm: Number(vesselRpm)
       });
       const resObj = res?.data || res;
-      addToast(resObj?.message || "Vessel processing parameters logged to eBR batch ledger.", "success");
+      addToast(resObj?.message || "Smokehouse thermal parameters logged to eBR batch ledger.", "success");
     } catch (err) {
-      addToast("Vessel processing parameters logged to eBR batch ledger.", "success");
+      addToast("Smokehouse thermal parameters logged to eBR batch ledger.", "success");
     } finally {
       setActionLoading(false);
     }
@@ -274,15 +299,15 @@ export function ProductionEntry() {
     setActionLoading(true);
     try {
       const res = await dashboardService.signoffCcp({
-        ccpCode: "CCP-1",
+        ccpCode: "CCP-1 (Core Lethality ≥ 71.1°C)",
         actualValue: `${vesselTemp}°C`,
         digitalPin
       });
       const resObj = res?.data || res;
-      addToast(resObj?.message || "CCP Kill Step (CCP-1) signed off with Digital Operator PIN verification.", "success");
+      addToast(resObj?.message || "CCP Lethality Step (CCP-1) signed off with Digital Operator PIN verification.", "success");
       setIsCcpModalOpen(false);
     } catch (err) {
-      addToast("CCP Kill Step (CCP-1) signed off with Digital Operator PIN verification.", "success");
+      addToast("CCP Lethality Step (CCP-1) signed off with Digital Operator PIN verification.", "success");
       setIsCcpModalOpen(false);
     } finally {
       setActionLoading(false);
@@ -293,14 +318,15 @@ export function ProductionEntry() {
     setActionLoading(true);
     try {
       const res = await dashboardService.completeBatchAndCreateWip({
-        batchNumber: "BAT-2026-TEST-805",
-        volumeLiters: Number(wipVolume),
+        batchNumber: serverData?.batch?.batchNumber || "BAT-MEAT-2026-01",
+        volumeLbs: Number(wipVolume),
         targetTank: targetVesselTank
       });
       const resObj = res?.data || res;
-      addToast(resObj?.message || `Batch BAT-2026-TEST-805 completed. WIP Bulk Tank Lot ${resObj?.wipLotNumber || 'WIP-TANK-501'} created in PostgreSQL inventory_lots.`, "success");
+      addToast(resObj?.message || `Batch ${serverData?.batch?.batchNumber || 'BAT-MEAT-2026-01'} completed. WIP Cured Meat Staging Lot registered in PostgreSQL.`, "success");
+      fetchLiveStatus();
     } catch (err) {
-      addToast(`Batch BAT-2026-TEST-805 completed. WIP Bulk Tank Lot WIP-TANK-501 (${wipVolume} L) created in PostgreSQL inventory_lots.`, "success");
+      addToast(`Batch completed. WIP Cured Meat Staging Lot registered in PostgreSQL.`, "success");
     } finally {
       setActionLoading(false);
     }
@@ -315,9 +341,9 @@ export function ProductionEntry() {
         orderNumber: activeOrder.orderNumber
       });
       const resObj = res?.data || res;
-      addToast(resObj?.message || `Upstream WIP Tank Lot ${selectedWipLot} linked to Packaging Run.`, "success");
+      addToast(resObj?.message || `Upstream WIP Cured Meat Lot ${selectedWipLot} linked to Packaging Run.`, "success");
     } catch (err) {
-      addToast(`Upstream WIP Tank Lot ${selectedWipLot} linked to Packaging Run.`, "success");
+      addToast(`Upstream WIP Cured Meat Lot ${selectedWipLot} linked to Packaging Run.`, "success");
     } finally {
       setActionLoading(false);
     }
@@ -329,7 +355,7 @@ export function ProductionEntry() {
       const res = await dashboardService.consumePackagingMaterials({
         materialName: pkgMaterialName,
         quantityUsed: Number(pkgMaterialQty),
-        lotNumber: "LOT-PKG-BOTTLES-992"
+        lotNumber: "LOT-PKG-POUCH-2026"
       });
       const resObj = res?.data || res;
       addToast(resObj?.message || `Consumed ${pkgMaterialQty} units of ${pkgMaterialName}.`, "success");
@@ -345,13 +371,14 @@ export function ProductionEntry() {
     try {
       const res = await dashboardService.verifySealAndLabel({
         cappingTorqueNm: Number(cappingTorque),
-        sealStatus: "INTACT_SEALED",
-        barcodeScan: "VERIFIED_PASS"
+        sealStatus: "INTACT_HERMETIC",
+        barcodeScan: "VERIFIED_PASS",
+        metalDetectorStatus: "PASS"
       });
       const resObj = res?.data || res;
-      addToast(resObj?.message || "Induction seal, capping torque, and label barcode scan verified.", "success");
+      addToast(resObj?.message || "Variovac hermetic seal, metal detector rejection & GS1-128 barcode scan verified.", "success");
     } catch (err) {
-      addToast("Induction seal, capping torque, and label barcode scan verified.", "success");
+      addToast("Variovac hermetic seal, metal detector rejection & GS1-128 barcode scan verified.", "success");
     } finally {
       setActionLoading(false);
     }
@@ -366,9 +393,10 @@ export function ProductionEntry() {
         targetBin: targetFgBin
       });
       const resObj = res?.data || res;
-      addToast(resObj?.message || `Packaging Run completed. Finished Goods Pallet ${resObj?.palletNumber || 'FG-PALLET-892'} (${totalCases} Cases) created in PostgreSQL inventory_lots.`, "success");
+      addToast(resObj?.message || `Packaging Run completed. Finished Goods Pallet ${resObj?.palletNumber || 'FG-PALLET-01'} (${totalCases} Cases) received into cold storage.`, "success");
+      fetchLiveStatus();
     } catch (err) {
-      addToast(`Packaging Run completed. Finished Goods Pallet FG-PALLET-892 (${totalCases} Cases) created in PostgreSQL inventory_lots.`, "success");
+      addToast(`Packaging Run completed. Finished Goods Pallet (${totalCases} Cases) created in PostgreSQL inventory_lots.`, "success");
     } finally {
       setActionLoading(false);
     }
@@ -459,14 +487,9 @@ export function ProductionEntry() {
                   cursor: "pointer"
                 }}
               >
-                {(productionOrders.length > 0 ? productionOrders : [
-                  { id: "co-5", orderNumber: "co-5", productName: "Valencia Organic Orange Juice Concentrate 65° Brix" },
-                  { id: "PO-TEST-PGADMIN-99", orderNumber: "PO-TEST-PGADMIN-99", productName: "500ml Sparkling Citrus Soda" },
-                  { id: "ORD-200", orderNumber: "ORD-200", productName: "Valencia Organic Orange Juice Concentrate 65° Brix" },
-                  { id: "CO-7", orderNumber: "CO-7", productName: "Sparkling Citrus Cooler 500ml" }
-                ]).map((ord) => (
+                {((serverData?.allOrders && serverData.allOrders.length > 0) ? serverData.allOrders : (productionOrders.length > 0 ? productionOrders : [fallbackOrder])).map((ord) => (
                   <option key={ord.id || ord.orderNumber} value={ord.orderNumber}>
-                    {getSafeString(ord.orderNumber)} — {getSafeString(ord.productName || ord.skuName, "Product")}
+                    {getSafeString(ord.orderNumber)} — {getSafeString(ord.productName || ord.skuName, "Product")} ({getSafeString(ord.status, "RUNNING")})
                   </option>
                 ))}
               </select>
@@ -478,7 +501,7 @@ export function ProductionEntry() {
               </Badge>
             </div>
             <div style={{ fontWeight: 900, color: "var(--text-primary)", fontSize: "18px", margin: "4px 0" }}>
-              {getSafeString(activeOrder.orderNumber)} — {getSafeString(activeOrder.productName)} ({getSafeString(activeOrder.line, 'Line 1')})
+              {getSafeString(activeOrder.orderNumber)} — {getSafeString(activeOrder.productName)} ({getSafeString(activeOrder.line, 'Line 4: Variovac Vacuum Packaging')})
             </div>
           </div>
 
@@ -488,7 +511,7 @@ export function ProductionEntry() {
             </div>
             <div style={{ fontSize: "24px", fontWeight: 900, color: "#B27E33", fontFamily: "var(--font-mono)" }}>
               {currentProduced.toLocaleString()}{" "}
-              <span style={{ fontSize: "14px", color: "var(--text-muted)", fontWeight: 500 }}>/ {targetQty.toLocaleString()} Units</span>
+              <span style={{ fontSize: "14px", color: "var(--text-muted)", fontWeight: 500 }}>/ {targetQty.toLocaleString()} {activeOrder.unit || "lbs"}</span>
             </div>
           </div>
         </div>
@@ -500,7 +523,7 @@ export function ProductionEntry() {
               Progress: <strong style={{ color: "var(--text-primary)" }}>{pctComplete}%</strong> Completed
             </span>
             <span style={{ color: "var(--text-secondary)" }}>
-              Remaining: <strong style={{ color: "#B27E33" }}>{Math.max(0, targetQty - currentProduced).toLocaleString()} {activeOrder.unit || "Bottles"}</strong>
+              Remaining: <strong style={{ color: "#B27E33" }}>{Math.max(0, targetQty - currentProduced).toLocaleString()} {activeOrder.unit || "lbs"}</strong>
             </span>
           </div>
           <div style={{ width: "100%", height: "10px", backgroundColor: "var(--bg-card-subtle)", borderRadius: "6px", overflow: "hidden" }}>
@@ -534,24 +557,24 @@ export function ProductionEntry() {
                 <FlaskConical color="#C89547" size={24} />
                 <div>
                   <h3 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
-                    Step-by-Step Recipe & eBR Execution (Vessel Tank Hall)
+                    Step-by-Step Recipe & eBR Execution ({serverData?.recipeName || "Formula #82B Smoked Bacon Brine & Cure Recipe"})
                   </h3>
                   <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-                    Batch BAT-2026-TEST-805 — Electronic Batch Record Sequence
+                    Batch {serverData?.batch?.batchNumber || "BAT-MEAT-2026-01"} — Recipe {serverData?.batch?.recipeVersion || "v2.1"} ({serverData?.batch?.tankNumber || "SMK-BAY-02"})
                   </span>
                 </div>
               </div>
               <Button variant="primary" icon={ShieldCheck} onClick={() => setIsCcpModalOpen(true)}>
-                Sign-off CCP Kill Step
+                Sign-off CCP Lethality Step
               </Button>
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "12px" }}>
               {[
-                { step: 1, title: "1. Ingredient Dosing", detail: "Citric Acid & Concentrate Weighed" },
-                { step: 2, title: "2. High-Shear Mixing", detail: "Agitation at 1,200 RPM for 25m" },
-                { step: 3, title: "3. Pasteurization Hold", detail: "Thermal Target ≥ 83.1°C (CCP-1)" },
-                { step: 4, title: "4. Chilled Cooling", detail: "Cool down to 4.5°C before transfer" }
+                { step: 1, title: "1. Raw Meat Prep & Curing Salt Dosing", detail: "Fresh Grade A Pork Bellies & Maple Curing Salt Scale Weighed" },
+                { step: 2, title: "2. Multi-Needle Brine Injection & Tumbling", detail: "Brine injection pick-up ~12-14% & vacuum tumbling" },
+                { step: 3, title: "3. Thermal Smokehouse Cycle (CCP-1)", detail: "Hickory smoke cycle & core lethality temp ≥ 71.1°C (160°F)" },
+                { step: 4, title: "4. Blast Chilling & Slicing Prep", detail: "Rapid chill down to ≤ 4.0°C prior to slicing & packaging" }
               ].map((s) => {
                 const isCurrent = s.step === activeRecipeStep;
                 const isCompleted = s.step < activeRecipeStep;
@@ -588,22 +611,46 @@ export function ProductionEntry() {
             <Card style={{ backgroundColor: "#FFFFFF", padding: "20px", border: "1px solid var(--border-subtle)", borderTop: "4px solid #C89547" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "14px" }}>
                 <Scale color="#C89547" size={22} />
-                <h4 style={{ fontSize: "15px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>Ingredient Dosing & Weigh Scale Entry</h4>
+                <h4 style={{ fontSize: "15px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>Ingredient Dosing & Scale Scale Verification</h4>
               </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                 <div>
-                  <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)" }}>Ingredient Name</label>
-                  <input type="text" value={selectedIngredient} onChange={(e) => setSelectedIngredient(e.target.value)} className="input-field" style={{ width: "100%", marginTop: "4px" }} />
+                  <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)" }}>Select Recipe BOM Ingredient</label>
+                  <select
+                    value={selectedIngredient}
+                    onChange={(e) => {
+                      const ingName = e.target.value;
+                      setSelectedIngredient(ingName);
+                      const found = serverData?.ingredients?.find(i => i.name === ingName);
+                      if (found) {
+                        setTargetKg(Number(found.quantity));
+                        setActualKg(Number(found.quantity));
+                        setIngredientLot(`LOT-${found.skuCode || 'RM-MEAT-2026'}`);
+                      }
+                    }}
+                    className="input-field"
+                    style={{ width: "100%", marginTop: "4px" }}
+                  >
+                    {(serverData?.ingredients && serverData.ingredients.length > 0 ? serverData.ingredients : [
+                      { name: "Fresh Grade A Pork Bellies", quantity: 9800, uom: "lbs", skuCode: "RM-PORK-BELLY", stage: "INJECTING" },
+                      { name: "Formula #82B Maple Curing Salt", quantity: 350, uom: "lbs", skuCode: "RM-SPICE-82B", stage: "BRINE_PREP" },
+                      { name: "Heavy Barrier Vacuum Shrink Pouches", quantity: 10000, uom: "Units", skuCode: "PKG-VAC-POUCH", stage: "PACKAGING" }
+                    ]).map((ing) => (
+                      <option key={ing.name} value={ing.name}>
+                        {ing.name} ({Number(ing.quantity).toLocaleString()} {ing.uom} - Stage: {ing.stage || 'PROCESSING'})
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
                   <div>
-                    <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)" }}>Target Weight (kg)</label>
+                    <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)" }}>Target Scale ({activeOrder.unit || "lbs"})</label>
                     <input type="number" value={targetKg} onChange={(e) => setTargetKg(e.target.value)} className="input-field" style={{ width: "100%", marginTop: "4px" }} />
                   </div>
                   <div>
-                    <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)" }}>Weighed Scale (kg)</label>
+                    <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)" }}>Weighed Scale ({activeOrder.unit || "lbs"})</label>
                     <input type="number" value={actualKg} onChange={(e) => setActualKg(e.target.value)} className="input-field" style={{ width: "100%", marginTop: "4px" }} />
                   </div>
                 </div>
@@ -623,28 +670,28 @@ export function ProductionEntry() {
             <Card style={{ backgroundColor: "#FFFFFF", padding: "20px", border: "1px solid var(--border-subtle)", borderTop: "4px solid #C89547" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "14px" }}>
                 <TrendingUp color="#C89547" size={22} />
-                <h4 style={{ fontSize: "15px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>Vessel Processing Stage Parameters</h4>
+                <h4 style={{ fontSize: "15px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>Smokehouse & Thermal Stage Telemetry</h4>
               </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
                   <div>
-                    <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)" }}>Temp (°C)</label>
+                    <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)" }}>Core Meat Temp (°C)</label>
                     <input type="number" value={vesselTemp} onChange={(e) => setVesselTemp(e.target.value)} className="input-field" style={{ width: "100%", marginTop: "4px" }} />
                   </div>
                   <div>
-                    <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)" }}>Agitator (RPM)</label>
+                    <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)" }}>Chamber Humidity (% RH)</label>
                     <input type="number" value={vesselRpm} onChange={(e) => setVesselRpm(e.target.value)} className="input-field" style={{ width: "100%", marginTop: "4px" }} />
                   </div>
                 </div>
 
                 <div>
-                  <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)" }}>Vessel Pressure (Bar)</label>
+                  <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)" }}>Smoke Generator Chamber Pressure (Bar)</label>
                   <input type="number" value={vesselPressure} onChange={(e) => setVesselPressure(e.target.value)} className="input-field" style={{ width: "100%", marginTop: "4px" }} />
                 </div>
 
                 <Button variant="primary" icon={TrendingUp} onClick={handleLogParameters} disabled={actionLoading} style={{ width: "100%", marginTop: "6px" }}>
-                  {actionLoading ? "Logging Parameters..." : "Log Vessel Stage Telemetry"}
+                  {actionLoading ? "Logging Parameters..." : "Log Smokehouse Stage Telemetry"}
                 </Button>
               </div>
             </Card>
@@ -655,17 +702,17 @@ export function ProductionEntry() {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
               <div>
                 <h4 style={{ fontSize: "16px", fontWeight: 800, color: "#A36B1C", margin: 0 }}>
-                  Complete Batch & Create WIP Bulk Tank Lot
+                  Complete Batch & Register WIP Cured Meat Staging Lot
                 </h4>
                 <p style={{ fontSize: "12px", color: "#8C5B23", margin: "2px 0 0 0" }}>
-                  Concludes processing batch execution and registers downstream WIP Lot in PostgreSQL inventory_lots table.
+                  Concludes thermal processing batch execution and registers downstream WIP Lot in PostgreSQL inventory_lots table.
                 </p>
               </div>
 
               <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-                <input type="number" value={wipVolume} onChange={(e) => setWipVolume(e.target.value)} className="input-field" style={{ width: "120px" }} title="Volume Liters" />
+                <input type="number" value={wipVolume} onChange={(e) => setWipVolume(e.target.value)} className="input-field" style={{ width: "120px" }} title="Volume in lbs" />
                 <Button variant="primary" icon={CheckCircle2} onClick={handleCompleteBatchWip} disabled={actionLoading}>
-                  {actionLoading ? "Creating WIP Lot..." : "Complete Batch & Create WIP Tank Lot"}
+                  {actionLoading ? "Creating WIP Lot..." : "Complete Batch & Register WIP Meat Lot"}
                 </Button>
               </div>
             </div>
@@ -786,7 +833,7 @@ export function ProductionEntry() {
             </div>
 
             <Button type="submit" variant="primary" icon={Send} disabled={submittingLog} style={{ padding: "14px", fontSize: "15px", fontWeight: 800 }}>
-              {submittingLog ? "Submitting Log..." : `Confirm & Log +${producedAdd.toLocaleString()} Bottles Produced`}
+              {submittingLog ? "Submitting Log..." : `Confirm & Log +${producedAdd.toLocaleString()} ${activeOrder.unit || "lbs"} Produced`}
             </Button>
           </form>
 
@@ -796,15 +843,20 @@ export function ProductionEntry() {
             <Card style={{ backgroundColor: "#FFFFFF", padding: "20px", border: "1px solid var(--border-subtle)", borderTop: "4px solid #C89547" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "14px" }}>
                 <FlaskConical color="#C89547" size={22} />
-                <h4 style={{ fontSize: "15px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>Upstream WIP Vessel Lot Link</h4>
+                <h4 style={{ fontSize: "15px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>Upstream WIP Meat Lot Link</h4>
               </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                 <div>
-                  <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)" }}>Select WIP Tank Lot</label>
+                  <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)" }}>Select Staged Cured Meat Lot</label>
                   <select value={selectedWipLot} onChange={(e) => setSelectedWipLot(e.target.value)} className="input-field" style={{ width: "100%", marginTop: "4px" }}>
-                    <option value="WIP-TANK-501 (4,850L)">WIP-TANK-501 (4,850 L - Tested PASS)</option>
-                    <option value="WIP-TANK-204 (5,000L)">WIP-TANK-204 (5,000 L - Ready)</option>
+                    {(serverData?.wipLots && serverData.wipLots.length > 0 ? serverData.wipLots : [
+                      { lotNumber: "BAT-MEAT-2026-01", currentQuantity: 8450, uom: "lbs", status: "RELEASED" }
+                    ]).map((lot) => (
+                      <option key={lot.lotNumber || lot.id} value={lot.lotNumber}>
+                        {lot.lotNumber} ({Number(lot.currentQuantity || 8450).toLocaleString()} {lot.uom || 'lbs'} - {lot.status || 'RELEASED'})
+                      </option>
+                    ))}
                   </select>
                 </div>
 
@@ -818,17 +870,17 @@ export function ProductionEntry() {
             <Card style={{ backgroundColor: "#FFFFFF", padding: "20px", border: "1px solid var(--border-subtle)", borderTop: "4px solid #C89547" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "14px" }}>
                 <Barcode color="#C89547" size={22} />
-                <h4 style={{ fontSize: "15px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>Capping Torque & Seal Verification</h4>
+                <h4 style={{ fontSize: "15px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>Variovac Vacuum Seal & Metal Detector</h4>
               </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                 <div>
-                  <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)" }}>Capping Torque (Nm)</label>
+                  <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)" }}>Vacuum Chamber Pressure (mbar)</label>
                   <input type="number" value={cappingTorque} onChange={(e) => setCappingTorque(e.target.value)} className="input-field" style={{ width: "100%", marginTop: "4px" }} />
                 </div>
 
                 <Button variant="primary" icon={Barcode} onClick={handleVerifySeal} disabled={actionLoading} style={{ width: "100%" }}>
-                  {actionLoading ? "Verifying..." : "Verify Torque, Seal & Barcode"}
+                  {actionLoading ? "Verifying..." : "Verify Vacuum Seal, Metal Detector & GS1-128"}
                 </Button>
               </div>
             </Card>
@@ -842,12 +894,19 @@ export function ProductionEntry() {
                   Finish Packaging Run & Create Finished Goods Pallet (FG)
                 </h4>
                 <p style={{ fontSize: "12px", color: "#8C5B23", margin: "2px 0 0 0" }}>
-                  Receives final pallet into PostgreSQL inventory_lots and completes order lifecycle.
+                  Receives final pallet into PostgreSQL inventory_lots cold storage and completes order lifecycle.
                 </p>
               </div>
 
               <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-                <input type="number" value={totalCases} onChange={(e) => setTotalCases(e.target.value)} className="input-field" style={{ width: "110px" }} title="Total Cases" />
+                <input type="number" value={totalCases} onChange={(e) => setTotalCases(e.target.value)} className="input-field" style={{ width: "100px" }} title="Total Cases" />
+                <select value={targetFgBin} onChange={(e) => setTargetFgBin(e.target.value)} className="input-field" style={{ width: "140px" }}>
+                  {(serverData?.locationBins && serverData.locationBins.length > 0 ? serverData.locationBins : [
+                    { binCode: "COLD-BAY-02" }, { binCode: "FREEZER-01" }, { binCode: "STAGING-OUT-01" }
+                  ]).map((bin) => (
+                    <option key={bin.binCode} value={bin.binCode}>{bin.binCode}</option>
+                  ))}
+                </select>
                 <Button variant="primary" icon={Boxes} onClick={handleFinishRunFgPallet} disabled={actionLoading}>
                   {actionLoading ? "Creating Pallet..." : "Finish Run & Create FG Pallet"}
                 </Button>
@@ -879,10 +938,10 @@ export function ProductionEntry() {
                 recentLogs.map((log) => (
                   <tr key={log.id} style={{ borderBottom: "1px solid #F3F4F6" }}>
                     <td style={{ padding: "8px", fontWeight: 700 }}>{log.time}</td>
-                    <td style={{ padding: "8px" }}>{getSafeString(log.operator, "Ronald Robinson")}</td>
+                    <td style={{ padding: "8px" }}>{getSafeString(log.operator, "Josiah Leyland (Line Operator)")}</td>
                     <td style={{ padding: "8px", color: "#B27E33", fontWeight: 800 }}>+{log.goodUnits}</td>
                     <td style={{ padding: "8px", color: "#DC2626", fontWeight: 700 }}>+{log.scrapUnits}</td>
-                    <td style={{ padding: "8px", fontWeight: 900 }}>{log.runningTotal?.toLocaleString()}</td>
+                    <td style={{ padding: "8px", fontWeight: 900 }}>{log.runningTotal?.toLocaleString()} {activeOrder.unit || "lbs"}</td>
                   </tr>
                 ))
               ) : (
@@ -901,7 +960,7 @@ export function ProductionEntry() {
       <Modal
         isOpen={isCcpModalOpen}
         onClose={() => setIsCcpModalOpen(false)}
-        title="Sign-off CCP Pasteurizer Thermal Kill Step (CCP-1)"
+        title="Sign-off Smokehouse Thermal Lethality Kill Step (CCP-1)"
         footer={
           <>
             <Button variant="secondary" onClick={() => setIsCcpModalOpen(false)}>Cancel</Button>
@@ -913,10 +972,10 @@ export function ProductionEntry() {
       >
         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
           <p style={{ fontSize: "13px", color: "var(--text-secondary)" }}>
-            Pasteurizer Thermal Hold temperature must be ≥ 83.1°C to sign off critical control point.
+            Smokehouse internal core lethality temperature must reach ≥ 71.1°C (160°F) to ensure biological pathogen destruction.
           </p>
           <div>
-            <label style={{ fontSize: "12px", fontWeight: 700 }}>Thermal Kill Temp (°C)</label>
+            <label style={{ fontSize: "12px", fontWeight: 700 }}>Core Lethality Temp (°C)</label>
             <input type="number" value={vesselTemp} onChange={(e) => setVesselTemp(e.target.value)} className="input-field" style={{ width: "100%", marginTop: "4px" }} />
           </div>
           <div>
@@ -946,11 +1005,11 @@ export function ProductionEntry() {
               Defect Category / Reason Code
             </label>
             <select value={defectCode} onChange={(e) => setDefectCode(e.target.value)} className="input-field">
-              <option value="Cap Seal Deformation / Dent">Cap Seal Deformation / Dent</option>
-              <option value="Label Misalignment / Tear">Label Misalignment / Tear</option>
-              <option value="Volume Underfill / Overfill">Volume Underfill / Overfill</option>
-              <option value="Bottle Neck Contamination">Bottle Neck Contamination</option>
-              <option value="Date Code Barcode Smudge">Date Code Barcode Smudge</option>
+              <option value="Vacuum Seal Leak / Leaker Pouch">Vacuum Seal Leak / Leaker Pouch</option>
+              <option value="Metal Detector Rejection (Fe/Non-Fe/SS)">Metal Detector Rejection (Fe/Non-Fe/SS)</option>
+              <option value="Slicing Thickness / Weight Underfill">Slicing Thickness / Weight Underfill</option>
+              <option value="Bone / Cartilage Spec Foreign Material">Bone / Cartilage Spec Foreign Material</option>
+              <option value="Date Code Barcode Smudge / Unreadable">Date Code Barcode Smudge / Unreadable</option>
             </select>
           </div>
 

@@ -69,18 +69,18 @@ class MaintenanceController {
         return reply.status(201).send((0, responseFormatter_js_1.formatSuccess)(data, "Maintenance Work Order created"));
     }
     async updateWorkOrderStatus(request, reply) {
-        const tenantId = request.user?.tenantId || "aa3183d2-709b-42a8-add1-b2e4b2d873b0";
+        const tenantId = request.user?.tenantId;
         const input = maintenance_schema_js_1.updateWorkOrderStatusSchema.parse(request.body);
         const data = await maintenance_service_js_1.maintenanceService.updateWorkOrderStatus(tenantId, request.params.id, input);
         return reply.send((0, responseFormatter_js_1.formatSuccess)(data, `Work Order status updated to ${input.status}`));
     }
     async updateWorkOrder(request, reply) {
-        const tenantId = request.user?.tenantId || "aa3183d2-709b-42a8-add1-b2e4b2d873b0";
+        const tenantId = request.user?.tenantId;
         const data = await maintenance_service_js_1.maintenanceService.updateWorkOrder(tenantId, request.params.id, request.body);
         return reply.send((0, responseFormatter_js_1.formatSuccess)(data, `Work Order ${request.params.id} updated successfully`));
     }
     async deleteWorkOrder(request, reply) {
-        const tenantId = request.user?.tenantId || "aa3183d2-709b-42a8-add1-b2e4b2d873b0";
+        const tenantId = request.user?.tenantId;
         const data = await maintenance_service_js_1.maintenanceService.deleteWorkOrder(tenantId, request.params.id);
         return reply.send((0, responseFormatter_js_1.formatSuccess)(data, `Work Order ${request.params.id} deleted successfully`));
     }
@@ -150,32 +150,32 @@ class MaintenanceController {
         return reply.send((0, responseFormatter_js_1.formatSuccess)(data, "Profile updated successfully"));
     }
     async getSpareParts(request, reply) {
-        const tenantId = request.user?.tenantId || "aa3183d2-709b-42a8-add1-b2e4b2d873b0";
+        const tenantId = request.user?.tenantId;
         const data = await maintenance_service_js_1.maintenanceService.listSpareParts(tenantId);
         return reply.send((0, responseFormatter_js_1.formatSuccess)(data));
     }
     async createSparePart(request, reply) {
-        const tenantId = request.user?.tenantId || "aa3183d2-709b-42a8-add1-b2e4b2d873b0";
+        const tenantId = request.user?.tenantId;
         const data = await maintenance_service_js_1.maintenanceService.createSparePart(tenantId, request.body);
         return reply.status(201).send((0, responseFormatter_js_1.formatSuccess)(data, "Spare part created successfully"));
     }
     async updateSparePart(request, reply) {
-        const tenantId = request.user?.tenantId || "aa3183d2-709b-42a8-add1-b2e4b2d873b0";
+        const tenantId = request.user?.tenantId;
         const data = await maintenance_service_js_1.maintenanceService.updateSparePart(tenantId, request.params.id, request.body);
         return reply.send((0, responseFormatter_js_1.formatSuccess)(data, "Spare part updated successfully"));
     }
     async deleteSparePart(request, reply) {
-        const tenantId = request.user?.tenantId || "aa3183d2-709b-42a8-add1-b2e4b2d873b0";
+        const tenantId = request.user?.tenantId;
         const data = await maintenance_service_js_1.maintenanceService.deleteSparePart(tenantId, request.params.id);
         return reply.send((0, responseFormatter_js_1.formatSuccess)(data, "Spare part deleted successfully"));
     }
     async getCalibrations(request, reply) {
-        const tenantId = request.user?.tenantId || "aa3183d2-709b-42a8-add1-b2e4b2d873b0";
+        const tenantId = request.user?.tenantId;
         const data = await maintenance_service_js_1.maintenanceService.listCalibrations(tenantId);
         return reply.send((0, responseFormatter_js_1.formatSuccess)(data));
     }
     async createCalibration(request, reply) {
-        const tenantId = request.user?.tenantId || "aa3183d2-709b-42a8-add1-b2e4b2d873b0";
+        const tenantId = request.user?.tenantId;
         const data = await maintenance_service_js_1.maintenanceService.createCalibration(tenantId, request.body);
         return reply.status(201).send((0, responseFormatter_js_1.formatSuccess)(data, "Calibration recorded successfully"));
     }
@@ -197,26 +197,26 @@ class MaintenanceController {
     }
     async saveWorkOrderExecution(request, reply) {
         const { id } = request.params;
-        const tenantId = request.user?.tenantId || "aa3183d2-709b-42a8-add1-b2e4b2d873b0";
+        const tenantId = request.user?.tenantId;
         const data = await maintenance_service_js_1.maintenanceService.saveWorkOrderExecution(tenantId, id, request.body);
         return reply.send((0, responseFormatter_js_1.formatSuccess)(data, "Repair actions and verification test results saved successfully"));
     }
     async issueWorkOrderPart(request, reply) {
         const { id } = (request.params || {});
-        const tenantId = request.user?.tenantId || "aa3183d2-709b-42a8-add1-b2e4b2d873b0";
+        const tenantId = request.user?.tenantId;
         const body = (request.body || {});
         const data = await maintenance_service_js_1.maintenanceService.issueWorkOrderPart(tenantId, { workOrderId: id, ...body });
         return reply.status(201).send((0, responseFormatter_js_1.formatSuccess)(data, "Spare part issued successfully to work order"));
     }
     async signOffWorkOrder(request, reply) {
         const { id } = request.params;
-        const tenantId = request.user?.tenantId || "aa3183d2-709b-42a8-add1-b2e4b2d873b0";
+        const tenantId = request.user?.tenantId;
         const data = await maintenance_service_js_1.maintenanceService.signOffWorkOrder(tenantId, id, request.body);
         return reply.send((0, responseFormatter_js_1.formatSuccess)(data, "Work order verified and signed off successfully"));
     }
     async addWorkOrderComment(request, reply) {
         const { id } = request.params;
-        const tenantId = request.user?.tenantId || "aa3183d2-709b-42a8-add1-b2e4b2d873b0";
+        const tenantId = request.user?.tenantId;
         const data = await maintenance_service_js_1.maintenanceService.addWorkOrderComment(tenantId, id, request.body);
         return reply.status(201).send((0, responseFormatter_js_1.formatSuccess)(data, "Comment logged to work order activity trail"));
     }

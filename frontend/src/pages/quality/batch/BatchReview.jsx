@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { 
   FileText, Plus, Search, FileSpreadsheet, RefreshCw, 
-  CheckCircle2, AlertOctagon, Eye, ShieldCheck, ArrowRight, Activity, Clock
+  CheckCircle2, AlertOctagon, Eye, ShieldCheck, ArrowRight, Activity, Clock, X
 } from "lucide-react";
 import { Card } from "../../../components/common/Card";
 import { Button } from "../../../components/common/Button";

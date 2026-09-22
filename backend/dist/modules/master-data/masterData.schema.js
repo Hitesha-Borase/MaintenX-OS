@@ -1,19 +1,33 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.updateRoutingSchema = exports.createRoutingSchema = exports.routingStepSchema = exports.createBomSchema = exports.createSkuSchema = void 0;
+exports.updateRoutingSchema = exports.createRoutingSchema = exports.routingStepSchema = exports.createBomSchema = exports.createDepartmentSchema = exports.createPlantSchema = exports.createSkuSchema = void 0;
 const zod_1 = require("zod");
 exports.createSkuSchema = zod_1.z.object({
-    skuCode: zod_1.z.string().min(2),
-    name: zod_1.z.string().min(2),
-    category: zod_1.z.enum(["FINISHED_GOODS", "RAW_MATERIAL", "PACKAGING"]),
-    familyId: zod_1.z.string().uuid().optional(),
-    uom: zod_1.z.string().default("Units"),
+    name: zod_1.z.string({ required_error: "SKU name is required" }).min(2, "SKU name must be at least 2 characters"),
+    skuCode: zod_1.z.string().min(2).optional(),
+    code: zod_1.z.string().min(2).optional(),
+    category: zod_1.z.string().default("FINISHED_GOODS").optional(),
+    familyId: zod_1.z.string().optional(),
+    uom: zod_1.z.string().default("Units").optional(),
     barcode: zod_1.z.string().optional(),
-    standardCost: zod_1.z.coerce.number().default(0),
-    shelfLifeDays: zod_1.z.coerce.number().default(365),
-    minStockLevel: zod_1.z.coerce.number().default(1000),
-    maxStockLevel: zod_1.z.coerce.number().default(50000),
-});
+    standardCost: zod_1.z.coerce.number().default(0).optional(),
+    shelfLifeDays: zod_1.z.coerce.number().default(365).optional(),
+    minStockLevel: zod_1.z.coerce.number().default(1000).optional(),
+    maxStockLevel: zod_1.z.coerce.number().default(50000).optional(),
+}).passthrough();
+exports.createPlantSchema = zod_1.z.object({
+    name: zod_1.z.string({ required_error: "Plant name is required" }).min(2, "Plant name must be at least 2 characters"),
+    code: zod_1.z.string().optional(),
+    city: zod_1.z.string().optional(),
+    state: zod_1.z.string().optional(),
+    country: zod_1.z.string().optional(),
+    timezone: zod_1.z.string().optional(),
+}).passthrough();
+exports.createDepartmentSchema = zod_1.z.object({
+    name: zod_1.z.string({ required_error: "Department name is required" }).min(2, "Department name must be at least 2 characters"),
+    code: zod_1.z.string().optional(),
+    plantId: zod_1.z.string().optional(),
+}).passthrough();
 exports.createBomSchema = zod_1.z.object({
     skuId: zod_1.z.string().uuid(),
     version: zod_1.z.string().default("v1.0"),

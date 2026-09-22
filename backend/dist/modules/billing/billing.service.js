@@ -70,6 +70,113 @@ class BillingService {
             paymentRecordId: paymentRecord?.id,
         };
     }
+    async syncTenantModules(tenantId, planNameOrId) {
+        const CANONICAL_PLAN_MODULES = {
+            pilot: ["produce"],
+            "plant pilot": ["produce"],
+            starter: ["produce", "verify"],
+            "individual modules": ["produce", "verify"],
+            standard: ["plan", "produce", "verify", "maintain", "move"],
+            bundles: ["plan", "produce", "verify", "maintain", "move"],
+            advanced: ["plan", "produce", "verify", "maintain", "move"],
+            enterprise: ["plan", "produce", "verify", "maintain", "move", "people", "improve", "intelligence"],
+            "maintenx os complete": ["plan", "produce", "verify", "maintain", "move", "people", "improve", "intelligence"],
+        };
+        const key = (planNameOrId || "").toLowerCase().trim();
+        const allowedMods = CANONICAL_PLAN_MODULES[key] || (key.includes("complete") || key.includes("enterprise")
+            ? ["plan", "produce", "verify", "maintain", "move", "people", "improve", "intelligence"]
+            : key.includes("bundle")
+                ? ["plan", "produce", "verify", "maintain", "move"]
+                : key.includes("individual") || key.includes("starter")
+                    ? ["produce", "verify"]
+                    : ["produce"]);
+        const coreModules = ["plan", "produce", "verify", "maintain", "move", "people", "improve", "intelligence"];
+        const modulesMap = {};
+        for (const mod of coreModules) {
+            const isEnabled = allowedMods.includes(mod);
+            modulesMap[mod] = isEnabled;
+            await database_js_1.pool.query(`INSERT INTO tenant_modules (tenant_id, module_key, is_enabled)
+         VALUES ($1, $2, $3)
+         ON CONFLICT (tenant_id, module_key) DO UPDATE SET is_enabled = EXCLUDED.is_enabled, updated_at = NOW()`, [tenantId, mod, isEnabled]);
+        }
+        return modulesMap;
+    }
+    async upgradePlan(params) {
+        const { tenantId, planId } = params;
+        const planKey = (planId || "").toLowerCase().trim();
+        const plan = exports.SUBSCRIPTION_PLANS[planKey] || exports.SUBSCRIPTION_PLANS.standard;
+        const now = new Date();
+        const periodEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days active
+        // 1. Update/Upsert active subscription
+        const existingSubs = await database_js_1.db
+            .select()
+            .from(index_js_1.subscriptions)
+            .where((0, drizzle_orm_1.eq)(index_js_1.subscriptions.tenantId, tenantId))
+            .orderBy((0, drizzle_orm_1.desc)(index_js_1.subscriptions.createdAt))
+            .limit(1);
+        let subRecord;
+        if (existingSubs.length > 0) {
+            const [updatedSub] = await database_js_1.db
+                .update(index_js_1.subscriptions)
+                .set({
+                planId: plan.id,
+                planName: plan.name,
+                status: "ACTIVE",
+                billingCycle: "MONTHLY",
+                amount: String(plan.price),
+                currency: plan.currency || "CAD",
+                currentPeriodStart: now,
+                currentPeriodEnd: periodEnd,
+                updatedAt: now,
+            })
+                .where((0, drizzle_orm_1.eq)(index_js_1.subscriptions.id, existingSubs[0].id))
+                .returning();
+            subRecord = updatedSub;
+        }
+        else {
+            const [newSub] = await database_js_1.db
+                .insert(index_js_1.subscriptions)
+                .values({
+                tenantId,
+                planId: plan.id,
+                planName: plan.name,
+                status: "ACTIVE",
+                billingCycle: "MONTHLY",
+                amount: String(plan.price),
+                currency: plan.currency || "CAD",
+                currentPeriodStart: now,
+                currentPeriodEnd: periodEnd,
+            })
+                .returning();
+            subRecord = newSub;
+        }
+        // 2. Update tenant organization plan in tenants table
+        const [updatedTenant] = await database_js_1.db
+            .update(index_js_1.tenants)
+            .set({
+            plan: plan.name,
+            status: "ACTIVE",
+            updatedAt: now,
+        })
+            .where((0, drizzle_orm_1.eq)(index_js_1.tenants.id, tenantId))
+            .returning();
+        // 3. Synchronize tenant_modules table
+        const modulesMap = await this.syncTenantModules(tenantId, plan.id);
+        return {
+            success: true,
+            message: `Successfully upgraded to ${plan.name}! All entitled modules have been unlocked.`,
+            tenant: {
+                id: updatedTenant.id,
+                name: updatedTenant.name,
+                plan: updatedTenant.plan,
+                modules: modulesMap,
+                hasSubscription: true,
+                subscriptionStatus: "ACTIVE",
+                subscriptionExpiryDate: periodEnd.toISOString(),
+            },
+            subscription: subRecord,
+        };
+    }
     async verifyPayment(params) {
         const { tenantId, orderId, paymentId, signature, planId } = params;
         // 1. Verify Cryptographic HMAC SHA-256 Signature
@@ -115,11 +222,13 @@ class BillingService {
         await database_js_1.db
             .update(index_js_1.tenants)
             .set({
-            plan: plan.name.toUpperCase().replace(/\s+/g, "_"),
+            plan: plan.name,
             status: "ACTIVE",
             updatedAt: now,
         })
             .where((0, drizzle_orm_1.eq)(index_js_1.tenants.id, tenantId));
+        // 5. Synchronize tenant_modules table
+        const modulesMap = await this.syncTenantModules(tenantId, plan.id);
         return {
             success: true,
             message: `Subscription to ${plan.name} verified and activated successfully!`,
@@ -128,6 +237,7 @@ class BillingService {
             paymentId,
             status: "ACTIVE",
             currentPeriodEnd: periodEnd.toISOString(),
+            modules: modulesMap,
         };
     }
     async processWebhook(rawBody, signature, eventPayload) {

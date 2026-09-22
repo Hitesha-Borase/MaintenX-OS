@@ -43,7 +43,7 @@ function buildSampleTraceabilityTree(lotNumber) {
                                 status: "21_CFR_QA_RELEASED",
                                 details: {
                                     producedQty: "24,000 Cans",
-                                    coaSignedBy: "Dr. Rachel Thorne (QA Lead)",
+                                    coaSignedBy: "Stephanie Kuzmych (QA Manager & HACCP Lead)",
                                     mfgDate: "2026-09-01",
                                     expiryDate: "2027-09-01",
                                 },

@@ -207,13 +207,13 @@ exports.mitigateServiceRiskSchema = zod_1.z.object({
     riskId: zod_1.z.string(),
     riskTitle: zod_1.z.string().optional(),
     actionProtocol: zod_1.z.string().optional(),
-    authorizedBy: zod_1.z.string().default("Elena Rostova (Lead Planner)"),
+    authorizedBy: zod_1.z.string().default("Stefan Crawford (Plant Manager)"),
     notes: zod_1.z.string().optional(),
 });
 exports.createScheduleVersionSchema = zod_1.z.object({
     title: zod_1.z.string().min(1, "Title is required"),
     reason: zod_1.z.string().optional(),
-    createdBy: zod_1.z.string().default("Alexander Vance (Lead Scheduler)"),
+    createdBy: zod_1.z.string().default("Stefan Crawford (Plant Manager)"),
     status: zod_1.z.string().default("Draft"),
 });
 exports.validateScheduleSchema = zod_1.z.object({
@@ -223,7 +223,7 @@ exports.validateScheduleSchema = zod_1.z.object({
 });
 exports.publishScheduleSchema = zod_1.z.object({
     versionId: zod_1.z.string().min(1, "Version ID is required"),
-    publishedBy: zod_1.z.string().default("Alexander Vance (Lead Scheduler)"),
+    publishedBy: zod_1.z.string().default("Stefan Crawford (Plant Manager)"),
     notes: zod_1.z.string().optional(),
 });
 exports.createShipmentSchema = zod_1.z.object({

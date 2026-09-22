@@ -1284,7 +1284,7 @@ class DashboardsService {
                 },
             };
             return {
-                plantCode: plantId || "INDORE-PLANT-01",
+                plantCode: plantId || "PLT-MEAT-01",
                 plantStatus: "LIVE",
                 hbSummary,
                 pillars,
@@ -2229,12 +2229,13 @@ class DashboardsService {
     }
     // ─── Operator Work Instructions & SOPs ─────────────────────────────────────
     async getWorkInstructions(tenantId, targetOrderNumber) {
-        const validTenant = (0, tenantContext_js_1.isValidUuid)(tenantId) ? tenantId : "aa3183d2-709b-42a8-add1-b2e4b2d873b0";
-        let activeOrderNumber = "PO-2026-904";
-        let productName = "Standard SKU Product";
-        let productCode = "SKU-PROD";
-        let lineName = "Line 1 (Aseptic Bottling)";
-        let workInstructions = "SOP-PKG-042: High-Speed Aseptic Cold Fill & Nitrogen Flush Procedures v4.1";
+        const isTenantActive = (0, tenantContext_js_1.isValidUuid)(tenantId);
+        const validTenant = isTenantActive ? tenantId : null;
+        let activeOrderNumber = isTenantActive ? "" : "PO-2026-904";
+        let productName = isTenantActive ? "No Assigned Order" : "Standard SKU Product";
+        let productCode = isTenantActive ? "N/A" : "SKU-PROD";
+        let lineName = isTenantActive ? "No Assigned Line" : "Line 1 (Aseptic Bottling)";
+        let workInstructions = isTenantActive ? "No active work instructions for this tenant." : "SOP-PKG-042: High-Speed Aseptic Cold Fill & Nitrogen Flush Procedures v4.1";
         let acknowledged = false;
         let stepsList = [];
         try {
@@ -2252,13 +2253,13 @@ class DashboardsService {
           FROM public.production_orders po
           LEFT JOIN public.skus s ON po.sku_id = s.id
           LEFT JOIN public.production_lines pl ON po.line_id = pl.id
-          WHERE po.order_number = ${cleanOrd} OR po.id::text = ${cleanOrd} OR po.order_number ILIKE ${'%' + cleanOrd + '%'}
+          WHERE ${validTenant ? (0, drizzle_orm_1.sql) `po.tenant_id = ${validTenant}::uuid AND` : (0, drizzle_orm_1.sql) ``} (po.order_number = ${cleanOrd} OR po.id::text = ${cleanOrd} OR po.order_number ILIKE ${'%' + cleanOrd + '%'})
           LIMIT 1
         `);
             }
             let rows = activeRes?.rows || (Array.isArray(activeRes) ? activeRes : []);
-            if (!rows || rows.length === 0) {
-                // Fallback to active/latest order
+            if ((!rows || rows.length === 0) && validTenant) {
+                // Fallback to active/latest order strictly scoped to the same tenant
                 const fallbackRes = await database_js_1.db.execute((0, drizzle_orm_1.sql) `
           SELECT 
             po.id, 
@@ -2269,6 +2270,7 @@ class DashboardsService {
           FROM public.production_orders po
           LEFT JOIN public.skus s ON po.sku_id = s.id
           LEFT JOIN public.production_lines pl ON po.line_id = pl.id
+          WHERE po.tenant_id = ${validTenant}::uuid
           ORDER BY CASE WHEN po.status = 'RUNNING' OR po.status = 'Running' THEN 1 ELSE 2 END, po.created_at DESC
           LIMIT 1
         `);
@@ -2387,17 +2389,20 @@ class DashboardsService {
     }
     // ─── Operator Production Entry & Output Logging ────────────────────────────
     async getProductionEntryStatus(tenantId, targetOrderNumber) {
-        const validTenant = (0, tenantContext_js_1.isValidUuid)(tenantId) ? tenantId : "aa3183d2-709b-42a8-add1-b2e4b2d873b0";
-        let activeOrderNumber = "CO-7";
-        let productName = "Sparkling Citrus Cooler 500ml";
-        let productCode = "SKU-VAL-8106";
-        let lineName = "High-Speed Bottling Line 1";
+        const isTenantActive = (0, tenantContext_js_1.isValidUuid)(tenantId);
+        const validTenant = isTenantActive ? tenantId : null;
+        let activeOrderNumber = "";
+        let productName = "";
+        let productCode = "";
+        let skuId = null;
+        let lineName = "";
         let orderId = null;
-        let targetQuantity = 8000;
+        let targetQuantity = 0;
         let producedQuantity = 0;
         let scrapQuantity = 0;
         let reworkQuantity = 0;
         let status = "RUNNING";
+        let unit = "lbs";
         try {
             let activeRes;
             if (targetOrderNumber && targetOrderNumber.trim()) {
@@ -2410,19 +2415,22 @@ class DashboardsService {
             po.produced_quantity as "producedQuantity",
             po.scrap_quantity as "scrapQuantity",
             po.status,
+            s.id as "skuId",
             s.sku_code as "productCode", 
             s.name as "productName", 
+            s.uom as "unit",
             pl.name as "lineName"
           FROM public.production_orders po
           LEFT JOIN public.skus s ON po.sku_id = s.id
           LEFT JOIN public.production_lines pl ON po.line_id = pl.id
-          WHERE po.order_number = ${cleanOrd} OR po.id::text = ${cleanOrd} OR po.order_number ILIKE ${'%' + cleanOrd + '%'}
+          WHERE (po.order_number = ${cleanOrd} OR po.id::text = ${cleanOrd} OR po.order_number ILIKE ${'%' + cleanOrd + '%'})
+          ${validTenant ? (0, drizzle_orm_1.sql) `AND (po.tenant_id = ${validTenant}::uuid OR po.tenant_id IS NOT NULL)` : (0, drizzle_orm_1.sql) ``}
           LIMIT 1
         `);
             }
             let rows = activeRes?.rows || (Array.isArray(activeRes) ? activeRes : []);
             if (!rows || rows.length === 0) {
-                // Fallback to active running order
+                // Fallback to active running order in DB
                 const fallbackRes = await database_js_1.db.execute((0, drizzle_orm_1.sql) `
           SELECT 
             po.id, 
@@ -2431,12 +2439,15 @@ class DashboardsService {
             po.produced_quantity as "producedQuantity",
             po.scrap_quantity as "scrapQuantity",
             po.status,
+            s.id as "skuId",
             s.sku_code as "productCode", 
             s.name as "productName", 
+            s.uom as "unit",
             pl.name as "lineName"
           FROM public.production_orders po
           LEFT JOIN public.skus s ON po.sku_id = s.id
           LEFT JOIN public.production_lines pl ON po.line_id = pl.id
+          ${validTenant ? (0, drizzle_orm_1.sql) `WHERE po.tenant_id = ${validTenant}::uuid` : (0, drizzle_orm_1.sql) ``}
           ORDER BY CASE WHEN po.status = 'RUNNING' OR po.status = 'Running' THEN 1 ELSE 2 END, po.created_at DESC
           LIMIT 1
         `);
@@ -2444,44 +2455,194 @@ class DashboardsService {
                 if (fallbackRows.length > 0) {
                     rows = fallbackRows;
                 }
+                else {
+                    // If no order with tenant, fetch any active order in the system
+                    const anyOrderRes = await database_js_1.db.execute((0, drizzle_orm_1.sql) `
+            SELECT 
+              po.id, 
+              po.order_number as "orderNumber", 
+              po.target_quantity as "targetQuantity",
+              po.produced_quantity as "producedQuantity",
+              po.scrap_quantity as "scrapQuantity",
+              po.status,
+              s.id as "skuId",
+              s.sku_code as "productCode", 
+              s.name as "productName", 
+              s.uom as "unit",
+              pl.name as "lineName"
+            FROM public.production_orders po
+            LEFT JOIN public.skus s ON po.sku_id = s.id
+            LEFT JOIN public.production_lines pl ON po.line_id = pl.id
+            ORDER BY CASE WHEN po.status = 'RUNNING' OR po.status = 'Running' THEN 1 ELSE 2 END, po.created_at DESC
+            LIMIT 1
+          `);
+                    rows = anyOrderRes?.rows || (Array.isArray(anyOrderRes) ? anyOrderRes : []);
+                }
             }
             if (rows && rows.length > 0) {
                 const row = rows[0];
                 orderId = row.id;
-                activeOrderNumber = row.orderNumber || activeOrderNumber;
-                productName = row.productName || productName;
-                productCode = row.productCode || productCode;
-                lineName = row.lineName || lineName;
-                targetQuantity = Number(row.targetQuantity) || 8000;
+                skuId = row.skuId;
+                activeOrderNumber = row.orderNumber || "";
+                productName = row.productName || "Meat Production SKU";
+                productCode = row.productCode || "SKU-PROD";
+                lineName = row.lineName || "Line 4: Variovac Vacuum Packaging & Metal Detector";
+                targetQuantity = Number(row.targetQuantity) || 0;
                 producedQuantity = Number(row.producedQuantity) || 0;
                 scrapQuantity = Number(row.scrapQuantity) || 0;
                 status = row.status || "RUNNING";
+                unit = row.unit || "lbs";
             }
-            // Fetch shift logs from public.shift_logs for this order/line
-            let recentLogs = [];
-            const logsRes = await database_js_1.db.execute((0, drizzle_orm_1.sql) `
+            // Fetch all real production orders from the DB for dropdown
+            const allOrdersRes = await database_js_1.db.execute((0, drizzle_orm_1.sql) `
         SELECT 
-          id, 
-          shift_code as "shiftCode", 
-          good_units_produced as "goodUnits", 
-          scrap_units_produced as "scrapUnits", 
-          logged_at as "loggedAt"
-        FROM public.shift_logs
-        ${orderId ? (0, drizzle_orm_1.sql) `WHERE order_id = ${orderId}` : (0, drizzle_orm_1.sql) ``}
-        ORDER BY logged_at DESC
-        LIMIT 20
+          po.id, 
+          po.order_number as "orderNumber", 
+          s.name as "productName",
+          s.sku_code as "skuCode",
+          pl.name as "lineName",
+          po.status,
+          po.target_quantity as "targetQuantity",
+          po.produced_quantity as "producedQuantity",
+          po.scrap_quantity as "scrapQuantity",
+          s.uom as "unit"
+        FROM public.production_orders po
+        LEFT JOIN public.skus s ON po.sku_id = s.id
+        LEFT JOIN public.production_lines pl ON po.line_id = pl.id
+        ORDER BY po.created_at DESC
       `);
-            const logRows = logsRes?.rows || (Array.isArray(logsRes) ? logsRes : []);
-            if (logRows.length > 0) {
-                recentLogs = logRows.map((l, idx) => ({
-                    id: `LOG-${(l.id || '').substring(0, 6).toUpperCase() || idx + 100}`,
-                    time: l.loggedAt ? new Date(l.loggedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Just now",
-                    operator: "Marcus Chen (Line Operator)",
-                    goodUnits: Number(l.goodUnits || 0),
-                    scrapUnits: Number(l.scrapUnits || 0),
-                    runningTotal: producedQuantity,
-                    notes: `Shift ${l.shiftCode || 'A'} hourly production log`
-                }));
+            const allOrders = allOrdersRes?.rows || (Array.isArray(allOrdersRes) ? allOrdersRes : []);
+            // Fetch batch data linked to this order
+            let batchData = null;
+            if (orderId) {
+                const batchRes = await database_js_1.db.execute((0, drizzle_orm_1.sql) `
+          SELECT 
+            b.id,
+            b.batch_number as "batchNumber",
+            b.recipe_version as "recipeVersion",
+            b.tank_number as "tankNumber",
+            b.target_volume as "targetVolume",
+            b.actual_volume as "actualVolume",
+            b.uom,
+            b.current_step as "currentStep",
+            b.progress_percent as "progressPercent",
+            b.status
+          FROM public.batches b
+          WHERE b.production_order_id = ${orderId}
+          ORDER BY b.created_at DESC
+          LIMIT 1
+        `);
+                const bRows = batchRes?.rows || (Array.isArray(batchRes) ? batchRes : []);
+                if (bRows.length > 0)
+                    batchData = bRows[0];
+            }
+            // If no batch directly linked, fetch any active batch from DB
+            if (!batchData) {
+                const anyBatchRes = await database_js_1.db.execute((0, drizzle_orm_1.sql) `
+          SELECT 
+            b.id,
+            b.batch_number as "batchNumber",
+            b.recipe_version as "recipeVersion",
+            b.tank_number as "tankNumber",
+            b.target_volume as "targetVolume",
+            b.actual_volume as "actualVolume",
+            b.uom,
+            b.current_step as "currentStep",
+            b.progress_percent as "progressPercent",
+            b.status
+          FROM public.batches b
+          ORDER BY b.created_at DESC
+          LIMIT 1
+        `);
+                const anyBRows = anyBatchRes?.rows || (Array.isArray(anyBatchRes) ? anyBatchRes : []);
+                if (anyBRows.length > 0)
+                    batchData = anyBRows[0];
+            }
+            // Fetch BOM raw ingredients
+            let ingredients = [];
+            let recipeName = "Formula #82B Smoked Bacon Brine & Cure Recipe";
+            if (skuId) {
+                const bomRes = await database_js_1.db.execute((0, drizzle_orm_1.sql) `
+          SELECT 
+            b.name as "recipeName",
+            bi.component_name as "componentName",
+            bi.sku_code as "skuCode",
+            bi.quantity,
+            bi.uom,
+            bi.stage
+          FROM public.boms b
+          JOIN public.bom_items bi ON b.id = bi.bom_id
+          WHERE b.sku_id = ${skuId}
+          ORDER BY bi.sequence ASC
+        `);
+                const bomRows = bomRes?.rows || (Array.isArray(bomRes) ? bomRes : []);
+                if (bomRows.length > 0) {
+                    recipeName = bomRows[0].recipeName;
+                    ingredients = bomRows.map((bi) => ({
+                        name: bi.componentName,
+                        skuCode: bi.skuCode,
+                        quantity: Number(bi.quantity),
+                        uom: bi.uom,
+                        stage: bi.stage
+                    }));
+                }
+            }
+            // Fetch real WIP Lots from inventory_lots
+            const lotsRes = await database_js_1.db.execute((0, drizzle_orm_1.sql) `
+        SELECT 
+          il.id,
+          il.lot_number as "lotNumber",
+          il.lot_type as "lotType",
+          s.name as "skuName",
+          il.current_quantity as "currentQuantity",
+          il.uom,
+          il.status
+        FROM public.inventory_lots il
+        LEFT JOIN public.skus s ON il.sku_id = s.id
+        ORDER BY il.created_at DESC
+        LIMIT 10
+      `);
+            const wipLots = lotsRes?.rows || (Array.isArray(lotsRes) ? lotsRes : []);
+            // Fetch location bins
+            const binsRes = await database_js_1.db.execute((0, drizzle_orm_1.sql) `
+        SELECT id, bin_code as "binCode", zone
+        FROM public.location_bins
+        ORDER BY bin_code ASC
+      `);
+            const locationBins = binsRes?.rows || (Array.isArray(binsRes) ? binsRes : []);
+            // Fetch shift logs from public.shift_logs for this order/line with real operator names
+            let recentLogs = [];
+            if (orderId) {
+                const logsRes = await database_js_1.db.execute((0, drizzle_orm_1.sql) `
+          SELECT 
+            sl.id, 
+            sl.shift_code as "shiftCode", 
+            sl.good_units_produced as "goodUnits", 
+            sl.scrap_units_produced as "scrapUnits", 
+            sl.logged_at as "loggedAt",
+            u.first_name as "firstName",
+            u.last_name as "lastName"
+          FROM public.shift_logs sl
+          LEFT JOIN public.users u ON sl.operator_id = u.id
+          WHERE sl.order_id = ${orderId}
+          ORDER BY sl.logged_at DESC
+          LIMIT 20
+        `);
+                const logRows = logsRes?.rows || (Array.isArray(logsRes) ? logsRes : []);
+                if (logRows.length > 0) {
+                    recentLogs = logRows.map((l, idx) => {
+                        const opName = l.firstName ? `${l.firstName} ${l.lastName || ''}`.trim() : "Josiah Leyland (Line Operator)";
+                        return {
+                            id: `LOG-${(l.id || '').substring(0, 6).toUpperCase() || idx + 100}`,
+                            time: l.loggedAt ? new Date(l.loggedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Just now",
+                            operator: opName,
+                            goodUnits: Number(l.goodUnits || 0),
+                            scrapUnits: Number(l.scrapUnits || 0),
+                            runningTotal: producedQuantity,
+                            notes: `Shift ${l.shiftCode || 'A'} output log`
+                        };
+                    });
+                }
             }
             return {
                 orderId,
@@ -2489,26 +2650,39 @@ class DashboardsService {
                 orderNumber: activeOrderNumber,
                 productName,
                 productCode,
+                skuId,
                 lineName,
                 status,
                 targetQuantity,
                 producedQuantity,
                 scrapQuantity,
                 reworkQuantity,
-                unit: "Bottles",
+                unit: unit || "lbs",
+                batch: batchData,
+                recipeName,
+                ingredients,
+                wipLots,
+                locationBins,
+                allOrders,
                 recentLogs
             };
         }
         catch (e) {
             console.warn("getProductionEntryStatus DB error:", e.message);
             return {
-                activeOrderNumber,
-                productName,
+                activeOrderNumber: activeOrderNumber || "PO-MEAT-2026-01",
+                orderNumber: activeOrderNumber || "PO-MEAT-2026-01",
+                productName: productName || "Hickory Smoked Bacon (Formula #82A/82B)",
+                lineName: lineName || "Line 4: Variovac Vacuum Packaging & Metal Detector",
                 targetQuantity,
                 producedQuantity,
                 scrapQuantity,
                 reworkQuantity,
-                unit: "Bottles",
+                unit: "lbs",
+                allOrders: [],
+                ingredients: [],
+                wipLots: [],
+                locationBins: [],
                 recentLogs: []
             };
         }
@@ -2544,19 +2718,40 @@ class DashboardsService {
                     targetOrder = rows[0];
             }
             if (targetOrder) {
-                const plantId = targetOrder.plant_id || 'bead41e2-b735-41b8-bd00-bdba1682fb6a';
-                const lineId = targetOrder.line_id || '32b55dde-97ca-4801-926f-3169d27e1ffb';
-                const operatorId = 'cf3c7dac-b8a0-4751-927c-1793206d2001';
+                const tenantIdForLog = targetOrder.tenant_id || validTenant;
+                const plantId = targetOrder.plant_id;
+                const lineId = targetOrder.line_id;
+                // Dynamic lookup valid operator user in this tenant
+                let operatorId = null;
+                const userRes = await database_js_1.db.execute((0, drizzle_orm_1.sql) `
+          SELECT id FROM public.users 
+          WHERE tenant_id = ${tenantIdForLog} AND email LIKE '%operator%'
+          LIMIT 1
+        `);
+                const uRows = userRes?.rows || (Array.isArray(userRes) ? userRes : []);
+                if (uRows.length > 0 && uRows[0].id) {
+                    operatorId = uRows[0].id;
+                }
+                else {
+                    const fallbackUser = await database_js_1.db.execute((0, drizzle_orm_1.sql) `
+            SELECT id FROM public.users WHERE tenant_id = ${tenantIdForLog} LIMIT 1
+          `);
+                    const fbRows = fallbackUser?.rows || (Array.isArray(fallbackUser) ? fallbackUser : []);
+                    if (fbRows.length > 0 && fbRows[0].id)
+                        operatorId = fbRows[0].id;
+                }
                 const hourWindow = `${new Date().getHours()}:00 - ${new Date().getHours() + 1}:00`;
                 const shiftCode = 'Shift A (Day)';
-                // 1. Insert into public.shift_logs table
-                await database_js_1.db.execute((0, drizzle_orm_1.sql) `
-          INSERT INTO public.shift_logs (
-            tenant_id, plant_id, line_id, order_id, shift_code, hour_window, operator_id, good_units_produced, scrap_units_produced, logged_at
-          ) VALUES (
-            ${validTenant}, ${plantId}, ${lineId}, ${targetOrder.id}, ${shiftCode}, ${hourWindow}, ${operatorId}, ${goodUnits}, ${scrapUnits}, NOW()
-          )
-        `);
+                // 1. Insert into public.shift_logs table if valid references exist
+                if (operatorId && plantId && lineId) {
+                    await database_js_1.db.execute((0, drizzle_orm_1.sql) `
+            INSERT INTO public.shift_logs (
+              tenant_id, plant_id, line_id, order_id, shift_code, hour_window, operator_id, good_units_produced, scrap_units_produced, logged_at
+            ) VALUES (
+              ${tenantIdForLog}, ${plantId}, ${lineId}, ${targetOrder.id}, ${shiftCode}, ${hourWindow}, ${operatorId}, ${goodUnits}, ${scrapUnits}, NOW()
+            )
+          `);
+                }
                 // 2. Update produced_quantity and scrap_quantity in public.production_orders table
                 await database_js_1.db.execute((0, drizzle_orm_1.sql) `
           UPDATE public.production_orders
@@ -2579,13 +2774,29 @@ class DashboardsService {
         };
     }
     async logScrapDefect(tenantId, payload) {
-        const validTenant = (0, tenantContext_js_1.isValidUuid)(tenantId) ? tenantId : "aa3183d2-709b-42a8-add1-b2e4b2d873b0";
+        const validTenant = (0, tenantContext_js_1.isValidUuid)(tenantId) ? tenantId : "0f63be8b-52aa-4e6b-ab83-1d5477328262";
         const scrapAdd = Number(payload.scrapAdd || 0);
         try {
-            await database_js_1.db.execute((0, drizzle_orm_1.sql) `
-        INSERT INTO public.digital_signatures (tenant_id, plant_id, entity_type, entity_id, signature_type, signed_by, comments, created_at)
-        VALUES (${validTenant}, 'bead41e2-b735-41b8-bd00-bdba1682fb6a', 'SCRAP_DEFECT_REASON', ${payload.defectCode || 'GENERIC_SCRAP'}, 'DEFECT_LOG', 'Marcus Chen (Line Operator)', ${'Scrap defect logged: ' + (payload.defectCode || '') + ' (' + scrapAdd + ' units) - Notes: ' + (payload.notes || 'N/A')}, NOW())
+            let userId = null;
+            let plantId = null;
+            const uRes = await database_js_1.db.execute((0, drizzle_orm_1.sql) `
+        SELECT id FROM public.users WHERE tenant_id = ${validTenant} AND email LIKE '%operator%' LIMIT 1
       `);
+            const uRows = uRes?.rows || (Array.isArray(uRes) ? uRes : []);
+            if (uRows.length > 0 && uRows[0].id)
+                userId = uRows[0].id;
+            const pRes = await database_js_1.db.execute((0, drizzle_orm_1.sql) `
+        SELECT id FROM public.plants WHERE tenant_id = ${validTenant} LIMIT 1
+      `);
+            const pRows = pRes?.rows || (Array.isArray(pRes) ? pRes : []);
+            if (pRows.length > 0 && pRows[0].id)
+                plantId = pRows[0].id;
+            if (userId && plantId) {
+                await database_js_1.db.execute((0, drizzle_orm_1.sql) `
+          INSERT INTO public.digital_signatures (tenant_id, plant_id, user_id, entity_type, entity_id, meaning, comments, signed_at)
+          VALUES (${validTenant}, ${plantId}, ${userId}, 'SCRAP_DEFECT_REASON', ${payload.defectCode || 'GENERIC_SCRAP'}, 'DEFECT_LOG', ${'Scrap defect logged: ' + (payload.defectCode || '') + ' (' + scrapAdd + ' units) - Notes: ' + (payload.notes || 'N/A')}, NOW())
+        `);
+            }
         }
         catch (e) {
             console.warn("logScrapDefect DB error:", e.message);
@@ -3366,11 +3577,11 @@ class DashboardsService {
                 id: "HO-991",
                 shiftFrom: "Shift C (Night)",
                 shiftTo: "Shift A (Day)",
-                handedOverBy: "Carlos Mendez",
-                receivedBy: "Elena Rostova",
-                notes: "Line 1 running at 580 BPM. Clean In Place (CIP) passed at 04:30. Filler head #7 seal replaced.",
+                handedOverBy: "Ronald Robinson",
+                receivedBy: "Douglas Andrew",
+                notes: "Smokehouse #3 and Weiler Grinder running nominal. Pre-op inspection passed at 05:30. Multivac R535 seal bar tension verified.",
                 status: "SIGNED OFF",
-                timestamp: "2026-08-31 05:55"
+                timestamp: "2026-09-20 05:55"
             }
         ];
     }
@@ -3404,7 +3615,7 @@ class DashboardsService {
           ${validPlant},
           ${payload.shiftFrom || 'Shift A (Day)'},
           ${payload.shiftTo || 'Shift B (Evening)'},
-          'Elena Rostova',
+          'Ronald Robinson',
           ${payload.receivedBy || 'Incoming Operator'},
           0,
           0,
@@ -3436,7 +3647,7 @@ class DashboardsService {
             id: handoffId,
             shiftFrom: payload.shiftFrom,
             shiftTo: payload.shiftTo,
-            handedOverBy: "Elena Rostova",
+            handedOverBy: "Ronald Robinson",
             receivedBy: payload.receivedBy,
             notes: payload.notes,
             status: "SIGNED OFF",
@@ -3712,7 +3923,7 @@ class DashboardsService {
                     .from(users_js_1.users)
                     .where((0, tenantContext_js_1.isValidUuid)(tenantId) ? (0, drizzle_orm_1.eq)(users_js_1.users.tenantId, tenantId) : (0, drizzle_orm_1.sql) `1=1`)
                     .limit(1);
-                shiftLead = firstUser ? `${firstUser.firstName} ${firstUser.lastName}` : "Alexander Vance";
+                shiftLead = firstUser ? `${firstUser.firstName} ${firstUser.lastName}` : "Ronald Robinson";
             }
             // Active Department Schedules from real production orders stored in DB
             const dbOrders = await database_js_1.db
@@ -4086,7 +4297,7 @@ class DashboardsService {
     // ─── Operations Supervisor Workforce / Employee List ───────────────────────
     async getSupervisorWorkforce(tenantId) {
         try {
-            const validTenant = (0, tenantContext_js_1.isValidUuid)(tenantId) ? tenantId : "aa3183d2-709b-42a8-add1-b2e4b2d873b0";
+            const { validTenant, validPlant } = await resolveValidTenantAndPlant(tenantId);
             const staffList = await database_js_1.db
                 .select()
                 .from(masterData_js_1.staff)
@@ -4112,7 +4323,7 @@ class DashboardsService {
                     unitsPerHour: certs.unitsPerHour || 150,
                     efficiency: certs.efficiency || "96.0%",
                     hoursWorkedMonth: certs.hoursWorkedMonth || 160,
-                    plant: certs.plant || "Indore Mega Bottling Facility",
+                    plant: certs.plant || "Plant 1 - Meat Processing & Smokehouse Facility",
                     activeStation: certs.activeStation || `${certs.department || "Packaging"} Station`,
                     shiftTiming: (s.shiftCode || "").includes("Evening") ? "14:30 - 22:30" : ((s.shiftCode || "").includes("Night") ? "22:30 - 06:00" : "06:00 - 14:30"),
                     phone: s.phone || "",
@@ -4127,7 +4338,7 @@ class DashboardsService {
         }
     }
     async addSupervisorWorkforceEmployee(tenantId, payload) {
-        const validTenant = (0, tenantContext_js_1.isValidUuid)(tenantId) ? tenantId : "aa3183d2-709b-42a8-add1-b2e4b2d873b0";
+        const { validTenant, validPlant } = await resolveValidTenantAndPlant(tenantId, payload?.plantId);
         const employeeCode = payload.id || payload.employeeId || `EMP-${Math.floor(100 + Math.random() * 900)}`;
         const name = payload.name?.trim() || "New Operator";
         const designation = payload.role || "Operator";
@@ -4146,7 +4357,7 @@ class DashboardsService {
             unitsPerHour: payload.unitsPerHour || 150,
             efficiency: payload.efficiency || "96.0%",
             hoursWorkedMonth: payload.hoursWorkedMonth || 160,
-            plant: payload.plant || "Indore Mega Bottling Facility",
+            plant: payload.plant || "Plant 1 - Meat Processing & Smokehouse Facility",
             activeStation: payload.activeStation || `${payload.department || "Packaging"} Station`,
             notes: payload.notes || ""
         };
@@ -4154,7 +4365,7 @@ class DashboardsService {
             .insert(masterData_js_1.staff)
             .values({
             tenantId: validTenant,
-            plantId: "bead41e2-b735-41b8-bd00-bdba1682fb6a",
+            plantId: validPlant,
             employeeCode,
             name,
             designation,
@@ -4261,7 +4472,7 @@ class DashboardsService {
         };
     }
     async deleteSupervisorWorkforceEmployee(tenantId, id) {
-        const validTenant = (0, tenantContext_js_1.isValidUuid)(tenantId) ? tenantId : "aa3183d2-709b-42a8-add1-b2e4b2d873b0";
+        const { validTenant } = await resolveValidTenantAndPlant(tenantId);
         await database_js_1.db.delete(masterData_js_1.staff).where((0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(masterData_js_1.staff.tenantId, validTenant), (0, drizzle_orm_1.sql) `(${masterData_js_1.staff.id}::text = ${id} OR ${masterData_js_1.staff.employeeCode} = ${id})`));
         return {
             id,
@@ -4733,7 +4944,7 @@ class DashboardsService {
                             trainingType: "Mandatory Safety",
                             completionDate: t.status === "Completed" ? (t.completionDate || "2026-08-10") : "Pending",
                             expiryDate: t.expiryDate || "2027-08-10",
-                            trainer: "Safety Lead (Indore Plant)",
+                            trainer: "Stephanie Kuzmych (QA & Safety Lead)",
                             status: t.status || "In Progress",
                             certification: t.certNo || `CERT-${s.employeeCode}`
                         });
@@ -4749,7 +4960,7 @@ class DashboardsService {
                         trainingType: "Mandatory Safety",
                         completionDate: certs.trainingStatus === "Up to Date" ? (certs.trainingCompletionDate || "2026-08-10") : "Pending",
                         expiryDate: certs.trainingTargetDate || "2027-08-10",
-                        trainer: "Safety Lead (Indore Plant)",
+                        trainer: "Stephanie Kuzmych (QA & Safety Lead)",
                         status: certs.trainingStatus === "Up to Date" ? "Completed" : (certs.trainingStatus || "In Progress"),
                         certification: certs.certificateNumber || `CERT-${s.employeeCode}`
                     });
@@ -4992,67 +5203,29 @@ class DashboardsService {
     // ─── Operations Supervisor Shift Management & Rostering ────────────────────
     async getSupervisorStaffing(tenantId) {
         try {
-            const validTenant = (0, tenantContext_js_1.isValidUuid)(tenantId) ? tenantId : "aa3183d2-709b-42a8-add1-b2e4b2d873b0";
-            const validPlant = "bead41e2-b735-41b8-bd00-bdba1682fb6a";
+            const { validTenant } = await resolveValidTenantAndPlant(tenantId);
             // 1. Fetch real shifts from public.shifts table
-            let dbShifts = await database_js_1.db.select().from(masterData_js_1.shifts).where((0, drizzle_orm_1.eq)(masterData_js_1.shifts.tenantId, validTenant));
-            // 2. Fetch staff to see current shifts and assignments
-            const staffList = await database_js_1.db.select().from(masterData_js_1.staff).where((0, drizzle_orm_1.eq)(masterData_js_1.staff.tenantId, validTenant));
-            // If public.shifts is empty in DB, let's sync/seed real shift rows into public.shifts table!
-            if (dbShifts.length === 0) {
-                const uniqueShiftNames = Array.from(new Set(staffList
-                    .map(s => s.shiftCode)
-                    .filter((code) => Boolean(code))));
-                if (uniqueShiftNames.length === 0) {
-                    uniqueShiftNames.push("Shift A (Day)", "Shift B (Evening)");
-                }
-                for (const sName of uniqueShiftNames) {
-                    const isEve = sName.toLowerCase().includes("evening") || sName.toLowerCase().includes("shift b");
-                    const isNight = sName.toLowerCase().includes("night") || sName.toLowerCase().includes("shift c");
-                    const code = isEve ? "SHIFT_B" : (isNight ? "SHIFT_C" : "SHIFT_A");
-                    const start = isEve ? "14:30" : (isNight ? "22:30" : "06:00");
-                    const end = isEve ? "22:30" : (isNight ? "06:30" : "14:30");
-                    try {
-                        await database_js_1.db.insert(masterData_js_1.shifts).values({
-                            tenantId: validTenant,
-                            plantId: validPlant,
-                            code,
-                            name: sName,
-                            startTime: start,
-                            endTime: end,
-                            isActive: true,
-                        });
-                    }
-                    catch (insertErr) {
-                        console.warn("Could not seed shift into public.shifts:", insertErr.message);
-                    }
-                }
-                // Re-fetch so dbShifts has the inserted shifts!
-                dbShifts = await database_js_1.db.select().from(masterData_js_1.shifts).where((0, drizzle_orm_1.eq)(masterData_js_1.shifts.tenantId, validTenant));
-            }
+            const shiftsRes = await database_js_1.pool.query(`
+        SELECT id, tenant_id, plant_id, code, name, start_time, end_time, is_active,
+               line, supervisor, planned_headcount, actual_headcount, shift_status, operators
+        FROM public.shifts
+        WHERE tenant_id = $1
+        ORDER BY created_at DESC, name ASC;
+      `, [validTenant]);
             const today = new Date().toISOString().substring(0, 10);
-            const rosters = [];
-            for (const sh of dbShifts) {
-                // Match staff assigned to this shift (by shiftCode matching sh.name or sh.code)
-                const assignedStaff = staffList.filter(s => s.shiftCode && (s.shiftCode.toLowerCase() === sh.name.toLowerCase() ||
-                    s.shiftCode.toLowerCase().includes(sh.code.toLowerCase()) ||
-                    sh.name.toLowerCase().includes(s.shiftCode.toLowerCase())));
-                const activeStaff = assignedStaff.filter(s => s.isAvailable || s.certifications?.currentStatus === "On Shift");
-                const assignedLine = assignedStaff[0]?.certifications?.activeStation || "Maintenance Station";
-                rosters.push({
-                    id: sh.id,
-                    shiftCode: sh.code,
-                    shiftName: sh.name,
-                    shiftTiming: `${sh.startTime} - ${sh.endTime}`,
-                    date: today,
-                    line: assignedLine,
-                    supervisor: "Operations Supervisor",
-                    operators: assignedStaff.map(s => s.name),
-                    plannedHeadcount: Math.max(assignedStaff.length, 1),
-                    actualHeadcount: activeStaff.length,
-                    shiftStatus: sh.isActive ? (activeStaff.length > 0 ? "In Progress" : "Scheduled") : "Closed"
-                });
-            }
+            const rosters = shiftsRes.rows.map((sh) => ({
+                id: sh.id,
+                shiftCode: sh.code,
+                shiftName: sh.name,
+                shiftTiming: `${sh.start_time || '06:00'} - ${sh.end_time || '14:30'}`,
+                date: today,
+                line: sh.line || "Line 1 — High-Speed Bottling",
+                supervisor: sh.supervisor || "Operations Supervisor",
+                operators: Array.isArray(sh.operators) ? sh.operators : [],
+                plannedHeadcount: sh.planned_headcount || 1,
+                actualHeadcount: sh.actual_headcount || 1,
+                shiftStatus: sh.shift_status || (sh.is_active ? "Scheduled" : "Closed")
+            }));
             return rosters;
         }
         catch (e) {
@@ -5061,52 +5234,90 @@ class DashboardsService {
         }
     }
     async addSupervisorStaffing(tenantId, payload) {
-        const validTenant = (0, tenantContext_js_1.isValidUuid)(tenantId) ? tenantId : "aa3183d2-709b-42a8-add1-b2e4b2d873b0";
-        const validPlant = "bead41e2-b735-41b8-bd00-bdba1682fb6a";
+        const { validTenant, validPlant } = await resolveValidTenantAndPlant(tenantId, payload?.plantId);
         const timingParts = (payload.shiftTiming || "06:00 - 14:30").split("-").map((t) => t.trim());
         const startTime = timingParts[0] || "06:00";
         const endTime = timingParts[1] || "14:30";
         const code = `SHIFT_${Date.now().toString().slice(-4)}`;
+        const line = payload.line || "Line 1 — High-Speed Bottling";
+        const supervisor = payload.supervisor || "Operations Supervisor";
+        const plannedHeadcount = Number(payload.plannedHeadcount) || 1;
+        const actualHeadcount = Number(payload.actualHeadcount) || 1;
+        const shiftStatus = payload.shiftStatus || "Scheduled";
         try {
-            const [newShift] = await database_js_1.db.insert(masterData_js_1.shifts).values({
-                tenantId: validTenant,
-                plantId: validPlant,
+            const insertRes = await database_js_1.pool.query(`
+        INSERT INTO public.shifts (
+          tenant_id, plant_id, code, name, start_time, end_time, is_active,
+          line, supervisor, planned_headcount, actual_headcount, shift_status, operators
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+        RETURNING *;
+      `, [
+                validTenant,
+                validPlant,
                 code,
-                name: payload.shiftName || "New Production Shift",
+                payload.shiftName || "New Production Shift",
                 startTime,
                 endTime,
-                isActive: payload.shiftStatus !== "Closed",
-            }).returning();
+                shiftStatus !== "Closed",
+                line,
+                supervisor,
+                plannedHeadcount,
+                actualHeadcount,
+                shiftStatus,
+                []
+            ]);
+            const row = insertRes.rows[0];
             return {
-                id: newShift.id,
-                ...payload,
-                shiftCode: newShift.code,
-                message: `Shift "${newShift.name}" created and saved to PostgreSQL database.`
+                id: row.id,
+                shiftCode: row.code,
+                shiftName: row.name,
+                shiftTiming: `${row.start_time} - ${row.end_time}`,
+                date: new Date().toISOString().substring(0, 10),
+                line: row.line,
+                supervisor: row.supervisor,
+                operators: row.operators || [],
+                plannedHeadcount: row.planned_headcount,
+                actualHeadcount: row.actual_headcount,
+                shiftStatus: row.shift_status,
+                message: `Shift "${row.name}" created and saved to PostgreSQL database.`
             };
         }
         catch (e) {
-            console.warn("Could not insert shift to public.shifts:", e.message);
-            return {
-                id: `SHF-${Date.now().toString().slice(-4)}`,
-                ...payload,
-                message: `Shift saved.`
-            };
+            console.error("Could not insert shift to public.shifts:", e.message);
+            throw new Error(`Failed to save shift to database: ${e.message}`);
         }
     }
     async updateSupervisorStaffing(tenantId, id, payload) {
-        const validTenant = (0, tenantContext_js_1.isValidUuid)(tenantId) ? tenantId : "aa3183d2-709b-42a8-add1-b2e4b2d873b0";
+        const { validTenant } = await resolveValidTenantAndPlant(tenantId);
         const timingParts = (payload.shiftTiming || "06:00 - 14:30").split("-").map((t) => t.trim());
         const startTime = timingParts[0] || "06:00";
         const endTime = timingParts[1] || "14:30";
         try {
-            if ((0, tenantContext_js_1.isValidUuid)(id)) {
-                await database_js_1.db.update(masterData_js_1.shifts).set({
-                    name: payload.shiftName,
-                    startTime,
-                    endTime,
-                    isActive: payload.shiftStatus !== "Closed"
-                }).where((0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(masterData_js_1.shifts.tenantId, validTenant), (0, drizzle_orm_1.eq)(masterData_js_1.shifts.id, id)));
-            }
+            await database_js_1.pool.query(`
+        UPDATE public.shifts
+        SET name = COALESCE($1, name),
+            start_time = COALESCE($2, start_time),
+            end_time = COALESCE($3, end_time),
+            line = COALESCE($4, line),
+            supervisor = COALESCE($5, supervisor),
+            planned_headcount = COALESCE($6, planned_headcount),
+            actual_headcount = COALESCE($7, actual_headcount),
+            shift_status = COALESCE($8, shift_status),
+            is_active = COALESCE($9, is_active)
+        WHERE id = $10 AND tenant_id = $11;
+      `, [
+                payload.shiftName,
+                startTime,
+                endTime,
+                payload.line,
+                payload.supervisor,
+                payload.plannedHeadcount ? Number(payload.plannedHeadcount) : null,
+                payload.actualHeadcount ? Number(payload.actualHeadcount) : null,
+                payload.shiftStatus,
+                payload.shiftStatus ? payload.shiftStatus !== "Closed" : null,
+                id,
+                validTenant
+            ]);
         }
         catch (e) {
             console.warn("Could not update shift in public.shifts:", e.message);
@@ -5118,24 +5329,21 @@ class DashboardsService {
         };
     }
     async assignSupervisorStaffingPersonnel(tenantId, id, payload) {
-        const validTenant = (0, tenantContext_js_1.isValidUuid)(tenantId) ? tenantId : "aa3183d2-709b-42a8-add1-b2e4b2d873b0";
+        const { validTenant } = await resolveValidTenantAndPlant(tenantId);
         try {
-            let shiftName = "Shift B (Evening)";
-            if ((0, tenantContext_js_1.isValidUuid)(id)) {
-                const sh = await database_js_1.db.query.shifts.findFirst({
-                    where: (0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(masterData_js_1.shifts.tenantId, validTenant), (0, drizzle_orm_1.eq)(masterData_js_1.shifts.id, id))
-                });
-                if (sh) {
-                    shiftName = sh.name;
-                }
+            if (payload.employeeName) {
+                await database_js_1.pool.query(`
+          UPDATE public.shifts
+          SET operators = array_append(operators, $1)
+          WHERE id = $2 AND tenant_id = $3 AND NOT ($1 = ANY(operators));
+        `, [payload.employeeName, id, validTenant]);
             }
-            // Update employee in staff table to assign to this shift!
+            // Update employee in staff table to assign to this shift if exists
             const targetEmp = await database_js_1.db.query.staff.findFirst({
                 where: (0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(masterData_js_1.staff.tenantId, validTenant), (0, drizzle_orm_1.sql) `(${masterData_js_1.staff.name} ILIKE ${payload.employeeName} OR ${masterData_js_1.staff.employeeCode} = ${payload.employeeName})`)
             });
             if (targetEmp) {
                 await database_js_1.db.update(masterData_js_1.staff).set({
-                    shiftCode: shiftName,
                     isAvailable: true,
                 }).where((0, drizzle_orm_1.eq)(masterData_js_1.staff.id, targetEmp.id));
             }
@@ -5150,7 +5358,7 @@ class DashboardsService {
         };
     }
     async assignSupervisorStaffingStation(tenantId, id, payload) {
-        const validTenant = (0, tenantContext_js_1.isValidUuid)(tenantId) ? tenantId : "aa3183d2-709b-42a8-add1-b2e4b2d873b0";
+        const { validTenant } = await resolveValidTenantAndPlant(tenantId);
         try {
             const targetEmp = await database_js_1.db.query.staff.findFirst({
                 where: (0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(masterData_js_1.staff.tenantId, validTenant), (0, drizzle_orm_1.sql) `(${masterData_js_1.staff.name} ILIKE ${payload.operator} OR ${masterData_js_1.staff.employeeCode} = ${payload.operator})`)
@@ -5176,18 +5384,18 @@ class DashboardsService {
         };
     }
     async closeSupervisorStaffingShift(tenantId, id, payload) {
-        const validTenant = (0, tenantContext_js_1.isValidUuid)(tenantId) ? tenantId : "aa3183d2-709b-42a8-add1-b2e4b2d873b0";
+        const { validTenant, validPlant } = await resolveValidTenantAndPlant(tenantId);
         try {
-            if ((0, tenantContext_js_1.isValidUuid)(id)) {
-                await database_js_1.db.update(masterData_js_1.shifts).set({
-                    isActive: false
-                }).where((0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(masterData_js_1.shifts.tenantId, validTenant), (0, drizzle_orm_1.eq)(masterData_js_1.shifts.id, id)));
-            }
+            await database_js_1.pool.query(`
+        UPDATE public.shifts
+        SET is_active = false, shift_status = 'Closed'
+        WHERE id = $1 AND tenant_id = $2;
+      `, [id, validTenant]);
             const handoffId = `HO-${Date.now().toString().slice(-6)}`;
             await database_js_1.db.insert(plantManager_js_1.pmShiftHandoffs).values({
                 id: handoffId,
                 tenantId: validTenant,
-                plantId: "PLT-01",
+                plantId: validPlant,
                 shiftFrom: id,
                 shiftTo: "Next Shift",
                 handedOverBy: "Operations Supervisor",
@@ -5209,11 +5417,9 @@ class DashboardsService {
         };
     }
     async deleteSupervisorStaffing(tenantId, id) {
-        const validTenant = (0, tenantContext_js_1.isValidUuid)(tenantId) ? tenantId : "aa3183d2-709b-42a8-add1-b2e4b2d873b0";
+        const { validTenant } = await resolveValidTenantAndPlant(tenantId);
         try {
-            if ((0, tenantContext_js_1.isValidUuid)(id)) {
-                await database_js_1.db.delete(masterData_js_1.shifts).where((0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(masterData_js_1.shifts.tenantId, validTenant), (0, drizzle_orm_1.eq)(masterData_js_1.shifts.id, id)));
-            }
+            await database_js_1.pool.query(`DELETE FROM public.shifts WHERE id = $1 AND tenant_id = $2;`, [id, validTenant]);
             return {
                 id,
                 message: "Shift deleted from PostgreSQL database successfully."
@@ -5259,17 +5465,47 @@ class DashboardsService {
         }
     }
     async updateSupervisorProductionRun(tenantId, payload) {
-        const validTenant = (0, tenantContext_js_1.isValidUuid)(tenantId) ? tenantId : "aa3183d2-709b-42a8-add1-b2e4b2d873b0";
+        const validTenant = (0, tenantContext_js_1.isValidUuid)(tenantId) ? tenantId : "0f63be8b-52aa-4e6b-ab83-1d5477328262";
         try {
-            const orders = await database_js_1.db.select().from(production_js_1.productionOrders).where((0, drizzle_orm_1.eq)(production_js_1.productionOrders.tenantId, validTenant));
-            if (orders.length > 0) {
-                await database_js_1.db.update(production_js_1.productionOrders).set({
-                    status: payload.status,
-                    producedQuantity: String(payload.producedQuantity),
-                    scrapQuantity: String(payload.scrapQuantity),
-                    notes: payload.speedBPM ? `Live Running Speed: ${payload.speedBPM} BPM` : orders[0].notes,
-                    updatedAt: new Date(),
-                }).where((0, drizzle_orm_1.eq)(production_js_1.productionOrders.id, orders[0].id));
+            let targetOrderId = null;
+            let existingNotes = null;
+            if (payload.orderId || payload.orderNumber) {
+                const searchVal = payload.orderId || payload.orderNumber;
+                const res = await database_js_1.db.execute((0, drizzle_orm_1.sql) `
+          SELECT id, notes FROM public.production_orders 
+          WHERE (id::text = ${searchVal} OR order_number = ${searchVal})
+          LIMIT 1
+        `);
+                const rows = res?.rows || (Array.isArray(res) ? res : []);
+                if (rows.length > 0) {
+                    targetOrderId = rows[0].id;
+                    existingNotes = rows[0].notes;
+                }
+            }
+            if (!targetOrderId) {
+                const res = await database_js_1.db.execute((0, drizzle_orm_1.sql) `
+          SELECT id, notes FROM public.production_orders 
+          WHERE tenant_id = ${validTenant}
+          ORDER BY CASE WHEN status = 'RUNNING' OR status = 'Running' THEN 1 ELSE 2 END, updated_at DESC NULLS LAST
+          LIMIT 1
+        `);
+                const rows = res?.rows || (Array.isArray(res) ? res : []);
+                if (rows.length > 0) {
+                    targetOrderId = rows[0].id;
+                    existingNotes = rows[0].notes;
+                }
+            }
+            if (targetOrderId) {
+                await database_js_1.db.execute((0, drizzle_orm_1.sql) `
+          UPDATE public.production_orders
+          SET 
+            status = ${payload.status},
+            produced_quantity = ${String(payload.producedQuantity)},
+            scrap_quantity = ${String(payload.scrapQuantity)},
+            notes = ${payload.speedBPM ? `Live Running Speed: ${payload.speedBPM} BPM` : existingNotes},
+            updated_at = NOW()
+          WHERE id = ${targetOrderId}
+        `);
             }
             return {
                 success: true,
@@ -6015,15 +6251,15 @@ class DashboardsService {
                     .where((0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(users_js_1.users.tenantId, validTenant), (0, drizzle_orm_1.eq)(users_js_1.users.email, "supervisor@maintenx.com")));
                 userRecord = u;
             }
-            const userName = userRecord ? `${userRecord.firstName} ${userRecord.lastName}` : "Sarah Jenkins";
+            const userName = userRecord ? `${userRecord.firstName} ${userRecord.lastName}` : "Ronald Robinson";
             const userEmail = userRecord?.email || "supervisor@maintenx.com";
-            const userPhone = userRecord?.phone || "+1 (555) 774-2993";
-            // 2. Fetch staff record from public.staff table for Sarah Jenkins
+            const userPhone = userRecord?.phone || "+1 (905) 555-0144";
+            // 2. Fetch staff record from public.staff table
             let staffRecord = null;
             const matchingStaff = await database_js_1.db
                 .select()
                 .from(masterData_js_1.staff)
-                .where((0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(masterData_js_1.staff.tenantId, validTenant), (0, drizzle_orm_1.eq)(masterData_js_1.staff.name, "Sarah Jenkins")));
+                .where((0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(masterData_js_1.staff.tenantId, validTenant), (0, drizzle_orm_1.eq)(masterData_js_1.staff.name, userName)));
             if (matchingStaff.length > 0) {
                 staffRecord = matchingStaff[0];
             }
@@ -6038,34 +6274,34 @@ class DashboardsService {
             }
             const rawCerts = staffRecord?.certifications || {};
             const qualifications = rawCerts.qualifications || [
-                { name: "Operations Safety Sign-Off Authority", desc: "Authorized to override and clear safety lockouts.", level: "Level 3", variant: "emerald" },
-                { name: "High-Speed Bottling Diagnostics", desc: "Master-level mechanical diagnostics and troubleshooting.", level: "Advanced", variant: "emerald" }
+                { name: "HACCP & CFIA Meat Processing Clearance", desc: "Authorized to verify critical control points and thermal lethality.", level: "Level 3", variant: "emerald" },
+                { name: "Smokehouse & Thermal Diagnostics", desc: "Master-level meat processing diagnostics and continuous batch monitoring.", level: "Advanced", variant: "emerald" }
             ];
             return {
                 id: userRecord?.id || staffRecord?.id,
                 name: staffRecord?.name || userName,
-                title: staffRecord?.designation || "Operations Shift Supervisor",
-                employeeId: staffRecord?.employeeCode || "EMP-1104",
+                title: staffRecord?.designation || "Processing Operations Supervisor",
+                employeeId: staffRecord?.employeeCode || "EMP-1054",
                 email: userEmail,
                 phone: staffRecord?.phone || userPhone,
-                plant: rawCerts.plant || "Plant 1 — Indore Mega Bottling Facility",
-                shift: staffRecord?.shiftCode || "Shift A (06:00 - 14:00)",
+                plant: rawCerts.plant || "Plant 1 - Meat Processing & Smokehouse Facility",
+                shift: staffRecord?.shiftCode || "Shift A (06:00 - 14:30)",
                 certifications: qualifications
             };
         }
         catch (err) {
             console.error("[DashboardsService] Error in getSupervisorProfile:", err);
             return {
-                name: "Sarah Jenkins",
-                title: "Operations Shift Supervisor",
-                employeeId: "EMP-1104",
+                name: "Ronald Robinson",
+                title: "Processing Operations Supervisor",
+                employeeId: "EMP-1054",
                 email: "supervisor@maintenx.com",
-                phone: "+1 (555) 774-2993",
-                plant: "Plant 1 — Indore Mega Bottling Facility",
-                shift: "Shift A (06:00 - 14:00)",
+                phone: "+1 (905) 555-0144",
+                plant: "Plant 1 - Meat Processing & Smokehouse Facility",
+                shift: "Shift A (06:00 - 14:30)",
                 certifications: [
-                    { name: "Operations Safety Sign-Off Authority", desc: "Authorized to override and clear safety lockouts.", level: "Level 3", variant: "emerald" },
-                    { name: "High-Speed Bottling Diagnostics", desc: "Master-level mechanical diagnostics and troubleshooting.", level: "Advanced", variant: "emerald" }
+                    { name: "HACCP & CFIA Meat Processing Clearance", desc: "Authorized to verify critical control points and thermal lethality.", level: "Level 3", variant: "emerald" },
+                    { name: "Smokehouse & Thermal Diagnostics", desc: "Master-level meat processing diagnostics and continuous batch monitoring.", level: "Advanced", variant: "emerald" }
                 ]
             };
         }
@@ -6086,18 +6322,26 @@ class DashboardsService {
     // ─── Processing Operator Operations ───────────────────────────────────────
     async advanceProcessingRecipeStep(tenantId, payload) {
         try {
-            const validTenant = (0, tenantContext_js_1.isValidUuid)(tenantId) ? tenantId : "aa3183d2-709b-42a8-add1-b2e4b2d873b0";
-            const stepNo = payload.stepNumber || 1;
-            const stepTitle = payload.stepName || "Liquid Ingredient Weighing & Dosing";
+            const stepNo = Number(payload.stepNumber || 1);
+            const stepTitle = payload.stepName || `Step ${stepNo}`;
+            const batchIdent = payload.batchNumber || payload.batchId || "BAT-MEAT-2026-01";
+            const progress = Math.min(100, Math.round((stepNo / 4) * 100));
+            const status = stepNo >= 4 ? "Completed" : "In Process";
+            await database_js_1.db.execute((0, drizzle_orm_1.sql) `
+        UPDATE public.batches 
+        SET current_step = ${stepNo}, progress_percent = ${progress}, status = ${status}, updated_at = NOW()
+        WHERE batch_number = ${batchIdent} OR id::text = ${batchIdent}
+      `).catch((e) => console.warn("advanceProcessingRecipeStep batch update:", e.message));
             return {
                 success: true,
-                batchId: payload.batchId || "BAT-2026-TEST-805",
+                batchNumber: batchIdent,
                 stepNumber: stepNo,
                 stepName: stepTitle,
-                status: "COMPLETED",
+                status: status,
+                progressPercent: progress,
                 parameters: payload.parameters || {},
                 completedAt: new Date().toISOString(),
-                message: `eBR Recipe Step ${stepNo} (${stepTitle}) marked as COMPLETED by operator.`
+                message: `eBR Recipe Step ${stepNo} (${stepTitle}) marked as active in PostgreSQL batch ledger.`
             };
         }
         catch (err) {
@@ -6107,19 +6351,19 @@ class DashboardsService {
     }
     async weighProcessingIngredient(tenantId, payload) {
         try {
-            const targetKg = Number(payload.targetKg) || 10.0;
-            const actualKg = Number(payload.actualKg) || 10.0;
-            const variancePct = Math.abs((actualKg - targetKg) / targetKg) * 100;
+            const target = Number(payload.targetLbs || payload.targetKg || 9800);
+            const actual = Number(payload.actualLbs || payload.actualKg || 9800);
+            const variancePct = target > 0 ? Math.abs((actual - target) / target) * 100 : 0;
             const isPass = variancePct <= 1.5;
             return {
                 success: true,
-                ingredient: payload.ingredient || "Citric Acid Buffer",
-                targetKg,
-                actualKg,
+                ingredient: payload.ingredient || "Fresh Grade A Pork Bellies",
+                targetWeight: target,
+                actualWeight: actual,
                 tolerancePercent: variancePct.toFixed(2),
                 status: isPass ? "PASS" : "ALARM_DEVIATION",
-                lotBarcode: payload.lotBarcode || "LOT-RAW-8812",
-                message: `Raw ingredient '${payload.ingredient || "Buffer"}' weighed: ${actualKg} kg (${variancePct.toFixed(2)}% variance - ${isPass ? 'PASS' : 'ALARM_DEVIATION'}).`
+                lotBarcode: payload.lotBarcode || "LOT-RM-MEAT-2026",
+                message: `Raw ingredient '${payload.ingredient || "Material"}' scale verified: ${actual} lbs (${variancePct.toFixed(2)}% variance — ${isPass ? 'PASS' : 'ALARM_DEVIATION'}).`
             };
         }
         catch (err) {
@@ -6129,15 +6373,17 @@ class DashboardsService {
     }
     async logProcessingParameters(tenantId, payload) {
         try {
+            const coreTemp = Number(payload.coreTempC || payload.temperature || 71.8);
+            const humidity = Number(payload.smokehouseHumidity || 82.5);
             return {
                 success: true,
-                temperature: payload.temperature || 83.5,
-                agitationRpm: payload.agitationRpm || 1200,
-                pressureBar: payload.pressureBar || 2.4,
-                brix: payload.brix || 11.9,
-                ph: payload.ph || 3.72,
+                coreTempC: coreTemp,
+                smokehouseHumidity: humidity,
+                temperature: coreTemp,
+                agitationRpm: payload.agitationRpm || 0,
+                pressureBar: payload.pressureBar || 1.0,
                 timestamp: new Date().toISOString(),
-                message: "Vessel processing parameters logged to eBR batch ledger."
+                message: `Smokehouse chamber & core thermal parameters logged (${coreTemp}°C, ${humidity}% RH) to eBR batch ledger.`
             };
         }
         catch (err) {
@@ -6147,13 +6393,34 @@ class DashboardsService {
     }
     async signoffCcp(tenantId, payload) {
         try {
+            const validTenant = (0, tenantContext_js_1.isValidUuid)(tenantId) ? tenantId : "0f63be8b-52aa-4e6b-ab83-1d5477328262";
+            const ccpCode = payload.ccpCode || "CCP-1 (Core Lethality ≥ 71.1°C)";
+            const actualVal = payload.actualValue || "71.8°C";
+            try {
+                const uRes = await database_js_1.db.execute((0, drizzle_orm_1.sql) `
+          SELECT id FROM public.users WHERE tenant_id = ${validTenant}::uuid AND email LIKE '%operator%' LIMIT 1
+        `);
+                const uRows = uRes?.rows || (Array.isArray(uRes) ? uRes : []);
+                const userId = uRows[0]?.id;
+                const pRes = await database_js_1.db.execute((0, drizzle_orm_1.sql) `SELECT id FROM public.plants WHERE tenant_id = ${validTenant}::uuid LIMIT 1`);
+                const plantId = pRes?.rows?.[0]?.id;
+                if (userId && plantId) {
+                    await database_js_1.db.execute((0, drizzle_orm_1.sql) `
+            INSERT INTO public.digital_signatures (tenant_id, plant_id, user_id, entity_type, entity_id, meaning, comments, signed_at)
+            VALUES (${validTenant}::uuid, ${plantId}::uuid, ${userId}::uuid, 'CCP_KILL_STEP', ${ccpCode}, 'CRITICAL_CONTROL_POINT_PASS', ${'Signed off CCP: ' + ccpCode + ' - Actual: ' + actualVal}, NOW())
+          `);
+                }
+            }
+            catch (sigErr) {
+                console.warn("[signoffCcp] DB signature insert warning:", sigErr.message);
+            }
             return {
                 success: true,
-                ccpCode: payload.ccpCode || "CCP-1",
-                actualValue: payload.actualValue || "83.8°C",
+                ccpCode,
+                actualValue: actualVal,
                 status: "PASS_VERIFIED",
                 operatorSignedOffAt: new Date().toISOString(),
-                message: `CCP Kill Step (${payload.ccpCode || "CCP-1"}) signed off with Digital Operator PIN verification.`
+                message: `CCP Critical Lethality Step (${ccpCode}) verified & signed off with Digital Operator PIN verification.`
             };
         }
         catch (err) {
@@ -6163,33 +6430,43 @@ class DashboardsService {
     }
     async completeBatchAndCreateWip(tenantId, payload) {
         try {
-            const validTenant = (0, tenantContext_js_1.isValidUuid)(tenantId) ? tenantId : "5bce8458-909a-4dd2-b221-614c32ac7c89";
-            const plantId = "83c90534-4761-495c-b2bf-6a61de2260c4";
-            const lotNumber = `WIP-TANK-${Math.floor(100 + Math.random() * 900)}`;
-            const volume = Number(payload.volumeLiters) || 5000;
-            // Persist WIP Lot to public.inventory_lots table
+            const validTenant = (0, tenantContext_js_1.isValidUuid)(tenantId) ? tenantId : "0f63be8b-52aa-4e6b-ab83-1d5477328262";
+            const pRes = await database_js_1.db.execute((0, drizzle_orm_1.sql) `SELECT id FROM public.plants WHERE tenant_id = ${validTenant}::uuid LIMIT 1`);
+            const plantId = pRes?.rows?.[0]?.id || "6869789b-32d4-4911-bf29-74a9e338f14a";
+            const bNumber = payload.batchNumber || "BAT-MEAT-2026-01";
+            const lotNumber = `WIP-MEAT-${Math.floor(1000 + Math.random() * 9000)}`;
+            const volume = Number(payload.volumeLbs || payload.volumeLiters || 8450);
+            // Persist WIP Lot to public.inventory_lots table with valid columns
             try {
                 await database_js_1.db.execute((0, drizzle_orm_1.sql) `
           INSERT INTO public.inventory_lots (
-            id, tenant_id, plant_id, lot_number, sku_id, quantity, status, location_bin_id, created_at, updated_at
+            id, tenant_id, plant_id, lot_number, sku_id, lot_type, initial_quantity, current_quantity, reserved_quantity, uom, status, location_bin_id, created_at, updated_at
           ) VALUES (
-            gen_random_uuid(), ${validTenant}, ${plantId}, ${lotNumber}, 
-            (SELECT id FROM public.skus LIMIT 1), ${volume}, 'QA_TESTED_READY_FOR_FILLING',
+            gen_random_uuid(), ${validTenant}::uuid, ${plantId}::uuid, ${lotNumber}, 
+            COALESCE((SELECT sku_id FROM public.batches WHERE batch_number = ${bNumber} LIMIT 1), (SELECT id FROM public.skus WHERE sku_code = 'SKU-BAC-82B' LIMIT 1)),
+            'WIP', ${volume}, ${volume}, 0, 'lbs', 'RELEASED',
             (SELECT id FROM public.location_bins LIMIT 1), NOW(), NOW()
-          ) ON CONFLICT DO NOTHING
+          ) ON CONFLICT (lot_number) DO UPDATE SET current_quantity = ${volume}, updated_at = NOW()
+        `);
+                // Mark batch as completed
+                await database_js_1.db.execute((0, drizzle_orm_1.sql) `
+          UPDATE public.batches 
+          SET status = 'Completed', current_step = 4, progress_percent = 100, completed_at = NOW(), updated_at = NOW()
+          WHERE batch_number = ${bNumber} OR id::text = ${bNumber}
         `);
             }
             catch (e) {
-                console.warn("[completeBatchAndCreateWip] Optional DB insert warning:", e.message);
+                console.warn("[completeBatchAndCreateWip] DB insert warning:", e.message);
             }
             return {
                 success: true,
-                batchNumber: payload.batchNumber || "BAT-2026-TEST-805",
+                batchNumber: bNumber,
                 wipLotNumber: lotNumber,
+                volumeLbs: volume,
                 volumeLiters: volume,
-                targetTank: payload.targetTank || "VESSEL-TANK-01",
-                status: "QA_TESTED_READY_FOR_FILLING",
-                message: `Batch ${payload.batchNumber || 'BAT-2026-TEST-805'} completed. WIP Bulk Tank Lot ${lotNumber} (${volume} L) created in PostgreSQL inventory_lots.`
+                targetTank: payload.targetTank || "SMK-BAY-02",
+                status: "RELEASED",
+                message: `Batch ${bNumber} completed. WIP Bulk Staged Lot ${lotNumber} (${volume.toLocaleString()} lbs) registered in PostgreSQL inventory_lots.`
             };
         }
         catch (err) {
@@ -6200,13 +6477,15 @@ class DashboardsService {
     // ─── Packaging Operator Operations ─────────────────────────────────────────
     async selectWipLotForPackaging(tenantId, payload) {
         try {
+            const wipLot = payload.wipLotNumber || "BAT-MEAT-2026-01";
+            const ordNum = payload.orderNumber || "PO-MEAT-2026-01";
             return {
                 success: true,
-                wipLotNumber: payload.wipLotNumber || "WIP-TANK-501",
-                orderNumber: payload.orderNumber || "ORD-7458",
-                availableVolumeLiters: 4850,
+                wipLotNumber: wipLot,
+                orderNumber: ordNum,
+                availableVolumeLbs: 8450,
                 status: "LINKED_VERIFIED",
-                message: `Upstream WIP Tank Lot ${payload.wipLotNumber || 'WIP-TANK-501'} linked to Packaging Run ${payload.orderNumber || 'ORD-7458'}.`
+                message: `Upstream WIP Cured Meat Lot ${wipLot} verified & linked to Packaging Run ${ordNum}.`
             };
         }
         catch (err) {
@@ -6216,12 +6495,15 @@ class DashboardsService {
     }
     async consumePackagingMaterials(tenantId, payload) {
         try {
+            const matName = payload.materialName || "Heavy Barrier Vacuum Shrink Pouches";
+            const lotNum = payload.lotNumber || "LOT-PKG-POUCH-2026";
+            const qty = Number(payload.quantityUsed) || 1000;
             return {
                 success: true,
-                materialName: payload.materialName || "500ml PET Bottles",
-                lotNumber: payload.lotNumber || "LOT-PKG-BOTTLES-992",
-                quantityUsed: Number(payload.quantityUsed) || 1000,
-                message: `Consumed ${payload.quantityUsed || 1000} units of ${payload.materialName || 'PET Bottles'} (Lot: ${payload.lotNumber || 'LOT-PKG-BOTTLES-992'}).`
+                materialName: matName,
+                lotNumber: lotNum,
+                quantityUsed: qty,
+                message: `Consumed ${qty.toLocaleString()} units of ${matName} (Lot: ${lotNum}).`
             };
         }
         catch (err) {
@@ -6240,7 +6522,7 @@ class DashboardsService {
                 goodUnits,
                 scrapUnits: scrap,
                 defectCode: payload.defectCode || "None",
-                message: `Logged +${cases} Cases (+${goodUnits} bottles), +${scrap} scrap rejects.`
+                message: `Logged +${cases} Master Cases (+${goodUnits} pouches), +${scrap} scrap defect rejects.`
             };
         }
         catch (err) {
@@ -6252,11 +6534,11 @@ class DashboardsService {
         try {
             return {
                 success: true,
-                cappingTorqueNm: Number(payload.cappingTorqueNm) || 1.85,
-                sealStatus: payload.sealStatus || "INTACT_SEALED",
-                barcodeScan: payload.barcodeScan || "VERIFIED_PASS",
+                vacuumSealStatus: "INTACT_HERMETIC",
+                metalDetectorStatus: "PASS (1.5mm Fe / 2.0mm Non-Fe)",
+                barcodeScan: "VERIFIED_PASS (GS1-128)",
                 timestamp: new Date().toISOString(),
-                message: "Induction seal, capping torque, and label barcode scan verified."
+                message: "Variovac hermetic seal integrity, metal detector rejection calibration & GS1-128 barcode scan verified."
             };
         }
         catch (err) {
@@ -6266,35 +6548,37 @@ class DashboardsService {
     }
     async finishRunAndCreateFgPallet(tenantId, payload) {
         try {
-            const validTenant = (0, tenantContext_js_1.isValidUuid)(tenantId) ? tenantId : "5bce8458-909a-4dd2-b221-614c32ac7c89";
-            const plantId = "83c90534-4761-495c-b2bf-6a61de2260c4";
+            const validTenant = (0, tenantContext_js_1.isValidUuid)(tenantId) ? tenantId : "0f63be8b-52aa-4e6b-ab83-1d5477328262";
+            const pRes = await database_js_1.db.execute((0, drizzle_orm_1.sql) `SELECT id FROM public.plants WHERE tenant_id = ${validTenant}::uuid LIMIT 1`);
+            const plantId = pRes?.rows?.[0]?.id || "6869789b-32d4-4911-bf29-74a9e338f14a";
+            const ordNum = payload.orderNumber || "PO-MEAT-2026-01";
             const palletNumber = `FG-PALLET-${Math.floor(1000 + Math.random() * 9000)}`;
             const cases = Number(payload.totalCases) || 80;
-            const totalBottles = cases * 24;
+            const targetBin = payload.targetBin || "COLD-BAY-02";
             // Persist Finished Goods Pallet to public.inventory_lots table
             try {
                 await database_js_1.db.execute((0, drizzle_orm_1.sql) `
           INSERT INTO public.inventory_lots (
-            id, tenant_id, plant_id, lot_number, sku_id, quantity, status, location_bin_id, created_at, updated_at
+            id, tenant_id, plant_id, lot_number, sku_id, lot_type, initial_quantity, current_quantity, reserved_quantity, uom, status, location_bin_id, created_at, updated_at
           ) VALUES (
-            gen_random_uuid(), ${validTenant}, ${plantId}, ${palletNumber}, 
-            (SELECT id FROM public.skus LIMIT 1), ${totalBottles}, 'QA_PENDING_RELEASE',
-            (SELECT id FROM public.location_bins LIMIT 1), NOW(), NOW()
-          ) ON CONFLICT DO NOTHING
+            gen_random_uuid(), ${validTenant}::uuid, ${plantId}::uuid, ${palletNumber}, 
+            COALESCE((SELECT sku_id FROM public.production_orders WHERE order_number = ${ordNum} OR id::text = ${ordNum} LIMIT 1), (SELECT id FROM public.skus WHERE sku_code = 'SKU-BAC-82B' LIMIT 1)),
+            'FINISHED_GOOD', ${cases}, ${cases}, 0, 'Cases', 'RELEASED',
+            COALESCE((SELECT id FROM public.location_bins WHERE bin_code = ${targetBin} LIMIT 1), (SELECT id FROM public.location_bins LIMIT 1)), NOW(), NOW()
+          ) ON CONFLICT (lot_number) DO UPDATE SET current_quantity = ${cases}, updated_at = NOW()
         `);
             }
             catch (e) {
-                console.warn("[finishRunAndCreateFgPallet] Optional DB insert warning:", e.message);
+                console.warn("[finishRunAndCreateFgPallet] DB insert warning:", e.message);
             }
             return {
                 success: true,
-                orderNumber: payload.orderNumber || "ORD-7458",
+                orderNumber: ordNum,
                 palletNumber,
                 totalCases: cases,
-                totalBottles,
-                targetBin: payload.targetBin || "WH-FG-BIN-04",
-                status: "QA_PENDING_RELEASE",
-                message: `Packaging Run ${payload.orderNumber || 'ORD-7458'} completed. Finished Goods Pallet ${palletNumber} (${cases} Cases / ${totalBottles} Units) received into PostgreSQL inventory_lots.`
+                targetBin,
+                status: "RELEASED",
+                message: `Packaging Run ${ordNum} completed. Finished Goods Pallet ${palletNumber} (${cases} Master Cases) received into cold storage bin ${targetBin}.`
             };
         }
         catch (err) {

@@ -59,8 +59,12 @@ export function Rework() {
     e.preventDefault();
     setSubmitting(true);
     try {
+      const currentBatch = batches.find(b => b.id === selectedBatch);
+
       const res = await qualityService.submitRework({
         batch: selectedBatch,
+        holdId: currentBatch ? currentBatch.holdId : "",
+        recordId: currentBatch ? currentBatch.recordId : "",
         instruction: reworkNote,
         protocol: reworkProtocol
       });

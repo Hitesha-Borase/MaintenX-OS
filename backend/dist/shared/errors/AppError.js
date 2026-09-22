@@ -22,8 +22,8 @@ class NotFoundError extends AppError {
 }
 exports.NotFoundError = NotFoundError;
 class UnauthorizedError extends AppError {
-    constructor(message = "Unauthorized access") {
-        super(message, 401, "UNAUTHORIZED");
+    constructor(message = "Unauthorized access", code = "UNAUTHORIZED", details) {
+        super(message, 401, code, details);
     }
 }
 exports.UnauthorizedError = UnauthorizedError;

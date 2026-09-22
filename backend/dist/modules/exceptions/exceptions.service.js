@@ -2,8 +2,12 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.exceptionsService = exports.ExceptionsService = void 0;
 const database_js_1 = require("../../config/database.js");
+const isValidUuid = (id) => typeof id === "string" &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 class ExceptionsService {
-    async listExceptions(plantId, severity, category) {
+    async listExceptions(tenantId, plantId, severity, category) {
+        if (!tenantId || !isValidUuid(tenantId))
+            return [];
         const client = await database_js_1.pool.connect();
         try {
             let query = `
@@ -14,9 +18,9 @@ class ExceptionsService {
                status, resolution_notes as "resolutionNotes",
                resolved_at as "resolvedAt", created_at as "createdAt"
         FROM pm_exceptions
-        WHERE 1=1
+        WHERE tenant_id = $1::uuid
       `;
-            const params = [];
+            const params = [tenantId];
             if (plantId && plantId !== 'ALL' && plantId !== 'PLT-01') {
                 params.push(plantId);
                 query += ` AND plant_id = $${params.length}`;
@@ -61,12 +65,14 @@ class ExceptionsService {
         try {
             const countRes = await client.query(`SELECT count(*) FROM pm_exceptions;`);
             const newId = `EX-2026-${100 + Number(countRes.rows[0].count) + 1}`;
+            const resolvedTenantId = input.tenantId && isValidUuid(input.tenantId) ? input.tenantId : null;
             const res = await client.query(`
-        INSERT INTO pm_exceptions (id, plant_id, title, severity, category, stage, asset_or_order, impact_description, owner, escalation_level, status)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'Active')
+        INSERT INTO pm_exceptions (id, tenant_id, plant_id, title, severity, category, stage, asset_or_order, impact_description, owner, escalation_level, status)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'Active')
         RETURNING id, title, severity, category, stage, asset_or_order as "assetOrOrder", impact_description as "impactDescription", owner, escalation_level as "escalationLevel", status;
       `, [
                 newId,
+                resolvedTenantId,
                 input.plantId || 'PLT-01',
                 input.title,
                 input.severity || 'P2',

@@ -2,12 +2,12 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ciService = exports.CIService = void 0;
 const database_js_1 = require("../../config/database.js");
+const isUuid = (str) => typeof str === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
 class CIService {
     // ============================================================================
     // AUDIT LOG HELPER
     // ============================================================================
     async logAudit(params) {
-        const isUuid = (str) => typeof str === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
         try {
             await database_js_1.pool.query(`INSERT INTO audit_logs (id, tenant_id, plant_id, user_id, action, entity_type, entity_id, old_values, new_values, created_at)
          VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, NOW())`, [
@@ -28,28 +28,37 @@ class CIService {
     // ============================================================================
     // 1. DASHBOARD SUMMARY
     // ============================================================================
-    async getDashboardSummary(plantId, stage) {
+    async getDashboardSummary(plantId, stage, tenantId) {
         const isPlantFilter = plantId && plantId !== "ALL" && plantId !== "PLT-01";
         const isStageFilter = stage && stage !== "ALL";
-        let plantClause = isPlantFilter ? "WHERE plant_id = $1" : "";
-        const params = isPlantFilter ? [plantId] : [];
+        const validTenant = isUuid(tenantId) ? tenantId : null;
+        const whereConditions = [];
+        const params = [];
+        let idx = 1;
+        if (validTenant) {
+            whereConditions.push(`tenant_id = $${idx++}::uuid`);
+            params.push(validTenant);
+        }
+        if (isPlantFilter) {
+            whereConditions.push(`plant_id = $${idx++}`);
+            params.push(plantId);
+        }
+        const baseClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(" AND ")}` : "";
         // Filter clauses for stage-aware tables
-        let stageRcaClause = "";
-        let stageRelClause = "";
-        let stageLossClause = "";
+        let stageRcaClause = baseClause;
+        let stageRelClause = baseClause;
+        let stageLossClause = baseClause;
         const stageParams = [...params];
         if (isStageFilter) {
             stageParams.push(stage);
-            const stageParamIdx = stageParams.length;
-            stageRcaClause = isPlantFilter ? `WHERE plant_id = $1 AND stage = $${stageParamIdx}` : `WHERE stage = $${stageParamIdx}`;
-            stageRelClause = isPlantFilter ? `WHERE plant_id = $1 AND stage = $${stageParamIdx}` : `WHERE stage = $${stageParamIdx}`;
-            stageLossClause = isPlantFilter ? `WHERE plant_id = $1 AND stage = $${stageParamIdx}` : `WHERE stage = $${stageParamIdx}`;
+            const stageIdx = stageParams.length;
+            const stageCond = `stage = $${stageIdx}`;
+            stageRcaClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(" AND ")} AND ${stageCond}` : `WHERE ${stageCond}`;
+            stageRelClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(" AND ")} AND ${stageCond}` : `WHERE ${stageCond}`;
+            stageLossClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(" AND ")} AND ${stageCond}` : `WHERE ${stageCond}`;
         }
-        else {
-            stageRcaClause = plantClause;
-            stageRelClause = plantClause;
-            stageLossClause = plantClause;
-        }
+        const tenantOnlyClause = validTenant ? `WHERE tenant_id = $1::uuid` : "";
+        const tenantOnlyParams = validTenant ? [validTenant] : [];
         // Projects savings
         const projRes = await database_js_1.pool.query(`SELECT 
         COALESCE(SUM(projected_savings_annual), 0) AS projected_total,
@@ -57,7 +66,7 @@ class CIService {
         COUNT(*) AS total_projects,
         COUNT(CASE WHEN status = 'Completed' OR benefit_status = 'Verified & Locked' THEN 1 END) AS completed_projects,
         COUNT(CASE WHEN benefit_status = 'Pending Verification' THEN 1 END) AS pending_benefits
-      FROM ci_projects ${plantClause}`, params);
+      FROM ci_projects ${baseClause}`, params);
         // RCA investigations
         const rcaRes = await database_js_1.pool.query(`SELECT 
         COUNT(*) AS total_rca,
@@ -79,7 +88,7 @@ class CIService {
         COUNT(CASE WHEN is_bad_actor = true THEN 1 END) AS bad_actors_count,
         COALESCE(AVG(mtbf_hrs), 0) AS avg_mtbf,
         COALESCE(AVG(mttr_min), 0) AS avg_mttr
-      FROM ci_reliability_records ${plantClause}
+      FROM ci_reliability_records ${baseClause}
       GROUP BY stage`, params);
         const procRel = stageRelRes.rows.find((r) => (r.stage || "").toUpperCase() === "PROCESSING") || {};
         const packRel = stageRelRes.rows.find((r) => (r.stage || "").toUpperCase() === "PACKAGING") || {};
@@ -93,7 +102,7 @@ class CIService {
         COALESCE(SUM(hours_lost), 0) AS hours_lost,
         COALESCE(SUM(financial_impact_usd), 0) AS loss_usd,
         COALESCE(SUM(units_lost), 0) AS units_lost
-      FROM ci_losses ${plantClause}
+      FROM ci_losses ${baseClause}
       GROUP BY stage`, params);
         const procLoss = stageLossRes.rows.find((r) => (r.stage || "").toUpperCase() === "PROCESSING") || {};
         const packLoss = stageLossRes.rows.find((r) => (r.stage || "").toUpperCase() === "PACKAGING") || {};
@@ -103,19 +112,19 @@ class CIService {
         COUNT(CASE WHEN status = 'Open' OR status = 'In Progress' THEN 1 END) AS pending_capa,
         COUNT(CASE WHEN status = 'Verified' THEN 1 END) AS verified_capa,
         COUNT(CASE WHEN status NOT IN ('Completed', 'Verified', 'Closed') AND due_date < CURRENT_DATE::text THEN 1 END) AS overdue_capa
-      FROM ci_capa_actions`);
+      FROM ci_capa_actions ${tenantOnlyClause}`, tenantOnlyParams);
         // Capex projects
         const capexRes = await database_js_1.pool.query(`SELECT 
         COUNT(*) AS total_capex,
         COUNT(CASE WHEN status NOT IN ('Closed', 'Commissioned') THEN 1 END) AS open_capex
-      FROM ci_capex_projects ${plantClause}`, params);
+      FROM ci_capex_projects ${baseClause}`, params);
         // Standards
         const stdRes = await database_js_1.pool.query(`SELECT 
         COUNT(*) AS total_standards,
         COUNT(CASE WHEN status = 'Active' THEN 1 END) AS active_standards
-      FROM ci_standards ${plantClause}`, params);
+      FROM ci_standards ${baseClause}`, params);
         // Verified Solutions
-        const solRes = await database_js_1.pool.query(`SELECT COUNT(*) AS total_solutions FROM ci_verified_solutions`);
+        const solRes = await database_js_1.pool.query(`SELECT COUNT(*) AS total_solutions FROM ci_verified_solutions ${tenantOnlyClause}`, tenantOnlyParams);
         const proj = projRes.rows[0] || {};
         const rca = rcaRes.rows[0] || {};
         const rel = relRes.rows[0] || {};
@@ -213,10 +222,14 @@ class CIService {
             updatedAt: r.updated_at,
         };
     }
-    async listInvestigations(plantId, stage) {
+    async listInvestigations(plantId, stage, tenantId) {
         let query = "SELECT * FROM ci_rca_investigations WHERE 1=1";
         const params = [];
         let idx = 1;
+        if (isUuid(tenantId)) {
+            query += ` AND tenant_id = $${idx++}::uuid`;
+            params.push(tenantId);
+        }
         if (plantId && plantId !== "ALL" && plantId !== "PLT-01") {
             query += ` AND plant_id = $${idx++}`;
             params.push(plantId);
@@ -241,12 +254,13 @@ class CIService {
         const year = new Date().getFullYear();
         const newId = data.id || `RCA-${year}-${String(count).padStart(3, "0")}`;
         const userName = userContext?.userName || "Lead CI Engineer";
+        const tId = isUuid(userContext?.tenantId) ? userContext.tenantId : null;
         const res = await database_js_1.pool.query(`INSERT INTO ci_rca_investigations (
         id, plant_id, title, stage, asset_id, asset_name, line_id, line_name,
         source_breakdown_id, source_work_order_id, severity, status,
         current_phase, problem_statement, lead_investigator, team_members,
-        event_date, days_active, why_tree, eight_d
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+        event_date, days_active, why_tree, eight_d, tenant_id
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
       RETURNING *`, [
             newId,
             data.plantId || userContext?.plantId || "PLT-01",
@@ -268,6 +282,7 @@ class CIService {
             data.daysActive || 0,
             JSON.stringify(data.whyTree || []),
             JSON.stringify(data.eightD || {}),
+            tId,
         ]);
         await this.logAudit({
             tenantId: userContext?.tenantId,
@@ -384,8 +399,8 @@ class CIService {
         });
         return { id, message: "Investigation and linked items deleted successfully" };
     }
-    async getRCASummary(plantId) {
-        const list = await this.listInvestigations(plantId);
+    async getRCASummary(plantId, tenantId) {
+        const list = await this.listInvestigations(plantId, undefined, tenantId);
         const total = list.length;
         const closed = list.filter((i) => i.status === "Closed" || i.currentPhase === "Closed").length;
         const active = total - closed;
@@ -639,6 +654,10 @@ class CIService {
         let query = "SELECT * FROM ci_capa_actions WHERE 1=1";
         const params = [];
         let idx = 1;
+        if (isUuid(filters?.tenantId)) {
+            query += ` AND tenant_id = $${idx++}::uuid`;
+            params.push(filters.tenantId);
+        }
         if (filters?.rcaId && filters.rcaId !== "ALL") {
             query += ` AND rca_id = $${idx++}`;
             params.push(filters.rcaId);
@@ -668,11 +687,12 @@ class CIService {
         const count = Number(seq.rows[0].count) + 1;
         const year = new Date().getFullYear();
         const newId = data.id || `CAPA-${year}-${String(count).padStart(3, "0")}`;
+        const tId = isUuid(userContext?.tenantId) ? userContext.tenantId : null;
         const res = await database_js_1.pool.query(`INSERT INTO ci_capa_actions (
         id, rca_id, project_id, description, action_type, owner,
         due_date, priority, stage, status, completion_date, evidence_notes,
-        effectiveness_result, verified_by, verified_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+        effectiveness_result, verified_by, verified_at, tenant_id
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
       RETURNING *`, [
             newId,
             data.rcaId || null,
@@ -689,6 +709,7 @@ class CIService {
             data.effectivenessResult || null,
             data.verifiedBy || null,
             data.verifiedAt || null,
+            tId,
         ]);
         await this.logAudit({
             tenantId: userContext?.tenantId,
@@ -844,10 +865,14 @@ class CIService {
             createdAt: r.created_at,
         };
     }
-    async listLosses(plantId, category, stage) {
+    async listLosses(plantId, category, stage, tenantId) {
         let query = "SELECT * FROM ci_losses WHERE 1=1";
         const params = [];
         let idx = 1;
+        if (isUuid(tenantId)) {
+            query += ` AND tenant_id = $${idx++}::uuid`;
+            params.push(tenantId);
+        }
         if (plantId && plantId !== "ALL" && plantId !== "PLT-01") {
             query += ` AND plant_id = $${idx++}`;
             params.push(plantId);
@@ -868,11 +893,12 @@ class CIService {
         const seq = await database_js_1.pool.query("SELECT COUNT(*) FROM ci_losses");
         const count = Number(seq.rows[0].count) + 1;
         const newId = data.id || `LOSS-${String(count).padStart(2, "0")}`;
+        const tId = isUuid(userContext?.tenantId) ? userContext.tenantId : null;
         const res = await database_js_1.pool.query(`INSERT INTO ci_losses (
         id, category, plant_id, line_id, asset_id, stage, event_name,
         hours_lost, units_lost, financial_impact_usd, linked_rca_id,
-        linked_project_id, trend, date
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+        linked_project_id, trend, date, tenant_id
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
       RETURNING *`, [
             newId,
             data.category || "Downtime Loss",
@@ -888,6 +914,7 @@ class CIService {
             data.linkedProjectId || null,
             data.trend || "Tracked",
             data.date || new Date().toISOString().substring(0, 10),
+            tId,
         ]);
         await this.logAudit({
             tenantId: userContext?.tenantId,
@@ -912,8 +939,8 @@ class CIService {
         });
         return { id, message: "Loss incident deleted" };
     }
-    async getLossSummary(plantId) {
-        const list = await this.listLosses(plantId);
+    async getLossSummary(plantId, tenantId) {
+        const list = await this.listLosses(plantId, undefined, undefined, tenantId);
         const totalUSD = list.reduce((acc, l) => acc + l.financialImpactUSD, 0);
         const totalHours = list.reduce((acc, l) => acc + l.hoursLost, 0);
         const totalUnits = list.reduce((acc, l) => acc + l.unitsLost, 0);
@@ -965,11 +992,16 @@ class CIService {
             createdAt: r.created_at,
         };
     }
-    async listProjects(plantId) {
-        let query = "SELECT * FROM ci_projects";
+    async listProjects(plantId, tenantId) {
+        let query = "SELECT * FROM ci_projects WHERE 1=1";
         const params = [];
+        let idx = 1;
+        if (isUuid(tenantId)) {
+            query += ` AND tenant_id = $${idx++}::uuid`;
+            params.push(tenantId);
+        }
         if (plantId && plantId !== "ALL") {
-            query += " WHERE plant_id = $1";
+            query += ` AND plant_id = $${idx++}`;
             params.push(plantId);
         }
         query += " ORDER BY created_at DESC";
@@ -986,13 +1018,14 @@ class CIService {
         const seq = await database_js_1.pool.query("SELECT COUNT(*) FROM ci_projects");
         const count = Number(seq.rows[0].count) + 1;
         const newId = input.id || `PRJ-CI-${String(count).padStart(3, "0")}`;
+        const tId = isUuid(userContext?.tenantId) ? userContext.tenantId : null;
         const res = await database_js_1.pool.query(`INSERT INTO ci_projects (
         id, name, type, plant_id, line_id, asset_id, linked_rca_id,
         sponsor, owner, start_date, target_date, status, progress,
         baseline_metric, target_metric, current_metric,
         projected_savings_annual, realized_savings_ytd, benefit_status,
-        locked_by, locked_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
+        locked_by, locked_at, tenant_id
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
       RETURNING *`, [
             newId,
             input.name || "Continuous Improvement Kaizen Event",
@@ -1015,6 +1048,7 @@ class CIService {
             input.benefitStatus || "Draft",
             input.lockedBy || null,
             input.lockedAt || null,
+            tId,
         ]);
         await this.logAudit({
             tenantId: userContext?.tenantId,
@@ -1129,8 +1163,8 @@ class CIService {
         });
         return this.mapProject(res.rows[0]);
     }
-    async getBenefitsSummary(plantId) {
-        const projects = await this.listProjects(plantId);
+    async getBenefitsSummary(plantId, tenantId) {
+        const projects = await this.listProjects(plantId, tenantId);
         const verified = projects.filter((p) => p.benefitStatus === "Verified & Locked");
         const pending = projects.filter((p) => p.benefitStatus === "Pending Verification");
         const realizedSavingsTotal = verified.reduce((sum, p) => sum + (p.realizedSavingsYTD || 0), 0);
@@ -1167,10 +1201,14 @@ class CIService {
             createdAt: r.created_at,
         };
     }
-    async listStandards(plantId, type) {
+    async listStandards(plantId, type, tenantId) {
         let query = "SELECT * FROM ci_standards WHERE 1=1";
         const params = [];
         let idx = 1;
+        if (isUuid(tenantId)) {
+            query += ` AND tenant_id = $${idx++}::uuid`;
+            params.push(tenantId);
+        }
         if (plantId && plantId !== "ALL") {
             query += ` AND plant_id = $${idx++}`;
             params.push(plantId);
@@ -1187,11 +1225,12 @@ class CIService {
         const seq = await database_js_1.pool.query("SELECT COUNT(*) FROM ci_standards");
         const count = Number(seq.rows[0].count) + 1;
         const newId = data.id || `STD-SOP-${String(count).padStart(3, "0")}`;
+        const tId = isUuid(userContext?.tenantId) ? userContext.tenantId : null;
         const res = await database_js_1.pool.query(`INSERT INTO ci_standards (
         id, title, type, version, plant_id, line_id, asset_id,
         source_project_id, source_rca_id, owner, status,
-        effective_date, review_date, approved_by
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+        effective_date, review_date, approved_by, tenant_id
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
       RETURNING *`, [
             newId,
             data.title || "Controlled Operating Procedure",
@@ -1207,6 +1246,7 @@ class CIService {
             data.effectiveDate || new Date().toISOString().substring(0, 10),
             data.reviewDate || new Date(Date.now() + 365 * 86400000).toISOString().substring(0, 10),
             data.approvedBy || userContext?.userName || "Lead CI Engineer",
+            tId,
         ]);
         await this.logAudit({
             tenantId: userContext?.tenantId,
@@ -1277,10 +1317,14 @@ class CIService {
             createdAt: r.created_at,
         };
     }
-    async listSolutions(assetId, search) {
+    async listSolutions(assetId, search, tenantId) {
         let query = "SELECT * FROM ci_verified_solutions WHERE 1=1";
         const params = [];
         let idx = 1;
+        if (isUuid(tenantId)) {
+            query += ` AND tenant_id = $${idx++}::uuid`;
+            params.push(tenantId);
+        }
         if (assetId && assetId !== "ALL") {
             query += ` AND asset_id = $${idx++}`;
             params.push(assetId);
@@ -1298,11 +1342,12 @@ class CIService {
         const seq = await database_js_1.pool.query("SELECT COUNT(*) FROM ci_verified_solutions");
         const count = Number(seq.rows[0].count) + 1;
         const newId = data.id || `VS-${String(count).padStart(3, "0")}`;
+        const tId = isUuid(userContext?.tenantId) ? userContext.tenantId : null;
         const res = await database_js_1.pool.query(`INSERT INTO ci_verified_solutions (
         id, asset_id, asset_name, failure_mode, symptom, root_cause,
         solution_steps, parts_used, source_rca_id, verified_by,
-        verified_date, status
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        verified_date, status, tenant_id
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
       RETURNING *`, [
             newId,
             data.assetId || "AST-001",
@@ -1316,6 +1361,7 @@ class CIService {
             data.verifiedBy || userContext?.userName || "Lead CI Specialist",
             data.verifiedDate || new Date().toISOString().substring(0, 10),
             data.status || "Published",
+            tId,
         ]);
         await this.logAudit({
             tenantId: userContext?.tenantId,
@@ -1364,11 +1410,16 @@ class CIService {
             createdAt: r.created_at,
         };
     }
-    async listCapex(plantId) {
-        let query = "SELECT * FROM ci_capex_projects";
+    async listCapex(plantId, tenantId) {
+        let query = "SELECT * FROM ci_capex_projects WHERE 1=1";
         const params = [];
+        let idx = 1;
+        if (isUuid(tenantId)) {
+            query += ` AND tenant_id = $${idx++}::uuid`;
+            params.push(tenantId);
+        }
         if (plantId && plantId !== "ALL") {
-            query += " WHERE plant_id = $1";
+            query += ` AND plant_id = $${idx++}`;
             params.push(plantId);
         }
         query += " ORDER BY created_at DESC";
@@ -1380,12 +1431,13 @@ class CIService {
         const count = Number(seq.rows[0].count) + 1;
         const year = new Date().getFullYear();
         const newId = data.id || `CPX-${year}-${String(count).padStart(3, "0")}`;
+        const tId = isUuid(userContext?.tenantId) ? userContext.tenantId : null;
         const res = await database_js_1.pool.query(`INSERT INTO ci_capex_projects (
         id, name, plant_id, line_id, asset_id, linked_rca_id,
         linked_project_id, budget, estimated_cost, actual_cost,
         engineering_justification, status, owner,
-        target_commission_date, dossier_ref, approval_status
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+        target_commission_date, dossier_ref, approval_status, tenant_id
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
       RETURNING *`, [
             newId,
             data.name || "Engineering Redesign Capex",
@@ -1403,6 +1455,7 @@ class CIService {
             data.targetCommissionDate || new Date(Date.now() + 90 * 86400000).toISOString().substring(0, 10),
             data.dossierRef || `DOS-ENG-${newId}`,
             data.approvalStatus || "Approved by Plant GM",
+            tId,
         ]);
         await this.logAudit({
             tenantId: userContext?.tenantId,
@@ -1451,10 +1504,14 @@ class CIService {
             createdAt: r.created_at,
         };
     }
-    async listReliabilityRecords(plantId, onlyBadActors, stage) {
+    async listReliabilityRecords(plantId, onlyBadActors, stage, tenantId) {
         let query = "SELECT * FROM ci_reliability_records WHERE 1=1";
         const params = [];
         let idx = 1;
+        if (isUuid(tenantId)) {
+            query += ` AND tenant_id = $${idx++}::uuid`;
+            params.push(tenantId);
+        }
         if (plantId && plantId !== "ALL" && plantId !== "PLT-01") {
             query += ` AND plant_id = $${idx++}`;
             params.push(plantId);

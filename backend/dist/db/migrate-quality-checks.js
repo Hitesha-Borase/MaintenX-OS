@@ -63,87 +63,8 @@ async function runQualityChecksMigration() {
         const tenantIds = tenantRows.rows.map(r => r.id);
         if (!tenantIds.includes(null))
             tenantIds.push(null);
-        // 4. Seed operational CCP checks if empty
-        const ccpRes = await client.query(`SELECT COUNT(*)::int as count FROM public.ccp_checks;`);
-        console.log(`📊 Current ccp_checks count: ${ccpRes.rows[0].count}`);
-        if (ccpRes.rows[0].count === 0) {
-            console.log("🌱 Seeding initial operational CCP checks into ccp_checks...");
-            for (const tid of tenantIds) {
-                await client.query(`
-          INSERT INTO public.ccp_checks (
-            tenant_id, ccp_code, ccp_name, target_value, actual_value, uom, status, 
-            batch_number, line_name, operator, equipment, location, test_method, critical_limit, notes
-          ) VALUES 
-          (
-            $1,
-            'CCP-01', 
-            'Pasteurizer HTST Critical Limit Temperature', 
-            83.1, 
-            83.5, 
-            '°C', 
-            'PASS', 
-            'BAT-2026-ORD2511', 
-            'Line 1 Bottling & Canning (250 BPM)', 
-            'Arthur Sterling (Plant Manager)', 
-            'Plate Heat Exchanger Pasteurizer', 
-            'Line 1 — Infeed Pasteurization Loop', 
-            'Automated RTD Sensor & QA Titration', 
-            '≥ 83.1°C for minimum 15 seconds', 
-            'Thermal hold step compliant. Sensor calibrated.'
-          ),
-          (
-            $1,
-            'CCP-02', 
-            'End-of-Line Metal Detection Sensitivity', 
-            0, 
-            0, 
-            'unit', 
-            'PASS', 
-            'BAT-2026-ORD2511', 
-            'Line 1 Bottling & Canning (250 BPM)', 
-            'Arthur Sterling (Plant Manager)', 
-            'Mettler Toledo In-Line Metal Detector', 
-            'Line 1 — Packaging Outfeed', 
-            'Calibrated Test Wand Challenge (Fe 2.0mm, Non-Fe 2.5mm, SS 3.0mm)', 
-            'Zero metal contamination reject', 
-            'Hourly challenge wands passed with immediate pneumatic reject.'
-          ),
-          (
-            $1,
-            'CCP-03', 
-            'Can Double Seam Hermetic Seal Verification', 
-            1.10, 
-            1.25, 
-            'mm', 
-            'PASS', 
-            'BAT-2026-ORD2511', 
-            'Line 2 High-Speed Can Line', 
-            'Dr. Rachel Thorne (QA Lead)', 
-            'CMC-KUHNKE Vision Seam Gauge', 
-            'Line 2 — Rotary Seamer Head', 
-            'Optical Cross-Section Seam Scope', 
-            'Seam Overlap ≥ 1.10mm', 
-            'Double seam overlap and tightness 100% verified.'
-          );
-        `, [tid]);
-            }
-            console.log("✅ Seeded initial operational CCP checks");
-        }
-        // 5. Seed operational Process checks if empty
-        const procRes = await client.query(`SELECT COUNT(*)::int as count FROM public.process_checks;`);
-        console.log(`📊 Current process_checks count: ${procRes.rows[0].count}`);
-        if (procRes.rows[0].count === 0) {
-            console.log("🌱 Seeding initial operational parameters into process_checks...");
-            await client.query(`
-        INSERT INTO public.process_checks (name, parameter, target, actual, line, status, timestamp_str)
-        VALUES
-        ('Blending agitator speed (Tank TK-02)', 'Agitator Speed', '450 RPM', '448 RPM', 'Line 1 - Blending Area', 'OK', '14:15'),
-        ('Intake Manifold Header Pressure', 'Header Pressure', '3.2 - 3.8 bar', '3.52 bar', 'Line 1 - Infeed', 'OK', '13:45'),
-        ('Carbonation Dissolved CO2 Level', 'CO2 Gas Volume', '3.60 - 3.80 Vol', '3.71 Vol', 'Line 2 - Carbonator', 'OK', '13:10'),
-        ('Bottle Rinser De-aerated Water Flush', 'Rinse Temp & Flow', '≥65°C • 12 LPM', '66.4°C • 12.2 LPM', 'Line 1 - Rinser', 'OK', '12:30');
-      `);
-            console.log("✅ Seeded initial operational parameters into process_checks");
-        }
+        // Auto-seeding disabled: only real operational data or manual entries should be saved in DB
+        console.log("ℹ️ Quality Checks schema checked (auto-seeding dummy rows disabled).");
         // 6. Quality Specifications table check (no auto-seeding dummy data)
         const specRes = await client.query(`SELECT COUNT(*)::int as count FROM public.quality_specs;`);
         console.log(`📊 Current quality_specs count: ${specRes.rows[0].count}`);

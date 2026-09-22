@@ -359,6 +359,10 @@ class MasterDataController {
         const data = await masterData_service_js_1.masterDataService.createAssetType(request.user?.tenantId, request.body);
         return reply.status(201).send((0, responseFormatter_js_1.formatSuccess)(data, "Asset category created successfully"));
     }
+    async updateAssetType(request, reply) {
+        const data = await masterData_service_js_1.masterDataService.updateAssetType(request.user?.tenantId, request.params.id, request.body);
+        return reply.send((0, responseFormatter_js_1.formatSuccess)(data, "Asset category updated successfully"));
+    }
     async deleteAssetType(request, reply) {
         const data = await masterData_service_js_1.masterDataService.deleteAssetType(request.user?.tenantId, request.params.id);
         return reply.send((0, responseFormatter_js_1.formatSuccess)(data, "Asset category deleted successfully"));
@@ -506,6 +510,27 @@ class MasterDataController {
         const { id } = request.params;
         const data = await masterData_service_js_1.masterDataService.deleteStorageResource(request.user?.tenantId, id);
         return reply.send((0, responseFormatter_js_1.formatSuccess)(data, "Storage resource deleted successfully"));
+    }
+    // ==========================================
+    // 20. STORAGE TYPES
+    // ==========================================
+    async getStorageTypes(request, reply) {
+        const data = await masterData_service_js_1.masterDataService.listStorageTypes(request.user?.tenantId);
+        return reply.send((0, responseFormatter_js_1.formatSuccess)(data));
+    }
+    async createStorageType(request, reply) {
+        const data = await masterData_service_js_1.masterDataService.createStorageType(request.user?.tenantId, request.body);
+        return reply.status(201).send((0, responseFormatter_js_1.formatSuccess)(data, "Storage type created successfully"));
+    }
+    async updateStorageType(request, reply) {
+        const { id } = request.params;
+        const data = await masterData_service_js_1.masterDataService.updateStorageType(request.user?.tenantId, id, request.body);
+        return reply.send((0, responseFormatter_js_1.formatSuccess)(data, "Storage type updated successfully"));
+    }
+    async deleteStorageType(request, reply) {
+        const { id } = request.params;
+        const data = await masterData_service_js_1.masterDataService.deleteStorageType(request.user?.tenantId, id);
+        return reply.send((0, responseFormatter_js_1.formatSuccess)(data, "Storage type deleted successfully"));
     }
 }
 exports.MasterDataController = MasterDataController;

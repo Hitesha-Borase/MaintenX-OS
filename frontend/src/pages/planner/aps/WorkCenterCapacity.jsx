@@ -56,9 +56,9 @@ export function WorkCenterCapacity() {
 
   const filtered = activeWorkCenters.filter(
     (c) =>
-      c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.lineCode.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (c.plantFacility && c.plantFacility.toLowerCase().includes(searchQuery.toLowerCase()))
+      (c.name || "").toLowerCase().includes((searchQuery || "").toLowerCase()) ||
+      (c.lineCode || "").toLowerCase().includes((searchQuery || "").toLowerCase()) ||
+      (c.plantFacility && c.plantFacility.toLowerCase().includes((searchQuery || "").toLowerCase()))
   );
 
 

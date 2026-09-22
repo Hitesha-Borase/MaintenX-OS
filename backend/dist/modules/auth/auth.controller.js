@@ -7,21 +7,17 @@ const responseFormatter_js_1 = require("../../shared/utils/responseFormatter.js"
 const AppError_js_1 = require("../../shared/errors/AppError.js");
 const auditContext_js_1 = require("../../middleware/auditContext.js");
 const master_service_js_1 = require("../master/master.service.js");
+const index_js_1 = require("../../db/index.js");
+const drizzle_orm_1 = require("drizzle-orm");
 class AuthController {
     async register(request, reply) {
-        const body = (request.body || {});
-        const name = (body.name || body.company || body.companyName || "").trim();
-        const admin = (body.admin || body.adminName || body.ownerName || body.fullName || "").trim();
-        const adminEmail = (body.adminEmail || body.email || "").trim().toLowerCase();
-        const adminPhone = (body.adminPhone || body.phone || "").trim();
-        const password = (body.password || "").trim();
-        const subscription = (body.subscription || body.plan || "Plant Pilot").trim();
-        if (!name || !admin || !adminEmail || !password) {
-            throw new AppError_js_1.ValidationError("Company name, company owner name, email, and password are required");
-        }
-        if (password.length < 6) {
-            throw new AppError_js_1.ValidationError("Password must be at least 6 characters");
-        }
+        const input = auth_schema_js_1.tenantRegistrationSchema.parse(request.body || {});
+        const name = (input.name || input.company || input.companyName || "").trim();
+        const admin = (input.admin || input.adminName || input.ownerName || input.fullName || "").trim();
+        const adminEmail = (input.adminEmail || input.email || "").trim().toLowerCase();
+        const adminPhone = (input.adminPhone || input.phone || "").trim();
+        const password = input.password.trim();
+        const subscription = (input.subscription || input.plan || "Plant Pilot").trim();
         const company = await master_service_js_1.masterAdminService.createCompany({
             name,
             admin,
@@ -56,7 +52,7 @@ class AuthController {
         return reply.status(201).send((0, responseFormatter_js_1.formatSuccess)({
             token,
             user,
-            tenant: tenant ? { id: tenant.id, name: tenant.name, slug: tenant.slug } : null,
+            tenant: tenant || null,
             company,
         }, "Tenant registered successfully"));
     }
@@ -85,12 +81,80 @@ class AuthController {
         return reply.send((0, responseFormatter_js_1.formatSuccess)({
             token,
             user,
-            tenant: tenant ? { id: tenant.id, name: tenant.name, slug: tenant.slug } : null,
+            tenant: tenant || null,
         }, "Logged in successfully"));
     }
     async me(request, reply) {
+        const user = request.user;
+        let tenantData = null;
+        if (user?.tenantId) {
+            try {
+                const [tenant] = await index_js_1.db.select().from(index_js_1.tenants).where((0, drizzle_orm_1.eq)(index_js_1.tenants.id, user.tenantId)).limit(1);
+                if (tenant) {
+                    const [sub] = await index_js_1.db
+                        .select()
+                        .from(index_js_1.subscriptions)
+                        .where((0, drizzle_orm_1.eq)(index_js_1.subscriptions.tenantId, tenant.id))
+                        .orderBy((0, drizzle_orm_1.desc)(index_js_1.subscriptions.createdAt))
+                        .limit(1);
+                    const activePlan = sub?.planName || tenant.plan || "Plant Pilot";
+                    const planKey = activePlan.toLowerCase().trim();
+                    const CANONICAL_PLAN_MODULES = {
+                        "plant pilot": ["produce"],
+                        "pilot": ["produce"],
+                        "trial": ["produce"],
+                        "starter": ["produce", "verify"],
+                        "individual modules": ["produce", "verify"],
+                        "bundles": ["plan", "produce", "verify", "maintain", "move"],
+                        "advanced": ["plan", "produce", "verify", "maintain", "move"],
+                        "maintenx os complete": ["plan", "produce", "verify", "maintain", "move", "people", "improve", "intelligence"],
+                        "enterprise": ["plan", "produce", "verify", "maintain", "move", "people", "improve", "intelligence"],
+                    };
+                    const allowed = CANONICAL_PLAN_MODULES[planKey] || (activePlan.toUpperCase() === "ENTERPRISE" || planKey.includes("complete")
+                        ? ["plan", "produce", "verify", "maintain", "move", "people", "improve", "intelligence"]
+                        : planKey.includes("bundle")
+                            ? ["plan", "produce", "verify", "maintain", "move"]
+                            : ["produce"]);
+                    const modulesMap = {
+                        plan: allowed.includes("plan"),
+                        produce: allowed.includes("produce"),
+                        verify: allowed.includes("verify"),
+                        maintain: allowed.includes("maintain"),
+                        move: allowed.includes("move"),
+                        people: allowed.includes("people"),
+                        improve: allowed.includes("improve"),
+                        intelligence: allowed.includes("intelligence"),
+                    };
+                    try {
+                        const explicitMods = await index_js_1.db.select().from(index_js_1.tenantModules).where((0, drizzle_orm_1.eq)(index_js_1.tenantModules.tenantId, tenant.id));
+                        for (const m of explicitMods) {
+                            modulesMap[m.moduleKey] = m.isEnabled;
+                        }
+                    }
+                    catch (e) {
+                        // ignore
+                    }
+                    tenantData = {
+                        id: tenant.id,
+                        name: tenant.name,
+                        slug: tenant.slug,
+                        plan: activePlan,
+                        createdAt: tenant.createdAt,
+                        hasSubscription: Boolean(sub && sub.status === "ACTIVE" && new Date(sub.currentPeriodEnd) > new Date()),
+                        subscriptionExpiryDate: sub?.currentPeriodEnd || null,
+                        subscriptionStatus: sub?.status || "TRIAL",
+                        subscription: sub || null,
+                        modules: modulesMap,
+                    };
+                }
+            }
+            catch (e) {
+                console.warn("Could not fetch tenant in /auth/me:", e.message);
+            }
+        }
         return reply.send((0, responseFormatter_js_1.formatSuccess)({
             user: request.user,
+            tenant: tenantData,
         }));
     }
     async digitalSignOff(request, reply) {
