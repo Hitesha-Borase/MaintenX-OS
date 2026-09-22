@@ -1212,17 +1212,17 @@ export function WarehouseDashboard() {
               style={{
                 width: "100%",
                 padding: "10px",
-                backgroundColor: "rgba(255, 255, 255, 0.05)",
-                border: "1px solid rgba(255, 255, 255, 0.15)",
+                backgroundColor: "var(--bg-card, #FFFFFF)",
+                border: "1px solid var(--border-color, #D1C7BD)",
                 borderRadius: "6px",
-                color: "#FFFFFF",
+                color: "var(--text-primary, #261603)",
                 fontSize: "13px"
               }}
               required
             >
               <option value="" disabled>-- Select Lot --</option>
               {(flowSummary.rawMaterials || []).map(r => (
-                <option key={r.id} value={r.lotNumber} style={{ backgroundColor: "#1E293B", color: "#FFFFFF" }}>
+                <option key={r.id} value={r.lotNumber} style={{ backgroundColor: "#FFFFFF", color: "#261603" }}>
                   {r.lotNumber} (Available: {Number(r.quantity).toLocaleString()} {r.uom})
                 </option>
               ))}
@@ -1242,10 +1242,10 @@ export function WarehouseDashboard() {
                 style={{
                   width: "100%",
                   padding: "10px",
-                  backgroundColor: "rgba(255, 255, 255, 0.05)",
-                  border: "1px solid rgba(255, 255, 255, 0.15)",
+                  backgroundColor: "var(--bg-card, #FFFFFF)",
+                  border: "1px solid var(--border-color, #D1C7BD)",
                   borderRadius: "6px",
-                  color: "#FFFFFF",
+                  color: "var(--text-primary, #261603)",
                   fontSize: "13px"
                 }}
                 required
@@ -1266,10 +1266,10 @@ export function WarehouseDashboard() {
                 style={{
                   width: "100%",
                   padding: "10px",
-                  backgroundColor: "rgba(255, 255, 255, 0.05)",
-                  border: "1px solid rgba(255, 255, 255, 0.15)",
+                  backgroundColor: "var(--bg-card, #FFFFFF)",
+                  border: "1px solid var(--border-color, #D1C7BD)",
                   borderRadius: "6px",
-                  color: "#FFFFFF",
+                  color: "var(--text-primary, #261603)",
                   fontSize: "13px"
                 }}
                 required
@@ -1288,10 +1288,10 @@ export function WarehouseDashboard() {
               style={{
                 width: "100%",
                 padding: "10px",
-                backgroundColor: "rgba(255, 255, 255, 0.05)",
-                border: "1px solid rgba(255, 255, 255, 0.15)",
+                backgroundColor: "var(--bg-card, #FFFFFF)",
+                border: "1px solid var(--border-color, #D1C7BD)",
                 borderRadius: "6px",
-                color: "#FFFFFF",
+                color: "var(--text-primary, #261603)",
                 fontSize: "13px"
               }}
             />
@@ -1334,10 +1334,10 @@ export function WarehouseDashboard() {
                 style={{
                   width: "100%",
                   padding: "10px",
-                  backgroundColor: "rgba(255, 255, 255, 0.05)",
-                  border: "1px solid rgba(255, 255, 255, 0.15)",
+                  backgroundColor: "var(--bg-card, #FFFFFF)",
+                  border: "1px solid var(--border-color, #D1C7BD)",
                   borderRadius: "6px",
-                  color: "#FFFFFF",
+                  color: "var(--text-primary, #261603)",
                   fontSize: "13px"
                 }}
                 required
@@ -1354,16 +1354,16 @@ export function WarehouseDashboard() {
                 style={{
                   width: "100%",
                   padding: "10px",
-                  backgroundColor: "rgba(255, 255, 255, 0.05)",
-                  border: "1px solid rgba(255, 255, 255, 0.15)",
+                  backgroundColor: "var(--bg-card, #FFFFFF)",
+                  border: "1px solid var(--border-color, #D1C7BD)",
                   borderRadius: "6px",
-                  color: "#FFFFFF",
+                  color: "var(--text-primary, #261603)",
                   fontSize: "13px"
                 }}
               >
-                <option value="Tank T-01" style={{ backgroundColor: "#1E293B" }}>Tank T-01 (10,000L Liquid Bay)</option>
-                <option value="Tank T-02" style={{ backgroundColor: "#1E293B" }}>Tank T-02 (10,000L Liquid Bay)</option>
-                <option value="Silo S-01" style={{ backgroundColor: "#1E293B" }}>Silo S-01 (25,000L Bulk Yard)</option>
+                <option value="Tank T-01" style={{ backgroundColor: "#FFFFFF", color: "#261603" }}>Tank T-01 (10,000L Liquid Bay)</option>
+                <option value="Tank T-02" style={{ backgroundColor: "#FFFFFF", color: "#261603" }}>Tank T-02 (10,000L Liquid Bay)</option>
+                <option value="Silo S-01" style={{ backgroundColor: "#FFFFFF", color: "#261603" }}>Silo S-01 (25,000L Bulk Yard)</option>
               </select>
             </div>
           </div>
@@ -1380,10 +1380,10 @@ export function WarehouseDashboard() {
                 style={{
                   width: "100%",
                   padding: "10px",
-                  backgroundColor: "rgba(255, 255, 255, 0.05)",
-                  border: "1px solid rgba(255, 255, 255, 0.15)",
+                  backgroundColor: "var(--bg-card, #FFFFFF)",
+                  border: "1px solid var(--border-color, #D1C7BD)",
                   borderRadius: "6px",
-                  color: "#FFFFFF",
+                  color: "var(--text-primary, #261603)",
                   fontSize: "13px"
                 }}
                 required
@@ -1400,15 +1400,15 @@ export function WarehouseDashboard() {
                 style={{
                   width: "100%",
                   padding: "10px",
-                  backgroundColor: "rgba(255, 255, 255, 0.05)",
-                  border: "1px solid rgba(255, 255, 255, 0.15)",
+                  backgroundColor: "var(--bg-card, #FFFFFF)",
+                  border: "1px solid var(--border-color, #D1C7BD)",
                   borderRadius: "6px",
-                  color: "#FFFFFF",
+                  color: "var(--text-primary, #261603)",
                   fontSize: "13px"
                 }}
               >
-                <option value="RELEASED" style={{ backgroundColor: "#1E293B" }}>RELEASED (Ready for Packaging)</option>
-                <option value="QUARANTINED" style={{ backgroundColor: "#1E293B" }}>QUARANTINED (Lab Hold)</option>
+                <option value="RELEASED" style={{ backgroundColor: "#FFFFFF", color: "#261603" }}>RELEASED (Ready for Packaging)</option>
+                <option value="QUARANTINED" style={{ backgroundColor: "#FFFFFF", color: "#261603" }}>QUARANTINED (Lab Hold)</option>
               </select>
             </div>
           </div>
@@ -1451,17 +1451,17 @@ export function WarehouseDashboard() {
               style={{
                 width: "100%",
                 padding: "10px",
-                backgroundColor: "rgba(255, 255, 255, 0.05)",
-                border: "1px solid rgba(255, 255, 255, 0.15)",
+                backgroundColor: "var(--bg-card, #FFFFFF)",
+                border: "1px solid var(--border-color, #D1C7BD)",
                 borderRadius: "6px",
-                color: "#FFFFFF",
+                color: "var(--text-primary, #261603)",
                 fontSize: "13px"
               }}
               required
             >
               <option value="" disabled>-- Select Packaging Lot --</option>
               {(flowSummary.packagingMaterials || []).map(p => (
-                <option key={p.id} value={p.lotNumber} style={{ backgroundColor: "#1E293B", color: "#FFFFFF" }}>
+                <option key={p.id} value={p.lotNumber} style={{ backgroundColor: "#FFFFFF", color: "#261603" }}>
                   {p.lotNumber} (Available: {Number(p.quantity).toLocaleString()} {p.uom})
                 </option>
               ))}
@@ -1479,16 +1479,16 @@ export function WarehouseDashboard() {
                 style={{
                   width: "100%",
                   padding: "10px",
-                  backgroundColor: "rgba(255, 255, 255, 0.05)",
-                  border: "1px solid rgba(255, 255, 255, 0.15)",
+                  backgroundColor: "var(--bg-card, #FFFFFF)",
+                  border: "1px solid var(--border-color, #D1C7BD)",
                   borderRadius: "6px",
-                  color: "#FFFFFF",
+                  color: "var(--text-primary, #261603)",
                   fontSize: "13px"
                 }}
               >
-                <option value="Canning Line 1" style={{ backgroundColor: "#1E293B" }}>Canning Line 1 (High-Speed 600cpm)</option>
-                <option value="Bottling Line 2" style={{ backgroundColor: "#1E293B" }}>Bottling Line 2 (Aseptic PET)</option>
-                <option value="Kegging Bay 3" style={{ backgroundColor: "#1E293B" }}>Kegging Bay 3</option>
+                <option value="Canning Line 1" style={{ backgroundColor: "#FFFFFF", color: "#261603" }}>Canning Line 1 (High-Speed 600cpm)</option>
+                <option value="Bottling Line 2" style={{ backgroundColor: "#FFFFFF", color: "#261603" }}>Bottling Line 2 (Aseptic PET)</option>
+                <option value="Kegging Bay 3" style={{ backgroundColor: "#FFFFFF", color: "#261603" }}>Kegging Bay 3</option>
               </select>
             </div>
 
@@ -1505,10 +1505,10 @@ export function WarehouseDashboard() {
                 style={{
                   width: "100%",
                   padding: "10px",
-                  backgroundColor: "rgba(255, 255, 255, 0.05)",
-                  border: "1px solid rgba(255, 255, 255, 0.15)",
+                  backgroundColor: "var(--bg-card, #FFFFFF)",
+                  border: "1px solid var(--border-color, #D1C7BD)",
                   borderRadius: "6px",
-                  color: "#FFFFFF",
+                  color: "var(--text-primary, #261603)",
                   fontSize: "13px"
                 }}
                 required
@@ -1555,18 +1555,18 @@ export function WarehouseDashboard() {
                 style={{
                   width: "100%",
                   padding: "10px",
-                  backgroundColor: "rgba(255, 255, 255, 0.05)",
-                  border: "1px solid rgba(255, 255, 255, 0.15)",
+                  backgroundColor: "var(--bg-card, #FFFFFF)",
+                  border: "1px solid var(--border-color, #D1C7BD)",
                   borderRadius: "6px",
-                  color: "#FFFFFF",
+                  color: "var(--text-primary, #261603)",
                   fontSize: "13px"
                 }}
               >
-                <option value={`WIP-${createFgForm.batchNumber}`} style={{ backgroundColor: "#1E293B" }}>
+                <option value={`WIP-${createFgForm.batchNumber}`} style={{ backgroundColor: "#FFFFFF", color: "#261603" }}>
                   Direct Bottling Run (Batch: {createFgForm.batchNumber})
                 </option>
                 {(flowSummary.wipLots || []).map(w => (
-                  <option key={w.id} value={w.lotNumber} style={{ backgroundColor: "#1E293B" }}>
+                  <option key={w.id} value={w.lotNumber} style={{ backgroundColor: "#FFFFFF", color: "#261603" }}>
                     {w.lotNumber} ({w.batchNumber} - {Number(w.quantity).toLocaleString()} {w.uom})
                   </option>
                 ))}
@@ -1584,10 +1584,10 @@ export function WarehouseDashboard() {
                 style={{
                   width: "100%",
                   padding: "10px",
-                  backgroundColor: "rgba(255, 255, 255, 0.05)",
-                  border: "1px solid rgba(255, 255, 255, 0.15)",
+                  backgroundColor: "var(--bg-card, #FFFFFF)",
+                  border: "1px solid var(--border-color, #D1C7BD)",
                   borderRadius: "6px",
-                  color: "#FFFFFF",
+                  color: "var(--text-primary, #261603)",
                   fontSize: "13px"
                 }}
                 required
@@ -1607,10 +1607,10 @@ export function WarehouseDashboard() {
                 style={{
                   width: "100%",
                   padding: "10px",
-                  backgroundColor: "rgba(255, 255, 255, 0.05)",
-                  border: "1px solid rgba(255, 255, 255, 0.15)",
+                  backgroundColor: "var(--bg-card, #FFFFFF)",
+                  border: "1px solid var(--border-color, #D1C7BD)",
                   borderRadius: "6px",
-                  color: "#FFFFFF",
+                  color: "var(--text-primary, #261603)",
                   fontSize: "13px"
                 }}
                 required
@@ -1628,10 +1628,10 @@ export function WarehouseDashboard() {
                 style={{
                   width: "100%",
                   padding: "10px",
-                  backgroundColor: "rgba(255, 255, 255, 0.05)",
-                  border: "1px solid rgba(255, 255, 255, 0.15)",
+                  backgroundColor: "var(--bg-card, #FFFFFF)",
+                  border: "1px solid var(--border-color, #D1C7BD)",
                   borderRadius: "6px",
-                  color: "#FFFFFF",
+                  color: "var(--text-primary, #261603)",
                   fontSize: "13px"
                 }}
                 required
@@ -1651,10 +1651,10 @@ export function WarehouseDashboard() {
                 style={{
                   width: "100%",
                   padding: "10px",
-                  backgroundColor: "rgba(255, 255, 255, 0.05)",
-                  border: "1px solid rgba(255, 255, 255, 0.15)",
+                  backgroundColor: "var(--bg-card, #FFFFFF)",
+                  border: "1px solid var(--border-color, #D1C7BD)",
                   borderRadius: "6px",
-                  color: "#FFFFFF",
+                  color: "var(--text-primary, #261603)",
                   fontSize: "13px"
                 }}
                 required
@@ -1671,15 +1671,15 @@ export function WarehouseDashboard() {
                 style={{
                   width: "100%",
                   padding: "10px",
-                  backgroundColor: "rgba(255, 255, 255, 0.05)",
-                  border: "1px solid rgba(255, 255, 255, 0.15)",
+                  backgroundColor: "var(--bg-card, #FFFFFF)",
+                  border: "1px solid var(--border-color, #D1C7BD)",
                   borderRadius: "6px",
-                  color: "#FFFFFF",
+                  color: "var(--text-primary, #261603)",
                   fontSize: "13px"
                 }}
               >
-                <option value="QA Released" style={{ backgroundColor: "#1E293B" }}>QA Released (Immediate Dispatch)</option>
-                <option value="Quarantine" style={{ backgroundColor: "#1E293B" }}>Quarantine (Micro Hold)</option>
+                <option value="QA Released" style={{ backgroundColor: "#FFFFFF", color: "#261603" }}>QA Released (Immediate Dispatch)</option>
+                <option value="Quarantine" style={{ backgroundColor: "#FFFFFF", color: "#261603" }}>Quarantine (Micro Hold)</option>
               </select>
             </div>
           </div>
@@ -1695,10 +1695,10 @@ export function WarehouseDashboard() {
               style={{
                 width: "100%",
                 padding: "10px",
-                backgroundColor: "rgba(255, 255, 255, 0.05)",
-                border: "1px solid rgba(255, 255, 255, 0.15)",
+                backgroundColor: "var(--bg-card, #FFFFFF)",
+                border: "1px solid var(--border-color, #D1C7BD)",
                 borderRadius: "6px",
-                color: "#FFFFFF",
+                color: "var(--text-primary, #261603)",
                 fontSize: "13px"
               }}
               required
