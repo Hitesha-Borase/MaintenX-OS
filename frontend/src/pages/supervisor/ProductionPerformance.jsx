@@ -85,11 +85,11 @@ export function ProductionPerformance() {
     try {
       const res = await dashboardService.setSupervisorProductionSpeedLimit({
         speedLimit: Number(speedLimit),
-        line: activeOrder?.line || "Line 1"
+        line: lineName
       });
-      addToast(res.message || `Line speed cap set to ${speedLimit} BPM for ${activeOrder?.line || "Line 1"}.`, "success");
+      addToast(res.message || `Line speed cap set to ${speedLimit} BPM for ${lineName}.`, "success");
     } catch (err) {
-      addToast(`Line speed cap set to ${speedLimit} BPM for ${activeOrder?.line || "Line 1"}.`, "success");
+      addToast(`Line speed cap set to ${speedLimit} BPM for ${lineName}.`, "success");
     }
     setIsSpeedModalOpen(false);
   };
@@ -129,6 +129,15 @@ export function ProductionPerformance() {
       setIsRefreshing(false);
     }
   };
+
+  // Safely extract line name — backend may return object {id, name, code, ...} or a plain string
+  const lineName = (() => {
+    const l = activeOrder?.line;
+    if (!l) return "Line 1";
+    if (typeof l === "string") return l;
+    if (typeof l === "object") return l.name || l.code || l.lineType || "Line 1";
+    return "Line 1";
+  })();
 
   const isRunning = activeOrder?.status === "RUNNING" || activeOrder?.status === "Running";
   const produced = Number(activeOrder?.producedQuantity || activeOrder?.produced_quantity) || 0;
@@ -237,12 +246,12 @@ export function ProductionPerformance() {
         <p style={{ fontSize: "13px", color: "var(--text-secondary)", lineHeight: 1.5 }}>
           {isRunning ? (
             <>
-              {activeOrder?.line || "Line 1"} is currently operating at <strong style={{ color: "var(--text-primary)" }}>{actualSpeed} BPM</strong> (Capped Limit: <strong style={{ color: "#0284C7" }}>{ratedSpeed} BPM</strong>).
+              {lineName} is currently operating at <strong style={{ color: "var(--text-primary)" }}>{actualSpeed} BPM</strong> (Capped Limit: <strong style={{ color: "#0284C7" }}>{ratedSpeed} BPM</strong>).
               Order <strong>{activeOrder?.orderNumber || activeOrder?.id}</strong> is actively in progress (<strong style={{ color: "var(--text-primary)" }}>{produced.toLocaleString()} / {target.toLocaleString()} units</strong> • {completionPct}% complete).
             </>
           ) : (
             <>
-              {activeOrder?.line || "Line 1"} is currently <strong style={{ color: "#D97706" }}>{activeOrder?.status || "PAUSED"}</strong> at <strong style={{ color: "var(--text-primary)" }}>0 BPM</strong> (Capped Limit: <strong style={{ color: "#0284C7" }}>{ratedSpeed} BPM</strong>).
+              {lineName} is currently <strong style={{ color: "#D97706" }}>{activeOrder?.status || "PAUSED"}</strong> at <strong style={{ color: "var(--text-primary)" }}>0 BPM</strong> (Capped Limit: <strong style={{ color: "#0284C7" }}>{ratedSpeed} BPM</strong>).
               {activeOrder?.orderNumber ? ` Production order ${activeOrder.orderNumber} is on standby (${produced.toLocaleString()} / ${target.toLocaleString()} units).` : " No active production order running."}
             </>
           )}
@@ -254,7 +263,7 @@ export function ProductionPerformance() {
         isOpen={isUpdateModalOpen}
         onClose={() => setIsUpdateModalOpen(false)}
         title="Update Production Run & Floor Telemetry"
-        subtitle={`Order: ${activeOrder?.orderNumber || "ORD-200"} • Line: ${activeOrder?.line || "Line 1"}`}
+        subtitle={`Order: ${activeOrder?.orderNumber || "ORD-200"} • Line: ${lineName}`}
         maxWidth="500px"
         footer={
           <>
@@ -340,7 +349,7 @@ export function ProductionPerformance() {
         isOpen={isSpeedModalOpen}
         onClose={() => setIsSpeedModalOpen(false)}
         title="Authorize Line Speed Limit"
-        subtitle={`Line: ${activeOrder?.line || "Line 1"}`}
+        subtitle={`Line: ${lineName}`}
         maxWidth="480px"
         footer={
           <>

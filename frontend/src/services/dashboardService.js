@@ -334,6 +334,48 @@ export const dashboardService = {
     return apiClient.post("/dashboards/operator/production-entry/log-scrap", payload);
   },
 
+  // ─── Processing Operator Specific ──────────────────────────────────────────
+  async advanceProcessingRecipeStep(payload) {
+    return apiClient.post("/dashboards/operator/processing/recipe-step", payload);
+  },
+
+  async weighProcessingIngredient(payload) {
+    return apiClient.post("/dashboards/operator/processing/weigh-ingredient", payload);
+  },
+
+  async logProcessingParameters(payload) {
+    return apiClient.post("/dashboards/operator/processing/log-parameters", payload);
+  },
+
+  async signoffCcp(payload) {
+    return apiClient.post("/dashboards/operator/processing/ccp-signoff", payload);
+  },
+
+  async completeBatchAndCreateWip(payload) {
+    return apiClient.post("/dashboards/operator/processing/complete-batch-wip", payload);
+  },
+
+  // ─── Packaging Operator Specific ───────────────────────────────────────────
+  async selectWipLotForPackaging(payload) {
+    return apiClient.post("/dashboards/operator/packaging/select-wip-lot", payload);
+  },
+
+  async consumePackagingMaterials(payload) {
+    return apiClient.post("/dashboards/operator/packaging/consume-materials", payload);
+  },
+
+  async logPackagingOutputCases(payload) {
+    return apiClient.post("/dashboards/operator/packaging/log-output-cases", payload);
+  },
+
+  async verifySealAndLabel(payload) {
+    return apiClient.post("/dashboards/operator/packaging/verify-seal-label", payload);
+  },
+
+  async finishRunAndCreateFgPallet(payload) {
+    return apiClient.post("/dashboards/operator/packaging/create-fg-pallet", payload);
+  },
+
   // ─── Operator Downtime & Loss ───────────────────────────────────────────────
   async getOperatorDowntime() {
     return apiClient.get("/dashboards/operator/downtime");

@@ -1260,7 +1260,7 @@ class AdminService {
                 activeTenantId = tenantId;
             }
             let roleList = [];
-            if (activeTenantId) {
+            if (activeTenantId && !isMasterAdmin) {
                 roleList = await database_js_1.db
                     .select()
                     .from(index_js_1.roles)

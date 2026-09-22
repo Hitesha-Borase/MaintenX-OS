@@ -2095,8 +2095,9 @@ class QualityService {
             .orderBy((0, drizzle_orm_1.desc)(quality_js_1.qualityHolds.createdAt));
         const batchesList = holds.map(h => ({
             id: h.batch || h.id,
-            name: `${h.batch || h.lotNumber} Ã¢â‚¬â€ ${h.reason ? h.reason.slice(0, 32) : ''} (Hold: ${h.holdId || ''})`.trim(),
+            name: `${h.batch || h.lotNumber} Ã¢â‚¬â€  ${h.reason ? h.reason.slice(0, 32) : ''} (Hold: ${h.holdId || ''})`.trim(),
             holdId: h.holdId || "",
+            recordId: h.id,
             lotNumber: h.lotNumber || ""
         }));
         return {
@@ -2217,7 +2218,7 @@ class QualityService {
     }
     async submitReworkInstruction(tenantId, plantId, input, userId) {
         const batchId = input.batch || "";
-        const instruction = input.instruction || "Re-pasteurize at 84Ã‚Â°C for 30 seconds to satisfy CCP thermal kill protocol";
+        const instruction = input.instruction || "Re-pasteurize at 84°C for 30 seconds to satisfy CCP thermal kill protocol";
         const protocol = input.protocol || "THERMAL_REPASTEURIZE";
         // 1. Insert into qa_disposition_records in PostgreSQL
         try {
@@ -2226,7 +2227,7 @@ class QualityService {
                 plantId: (0, tenantContext_js_1.isValidUuid)(plantId) ? plantId : null,
                 dispositionType: "REWORK",
                 batchId: batchId,
-                holdId: input.holdId || "HLD-401",
+                holdId: input.holdId || null,
                 protocol: protocol,
                 instructionNotes: instruction,
                 status: "COMPLETED",
@@ -2239,13 +2240,24 @@ class QualityService {
         }
         // 2. Update quality_holds in PostgreSQL
         try {
-            await database_js_1.db
-                .update(quality_js_1.qualityHolds)
-                .set({
-                status: "REWORK_SCHEDULED",
-                updatedAt: new Date()
-            })
-                .where((0, drizzle_orm_1.eq)(quality_js_1.qualityHolds.batch, batchId));
+            if (input.recordId) {
+                await database_js_1.db
+                    .update(quality_js_1.qualityHolds)
+                    .set({
+                    status: "REWORK_SCHEDULED",
+                    updatedAt: new Date()
+                })
+                    .where((0, drizzle_orm_1.eq)(quality_js_1.qualityHolds.id, input.recordId));
+            }
+            else {
+                await database_js_1.db
+                    .update(quality_js_1.qualityHolds)
+                    .set({
+                    status: "REWORK_SCHEDULED",
+                    updatedAt: new Date()
+                })
+                    .where((0, drizzle_orm_1.eq)(quality_js_1.qualityHolds.batch, batchId));
+            }
         }
         catch (e) {
             console.warn("Update quality_holds rework error:", e.message);

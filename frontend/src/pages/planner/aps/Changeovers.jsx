@@ -134,10 +134,10 @@ export function Changeovers() {
 
   const filtered = matrixRules.filter(
     (r) =>
-      r.fromSku.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      r.toSku.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      r.protocol.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      r.line.toLowerCase().includes(searchQuery.toLowerCase())
+      (r.fromSku || "").toLowerCase().includes((searchQuery || "").toLowerCase()) ||
+      (r.toSku || "").toLowerCase().includes((searchQuery || "").toLowerCase()) ||
+      (r.protocol || "").toLowerCase().includes((searchQuery || "").toLowerCase()) ||
+      (r.line || "").toLowerCase().includes((searchQuery || "").toLowerCase())
   );
 
   return (

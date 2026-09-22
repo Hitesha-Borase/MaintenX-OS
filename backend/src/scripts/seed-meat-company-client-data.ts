@@ -41,8 +41,7 @@ export async function seedMeatCompanyClientData() {
       code: "LINE-MEAT-01",
       name: "Line 1 - Meat Processing & Thermoforming Packaging",
       status: "RUNNING",
-      capacityPerHour: 800,
-      oeeTarget: "85.00",
+      nominalSpeedBpm: 580,
     }).returning();
   }
 
@@ -266,7 +265,8 @@ export async function seedMeatCompanyClientData() {
       scrapQuantity: "25",
       status: "RUNNING",
       priority: "HIGH",
-      startDate: new Date(),
+      plannedStart: new Date(),
+      plannedEnd: new Date(Date.now() + 24 * 3600 * 1000),
     }).returning();
     orderId = prodOrder.id;
   } else {

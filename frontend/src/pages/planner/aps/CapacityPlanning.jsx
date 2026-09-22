@@ -108,9 +108,9 @@ export function CapacityPlanning() {
 
   const filtered = activeCalculations.filter((c) => {
     const matchesSearch =
-      c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.lineCode.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (c.plantName && c.plantName.toLowerCase().includes(searchQuery.toLowerCase()));
+      (c.name || "").toLowerCase().includes((searchQuery || "").toLowerCase()) ||
+      (c.lineCode || "").toLowerCase().includes((searchQuery || "").toLowerCase()) ||
+      (c.plantName && c.plantName.toLowerCase().includes((searchQuery || "").toLowerCase()));
 
     const matchesType =
       resourceTypeTab === "ALL" ||

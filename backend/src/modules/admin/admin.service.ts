@@ -1352,7 +1352,7 @@ export class AdminService {
       }
 
       let roleList = [];
-      if (activeTenantId) {
+      if (activeTenantId && !isMasterAdmin) {
         roleList = await db
           .select()
           .from(roles)

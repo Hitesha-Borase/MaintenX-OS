@@ -200,17 +200,17 @@ export function AllergenChecks() {
               alignItems: "center",
               gap: "6px",
               padding: "9px 15px",
-              backgroundColor: "#261603",
-              border: "1px solid #261603",
+              backgroundColor: "#FFFFFF",
+              border: "1px solid var(--border-subtle, #E8DDCF)",
               borderRadius: "8px",
               fontSize: "13px",
               fontWeight: 750,
-              color: "#FFFFFF",
+              color: "#261603",
               cursor: "pointer",
-              boxShadow: "0 2px 6px rgba(40, 25, 10, 0.15)"
+              boxShadow: "0 2px 6px rgba(40, 25, 10, 0.03)"
             }}
           >
-            <Plus size={15} color="#E2B670" /> Add Allergen Check
+            <Plus size={15} color="#B27E33" /> Add Allergen Check
           </button>
 
           <button
