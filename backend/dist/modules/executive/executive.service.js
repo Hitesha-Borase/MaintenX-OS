@@ -14,57 +14,27 @@ const tenantContext_js_1 = require("../../shared/utils/tenantContext.js");
 const drizzle_orm_1 = require("drizzle-orm");
 let inMemoryExecutivePlants = [
     {
-        id: "PLANT-01",
-        name: "Indore Mega Bottling & Canning Facility",
-        plant: "Indore Mega Bottling & Canning Facility",
-        location: "Indore, MP (Central Hub)",
-        linesCount: 6,
+        id: "6869789b-32d4-4911-bf29-74a9e338f14a",
+        name: "Plant 1 - Meat Processing & Smokehouse Facility",
+        plant: "Plant 1 - Meat Processing & Smokehouse Facility",
+        location: "Oshawa, ON, Canada",
+        linesCount: 3,
         attainment: 88.4,
         status: "OPTIMAL",
-        oee: "84.2%",
-        fpy: "98.5%",
-        throughput: "14,200/hr",
-        labor: "94.2%",
-        lastAudit: "2026-08-15",
-        auditStatus: "Completed"
-    },
-    {
-        id: "PLANT-02",
-        name: "Pune Aseptic Tetra Packaging Hub",
-        plant: "Pune Aseptic Tetra Packaging Hub",
-        location: "Pune, MH (Export Plant)",
-        linesCount: 4,
-        attainment: 76.2,
-        status: "ATTENTION_REQUIRED",
-        oee: "78.9%",
-        fpy: "96.2%",
-        throughput: "11,800/hr",
-        labor: "88.5%",
-        lastAudit: "2026-07-20",
-        auditStatus: "Pending Audit"
-    },
-    {
-        id: "PLANT-03",
-        name: "Bengaluru High-Speed Craft Brewery & Kegging",
-        plant: "Bengaluru High-Speed Craft Brewery & Kegging",
-        location: "Bengaluru, KA (South Plant)",
-        linesCount: 3,
-        attainment: 92.1,
-        status: "OPTIMAL",
-        oee: "89.5%",
+        oee: "84.5%",
         fpy: "99.1%",
-        throughput: "16,000/hr",
-        labor: "96.8%",
-        lastAudit: "2026-08-28",
-        auditStatus: "Completed"
+        throughput: "2,500 LBS/hr",
+        labor: "95.0%",
+        lastAudit: "2026-08-20",
+        auditStatus: "Completed (CFIA / SQF Level 3)"
     }
 ];
 let inMemoryRuntimeRisks = [];
 let inMemoryApprovedOpps = new Set();
 let inMemoryManufacturingCosts = {
-    "BAT-2026-0890": {
-        batchId: "BAT-2026-0890",
-        recipe: "Organic Apple Juice 1L Bottle",
+    "BAT-MEAT-2026-01": {
+        batchId: "BAT-MEAT-2026-01",
+        recipe: "GCM Teriyaki Beef Jerky 80g",
         material: "$18,500",
         packaging: "$4,200",
         labour: "$6,800",
@@ -75,9 +45,9 @@ let inMemoryManufacturingCosts = {
         variance: "+$1,500",
         status: "OVER_BUDGET"
     },
-    "BAT-2026-0891": {
-        batchId: "BAT-2026-0891",
-        recipe: "Organic Apple Juice 500ml Can",
+    "BAT-MEAT-2026-02": {
+        batchId: "BAT-MEAT-2026-02",
+        recipe: "Traditional Smoked Ham 500g",
         material: "$17,200",
         packaging: "$3,900",
         labour: "$6,200",
@@ -88,9 +58,9 @@ let inMemoryManufacturingCosts = {
         variance: "-$1,200",
         status: "OPTIMAL"
     },
-    "BAT-2026-0888": {
-        batchId: "BAT-2026-0888",
-        recipe: "Organic Orange Juice 1L Bottle",
+    "BAT-MEAT-2026-03": {
+        batchId: "BAT-MEAT-2026-03",
+        recipe: "Pepperoni Meat Snack Stick",
         material: "$19,800",
         packaging: "$4,500",
         labour: "$7,100",
@@ -103,7 +73,7 @@ let inMemoryManufacturingCosts = {
     }
 };
 let inMemoryCostVariances = [
-    { dept: "Blending / Processing", variance: "+$4,800", cause: "Base ingredient yield loss" },
+    { dept: "Smokehouse & Thermal Processing", variance: "+$1,200", cause: "Damper thermal calibration excursion" },
     { dept: "Filling / Bottling", variance: "+$2,200", cause: "Nozzle overweight calibration variance" },
     { dept: "Packaging & Case Packing", variance: "-$900", cause: "Under standard case carton wastage" },
     { dept: "Direct Labour & Shift Premiums", variance: "+$6,700", cause: "Line breakdowns extending overtime" }
@@ -148,33 +118,20 @@ class ExecutiveService {
             // 1. Ensure Plants exist
             let plantRows = await database_js_1.db.select().from(tenants_js_1.plants).where((0, drizzle_orm_1.eq)(tenants_js_1.plants.tenantId, resolvedTenantId));
             if (plantRows.length === 0) {
-                const [indorePlant] = await database_js_1.db
+                const [meatPlant] = await database_js_1.db
                     .insert(tenants_js_1.plants)
                     .values({
                     tenantId: resolvedTenantId,
-                    code: "INDORE-01",
-                    name: "Indore Mega Bottling & Canning Facility",
-                    city: "Indore",
-                    state: "Madhya Pradesh",
-                    country: "India",
-                    timezone: "Asia/Kolkata",
+                    code: "PLT-MEAT-01",
+                    name: "Plant 1 - Meat Processing & Smokehouse Facility",
+                    city: "Oshawa",
+                    state: "Ontario",
+                    country: "Canada",
+                    timezone: "America/Toronto",
                     isActive: true
                 })
                     .returning();
-                const [punePlant] = await database_js_1.db
-                    .insert(tenants_js_1.plants)
-                    .values({
-                    tenantId: resolvedTenantId,
-                    code: "PUNE-02",
-                    name: "Pune Blending & Packaging Plant",
-                    city: "Pune",
-                    state: "Maharashtra",
-                    country: "India",
-                    timezone: "Asia/Kolkata",
-                    isActive: true
-                })
-                    .returning();
-                plantRows = [indorePlant, punePlant];
+                plantRows = [meatPlant];
             }
             const primaryPlant = plantRows[0];
             // 2. Ensure Work Centers exist for Processing & Packaging
@@ -615,7 +572,7 @@ class ExecutiveService {
             const pOrders = allOrders.filter(o => o.plantId === p.id);
             const pTarget = pOrders.reduce((s, o) => s + (Number(o.targetQuantity) || 0), 0);
             const pActual = pOrders.reduce((s, o) => s + (Number(o.producedQuantity) || 0), 0);
-            const pAch = pTarget > 0 ? ((pActual / pTarget) * 100).toFixed(1) : (p.code?.includes("INDORE") ? "88.4" : "76.2");
+            const pAch = pTarget > 0 ? ((pActual / pTarget) * 100).toFixed(1) : "88.4";
             const activeCI = ciProjRows.filter(c => c.plantId === p.code || c.plantId === p.id).length;
             let status = "Optimal";
             if (Number(pAch) < 85)
@@ -625,15 +582,15 @@ class ExecutiveService {
             return {
                 id: p.id,
                 name: p.name,
-                code: p.code || "PLANT",
-                region: `${p.city || 'HQ'}, ${p.state || 'Facility'}`,
-                lines: 4,
+                code: p.code || "PLT-MEAT-01",
+                region: `${p.city || 'Oshawa'}, ${p.state || 'ON'}`,
+                lines: 3,
                 achievement: pAch + "%",
                 activeCI: activeCI || 2,
                 status,
-                oee: p.code?.includes("INDORE") ? "84.2%" : "78.9%",
-                cost: p.code?.includes("INDORE") ? "$142.5K" : "$130.9K",
-                scrapRate: p.code?.includes("INDORE") ? "0.4%" : "0.8%",
+                oee: "84.5%",
+                cost: "$142.5K",
+                scrapRate: "0.4%",
                 mtbf: `${avgMtbf} hrs`
             };
         });
@@ -920,7 +877,7 @@ class ExecutiveService {
             success: true,
             plantId: input.plantId,
             plantName,
-            leadAuditor: input.leadAuditor || "Alexander Vance",
+            leadAuditor: input.leadAuditor || "Ronald Robinson",
             auditDate: input.auditDate || new Date().toISOString().split("T")[0],
             auditStatus: "Audit In Progress",
             message: `On-site performance audit for ${plantName} initiated successfully!`

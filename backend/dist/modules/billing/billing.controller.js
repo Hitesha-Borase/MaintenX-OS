@@ -4,35 +4,29 @@ exports.billingController = exports.BillingController = void 0;
 const billing_service_js_1 = require("./billing.service.js");
 const responseFormatter_js_1 = require("../../shared/utils/responseFormatter.js");
 const AppError_js_1 = require("../../shared/errors/AppError.js");
+const billing_schema_js_1 = require("./billing.schema.js");
 class BillingController {
     async getPlans(_request, reply) {
         const plans = await billing_service_js_1.billingService.listPlans();
         return reply.send((0, responseFormatter_js_1.formatSuccess)(plans));
     }
     async createOrder(request, reply) {
-        const body = request.body;
-        const planId = body?.planId;
-        const currency = body?.currency || "INR";
+        const input = billing_schema_js_1.createOrderSchema.parse(request.body);
+        const planId = input.planId;
+        const currency = input.currency || "INR";
         const tenantId = request.user?.tenantId || "aa3183d2-709b-42a8-add1-b2e4b2d873b0";
-        if (!planId) {
-            throw new AppError_js_1.ValidationError("Missing required parameter 'planId'");
-        }
         const order = await billing_service_js_1.billingService.createOrder({ planId, tenantId, currency });
         return reply.send((0, responseFormatter_js_1.formatSuccess)(order, "Razorpay payment order created successfully"));
     }
     async verifyPayment(request, reply) {
-        const body = request.body;
-        const { orderId, paymentId, signature, planId } = body || {};
+        const input = billing_schema_js_1.verifyPaymentSchema.parse(request.body);
         const tenantId = request.user?.tenantId || "aa3183d2-709b-42a8-add1-b2e4b2d873b0";
-        if (!orderId || !paymentId || !signature) {
-            throw new AppError_js_1.ValidationError("Missing orderId, paymentId, or signature in verification payload.");
-        }
         const result = await billing_service_js_1.billingService.verifyPayment({
             tenantId,
-            orderId,
-            paymentId,
-            signature,
-            planId: planId || "standard",
+            orderId: input.orderId,
+            paymentId: input.paymentId,
+            signature: input.signature,
+            planId: input.planId || "standard",
         });
         return reply.send((0, responseFormatter_js_1.formatSuccess)(result, "Payment successfully verified"));
     }
@@ -42,6 +36,15 @@ class BillingController {
         const payload = typeof request.body === "object" ? request.body : JSON.parse(rawBody || "{}");
         const result = await billing_service_js_1.billingService.processWebhook(rawBody, signature, payload);
         return reply.send((0, responseFormatter_js_1.formatSuccess)(result));
+    }
+    async upgradePlan(request, reply) {
+        const input = billing_schema_js_1.upgradePlanSchema.parse(request.body);
+        const tenantId = request.user?.tenantId;
+        if (!tenantId) {
+            throw new AppError_js_1.ValidationError("No tenant associated with user session.");
+        }
+        const result = await billing_service_js_1.billingService.upgradePlan({ tenantId, planId: input.planId });
+        return reply.send((0, responseFormatter_js_1.formatSuccess)(result, "Subscription plan upgraded successfully"));
     }
     async getSubscription(request, reply) {
         const tenantId = request.user?.tenantId || "aa3183d2-709b-42a8-add1-b2e4b2d873b0";

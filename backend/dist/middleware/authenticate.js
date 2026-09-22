@@ -51,6 +51,9 @@ async function authenticate(request, _reply) {
             }
             catch (_) { }
         }
+        if (!currentUser.tenantId) {
+            currentUser.tenantId = headerTenantId || null;
+        }
         return;
     }
     // 2. If X-Tenant-Id header was provided
@@ -126,10 +129,10 @@ async function authenticate(request, _reply) {
     request.user = {
         id: "admin-default",
         userId: "4a9fe1e0-6512-444d-a639-25ca55ff4866",
-        tenantId: fallbackTenantId,
+        tenantId: fallbackTenantId || headerTenantId || null,
         plantId: "83c90534-4761-495c-b2bf-6a61de2260c4",
         role: "admin",
         email: "admin@maintenx.com",
-        isMasterAdmin: true,
+        isMasterAdmin: false,
     };
 }

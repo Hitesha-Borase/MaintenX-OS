@@ -532,7 +532,7 @@ class PlanningService {
                 mapeAccuracy: f.mapeAccuracy ? Number(f.mapeAccuracy) : 96.5,
                 reason: f.reason || (Number(f.overrideQuantity || 0) > 0 ? "Retailer promotion uplift expected" : "System baseline unadjusted"),
                 justification: f.reason || "",
-                owner: f.owner || "Elena Rostova",
+                owner: f.owner || "Ronald Robinson",
                 status: f.status || "Submitted",
                 updatedAt: f.createdAt ? f.createdAt.toISOString() : new Date().toISOString()
             };
@@ -556,7 +556,7 @@ class PlanningService {
             finalForecast: finalVal.toString(),
             modelType: input.method || input.modelType || "Moving Average (4-Week)",
             mapeAccuracy: "96.50",
-            owner: input.owner || "Elena Rostova",
+            owner: input.owner || "Ronald Robinson",
             reason: input.reason || input.justification || "",
             status: input.status || "Submitted",
         })
@@ -577,7 +577,7 @@ class PlanningService {
             mapeAccuracy: 96.5,
             reason: fc.reason || input.reason || input.justification || "",
             justification: fc.reason || input.justification || input.reason || "",
-            owner: fc.owner || input.owner || "Elena Rostova",
+            owner: fc.owner || input.owner || "Ronald Robinson",
             status: fc.status || input.status || "Submitted",
             updatedAt: fc.createdAt ? fc.createdAt.toISOString() : new Date().toISOString()
         };
@@ -623,7 +623,7 @@ class PlanningService {
                     finalForecast: Number(updated.finalForecast),
                     reason: updated.reason || input.reason || input.justification || "Manual Override updated",
                     justification: updated.reason || input.justification || input.reason || "",
-                    owner: updated.owner || input.owner || "Elena Rostova",
+                    owner: updated.owner || input.owner || "Ronald Robinson",
                     status: updated.status || input.status || "Submitted"
                 };
             }
@@ -1348,28 +1348,28 @@ class PlanningService {
             {
                 lineId: "LIN-01",
                 lineCode: "LINE-1",
-                name: "High-Speed Bottling Line 1 (250 BPM)",
-                plantName: "Indore Plant",
+                name: "Line 1 - Smokehouse & Grinder Line",
+                plantName: "Plant 1 - Meat Processing & Smokehouse Facility",
                 availableHours: 120,
                 plannedHours: 2.8,
                 remainingHours: 117.2,
                 utilizationPercent: 2,
                 hasConflict: false,
-                runRateSpec: "42,000 BPH",
+                runRateSpec: "2,500 LBS/HR",
                 assignedOrdersCount: 2,
                 status: "Active"
             },
             {
                 lineId: "LIN-02",
                 lineCode: "LINE-2",
-                name: "Canning & Seaming Line 2",
-                plantName: "Indore Plant",
+                name: "Line 2 - Slicing & Packaging Line",
+                plantName: "Plant 1 - Meat Processing & Smokehouse Facility",
                 availableHours: 120,
                 plannedHours: 1.2,
                 remainingHours: 118.8,
                 utilizationPercent: 1,
                 hasConflict: false,
-                runRateSpec: "36,000 CPH",
+                runRateSpec: "1,800 LBS/HR",
                 assignedOrdersCount: 1,
                 status: "Active"
             }
@@ -1390,11 +1390,11 @@ class PlanningService {
             {
                 lineId: "LIN-01",
                 lineCode: "LINE-1",
-                name: "Line 1 Bottling & Canning (250 BPM)",
-                plantFacility: "Indore Plant",
-                ratedCapacity: "42,000 BPH",
+                name: "Line 1 - Smokehouse & Grinder Line",
+                plantFacility: "Plant 1 - Meat Processing & Smokehouse Facility",
+                ratedCapacity: "2,500 LBS/HR",
                 assignedAssetsCount: 4,
-                assetDescription: "4 Machines (Filler, Capper, CIP, Labeler)",
+                assetDescription: "4 Machines (Weiler Grinder, Ruhle Injector, Smokehouse 3, Multivac R535)",
                 scheduledLoadHours: 0,
                 utilizationPercent: 0,
                 availableCapacityHours: 120,
@@ -1631,45 +1631,44 @@ class PlanningService {
     // ============================================================
     async runMrpEngineCalculation(tenantId, plantId, input) {
         const targetPeriod = input.period || "Next 7 Days (W36 - W37)";
-        const targetPlant = input.plantId || plantId || "PLT-01 (Indore Facility)";
+        const targetPlant = input.plantId || plantId || "Plant 1 - Meat Processing & Smokehouse Facility";
         const targetProduct = input.productId || "ALL";
         const allProductsResults = [
             {
-                product: "500ml Sparkling Citrus Soda (SKU-5001)",
+                product: "GCM Teriyaki Beef Jerky 80g (SKU-5001)",
                 productCode: "SKU-5001",
-                requiredUnits: 100000,
+                requiredUnits: 10000,
                 plant: targetPlant,
                 period: targetPeriod,
                 materials: [
-                    { component: "500ml PET Bottles", skuCode: "PKG-1001", required: 100000, available: 14000, shortage: 86000, plannedPurchase: 90000, plannedProduction: 0, uom: "Units", status: "PO Recommended" },
-                    { component: "28mm Tamper HDPE Cap", skuCode: "PKG-2001", required: 100000, available: 45000, shortage: 55000, plannedPurchase: 60000, plannedProduction: 0, uom: "Units", status: "PO Recommended" },
-                    { component: "Full-Body Shrink Label", skuCode: "PKG-3001", required: 102000, available: 120000, shortage: 0, plannedPurchase: 0, plannedProduction: 0, uom: "Units", status: "Covered" },
-                    { component: "Organic Orange Concentrate 65°Bx", skuCode: "ING-1003", required: 5000, available: 1200, shortage: 3800, plannedPurchase: 4000, plannedProduction: 0, uom: "Kg", status: "Expedite Purchase" },
-                    { component: "Liquid Cane Sugar 67°Bx", skuCode: "ING-1001", required: 8500, available: 18500, shortage: 0, plannedPurchase: 0, plannedProduction: 0, uom: "Liters", status: "Covered" }
+                    { component: "Winpak Vacuum Barrier Pouches", skuCode: "PKG-1001", required: 10000, available: 2500, shortage: 7500, plannedPurchase: 8000, plannedProduction: 0, uom: "Units", status: "PO Recommended" },
+                    { component: "Dextrose Monohydrate Teriyaki Blend", skuCode: "ING-1001", required: 850, available: 450, shortage: 400, plannedPurchase: 500, plannedProduction: 0, uom: "Kg", status: "PO Recommended" },
+                    { component: "Canada AAA Beef Flank Raw", skuCode: "ING-1002", required: 4500, available: 1200, shortage: 3300, plannedPurchase: 3500, plannedProduction: 0, uom: "Kg", status: "Expedite Purchase" },
+                    { component: "Soy Sauce & Ginger Marinade", skuCode: "ING-1003", required: 650, available: 800, shortage: 0, plannedPurchase: 0, plannedProduction: 0, uom: "Liters", status: "Covered" }
                 ]
             },
             {
-                product: "1L Tonic Water Natural Quinine (SKU-5002)",
+                product: "Traditional Smoked Ham 500g (SKU-5002)",
                 productCode: "SKU-5002",
-                requiredUnits: 40000,
+                requiredUnits: 5000,
                 plant: targetPlant,
                 period: targetPeriod,
                 materials: [
-                    { component: "1L Glass Bottle Standard", skuCode: "PKG-1002", required: 40000, available: 50000, shortage: 0, plannedPurchase: 0, plannedProduction: 0, uom: "Units", status: "Covered" },
-                    { component: "Crown Metal Cap", skuCode: "PKG-2002", required: 41000, available: 20000, shortage: 21000, plannedPurchase: 25000, plannedProduction: 0, uom: "Units", status: "PO Recommended" },
-                    { component: "Natural Quinine Extract", skuCode: "ING-1004", required: 200, available: 350, shortage: 0, plannedPurchase: 0, plannedProduction: 0, uom: "Kg", status: "Covered" }
+                    { component: "Viscofan Smoked Collagen Casings", skuCode: "PKG-1002", required: 5000, available: 6000, shortage: 0, plannedPurchase: 0, plannedProduction: 0, uom: "Units", status: "Covered" },
+                    { component: "Ontario Fresh Pork Leg Raw Trim", skuCode: "ING-1004", required: 4200, available: 1800, shortage: 2400, plannedPurchase: 2500, plannedProduction: 0, uom: "Kg", status: "PO Recommended" },
+                    { component: "Sodium Nitrite Cure Salt Premix", skuCode: "ING-1005", required: 120, available: 250, shortage: 0, plannedPurchase: 0, plannedProduction: 0, uom: "Kg", status: "Covered" }
                 ]
             },
             {
-                product: "330ml Organic Ginger Beer (SKU-5003)",
+                product: "Pepperoni Meat Snack Stick (SKU-5003)",
                 productCode: "SKU-5003",
-                requiredUnits: 36000,
+                requiredUnits: 8000,
                 plant: targetPlant,
                 period: targetPeriod,
                 materials: [
-                    { component: "330ml Aluminum Can & Lid", skuCode: "PKG-1003", required: 36000, available: 42000, shortage: 0, plannedPurchase: 0, plannedProduction: 0, uom: "Units", status: "Covered" },
-                    { component: "Natural Citrus Essential Oil Compound", skuCode: "ING-1002", required: 144, available: 850, shortage: 0, plannedPurchase: 0, plannedProduction: 0, uom: "Kg", status: "Covered" },
-                    { component: "Organic Brewed Ginger Base", skuCode: "ING-1005", required: 3200, available: 4500, shortage: 0, plannedPurchase: 0, plannedProduction: 0, uom: "Liters", status: "Covered" }
+                    { component: "Multivac R535 Formable Web Film", skuCode: "PKG-1003", required: 8000, available: 9500, shortage: 0, plannedPurchase: 0, plannedProduction: 0, uom: "Units", status: "Covered" },
+                    { component: "Lean Pork & Beef Trim 80/20", skuCode: "ING-1006", required: 3200, available: 3500, shortage: 0, plannedPurchase: 0, plannedProduction: 0, uom: "Kg", status: "Covered" },
+                    { component: "Smoked Paprika & Garlic Seasoning", skuCode: "ING-1007", required: 280, available: 350, shortage: 0, plannedPurchase: 0, plannedProduction: 0, uom: "Kg", status: "Covered" }
                 ]
             }
         ];
@@ -1702,7 +1701,7 @@ class PlanningService {
             name: input.name || resolvedSku.name,
             quantity: input.quantity,
             uom: input.uom || resolvedSku.uom,
-            vendorName: input.vendorName || "Indore Packaging & Beverage Ingredients Ltd",
+            vendorName: input.vendorName || "Winpak Packaging & Specialty Films Ltd",
             urgency: input.priority || "Expedite",
             notes: input.notes || "Automated MRP Deficit PO Requisition",
             status: "PO_CREATED",
@@ -1749,16 +1748,16 @@ class PlanningService {
     // ============================================================
     async expediteMaterialShortage(tenantId, plantId, input) {
         const trackingId = `EXP-TRK-${Math.floor(100000 + Math.random() * 900000)}`;
-        const key = input.skuId || input.skuCode || "PKG-2001";
+        const key = input.skuId || input.skuCode || "PKG-1001";
         const expeditedRecord = {
             trackingId,
             skuId: input.skuId,
-            skuCode: input.skuCode || "PKG-2001",
-            name: input.name || "28mm Tamper-Evident HDPE Bottle Cap",
-            expediteMode: input.expediteMode || "Air/Express Freight",
+            skuCode: input.skuCode || "PKG-1001",
+            name: input.name || "Winpak High-Barrier Vacuum Pouch Film",
+            expediteMode: input.expediteMode || "Express Freight",
             leadTimeReductionHours: input.leadTimeReductionHours || 48,
             status: "EXPEDITE_CONFIRMED",
-            vendorName: input.vendorName || "Indore Packaging & Beverage Ingredients Ltd",
+            vendorName: input.vendorName || "Winpak Packaging & Specialty Films Ltd",
             dispatchedAt: new Date().toISOString(),
             expectedArrival: new Date(Date.now() + 3 * 86400000).toISOString().substring(0, 10),
             notes: input.notes || "Supplier priority shipment expedited by Planner"
@@ -1892,7 +1891,7 @@ class PlanningService {
         if (risk) {
             risk.isMitigated = true;
             risk.mitigatedAt = new Date().toISOString();
-            risk.mitigatedBy = input.authorizedBy || "Elena Rostova (Lead Planner)";
+            risk.mitigatedBy = input.authorizedBy || "Stefan Crawford (Plant Manager)";
         }
         // Persist in DB
         try {
@@ -1901,7 +1900,7 @@ class PlanningService {
                     .set({
                     isMitigated: true,
                     mitigatedAt: new Date(),
-                    mitigatedBy: input.authorizedBy || "Elena Rostova (Lead Planner)",
+                    mitigatedBy: input.authorizedBy || "Stefan Crawford (Plant Manager)",
                     updatedAt: new Date()
                 })
                     .where((0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(planning_js_1.serviceRisks.tenantId, tenantId), (0, drizzle_orm_1.or)((0, drizzle_orm_1.eq)(planning_js_1.serviceRisks.riskCode, input.riskId), (0, drizzle_orm_1.eq)(planning_js_1.serviceRisks.id, input.riskId))));
@@ -1994,7 +1993,7 @@ class PlanningService {
           version_id VARCHAR(100) NOT NULL,
           title VARCHAR(255) NOT NULL,
           status VARCHAR(50) DEFAULT 'Draft' NOT NULL,
-          created_by VARCHAR(255) DEFAULT 'Elena Rostova (Lead Planner)',
+          created_by VARCHAR(255) DEFAULT 'Stefan Crawford (Plant Manager)',
           orders_count INT DEFAULT 4,
           total_planned_hours NUMERIC(8,2) DEFAULT 80.00,
           utilization_percent NUMERIC(5,2) DEFAULT 90.00,
@@ -2025,7 +2024,7 @@ class PlanningService {
                     title: r.title,
                     status: r.status,
                     createdDate: r.createdAt ? new Date(r.createdAt).toISOString().substring(0, 16).replace("T", " ") : new Date().toISOString().substring(0, 16).replace("T", " "),
-                    createdBy: r.createdBy || "Alexander Vance (Lead Scheduler)",
+                    createdBy: r.createdBy || "Stefan Crawford (Plant Manager)",
                     ordersCount: r.ordersCount || 4,
                     totalPlannedHours: Number(r.totalPlannedHours) || 80.0,
                     utilizationPercent: Number(r.utilizationPercent) || 89.5,
@@ -2042,7 +2041,7 @@ class PlanningService {
                     versionId: "V4.2",
                     title: "Master Weekly Production Schedule V4.2",
                     status: "Published",
-                    createdBy: "Alexander Vance (Lead Scheduler)",
+                    createdBy: "Stefan Crawford (Plant Manager)",
                     ordersCount: 4,
                     totalPlannedHours: "78.50",
                     utilizationPercent: "88.00",
@@ -2055,7 +2054,7 @@ class PlanningService {
                     versionId: "V4.3-DRAFT",
                     title: "Draft Production Schedule Revision V4.3",
                     status: "Validated",
-                    createdBy: "Alexander Vance (Lead Scheduler)",
+                    createdBy: "Stefan Crawford (Plant Manager)",
                     ordersCount: 5,
                     totalPlannedHours: "94.00",
                     utilizationPercent: "92.00",
@@ -2070,7 +2069,7 @@ class PlanningService {
                 title: r.title,
                 status: r.status,
                 createdDate: r.createdAt ? new Date(r.createdAt).toISOString().substring(0, 16).replace("T", " ") : new Date().toISOString().substring(0, 16).replace("T", " "),
-                createdBy: r.createdBy || "Alexander Vance (Lead Scheduler)",
+                createdBy: r.createdBy || "Stefan Crawford (Plant Manager)",
                 ordersCount: r.ordersCount || 4,
                 totalPlannedHours: Number(r.totalPlannedHours) || 80.0,
                 utilizationPercent: Number(r.utilizationPercent) || 89.5,
@@ -2116,7 +2115,7 @@ class PlanningService {
             versionId: verId,
             title: input.title,
             status: input.status || "Draft",
-            createdBy: input.createdBy || "Alexander Vance (Lead Scheduler)",
+            createdBy: input.createdBy || "Stefan Crawford (Plant Manager)",
             ordersCount: activeOrdersCount,
             totalPlannedHours: computedPlannedHours.toString(),
             utilizationPercent: "89.50",
@@ -2149,7 +2148,7 @@ class PlanningService {
                 title: input.title,
                 status: input.status || "Draft",
                 createdDate: new Date().toISOString().substring(0, 16).replace("T", " "),
-                createdBy: input.createdBy || "Alexander Vance (Lead Scheduler)",
+                createdBy: input.createdBy || "Stefan Crawford (Plant Manager)",
                 ordersCount: activeOrdersCount,
                 totalPlannedHours: computedPlannedHours,
                 utilizationPercent: 89.5,
@@ -2243,7 +2242,7 @@ class PlanningService {
             success: true,
             versionId: input.versionId,
             status: "PUBLISHED",
-            publishedBy: input.publishedBy || "Alexander Vance (Lead Scheduler)",
+            publishedBy: input.publishedBy || "Stefan Crawford (Plant Manager)",
             publishedAt: new Date().toISOString(),
             dispatchedTerminalsCount: 3,
             message: `Master schedule ${input.versionId} published and broadcast to all plant line HMIs!`

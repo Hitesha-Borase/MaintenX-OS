@@ -24,7 +24,7 @@ async function main() {
             email,
             role: "Maintenance Lead",
             department: "Maintenance",
-            plant: "Indore Mega Facility",
+            plant: "Plant 1 - Meat Processing & Smokehouse Facility",
             status: "Active"
         })
     });
@@ -40,7 +40,7 @@ async function main() {
             email,
             role: "Plant Manager",
             department: "Operations",
-            plant: "Indore Mega Facility",
+            plant: "Plant 1 - Meat Processing & Smokehouse Facility",
             status: "Active"
         })
     });

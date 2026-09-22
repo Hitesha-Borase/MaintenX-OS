@@ -3,7 +3,7 @@ import { qualityHolds, ccpChecks, preopChecks } from "../../db/schema/quality.js
 import { workOrders } from "../../db/schema/maintenance.js";
 import { downtimeLogs, productionOrders, shiftLogs, batches, batchSteps } from "../../db/schema/production.js";
 import { inventoryLots } from "../../db/schema/warehouse.js";
-import { productionLines, skus, staff, shifts, assets } from "../../db/schema/masterData.js";
+import { productionLines, skus, staff, shifts, assets, bomItems } from "../../db/schema/masterData.js";
 import { plants } from "../../db/schema/tenants.js";
 import { exceptions, shiftApprovals, documents, notifications } from "../../db/schema/common.js";
 import { pmShiftHandoffs, pmHbLogs, pmRecoveryPlans, pmExceptions } from "../../db/schema/plantManager.js";
@@ -107,25 +107,96 @@ export class DashboardsService {
       dbRecipeSteps = await db.select().from(batchSteps).where(eq(batchSteps.batchId, activeBatch.id)).orderBy(asc(batchSteps.stepNumber));
     }
 
-    // 2. CCP Checks & Quality Telemetry
+    // 2. Ingredients & BOM Items for Batch Weighing
+    const dbBomItems = await db.select().from(bomItems).orderBy(asc(bomItems.sequence));
+
+    // 3. CCP Checks & Quality Telemetry
     const dbCcps = await db.select().from(ccpChecks).where(eq(ccpChecks.tenantId, validTenant)).orderBy(desc(ccpChecks.checkedAt)).limit(10);
 
-    // 3. Packaging Runs & Orders
+    // 4. Packaging Runs & Orders
     const dbOrders = await db.select().from(productionOrders).where(eq(productionOrders.tenantId, validTenant)).orderBy(desc(productionOrders.createdAt));
     const activePackagingRun = dbOrders.find(o => o.status === "RUNNING" || o.status === "IN_PROGRESS") || dbOrders[0] || null;
 
-    // 4. Line Clearance & Preop Checks
+    let skuDisplayName = "Hickory Smoked Sliced Bacon (Formula #82B)";
+    if (activePackagingRun?.skuId) {
+      const [matchedSku] = await db.select().from(skus).where(eq(skus.id, activePackagingRun.skuId));
+      if (matchedSku?.name) {
+        skuDisplayName = matchedSku.name;
+      }
+    }
+
+    // 5. Line Clearance & Preop Checks
     const dbPreops = await db.select().from(preopChecks).where(eq(preopChecks.tenantId, validTenant)).orderBy(desc(preopChecks.createdAt)).limit(10);
 
-    // 5. Downtime & Micro-stops
+    // 6. Downtime & Micro-stops
     const dbDowntimes = await db.select().from(downtimeLogs).where(eq(downtimeLogs.tenantId, validTenant)).orderBy(desc(downtimeLogs.startTime));
     const totalDowntimeMins = dbDowntimes.reduce((sum, d) => sum + (Number(d.durationMinutes) || 0), 0);
+
+    // Dynamic Recipe Steps formulation
+    const recipeSteps = dbRecipeSteps.length > 0 ? dbRecipeSteps.map(s => {
+      const params = (s.parameters && typeof s.parameters === 'object') ? s.parameters : {};
+      return {
+        id: s.id,
+        stepNumber: s.stepNumber,
+        stepName: s.stepName,
+        status: s.status,
+        targetTemp: (params as any).targetTemp || "71.0°C",
+        actualTemp: (params as any).actualTemp || "71.8°C",
+        durationMins: (params as any).durationMins || 30,
+      };
+    }) : [
+      { id: "STEP-1", stepNumber: 1, stepName: "Raw Pork Bellies Inspection & Green Weight Check (≤ 4.0°C)", status: "COMPLETED", targetTemp: "≤ 4.0°C", actualTemp: "3.6°C", durationMins: 15 },
+      { id: "STEP-2", stepNumber: 2, stepName: "Automated Brine Injection & Curing (Pump Target: 8.5% - 10.0% @ 1.8 bar)", status: "COMPLETED", targetTemp: "4.0°C", actualTemp: "3.9°C", durationMins: 30 },
+      { id: "STEP-3", stepNumber: 3, stepName: "Smokehouse Thermal Cooking & Hardwood Smoke Hold (CCP1 ≥ 71.0°C)", status: "IN_PROGRESS", targetTemp: "71.0°C", actualTemp: "71.8°C", durationMins: 90 },
+      { id: "STEP-4", stepNumber: 4, stepName: "Rapid Blast Chilling (< 4.0°C) & Variovac Thermoform Vacuum Sealing", status: "PENDING", targetTemp: "2.0°C", actualTemp: "--", durationMins: 30 },
+    ];
+
+    // Dynamic Weighing Tolerance from DB BOM Items
+    const weighingTolerance = dbBomItems.length > 0 ? dbBomItems.map(item => ({
+      ingredient: item.componentName || item.skuCode || "Raw Pork Meat",
+      targetKg: Number(item.quantity) || 450.0,
+      actualKg: Number(item.quantity) || 450.0,
+      tolerancePercent: Number(item.scrapPercentage) || 0.5,
+      status: "PASS"
+    })) : [
+      { ingredient: "Fresh Grade A Pork Bellies (Initial Green Weight)", targetKg: 450.0, actualKg: 450.2, tolerancePercent: 0.5, status: "PASS" },
+      { ingredient: "Complete Bacon Cure MALBCUR-002 Seasoning Blend", targetKg: 15.0, actualKg: 15.0, tolerancePercent: 0.2, status: "PASS" },
+      { ingredient: "Complete Bacon Cure Sure Cure (Sodium Nitrite 6.25%)", targetKg: 2.4, actualKg: 2.4, tolerancePercent: 0.1, status: "PASS" },
+      { ingredient: "Pure Dark Brown Cane Sugar", targetKg: 10.0, actualKg: 10.0, tolerancePercent: 0.2, status: "PASS" },
+    ];
+
+    // Dynamic CCP Telemetry from DB CCP Checks
+    const ccpMonitoring = dbCcps.length > 0 ? dbCcps.map(c => ({
+      id: c.id,
+      ccpName: c.ccpName || "CCP Check",
+      parameter: c.location || "Line Sensor",
+      target: c.criticalLimit || `${c.targetValue} ${c.uom}`,
+      actual: `${c.actualValue} ${c.uom}`,
+      status: c.status || "PASS",
+      verifiedAt: formatRelativeTime(c.checkedAt)
+    })) : [
+      { id: "CCP-1", ccpName: "CCP 1 — Smokehouse Core Thermal Lethality", parameter: "Smokehouse Bay 02", target: "Internal Core Meat Temp ≥ 71.0°C", actual: "71.8°C", status: "PASS", verifiedAt: "10 mins ago" },
+      { id: "CCP-2", ccpName: "CCP 2 — Raw Meat Defrosting Cold Chain", parameter: "Raw Meat Staging", target: "Meat Temp ≤ 4.0°C", actual: "3.6°C", status: "PASS", verifiedAt: "25 mins ago" },
+      { id: "CCP-3", ccpName: "CCP 3 — Dehydration Room Water Activity (Aw)", parameter: "Dry Room 02", target: "Aw ≤ 0.850 (0.760 - 0.780)", actual: "0.772 Aw", status: "PASS", verifiedAt: "40 mins ago" },
+      { id: "CCP-4", ccpName: "CCP 4 — Inline Metal Detection & Reject Trap", parameter: "Variovac Sealer Discharge", target: "0 mm Defect Tolerance", actual: "CLEAR (0.0mm)", status: "PASS", verifiedAt: "55 mins ago" },
+    ];
+
+    // Dynamic Line Clearance Items
+    const lineClearanceItems = dbPreops.length > 0 ? dbPreops.map(p => ({
+      check: p.name,
+      passed: p.passed !== false
+    })) : [
+      { check: "Prior Meat SKU Labels & Outer Cartons Removed", passed: true },
+      { check: "Brine Injector Needles Inspected (Intact & Clean)", passed: true },
+      { check: "Smokehouse Trolleys Cleaned & ATP Swab Verified", passed: true },
+      { check: "Variovac Sealer & Metal Detector E-Stop Test Passed", passed: true },
+    ];
 
     return {
       kpi: {
         currentHB: {
-          actual: activePackagingRun ? Number(activePackagingRun.producedQuantity) || 18950 : 18950,
-          target: activePackagingRun ? Number(activePackagingRun.targetQuantity) || 24000 : 24000,
+          actual: activePackagingRun ? Number(activePackagingRun.producedQuantity) || 8450 : 8450,
+          target: activePackagingRun ? Number(activePackagingRun.targetQuantity) || 10000 : 10000,
           paceBPM: 580,
           targetPaceBPM: 600,
           remainingHours: 3.5
@@ -137,112 +208,67 @@ export class DashboardsService {
         activeBatch: activeBatch ? {
           id: activeBatch.id,
           batchNumber: activeBatch.batchNumber,
-          tankNumber: activeBatch.tankNumber || "VESSEL-TANK-01",
-          recipeVersion: activeBatch.recipeVersion || "REC-JUICE-v4",
+          tankNumber: activeBatch.tankNumber || "SMK-BAY-02",
+          recipeVersion: activeBatch.recipeVersion || "Formula #82B (Hickory Bacon)",
           targetVolume: Number(activeBatch.targetVolume) || 5000,
           actualVolume: Number(activeBatch.actualVolume) || 4850,
-          uom: activeBatch.uom || "Liters",
+          uom: activeBatch.uom || "Kg",
           status: activeBatch.status || "IN_PROGRESS",
-          stage: activeBatch.status === "IN_PROGRESS" ? "COOKING_PASTEURIZING" : "READY_FOR_FILL"
+          stage: activeBatch.status === "IN_PROGRESS" ? "SMOKEHOUSE_COOKING" : "READY_FOR_PACKAGING"
         } : {
-          id: "BATCH-2026-8801",
-          batchNumber: "BAT-8801",
-          tankNumber: "VESSEL-TANK-01",
-          recipeVersion: "REC-JUICE-v4",
+          id: "BAT-MEAT-2026-01",
+          batchNumber: "BAT-MEAT-2026-01",
+          tankNumber: "SMK-BAY-02",
+          recipeVersion: "Formula #82B (Hickory Bacon)",
           targetVolume: 5000,
           actualVolume: 4850,
-          uom: "Liters",
+          uom: "Kg",
           status: "IN_PROGRESS",
-          stage: "COOKING_PASTEURIZING"
+          stage: "SMOKEHOUSE_COOKING"
         },
-        recipeSteps: dbRecipeSteps.length > 0 ? dbRecipeSteps.map(s => ({
-          id: s.id,
-          stepNumber: s.stepNumber,
-          stepName: s.stepName,
-          status: s.status,
-          targetTemp: "83.5°C",
-          actualTemp: "83.5°C",
-          durationMins: 20
-        })) : [
-          { id: "STEP-1", stepNumber: 1, stepName: "Liquid Ingredient Dosing & Weighing", status: "COMPLETED", targetTemp: "25°C", actualTemp: "24.8°C", durationMins: 15 },
-          { id: "STEP-2", stepNumber: 2, stepName: "High-Shear Mixing & Agitation", status: "COMPLETED", targetTemp: "45°C", actualTemp: "45.2°C", durationMins: 30 },
-          { id: "STEP-3", stepNumber: 3, stepName: "Pasteurization Thermal Hold (CCP1)", status: "IN_PROGRESS", targetTemp: "83.5°C", actualTemp: "83.5°C", durationMins: 20 },
-          { id: "STEP-4", stepNumber: 4, stepName: "Cooling to Filling Staging Temp (12°C)", status: "PENDING", targetTemp: "12.0°C", actualTemp: "--", durationMins: 25 },
-        ],
-        weighingTolerance: [
-          { ingredient: "Concentrate Base Lot A", targetKg: 450.0, actualKg: 450.2, tolerancePercent: 0.5, status: "PASS" },
-          { ingredient: "Citric Acid Buffer", targetKg: 12.5, actualKg: 12.48, tolerancePercent: 1.0, status: "PASS" },
-          { ingredient: "Natural Flavor Extract", targetKg: 8.0, actualKg: 8.01, tolerancePercent: 0.5, status: "PASS" },
-        ],
-        ccpMonitoring: dbCcps.length > 0 ? dbCcps.map(c => ({
-          id: c.id,
-          ccpName: c.ccpName || "CCP 1 — Pasteurizer Limit",
-          parameter: "Thermal Temp",
-          target: `${c.targetValue} ${c.uom}`,
-          actual: `${c.actualValue} ${c.uom}`,
-          status: c.status || "PASS",
-          verifiedAt: formatRelativeTime(c.checkedAt)
-        })) : [
-          { id: "CCP-1", ccpName: "CCP 1 — Pasteurizer Thermal Hold", parameter: "Temperature", target: "83.5°C (Min 82.0°C)", actual: "83.5°C", status: "PASS", verifiedAt: "10 mins ago" },
-          { id: "CCP-2", ccpName: "CCP 2 — Brix Concentration", parameter: "Sugar Concentration", target: "11.9 °BX (11.5 - 12.2)", actual: "11.9 °BX", status: "PASS", verifiedAt: "15 mins ago" },
-          { id: "CCP-3", ccpName: "CCP 3 — Inline pH Balance", parameter: "Acidity Level", target: "3.72 pH (3.60 - 3.85)", actual: "3.72 pH", status: "PASS", verifiedAt: "25 mins ago" },
-          { id: "CCP-4", ccpName: "CCP 4 — Metal Detector & Magnet Trap", parameter: "Ferrous/Non-Ferrous", target: "0 mm Defect", actual: "CLEAR (0.0mm)", status: "PASS", verifiedAt: "30 mins ago" },
-        ]
+        recipeSteps,
+        weighingTolerance,
+        ccpMonitoring
       },
       packaging: {
         activeRun: activePackagingRun ? {
           id: activePackagingRun.id,
           orderNumber: activePackagingRun.orderNumber,
-          skuName: "500ml Organic Orange Juice PET",
-          targetQty: Number(activePackagingRun.targetQuantity) || 24000,
-          producedQty: Number(activePackagingRun.producedQuantity) || 18950,
-          scrapQty: Number(activePackagingRun.scrapQuantity) || 120,
+          skuName: skuDisplayName,
+          targetQty: Number(activePackagingRun.targetQuantity) || 10000,
+          producedQty: Number(activePackagingRun.producedQuantity) || 8450,
+          scrapQty: Number(activePackagingRun.scrapQuantity) || 25,
           speedBpm: 580,
           oeePercent: 88.4,
           status: activePackagingRun.status || "RUNNING"
         } : {
-          id: "RUN-9920",
-          orderNumber: "ORD-2026-9920",
-          skuName: "500ml Organic Orange Juice PET",
-          targetQty: 24000,
-          producedQty: 18950,
-          scrapQty: 120,
+          id: "PO-MEAT-2026-01",
+          orderNumber: "PO-MEAT-2026-01",
+          skuName: skuDisplayName,
+          targetQty: 10000,
+          producedQty: 8450,
+          scrapQty: 25,
           speedBpm: 580,
           oeePercent: 88.4,
           status: "RUNNING"
         },
-        lineClearance: dbPreops.length > 0 ? {
+        lineClearance: {
           status: "APPROVED",
-          checkedBy: dbPreops[0].inspectorName || "Lead Tech",
-          checkedAt: formatRelativeTime(dbPreops[0].createdAt),
-          items: [
-            { check: "Prior SKU Labels & Cartons Removed", passed: true },
-            { check: "Cap Hopper & Chute Flushed", passed: true },
-            { check: "Coder Date/Lot Stamp Verified", passed: true },
-            { check: "Line Sensor & E-Stop Functional Test", passed: true },
-          ]
-        } : {
-          status: "APPROVED",
-          checkedBy: "Lead Tech",
-          checkedAt: "1 hour ago",
-          items: [
-            { check: "Prior SKU Labels & Cartons Removed", passed: true },
-            { check: "Cap Hopper & Chute Flushed", passed: true },
-            { check: "Coder Date/Lot Stamp Verified", passed: true },
-            { check: "Line Sensor & E-Stop Functional Test", passed: true },
-          ]
+          checkedBy: dbPreops[0]?.inspectorName || "Douglas Andrew (Line Lead)",
+          checkedAt: dbPreops[0]?.createdAt ? formatRelativeTime(dbPreops[0].createdAt) : "1 hour ago",
+          items: lineClearanceItems
         },
         sealVerification: {
           cappingTorqueNm: 1.85,
           torqueRangeNm: "1.80 - 2.00 Nm",
-          inductionSealStatus: "INTECT_SEALED",
-          labelBarcodeStatus: "VERIFIED_PASS",
+          inductionSealStatus: "INTACT_SEALED",
+          labelBarcodeStatus: "VERIFIED_MATCH (PASS)",
           lastCheckedAt: "12 mins ago"
         },
         wipConsumption: {
-          sourceTank: "VESSEL-TANK-01",
-          batchNumber: activeBatch ? activeBatch.batchNumber : "BAT-8801",
-          initialVolumeLiters: 5000,
+          sourceTank: activeBatch?.tankNumber || "SMK-BAY-02",
+          batchNumber: activeBatch ? activeBatch.batchNumber : "BAT-MEAT-2026-01",
+          initialVolumeLiters: Number(activeBatch?.targetVolume) || 5000,
           transferredLiters: 3790,
           remainingLiters: 1210,
           consumptionPercent: 75.8,
@@ -250,9 +276,9 @@ export class DashboardsService {
         }
       },
       staffing: { present: 5, total: 5, status: "Fully Staffed" },
-      nextChangeover: { minutesAway: 45, toSKU: "SKU-AJ-1L-ORG" },
+      nextChangeover: { minutesAway: 45, toSKU: "SKU-PEP-201 - Smoked Pepperoni Sticks" },
       downtime: { totalMinutes: totalDowntimeMins || 35, microStopsActive: true },
-      materialAlert: { lotId: "LOT-ORG-442", lowStockItem: "Orange Caps", supplyStatus: "Low" },
+      materialAlert: { lotId: "LOT-MEAT-09", lowStockItem: "Variovac Thermoform Film", supplyStatus: "Good" },
       qualityHolds: { activeBatches: 0, lastCheckTime: "14:00", lastCheckResult: "PASSED" },
       maintenance: { openWorkOrders: 3, escalatedP1: 1 },
     };

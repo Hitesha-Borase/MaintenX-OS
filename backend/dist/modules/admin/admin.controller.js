@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.adminController = exports.AdminController = void 0;
 const admin_service_js_1 = require("./admin.service.js");
+const admin_schema_js_1 = require("./admin.schema.js");
 class AdminController {
     async getDashboard(request, reply) {
         const user = request.user;
@@ -15,8 +16,8 @@ class AdminController {
     }
     async provisionUser(request, reply) {
         const user = request.user;
-        const body = request.body;
-        const newUser = await admin_service_js_1.adminService.provisionUser(user?.tenantId, body);
+        const input = admin_schema_js_1.provisionUserSchema.parse(request.body);
+        const newUser = await admin_service_js_1.adminService.provisionUser(user?.tenantId, input);
         return reply.status(201).send(newUser);
     }
     async getUsers(request, reply) {
@@ -27,15 +28,15 @@ class AdminController {
     async updateUserStatus(request, reply) {
         const user = request.user;
         const { id } = request.params;
-        const { status } = request.body || {};
-        const updated = await admin_service_js_1.adminService.updateUserStatus(user?.tenantId, id, status);
+        const input = admin_schema_js_1.updateUserStatusSchema.parse(request.body);
+        const updated = await admin_service_js_1.adminService.updateUserStatus(user?.tenantId, id, input.status);
         return reply.status(200).send(updated);
     }
     async editUser(request, reply) {
         const user = request.user;
         const { id } = request.params;
-        const body = request.body;
-        const updated = await admin_service_js_1.adminService.editUser(user?.tenantId, id, body);
+        const input = admin_schema_js_1.editUserSchema.parse(request.body);
+        const updated = await admin_service_js_1.adminService.editUser(user?.tenantId, id, input);
         return reply.status(200).send(updated);
     }
     async deleteUser(request, reply) {
@@ -46,8 +47,8 @@ class AdminController {
     }
     async bulkUpdateUserStatus(request, reply) {
         const user = request.user;
-        const { action } = request.body || {};
-        const result = await admin_service_js_1.adminService.bulkUpdateUserStatus(user?.tenantId, action);
+        const input = admin_schema_js_1.bulkUpdateUserStatusSchema.parse(request.body);
+        const result = await admin_service_js_1.adminService.bulkUpdateUserStatus(user?.tenantId, input.action);
         return reply.status(200).send(result);
     }
     async getInvitations(request, reply) {
@@ -57,8 +58,8 @@ class AdminController {
     }
     async createInvitation(request, reply) {
         const user = request.user;
-        const body = request.body;
-        const invite = await admin_service_js_1.adminService.createInvitation(user?.tenantId, body);
+        const input = admin_schema_js_1.createInvitationSchema.parse(request.body);
+        const invite = await admin_service_js_1.adminService.createInvitation(user?.tenantId, input);
         return reply.status(201).send(invite);
     }
     async resendInvitation(request, reply) {
@@ -115,20 +116,21 @@ class AdminController {
     // Roles & Permissions
     async getRoles(request, reply) {
         const user = request.user;
-        const roles = await admin_service_js_1.adminService.getRoles(user?.tenantId);
+        const isMasterAdmin = Boolean(user?.isMasterAdmin || user?.role === "master_admin");
+        const roles = await admin_service_js_1.adminService.getRoles(user?.tenantId, isMasterAdmin);
         return reply.status(200).send(roles);
     }
     async createRole(request, reply) {
         const user = request.user;
-        const body = request.body;
-        const newRole = await admin_service_js_1.adminService.createRole(user?.tenantId, body);
+        const input = admin_schema_js_1.createRoleSchema.parse(request.body);
+        const newRole = await admin_service_js_1.adminService.createRole(user?.tenantId, input);
         return reply.status(201).send(newRole);
     }
     async updateRole(request, reply) {
         const user = request.user;
         const { id } = request.params;
-        const body = request.body;
-        const updated = await admin_service_js_1.adminService.updateRole(user?.tenantId, id, body);
+        const input = admin_schema_js_1.updateRoleSchema.parse(request.body);
+        const updated = await admin_service_js_1.adminService.updateRole(user?.tenantId, id, input);
         return reply.status(200).send(updated);
     }
     async deleteRole(request, reply) {
@@ -139,7 +141,8 @@ class AdminController {
     }
     async getPermissionMatrix(request, reply) {
         const user = request.user;
-        const matrix = await admin_service_js_1.adminService.getPermissionMatrix(user?.tenantId);
+        const isMasterAdmin = Boolean(user?.isMasterAdmin || user?.role === "master_admin");
+        const matrix = await admin_service_js_1.adminService.getPermissionMatrix(user?.tenantId, isMasterAdmin);
         return reply.status(200).send(matrix);
     }
     async updatePermissionMatrix(request, reply) {
@@ -167,15 +170,15 @@ class AdminController {
     }
     async createApprovalRule(request, reply) {
         const user = request.user;
-        const body = request.body;
-        const created = await admin_service_js_1.adminService.createApprovalRule(user?.tenantId, body);
+        const input = admin_schema_js_1.createApprovalRuleSchema.parse(request.body);
+        const created = await admin_service_js_1.adminService.createApprovalRule(user?.tenantId, input);
         return reply.status(201).send(created);
     }
     async updateApprovalRule(request, reply) {
         const user = request.user;
         const { id } = request.params;
-        const body = request.body;
-        const updated = await admin_service_js_1.adminService.updateApprovalRule(user?.tenantId, id, body);
+        const input = admin_schema_js_1.updateApprovalRuleSchema.parse(request.body);
+        const updated = await admin_service_js_1.adminService.updateApprovalRule(user?.tenantId, id, input);
         return reply.status(200).send(updated);
     }
     async deleteApprovalRule(request, reply) {

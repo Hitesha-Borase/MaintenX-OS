@@ -36,30 +36,23 @@ function detectEquipmentStage(name, category, lineName) {
 }
 class MaintenanceService {
     async listWorkOrders(tenantId, plantId) {
+        if (!(0, tenantContext_js_1.isValidUuid)(tenantId))
+            return [];
         let rows = [];
         try {
             rows = await database_js_1.db.query.workOrders.findMany({
-                where: (0, tenantContext_js_1.isValidUuid)(tenantId) ? (0, drizzle_orm_1.eq)(maintenance_js_1.workOrders.tenantId, tenantId) : undefined,
+                where: (0, drizzle_orm_1.eq)(maintenance_js_1.workOrders.tenantId, tenantId),
                 with: {
                     asset: true,
                     assignedUser: true,
                 },
                 orderBy: (workOrders, { desc }) => [desc(workOrders.createdAt)],
             });
-            if (!rows || rows.length === 0) {
-                rows = await database_js_1.db.query.workOrders.findMany({
-                    with: {
-                        asset: true,
-                        assignedUser: true,
-                    },
-                    orderBy: (workOrders, { desc }) => [desc(workOrders.createdAt)],
-                });
-            }
         }
         catch (queryErr) {
-            console.warn("Falling back to raw work_orders query:", queryErr.message);
+            console.warn("Work orders query error:", queryErr.message);
             try {
-                const rawWOs = await database_js_1.db.select().from(maintenance_js_1.workOrders);
+                const rawWOs = await database_js_1.db.select().from(maintenance_js_1.workOrders).where((0, drizzle_orm_1.eq)(maintenance_js_1.workOrders.tenantId, tenantId));
                 rows = rawWOs.map(wo => ({
                     ...wo,
                     asset: { id: wo.assetId, name: "Packaging Asset", assetCode: "EQ-001" },
@@ -76,13 +69,15 @@ class MaintenanceService {
         }));
     }
     async listBreakdowns(tenantId, plantId) {
+        if (!(0, tenantContext_js_1.isValidUuid)(tenantId))
+            return [];
         // 1. Fetch real downtime logs from PostgreSQL
         let dtLogs = [];
         try {
             dtLogs = await database_js_1.db
                 .select()
                 .from(production_js_1.downtimeLogs)
-                .where((0, tenantContext_js_1.isValidUuid)(tenantId) ? (0, drizzle_orm_1.eq)(production_js_1.downtimeLogs.tenantId, tenantId) : (0, drizzle_orm_1.sql) `1=1`)
+                .where((0, drizzle_orm_1.eq)(production_js_1.downtimeLogs.tenantId, tenantId))
                 .orderBy((0, drizzle_orm_1.desc)(production_js_1.downtimeLogs.startTime));
         }
         catch (dtErr) {
@@ -92,7 +87,7 @@ class MaintenanceService {
         let emergencyWOs = [];
         try {
             emergencyWOs = await database_js_1.db.query.workOrders.findMany({
-                where: (0, drizzle_orm_1.and)((0, tenantContext_js_1.isValidUuid)(tenantId) ? (0, drizzle_orm_1.eq)(maintenance_js_1.workOrders.tenantId, tenantId) : (0, drizzle_orm_1.sql) `1=1`, (0, drizzle_orm_1.or)((0, drizzle_orm_1.eq)(maintenance_js_1.workOrders.type, "EMERGENCY_BREAKDOWN"), (0, drizzle_orm_1.ilike)(maintenance_js_1.workOrders.title, "%breakdown%"), (0, drizzle_orm_1.ilike)(maintenance_js_1.workOrders.title, "%emergency%"))),
+                where: (0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(maintenance_js_1.workOrders.tenantId, tenantId), (0, drizzle_orm_1.or)((0, drizzle_orm_1.eq)(maintenance_js_1.workOrders.type, "EMERGENCY_BREAKDOWN"), (0, drizzle_orm_1.ilike)(maintenance_js_1.workOrders.title, "%breakdown%"), (0, drizzle_orm_1.ilike)(maintenance_js_1.workOrders.title, "%emergency%"))),
                 with: {
                     asset: true,
                     assignedUser: true,
@@ -105,7 +100,7 @@ class MaintenanceService {
         }
         let allAssets = [];
         try {
-            allAssets = await database_js_1.db.select().from(masterData_js_1.assets).where((0, tenantContext_js_1.isValidUuid)(tenantId) ? (0, drizzle_orm_1.eq)(masterData_js_1.assets.tenantId, tenantId) : (0, drizzle_orm_1.sql) `1=1`);
+            allAssets = await database_js_1.db.select().from(masterData_js_1.assets).where((0, drizzle_orm_1.eq)(masterData_js_1.assets.tenantId, tenantId));
         }
         catch (astErr) {
             console.warn("Assets query in listBreakdowns failed:", astErr.message);
@@ -113,7 +108,7 @@ class MaintenanceService {
         const assetMap = new Map(allAssets.map(a => [a.id, a]));
         let allLines = [];
         try {
-            allLines = await database_js_1.db.select().from(masterData_js_1.productionLines).where((0, tenantContext_js_1.isValidUuid)(tenantId) ? (0, drizzle_orm_1.eq)(masterData_js_1.productionLines.tenantId, tenantId) : (0, drizzle_orm_1.sql) `1=1`);
+            allLines = await database_js_1.db.select().from(masterData_js_1.productionLines).where((0, drizzle_orm_1.eq)(masterData_js_1.productionLines.tenantId, tenantId));
         }
         catch (lineErr) {
             console.warn("Lines query failed:", lineErr.message);
@@ -121,7 +116,7 @@ class MaintenanceService {
         const lineMap = new Map(allLines.map(l => [l.id, l]));
         let allUsers = [];
         try {
-            allUsers = await database_js_1.db.select().from(users_js_1.users).where((0, tenantContext_js_1.isValidUuid)(tenantId) ? (0, drizzle_orm_1.eq)(users_js_1.users.tenantId, tenantId) : (0, drizzle_orm_1.sql) `1=1`);
+            allUsers = await database_js_1.db.select().from(users_js_1.users).where((0, drizzle_orm_1.eq)(users_js_1.users.tenantId, tenantId));
         }
         catch (userErr) {
             console.warn("Users query failed:", userErr.message);
@@ -596,7 +591,7 @@ class MaintenanceService {
         const historyItems = [];
         for (const wo of completedWOs) {
             const ast = wo.asset || (wo.assetId ? assetMap.get(wo.assetId) : null);
-            const tech = wo.assignedUser ? `${wo.assignedUser.firstName} ${wo.assignedUser.lastName}` : "Marcus Vance";
+            const tech = wo.assignedUser ? `${wo.assignedUser.firstName} ${wo.assignedUser.lastName}` : "David Markov";
             const dateObj = wo.completedAt || wo.updatedAt || wo.createdAt;
             const dStr = dateObj ? new Date(dateObj).toISOString().split("T")[0] : new Date().toISOString().split("T")[0];
             const tStr = dateObj ? new Date(dateObj).toTimeString().slice(0, 5) : "10:00";
@@ -625,7 +620,7 @@ class MaintenanceService {
                 continue;
             const ast = dt.assetId ? assetMap.get(dt.assetId) : null;
             const loggedUser = dt.loggedBy ? userMap.get(dt.loggedBy) : null;
-            const tech = loggedUser ? `${loggedUser.firstName} ${loggedUser.lastName}` : "Dave Miller";
+            const tech = loggedUser ? `${loggedUser.firstName} ${loggedUser.lastName}` : "David Markov";
             const dateObj = dt.endTime || dt.startTime;
             const dStr = dateObj ? new Date(dateObj).toISOString().split("T")[0] : new Date().toISOString().split("T")[0];
             const tStr = dateObj ? new Date(dateObj).toTimeString().slice(0, 5) : "12:00";
@@ -684,8 +679,10 @@ class MaintenanceService {
         return updated || { id, ...input, acknowledged: true };
     }
     async listTroubleshooting(tenantId) {
+        if (!(0, tenantContext_js_1.isValidUuid)(tenantId))
+            return [];
         try {
-            const res = await database_js_1.pool.query("SELECT * FROM ci_verified_solutions ORDER BY created_at DESC");
+            const res = await database_js_1.pool.query("SELECT * FROM ci_verified_solutions WHERE tenant_id = $1::uuid ORDER BY created_at DESC", [tenantId]);
             if (res.rows && res.rows.length > 0) {
                 return res.rows.map((r) => ({
                     id: r.id,
@@ -859,7 +856,7 @@ class MaintenanceService {
             if (user)
                 return user.id;
         }
-        // Clean out parenthesized role/specialty, e.g. "Elena Rostova (Electrical Specialist)" -> "Elena Rostova"
+        // Clean out parenthesized role/specialty, e.g. "Ronald Robinson (Electrical Specialist)" -> "Ronald Robinson"
         const cleanName = raw.replace(/\(.*?\)/g, "").trim();
         if (!cleanName)
             return null;
@@ -1117,20 +1114,18 @@ class MaintenanceService {
         };
     }
     async listPMSchedules(tenantId) {
-        const tId = tenantId || "aa3183d2-709b-42a8-add1-b2e4b2d873b0";
+        if (!(0, tenantContext_js_1.isValidUuid)(tenantId))
+            return [];
         let rows = [];
         try {
-            rows = await database_js_1.db.select().from(maintenance_js_1.pmSchedules).where((0, tenantContext_js_1.isValidUuid)(tId) ? (0, drizzle_orm_1.eq)(maintenance_js_1.pmSchedules.tenantId, tId) : (0, drizzle_orm_1.sql) `1=1`);
-            if (!rows || rows.length === 0) {
-                rows = await database_js_1.db.select().from(maintenance_js_1.pmSchedules);
-            }
+            rows = await database_js_1.db.select().from(maintenance_js_1.pmSchedules).where((0, drizzle_orm_1.eq)(maintenance_js_1.pmSchedules.tenantId, tenantId));
         }
         catch (pmErr) {
             console.warn("pmSchedules query warning:", pmErr.message);
         }
         let allAssets = [];
         try {
-            allAssets = await database_js_1.db.select().from(masterData_js_1.assets);
+            allAssets = await database_js_1.db.select().from(masterData_js_1.assets).where((0, drizzle_orm_1.eq)(masterData_js_1.assets.tenantId, tenantId));
         }
         catch (astErr) {
             console.warn("Could not query assets for PM schedules:", astErr.message);
@@ -1156,7 +1151,7 @@ class MaintenanceService {
             const freq = s.frequency ? s.frequency.charAt(0).toUpperCase() + s.frequency.slice(1).toLowerCase() : "Weekly";
             const dueStr = s.nextDueDate ? new Date(s.nextDueDate).toISOString().substring(0, 10) : new Date().toISOString().substring(0, 10);
             const lastCompStr = s.lastPerformedDate ? new Date(s.lastPerformedDate).toISOString().substring(0, 10) : "-";
-            const assignedTo = s.checklistTemplate?.assignedTo || "Marcus Vance (Senior Tech)";
+            const assignedTo = s.checklistTemplate?.assignedTo || "David Markov (Maintenance Lead)";
             return {
                 id: s.scheduleCode || s.id,
                 scheduleCode: s.scheduleCode,
@@ -1234,7 +1229,7 @@ class MaintenanceService {
             nextDueDate,
             status: statusValue,
             checklistTemplate: {
-                assignedTo: input.assignedTo || "Marcus Vance (Senior Tech)",
+                assignedTo: input.assignedTo || "David Markov (Maintenance Lead)",
                 templateId: input.templateId || "CHK-001",
                 priority: input.priority || "P2 - High",
                 estimatedMinutes: 45,
@@ -1256,8 +1251,8 @@ class MaintenanceService {
             dueNext: `${dueStr} 08:00`,
             lastCompleted: "-",
             status: schedule.status,
-            assignedTo: input.assignedTo || "Marcus Vance (Senior Tech)",
-            assignedTechnician: input.assignedTo || "Marcus Vance (Senior Tech)",
+            assignedTo: input.assignedTo || "David Markov (Maintenance Lead)",
+            assignedTechnician: input.assignedTo || "David Markov (Maintenance Lead)",
             templateId: input.templateId || "CHK-001",
             priority: input.priority || "P2 - High",
             isActive: true,
@@ -1311,7 +1306,7 @@ class MaintenanceService {
             dueDate: dueStr,
             dueNext: `${dueStr} 08:00`,
             status: updated.status,
-            assignedTo: input.assignedTo || updated.checklistTemplate?.assignedTo || "Marcus Vance",
+            assignedTo: input.assignedTo || updated.checklistTemplate?.assignedTo || "David Markov",
             isActive: updated.isActive,
         };
     }
@@ -1339,27 +1334,23 @@ class MaintenanceService {
     async executePMChecklist(tenantId, plantId, input) {
         const histId = `EXEC-${Date.now()}`;
         const tId = tenantId || "aa3183d2-709b-42a8-add1-b2e4b2d873b0";
-        // 1. Find matching PM schedule
+        // 1. Find matching PM schedule for this tenant
         let existingSchedule = null;
-        if (input.scheduleId || input.id) {
+        if ((0, tenantContext_js_1.isValidUuid)(tenantId) && (input.scheduleId || input.id)) {
             const isUuid = (0, tenantContext_js_1.isValidUuid)(input.scheduleId || input.id);
             const [s] = isUuid
-                ? await database_js_1.db.select().from(maintenance_js_1.pmSchedules).where((0, drizzle_orm_1.or)((0, drizzle_orm_1.eq)(maintenance_js_1.pmSchedules.id, input.scheduleId || input.id), (0, drizzle_orm_1.eq)(maintenance_js_1.pmSchedules.scheduleCode, input.scheduleId || input.id))).limit(1)
-                : await database_js_1.db.select().from(maintenance_js_1.pmSchedules).where((0, drizzle_orm_1.eq)(maintenance_js_1.pmSchedules.scheduleCode, input.scheduleId || input.id)).limit(1);
+                ? await database_js_1.db.select().from(maintenance_js_1.pmSchedules).where((0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(maintenance_js_1.pmSchedules.tenantId, tenantId), (0, drizzle_orm_1.or)((0, drizzle_orm_1.eq)(maintenance_js_1.pmSchedules.id, input.scheduleId || input.id), (0, drizzle_orm_1.eq)(maintenance_js_1.pmSchedules.scheduleCode, input.scheduleId || input.id)))).limit(1)
+                : await database_js_1.db.select().from(maintenance_js_1.pmSchedules).where((0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(maintenance_js_1.pmSchedules.tenantId, tenantId), (0, drizzle_orm_1.eq)(maintenance_js_1.pmSchedules.scheduleCode, input.scheduleId || input.id))).limit(1);
             existingSchedule = s;
         }
-        if (!existingSchedule && input.assetId) {
+        if (!existingSchedule && input.assetId && (0, tenantContext_js_1.isValidUuid)(tenantId)) {
             const [a] = (0, tenantContext_js_1.isValidUuid)(input.assetId)
-                ? await database_js_1.db.select().from(masterData_js_1.assets).where((0, drizzle_orm_1.eq)(masterData_js_1.assets.id, input.assetId)).limit(1)
-                : await database_js_1.db.select().from(masterData_js_1.assets).where((0, drizzle_orm_1.or)((0, drizzle_orm_1.eq)(masterData_js_1.assets.assetCode, input.assetId), (0, drizzle_orm_1.eq)(masterData_js_1.assets.name, input.assetId))).limit(1);
+                ? await database_js_1.db.select().from(masterData_js_1.assets).where((0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(masterData_js_1.assets.tenantId, tenantId), (0, drizzle_orm_1.eq)(masterData_js_1.assets.id, input.assetId))).limit(1)
+                : await database_js_1.db.select().from(masterData_js_1.assets).where((0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(masterData_js_1.assets.tenantId, tenantId), (0, drizzle_orm_1.or)((0, drizzle_orm_1.eq)(masterData_js_1.assets.assetCode, input.assetId), (0, drizzle_orm_1.eq)(masterData_js_1.assets.name, input.assetId)))).limit(1);
             if (a) {
-                const [s] = await database_js_1.db.select().from(maintenance_js_1.pmSchedules).where((0, drizzle_orm_1.eq)(maintenance_js_1.pmSchedules.assetId, a.id)).limit(1);
+                const [s] = await database_js_1.db.select().from(maintenance_js_1.pmSchedules).where((0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(maintenance_js_1.pmSchedules.tenantId, tenantId), (0, drizzle_orm_1.eq)(maintenance_js_1.pmSchedules.assetId, a.id))).limit(1);
                 existingSchedule = s;
             }
-        }
-        if (!existingSchedule) {
-            const [fallback] = await database_js_1.db.select().from(maintenance_js_1.pmSchedules).limit(1);
-            existingSchedule = fallback;
         }
         const hasFailures = Boolean(input.hasFailures ||
             (Array.isArray(input.sections) && input.sections.some((sec) => sec.items && sec.items.some((i) => i.status === "FAIL"))));
@@ -1371,7 +1362,7 @@ class MaintenanceService {
             const updatedTemplate = {
                 templateId: input.templateId || existingSchedule.checklistTemplate?.templateId || "CHK-001",
                 templateName: input.templateName || existingSchedule.checklistTemplate?.templateName || existingSchedule.title,
-                technician: input.technician || existingSchedule.checklistTemplate?.assignedTo || "Marcus Vance",
+                technician: input.technician || existingSchedule.checklistTemplate?.assignedTo || "David Markov",
                 technicianNotes: input.technicianNotes || "",
                 status: executionStatus,
                 executedAt: new Date().toISOString(),
@@ -1495,8 +1486,9 @@ class MaintenanceService {
         };
     }
     async listSpareParts(tenantId) {
-        const tId = tenantId || "aa3183d2-709b-42a8-add1-b2e4b2d873b0";
-        const parts = await database_js_1.db.select().from(maintenance_js_1.spareParts).where((0, drizzle_orm_1.eq)(maintenance_js_1.spareParts.tenantId, tId));
+        if (!(0, tenantContext_js_1.isValidUuid)(tenantId))
+            return [];
+        const parts = await database_js_1.db.select().from(maintenance_js_1.spareParts).where((0, drizzle_orm_1.eq)(maintenance_js_1.spareParts.tenantId, tenantId));
         return parts.map((p) => {
             const stock = Number(p.currentStock ?? 0);
             const minStock = Number(p.minStockLevel ?? 5);
@@ -1525,8 +1517,9 @@ class MaintenanceService {
         });
     }
     async createSparePart(tenantId, input) {
-        const tId = tenantId || "aa3183d2-709b-42a8-add1-b2e4b2d873b0";
-        const plantList = await database_js_1.db.select().from(tenants_js_1.plants).where((0, drizzle_orm_1.eq)(tenants_js_1.plants.tenantId, tId)).limit(1);
+        if (!(0, tenantContext_js_1.isValidUuid)(tenantId))
+            throw new Error("Valid tenant UUID required");
+        const plantList = await database_js_1.db.select().from(tenants_js_1.plants).where((0, drizzle_orm_1.eq)(tenants_js_1.plants.tenantId, tenantId)).limit(1);
         const pId = plantList[0]?.id || "bead41e2-b735-41b8-bd00-bdba1682fb6a";
         const partNumber = (input.partNo || input.partNumber || `SP-${Math.floor(1000 + Math.random() * 9000)}`).trim();
         const stock = Number(input.stock ?? input.currentStock ?? 0);
@@ -1545,7 +1538,7 @@ class MaintenanceService {
         const [created] = await database_js_1.db
             .insert(maintenance_js_1.spareParts)
             .values({
-            tenantId: tId,
+            tenantId,
             plantId: pId,
             partNumber,
             name: input.name || "Spare Part",
@@ -1558,8 +1551,6 @@ class MaintenanceService {
             linkedAssets: linkedAssetsStr,
         })
             .returning();
-        const createdStock = Number(created.currentStock ?? 0);
-        const createdMinStock = Number(created.minStockLevel ?? 5);
         const createdLinked = created.linkedAssets ? created.linkedAssets.split(',').map((s) => s.trim()).filter(Boolean) : [];
         return {
             id: created.id,
@@ -1568,22 +1559,23 @@ class MaintenanceService {
             partNumber: created.partNumber,
             name: created.name,
             category: created.category,
-            stock: createdStock,
-            currentStock: createdStock,
-            minStock: createdMinStock,
-            minStockLevel: createdMinStock,
+            stock: Number(created.currentStock ?? 0),
+            currentStock: Number(created.currentStock ?? 0),
+            minStock: Number(created.minStockLevel ?? 5),
+            minStockLevel: Number(created.minStockLevel ?? 5),
             unitCost: Number(created.unitCost ?? 0),
             location: created.binLocation,
             binLocation: created.binLocation,
             supplier: created.supplierName,
             supplierName: created.supplierName,
-            status: createdStock <= createdMinStock ? "Low Stock" : "In Stock",
+            status: Number(created.currentStock ?? 0) <= Number(created.minStockLevel ?? 5) ? "Low Stock" : "In Stock",
             linkedAssets: createdLinked,
             linkedAsset: createdLinked[0] || null,
         };
     }
     async updateSparePart(tenantId, partId, input) {
-        const tId = tenantId || "aa3183d2-709b-42a8-add1-b2e4b2d873b0";
+        if (!(0, tenantContext_js_1.isValidUuid)(tenantId))
+            throw new Error("Valid tenant UUID required");
         const updateData = {};
         if (input.name !== undefined)
             updateData.name = input.name;
@@ -1618,7 +1610,7 @@ class MaintenanceService {
         const [updated] = await database_js_1.db
             .update(maintenance_js_1.spareParts)
             .set(updateData)
-            .where((0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(maintenance_js_1.spareParts.tenantId, tId), isUuid ? (0, drizzle_orm_1.eq)(maintenance_js_1.spareParts.id, partId) : (0, drizzle_orm_1.eq)(maintenance_js_1.spareParts.partNumber, partId)))
+            .where((0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(maintenance_js_1.spareParts.tenantId, tenantId), isUuid ? (0, drizzle_orm_1.eq)(maintenance_js_1.spareParts.id, partId) : (0, drizzle_orm_1.eq)(maintenance_js_1.spareParts.partNumber, partId)))
             .returning();
         if (!updated) {
             throw new Error(`Spare part ${partId} not found`);
@@ -1647,15 +1639,18 @@ class MaintenanceService {
         };
     }
     async deleteSparePart(tenantId, partId) {
-        const tId = tenantId || "aa3183d2-709b-42a8-add1-b2e4b2d873b0";
+        if (!(0, tenantContext_js_1.isValidUuid)(tenantId))
+            return { id: partId, success: false };
         const isUuid = (0, tenantContext_js_1.isValidUuid)(partId);
         const [deleted] = await database_js_1.db
             .delete(maintenance_js_1.spareParts)
-            .where((0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(maintenance_js_1.spareParts.tenantId, tId), isUuid ? (0, drizzle_orm_1.eq)(maintenance_js_1.spareParts.id, partId) : (0, drizzle_orm_1.eq)(maintenance_js_1.spareParts.partNumber, partId)))
+            .where((0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(maintenance_js_1.spareParts.tenantId, tenantId), isUuid ? (0, drizzle_orm_1.eq)(maintenance_js_1.spareParts.id, partId) : (0, drizzle_orm_1.eq)(maintenance_js_1.spareParts.partNumber, partId)))
             .returning();
         return { id: partId, success: !!deleted };
     }
     async listCalibrations(tenantId) {
+        if (!(0, tenantContext_js_1.isValidUuid)(tenantId))
+            return [];
         try {
             const records = await database_js_1.db
                 .select({
@@ -1663,7 +1658,8 @@ class MaintenanceService {
                 assetCode: masterData_js_1.assets.assetCode,
             })
                 .from(maintenance_js_1.calibrations)
-                .leftJoin(masterData_js_1.assets, (0, drizzle_orm_1.eq)(maintenance_js_1.calibrations.assetId, masterData_js_1.assets.id));
+                .leftJoin(masterData_js_1.assets, (0, drizzle_orm_1.eq)(maintenance_js_1.calibrations.assetId, masterData_js_1.assets.id))
+                .where((0, drizzle_orm_1.eq)(maintenance_js_1.calibrations.tenantId, tenantId));
             return records.map(({ cal, assetCode }) => ({
                 id: cal.id,
                 assetId: assetCode || cal.assetId,
@@ -1686,20 +1682,22 @@ class MaintenanceService {
         }
     }
     async createCalibration(tenantId, input) {
-        const tId = tenantId || "aa3183d2-709b-42a8-add1-b2e4b2d873b0";
+        if (!(0, tenantContext_js_1.isValidUuid)(tenantId))
+            throw new Error("Valid tenant UUID required");
         const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(input.assetId || "");
         let targetAsset = isUuid
-            ? await database_js_1.db.select().from(masterData_js_1.assets).where((0, drizzle_orm_1.or)((0, drizzle_orm_1.eq)(masterData_js_1.assets.id, input.assetId), (0, drizzle_orm_1.eq)(masterData_js_1.assets.assetCode, input.assetId))).limit(1)
-            : await database_js_1.db.select().from(masterData_js_1.assets).where((0, drizzle_orm_1.eq)(masterData_js_1.assets.assetCode, input.assetId)).limit(1);
+            ? await database_js_1.db.select().from(masterData_js_1.assets).where((0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(masterData_js_1.assets.tenantId, tenantId), (0, drizzle_orm_1.or)((0, drizzle_orm_1.eq)(masterData_js_1.assets.id, input.assetId), (0, drizzle_orm_1.eq)(masterData_js_1.assets.assetCode, input.assetId)))).limit(1)
+            : await database_js_1.db.select().from(masterData_js_1.assets).where((0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(masterData_js_1.assets.tenantId, tenantId), (0, drizzle_orm_1.eq)(masterData_js_1.assets.assetCode, input.assetId))).limit(1);
         if (!targetAsset[0]) {
-            const fallback = await database_js_1.db.select().from(masterData_js_1.assets).limit(1);
-            targetAsset = fallback;
+            const [fallback] = await database_js_1.db.select().from(masterData_js_1.assets).where((0, drizzle_orm_1.eq)(masterData_js_1.assets.tenantId, tenantId)).limit(1);
+            if (fallback)
+                targetAsset = [fallback];
         }
-        const aId = targetAsset[0]?.id;
-        const pId = targetAsset[0]?.plantId || "bead41e2-b735-41b8-bd00-bdba1682fb6a";
+        const aId = targetAsset[0]?.id || null;
+        const pId = targetAsset[0]?.plantId || null;
         const resolvedCode = targetAsset[0]?.assetCode || input.assetId;
         const [created] = await database_js_1.db.insert(maintenance_js_1.calibrations).values({
-            tenantId: tId,
+            tenantId,
             plantId: pId,
             assetId: aId,
             instrumentName: input.name || input.instrumentName || "Precision Instrument",
@@ -1731,11 +1729,13 @@ class MaintenanceService {
         return await database_js_1.db.select().from(maintenance_js_1.pmSchedules).where((0, drizzle_orm_1.eq)(maintenance_js_1.pmSchedules.tenantId, tenantId));
     }
     async listNotifications(tenantId) {
+        if (!(0, tenantContext_js_1.isValidUuid)(tenantId))
+            return [];
         // 1. Fetch real assets
         const assetRows = await database_js_1.db
             .select()
             .from(masterData_js_1.assets)
-            .where((0, tenantContext_js_1.isValidUuid)(tenantId) ? (0, drizzle_orm_1.eq)(masterData_js_1.assets.tenantId, tenantId) : (0, drizzle_orm_1.sql) `1=1`);
+            .where((0, drizzle_orm_1.eq)(masterData_js_1.assets.tenantId, tenantId));
         const assetMap = new Map();
         for (const a of assetRows) {
             assetMap.set(a.id, a);
@@ -1744,23 +1744,23 @@ class MaintenanceService {
         const dtRows = await database_js_1.db
             .select()
             .from(production_js_1.downtimeLogs)
-            .where((0, tenantContext_js_1.isValidUuid)(tenantId) ? (0, drizzle_orm_1.eq)(production_js_1.downtimeLogs.tenantId, tenantId) : (0, drizzle_orm_1.sql) `1=1`)
+            .where((0, drizzle_orm_1.eq)(production_js_1.downtimeLogs.tenantId, tenantId))
             .orderBy((0, drizzle_orm_1.desc)(production_js_1.downtimeLogs.createdAt));
         // 3. Fetch real work orders
         const woRows = await database_js_1.db
             .select()
             .from(maintenance_js_1.workOrders)
-            .where((0, tenantContext_js_1.isValidUuid)(tenantId) ? (0, drizzle_orm_1.eq)(maintenance_js_1.workOrders.tenantId, tenantId) : (0, drizzle_orm_1.sql) `1=1`)
+            .where((0, drizzle_orm_1.eq)(maintenance_js_1.workOrders.tenantId, tenantId))
             .orderBy((0, drizzle_orm_1.desc)(maintenance_js_1.workOrders.createdAt));
         // 4. Fetch notifications from notifications table
         let dbNotifs = await database_js_1.db
             .select()
             .from(common_js_1.notifications)
-            .where((0, drizzle_orm_1.and)((0, tenantContext_js_1.isValidUuid)(tenantId) ? (0, drizzle_orm_1.eq)(common_js_1.notifications.tenantId, tenantId) : (0, drizzle_orm_1.sql) `1=1`, (0, drizzle_orm_1.or)((0, drizzle_orm_1.eq)(common_js_1.notifications.targetRole, "MAINTENANCE"), (0, drizzle_orm_1.inArray)(common_js_1.notifications.category, ["Breakdowns", "Work Orders", "Preventive Maintenance"]))))
+            .where((0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(common_js_1.notifications.tenantId, tenantId), (0, drizzle_orm_1.or)((0, drizzle_orm_1.eq)(common_js_1.notifications.targetRole, "MAINTENANCE"), (0, drizzle_orm_1.inArray)(common_js_1.notifications.category, ["Breakdowns", "Work Orders", "Preventive Maintenance"]))))
             .orderBy((0, drizzle_orm_1.desc)(common_js_1.notifications.createdAt));
         // If notifications table has fewer than 2 items, synchronize with actual live database events
         if (!dbNotifs || dbNotifs.length < 2) {
-            const validTenant = (0, tenantContext_js_1.isValidUuid)(tenantId) ? tenantId : (assetRows[0]?.tenantId || "aa3183d2-709b-42a8-add1-b2e4b2d873b0");
+            const validTenant = tenantId;
             for (const dt of dtRows.slice(0, 3)) {
                 const ast = dt.assetId ? assetMap.get(dt.assetId) : null;
                 const assetName = ast ? `${ast.name} (${ast.assetCode})` : "Fleet Asset";
@@ -1888,48 +1888,58 @@ class MaintenanceService {
         return await database_js_1.db.update(common_js_1.notifications).set({ isRead: true }).where((0, drizzle_orm_1.eq)(common_js_1.notifications.id, id));
     }
     async markAllNotificationsRead(tenantId) {
-        return await database_js_1.db.update(common_js_1.notifications).set({ isRead: true }).where((0, tenantContext_js_1.isValidUuid)(tenantId) ? (0, drizzle_orm_1.eq)(common_js_1.notifications.tenantId, tenantId) : (0, drizzle_orm_1.sql) `1=1`);
+        if (!(0, tenantContext_js_1.isValidUuid)(tenantId))
+            return { count: 0 };
+        return await database_js_1.db.update(common_js_1.notifications).set({ isRead: true }).where((0, drizzle_orm_1.eq)(common_js_1.notifications.tenantId, tenantId));
     }
     async clearNotifications(tenantId) {
-        return await database_js_1.db.delete(common_js_1.notifications).where((0, tenantContext_js_1.isValidUuid)(tenantId) ? (0, drizzle_orm_1.eq)(common_js_1.notifications.tenantId, tenantId) : (0, drizzle_orm_1.sql) `1=1`);
+        if (!(0, tenantContext_js_1.isValidUuid)(tenantId))
+            return { count: 0 };
+        return await database_js_1.db.delete(common_js_1.notifications).where((0, drizzle_orm_1.eq)(common_js_1.notifications.tenantId, tenantId));
     }
     async listProfile(tenantId, userId, userEmail) {
-        // 1. Resolve real user from users table
+        // 1. Resolve real user from users table for this tenant
         let targetUser = null;
-        if (userId && (0, tenantContext_js_1.isValidUuid)(userId)) {
-            const [u] = await database_js_1.db.select().from(users_js_1.users).where((0, drizzle_orm_1.eq)(users_js_1.users.id, userId)).limit(1);
-            targetUser = u;
-        }
-        if (!targetUser && userEmail) {
-            const [u] = await database_js_1.db.select().from(users_js_1.users).where((0, drizzle_orm_1.eq)(users_js_1.users.email, userEmail)).limit(1);
-            targetUser = u;
-        }
-        if (!targetUser) {
-            const [u] = await database_js_1.db.select().from(users_js_1.users).where((0, drizzle_orm_1.eq)(users_js_1.users.email, "maintenance@maintenx.com")).limit(1);
-            targetUser = u;
-        }
-        if (!targetUser) {
-            const [firstU] = await database_js_1.db.select().from(users_js_1.users).limit(1);
-            targetUser = firstU;
+        if ((0, tenantContext_js_1.isValidUuid)(tenantId)) {
+            if (userId && (0, tenantContext_js_1.isValidUuid)(userId)) {
+                const [u] = await database_js_1.db.select().from(users_js_1.users).where((0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(users_js_1.users.tenantId, tenantId), (0, drizzle_orm_1.eq)(users_js_1.users.id, userId))).limit(1);
+                targetUser = u;
+            }
+            if (!targetUser && userEmail) {
+                const [u] = await database_js_1.db.select().from(users_js_1.users).where((0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(users_js_1.users.tenantId, tenantId), (0, drizzle_orm_1.eq)(users_js_1.users.email, userEmail))).limit(1);
+                targetUser = u;
+            }
+            if (!targetUser) {
+                const [firstU] = await database_js_1.db.select().from(users_js_1.users).where((0, drizzle_orm_1.eq)(users_js_1.users.tenantId, tenantId)).limit(1);
+                targetUser = firstU;
+            }
         }
         // 2. Resolve Plant name
-        const [plant] = await database_js_1.db.select().from(tenants_js_1.plants).where(targetUser?.plantId ? (0, drizzle_orm_1.eq)(tenants_js_1.plants.id, targetUser.plantId) : ((0, tenantContext_js_1.isValidUuid)(tenantId) ? (0, drizzle_orm_1.eq)(tenants_js_1.plants.tenantId, tenantId) : (0, drizzle_orm_1.sql) `1=1`)).limit(1);
-        const plantDisplay = plant ? `${plant.name} (${plant.code})` : "Indore Mega Bottling & Canning Facility (INDORE-01)";
+        const [plant] = (0, tenantContext_js_1.isValidUuid)(tenantId)
+            ? await database_js_1.db.select().from(tenants_js_1.plants).where(targetUser?.plantId ? (0, drizzle_orm_1.eq)(tenants_js_1.plants.id, targetUser.plantId) : (0, drizzle_orm_1.eq)(tenants_js_1.plants.tenantId, tenantId)).limit(1)
+            : [null];
+        const plantDisplay = plant ? `${plant.name} (${plant.code})` : "Main Facility";
         // 3. Resolve Staff details (shift, bio, certifications)
         let staffRec = null;
-        if (targetUser) {
-            const [s] = await database_js_1.db.select().from(masterData_js_1.staff).where((0, drizzle_orm_1.or)((0, drizzle_orm_1.ilike)(masterData_js_1.staff.name, `%${targetUser.firstName}%`), (0, drizzle_orm_1.eq)(masterData_js_1.staff.employeeCode, "EMP-DM01"))).limit(1);
+        if (targetUser && (0, tenantContext_js_1.isValidUuid)(tenantId)) {
+            const [s] = await database_js_1.db.select().from(masterData_js_1.staff).where((0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(masterData_js_1.staff.tenantId, tenantId), (0, drizzle_orm_1.ilike)(masterData_js_1.staff.name, `%${targetUser.firstName}%`))).limit(1);
             staffRec = s;
         }
         // 4. Compute real live KPIs from PostgreSQL
-        const activeWos = await database_js_1.db.select().from(maintenance_js_1.workOrders).where((0, drizzle_orm_1.and)((0, tenantContext_js_1.isValidUuid)(tenantId) ? (0, drizzle_orm_1.eq)(maintenance_js_1.workOrders.tenantId, tenantId) : (0, drizzle_orm_1.sql) `1=1`, (0, drizzle_orm_1.or)((0, drizzle_orm_1.eq)(maintenance_js_1.workOrders.status, "OPEN"), (0, drizzle_orm_1.eq)(maintenance_js_1.workOrders.status, "IN_PROGRESS"))));
-        const completedWos = await database_js_1.db.select().from(maintenance_js_1.workOrders).where((0, drizzle_orm_1.and)((0, tenantContext_js_1.isValidUuid)(tenantId) ? (0, drizzle_orm_1.eq)(maintenance_js_1.workOrders.tenantId, tenantId) : (0, drizzle_orm_1.sql) `1=1`, (0, drizzle_orm_1.or)((0, drizzle_orm_1.eq)(maintenance_js_1.workOrders.status, "COMPLETED"), (0, drizzle_orm_1.eq)(maintenance_js_1.workOrders.status, "CLOSED"))));
-        const pmList = await database_js_1.db.select().from(maintenance_js_1.pmSchedules).where((0, tenantContext_js_1.isValidUuid)(tenantId) ? (0, drizzle_orm_1.eq)(maintenance_js_1.pmSchedules.tenantId, tenantId) : (0, drizzle_orm_1.sql) `1=1`);
+        const activeWos = (0, tenantContext_js_1.isValidUuid)(tenantId)
+            ? await database_js_1.db.select().from(maintenance_js_1.workOrders).where((0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(maintenance_js_1.workOrders.tenantId, tenantId), (0, drizzle_orm_1.or)((0, drizzle_orm_1.eq)(maintenance_js_1.workOrders.status, "OPEN"), (0, drizzle_orm_1.eq)(maintenance_js_1.workOrders.status, "IN_PROGRESS"))))
+            : [];
+        const completedWos = (0, tenantContext_js_1.isValidUuid)(tenantId)
+            ? await database_js_1.db.select().from(maintenance_js_1.workOrders).where((0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(maintenance_js_1.workOrders.tenantId, tenantId), (0, drizzle_orm_1.or)((0, drizzle_orm_1.eq)(maintenance_js_1.workOrders.status, "COMPLETED"), (0, drizzle_orm_1.eq)(maintenance_js_1.workOrders.status, "CLOSED"))))
+            : [];
+        const pmList = (0, tenantContext_js_1.isValidUuid)(tenantId)
+            ? await database_js_1.db.select().from(maintenance_js_1.pmSchedules).where((0, drizzle_orm_1.eq)(maintenance_js_1.pmSchedules.tenantId, tenantId))
+            : [];
         const completedPms = pmList.filter(p => p.status === "Completed").length;
         const pmCompliance = pmList.length > 0
             ? `${Math.round((completedPms / pmList.length) * 100)}%`
             : "100%";
-        const fullName = targetUser ? `${targetUser.firstName} ${targetUser.lastName}`.trim() : "Dave Miller";
+        const fullName = targetUser ? `${targetUser.firstName} ${targetUser.lastName}`.trim() : "David Markov";
         const initials = targetUser
             ? `${targetUser.firstName?.[0] || 'D'}${targetUser.lastName?.[0] || 'M'}`.toUpperCase()
             : "DM";
@@ -1984,7 +1994,7 @@ class MaintenanceService {
             const existingStaff = await database_js_1.db.select().from(masterData_js_1.staff).where((0, drizzle_orm_1.or)((0, drizzle_orm_1.eq)(masterData_js_1.staff.employeeCode, "EMP-DM01"), (0, drizzle_orm_1.ilike)(masterData_js_1.staff.name, input.name || ""))).limit(1);
             if (existingStaff[0]) {
                 await database_js_1.db.update(masterData_js_1.staff).set({
-                    name: input.name || "Dave Miller",
+                    name: input.name || "David Markov",
                     phone: input.phone || null,
                     shiftCode: input.shift || "Shift A",
                     designation: input.role || "Senior Maintenance Technician",
@@ -1997,7 +2007,7 @@ class MaintenanceService {
                     tenantId: (0, tenantContext_js_1.isValidUuid)(tenantId) ? tenantId : "aa3183d2-709b-42a8-add1-b2e4b2d873b0",
                     plantId: firstPlant?.id || "bead41e2-b735-41b8-bd00-bdba1682fb6a",
                     employeeCode: "EMP-DM01",
-                    name: input.name || "Dave Miller",
+                    name: input.name || "David Markov",
                     phone: input.phone || null,
                     shiftCode: input.shift || "Shift A",
                     designation: input.role || "Senior Maintenance Technician",
@@ -2016,16 +2026,20 @@ class MaintenanceService {
         };
     }
     async getReliabilityMetrics(tenantId, plantId) {
+        if (!(0, tenantContext_js_1.isValidUuid)(tenantId)) {
+            return {
+                plantOverall: { mttrHours: "0.0", mtbfHours: "720.0", downtimeHours: "0.0", availability: "100.0%", oee: "95.0%" },
+                byStage: [],
+                repeatFailures: [],
+            };
+        }
         // 1. Fetch real assets from PostgreSQL
         let assetRows = [];
         try {
             assetRows = await database_js_1.db
                 .select()
                 .from(masterData_js_1.assets)
-                .where((0, tenantContext_js_1.isValidUuid)(tenantId) ? (0, drizzle_orm_1.eq)(masterData_js_1.assets.tenantId, tenantId) : (0, drizzle_orm_1.sql) `1=1`);
-            if (!assetRows || assetRows.length === 0) {
-                assetRows = await database_js_1.db.select().from(masterData_js_1.assets);
-            }
+                .where((0, drizzle_orm_1.eq)(masterData_js_1.assets.tenantId, tenantId));
         }
         catch (astErr) {
             console.warn("Asset query in getReliabilityMetrics warning:", astErr.message);
@@ -2036,10 +2050,7 @@ class MaintenanceService {
             dtRows = await database_js_1.db
                 .select()
                 .from(production_js_1.downtimeLogs)
-                .where((0, tenantContext_js_1.isValidUuid)(tenantId) ? (0, drizzle_orm_1.eq)(production_js_1.downtimeLogs.tenantId, tenantId) : (0, drizzle_orm_1.sql) `1=1`);
-            if (!dtRows || dtRows.length === 0) {
-                dtRows = await database_js_1.db.select().from(production_js_1.downtimeLogs);
-            }
+                .where((0, drizzle_orm_1.eq)(production_js_1.downtimeLogs.tenantId, tenantId));
         }
         catch (dtErr) {
             console.warn("Downtime logs query warning:", dtErr.message);
@@ -2050,7 +2061,7 @@ class MaintenanceService {
             completedWOs = await database_js_1.db
                 .select()
                 .from(maintenance_js_1.workOrders)
-                .where((0, drizzle_orm_1.and)((0, tenantContext_js_1.isValidUuid)(tenantId) ? (0, drizzle_orm_1.eq)(maintenance_js_1.workOrders.tenantId, tenantId) : (0, drizzle_orm_1.sql) `1=1`, (0, drizzle_orm_1.or)((0, drizzle_orm_1.eq)(maintenance_js_1.workOrders.status, "COMPLETED"), (0, drizzle_orm_1.eq)(maintenance_js_1.workOrders.status, "CLOSED"), (0, drizzle_orm_1.eq)(maintenance_js_1.workOrders.status, "VERIFIED"))));
+                .where((0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(maintenance_js_1.workOrders.tenantId, tenantId), (0, drizzle_orm_1.or)((0, drizzle_orm_1.eq)(maintenance_js_1.workOrders.status, "COMPLETED"), (0, drizzle_orm_1.eq)(maintenance_js_1.workOrders.status, "CLOSED"), (0, drizzle_orm_1.eq)(maintenance_js_1.workOrders.status, "VERIFIED"))));
         }
         catch (woErr) {
             console.warn("Completed work orders query warning:", woErr.message);
@@ -2265,7 +2276,7 @@ class MaintenanceService {
                 plantId: "PLT-01",
                 sourceBreakdownId: "BD-2026-092",
                 leadInvestigator: "David Kim (Lead CI)",
-                teamMembers: ["Marcus Vance (Maint)", "Sarah Jenkins (Prod)", "Dr. Aris Thorne (QA)"],
+                teamMembers: ["David Markov (Maint)", "Ronald Robinson (Prod)", "Stephanie Kuzmych (QA)"],
                 currentPhase: "Occurrence Cause",
                 status: "Active Root Cause Analysis",
                 severity: "Critical",
@@ -2281,7 +2292,7 @@ class MaintenanceService {
                 lineName: "Line 1 — Aseptic Bottling",
                 plantId: "PLT-01",
                 sourceBreakdownId: "BD-2026-088",
-                leadInvestigator: "Marcus Vance (Senior Reliability)",
+                leadInvestigator: "David Markov (Senior Reliability)",
                 teamMembers: ["Devang Patel (Line Lead)", "David Kim (Lead CI)"],
                 currentPhase: "Hypothesis & Tests",
                 status: "Active Root Cause Analysis",

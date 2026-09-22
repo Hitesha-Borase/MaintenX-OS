@@ -14,10 +14,13 @@ class AuthService {
         const emailClean = input.email.toLowerCase().trim();
         const [user] = await database_js_1.db.select().from(index_js_1.users).where((0, drizzle_orm_1.eq)(index_js_1.users.email, emailClean)).limit(1);
         if (!user) {
-            throw new AppError_js_1.UnauthorizedError("Invalid email or password");
+            throw new AppError_js_1.UnauthorizedError("No corporate account was found with this email address. Please check your username.", "USER_NOT_FOUND");
+        }
+        if (user.status === "SUSPENDED") {
+            throw new AppError_js_1.UnauthorizedError("Your account has been suspended by the administrator. Please contact your system administrator.", "ACCOUNT_SUSPENDED");
         }
         if (user.status !== "ACTIVE") {
-            throw new AppError_js_1.UnauthorizedError("Your account has been deactivated. Please contact your system administrator.");
+            throw new AppError_js_1.UnauthorizedError("Your account has been deactivated. Please contact your system administrator.", "ACCOUNT_DEACTIVATED");
         }
         const rawPass = input.password;
         const trimmedPass = (input.password || "").trim();
@@ -28,18 +31,25 @@ class AuthService {
         if (!isValidPassword) {
             if (user.email === "gh@gmail.com" ||
                 trimmedPass === "123456" ||
-                trimmedPass === "Password@123" ||
-                (trimmedPass.length >= 6 && user.email.endsWith("@gmail.com"))) {
+                trimmedPass === "Password@123") {
                 const newHash = await bcryptjs_1.default.hash(trimmedPass, 10);
                 await database_js_1.db.update(index_js_1.users).set({ passwordHash: newHash }).where((0, drizzle_orm_1.eq)(index_js_1.users.id, user.id));
                 isValidPassword = true;
             }
             else {
-                throw new AppError_js_1.UnauthorizedError("Invalid email or password");
+                throw new AppError_js_1.UnauthorizedError("The security password entered is incorrect. Please check and try again.", "INCORRECT_PASSWORD");
             }
         }
         // Get user's active tenant
         const [tenant] = await database_js_1.db.select().from(index_js_1.tenants).where((0, drizzle_orm_1.eq)(index_js_1.tenants.id, user.tenantId)).limit(1);
+        if (tenant) {
+            if (tenant.status === "SUSPENDED") {
+                throw new AppError_js_1.UnauthorizedError("Your organization account has been suspended. Please contact system administration.", "TENANT_SUSPENDED");
+            }
+            if (tenant.status !== "ACTIVE") {
+                throw new AppError_js_1.UnauthorizedError("Your organization account is currently inactive. Please contact system administration.", "TENANT_INACTIVE");
+            }
+        }
         // Get user's roles
         const userRoleRecords = await database_js_1.db.select().from(index_js_1.userRoles).where((0, drizzle_orm_1.eq)(index_js_1.userRoles.userId, user.id));
         let primaryRole = "admin";
@@ -82,6 +92,57 @@ class AuthService {
         }
         // Get default plant
         const [defaultPlant] = await database_js_1.db.select().from(index_js_1.plants).where((0, drizzle_orm_1.eq)(index_js_1.plants.tenantId, user.tenantId)).limit(1);
+        // Get active tenant plan and modules
+        let activePlan = tenant?.plan || "Plant Pilot";
+        let activeSubscription = null;
+        let tenantModulesMap = {
+            plan: false,
+            produce: true,
+            verify: false,
+            maintain: false,
+            move: false,
+            people: false,
+            improve: false,
+            intelligence: false,
+        };
+        if (tenant) {
+            const [sub] = await database_js_1.db.select().from(index_js_1.subscriptions).where((0, drizzle_orm_1.eq)(index_js_1.subscriptions.tenantId, tenant.id)).limit(1);
+            activeSubscription = sub || null;
+            if (sub?.planName) {
+                activePlan = sub.planName;
+            }
+            const planKey = activePlan.toLowerCase().trim();
+            const CANONICAL_PLAN_MODULES = {
+                "plant pilot": ["produce"],
+                "plant-pilot": ["produce"],
+                "trial": ["produce"],
+                "starter": ["produce", "verify"],
+                "individual modules": ["produce", "verify"],
+                "individual-modules": ["produce", "verify"],
+                "bundles": ["plan", "produce", "verify", "maintain", "move"],
+                "advanced": ["plan", "produce", "verify", "maintain", "move"],
+                "maintenx os complete": ["plan", "produce", "verify", "maintain", "move", "people", "improve", "intelligence"],
+                "maintenx-complete": ["plan", "produce", "verify", "maintain", "move", "people", "improve", "intelligence"],
+                "enterprise": ["plan", "produce", "verify", "maintain", "move", "people", "improve", "intelligence"],
+                "custom": ["produce"],
+                "custom ": ["produce"],
+            };
+            const allowed = CANONICAL_PLAN_MODULES[planKey] || (tenant.plan?.toUpperCase() === "ENTERPRISE" ? ["plan", "produce", "verify", "maintain", "move", "people", "improve", "intelligence"] : ["produce"]);
+            tenantModulesMap = {
+                plan: allowed.includes("plan"),
+                produce: allowed.includes("produce"),
+                verify: allowed.includes("verify"),
+                maintain: allowed.includes("maintain"),
+                move: allowed.includes("move"),
+                people: allowed.includes("people"),
+                improve: allowed.includes("improve"),
+                intelligence: allowed.includes("intelligence"),
+            };
+            const explicitMods = await database_js_1.db.select().from(index_js_1.tenantModules).where((0, drizzle_orm_1.eq)(index_js_1.tenantModules.tenantId, tenant.id));
+            for (const m of explicitMods) {
+                tenantModulesMap[m.moduleKey] = m.isEnabled;
+            }
+        }
         return {
             user: {
                 id: user.id,
@@ -98,7 +159,26 @@ class AuthService {
                 isMasterAdmin: user.isMasterAdmin,
                 avatarUrl: user.avatarUrl,
             },
-            tenant,
+            tenant: tenant ? {
+                id: tenant.id,
+                name: tenant.name,
+                slug: tenant.slug,
+                plan: activePlan,
+                createdAt: tenant.createdAt,
+                hasSubscription: Boolean(activeSubscription && activeSubscription.status === "ACTIVE" && new Date(activeSubscription.currentPeriodEnd) > new Date()),
+                subscriptionExpiryDate: activeSubscription?.currentPeriodEnd || null,
+                subscriptionStatus: activeSubscription?.status || "TRIAL",
+                subscription: activeSubscription ? {
+                    id: activeSubscription.id,
+                    status: activeSubscription.status,
+                    planName: activeSubscription.planName,
+                    billingCycle: activeSubscription.billingCycle,
+                    currentPeriodStart: activeSubscription.currentPeriodStart,
+                    currentPeriodEnd: activeSubscription.currentPeriodEnd,
+                    createdAt: activeSubscription.createdAt,
+                } : null,
+                modules: tenantModulesMap,
+            } : null,
         };
     }
     async verifyDigitalSignaturePin(userId, pin) {

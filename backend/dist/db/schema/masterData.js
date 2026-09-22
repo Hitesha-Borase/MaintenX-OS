@@ -1,13 +1,20 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.storageResources = exports.ccpLimits = exports.employeeSkills = exports.labourStandards = exports.labourAllocations = exports.uoms = exports.allergenRules = exports.sanitationClasses = exports.packaging = exports.lineTargets = exports.operations = exports.changeoverRules = exports.routingSteps = exports.routings = exports.qualitySpecs = exports.staff = exports.assets = exports.criticalityLevels = exports.assetTypes = exports.shifts = exports.productionLines = exports.workCenters = exports.bomItems = exports.boms = exports.skus = exports.productFamilies = void 0;
+exports.storageTypes = exports.storageResources = exports.ccpLimits = exports.employeeSkills = exports.labourStandards = exports.labourAllocations = exports.uoms = exports.allergenRules = exports.sanitationClasses = exports.packaging = exports.lineTargets = exports.operations = exports.changeoverRules = exports.routingSteps = exports.routings = exports.qualitySpecs = exports.staff = exports.assets = exports.criticalityLevels = exports.assetTypes = exports.shifts = exports.productionLines = exports.workCenters = exports.bomItems = exports.boms = exports.skus = exports.productFamilies = void 0;
 const pg_core_1 = require("drizzle-orm/pg-core");
 const tenants_1 = require("./tenants");
 exports.productFamilies = (0, pg_core_1.pgTable)("product_families", {
     id: (0, pg_core_1.uuid)("id").defaultRandom().primaryKey(),
-    tenantId: (0, pg_core_1.uuid)("tenant_id").references(() => tenants_1.tenants.id, { onDelete: "cascade" }).notNull(),
+    tenantId: (0, pg_core_1.uuid)("tenant_id").references(() => tenants_1.tenants.id, { onDelete: "cascade" }),
     code: (0, pg_core_1.varchar)("code", { length: 50 }).notNull(),
     name: (0, pg_core_1.varchar)("name", { length: 255 }).notNull(),
+    category: (0, pg_core_1.varchar)("category", { length: 100 }).default("Finished Goods"),
+    plantId: (0, pg_core_1.varchar)("plant_id", { length: 100 }),
+    allergenRisk: (0, pg_core_1.varchar)("allergen_risk", { length: 100 }).default("None"),
+    standardMargin: (0, pg_core_1.varchar)("standard_margin", { length: 50 }).default("55.0%"),
+    status: (0, pg_core_1.varchar)("status", { length: 50 }).default("Active"),
+    effectiveFrom: (0, pg_core_1.varchar)("effective_from", { length: 50 }),
+    effectiveTo: (0, pg_core_1.varchar)("effective_to", { length: 50 }),
     description: (0, pg_core_1.text)("description"),
     createdAt: (0, pg_core_1.timestamp)("created_at").defaultNow().notNull(),
     updatedAt: (0, pg_core_1.timestamp)("updated_at").defaultNow().notNull(),
@@ -43,7 +50,7 @@ exports.boms = (0, pg_core_1.pgTable)("boms", {
     isDefault: (0, pg_core_1.boolean)("is_default").default(true).notNull(),
     status: (0, pg_core_1.varchar)("status", { length: 50 }).default("ACTIVE").notNull(),
     approvalStatus: (0, pg_core_1.varchar)("approval_status", { length: 50 }).default("Draft"),
-    createdBy: (0, pg_core_1.varchar)("created_by", { length: 100 }).default("Alexander Vance"),
+    createdBy: (0, pg_core_1.varchar)("created_by", { length: 100 }).default("Ronald Robinson"),
     createdAt: (0, pg_core_1.timestamp)("created_at").defaultNow().notNull(),
     updatedAt: (0, pg_core_1.timestamp)("updated_at").defaultNow().notNull(),
 });
@@ -362,7 +369,7 @@ exports.employeeSkills = (0, pg_core_1.pgTable)("employee_skills", {
     departmentId: (0, pg_core_1.varchar)("department_id", { length: 50 }),
     role: (0, pg_core_1.varchar)("role", { length: 150 }).default("Line Operator").notNull(),
     plantId: (0, pg_core_1.varchar)("plant_id", { length: 50 }).default("PLT-01"),
-    plantName: (0, pg_core_1.varchar)("plant_name", { length: 150 }).default("Indore Plant"),
+    plantName: (0, pg_core_1.varchar)("plant_name", { length: 150 }).default("Plant 1 - Meat Processing & Smokehouse Facility"),
     skillLevel: (0, pg_core_1.varchar)("skill_level", { length: 100 }).default("Level 2 (Certified Operator)").notNull(),
     skills: (0, pg_core_1.jsonb)("skills").default([]).notNull(),
     certifications: (0, pg_core_1.jsonb)("certifications").default([]).notNull(),
@@ -389,7 +396,7 @@ exports.storageResources = (0, pg_core_1.pgTable)("storage_resources", {
     name: (0, pg_core_1.varchar)("name", { length: 255 }).notNull(),
     resourceType: (0, pg_core_1.varchar)("resource_type", { length: 100 }).default("Selective Pallet Rack").notNull(),
     plantId: (0, pg_core_1.varchar)("plant_id", { length: 50 }).default("PLT-01"),
-    plantName: (0, pg_core_1.varchar)("plant_name", { length: 150 }).default("Indore Plant"),
+    plantName: (0, pg_core_1.varchar)("plant_name", { length: 150 }).default("Plant 1 - Meat Processing & Smokehouse Facility"),
     zone: (0, pg_core_1.varchar)("zone", { length: 100 }).default("General Staging"),
     capacityUnit: (0, pg_core_1.varchar)("capacity_unit", { length: 50 }).default("Pallet Positions"),
     totalCapacity: (0, pg_core_1.integer)("total_capacity").default(500),
@@ -399,6 +406,16 @@ exports.storageResources = (0, pg_core_1.pgTable)("storage_resources", {
     status: (0, pg_core_1.varchar)("status", { length: 50 }).default("Active").notNull(),
     effectiveFrom: (0, pg_core_1.varchar)("effective_from", { length: 50 }).default("2025-01-01"),
     effectiveTo: (0, pg_core_1.varchar)("effective_to", { length: 50 }).default("2030-12-31"),
+    createdAt: (0, pg_core_1.timestamp)("created_at").defaultNow(),
+    updatedAt: (0, pg_core_1.timestamp)("updated_at").defaultNow(),
+});
+exports.storageTypes = (0, pg_core_1.pgTable)("storage_types", {
+    id: (0, pg_core_1.uuid)("id").defaultRandom().primaryKey(),
+    typeCode: (0, pg_core_1.varchar)("type_code", { length: 50 }).notNull().unique(),
+    name: (0, pg_core_1.varchar)("name", { length: 255 }).notNull(),
+    category: (0, pg_core_1.varchar)("category", { length: 100 }).default("Warehouse Storage"),
+    description: (0, pg_core_1.text)("description"),
+    status: (0, pg_core_1.varchar)("status", { length: 50 }).default("Active").notNull(),
     createdAt: (0, pg_core_1.timestamp)("created_at").defaultNow(),
     updatedAt: (0, pg_core_1.timestamp)("updated_at").defaultNow(),
 });

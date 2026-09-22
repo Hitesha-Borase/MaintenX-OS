@@ -97,7 +97,7 @@ async function runTests() {
                 type: "SCADA Trend",
                 title: "Steam Manifold Pressure Plunge",
                 details: "Pressure plunged from 6.2 bar to 2.8 bar.",
-                uploadedBy: "Marcus Vance",
+                uploadedBy: "David Markov",
             }),
         });
         const json = (await res.json());
@@ -169,7 +169,7 @@ async function runTests() {
                 rcaId: testRcaId,
                 description: "Replace EPDM diaphragm with Viton High-Temp fluoroelastomer.",
                 actionType: "Corrective",
-                owner: "Marcus Vance",
+                owner: "David Markov",
                 priority: "High",
                 dueDate: "2026-09-30",
             }),

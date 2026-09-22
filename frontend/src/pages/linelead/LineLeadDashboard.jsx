@@ -55,11 +55,10 @@ export function LineLeadDashboard() {
   const [isCcpModalOpen, setIsCcpModalOpen] = useState(false);
   const [isClearanceModalOpen, setIsClearanceModalOpen] = useState(false);
 
-  // Form States
   const [proposedBPM, setProposedBPM] = useState(620);
-  const [weighForm, setWeighForm] = useState({ ingredient: "Concentrate Base Lot A", targetKg: 450, actualKg: 450.2 });
-  const [ccpForm, setCcpForm] = useState({ ccpName: "CCP 1 — Pasteurizer Thermal Hold", parameterName: "Pasteurizer Temp", targetValue: "83.5", actualValue: "83.5", uom: "°C" });
-  const [clearanceNotes, setClearanceNotes] = useState("Line Clearance Verified — All prior SKU items & labels cleared");
+  const [weighForm, setWeighForm] = useState({ ingredient: "Fresh Grade A Pork Bellies (≤ 4.0°C)", targetKg: 450, actualKg: 450.2 });
+  const [ccpForm, setCcpForm] = useState({ ccpName: "CCP 1 — Smokehouse Core Thermal Lethality", parameterName: "Core Probe Temp", targetValue: "71.0", actualValue: "71.8", uom: "°C" });
+  const [clearanceNotes, setClearanceNotes] = useState("Line Clearance Verified — All prior Meat SKU items & labels cleared");
 
   // Loading States
   const [requestingStock, setRequestingStock] = useState(false);

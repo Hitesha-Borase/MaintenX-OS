@@ -349,11 +349,6 @@ export function Login() {
             <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
               <div
                 style={{
-                  padding: "4px 8px",
-                  borderRadius: "12px",
-                  backgroundColor: "#FFFFFF",
-                  border: "1px solid rgba(200, 149, 71, 0.25)",
-                  boxShadow: "0 2px 8px rgba(70, 45, 15, 0.06)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",

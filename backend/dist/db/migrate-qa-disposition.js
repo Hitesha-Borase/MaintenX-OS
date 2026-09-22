@@ -19,7 +19,7 @@ async function runQaDispositionMigration() {
         protocol VARCHAR(255),
         instruction_notes TEXT,
         status VARCHAR(50) DEFAULT 'COMPLETED',
-        authorized_by VARCHAR(150) DEFAULT 'Dr. Rachel Thorne (QA Lead)',
+        authorized_by VARCHAR(150) DEFAULT 'Stephanie Kuzmych (QA Manager & HACCP Lead)',
         authorized_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -33,26 +33,7 @@ async function runQaDispositionMigration() {
         const tenantIds = tenantRows.rows.map(r => r.id);
         if (!tenantIds.includes(null))
             tenantIds.push(null);
-        // 2. Ensure initial quarantine record exists in public.quality_holds for all tenants
-        for (const tid of tenantIds) {
-            const existingHold = await client.query(`
-        SELECT id FROM public.quality_holds 
-        WHERE (tenant_id = $1 OR ($1 IS NULL AND tenant_id IS NULL))
-          AND (hold_id = 'BLK-101' OR batch = 'BAT-2026-0890')
-        LIMIT 1;
-      `, [tid]);
-            if (existingHold.rows.length === 0) {
-                console.log(`🌱 Seeding initial quarantine hold BLK-101 for tenant ${tid || 'null'} into public.quality_holds...`);
-                await client.query(`
-          INSERT INTO public.quality_holds (
-            tenant_id, hold_id, batch, lot_number, reason, severity, status, held_by_name, date, hold_at
-          ) VALUES (
-            $1, 'BLK-101', 'BAT-2026-0890', 'LOT-ORG-442', 'CCP Pasteurizer temp excursion to 82.9°C (Minimum threshold: 83.1°C)', 'HIGH', 'HOLD', 'Maria Santos (QA Lead)', '2026-08-31', '2026-08-31 10:00:00'
-          );
-        `, [tid]);
-            }
-        }
-        console.log("✅ Verified and ensured public.quality_holds has disposition candidates");
+        console.log("✅ Verified public.quality_holds disposition ready (Zero dummy seeding).");
     }
     catch (err) {
         console.error("❌ QA Disposition migration failed:", err);

@@ -63,7 +63,7 @@ async function seedPM() {
         await client.query(`
       INSERT INTO pm_shift_handoffs (id, tenant_id, plant_id, shift_from, shift_to, handed_over_by, received_by, units_produced, scrap_units, notes, signature_status)
       VALUES
-      ('SHF-2026-01', $1, 'PLT-01', 'Shift C', 'Shift A', 'Carlos Mendez', 'Thomas Sterling', 44500, 520, 'All 3 lines running smoothly. Line 2 pasteurizer steam valve gasket inspected, zero leaks. Raw water RO tank at 92% capacity.', 'Digitally Signed'),
+      ('SHF-2026-01', $1, 'PLT-01', 'Shift C', 'Shift A', 'Ashley Kulcar', 'Thomas Sterling', 44500, 520, 'All 3 lines running smoothly. Line 2 pasteurizer steam valve gasket inspected, zero leaks. Raw water RO tank at 92% capacity.', 'Digitally Signed'),
       ('SHF-2026-02', $1, 'PLT-01', 'Shift A', 'Shift B', 'Thomas Sterling', 'Chloe Dupuis', 48200, 380, 'Line 1 cap conveyor photoeye dusted at 08:30. Recovered pacing by +5% speed boost. Ready for 1L changeover at 14:30.', 'Digitally Signed')
       ON CONFLICT (id) DO NOTHING;
     `, [tenantId]);
@@ -80,7 +80,7 @@ async function seedPM() {
         await client.query(`
       INSERT INTO pm_exceptions (id, tenant_id, plant_id, title, severity, category, asset_or_order, impact_description, owner, escalation_level, status, resolution_notes)
       VALUES
-      ('EX-2026-101', $1, 'PLT-01', 'Line 1 Cap Conveyor Micro-Jam Glare', 'P2', 'Equipment Stoppage', 'MC-FILL-01', 'Photoeye sensor glare caused 18 mins intermittent micro-jam during Shift A.', 'Marcus Vance (Maint Lead)', 'L2 - Engineering', 'Resolved', 'Realigned photoeye bracket with 15-degree tilt and wiped reflector lens.'),
+      ('EX-2026-101', $1, 'PLT-01', 'Line 1 Cap Conveyor Micro-Jam Glare', 'P2', 'Equipment Stoppage', 'MC-FILL-01', 'Photoeye sensor glare caused 18 mins intermittent micro-jam during Shift A.', 'David Markov (Maint Lead)', 'L2 - Engineering', 'Resolved', 'Realigned photoeye bracket with 15-degree tilt and wiped reflector lens.'),
       ('EX-2026-102', $1, 'PLT-01', 'Citric Acid Anhydrous Delayed Shipment', 'P3', 'Raw Material Shortage', 'PO-2026-005', 'Material delivery delayed by 4 hours from chemical supplier. Shift B batching queued.', 'Pooja Verma (Supply Chain)', 'L1 - Shift Supervisor', 'Active', NULL),
       ('EX-2026-103', $1, 'PLT-01', 'Line 2 Pasteurizer Steam Valve Pressure Fluctuation', 'P2', 'Quality Deviation', 'MC-PAST-02', 'Steam header pressure dipped to 2.8 bar momentarily during CIP switchover.', 'David Kim (Lead CI)', 'L2 - Engineering', 'In Review', 'Checking steam trap 04 and pneumatic modulating valve bypass.'),
       ('EX-2026-104', $1, 'PLT-01', 'High-Speed Shrink Film Roll Core Misalignment', 'P3', 'Equipment Stoppage', 'MC-PACK-03', 'Film roll core diameter was 78mm vs 76mm spindle specification.', 'Chloe Dupuis (Supervisor)', 'L1 - Shift Supervisor', 'Resolved', 'Swapped core adapter spindle in 4 mins.')

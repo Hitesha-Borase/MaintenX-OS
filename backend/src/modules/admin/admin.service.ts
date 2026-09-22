@@ -1344,7 +1344,7 @@ export class AdminService {
   // ROLES & PERMISSIONS GOVERNANCE
   // ==========================================
 
-  async getRoles(tenantId?: string) {
+  async getRoles(tenantId?: string, isMasterAdmin?: boolean) {
     try {
       let activeTenantId: string | null = null;
       if (typeof tenantId === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tenantId)) {
@@ -1729,7 +1729,7 @@ export class AdminService {
     }
   }
 
-  async getPermissionMatrix(tenantId?: string) {
+  async getPermissionMatrix(tenantId?: string, isMasterAdmin?: boolean) {
     const PERMISSION_MODULES = [
       "SKU Master",
       "BOM / Recipe",

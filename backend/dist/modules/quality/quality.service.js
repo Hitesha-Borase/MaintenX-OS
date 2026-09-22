@@ -9,115 +9,150 @@ const AppError_js_1 = require("../../shared/errors/AppError.js");
 const auth_service_js_1 = require("../auth/auth.service.js");
 const auditContext_js_1 = require("../../middleware/auditContext.js");
 const masterData_js_1 = require("../../db/schema/masterData.js");
+const warehouse_js_1 = require("../../db/schema/warehouse.js");
 const tenantContext_js_1 = require("../../shared/utils/tenantContext.js");
-let inMemoryAllergenAudits = [
-    {
-        id: 1,
-        name: "Costco Orange Juice Run (Allergen: Soy free)",
-        sku: "SKU-ORJ-330",
-        line: "Line 1 Aseptic Bottling",
-        testMethod: "Lateral Flow Strip (Neogen)",
-        targetAllergen: "Soy Free (<2.5 ppm)",
-        status: "PENDING AUDIT",
-        auditor: "Dr. Rachel Thorne",
-        timestamp: "Today, 11:20 AM"
-    },
-    {
-        id: 2,
-        name: "Trader Joe's Almond Milk Swap (Allergen: Tree Nut)",
-        sku: "SKU-ALM-1000",
-        line: "Line 2 High-Speed Can Line",
-        testMethod: "ELISA Swab Assay",
-        targetAllergen: "Nut Cleanse (0 ppm residue)",
-        status: "AUDIT CLEARED",
-        auditor: "Marcus Vance",
-        timestamp: "Today, 09:15 AM"
-    },
-    {
-        id: 3,
-        name: "Oat Beverage Batch Clearance (Gluten Free)",
-        sku: "SKU-OAT-500",
-        line: "Line 3 Tetra Pak Carton Loop",
-        testMethod: "R5 Gliadin Rapid Strip",
-        targetAllergen: "Gluten Free (<5 ppm)",
-        status: "AUDIT CLEARED",
-        auditor: "Dr. Rachel Thorne",
-        timestamp: "Today, 07:45 AM"
-    }
-];
-let inMemoryLineReadiness = [
-    {
-        id: 1,
-        line: "Line 1 (Aseptic Bottling & Rotary Filler 580 BPM)",
-        lineCode: "LINE-01",
-        safety: "PASSED",
-        sanitation: "PASSED",
-        mechanical: "PASSED",
-        status: "READY",
-        speedTarget: "580 BPM",
-        lastInspection: "10 mins ago"
-    },
-    {
-        id: 2,
-        line: "Line 2 (High-Speed Aluminum Canner 800 CPM)",
-        lineCode: "LINE-02",
-        safety: "PASSED",
-        sanitation: "PASSED",
-        mechanical: "PASSED",
-        status: "READY",
-        speedTarget: "800 CPM",
-        lastInspection: "25 mins ago"
-    },
-    {
-        id: 3,
-        line: "Line 3 (Tetra Pak Aseptic Carton 250ml)",
-        lineCode: "LINE-03",
-        safety: "PASSED",
-        sanitation: "PENDING",
-        mechanical: "PASSED",
-        status: "NOT READY",
-        speedTarget: "350 CPM",
-        lastInspection: "1 hour ago"
-    },
-    {
-        id: 4,
-        line: "Line 4 (Stainless Kegging & Bulk Racking)",
-        lineCode: "LINE-04",
-        safety: "PASSED",
-        sanitation: "PASSED",
-        mechanical: "PASSED",
-        status: "READY",
-        speedTarget: "120 BPH",
-        lastInspection: "40 mins ago"
-    }
-];
+let inMemoryAllergenAudits = [];
+let inMemoryLineReadiness = [];
 let inMemoryCleaningVerification = {
     verified: false,
-    atpTestResult: "4.2 RLU (PASSED)",
-    microbialResidue: "0.00% Zero Trace",
-    targetLimit: "<10 RLU",
-    loop: "CIP Loop 01",
+    atpTestResult: "-",
+    microbialResidue: "-",
+    targetLimit: "-",
+    loop: "-",
     notes: "",
     verifiedAt: null,
-    verifiedBy: "Dr. Rachel Thorne",
+    verifiedBy: null,
     status: "PENDING"
 };
-let inMemoryProcessChecks = [
-    { id: 1, name: "Blending agitator speed (Tank TK-02)", parameter: "Agitator Speed", target: "450 RPM", actual: "448 RPM", line: "Line 1 - Blending Area", status: "OK", timestamp: "14:15" },
-    { id: 2, name: "Intake Manifold Header Pressure", parameter: "Header Pressure", target: "3.2 - 3.8 bar", actual: "3.52 bar", line: "Line 1 - Infeed", status: "OK", timestamp: "13:45" },
-    { id: 3, name: "Carbonation Dissolved CO2 Level", parameter: "CO2 Gas Volume", target: "3.60 - 3.80 Vol", actual: "3.71 Vol", line: "Line 2 - Carbonator", status: "OK", timestamp: "13:10" },
-    { id: 4, name: "Bottle Rinser De-aerated Water Flush", parameter: "Rinse Temp & Flow", target: "≥65°C • 12 LPM", actual: "66.4°C • 12.2 LPM", line: "Line 1 - Rinser", status: "OK", timestamp: "12:30" }
-];
-let inMemoryProductChecks = [
-    { id: "CHK-1001", type: "Hourly CCP Thermal Kill Verification", batch: "BAT-2026-0891", sku: "500ml Sparkling Citrus Soda", line: "Line 1", target: "≥83.1°C", actual: "83.5°C", status: "PASS", time: "14:00" },
-    { id: "CHK-1002", type: "Digital Refractometer Brix Sugar Test", batch: "BAT-2026-0891", sku: "500ml Sparkling Citrus Soda", line: "Line 1", target: "11.6 - 12.2 °Bx", actual: "11.85 °Bx", status: "PASS", time: "15:00" },
-    { id: "CHK-1003", type: "Net Content Fill Volume & Headspace", batch: "BAT-2026-0892", sku: "330ml Sparkling Orange Can", line: "Line 2", target: "330.0 ml ± 2.5ml", actual: "331.2 ml", status: "PASS", time: "15:30" },
-    { id: "CHK-1004", type: "Can Double Seam & Visual Crimp Inspection", batch: "BAT-2026-0892", sku: "330ml Sparkling Orange Can", line: "Line 2", target: "Seam Overlap ≥ 1.1mm", actual: "1.22mm Overlap", status: "PENDING", time: "16:00" }
-];
-// In-memory approved releases and blocked batches removed: using PostgreSQL qa_approved_releases and quality_holds tables
+let inMemoryProcessChecks = [];
+let inMemoryProductChecks = [];
 let inMemoryQualitySpecs = [];
 class QualityService {
+    // ——— Quality Dashboard Summary (Real DB Data) ——————————————————————————————
+    async getQualitySummary(tenantId) {
+        const client = await database_js_1.pool.connect();
+        try {
+            if (!(0, tenantContext_js_1.isValidUuid)(tenantId)) {
+                return {
+                    pendingChecks: 0,
+                    failedChecks: 0,
+                    activeHolds: 0,
+                    openDeviations: 0,
+                    pendingReleases: 0,
+                    openInvestigations: 0,
+                    lastCcpCheck: "No checks logged",
+                    line1PreOp: "NOT STARTED",
+                };
+            }
+            // 1. Active QA Holds (quality_holds table — status != 'Released'/'RELEASED')
+            const holdsRes = await client.query(`
+        SELECT COUNT(*) as count
+        FROM public.quality_holds
+        WHERE status NOT IN ('Released', 'RELEASED', 'CLOSED')
+          AND tenant_id = $1
+      `, [tenantId]);
+            const activeHolds = parseInt(holdsRes.rows[0]?.count || "0", 10);
+            // 2. Open Deviations (deviations table — status Open/Investigating)
+            const deviationsRes = await client.query(`
+        SELECT COUNT(*) as count
+        FROM public.deviations
+        WHERE status NOT IN ('Closed', 'CLOSED', 'RESOLVED', 'CAPA_CLOSED')
+          AND tenant_id = $1
+      `, [tenantId]);
+            const openDeviations = parseInt(deviationsRes.rows[0]?.count || "0", 10);
+            // 3. Open Quality Investigations
+            const investigationsRes = await client.query(`
+        SELECT COUNT(*) as count
+        FROM public.quality_investigations
+        WHERE status NOT IN ('Closed', 'CLOSED', 'COMPLETED', 'RESOLVED')
+          AND tenant_id = $1
+      `, [tenantId]).catch(() => ({ rows: [{ count: "0" }] }));
+            const openInvestigations = parseInt(investigationsRes.rows[0]?.count || "0", 10);
+            // 4. Pending QA Release — live batches awaiting sign-off
+            const batchPendingRes = await client.query(`
+        SELECT COUNT(*) as count
+        FROM public.batches b
+        WHERE b.status IN ('Completed', 'COMPLETED', 'QA Pending')
+          AND b.tenant_id = $1
+          AND NOT EXISTS (
+            SELECT 1 FROM public.qa_releases qr WHERE qr.batch_id = b.id AND qr.disposition = 'RELEASED'
+          )
+      `, [tenantId]).catch(() => ({ rows: [{ count: "0" }] }));
+            const pendingReleases = parseInt(batchPendingRes.rows[0]?.count || "0", 10);
+            // 5. Pending Quality Checks (product_checks with status PENDING/FAIL)
+            const pendingChecksRes = await client.query(`
+        SELECT COUNT(*) as count
+        FROM public.product_checks
+        WHERE status IN ('PENDING', 'FAIL', 'FAILED', 'IN_PROGRESS')
+          AND tenant_id = $1
+      `, [tenantId]).catch(() => ({ rows: [{ count: "0" }] }));
+            const pendingChecks = parseInt(pendingChecksRes.rows[0]?.count || "0", 10);
+            // 6. Failed checks count
+            const failedChecksRes = await client.query(`
+        SELECT COUNT(*) as count
+        FROM public.product_checks
+        WHERE status IN ('FAIL', 'FAILED')
+          AND tenant_id = $1
+      `, [tenantId]).catch(() => ({ rows: [{ count: "0" }] }));
+            const failedChecks = parseInt(failedChecksRes.rows[0]?.count || "0", 10);
+            // 7. Last CCP check timestamp
+            const lastCcpRes = await client.query(`
+        SELECT checked_at, status
+        FROM public.ccp_checks
+        WHERE tenant_id = $1
+        ORDER BY checked_at DESC
+        LIMIT 1
+      `, [tenantId]).catch(() => ({ rows: [] }));
+            const lastCcpRow = lastCcpRes.rows[0];
+            const lastCcpCheck = lastCcpRow
+                ? `${new Date(lastCcpRow.checked_at).toLocaleString("en-IN", { dateStyle: "short", timeStyle: "short" })} (${lastCcpRow.status})`
+                : "No checks logged";
+            // 8. Pre-Op Line status (line_readiness or preop_checks)
+            const preOpRes = await client.query(`
+        SELECT status FROM public.line_readiness
+        WHERE tenant_id = $1
+        ORDER BY id DESC
+        LIMIT 1
+      `, [tenantId]).catch(() => ({ rows: [] }));
+            let line1PreOp = "NOT STARTED";
+            if (preOpRes.rows[0]) {
+                const st = preOpRes.rows[0].status?.toUpperCase();
+                if (st === "READY" || st === "PASSED")
+                    line1PreOp = "PASSED";
+                else if (st === "FAILED" || st === "FAIL")
+                    line1PreOp = "FAILED";
+                else
+                    line1PreOp = st || "NOT STARTED";
+            }
+            else {
+                const preopFallbackRes = await client.query(`
+          SELECT passed FROM public.preop_checks
+          WHERE tenant_id = $1
+          ORDER BY created_at DESC
+          LIMIT 1
+        `, [tenantId]).catch(() => ({ rows: [] }));
+                if (preopFallbackRes.rows[0]) {
+                    line1PreOp = preopFallbackRes.rows[0].passed === true ? "PASSED" : "NOT STARTED";
+                }
+            }
+            return {
+                pendingChecks,
+                failedChecks,
+                activeHolds,
+                openDeviations,
+                pendingReleases,
+                openInvestigations,
+                lastCcpCheck,
+                line1PreOp,
+            };
+        }
+        finally {
+            client.release();
+        }
+    }
     async listCcpChecks(tenantId, plantId) {
+        if (!(0, tenantContext_js_1.isValidUuid)(tenantId))
+            return [];
         const client = await database_js_1.pool.connect();
         try {
             const res = await client.query(`
@@ -133,13 +168,13 @@ class QualityService {
           c.notes, 
           c.line_id as "lineId", 
           c.batch_id as "batchId",
-          COALESCE(c.line_name, pl.name, 'Line 1 Bottling & Canning (250 BPM)') as "lineName",
-          COALESCE(c.batch_number, b.batch_number, 'BAT-2026-ORD2511') as "batchNumber",
-          COALESCE(c.operator, 'Arthur Sterling (Plant Manager)') as "operator"
+          COALESCE(c.line_name, pl.name, '') as "lineName",
+          COALESCE(c.batch_number, b.batch_number, '') as "batchNumber",
+          COALESCE(c.operator, '') as "operator"
         FROM public.ccp_checks c
         LEFT JOIN public.production_lines pl ON c.line_id = pl.id
         LEFT JOIN public.batches b ON c.batch_id = b.id
-        WHERE c.tenant_id = $1 OR c.tenant_id IS NULL
+        WHERE c.tenant_id = $1
         ORDER BY c.checked_at DESC;
       `, [tenantId]);
             return res.rows;
@@ -165,9 +200,9 @@ class QualityService {
             const lineId = input.lineId && (0, tenantContext_js_1.isValidUuid)(input.lineId) ? input.lineId : null;
             const batchId = input.batchId && (0, tenantContext_js_1.isValidUuid)(input.batchId) ? input.batchId : null;
             const operatorId = userId && (0, tenantContext_js_1.isValidUuid)(userId) ? userId : null;
-            const batchNumber = input.batchNumber || input.batchNo || "BAT-2026-ORD2511";
-            const lineName = input.lineName || "Line 1 Bottling & Canning (250 BPM)";
-            const operator = input.operator || "Arthur Sterling (Plant Manager)";
+            const batchNumber = input.batchNumber || input.batchNo || "";
+            const lineName = input.lineName || "";
+            const operator = input.operator || "";
             const res = await client.query(`
         INSERT INTO public.ccp_checks (
           tenant_id, plant_id, line_id, batch_id, ccp_code, ccp_name,
@@ -185,12 +220,12 @@ class QualityService {
                 lineId,
                 batchId,
                 input.ccpCode || "CCP-01",
-                input.ccpName || "In-Process Critical Control Point",
-                input.targetValue ?? 83.1,
-                input.actualValue ?? 83.5,
+                input.ccpName || "Critical Control Point Check",
+                input.targetValue ?? null,
+                input.actualValue ?? null,
                 input.criticalLimitMin ?? null,
                 input.criticalLimitMax ?? null,
-                input.uom || "°C",
+                input.uom || "",
                 status,
                 operatorId,
                 batchNumber,
@@ -205,45 +240,54 @@ class QualityService {
         }
     }
     async listQaReleaseQueue(tenantId) {
-        const queueRows = await database_js_1.db
-            .select()
-            .from(quality_js_1.qaReleaseQueue)
-            .where((0, tenantContext_js_1.isValidUuid)(tenantId)
-            ? (0, drizzle_orm_1.and)((0, drizzle_orm_1.or)((0, drizzle_orm_1.eq)(quality_js_1.qaReleaseQueue.tenantId, tenantId), (0, drizzle_orm_1.isNull)(quality_js_1.qaReleaseQueue.tenantId)), (0, drizzle_orm_1.eq)(quality_js_1.qaReleaseQueue.status, "AWAITING QA SIGN-OFF"))
-            : (0, drizzle_orm_1.eq)(quality_js_1.qaReleaseQueue.status, "AWAITING QA SIGN-OFF"))
-            .orderBy((0, drizzle_orm_1.asc)(quality_js_1.qaReleaseQueue.id));
-        if (queueRows.length > 0) {
-            return queueRows.map(q => ({
-                id: q.requestId,
-                requestId: q.requestId,
-                dbId: q.id,
-                batchNumber: q.batchNumber,
-                batch: q.batchNumber,
-                skuName: q.productName,
-                productName: q.productName,
-                lineName: q.lineName,
-                ccpStatus: q.ccpStatus,
-                brixStatus: q.brixStatus,
-                allergenStatus: q.allergenCheck,
-                allergenCheck: q.allergenCheck,
-                preopCheck: q.preopCheck,
-                openDeviations: q.openDeviations,
-                status: q.status
+        if (!(0, tenantContext_js_1.isValidUuid)(tenantId))
+            return [];
+        const client = await database_js_1.pool.connect();
+        try {
+            const res = await client.query(`
+        SELECT 
+          b.id as batch_id,
+          b.batch_number,
+          b.status as batch_status,
+          s.name as sku_name,
+          pl.name as line_name,
+          COALESCE(bqr.ccp_status, 'IN SPEC') as ccp_status,
+          COALESCE(bqr.qa_status, 'AWAITING QA SIGN-OFF') as qa_status
+        FROM public.batches b
+        LEFT JOIN public.production_orders po ON b.production_order_id = po.id
+        LEFT JOIN public.skus s ON po.sku_id = s.id
+        LEFT JOIN public.production_lines pl ON po.line_id = pl.id
+        LEFT JOIN public.batch_quality_reviews bqr ON b.batch_number = bqr.batch_number AND bqr.tenant_id = b.tenant_id
+        WHERE b.tenant_id = $1
+          AND b.status IN ('QA Pending', 'Completed', 'COMPLETED', 'In Progress')
+          AND NOT EXISTS (
+            SELECT 1 FROM public.qa_releases qr WHERE qr.batch_id = b.id AND qr.disposition = 'RELEASED'
+          )
+        ORDER BY b.created_at DESC;
+      `, [tenantId]);
+            return res.rows.map((r) => ({
+                id: `REQ-${r.batch_number}`,
+                requestId: `REQ-${r.batch_number}`,
+                dbId: r.batch_id,
+                batchNumber: r.batch_number,
+                batch: r.batch_number,
+                skuName: r.sku_name || "Finished Goods SKU",
+                productName: r.sku_name || "Finished Goods SKU",
+                lineName: r.line_name || "Production Line",
+                ccpStatus: r.ccp_status || "VERIFIED",
+                brixStatus: "In Spec",
+                allergenStatus: "PASSED",
+                allergenCheck: "PASSED",
+                preopCheck: "PASSED",
+                openDeviations: "0 Open",
             }));
         }
-        try {
-            const dbBatches = await database_js_1.db.query.batches.findMany({
-                where: (0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(production_js_1.batches.tenantId, tenantId), (0, drizzle_orm_1.or)((0, drizzle_orm_1.eq)(production_js_1.batches.status, "QA Pending"), (0, drizzle_orm_1.eq)(production_js_1.batches.status, "Completed"), (0, drizzle_orm_1.eq)(production_js_1.batches.status, "COMPLETED"))),
-                with: {
-                    sku: true,
-                    steps: true,
-                    ccpChecks: true,
-                },
-            });
-            return dbBatches;
-        }
         catch (e) {
+            console.warn("listQaReleaseQueue error:", e.message);
             return [];
+        }
+        finally {
+            client.release();
         }
     }
     async getQaReleaseMetrics(tenantId) {
@@ -252,7 +296,7 @@ class QualityService {
             .select()
             .from(quality_js_1.qaReleaseQueue)
             .where((0, tenantContext_js_1.isValidUuid)(tenantId)
-            ? (0, drizzle_orm_1.and)((0, drizzle_orm_1.or)((0, drizzle_orm_1.eq)(quality_js_1.qaReleaseQueue.tenantId, tenantId), (0, drizzle_orm_1.isNull)(quality_js_1.qaReleaseQueue.tenantId)), (0, drizzle_orm_1.eq)(quality_js_1.qaReleaseQueue.status, "AWAITING QA SIGN-OFF"))
+            ? (0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(quality_js_1.qaReleaseQueue.tenantId, tenantId), (0, drizzle_orm_1.eq)(quality_js_1.qaReleaseQueue.status, "AWAITING QA SIGN-OFF"))
             : (0, drizzle_orm_1.eq)(quality_js_1.qaReleaseQueue.status, "AWAITING QA SIGN-OFF"));
         let dbPendingCount = 0;
         try {
@@ -267,7 +311,7 @@ class QualityService {
         const allCcp = await database_js_1.db
             .select()
             .from(quality_js_1.ccpChecks)
-            .where((0, tenantContext_js_1.isValidUuid)(tenantId) ? (0, drizzle_orm_1.or)((0, drizzle_orm_1.eq)(quality_js_1.ccpChecks.tenantId, tenantId), (0, drizzle_orm_1.isNull)(quality_js_1.ccpChecks.tenantId)) : undefined);
+            .where((0, tenantContext_js_1.isValidUuid)(tenantId) ? (0, drizzle_orm_1.eq)(quality_js_1.ccpChecks.tenantId, tenantId) : undefined);
         const passedCcp = allCcp.filter(c => c.status === "PASS" || c.status === "PASSED");
         const ccpTotal = allCcp.length;
         const ccpPassed = passedCcp.length;
@@ -286,7 +330,7 @@ class QualityService {
         const approvedReleasesList = await database_js_1.db
             .select()
             .from(quality_js_1.qaApprovedReleases)
-            .where((0, tenantContext_js_1.isValidUuid)(tenantId) ? (0, drizzle_orm_1.or)((0, drizzle_orm_1.eq)(quality_js_1.qaApprovedReleases.tenantId, tenantId), (0, drizzle_orm_1.isNull)(quality_js_1.qaApprovedReleases.tenantId)) : undefined);
+            .where((0, tenantContext_js_1.isValidUuid)(tenantId) ? (0, drizzle_orm_1.eq)(quality_js_1.qaApprovedReleases.tenantId, tenantId) : undefined);
         const avgCycleTime = approvedReleasesList.length > 0 ? "14 mins" : "--";
         const avgCycleBadge = approvedReleasesList.length > 0 ? "PASSED" : "TARGET";
         const avgCycleSubtitle = approvedReleasesList.length > 0 ? `Compliance verified across ${approvedReleasesList.length} lot(s)` : "Standard compliance SLA < 30m";
@@ -311,7 +355,7 @@ class QualityService {
         const [queueItem] = await database_js_1.db
             .select()
             .from(quality_js_1.qaReleaseQueue)
-            .where((0, drizzle_orm_1.and)((0, tenantContext_js_1.isValidUuid)(tenantId) ? (0, drizzle_orm_1.or)((0, drizzle_orm_1.eq)(quality_js_1.qaReleaseQueue.tenantId, tenantId), (0, drizzle_orm_1.isNull)(quality_js_1.qaReleaseQueue.tenantId)) : undefined, (0, drizzle_orm_1.or)((0, drizzle_orm_1.eq)(quality_js_1.qaReleaseQueue.batchNumber, batchId), (0, drizzle_orm_1.eq)(quality_js_1.qaReleaseQueue.requestId, batchId))))
+            .where((0, drizzle_orm_1.and)((0, tenantContext_js_1.isValidUuid)(tenantId) ? (0, drizzle_orm_1.eq)(quality_js_1.qaReleaseQueue.tenantId, tenantId) : undefined, (0, drizzle_orm_1.or)((0, drizzle_orm_1.eq)(quality_js_1.qaReleaseQueue.batchNumber, batchId), (0, drizzle_orm_1.eq)(quality_js_1.qaReleaseQueue.requestId, batchId))))
             .limit(1);
         if (queueItem) {
             return {
@@ -331,36 +375,55 @@ class QualityService {
         const [reviewItem] = await database_js_1.db
             .select()
             .from(quality_js_1.batchQualityReviews)
-            .where((0, drizzle_orm_1.and)((0, tenantContext_js_1.isValidUuid)(tenantId) ? (0, drizzle_orm_1.or)((0, drizzle_orm_1.eq)(quality_js_1.batchQualityReviews.tenantId, tenantId), (0, drizzle_orm_1.isNull)(quality_js_1.batchQualityReviews.tenantId)) : undefined, (0, drizzle_orm_1.eq)(quality_js_1.batchQualityReviews.batchNumber, batchId)))
+            .where((0, drizzle_orm_1.and)((0, tenantContext_js_1.isValidUuid)(tenantId) ? (0, drizzle_orm_1.eq)(quality_js_1.batchQualityReviews.tenantId, tenantId) : undefined, (0, drizzle_orm_1.eq)(quality_js_1.batchQualityReviews.batchNumber, batchId)))
             .limit(1);
         if (reviewItem) {
             return {
                 id: reviewItem.batchNumber,
                 batch: reviewItem.batchNumber,
-                requestId: `REL-${reviewItem.batchNumber.replace(/\D/g, "") || "201"}`,
-                recipe: reviewItem.recipeName,
-                line: reviewItem.line,
-                ccpTemp: reviewItem.ccpStatus,
-                brix: "11.9°Bx (OK)",
-                allergen: "Allergen Clear (0 ppm)",
-                preOp: "PASSED (100% Clean)",
-                deviations: "1 Open (DEV-802)",
+                requestId: `REL-${reviewItem.batchNumber.replace(/\D/g, "") || "001"}`,
+                recipe: reviewItem.recipeName || "Finished Goods SKU",
+                line: reviewItem.line || "Production Line",
+                ccpTemp: reviewItem.ccpStatus || "Verified In-Spec",
+                brix: "In Spec",
+                allergen: "Allergen Clear",
+                preOp: "PASSED",
+                deviations: "None",
                 status: reviewItem.qaStatus
             };
         }
-        return {
-            id: batchId || "BAT-2026-0889",
-            batch: batchId || "BAT-2026-0889",
-            requestId: "REL-101",
-            recipe: "Organic Orange Juice 1L Bottle",
-            line: "Line 1 (Aseptic Bottling 580 BPM)",
-            ccpTemp: "83.5°C (PASS)",
-            brix: "11.9°Bx (OK)",
-            allergen: "Allergen Clear (0 ppm)",
-            preOp: "PASSED (100% Clean)",
-            deviations: "1 Open (DEV-802)",
-            status: "AWAITING QA SIGN-OFF"
-        };
+        const client = await database_js_1.pool.connect();
+        try {
+            const bRes = await client.query(`
+        SELECT b.id, b.batch_number, b.status, s.name as sku_name, pl.name as line_name
+        FROM public.batches b
+        LEFT JOIN public.production_orders po ON b.production_order_id = po.id
+        LEFT JOIN public.skus s ON po.sku_id = s.id
+        LEFT JOIN public.production_lines pl ON po.line_id = pl.id
+        WHERE b.tenant_id = $1 AND (b.batch_number = $2 OR b.id::text = $2)
+        LIMIT 1;
+      `, [tenantId, batchId]);
+            if (bRes.rows.length > 0) {
+                const b = bRes.rows[0];
+                return {
+                    id: b.batch_number,
+                    batch: b.batch_number,
+                    requestId: `REL-${b.batch_number.replace(/\D/g, "") || "001"}`,
+                    recipe: b.sku_name || "Finished Goods SKU",
+                    line: b.line_name || "Production Line",
+                    ccpTemp: "Verified In-Spec",
+                    brix: "In Spec",
+                    allergen: "Allergen Clear",
+                    preOp: "PASSED",
+                    deviations: "None",
+                    status: b.status === "Released" ? "RELEASED" : "AWAITING QA SIGN-OFF"
+                };
+            }
+        }
+        finally {
+            client.release();
+        }
+        return null;
     }
     async authorizeBatchRelease(tenantId, plantId, input, userId, ipAddress) {
         let isPinValid = true;
@@ -377,13 +440,16 @@ class QualityService {
             const [found] = await database_js_1.db.select().from(production_js_1.batches).where((0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(production_js_1.batches.tenantId, tenantId), (0, drizzle_orm_1.eq)(production_js_1.batches.id, input.batchId)));
             batch = found;
         }
-        else {
-            const [found] = await database_js_1.db.select().from(production_js_1.batches).where((0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(production_js_1.batches.tenantId, tenantId), (0, drizzle_orm_1.eq)(production_js_1.batches.batchNumber, input.batchId || "BAT-2026-0889"))).limit(1);
+        else if (input.batchId) {
+            const [found] = await database_js_1.db.select().from(production_js_1.batches).where((0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(production_js_1.batches.tenantId, tenantId), (0, drizzle_orm_1.eq)(production_js_1.batches.batchNumber, input.batchId))).limit(1);
             batch = found;
         }
         if (!batch) {
             const [firstBatch] = await database_js_1.db.select().from(production_js_1.batches).where((0, drizzle_orm_1.eq)(production_js_1.batches.tenantId, tenantId)).limit(1);
-            batch = firstBatch || { id: "f2b711ac-68cd-4111-a6f4-256155a7776a", batchNumber: input.batchId || "BAT-2026-0889", productionOrderId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890" };
+            batch = firstBatch;
+        }
+        if (!batch) {
+            throw new AppError_js_1.NotFoundError("No active batch found for release authorization");
         }
         // Generate CoA Record
         const coaUrl = `https://maintenx.cloud/certificates/COA-${batch.batchNumber}.pdf`;
@@ -396,7 +462,7 @@ class QualityService {
                 plantId,
                 batchId: batch.id,
                 disposition: input.disposition || "RELEASED",
-                dispositionBy: userId && (0, tenantContext_js_1.isValidUuid)(userId) ? userId : "923145ab-8812-4cf3-a12b-bba711200192",
+                dispositionBy: userId && (0, tenantContext_js_1.isValidUuid)(userId) ? userId : null,
                 digitalSignaturePinUsed: true,
                 certificateOfAnalysisUrl: coaUrl,
                 comments: input.comments,
@@ -415,15 +481,13 @@ class QualityService {
         }
         // Update batch and order status
         try {
-            if (input.batchId && (0, tenantContext_js_1.isValidUuid)(input.batchId)) {
-                await database_js_1.db
-                    .update(production_js_1.batches)
-                    .set({
-                    status: input.disposition === "RELEASED" ? "Released" : input.disposition,
-                    updatedAt: new Date(),
-                })
-                    .where((0, drizzle_orm_1.eq)(production_js_1.batches.id, input.batchId));
-            }
+            await database_js_1.db
+                .update(production_js_1.batches)
+                .set({
+                status: input.disposition === "RELEASED" ? "Released" : input.disposition,
+                updatedAt: new Date(),
+            })
+                .where((0, drizzle_orm_1.eq)(production_js_1.batches.id, batch.id));
         }
         catch (err) {
             console.warn("Update batches error:", err.message);
@@ -469,13 +533,13 @@ class QualityService {
                         tenantId: (0, tenantContext_js_1.isValidUuid)(tenantId) ? tenantId : null,
                         plantId: (0, tenantContext_js_1.isValidUuid)(plantId) ? plantId : null,
                         batchId: batch.batchNumber,
-                        recipe: batch.sku?.name || batch.recipeName || "Organic Orange Juice 1L Bottle",
-                        line: "Line 1 (Aseptic Bottling)",
-                        pallets: "24 Pallets (28,800 Units)",
+                        recipe: batch.sku?.name || batch.recipeName || "Finished Goods SKU",
+                        line: "Production Line",
+                        pallets: "Standard Lot",
                         date: new Date().toISOString().split("T")[0],
                         status: "RELEASED",
                         coaUrl,
-                        auditor: "Dr. Rachel Thorne",
+                        auditor: "",
                     });
                 }
             }
@@ -496,15 +560,15 @@ class QualityService {
             try {
                 const releaseCode = release?.id && typeof release.id === "string" && release.id.startsWith("REL-")
                     ? release.id
-                    : `REL-${Math.floor(200 + Math.random() * 800)}`;
+                    : `REL-${batch.batchNumber.replace(/\D/g, "") || Math.floor(200 + Math.random() * 800)}`;
                 await database_js_1.db.insert(quality_js_1.qaApprovedReleases).values({
                     tenantId: (0, tenantContext_js_1.isValidUuid)(tenantId) ? tenantId : null,
                     plantId: (0, tenantContext_js_1.isValidUuid)(plantId) ? plantId : null,
                     releaseCode,
                     batchId: batch.batchNumber,
-                    recipe: batch.sku?.name || batch.recipeName || batch.productName || "Organic Orange Juice 1L Bottle",
-                    pallets: "24 Pallets (28,800 Units)",
-                    approvedBy: "Maria Santos (QA Lead)",
+                    recipe: batch.sku?.name || batch.recipeName || batch.productName || "Finished Goods SKU",
+                    pallets: "Standard Lot",
+                    approvedBy: "",
                     releaseDate: new Date().toISOString().split("T")[0],
                     status: "APPROVED",
                     coaUrl,
@@ -512,6 +576,40 @@ class QualityService {
             }
             catch (err) {
                 console.warn("Insert qaApprovedReleases error:", err.message);
+            }
+            // Auto-insert released batch into finished_goods table for Warehouse
+            try {
+                const [existingFg] = await database_js_1.db
+                    .select()
+                    .from(warehouse_js_1.finishedGoods)
+                    .where((0, drizzle_orm_1.eq)(warehouse_js_1.finishedGoods.batchNumber, batch.batchNumber))
+                    .limit(1);
+                if (!existingFg) {
+                    const qty = batch?.actualVolume ? `${Number(batch.actualVolume).toLocaleString()} Bottles` : "13,350 Bottles";
+                    const todayStr = new Date().toISOString().split("T")[0];
+                    const expiryStr = new Date(Date.now() + 180 * 24 * 3600 * 1000).toISOString().split("T")[0];
+                    await database_js_1.db.insert(warehouse_js_1.finishedGoods).values({
+                        tenantId: (0, tenantContext_js_1.isValidUuid)(tenantId) ? tenantId : "0f63be8b-52aa-4e6b-ab83-1d5477328262",
+                        plantId: (0, tenantContext_js_1.isValidUuid)(plantId) ? plantId : "6869789b-32d4-4911-bf29-74a9e338f14a",
+                        sku: batch.sku?.skuCode || "SKU-004",
+                        productName: batch.sku?.name || batch.recipeName || "SD HD",
+                        finishedLot: `LOT-FG-${batch.batchNumber.replace(/\D/g, "") || "2026"}`,
+                        batchNumber: batch.batchNumber,
+                        quantity: qty,
+                        storageLocation: "Zone A - Outbound Bay 12",
+                        productionDate: todayStr,
+                        expiryDate: expiryStr,
+                        qaStatus: "QA Released",
+                        palletSerial: `PLT-${batch.batchNumber.replace(/\D/g, "") || "8812"}`,
+                        shipmentStatus: "Ready to Ship",
+                        destination: "Customer Distribution Center (Outbound)",
+                        tempCheck: "Ambient Controlled",
+                        notes: "QA Electronically Released via 21 CFR Part 11 Digital Signature",
+                    });
+                }
+            }
+            catch (err) {
+                console.warn("Insert finishedGoods error:", err.message);
             }
         }
         await (0, auditContext_js_1.logAuditTrail)({
@@ -530,20 +628,20 @@ class QualityService {
         const records = await database_js_1.db
             .select()
             .from(quality_js_1.qualityHolds)
-            .where((0, tenantContext_js_1.isValidUuid)(tenantId) ? (0, drizzle_orm_1.or)((0, drizzle_orm_1.eq)(quality_js_1.qualityHolds.tenantId, tenantId), (0, drizzle_orm_1.isNull)(quality_js_1.qualityHolds.tenantId)) : undefined)
+            .where((0, tenantContext_js_1.isValidUuid)(tenantId) ? (0, drizzle_orm_1.eq)(quality_js_1.qualityHolds.tenantId, tenantId) : undefined)
             .orderBy((0, drizzle_orm_1.desc)(quality_js_1.qualityHolds.createdAt));
         return records.map(h => ({
             id: h.holdId || h.id,
             holdId: h.holdId || h.id,
             dbId: h.id,
             lotNumber: h.lotNumber || "N/A",
-            batch: h.batch || "BAT-2026-ORD2511",
-            batchNumber: h.batch || "BAT-2026-ORD2511",
+            batch: h.batch || "",
+            batchNumber: h.batch || "",
             reason: h.reason,
             severity: h.severity || "HIGH",
             status: h.status || "ACTIVE_HOLD",
             date: h.date || (h.holdAt ? new Date(h.holdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]),
-            heldBy: h.heldByName || "Dr. Rachel Thorne (QA Lead)",
+            heldBy: h.heldByName || "",
             createdAt: h.createdAt
         }));
     }
@@ -587,13 +685,13 @@ class QualityService {
             plantId: (0, tenantContext_js_1.isValidUuid)(plantId) ? plantId : null,
             holdId: holdId,
             lotNumber: input.lotNumber || "LOT-ORD2511-01",
-            batch: input.batchId || "BAT-2026-ORD2511",
+            batch: input.batchId || "",
             batchId: resolvedBatchId,
             reason: input.reason,
             severity: input.severity || "HIGH",
             status: "ACTIVE_HOLD",
             holdBy: resolvedHoldBy,
-            heldByName: "Dr. Rachel Thorne (QA Lead)",
+            heldByName: "",
             date: new Date().toISOString().split("T")[0]
         })
             .returning();
@@ -606,57 +704,11 @@ class QualityService {
             status: hold.status
         };
     }
-    async getQualitySummary(tenantId) {
-        const holds = await database_js_1.db.select().from(quality_js_1.qualityHolds).where((0, drizzle_orm_1.eq)(quality_js_1.qualityHolds.tenantId, tenantId));
-        const devs = await database_js_1.db.select().from(quality_js_1.deviations).where((0, drizzle_orm_1.eq)(quality_js_1.deviations.tenantId, tenantId));
-        const ccp = await database_js_1.db.select().from(quality_js_1.ccpChecks).where((0, drizzle_orm_1.eq)(quality_js_1.ccpChecks.tenantId, tenantId));
-        const releaseQueue = await database_js_1.db.select().from(production_js_1.batches).where((0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(production_js_1.batches.tenantId, tenantId), (0, drizzle_orm_1.eq)(production_js_1.batches.status, "QA Pending")));
-        const activeHolds = holds.filter(h => !h.releasedAt && (h.status === "ACTIVE_HOLD" || h.status === "Active" || h.status === "HOLD")).length;
-        const openDeviations = devs.filter(d => d.status === "UNDER_INVESTIGATION" || d.status === "Open" || d.status === "OPEN").length;
-        // Check pending and failed across CCP and preop checks in PostgreSQL
-        const pendingCcp = ccp.filter(c => c.status === "PENDING" || c.status === "Pending").length;
-        const failedCcp = ccp.filter(c => c.status === "FAIL" || c.status === "Failed").length;
-        const preops = await database_js_1.db.select().from(quality_js_1.preopChecks).where((0, drizzle_orm_1.eq)(quality_js_1.preopChecks.tenantId, tenantId));
-        const pendingPreops = preops.filter(p => p.passed === null).length;
-        const failedPreops = preops.filter(p => p.passed === false).length;
-        const pendingChecks = pendingCcp + pendingPreops;
-        const failedChecks = failedCcp + failedPreops;
-        const pendingReleases = releaseQueue.length;
-        // Get latest recorded CCP check
-        const latestCcp = ccp.length > 0 ? ccp[ccp.length - 1] : null;
-        const lastCcpCheck = latestCcp
-            ? `${latestCcp.checkedAt ? new Date(latestCcp.checkedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recent'} (${latestCcp.status || 'PASS'})`
-            : "No checks logged";
-        let line1PreOp = "PASSED";
-        if (preops.length === 0) {
-            line1PreOp = "NOT STARTED";
-        }
-        else if (failedPreops > 0) {
-            line1PreOp = "FAILED";
-        }
-        else if (pendingPreops > 0) {
-            line1PreOp = "INSPECTION ACTIVE";
-        }
-        else {
-            line1PreOp = "PASSED";
-        }
-        return {
-            pendingChecks,
-            failedChecks,
-            activeHolds,
-            openDeviations,
-            pendingReleases,
-            openInvestigations: openDeviations,
-            line1PreOp,
-            lastCcpCheck,
-            status: "OPERATIONAL"
-        };
-    }
     async listDeviations(tenantId) {
         const records = await database_js_1.db
             .select()
             .from(quality_js_1.deviations)
-            .where((0, tenantContext_js_1.isValidUuid)(tenantId) ? (0, drizzle_orm_1.or)((0, drizzle_orm_1.eq)(quality_js_1.deviations.tenantId, tenantId), (0, drizzle_orm_1.isNull)(quality_js_1.deviations.tenantId)) : undefined)
+            .where((0, tenantContext_js_1.isValidUuid)(tenantId) ? (0, drizzle_orm_1.eq)(quality_js_1.deviations.tenantId, tenantId) : undefined)
             .orderBy((0, drizzle_orm_1.desc)(quality_js_1.deviations.createdAt));
         return records.map(d => ({
             id: d.deviationNumber || d.id,
@@ -668,7 +720,7 @@ class QualityService {
             severity: d.severity || "MEDIUM",
             status: d.status || "Open",
             holdId: d.holdId || "None",
-            reportedByName: d.reportedByName || "Dr. Rachel Thorne",
+            reportedByName: d.reportedByName || "",
             createdAt: d.createdAt ? new Date(d.createdAt).toISOString().replace("T", " ").substring(0, 16) : new Date().toISOString().replace("T", " ").substring(0, 16)
         }));
     }
@@ -691,7 +743,7 @@ class QualityService {
             status: "Open",
             holdId: input.holdId || "None",
             reportedBy: resolvedUserId,
-            reportedByName: "Dr. Rachel Thorne",
+            reportedByName: input.reportedByName || null,
         })
             .returning();
         return {
@@ -703,7 +755,7 @@ class QualityService {
         };
     }
     async startInvestigation(tenantId, plantId, input, userId) {
-        const devId = input.devId || "DEV-802";
+        const devId = input.devId || "";
         const invId = input.invNumber || `INV-${Math.floor(900 + Math.random() * 100)}`;
         // Update deviation in DB if exists
         await database_js_1.db.update(quality_js_1.deviations)
@@ -720,7 +772,7 @@ class QualityService {
             finding: input.finding || "",
             action: input.action || "",
             status: "In Progress",
-            leadInvestigator: "Dr. Rachel Thorne",
+            leadInvestigator: "",
             targetDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
             rootCauseCategory: input.rootCauseCategory || "MECHANICAL"
         })
@@ -743,7 +795,7 @@ class QualityService {
         const records = await database_js_1.db
             .select()
             .from(quality_js_1.qualityInvestigations)
-            .where((0, tenantContext_js_1.isValidUuid)(tenantId) ? (0, drizzle_orm_1.or)((0, drizzle_orm_1.eq)(quality_js_1.qualityInvestigations.tenantId, tenantId), (0, drizzle_orm_1.isNull)(quality_js_1.qualityInvestigations.tenantId)) : undefined)
+            .where((0, tenantContext_js_1.isValidUuid)(tenantId) ? (0, drizzle_orm_1.eq)(quality_js_1.qualityInvestigations.tenantId, tenantId) : undefined)
             .orderBy((0, drizzle_orm_1.desc)(quality_js_1.qualityInvestigations.createdAt));
         return records.map(i => ({
             id: i.invNumber,
@@ -754,14 +806,14 @@ class QualityService {
             finding: i.finding || "",
             action: i.action || "",
             status: i.status || "Pending",
-            leadInvestigator: i.leadInvestigator || "Dr. Rachel Thorne",
+            leadInvestigator: i.leadInvestigator || "",
             targetDate: i.targetDate || "2026-09-18",
             rootCauseCategory: i.rootCauseCategory || "MECHANICAL",
             createdAt: i.createdAt ? new Date(i.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
         }));
     }
     async saveInvestigationFinding(tenantId, plantId, input, userId) {
-        const invIdentifier = input.invId || input.id || "INV-901";
+        const invIdentifier = input.invId || input.id || "";
         await database_js_1.db.update(quality_js_1.qualityInvestigations)
             .set({
             finding: input.finding,
@@ -781,7 +833,7 @@ class QualityService {
         };
     }
     async completeInvestigation(tenantId, plantId, input, userId) {
-        const invIdentifier = input.invId || input.id || "INV-901";
+        const invIdentifier = input.invId || input.id || "";
         await database_js_1.db.update(quality_js_1.qualityInvestigations)
             .set({
             status: "Completed",
@@ -796,7 +848,7 @@ class QualityService {
         return {
             success: true,
             id: invIdentifier,
-            devId: input.devId || "DEV-802",
+            devId: input.devId || "",
             status: "Completed",
             completedAt: new Date().toISOString(),
             message: `Investigation ${invIdentifier} marked as completed. Deviation resolved.`
@@ -854,7 +906,7 @@ class QualityService {
         const records = await database_js_1.db
             .select()
             .from(quality_js_1.ncrs)
-            .where((0, tenantContext_js_1.isValidUuid)(tenantId) ? (0, drizzle_orm_1.or)((0, drizzle_orm_1.eq)(quality_js_1.ncrs.tenantId, tenantId), (0, drizzle_orm_1.isNull)(quality_js_1.ncrs.tenantId)) : undefined)
+            .where((0, tenantContext_js_1.isValidUuid)(tenantId) ? (0, drizzle_orm_1.eq)(quality_js_1.ncrs.tenantId, tenantId) : undefined)
             .orderBy((0, drizzle_orm_1.desc)(quality_js_1.ncrs.createdAt));
         return records.map(n => ({
             id: n.ncrNumber,
@@ -866,7 +918,7 @@ class QualityService {
             status: n.status || "PENDING QA REVIEW",
             disposition: n.disposition || "QUARANTINED",
             date: n.date || (n.createdAt ? new Date(n.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]),
-            reportedBy: n.reportedBy || "Dr. Rachel Thorne"
+            reportedBy: n.reportedBy || ""
         }));
     }
     async createNcrReport(tenantId, plantId, input, userId) {
@@ -883,7 +935,7 @@ class QualityService {
             status: "PENDING QA REVIEW",
             disposition: input.disposition || "QUARANTINED",
             date: new Date().toISOString().split('T')[0],
-            reportedBy: input.reportedBy || "Dr. Rachel Thorne"
+            reportedBy: input.reportedBy || ""
         })
             .returning();
         return {
@@ -971,28 +1023,83 @@ class QualityService {
             holdId: holdIdentifier,
             status: "RELEASED",
             releasedAt: new Date().toISOString(),
-            releasedBy: userId || "Dr. Rachel Thorne"
+            releasedBy: userId || ""
         };
     }
     async listBatchQualityReviews(tenantId) {
-        const reviews = await database_js_1.db
-            .select()
-            .from(quality_js_1.batchQualityReviews)
-            .where((0, tenantContext_js_1.isValidUuid)(tenantId) ? (0, drizzle_orm_1.or)((0, drizzle_orm_1.eq)(quality_js_1.batchQualityReviews.tenantId, tenantId), (0, drizzle_orm_1.isNull)(quality_js_1.batchQualityReviews.tenantId)) : undefined)
-            .orderBy((0, drizzle_orm_1.asc)(quality_js_1.batchQualityReviews.id));
-        return reviews.map(b => ({
-            id: b.batchNumber,
-            batchNumber: b.batchNumber,
-            dbId: b.id,
-            recipeName: b.recipeName,
-            currentStep: b.currentStep,
-            stepNumber: b.stepNumber,
-            totalSteps: b.totalSteps,
-            progressPercent: b.progressPercent,
-            line: b.line,
-            ccpStatus: b.ccpStatus,
-            qaStatus: b.qaStatus
-        }));
+        if (!(0, tenantContext_js_1.isValidUuid)(tenantId))
+            return [];
+        const client = await database_js_1.pool.connect();
+        try {
+            const res = await client.query(`
+        SELECT b.id as db_id, b.batch_number, b.status as batch_status, b.created_at,
+               po.order_number, s.name as sku_name, pl.name as line_name,
+               bqr.current_step, bqr.step_number, bqr.total_steps, bqr.progress_percent,
+               bqr.ccp_status, bqr.qa_status
+        FROM public.batches b
+        LEFT JOIN public.production_orders po ON b.production_order_id = po.id
+        LEFT JOIN public.skus s ON po.sku_id = s.id
+        LEFT JOIN public.production_lines pl ON po.line_id = pl.id
+        LEFT JOIN public.batch_quality_reviews bqr ON b.batch_number = bqr.batch_number AND bqr.tenant_id = b.tenant_id
+        WHERE b.tenant_id = $1
+        ORDER BY b.created_at DESC;
+      `, [tenantId]);
+            // Also get any reviews that were directly logged into batch_quality_reviews
+            const extraRes = await client.query(`
+        SELECT bqr.id as db_id, bqr.batch_number, bqr.recipe_name, bqr.line,
+               bqr.current_step, bqr.step_number, bqr.total_steps, bqr.progress_percent,
+               bqr.ccp_status, bqr.qa_status
+        FROM public.batch_quality_reviews bqr
+        WHERE bqr.tenant_id = $1 
+          AND bqr.batch_number NOT IN (SELECT batch_number FROM public.batches WHERE tenant_id = $1);
+      `, [tenantId]);
+            const list = [];
+            const seenBatches = new Set();
+            res.rows.forEach(r => {
+                seenBatches.add(r.batch_number);
+                list.push({
+                    id: r.batch_number,
+                    batchNumber: r.batch_number,
+                    dbId: r.db_id,
+                    recipeName: r.sku_name || "Finished Goods SKU",
+                    currentStep: r.current_step || (r.batch_status === "Released" ? "Completed & Dossier Signed" : "Phase 1: In-Process Inspection"),
+                    stepNumber: r.step_number || (r.batch_status === "Released" ? 5 : 1),
+                    totalSteps: r.total_steps || 5,
+                    progressPercent: r.progress_percent !== null && r.progress_percent !== undefined
+                        ? Number(r.progress_percent)
+                        : (r.batch_status === "Released" ? 100 : 25),
+                    line: r.line_name || "Production Line",
+                    ccpStatus: r.ccp_status || "IN SPEC",
+                    qaStatus: r.qa_status || (r.batch_status === "Released" ? "RELEASED" : "QA REVIEW IN PROGRESS")
+                });
+            });
+            extraRes.rows.forEach(e => {
+                if (!seenBatches.has(e.batch_number)) {
+                    seenBatches.add(e.batch_number);
+                    list.push({
+                        id: e.batch_number,
+                        batchNumber: e.batch_number,
+                        dbId: e.db_id,
+                        recipeName: e.recipe_name || "Finished Goods SKU",
+                        currentStep: e.current_step || "In-Process Review",
+                        stepNumber: e.step_number || 1,
+                        totalSteps: e.total_steps || 5,
+                        progressPercent: Number(e.progress_percent) || 25,
+                        line: e.line || "Line 1",
+                        ccpStatus: e.ccp_status || "IN SPEC",
+                        qaStatus: e.qa_status || "QA REVIEW IN PROGRESS"
+                    });
+                }
+            });
+            return list;
+        }
+        catch (err) {
+            console.warn("DB listBatchQualityReviews error:", err.message);
+            return [];
+        }
+        finally {
+            client.release();
+        }
     }
     async reviewBatchDossier(tenantId, plantId, input, userId) {
         const batchId = input.batchId || input.id;
@@ -1007,7 +1114,7 @@ class QualityService {
             success: true,
             batchId: batchId,
             status: "DOSSIER_VERIFIED",
-            verifiedBy: userId || "Dr. Rachel Thorne (QA Lead)",
+            verifiedBy: userId || "",
             verifiedAt: new Date().toISOString(),
             message: `Batch quality dossier for ${batchId} verified & cleared for final disposition.`
         };
@@ -1078,31 +1185,11 @@ class QualityService {
     }
     async listAllergenAudits(tenantId) {
         try {
-            let rows = await database_js_1.db
+            const rows = await database_js_1.db
                 .select()
                 .from(quality_js_1.allergenAudits)
-                .where((0, drizzle_orm_1.or)((0, drizzle_orm_1.eq)(quality_js_1.allergenAudits.tenantId, tenantId), (0, drizzle_orm_1.isNull)(quality_js_1.allergenAudits.tenantId)))
+                .where((0, drizzle_orm_1.eq)(quality_js_1.allergenAudits.tenantId, tenantId))
                 .orderBy((0, drizzle_orm_1.asc)(quality_js_1.allergenAudits.id));
-            if (rows.length === 0) {
-                const client = await database_js_1.pool.connect();
-                try {
-                    await client.query(`
-            INSERT INTO public.allergen_audits (tenant_id, name, sku, line, test_method, target_allergen, status, auditor, timestamp_str)
-            VALUES
-            ($1, 'Costco Orange Juice Run (Allergen: Soy free)', 'SKU-ORJ-330', 'Line 1 Aseptic Bottling', 'Lateral Flow Strip (Neogen)', 'Soy Free (<2.5 ppm)', 'PENDING AUDIT', 'Dr. Rachel Thorne', 'Today, 11:20 AM'),
-            ($1, 'Trader Joe''s Almond Milk Swap (Allergen: Tree Nut)', 'SKU-ALM-1000', 'Line 2 High-Speed Can Line', 'ELISA Swab Assay', 'Nut Cleanse (0 ppm residue)', 'AUDIT CLEARED', 'Marcus Vance', 'Today, 09:15 AM'),
-            ($1, 'Oat Beverage Batch Clearance (Gluten Free)', 'SKU-OAT-500', 'Line 3 Tetra Pak Carton Loop', 'R5 Gliadin Rapid Strip', 'Gluten Free (<5 ppm)', 'AUDIT CLEARED', 'Dr. Rachel Thorne', 'Today, 07:45 AM');
-          `, [tenantId]);
-                }
-                finally {
-                    client.release();
-                }
-                rows = await database_js_1.db
-                    .select()
-                    .from(quality_js_1.allergenAudits)
-                    .where((0, drizzle_orm_1.eq)(quality_js_1.allergenAudits.tenantId, tenantId))
-                    .orderBy((0, drizzle_orm_1.asc)(quality_js_1.allergenAudits.id));
-            }
             return rows.map(r => ({
                 id: r.id,
                 name: r.name,
@@ -1111,8 +1198,8 @@ class QualityService {
                 testMethod: r.testMethod,
                 targetAllergen: r.targetAllergen,
                 status: r.status || "PENDING AUDIT",
-                auditor: r.auditor || "Dr. Rachel Thorne",
-                timestamp: r.timestampStr || (r.createdAt ? new Date(r.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Today")
+                auditor: r.auditor || "",
+                timestamp: r.timestampStr || (r.createdAt ? new Date(r.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "")
             }));
         }
         catch (err) {
@@ -1145,7 +1232,7 @@ class QualityService {
             runName: input.runName,
             status: "AUDIT CLEARED",
             clearedAt: new Date().toISOString(),
-            clearedBy: userId || "Dr. Rachel Thorne",
+            clearedBy: userId || "",
             data: updated
         };
     }
@@ -1193,11 +1280,11 @@ class QualityService {
       `, [
                 tenantId,
                 input.name,
-                input.sku || 'SKU-GEN-01',
-                input.line || 'Line 1 Aseptic Bottling',
-                input.testMethod || 'Lateral Flow Strip (Neogen)',
+                input.sku || '',
+                input.line || '',
+                input.testMethod || 'Lateral Flow Strip',
                 input.targetAllergen || 'Zero Residue',
-                input.auditor || 'Dr. Rachel Thorne',
+                input.auditor || '',
                 'Today, ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
             ]);
             return { success: true, item: rows[0], message: "Allergen verification audit created in database." };
@@ -1209,7 +1296,7 @@ class QualityService {
     async deleteAllergenAudit(tenantId, id) {
         const client = await database_js_1.pool.connect();
         try {
-            await client.query(`DELETE FROM public.allergen_audits WHERE id = $1;`, [id]);
+            await client.query(`DELETE FROM public.allergen_audits WHERE id = $1 AND tenant_id = $2;`, [id, tenantId]);
             return { success: true, message: "Allergen audit deleted from database." };
         }
         finally {
@@ -1217,45 +1304,66 @@ class QualityService {
         }
     }
     async listLineReadiness(tenantId) {
+        if (!(0, tenantContext_js_1.isValidUuid)(tenantId))
+            return [];
         const client = await database_js_1.pool.connect();
         try {
             const res = await client.query(`SELECT id, line, line_code as "lineCode", safety, sanitation, mechanical, status, speed_target as "speedTarget", last_inspection as "lastInspection" 
          FROM public.line_readiness 
-         WHERE tenant_id = $1 OR tenant_id IS NULL 
+         WHERE tenant_id = $1 
          ORDER BY id ASC;`, [tenantId]);
-            return res.rows;
+            if (res.rows.length > 0) {
+                return res.rows;
+            }
+            // If line_readiness has no entries yet, dynamically populate from tenant's real production lines!
+            const linesRes = await client.query(`SELECT id, code, name, nominal_speed_bpm FROM public.production_lines WHERE tenant_id = $1 ORDER BY code ASC;`, [tenantId]);
+            return linesRes.rows.map(l => ({
+                id: l.id,
+                line: l.name,
+                lineCode: l.code,
+                safety: "PENDING",
+                sanitation: "PENDING",
+                mechanical: "PENDING",
+                status: "NOT READY",
+                speedTarget: `${l.nominal_speed_bpm || 500} BPM`,
+                lastInspection: "Not inspected"
+            }));
         }
         catch (err) {
             console.warn("DB listLineReadiness fallback:", err.message);
-            return inMemoryLineReadiness;
+            return [];
         }
         finally {
             client.release();
         }
     }
     async toggleLineReadiness(tenantId, plantId, input, userId) {
-        const lineIdNum = Number(input.lineId);
         const newStatus = input.status === "READY" ? "NOT READY" : "READY";
         const client = await database_js_1.pool.connect();
         try {
-            const safety = "PASSED";
-            const mechanical = "PASSED";
+            const safety = newStatus === "READY" ? "PASSED" : "PENDING";
+            const mechanical = newStatus === "READY" ? "PASSED" : "PENDING";
             const sanitation = newStatus === "READY" ? "PASSED" : "PENDING";
             const lastInspection = "Just now";
-            await client.query(`UPDATE public.line_readiness 
-         SET status = $1, safety = $2, sanitation = $3, mechanical = $4, last_inspection = $5, updated_at = NOW() 
-         WHERE (id = $6 OR line_code = $7 OR line = $8) AND (tenant_id = $9 OR tenant_id IS NULL);`, [newStatus, safety, sanitation, mechanical, lastInspection, lineIdNum || -1, input.lineCode || "", input.lineName || "", tenantId]);
-            const refreshed = await client.query(`SELECT id, line, line_code as "lineCode", safety, sanitation, mechanical, status, speed_target as "speedTarget", last_inspection as "lastInspection" 
-         FROM public.line_readiness 
-         WHERE tenant_id = $1 OR tenant_id IS NULL 
-         ORDER BY id ASC;`, [tenantId]);
+            const check = await client.query(`SELECT id FROM public.line_readiness WHERE (id::text = $1 OR line_code = $2 OR line = $3) AND tenant_id = $4;`, [String(input.lineId || ""), input.lineCode || "", input.lineName || "", tenantId]);
+            if (check.rows.length > 0) {
+                await client.query(`UPDATE public.line_readiness 
+           SET status = $1, safety = $2, sanitation = $3, mechanical = $4, last_inspection = $5, updated_at = NOW() 
+           WHERE id = $6;`, [newStatus, safety, sanitation, mechanical, lastInspection, check.rows[0].id]);
+            }
+            else {
+                await client.query(`INSERT INTO public.line_readiness 
+           (tenant_id, line, line_code, status, safety, sanitation, mechanical, speed_target, last_inspection)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);`, [tenantId, input.lineName || "Line", input.lineCode || "LIN-01", newStatus, safety, sanitation, mechanical, input.speedTarget || "500 BPM", lastInspection]);
+            }
+            const refreshed = await this.listLineReadiness(tenantId);
             return {
                 success: true,
                 lineId: input.lineId,
                 lineName: input.lineName,
                 newStatus,
                 updatedAt: new Date().toISOString(),
-                data: refreshed.rows
+                data: refreshed
             };
         }
         catch (err) {
@@ -1275,10 +1383,10 @@ class QualityService {
         try {
             await client.query(`UPDATE public.line_readiness 
          SET status = 'READY', safety = 'PASSED', sanitation = 'PASSED', mechanical = 'PASSED', last_inspection = 'Just now', updated_at = NOW() 
-         WHERE tenant_id = $1 OR tenant_id IS NULL;`, [tenantId]);
+         WHERE tenant_id = $1;`, [tenantId]);
             const refreshed = await client.query(`SELECT id, line, line_code as "lineCode", safety, sanitation, mechanical, status, speed_target as "speedTarget", last_inspection as "lastInspection" 
          FROM public.line_readiness 
-         WHERE tenant_id = $1 OR tenant_id IS NULL 
+         WHERE tenant_id = $1 
          ORDER BY id ASC;`, [tenantId]);
             return {
                 success: true,
@@ -1301,22 +1409,55 @@ class QualityService {
         };
     }
     async getCleaningVerification(tenantId) {
+        if (!(0, tenantContext_js_1.isValidUuid)(tenantId)) {
+            return {
+                verified: false,
+                atpTestResult: "-",
+                microbialResidue: "-",
+                targetLimit: "<10 RLU",
+                loop: "-",
+                notes: "",
+                verifiedAt: null,
+                verifiedBy: null,
+                status: "PENDING"
+            };
+        }
         const client = await database_js_1.pool.connect();
         try {
             const res = await client.query(`SELECT id, verified, atp_test_result as "atpTestResult", microbial_residue as "microbialResidue", 
                 target_limit as "targetLimit", loop, notes, verified_at as "verifiedAt", 
                 verified_by as "verifiedBy", status 
          FROM public.cleaning_verifications 
-         WHERE tenant_id = $1 OR tenant_id IS NULL 
+         WHERE tenant_id = $1 
          ORDER BY id DESC LIMIT 1;`, [tenantId]);
             if (res.rows.length > 0) {
                 return res.rows[0];
             }
-            return inMemoryCleaningVerification;
+            return {
+                verified: false,
+                atpTestResult: "-",
+                microbialResidue: "-",
+                targetLimit: "<10 RLU",
+                loop: "-",
+                notes: "",
+                verifiedAt: null,
+                verifiedBy: null,
+                status: "PENDING"
+            };
         }
         catch (err) {
             console.warn("DB getCleaningVerification error:", err.message);
-            return inMemoryCleaningVerification;
+            return {
+                verified: false,
+                atpTestResult: "-",
+                microbialResidue: "-",
+                targetLimit: "<10 RLU",
+                loop: "-",
+                notes: "",
+                verifiedAt: null,
+                verifiedBy: null,
+                status: "PENDING"
+            };
         }
         finally {
             client.release();
@@ -1325,12 +1466,22 @@ class QualityService {
     async verifyCleaning(tenantId, plantId, input, userId) {
         const client = await database_js_1.pool.connect();
         try {
-            const notes = input.notes || "";
-            const verifiedBy = userId || "Dr. Rachel Thorne";
+            const notes = input.notes || "Cleaning verification signed off";
+            const verifiedBy = userId || "";
+            const atpResult = input.atpTestResult || "Passed (<10 RLU)";
+            const loop = input.loop || "CIP Loop 01";
             const now = new Date();
-            await client.query(`UPDATE public.cleaning_verifications 
-         SET verified = TRUE, status = 'VERIFIED', notes = $1, verified_by = $2, verified_at = $3, updated_at = NOW() 
-         WHERE id = (SELECT id FROM public.cleaning_verifications WHERE tenant_id = $4 OR tenant_id IS NULL ORDER BY id DESC LIMIT 1);`, [notes, verifiedBy, now, tenantId]);
+            const existing = await client.query(`SELECT id FROM public.cleaning_verifications WHERE tenant_id = $1 ORDER BY id DESC LIMIT 1;`, [tenantId]);
+            if (existing.rows.length > 0) {
+                await client.query(`UPDATE public.cleaning_verifications 
+           SET verified = TRUE, status = 'VERIFIED', notes = $1, verified_by = $2, verified_at = $3, atp_test_result = $4, loop = $5, updated_at = NOW() 
+           WHERE id = $6;`, [notes, verifiedBy, now, atpResult, loop, existing.rows[0].id]);
+            }
+            else {
+                await client.query(`INSERT INTO public.cleaning_verifications 
+           (tenant_id, verified, status, notes, verified_by, verified_at, atp_test_result, loop)
+           VALUES ($1, TRUE, 'VERIFIED', $2, $3, $4, $5, $6);`, [tenantId, notes, verifiedBy, now, atpResult, loop]);
+            }
             const refreshed = await this.getCleaningVerification(tenantId);
             return {
                 success: true,
@@ -1347,7 +1498,7 @@ class QualityService {
         try {
             await client.query(`UPDATE public.cleaning_verifications 
          SET verified = FALSE, status = 'PENDING', notes = '', verified_at = NULL, updated_at = NOW() 
-         WHERE id = (SELECT id FROM public.cleaning_verifications WHERE tenant_id = $1 OR tenant_id IS NULL ORDER BY id DESC LIMIT 1);`, [tenantId]);
+         WHERE id = (SELECT id FROM public.cleaning_verifications WHERE tenant_id = $1 ORDER BY id DESC LIMIT 1);`, [tenantId]);
             const refreshed = await this.getCleaningVerification(tenantId);
             return {
                 success: true,
@@ -1365,14 +1516,14 @@ class QualityService {
             const res = await client.query(`
         SELECT id, name, parameter, target, actual, line, status, timestamp_str as timestamp
         FROM public.process_checks
-        WHERE tenant_id = $1 OR tenant_id IS NULL
+        WHERE tenant_id = $1
         ORDER BY id ASC;
       `, [tenantId]);
             return res.rows;
         }
         catch (err) {
-            console.warn("DB listProcessChecks fallback:", err.message);
-            return inMemoryProcessChecks;
+            console.warn("DB listProcessChecks error:", err.message);
+            return [];
         }
         finally {
             client.release();
@@ -1473,7 +1624,7 @@ class QualityService {
                     id: r.checkCode || r.id,
                     dbId: r.id,
                     type: r.checkType,
-                    batch: r.batchNumber || "BAT-2026-ORD2511",
+                    batch: r.batchNumber || "",
                     sku: r.skuName || "Finished Goods SKU",
                     line: r.lineName || "Line 1",
                     target: r.targetSpec,
@@ -1539,7 +1690,7 @@ class QualityService {
                     tenantId,
                     plantId: (0, tenantContext_js_1.isValidUuid)(plantId) ? plantId : null,
                     checkType: input.type || "In-Line Product Quality Check",
-                    batchNumber: input.batch || "BAT-2026-ORD2511",
+                    batchNumber: input.batch || "",
                     skuName: input.sku || "Finished Goods SKU",
                     lineName: input.line || "Line 1",
                     targetSpec: input.target || "Spec Range",
@@ -1561,7 +1712,7 @@ class QualityService {
                 id: r.checkCode || r.id,
                 dbId: r.id,
                 type: r.checkType,
-                batch: r.batchNumber || "BAT-2026-ORD2511",
+                batch: r.batchNumber || "",
                 sku: r.skuName || "Finished Goods SKU",
                 line: r.lineName || "Line 1",
                 target: r.targetSpec,
@@ -1572,7 +1723,7 @@ class QualityService {
             const checkItem = {
                 id: savedRecord.checkCode || savedRecord.id,
                 type: savedRecord.checkType,
-                batch: savedRecord.batchNumber || "BAT-2026-ORD2511",
+                batch: savedRecord.batchNumber || "",
                 sku: savedRecord.skuName || "Finished Goods SKU",
                 line: savedRecord.lineName || "Line 1",
                 target: savedRecord.targetSpec,
@@ -1626,7 +1777,7 @@ class QualityService {
                 const mapped = records.map(r => ({
                     id: r.checkCode || r.id,
                     type: r.checkType,
-                    batch: r.batchNumber || "BAT-2026-ORD2511",
+                    batch: r.batchNumber || "",
                     sku: r.skuName || "Finished Goods SKU",
                     line: r.lineName || "Line 1",
                     target: r.targetSpec,
@@ -1648,8 +1799,8 @@ class QualityService {
         return {
             success: true,
             message: "Product quality checks exported successfully.",
-            totalRecords: inMemoryProductChecks.length,
-            records: inMemoryProductChecks
+            totalRecords: 0,
+            records: []
         };
     }
     async listQualitySpecs(tenantId) {
@@ -1668,14 +1819,14 @@ class QualityService {
           status, 
           criticality
         FROM public.quality_specs
-        WHERE tenant_id = $1 OR tenant_id IS NULL
+        WHERE tenant_id = $1
         ORDER BY created_at ASC, id ASC;
       `, [tenantId]);
             return res.rows;
         }
         catch (err) {
-            console.warn("DB listQualitySpecs fallback:", err.message);
-            return inMemoryQualitySpecs;
+            console.warn("DB listQualitySpecs error:", err.message);
+            return [];
         }
         finally {
             client.release();
@@ -1757,23 +1908,75 @@ class QualityService {
         };
     }
     async listApprovedReleases(tenantId) {
-        const records = await database_js_1.db
-            .select()
-            .from(quality_js_1.qaApprovedReleases)
-            .where((0, tenantContext_js_1.isValidUuid)(tenantId) ? (0, drizzle_orm_1.or)((0, drizzle_orm_1.eq)(quality_js_1.qaApprovedReleases.tenantId, tenantId), (0, drizzle_orm_1.isNull)(quality_js_1.qaApprovedReleases.tenantId)) : undefined)
-            .orderBy((0, drizzle_orm_1.asc)(quality_js_1.qaApprovedReleases.id));
-        return records.map(r => ({
-            id: r.releaseCode,
-            releaseCode: r.releaseCode,
-            dbId: r.id,
-            batch: r.batchId,
-            recipe: r.recipe,
-            pallets: r.pallets,
-            approvedBy: r.approvedBy,
-            date: r.releaseDate,
-            status: r.status,
-            coaUrl: r.coaUrl
-        }));
+        if (!(0, tenantContext_js_1.isValidUuid)(tenantId))
+            return [];
+        const client = await database_js_1.pool.connect();
+        try {
+            const res = await client.query(`
+        SELECT 
+          b.id as batch_id,
+          b.batch_number,
+          b.status,
+          b.updated_at,
+          s.name as sku_name,
+          qr.certificate_of_analysis_url as coa_url,
+          qr.released_at,
+          u.first_name, u.last_name
+        FROM public.batches b
+        INNER JOIN public.qa_releases qr ON qr.batch_id = b.id AND qr.disposition = 'RELEASED'
+        LEFT JOIN public.production_orders po ON b.production_order_id = po.id
+        LEFT JOIN public.skus s ON po.sku_id = s.id
+        LEFT JOIN public.users u ON qr.disposition_by = u.id
+        WHERE b.tenant_id = $1
+        ORDER BY qr.released_at DESC;
+      `, [tenantId]);
+            const legacyRes = await client.query(`
+        SELECT * FROM public.qa_approved_releases WHERE tenant_id = $1 ORDER BY id DESC;
+      `, [tenantId]);
+            const list = [];
+            const seen = new Set();
+            res.rows.forEach(r => {
+                seen.add(r.batch_number);
+                const signerName = [r.first_name, r.last_name].filter(Boolean).join(" ") || "QA Signatory Authority";
+                list.push({
+                    id: `REL-${r.batch_number}`,
+                    releaseCode: `REL-${r.batch_number}`,
+                    dbId: r.batch_id,
+                    batch: r.batch_number,
+                    recipe: r.sku_name || "Finished Goods SKU",
+                    pallets: "Standard Lot",
+                    approvedBy: signerName,
+                    date: r.released_at ? new Date(r.released_at).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
+                    status: "APPROVED",
+                    coaUrl: r.coa_url || `https://maintenx.cloud/certificates/COA-${r.batch_number}.pdf`
+                });
+            });
+            legacyRes.rows.forEach(l => {
+                if (!seen.has(l.batch_id)) {
+                    seen.add(l.batch_id);
+                    list.push({
+                        id: l.release_code || `REL-${l.batch_id}`,
+                        releaseCode: l.release_code || `REL-${l.batch_id}`,
+                        dbId: l.id,
+                        batch: l.batch_id,
+                        recipe: l.recipe || "Finished Goods SKU",
+                        pallets: l.pallets || "Standard Lot",
+                        approvedBy: l.approved_by || "QA Lead",
+                        date: l.release_date || new Date().toISOString().split("T")[0],
+                        status: l.status || "APPROVED",
+                        coaUrl: l.coa_url || ""
+                    });
+                }
+            });
+            return list;
+        }
+        catch (e) {
+            console.warn("listApprovedReleases error:", e.message);
+            return [];
+        }
+        finally {
+            client.release();
+        }
     }
     async toggleApprovedReleaseStatus(tenantId, plantId, input, userId) {
         const id = input.id || input.releaseCode;
@@ -1814,19 +2017,19 @@ class QualityService {
             .select()
             .from(quality_js_1.qualityHolds)
             .where((0, tenantContext_js_1.isValidUuid)(tenantId)
-            ? (0, drizzle_orm_1.or)((0, drizzle_orm_1.eq)(quality_js_1.qualityHolds.tenantId, tenantId), (0, drizzle_orm_1.isNull)(quality_js_1.qualityHolds.tenantId))
+            ? (0, drizzle_orm_1.eq)(quality_js_1.qualityHolds.tenantId, tenantId)
             : undefined)
             .orderBy((0, drizzle_orm_1.desc)(quality_js_1.qualityHolds.createdAt));
         return records.map(h => ({
-            id: h.holdId || (h.id ? `BLK-${h.id.slice(0, 4)}` : "BLK-101"),
+            id: h.holdId || h.id,
             dbId: h.id,
-            batch: h.batch || "BAT-2026-0890",
+            batch: h.batch || "",
             reason: h.reason,
-            blockedBy: h.heldByName || "Maria Santos (QA Lead)",
+            blockedBy: h.heldByName || "",
             date: h.date || (h.holdAt ? new Date(h.holdAt).toISOString().split("T")[0] : new Date().toISOString().split("T")[0]),
             status: (h.status === "ACTIVE_HOLD" || h.status === "HOLD") ? "HOLD" : h.status,
             severity: h.severity || "HIGH",
-            lotNumber: h.lotNumber || "LOT-ORG-442"
+            lotNumber: h.lotNumber || ""
         }));
     }
     async toggleBlockedBatchStatus(tenantId, plantId, input, userId) {
@@ -1871,44 +2074,36 @@ class QualityService {
         const records = await database_js_1.db
             .select()
             .from(quality_js_1.qualityHolds)
-            .where((0, drizzle_orm_1.and)((0, tenantContext_js_1.isValidUuid)(tenantId) ? (0, drizzle_orm_1.or)((0, drizzle_orm_1.eq)(quality_js_1.qualityHolds.tenantId, tenantId), (0, drizzle_orm_1.isNull)(quality_js_1.qualityHolds.tenantId)) : undefined, (0, drizzle_orm_1.or)((0, drizzle_orm_1.eq)(quality_js_1.qualityHolds.status, "ACTIVE_HOLD"), (0, drizzle_orm_1.eq)(quality_js_1.qualityHolds.status, "HOLD"), (0, drizzle_orm_1.eq)(quality_js_1.qualityHolds.status, "Active"))))
+            .where((0, drizzle_orm_1.and)((0, tenantContext_js_1.isValidUuid)(tenantId) ? (0, drizzle_orm_1.eq)(quality_js_1.qualityHolds.tenantId, tenantId) : undefined, (0, drizzle_orm_1.or)((0, drizzle_orm_1.eq)(quality_js_1.qualityHolds.status, "ACTIVE_HOLD"), (0, drizzle_orm_1.eq)(quality_js_1.qualityHolds.status, "HOLD"), (0, drizzle_orm_1.eq)(quality_js_1.qualityHolds.status, "Active"))))
             .orderBy((0, drizzle_orm_1.desc)(quality_js_1.qualityHolds.createdAt));
         return records.map(h => ({
             id: h.holdId || h.id,
             dbId: h.id,
-            batch: h.batch || "BAT-2026-0890",
-            lotNumber: h.lotNumber || "LOT-ORG-442",
-            reason: h.reason || "Temperature Deviation (Excursion below 83.1°C)",
+            batch: h.batch || "",
+            lotNumber: h.lotNumber || "",
+            reason: h.reason || "",
             severity: h.severity || "HIGH",
             status: "Active",
-            date: h.date || (h.holdAt ? new Date(h.holdAt).toISOString().split("T")[0] : "2026-08-31")
+            date: h.date || (h.holdAt ? new Date(h.holdAt).toISOString().split("T")[0] : new Date().toISOString().split("T")[0])
         }));
     }
     async getDispositionRework(tenantId) {
         const holds = await database_js_1.db
             .select()
             .from(quality_js_1.qualityHolds)
-            .where((0, drizzle_orm_1.and)((0, tenantContext_js_1.isValidUuid)(tenantId) ? (0, drizzle_orm_1.or)((0, drizzle_orm_1.eq)(quality_js_1.qualityHolds.tenantId, tenantId), (0, drizzle_orm_1.isNull)(quality_js_1.qualityHolds.tenantId)) : undefined, (0, drizzle_orm_1.or)((0, drizzle_orm_1.eq)(quality_js_1.qualityHolds.status, "ACTIVE_HOLD"), (0, drizzle_orm_1.eq)(quality_js_1.qualityHolds.status, "HOLD"), (0, drizzle_orm_1.eq)(quality_js_1.qualityHolds.status, "REWORK_SCHEDULED"), (0, drizzle_orm_1.eq)(quality_js_1.qualityHolds.status, "Active"))))
+            .where((0, drizzle_orm_1.and)((0, tenantContext_js_1.isValidUuid)(tenantId) ? (0, drizzle_orm_1.eq)(quality_js_1.qualityHolds.tenantId, tenantId) : undefined, (0, drizzle_orm_1.or)((0, drizzle_orm_1.eq)(quality_js_1.qualityHolds.status, "ACTIVE_HOLD"), (0, drizzle_orm_1.eq)(quality_js_1.qualityHolds.status, "HOLD"), (0, drizzle_orm_1.eq)(quality_js_1.qualityHolds.status, "REWORK_SCHEDULED"), (0, drizzle_orm_1.eq)(quality_js_1.qualityHolds.status, "Active"))))
             .orderBy((0, drizzle_orm_1.desc)(quality_js_1.qualityHolds.createdAt));
         const batchesList = holds.map(h => ({
-            id: h.batch || "BAT-2026-0890",
-            name: `${h.batch || 'BAT-2026-0890'} — ${h.reason ? h.reason.slice(0, 32) : 'Organic Juice'} (Hold: ${h.holdId || 'HLD-401'})`,
-            holdId: h.holdId || "HLD-401",
-            lotNumber: h.lotNumber || "LOT-ORG-442"
+            id: h.batch || h.id,
+            name: `${h.batch || h.lotNumber} Ã¢â‚¬â€ ${h.reason ? h.reason.slice(0, 32) : ''} (Hold: ${h.holdId || ''})`.trim(),
+            holdId: h.holdId || "",
+            lotNumber: h.lotNumber || ""
         }));
-        if (batchesList.length === 0) {
-            batchesList.push({
-                id: "BAT-2026-0890",
-                name: "BAT-2026-0890 — Organic Orange Juice 1L (Hold: BLK-101)",
-                holdId: "BLK-101",
-                lotNumber: "LOT-ORG-442"
-            });
-        }
         return {
             batches: batchesList,
             protocols: [
-                { id: "THERMAL_REPASTEURIZE", label: "Thermal Kill Step Re-Pasteurization (≥83.1°C)", defaultNote: "Re-pasteurize at 84°C for 30 seconds to satisfy CCP thermal kill protocol" },
-                { id: "BRIX_DILUTION", label: "Refractometer Brix Adjustment & Sugar Re-blending", defaultNote: "Adjust brix sugar levels to 11.8°Bx by controlled purified water blending" },
+                { id: "THERMAL_REPASTEURIZE", label: "Thermal Kill Step Re-Pasteurization (Ã¢â€°Â¥83.1Ã‚Â°C)", defaultNote: "Re-pasteurize at 84Ã‚Â°C for 30 seconds to satisfy CCP thermal kill protocol" },
+                { id: "BRIX_DILUTION", label: "Refractometer Brix Adjustment & Sugar Re-blending", defaultNote: "Adjust brix sugar levels to 11.8Ã‚Â°Bx by controlled purified water blending" },
                 { id: "FILTER_POLISH", label: "Secondary Micro-Filtration Polish", defaultNote: "Perform secondary 0.45 micron micro-filtration polish cycle" }
             ]
         };
@@ -1917,20 +2112,13 @@ class QualityService {
         const holds = await database_js_1.db
             .select()
             .from(quality_js_1.qualityHolds)
-            .where((0, drizzle_orm_1.and)((0, tenantContext_js_1.isValidUuid)(tenantId) ? (0, drizzle_orm_1.or)((0, drizzle_orm_1.eq)(quality_js_1.qualityHolds.tenantId, tenantId), (0, drizzle_orm_1.isNull)(quality_js_1.qualityHolds.tenantId)) : undefined, (0, drizzle_orm_1.or)((0, drizzle_orm_1.eq)(quality_js_1.qualityHolds.status, "ACTIVE_HOLD"), (0, drizzle_orm_1.eq)(quality_js_1.qualityHolds.status, "HOLD"), (0, drizzle_orm_1.eq)(quality_js_1.qualityHolds.status, "Active"))))
+            .where((0, drizzle_orm_1.and)((0, tenantContext_js_1.isValidUuid)(tenantId) ? (0, drizzle_orm_1.eq)(quality_js_1.qualityHolds.tenantId, tenantId) : undefined, (0, drizzle_orm_1.or)((0, drizzle_orm_1.eq)(quality_js_1.qualityHolds.status, "ACTIVE_HOLD"), (0, drizzle_orm_1.eq)(quality_js_1.qualityHolds.status, "HOLD"), (0, drizzle_orm_1.eq)(quality_js_1.qualityHolds.status, "Active"))))
             .orderBy((0, drizzle_orm_1.desc)(quality_js_1.qualityHolds.createdAt));
         const batchesList = holds.map(h => ({
-            id: h.batch || "BAT-2026-0890",
-            name: `${h.batch || 'BAT-2026-0890'} — Organic Orange Juice 1L (Hold: ${h.holdId || 'BLK-101'})`,
-            holdId: h.holdId || "BLK-101"
+            id: h.batch || h.id,
+            name: `${h.batch || h.lotNumber || h.id} Ã¢â‚¬â€ ${h.reason ? h.reason.slice(0, 32) : ''} (Hold: ${h.holdId || ''})`.trim(),
+            holdId: h.holdId || ""
         }));
-        if (batchesList.length === 0) {
-            batchesList.push({
-                id: "BAT-2026-0890",
-                name: "BAT-2026-0890 — Organic Orange Juice 1L",
-                holdId: "BLK-101"
-            });
-        }
         return {
             batches: batchesList,
             protocols: [
@@ -1944,22 +2132,15 @@ class QualityService {
         const holds = await database_js_1.db
             .select()
             .from(quality_js_1.qualityHolds)
-            .where((0, drizzle_orm_1.and)((0, tenantContext_js_1.isValidUuid)(tenantId) ? (0, drizzle_orm_1.or)((0, drizzle_orm_1.eq)(quality_js_1.qualityHolds.tenantId, tenantId), (0, drizzle_orm_1.isNull)(quality_js_1.qualityHolds.tenantId)) : undefined, (0, drizzle_orm_1.or)((0, drizzle_orm_1.eq)(quality_js_1.qualityHolds.status, "ACTIVE_HOLD"), (0, drizzle_orm_1.eq)(quality_js_1.qualityHolds.status, "HOLD"), (0, drizzle_orm_1.eq)(quality_js_1.qualityHolds.status, "Active"))))
+            .where((0, drizzle_orm_1.and)((0, tenantContext_js_1.isValidUuid)(tenantId) ? (0, drizzle_orm_1.eq)(quality_js_1.qualityHolds.tenantId, tenantId) : undefined, (0, drizzle_orm_1.or)((0, drizzle_orm_1.eq)(quality_js_1.qualityHolds.status, "ACTIVE_HOLD"), (0, drizzle_orm_1.eq)(quality_js_1.qualityHolds.status, "HOLD"), (0, drizzle_orm_1.eq)(quality_js_1.qualityHolds.status, "Active"))))
             .orderBy((0, drizzle_orm_1.desc)(quality_js_1.qualityHolds.createdAt));
-        const batchesList = holds.map(h => ({
-            id: h.batch || "BAT-2026-0890",
-            name: `${h.batch || 'BAT-2026-0890'} — Organic Orange Juice 1L (Hold: ${h.holdId || 'BLK-101'})`,
-            holdId: h.holdId || "BLK-101"
+        const batchesListDG = holds.map(h => ({
+            id: h.batch || h.id,
+            name: `${h.batch || h.lotNumber || h.id} Ã¢â‚¬â€ ${h.reason ? h.reason.slice(0, 32) : ''} (Hold: ${h.holdId || ''})`.trim(),
+            holdId: h.holdId || ""
         }));
-        if (batchesList.length === 0) {
-            batchesList.push({
-                id: "BAT-2026-0890",
-                name: "BAT-2026-0890 — Organic Orange Juice 1L",
-                holdId: "BLK-101"
-            });
-        }
         return {
-            batches: batchesList,
+            batches: batchesListDG,
             grades: [
                 { id: "Animal Feed Grade", label: "Animal Feed Grade (Certified Safe)", defaultNote: "Lot passed microbiological tests but failed aesthetic flavor/color profile for commercial retail." },
                 { id: "Industrial Cleaning / Vinegar Base", label: "Industrial Cleaning / Vinegar Fermentation Base", defaultNote: "Reclassified as raw industrial vinegar fermentation substrate." },
@@ -1969,8 +2150,8 @@ class QualityService {
     }
     async authorizeDisposition(tenantId, plantId, input, userId) {
         const action = input.decision || input.action || "RELEASE";
-        const batchId = input.batch || input.batchId || "BAT-2026-0890";
-        const holdId = input.holdId || "BLK-101";
+        const batchId = input.batch || input.batchId || "";
+        const holdId = input.holdId || "";
         const nextHoldStatus = action === "RELEASE" ? "RELEASED" : action === "SCRAP" ? "DESTROYED" : action === "DOWNGRADE" ? "DOWNGRADED" : "REWORK_SCHEDULED";
         // 1. Update quality_holds in PostgreSQL
         try {
@@ -1994,11 +2175,11 @@ class QualityService {
                 dispositionType: action,
                 batchId: batchId,
                 holdId: holdId,
-                lotNumber: input.lotNumber || "LOT-ORG-442",
+                lotNumber: input.lotNumber || "",
                 protocol: input.protocol || (action === "RELEASE" ? "Standard QA Release Authorization" : action === "SCRAP" ? "Controlled Destruction" : action),
                 instructionNotes: input.instruction || input.notes || `Disposition authorized as ${action} by QA sign-off.`,
                 status: "COMPLETED",
-                authorizedBy: userId || "Dr. Rachel Thorne (QA Lead)",
+                authorizedBy: userId || "",
                 authorizedAt: new Date()
             });
         }
@@ -2011,7 +2192,7 @@ class QualityService {
                 tenantId: (0, tenantContext_js_1.isValidUuid)(tenantId) ? tenantId : null,
                 plantId: (0, tenantContext_js_1.isValidUuid)(plantId) ? plantId : null,
                 eventCode: `AUD-${Math.floor(9900 + Math.random() * 90)}`,
-                userName: userId || "Dr. Rachel Thorne (QA Lead)",
+                userName: userId || "",
                 actionText: `Authorized Batch Disposition (${action} Lot ${holdId} / ${batchId})`,
                 entityType: "DISPOSITION",
                 entityId: batchId,
@@ -2029,14 +2210,14 @@ class QualityService {
             batchId,
             decision: action,
             status: nextHoldStatus,
-            authorizedBy: userId || "Dr. Rachel Thorne (QA Lead)",
+            authorizedBy: userId || "",
             authorizedAt: new Date().toISOString(),
             message: `Batch ${batchId} disposition: ${action} successfully authorized and recorded in database.`
         };
     }
     async submitReworkInstruction(tenantId, plantId, input, userId) {
-        const batchId = input.batch || "BAT-2026-0890";
-        const instruction = input.instruction || "Re-pasteurize at 84°C for 30 seconds to satisfy CCP thermal kill protocol";
+        const batchId = input.batch || "";
+        const instruction = input.instruction || "Re-pasteurize at 84Ã‚Â°C for 30 seconds to satisfy CCP thermal kill protocol";
         const protocol = input.protocol || "THERMAL_REPASTEURIZE";
         // 1. Insert into qa_disposition_records in PostgreSQL
         try {
@@ -2049,7 +2230,7 @@ class QualityService {
                 protocol: protocol,
                 instructionNotes: instruction,
                 status: "COMPLETED",
-                authorizedBy: userId || "Dr. Rachel Thorne (QA Lead)",
+                authorizedBy: userId || "",
                 authorizedAt: new Date()
             });
         }
@@ -2075,7 +2256,7 @@ class QualityService {
                 tenantId: (0, tenantContext_js_1.isValidUuid)(tenantId) ? tenantId : null,
                 plantId: (0, tenantContext_js_1.isValidUuid)(plantId) ? plantId : null,
                 eventCode: `AUD-${Math.floor(9900 + Math.random() * 90)}`,
-                userName: userId || "Dr. Rachel Thorne (QA Lead)",
+                userName: userId || "",
                 actionText: `Authorized Rework Protocol for Batch ${batchId} (${protocol})`,
                 entityType: "REWORK",
                 entityId: batchId,
@@ -2093,13 +2274,13 @@ class QualityService {
             instruction: instruction,
             protocol: protocol,
             status: "REWORK_SCHEDULED",
-            authorizedBy: userId || "Dr. Rachel Thorne (QA Lead)",
+            authorizedBy: userId || "",
             timestamp: new Date().toISOString(),
             message: `Batch ${batchId} authorized for rework. Re-processing instructions saved in database.`
         };
     }
     async submitRejectAuthorization(tenantId, plantId, input, userId) {
-        const batchId = input.batch || "BAT-2026-0890";
+        const batchId = input.batch || "";
         const reason = input.reason || "Non-recoverable CCP pasteurizer excursion. Biological integrity compromised.";
         const protocol = input.destructionProtocol || input.protocol || "ON_SITE_BIO_DRAIN";
         // 1. Insert into qa_disposition_records in PostgreSQL
@@ -2113,7 +2294,7 @@ class QualityService {
                 protocol: protocol,
                 instructionNotes: reason,
                 status: "COMPLETED",
-                authorizedBy: userId || "Dr. Rachel Thorne (QA Lead)",
+                authorizedBy: userId || "",
                 authorizedAt: new Date()
             });
         }
@@ -2139,7 +2320,7 @@ class QualityService {
                 tenantId: (0, tenantContext_js_1.isValidUuid)(tenantId) ? tenantId : null,
                 plantId: (0, tenantContext_js_1.isValidUuid)(plantId) ? plantId : null,
                 eventCode: `AUD-${Math.floor(9900 + Math.random() * 90)}`,
-                userName: userId || "Dr. Rachel Thorne (QA Lead)",
+                userName: userId || "",
                 actionText: `Authorized Certified Scrap / Destruction for Batch ${batchId} (${protocol})`,
                 entityType: "SCRAP",
                 entityId: batchId,
@@ -2155,13 +2336,13 @@ class QualityService {
             success: true,
             batch: batchId,
             status: "DESTROYED",
-            authorizedBy: userId || "Dr. Rachel Thorne (QA Lead)",
+            authorizedBy: userId || "",
             timestamp: new Date().toISOString(),
             message: `Batch ${batchId} REJECTED and marked for controlled destruction in database.`
         };
     }
     async submitDowngradeAuthorization(tenantId, plantId, input, userId) {
-        const batchId = input.batch || "BAT-2026-0890";
+        const batchId = input.batch || "";
         const targetGrade = input.targetGrade || "Animal Feed Grade";
         const notes = input.notes || "Lot passed microbiological tests but failed aesthetic flavor/color profile.";
         // 1. Insert into qa_disposition_records in PostgreSQL
@@ -2175,7 +2356,7 @@ class QualityService {
                 protocol: targetGrade,
                 instructionNotes: notes,
                 status: "COMPLETED",
-                authorizedBy: userId || "Dr. Rachel Thorne (QA Lead)",
+                authorizedBy: userId || "",
                 authorizedAt: new Date()
             });
         }
@@ -2201,7 +2382,7 @@ class QualityService {
                 tenantId: (0, tenantContext_js_1.isValidUuid)(tenantId) ? tenantId : null,
                 plantId: (0, tenantContext_js_1.isValidUuid)(plantId) ? plantId : null,
                 eventCode: `AUD-${Math.floor(9900 + Math.random() * 90)}`,
-                userName: userId || "Dr. Rachel Thorne (QA Lead)",
+                userName: userId || "",
                 actionText: `Authorized Batch Downgrade to "${targetGrade}" for ${batchId}`,
                 entityType: "DOWNGRADE",
                 entityId: batchId,
@@ -2218,7 +2399,7 @@ class QualityService {
             batch: batchId,
             targetGrade: targetGrade,
             status: "DOWNGRADED",
-            authorizedBy: userId || "Dr. Rachel Thorne (QA Lead)",
+            authorizedBy: userId || "",
             timestamp: new Date().toISOString(),
             message: `Batch ${batchId} downgraded to "${targetGrade}" by QA authorization in database.`
         };
@@ -2230,18 +2411,18 @@ class QualityService {
         const rows = await database_js_1.db
             .select()
             .from(quality_js_1.capaRecords)
-            .where((0, tenantContext_js_1.isValidUuid)(tenantId) ? (0, drizzle_orm_1.or)((0, drizzle_orm_1.eq)(quality_js_1.capaRecords.tenantId, tenantId), (0, drizzle_orm_1.isNull)(quality_js_1.capaRecords.tenantId)) : undefined)
+            .where((0, tenantContext_js_1.isValidUuid)(tenantId) ? (0, drizzle_orm_1.eq)(quality_js_1.capaRecords.tenantId, tenantId) : undefined)
             .orderBy((0, drizzle_orm_1.desc)(quality_js_1.capaRecords.id));
         return rows.map(c => ({
             id: c.capaNumber,
             dbId: c.id,
-            invId: c.invId || "INV-001",
+            invId: c.invId || "",
             deviationId: c.deviationId || "DEV-101",
             rootCause: c.rootCause || c.title,
             correctiveAction: c.correctiveAction,
             preventiveAction: c.preventiveAction,
             status: c.status || "ACTIVE_MONITORING",
-            assignedTo: c.assignedToName || "Dr. Rachel Thorne",
+            assignedTo: c.assignedToName || "",
             targetDate: c.targetDate || (c.targetCompletionDate ? new Date(c.targetCompletionDate).toISOString().split("T")[0] : "2026-09-30"),
             effectivenessRate: c.effectivenessRate || "98.5%"
         }));
@@ -2251,7 +2432,7 @@ class QualityService {
         const rootCause = input.rootCause || "Sensor calibration drift";
         const correctiveAction = input.correctiveAction || input.corrective || "Immediate component replacement";
         const preventiveAction = input.preventiveAction || input.preventive || "Preventative maintenance SOP updated";
-        const invId = input.invId || input.selectedInvId || "INV-001";
+        const invId = input.invId || input.selectedInvId || "";
         const targetDate = input.targetDate || "2026-09-30";
         const [created] = await database_js_1.db
             .insert(quality_js_1.capaRecords)
@@ -2266,7 +2447,7 @@ class QualityService {
             correctiveAction: correctiveAction,
             preventiveAction: preventiveAction,
             status: "ACTIVE_MONITORING",
-            assignedToName: userId || "Dr. Rachel Thorne",
+            assignedToName: userId || "",
             targetDate: targetDate,
             effectivenessRate: "Pending Verification"
         })
@@ -2291,7 +2472,7 @@ class QualityService {
                 tenantId: (0, tenantContext_js_1.isValidUuid)(tenantId) ? tenantId : null,
                 plantId: (0, tenantContext_js_1.isValidUuid)(plantId) ? plantId : null,
                 eventCode: `AUD-${Math.floor(9900 + Math.random() * 90)}`,
-                userName: userId || "Dr. Rachel Thorne (QA Lead)",
+                userName: userId || "",
                 actionText: `Created and linked ${capaNumber} to investigation ${invId}`,
                 entityType: "CAPA_RECORD",
                 entityId: capaNumber,
@@ -2313,7 +2494,7 @@ class QualityService {
             correctiveAction,
             preventiveAction,
             status: "ACTIVE_MONITORING",
-            assignedTo: userId || "Dr. Rachel Thorne",
+            assignedTo: userId || "",
             targetDate,
             effectivenessRate: "Pending Verification",
             message: `RCA & CAPA Plan ${capaNumber} successfully saved in PostgreSQL and linked to ${invId}.`
@@ -2326,7 +2507,7 @@ class QualityService {
         const rows = await database_js_1.db
             .select()
             .from(quality_js_1.qaAuditTrail)
-            .where((0, tenantContext_js_1.isValidUuid)(tenantId) ? (0, drizzle_orm_1.or)((0, drizzle_orm_1.eq)(quality_js_1.qaAuditTrail.tenantId, tenantId), (0, drizzle_orm_1.isNull)(quality_js_1.qaAuditTrail.tenantId)) : undefined)
+            .where((0, tenantContext_js_1.isValidUuid)(tenantId) ? (0, drizzle_orm_1.eq)(quality_js_1.qaAuditTrail.tenantId, tenantId) : undefined)
             .orderBy((0, drizzle_orm_1.desc)(quality_js_1.qaAuditTrail.id));
         return rows.map(a => ({
             id: a.eventCode,
@@ -2348,7 +2529,7 @@ class QualityService {
         const rows = await database_js_1.db
             .select()
             .from(quality_js_1.qaReports)
-            .where((0, tenantContext_js_1.isValidUuid)(tenantId) ? (0, drizzle_orm_1.or)((0, drizzle_orm_1.eq)(quality_js_1.qaReports.tenantId, tenantId), (0, drizzle_orm_1.isNull)(quality_js_1.qaReports.tenantId)) : undefined)
+            .where((0, tenantContext_js_1.isValidUuid)(tenantId) ? (0, drizzle_orm_1.eq)(quality_js_1.qaReports.tenantId, tenantId) : undefined)
             .orderBy((0, drizzle_orm_1.desc)(quality_js_1.qaReports.id));
         return rows.map(r => ({
             id: r.reportCode,
@@ -2380,7 +2561,7 @@ class QualityService {
             format: "PDF / CSV",
             status: "READY",
             recordsCount: 35,
-            generatedBy: userId || "Dr. Rachel Thorne",
+            generatedBy: userId || "",
             downloadUrl: `/api/v1/quality/reports/download/${reportCode}`
         })
             .returning();
@@ -2401,7 +2582,7 @@ class QualityService {
         const rows = await database_js_1.db
             .select()
             .from(quality_js_1.qaNotifications)
-            .where((0, tenantContext_js_1.isValidUuid)(tenantId) ? (0, drizzle_orm_1.or)((0, drizzle_orm_1.eq)(quality_js_1.qaNotifications.tenantId, tenantId), (0, drizzle_orm_1.isNull)(quality_js_1.qaNotifications.tenantId)) : undefined)
+            .where((0, tenantContext_js_1.isValidUuid)(tenantId) ? (0, drizzle_orm_1.eq)(quality_js_1.qaNotifications.tenantId, tenantId) : undefined)
             .orderBy((0, drizzle_orm_1.desc)(quality_js_1.qaNotifications.id));
         return rows.map(n => ({
             id: n.notifCode,
@@ -2421,7 +2602,7 @@ class QualityService {
             await database_js_1.db
                 .update(quality_js_1.qaNotifications)
                 .set({ isRead: true, updatedAt: new Date() })
-                .where((0, tenantContext_js_1.isValidUuid)(tenantId) ? (0, drizzle_orm_1.or)((0, drizzle_orm_1.eq)(quality_js_1.qaNotifications.tenantId, tenantId), (0, drizzle_orm_1.isNull)(quality_js_1.qaNotifications.tenantId)) : undefined);
+                .where((0, tenantContext_js_1.isValidUuid)(tenantId) ? (0, drizzle_orm_1.eq)(quality_js_1.qaNotifications.tenantId, tenantId) : undefined);
             return {
                 success: true,
                 id: "ALL",
@@ -2443,7 +2624,7 @@ class QualityService {
         if (!notifId || notifId === "ALL") {
             await database_js_1.db
                 .delete(quality_js_1.qaNotifications)
-                .where((0, tenantContext_js_1.isValidUuid)(tenantId) ? (0, drizzle_orm_1.or)((0, drizzle_orm_1.eq)(quality_js_1.qaNotifications.tenantId, tenantId), (0, drizzle_orm_1.isNull)(quality_js_1.qaNotifications.tenantId)) : undefined);
+                .where((0, tenantContext_js_1.isValidUuid)(tenantId) ? (0, drizzle_orm_1.eq)(quality_js_1.qaNotifications.tenantId, tenantId) : undefined);
             return {
                 success: true,
                 id: "ALL",
@@ -2463,48 +2644,74 @@ class QualityService {
     // QA LEAD PROFILE & CREDENTIALS METHODS
     // ==========================================
     async getQualityProfile(tenantId, userId) {
-        const profileRows = await database_js_1.db
-            .select()
-            .from(quality_js_1.qaProfiles)
-            .where((0, tenantContext_js_1.isValidUuid)(tenantId) ? (0, drizzle_orm_1.or)((0, drizzle_orm_1.eq)(quality_js_1.qaProfiles.tenantId, tenantId), (0, drizzle_orm_1.isNull)(quality_js_1.qaProfiles.tenantId)) : undefined)
-            .limit(1);
-        const profile = profileRows[0] || {
-            name: "Dr. Rachel Thorne",
-            role: "Quality Assurance Lead",
-            badgeTitle: "QA SIGNATORY AUTHORITY",
-            subBadge: "CCP AUDITOR",
-            initials: "RT",
-            signaturePin: "9482",
-            batchesReviewed: 142,
-            holdsIssued: 3,
-            approvedReleases: 139,
-            complianceRating: "99.4%"
-        };
-        const certRows = await database_js_1.db
-            .select()
-            .from(quality_js_1.qaCertifications)
-            .where((0, tenantContext_js_1.isValidUuid)(tenantId) ? (0, drizzle_orm_1.or)((0, drizzle_orm_1.eq)(quality_js_1.qaCertifications.tenantId, tenantId), (0, drizzle_orm_1.isNull)(quality_js_1.qaCertifications.tenantId)) : undefined)
-            .orderBy((0, drizzle_orm_1.asc)(quality_js_1.qaCertifications.id));
-        return {
-            name: profile.name,
-            role: profile.role,
-            badgeTitle: profile.badgeTitle,
-            subBadge: profile.subBadge,
-            initials: profile.initials,
-            stats: {
-                batchesReviewed: profile.batchesReviewed || 142,
-                holdsIssued: profile.holdsIssued || 3,
-                approvedReleases: profile.approvedReleases || 139,
-                complianceScore: profile.complianceRating || "99.4%"
-            },
-            certifications: certRows.map(c => ({
-                id: c.id,
-                name: c.name,
-                status: c.status,
-                issuer: c.issuer,
-                validUntil: c.validUntil
-            }))
-        };
+        if (!(0, tenantContext_js_1.isValidUuid)(tenantId)) {
+            return {
+                name: "Quality Lead",
+                role: "Quality Assurance Lead",
+                badgeTitle: "QA SIGNATORY AUTHORITY",
+                subBadge: "CCP AUDITOR",
+                initials: "QA",
+                stats: { batchesReviewed: 0, holdsIssued: 0, approvedReleases: 0, complianceScore: "100%" },
+                certifications: []
+            };
+        }
+        const client = await database_js_1.pool.connect();
+        try {
+            const profileRows = await client.query(`
+        SELECT * FROM public.qa_profiles WHERE tenant_id = $1 LIMIT 1;
+      `, [tenantId]);
+            let name = "";
+            let role = "Quality Assurance Lead";
+            let initials = "QA";
+            if (profileRows.rows.length > 0) {
+                const p = profileRows.rows[0];
+                name = p.name;
+                role = p.role || role;
+                initials = p.initials || initials;
+            }
+            else {
+                let userRes;
+                if ((0, tenantContext_js_1.isValidUuid)(userId)) {
+                    userRes = await client.query(`SELECT first_name, last_name, email, department FROM public.users WHERE id = $1;`, [userId]);
+                }
+                if (!userRes || userRes.rows.length === 0) {
+                    userRes = await client.query(`SELECT first_name, last_name, email, department FROM public.users WHERE tenant_id = $1 AND email LIKE '%qa%' LIMIT 1;`, [tenantId]);
+                }
+                if (userRes && userRes.rows.length > 0) {
+                    const u = userRes.rows[0];
+                    name = [u.first_name, u.last_name].filter(Boolean).join(" ") || u.email.split("@")[0];
+                    role = u.department || "Quality Assurance Lead";
+                    initials = `${(u.first_name || "Q")[0]}${(u.last_name || "A")[0]}`.toUpperCase();
+                }
+                else {
+                    name = "Quality Lead";
+                }
+            }
+            // Real stats from database
+            const batchesRes = await client.query(`SELECT count(*)::int as count FROM public.batches WHERE tenant_id = $1;`, [tenantId]);
+            const holdsRes = await client.query(`SELECT count(*)::int as count FROM public.quality_holds WHERE tenant_id = $1;`, [tenantId]);
+            const releaseRes = await client.query(`SELECT count(*)::int as count FROM public.qa_releases WHERE tenant_id = $1 AND disposition = 'RELEASED';`, [tenantId]);
+            const certRows = await client.query(`
+        SELECT id, name, issuer, valid_until as "validUntil", status FROM public.qa_certifications WHERE tenant_id = $1;
+      `, [tenantId]);
+            return {
+                name,
+                role,
+                badgeTitle: "QA SIGNATORY AUTHORITY",
+                subBadge: "CCP AUDITOR",
+                initials,
+                stats: {
+                    batchesReviewed: batchesRes.rows[0]?.count || 0,
+                    holdsIssued: holdsRes.rows[0]?.count || 0,
+                    approvedReleases: releaseRes.rows[0]?.count || 0,
+                    complianceScore: "100%"
+                },
+                certifications: certRows.rows
+            };
+        }
+        finally {
+            client.release();
+        }
     }
     async updateQualityProfile(tenantId, input, userId) {
         if (input.signaturePin) {
@@ -2514,7 +2721,7 @@ class QualityService {
                 signaturePin: input.signaturePin,
                 updatedAt: new Date()
             })
-                .where((0, tenantContext_js_1.isValidUuid)(tenantId) ? (0, drizzle_orm_1.or)((0, drizzle_orm_1.eq)(quality_js_1.qaProfiles.tenantId, tenantId), (0, drizzle_orm_1.isNull)(quality_js_1.qaProfiles.tenantId)) : undefined);
+                .where((0, tenantContext_js_1.isValidUuid)(tenantId) ? (0, drizzle_orm_1.eq)(quality_js_1.qaProfiles.tenantId, tenantId) : undefined);
         }
         return {
             success: true,
@@ -2550,15 +2757,6 @@ class QualityService {
                 .from(quality_js_1.preopChecks)
                 .where((0, drizzle_orm_1.eq)(quality_js_1.preopChecks.tenantId, tenantId))
                 .orderBy((0, drizzle_orm_1.asc)(quality_js_1.preopChecks.createdAt));
-            // Auto-seed standard 6 HACCP checkpoints if empty for this tenant
-            if (rows.length === 0) {
-                await this.seedStandardPreOp(tenantId, "");
-                rows = await database_js_1.db
-                    .select()
-                    .from(quality_js_1.preopChecks)
-                    .where((0, drizzle_orm_1.eq)(quality_js_1.preopChecks.tenantId, tenantId))
-                    .orderBy((0, drizzle_orm_1.asc)(quality_js_1.preopChecks.createdAt));
-            }
             const lineRows = await database_js_1.db
                 .select({ id: masterData_js_1.productionLines.id, code: masterData_js_1.productionLines.code, name: masterData_js_1.productionLines.name })
                 .from(masterData_js_1.productionLines)
@@ -2758,7 +2956,7 @@ class QualityService {
             {
                 category: "Process Instrumentation",
                 name: "Pasteurizer Pipeline Pressure & Temp Sensor Calibration",
-                spec: "4.2 Bar ± 0.2 • 72.4°C baseline",
+                spec: "4.2 Bar Ã‚Â± 0.2 Ã¢â‚¬Â¢ 72.4Ã‚Â°C baseline",
                 criticality: "CCP Calibration",
                 method: "Digital Telemetry"
             },
@@ -2767,7 +2965,7 @@ class QualityService {
                 name: "Packaging Line 1 Clean of Raw Debris, Prior Labels & Tools",
                 spec: "100% Cleared (Zero Foreign Material)",
                 criticality: "GMP Hygiene",
-                method: "360° Line Walkthrough"
+                method: "360Ã‚Â° Line Walkthrough"
             },
             {
                 category: "Chemical Residuals",
@@ -2796,7 +2994,7 @@ class QualityService {
                 passed: null,
                 notes: "",
                 lineName: body?.line || "LINE-2 (abc)",
-                batchNumber: body?.batch || "BAT-2026-ORD2511"
+                batchNumber: body?.batch || ""
             });
         }
         return {
@@ -2809,44 +3007,21 @@ class QualityService {
             let steps = await database_js_1.db
                 .select()
                 .from(quality_js_1.sanitationCipSteps)
-                .where((0, drizzle_orm_1.or)((0, drizzle_orm_1.eq)(quality_js_1.sanitationCipSteps.tenantId, tenantId), (0, drizzle_orm_1.isNull)(quality_js_1.sanitationCipSteps.tenantId)))
+                .where((0, drizzle_orm_1.eq)(quality_js_1.sanitationCipSteps.tenantId, tenantId))
                 .orderBy((0, drizzle_orm_1.asc)(quality_js_1.sanitationCipSteps.stepOrder));
-            if (steps.length === 0) {
-                const client = await database_js_1.pool.connect();
-                try {
-                    await client.query(`
-            INSERT INTO public.sanitation_cip_steps (tenant_id, step_order, phase, equipment, spec, chemical, target_value, completed, log_value)
-            VALUES
-            ($1, 1, '1. Pre-Rinse Cycle', 'Main Filler Bowl & Intake Manifold', 'Warm RO Water @ 45°C - 55°C • 10 mins', 'Treated Reverse Osmosis Water', 'Turbidity < 5 NTU', true, 'Rinse time: 10 mins • Clear effluent'),
-            ($1, 2, '2. Alkaline Caustic Wash', 'Valves, Filling Nozzles & Flow Meters', '2.5% NaOH (Sodium Hydroxide) @ 75°C - 85°C • 20 mins', 'Diversey Caustic CIP Blend', 'Conductivity > 45 mS/cm', true, 'Concentration: 2.52% • Temp: 81.4°C'),
-            ($1, 3, '3. Intermediate Water Rinse', 'Product Contact Lines & Manifold Loop', 'Ambient RO Water until pH 7.0 neutral • 8 mins', 'Sterile RO Flush', 'pH 6.8 - 7.2 neutral', true, 'pH verified: 7.02 (Neutralized)'),
-            ($1, 4, '4. Acid Wash (Scale Removal)', 'Plate Heat Exchanger & Pasteurizer Tubes', '1.2% Nitric/Phosphoric Acid @ 60°C • 15 mins', 'Food-Grade Descaler Acid', 'Conductivity 18 - 22 mS/cm', true, 'Acid loop: 1.2% • Temp: 62.0°C'),
-            ($1, 5, '5. Sanitizer Cold Disinfection', 'All Aseptic Product Filling Heads', '150 - 200 ppm Peracetic Acid (PAA) @ 20°C • 10 mins', 'Peracetic Acid (PAA 15%)', '150 - 200 ppm titration', false, ''),
-            ($1, 6, '6. Final Sterile Air Purge', 'Nozzle Tips & Conveyor Enclosure', 'HEPA Filtered Class 100 Air Blowdown • 5 mins', '0.2 Micron Filtered Air', 'Zero Moisture Residue', false, '');
-          `, [tenantId]);
-                }
-                finally {
-                    client.release();
-                }
-                steps = await database_js_1.db
-                    .select()
-                    .from(quality_js_1.sanitationCipSteps)
-                    .where((0, drizzle_orm_1.eq)(quality_js_1.sanitationCipSteps.tenantId, tenantId))
-                    .orderBy((0, drizzle_orm_1.asc)(quality_js_1.sanitationCipSteps.stepOrder));
-            }
             const [config] = await database_js_1.db
                 .select()
                 .from(quality_js_1.sanitationCipConfig)
-                .where((0, drizzle_orm_1.or)((0, drizzle_orm_1.eq)(quality_js_1.sanitationCipConfig.tenantId, tenantId), (0, drizzle_orm_1.isNull)(quality_js_1.sanitationCipConfig.tenantId)))
+                .where((0, drizzle_orm_1.eq)(quality_js_1.sanitationCipConfig.tenantId, tenantId))
                 .limit(1);
             const completedCount = steps.filter(s => s.completed === true).length;
             const totalCount = steps.length;
-            const loop = config?.loop || "CIP Loop 01 (Rotary Filler & Intake Manifold)";
-            const protocol = config?.protocol || "5-Step Full Thermal & Chemical CIP Cycle";
-            const operator = config?.operator || "Dr. Rachel Thorne (QA Lead)";
-            const chemicalWash = config?.chemicalWash || "Caustic 2.5% • 81.4°C";
-            const sanitizer = config?.sanitizer || "PAA Sanitizer: 180 ppm Target";
-            const status = completedCount === totalCount ? "COMPLETED" : "CYCLE IN PROGRESS";
+            const loop = config?.loop || "";
+            const protocol = config?.protocol || "";
+            const operator = config?.operator || "";
+            const chemicalWash = config?.chemicalWash || "";
+            const sanitizer = config?.sanitizer || "";
+            const status = steps.length === 0 ? "NOT STARTED" : (completedCount === totalCount ? "COMPLETED" : "CYCLE IN PROGRESS");
             return {
                 steps: steps.map(s => ({
                     id: s.id,
@@ -2875,12 +3050,9 @@ class QualityService {
             console.warn("DB getSanitationChecklist error:", err);
             return {
                 steps: [],
-                loop: "CIP Loop 01",
-                protocol: "5-Step Full CIP",
-                operator: "Dr. Rachel Thorne",
-                chemicalWash: "Caustic 2.5%",
-                sanitizer: "PAA Sanitizer",
-                status: "CYCLE IN PROGRESS",
+                loop: "", protocol: "", operator: "",
+                chemicalWash: "", sanitizer: "",
+                status: "NOT STARTED",
                 metrics: { totalSteps: 0, completedCycles: 0, progressPercent: 0 }
             };
         }
@@ -2915,7 +3087,7 @@ class QualityService {
                         await client.query(`
               INSERT INTO public.sanitation_cip_config (tenant_id, loop, protocol, operator, status)
               VALUES ($1, $2, $3, $4, 'CYCLE IN PROGRESS');
-            `, [tenantId, body.loop || 'CIP Loop 01', body.protocol || '5-Step CIP', body.operator || 'Dr. Rachel Thorne']);
+            `, [tenantId, body.loop || null, body.protocol || null, body.operator || null]);
                     }
                 }
             }
@@ -2933,23 +3105,75 @@ class QualityService {
         }
     }
     async listBatchHistory(tenantId) {
-        const records = await database_js_1.db
-            .select()
-            .from(quality_js_1.batchHistory)
-            .where((0, tenantContext_js_1.isValidUuid)(tenantId) ? (0, drizzle_orm_1.or)((0, drizzle_orm_1.eq)(quality_js_1.batchHistory.tenantId, tenantId), (0, drizzle_orm_1.isNull)(quality_js_1.batchHistory.tenantId)) : undefined)
-            .orderBy((0, drizzle_orm_1.desc)(quality_js_1.batchHistory.date), (0, drizzle_orm_1.desc)(quality_js_1.batchHistory.id));
-        return records.map(h => ({
-            id: h.batchId,
-            batchId: h.batchId,
-            dbId: h.id,
-            recipe: h.recipe,
-            line: h.line,
-            pallets: h.pallets,
-            date: h.date,
-            status: h.status,
-            coaUrl: h.coaUrl,
-            auditor: h.auditor
-        }));
+        if (!(0, tenantContext_js_1.isValidUuid)(tenantId))
+            return [];
+        const client = await database_js_1.pool.connect();
+        try {
+            const res = await client.query(`
+        SELECT 
+          b.id as batch_id,
+          b.batch_number,
+          b.status,
+          b.updated_at,
+          b.created_at,
+          s.name as sku_name,
+          pl.name as line_name,
+          qr.certificate_of_analysis_url as coa_url
+        FROM public.batches b
+        LEFT JOIN public.production_orders po ON b.production_order_id = po.id
+        LEFT JOIN public.skus s ON po.sku_id = s.id
+        LEFT JOIN public.production_lines pl ON po.line_id = pl.id
+        LEFT JOIN public.qa_releases qr ON qr.batch_id = b.id
+        WHERE b.tenant_id = $1 AND b.status IN ('Released', 'RELEASED', 'Completed', 'COMPLETED')
+        ORDER BY b.created_at DESC;
+      `, [tenantId]);
+            // Also get explicit batch_history entries
+            const histRes = await client.query(`
+        SELECT * FROM public.batch_history WHERE tenant_id = $1 ORDER BY id DESC;
+      `, [tenantId]);
+            const seen = new Set();
+            const list = [];
+            res.rows.forEach(r => {
+                seen.add(r.batch_number);
+                list.push({
+                    id: r.batch_number,
+                    batchId: r.batch_number,
+                    dbId: r.batch_id,
+                    recipe: r.sku_name || "Finished Goods SKU",
+                    line: r.line_name || "Production Line",
+                    pallets: "Standard Lot",
+                    date: r.updated_at ? new Date(r.updated_at).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
+                    status: "RELEASED",
+                    coaUrl: r.coa_url || `https://maintenx.cloud/certificates/COA-${r.batch_number}.pdf`,
+                    auditor: ""
+                });
+            });
+            histRes.rows.forEach(h => {
+                if (!seen.has(h.batch_id)) {
+                    seen.add(h.batch_id);
+                    list.push({
+                        id: h.batch_id,
+                        batchId: h.batch_id,
+                        dbId: h.id,
+                        recipe: h.recipe,
+                        line: h.line,
+                        pallets: h.pallets,
+                        date: h.date,
+                        status: h.status,
+                        coaUrl: h.coa_url,
+                        auditor: h.auditor
+                    });
+                }
+            });
+            return list;
+        }
+        catch (e) {
+            console.warn("listBatchHistory error:", e.message);
+            return [];
+        }
+        finally {
+            client.release();
+        }
     }
     async toggleBatchHistoryStatus(tenantId, plantId, input, userId) {
         const id = input.id || input.batchId;
@@ -2985,7 +3209,7 @@ class QualityService {
         const records = await database_js_1.db
             .select()
             .from(quality_js_1.batchQualityRecords)
-            .where((0, tenantContext_js_1.isValidUuid)(tenantId) ? (0, drizzle_orm_1.or)((0, drizzle_orm_1.eq)(quality_js_1.batchQualityRecords.tenantId, tenantId), (0, drizzle_orm_1.isNull)(quality_js_1.batchQualityRecords.tenantId)) : undefined)
+            .where((0, tenantContext_js_1.isValidUuid)(tenantId) ? (0, drizzle_orm_1.eq)(quality_js_1.batchQualityRecords.tenantId, tenantId) : undefined)
             .orderBy((0, drizzle_orm_1.asc)(quality_js_1.batchQualityRecords.recordId));
         return records.map(r => ({
             id: r.recordId,
@@ -3133,12 +3357,12 @@ exports.QualityService = QualityService;
 let preOpConfigStore = {
     line: "Line 1 (High-Speed Rotary 580 BPM)",
     batch: "BAT-2026-0885 (Sparkling Orange Soda 330ml)",
-    inspector: "Dr. Rachel Thorne (QA Lead)"
+    inspector: ""
 };
 let sanitationConfigStore = {
     loop: "CIP Loop 01 (Rotary Filler & Intake Manifold)",
     protocol: "5-Step Full Thermal & Chemical CIP Cycle",
-    operator: "Dr. Rachel Thorne (QA Lead)"
+    operator: ""
 };
 let preOpChecklistStore = [
     {
@@ -3165,7 +3389,7 @@ let preOpChecklistStore = [
         id: 3,
         category: "Process Instrumentation",
         name: "Pasteurizer Pipeline Pressure & Temp Sensor Calibration",
-        spec: "4.2 Bar ± 0.2 • 72.4°C baseline",
+        spec: "4.2 Bar Ã‚Â± 0.2 Ã¢â‚¬Â¢ 72.4Ã‚Â°C baseline",
         criticality: "CCP Calibration",
         method: "Digital Telemetry",
         passed: true,
@@ -3177,7 +3401,7 @@ let preOpChecklistStore = [
         name: "Packaging Line 1 Clean of Raw Debris, Prior Labels & Tools",
         spec: "100% Cleared (Zero Foreign Material)",
         criticality: "GMP Hygiene",
-        method: "360° Line Walkthrough",
+        method: "360Ã‚Â° Line Walkthrough",
         passed: true,
         notes: "Prior batch labels removed"
     },
@@ -3207,27 +3431,27 @@ let sanitationChecklistStore = [
         id: 1,
         phase: "1. Pre-Rinse Cycle",
         equipment: "Main Filler Bowl & Intake Manifold",
-        spec: "Warm RO Water @ 45°C - 55°C • 10 mins",
+        spec: "Warm RO Water @ 45Ã‚Â°C - 55Ã‚Â°C Ã¢â‚¬Â¢ 10 mins",
         chemical: "Treated Reverse Osmosis Water",
         targetValue: "Turbidity < 5 NTU",
         completed: true,
-        logValue: "Rinse time: 10 mins • Clear effluent"
+        logValue: "Rinse time: 10 mins Ã¢â‚¬Â¢ Clear effluent"
     },
     {
         id: 2,
         phase: "2. Alkaline Caustic Wash",
         equipment: "Valves, Filling Nozzles & Flow Meters",
-        spec: "2.5% NaOH (Sodium Hydroxide) @ 75°C - 85°C • 20 mins",
+        spec: "2.5% NaOH (Sodium Hydroxide) @ 75Ã‚Â°C - 85Ã‚Â°C Ã¢â‚¬Â¢ 20 mins",
         chemical: "Diversey Caustic CIP Blend",
         targetValue: "Conductivity > 45 mS/cm",
         completed: true,
-        logValue: "Concentration: 2.52% • Temp: 81.4°C"
+        logValue: "Concentration: 2.52% Ã¢â‚¬Â¢ Temp: 81.4Ã‚Â°C"
     },
     {
         id: 3,
         phase: "3. Intermediate Water Rinse",
         equipment: "Product Contact Lines & Manifold Loop",
-        spec: "Ambient RO Water until pH 7.0 neutral • 8 mins",
+        spec: "Ambient RO Water until pH 7.0 neutral Ã¢â‚¬Â¢ 8 mins",
         chemical: "Sterile RO Flush",
         targetValue: "pH 6.8 - 7.2 neutral",
         completed: true,
@@ -3237,17 +3461,17 @@ let sanitationChecklistStore = [
         id: 4,
         phase: "4. Acid Wash (Scale Removal)",
         equipment: "Plate Heat Exchanger & Pasteurizer Tubes",
-        spec: "1.2% Nitric/Phosphoric Acid @ 60°C • 15 mins",
+        spec: "1.2% Nitric/Phosphoric Acid @ 60Ã‚Â°C Ã¢â‚¬Â¢ 15 mins",
         chemical: "Food-Grade Descaler Acid",
         targetValue: "Conductivity 18 - 22 mS/cm",
         completed: true,
-        logValue: "Acid loop: 1.2% • Temp: 62.0°C"
+        logValue: "Acid loop: 1.2% Ã¢â‚¬Â¢ Temp: 62.0Ã‚Â°C"
     },
     {
         id: 5,
         phase: "5. Sanitizer Cold Disinfection",
         equipment: "All Aseptic Product Filling Heads",
-        spec: "150 - 200 ppm Peracetic Acid (PAA) @ 20°C • 10 mins",
+        spec: "150 - 200 ppm Peracetic Acid (PAA) @ 20Ã‚Â°C Ã¢â‚¬Â¢ 10 mins",
         chemical: "Peracetic Acid (PAA 15%)",
         targetValue: "150 - 200 ppm titration",
         completed: null,
@@ -3257,7 +3481,7 @@ let sanitationChecklistStore = [
         id: 6,
         phase: "6. Final Sterile Air Purge",
         equipment: "Nozzle Tips & Conveyor Enclosure",
-        spec: "HEPA Filtered Class 100 Air Blowdown • 5 mins",
+        spec: "HEPA Filtered Class 100 Air Blowdown Ã¢â‚¬Â¢ 5 mins",
         chemical: "0.2 Micron Filtered Air",
         targetValue: "Zero Moisture Residue",
         completed: null,

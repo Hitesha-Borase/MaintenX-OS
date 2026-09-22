@@ -6,7 +6,8 @@ const responseFormatter_js_1 = require("../../shared/utils/responseFormatter.js"
 class ExceptionsController {
     async getExceptions(request, reply) {
         const { plantId, severity, category } = request.query;
-        const data = await exceptions_service_js_1.exceptionsService.listExceptions(plantId || request.user?.plantId, severity, category);
+        const tenantId = request.user?.tenantId;
+        const data = await exceptions_service_js_1.exceptionsService.listExceptions(tenantId, plantId || request.user?.plantId, severity, category);
         return reply.send((0, responseFormatter_js_1.formatSuccess)(data));
     }
     async getException(request, reply) {
@@ -15,7 +16,9 @@ class ExceptionsController {
     }
     async createException(request, reply) {
         const body = request.body;
+        const tenantId = request.user?.tenantId;
         const data = await exceptions_service_js_1.exceptionsService.createException({
+            tenantId,
             title: body.title,
             severity: body.severity,
             category: body.category,

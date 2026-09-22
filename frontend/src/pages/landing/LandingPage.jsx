@@ -275,14 +275,9 @@ export function LandingPage() {
             <div
               style={{
                 height: "36px",
-                padding: "2px 6px",
-                borderRadius: "8px",
-                backgroundColor: "#FFFFFF",
-                border: "1px solid rgba(200, 149, 71, 0.25)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                boxShadow: "0 2px 6px rgba(70, 45, 15, 0.06)",
                 flexShrink: 0
               }}
             >
@@ -290,8 +285,8 @@ export function LandingPage() {
                 src="/great_canadian_meat_logo.png"
                 alt="The Great Canadian Meat Company"
                 style={{
-                  height: "30px",
-                  maxWidth: "54px",
+                  height: "32px",
+                  maxWidth: "58px",
                   objectFit: "contain"
                 }}
               />
@@ -745,10 +740,6 @@ export function LandingPage() {
               <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "14px" }}>
                 <div
                   style={{
-                    padding: "3px 6px",
-                    borderRadius: "8px",
-                    backgroundColor: "#FFFFFF",
-                    border: "1px solid rgba(200, 149, 71, 0.25)",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center"

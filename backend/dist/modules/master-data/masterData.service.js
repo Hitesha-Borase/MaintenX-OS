@@ -45,7 +45,7 @@ async function resolvePlantId(tenantId, plantIdOrCode) {
         return undefined;
     if (UUID_REGEX.test(plantIdOrCode))
         return plantIdOrCode;
-    // Try to find plant by code (e.g. "INDORE-01", "PUNE-02", "PLT-01")
+    // Try to find plant by code (e.g. "PLT-MEAT-01", "PLT-01")
     const [plant] = await database_js_1.db
         .select({ id: tenants_js_1.plants.id })
         .from(tenants_js_1.plants)
@@ -277,10 +277,10 @@ class MasterDataService {
         const newId = `PLT-0${inMemoryPlants.length + 1}`;
         const plantCode = (input.code ? String(input.code).trim().toUpperCase() : `PLT-${Date.now().toString().slice(-4)}`);
         const plantName = (input.name || "Main Manufacturing Plant").toString().trim();
-        const city = (input.city || (input.location ? input.location.split(',')[0]?.trim() : "Indore") || "Indore").toString().trim();
-        const state = (input.state || (input.location ? input.location.split(',')[1]?.trim() : "Madhya Pradesh") || "Madhya Pradesh").toString().trim();
-        const country = (input.country || (input.location ? input.location.split(',')[2]?.trim() : "India") || "India").toString().trim();
-        const timezone = ((input.timezone || "Asia/Kolkata").replace(/\s*\(.*\)/, "").trim()) || "Asia/Kolkata";
+        const city = (input.city || (input.location ? input.location.split(',')[0]?.trim() : "Oshawa") || "Oshawa").toString().trim();
+        const state = (input.state || (input.location ? input.location.split(',')[1]?.trim() : "Ontario") || "Ontario").toString().trim();
+        const country = (input.country || (input.location ? input.location.split(',')[2]?.trim() : "Canada") || "Canada").toString().trim();
+        const timezone = ((input.timezone || "America/Toronto").replace(/\s*\(.*\)/, "").trim()) || "America/Toronto";
         const loc = input.location || `${city}, ${state}, ${country}`;
         const isActive = input.status !== "Inactive" && input.isActive !== false;
         const newPlant = {
@@ -1346,32 +1346,35 @@ class MasterDataService {
     // ==========================================
     async listProductFamilies(tenantId) {
         try {
-            const query = tenantId
+            const isTenantUuid = typeof tenantId === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tenantId);
+            const query = isTenantUuid
                 ? (0, drizzle_orm_1.sql) `
-            SELECT id, code, name, category, description, plant_id, allergen_risk, standard_margin, status, created_at
+            SELECT id, tenant_id, code, name, category, description, plant_id, allergen_risk, standard_margin, status, effective_from, effective_to, created_at
             FROM public.product_families
-            WHERE tenant_id = ${tenantId}
-            ORDER BY created_at ASC
+            WHERE tenant_id = ${tenantId} OR tenant_id IS NULL
+            ORDER BY created_at DESC
           `
                 : (0, drizzle_orm_1.sql) `
-            SELECT id, code, name, category, description, plant_id, allergen_risk, standard_margin, status, created_at
+            SELECT id, tenant_id, code, name, category, description, plant_id, allergen_risk, standard_margin, status, effective_from, effective_to, created_at
             FROM public.product_families
-            ORDER BY created_at ASC
+            ORDER BY created_at DESC
           `;
             const dbFamilies = await database_js_1.db.execute(query);
             const rows = dbFamilies?.rows || (Array.isArray(dbFamilies) ? dbFamilies : []);
-            if (rows.length > 0) {
+            if (rows && rows.length > 0) {
                 return rows.map((r) => ({
                     id: String(r.id),
                     familyId: String(r.id),
                     code: r.code,
                     name: r.name,
-                    category: r.category || "BEVERAGE",
+                    category: r.category || "Finished Goods",
                     description: r.description || "",
                     plantId: r.plant_id || "PLT-01",
                     allergenRisk: r.allergen_risk || "None",
                     standardMargin: r.standard_margin || "55.0%",
                     status: r.status || "Active",
+                    effectiveFrom: r.effective_from || "",
+                    effectiveTo: r.effective_to || "",
                     skusCount: 0,
                 }));
             }
@@ -1379,49 +1382,94 @@ class MasterDataService {
         catch (err) {
             console.warn("DB listProductFamilies error:", err.message);
         }
-        return tenantId ? [] : inMemoryProductFamilies;
+        return [];
     }
     async createProductFamily(tenantId, input) {
-        const code = (input.code ? String(input.code).trim().toUpperCase() : `PF-${Date.now()}`);
+        const code = (input.code ? String(input.code).trim().toUpperCase() : `FAM-${Date.now().toString().slice(-4)}`);
         const name = String(input.name || "Product Family").trim();
-        const category = input.category || "BEVERAGE";
+        const category = input.category || "Finished Goods";
         const description = input.description || "";
         const plantId = input.plantId || "PLT-01";
         const allergenRisk = input.allergenRisk || "None";
         const standardMargin = input.standardMargin || "55.0%";
         const status = input.status || "Active";
-        let dbId = null;
+        const effectiveFrom = input.effectiveFrom || new Date().toISOString().substring(0, 10);
+        const effectiveTo = input.effectiveTo || "2030-12-31";
+        let activeTenantId = null;
+        if (typeof tenantId === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tenantId)) {
+            activeTenantId = tenantId;
+        }
+        else {
+            try {
+                const [demoTenant] = await database_js_1.db.select().from(tenants_js_1.tenants).limit(1);
+                if (demoTenant?.id)
+                    activeTenantId = demoTenant.id;
+            }
+            catch (_) { }
+        }
         try {
             const res = await database_js_1.db.execute((0, drizzle_orm_1.sql) `
-        INSERT INTO public.product_families (code, name, category, description, plant_id, allergen_risk, standard_margin, status)
-        VALUES (${code}, ${name}, ${category}, ${description}, ${plantId}, ${allergenRisk}, ${standardMargin}, ${status})
-        RETURNING id, code, name, category, description, plant_id, allergen_risk, standard_margin, status
+        INSERT INTO public.product_families (
+          tenant_id, code, name, category, description, plant_id, allergen_risk, standard_margin, status, effective_from, effective_to
+        )
+        VALUES (
+          ${activeTenantId}, ${code}, ${name}, ${category}, ${description}, ${plantId}, ${allergenRisk}, ${standardMargin}, ${status}, ${effectiveFrom}, ${effectiveTo}
+        )
+        ON CONFLICT (code) DO UPDATE SET
+          name = EXCLUDED.name,
+          category = EXCLUDED.category,
+          description = EXCLUDED.description,
+          plant_id = EXCLUDED.plant_id,
+          allergen_risk = EXCLUDED.allergen_risk,
+          standard_margin = EXCLUDED.standard_margin,
+          status = EXCLUDED.status,
+          effective_from = EXCLUDED.effective_from,
+          effective_to = EXCLUDED.effective_to,
+          updated_at = NOW()
+        RETURNING id, tenant_id, code, name, category, description, plant_id, allergen_risk, standard_margin, status, effective_from, effective_to
       `);
             const row = res?.rows?.[0] || (Array.isArray(res) ? res[0] : null);
             if (row?.id) {
-                dbId = String(row.id);
+                return {
+                    id: String(row.id),
+                    familyId: String(row.id),
+                    code: row.code,
+                    name: row.name,
+                    category: row.category,
+                    description: row.description,
+                    plantId: row.plant_id,
+                    allergenRisk: row.allergen_risk,
+                    standardMargin: row.standard_margin,
+                    status: row.status,
+                    effectiveFrom: row.effective_from,
+                    effectiveTo: row.effective_to,
+                    skusCount: Number(input.skusCount) || 0,
+                };
             }
         }
         catch (err) {
             console.warn("DB insert public.product_families error:", err.message);
+            throw err;
         }
-        const newId = dbId || `PF-0${inMemoryProductFamilies.length + 1}`;
-        const newFamily = {
-            id: newId,
-            familyId: newId,
+        return {
+            id: `PF-${Date.now()}`,
+            familyId: `PF-${Date.now()}`,
             code,
             name,
             category,
             description,
+            plantId,
+            allergenRisk,
+            standardMargin,
             status,
-            skusCount: Number(input.skusCount) || 0,
+            effectiveFrom,
+            effectiveTo,
+            skusCount: 0
         };
-        inMemoryProductFamilies.unshift(newFamily);
-        return newFamily;
     }
     async updateProductFamily(tenantId, id, input) {
         try {
-            await database_js_1.db.execute((0, drizzle_orm_1.sql) `
+            const res = await database_js_1.db.execute((0, drizzle_orm_1.sql) `
         UPDATE public.product_families
         SET 
           name = COALESCE(${input.name || null}, name),
@@ -1432,28 +1480,35 @@ class MasterDataService {
           allergen_risk = COALESCE(${input.allergenRisk || null}, allergen_risk),
           standard_margin = COALESCE(${input.standardMargin || null}, standard_margin),
           status = COALESCE(${input.status || null}, status),
+          effective_from = COALESCE(${input.effectiveFrom || null}, effective_from),
+          effective_to = COALESCE(${input.effectiveTo || null}, effective_to),
           updated_at = now()
         WHERE id::text = ${id} OR code = ${id}
+        RETURNING id, code, name, category, description, plant_id, allergen_risk, standard_margin, status, effective_from, effective_to
       `);
+            const row = res?.rows?.[0] || (Array.isArray(res) ? res[0] : null);
+            if (row) {
+                return {
+                    id: String(row.id),
+                    familyId: String(row.id),
+                    code: row.code,
+                    name: row.name,
+                    category: row.category,
+                    description: row.description,
+                    plantId: row.plant_id,
+                    allergenRisk: row.allergen_risk,
+                    standardMargin: row.standard_margin,
+                    status: row.status,
+                    effectiveFrom: row.effective_from,
+                    effectiveTo: row.effective_to,
+                };
+            }
         }
         catch (err) {
             console.warn("DB update public.product_families error:", err.message);
+            throw err;
         }
-        const idx = inMemoryProductFamilies.findIndex((f) => matchKey(f, id, ["id", "familyId", "code", "name"]));
-        if (idx === -1) {
-            const fallback = {
-                id,
-                familyId: id,
-                code: input.code || id,
-                name: input.name || "Product Family",
-                category: input.category || "BEVERAGE",
-                status: input.status || "Active",
-            };
-            inMemoryProductFamilies.push(fallback);
-            return fallback;
-        }
-        inMemoryProductFamilies[idx] = { ...inMemoryProductFamilies[idx], ...input };
-        return inMemoryProductFamilies[idx];
+        return { id, familyId: id, ...input };
     }
     async deleteProductFamily(tenantId, id) {
         try {
@@ -1461,16 +1516,12 @@ class MasterDataService {
         DELETE FROM public.product_families
         WHERE id::text = ${id} OR code = ${id} OR name = ${id}
       `);
+            return { success: true, id, message: "Product Family deleted from database" };
         }
         catch (err) {
             console.warn("DB delete public.product_families error:", err.message);
+            throw err;
         }
-        const idx = inMemoryProductFamilies.findIndex((f) => matchKey(f, id, ["id", "familyId", "code", "name"]));
-        if (idx !== -1) {
-            const deleted = inMemoryProductFamilies.splice(idx, 1);
-            return deleted[0];
-        }
-        return { id, message: "Product Family deleted" };
     }
     // ==========================================
     // 9. UOMS
@@ -1962,9 +2013,6 @@ class MasterDataService {
     // 12. CHANGEOVER MATRIX
     // ==========================================
     async listChangeoverRules(tenantId) {
-        if (tenantId) {
-            return [];
-        }
         try {
             const res = await database_js_1.db.execute((0, drizzle_orm_1.sql) `
         SELECT 
@@ -1984,36 +2032,35 @@ class MasterDataService {
           created_at AS "createdAt",
           updated_at AS "updatedAt"
         FROM public.changeover_rules
-        ORDER BY created_at ASC
+        ORDER BY created_at DESC
       `);
-            if (res.rows) {
-                return res.rows.map((r) => ({
-                    id: r.id,
-                    matrixId: r.matrixId || r.id,
-                    fromSkuId: r.fromSkuId || "SKU-001",
-                    fromSkuCode: r.fromSkuCode || "SKU-5001",
-                    fromFamily: r.fromFamily || "All Families",
-                    toSkuId: r.toSkuId || "SKU-002",
-                    toSkuCode: r.toSkuCode || "SKU-5002",
-                    toFamily: r.toFamily || "All Families",
-                    changeoverDurationMin: Number(r.changeoverDurationMin) || 0,
-                    sanitationClass: r.sanitationClass || "Standard Rinse",
-                    allergenCleaningRequired: Boolean(r.allergenCleaningRequired),
-                    notes: r.notes || "",
-                    status: r.status || "Active",
-                    createdAt: r.createdAt,
-                    updatedAt: r.updatedAt,
-                }));
-            }
+            const rows = res?.rows || (Array.isArray(res) ? res : []);
+            return rows.map((r) => ({
+                id: r.id,
+                matrixId: r.matrixId || r.id,
+                fromSkuId: r.fromSkuId || "SKU-001",
+                fromSkuCode: r.fromSkuCode || "SKU-5001",
+                fromFamily: r.fromFamily || "All Families",
+                toSkuId: r.toSkuId || "SKU-002",
+                toSkuCode: r.toSkuCode || "SKU-5002",
+                toFamily: r.toFamily || "All Families",
+                changeoverDurationMin: Number(r.changeoverDurationMin) || 0,
+                sanitationClass: r.sanitationClass || "Standard Rinse",
+                allergenCleaningRequired: Boolean(r.allergenCleaningRequired),
+                notes: r.notes || "",
+                status: r.status || "Active",
+                createdAt: r.createdAt,
+                updatedAt: r.updatedAt,
+            }));
         }
         catch (err) {
             console.warn("DB listChangeoverRules error:", err.message);
+            return inMemoryChangeoverRules;
         }
-        return inMemoryChangeoverRules;
     }
     async createChangeoverRule(tenantId, input) {
-        const newId = input.id || input.matrixId || `CO-0${inMemoryChangeoverRules.length + 1}`;
-        const matrixId = input.matrixId || newId;
+        const rawId = input.id || input.matrixId || `CO-${Date.now().toString().slice(-6)}`;
+        const matrixId = input.matrixId || input.id || rawId;
         const fromSkuId = input.fromSkuId || "SKU-001";
         const fromSkuCode = input.fromSkuCode || "SKU-5001";
         const fromFamily = input.fromFamily || "All Families";
@@ -2026,14 +2073,14 @@ class MasterDataService {
         const notes = input.notes || "";
         const status = input.status || "Active";
         try {
-            await database_js_1.db.execute((0, drizzle_orm_1.sql) `
+            const res = await database_js_1.db.execute((0, drizzle_orm_1.sql) `
         INSERT INTO public.changeover_rules (
           id, matrix_id, from_sku_id, from_sku_code, from_family,
           to_sku_id, to_sku_code, to_family, changeover_duration_min,
           sanitation_class, allergen_cleaning_required, notes, status,
           created_at, updated_at
         ) VALUES (
-          ${newId}, ${matrixId}, ${fromSkuId}, ${fromSkuCode}, ${fromFamily},
+          ${rawId}, ${matrixId}, ${fromSkuId}, ${fromSkuCode}, ${fromFamily},
           ${toSkuId}, ${toSkuCode}, ${toFamily}, ${duration},
           ${sanitation}, ${allergen}, ${notes}, ${status},
           NOW(), NOW()
@@ -2052,13 +2099,52 @@ class MasterDataService {
           notes = EXCLUDED.notes,
           status = EXCLUDED.status,
           updated_at = NOW()
+        RETURNING 
+          id,
+          matrix_id AS "matrixId",
+          from_sku_id AS "fromSkuId",
+          from_sku_code AS "fromSkuCode",
+          from_family AS "fromFamily",
+          to_sku_id AS "toSkuId",
+          to_sku_code AS "toSkuCode",
+          to_family AS "toFamily",
+          changeover_duration_min AS "changeoverDurationMin",
+          sanitation_class AS "sanitationClass",
+          allergen_cleaning_required AS "allergenCleaningRequired",
+          notes,
+          status,
+          created_at AS "createdAt",
+          updated_at AS "updatedAt"
       `);
+            if (res?.rows?.[0]) {
+                const r = res.rows[0];
+                const record = {
+                    id: r.id,
+                    matrixId: r.matrixId || r.id,
+                    fromSkuId: r.fromSkuId,
+                    fromSkuCode: r.fromSkuCode,
+                    fromFamily: r.fromFamily,
+                    toSkuId: r.toSkuId,
+                    toSkuCode: r.toSkuCode,
+                    toFamily: r.toFamily,
+                    changeoverDurationMin: Number(r.changeoverDurationMin) || 0,
+                    sanitationClass: r.sanitationClass,
+                    allergenCleaningRequired: Boolean(r.allergenCleaningRequired),
+                    notes: r.notes || "",
+                    status: r.status || "Active",
+                    createdAt: r.createdAt,
+                    updatedAt: r.updatedAt,
+                };
+                inMemoryChangeoverRules = [record, ...inMemoryChangeoverRules.filter((x) => x.id !== rawId && x.matrixId !== matrixId)];
+                return record;
+            }
         }
         catch (err) {
             console.warn("DB createChangeoverRule error:", err.message);
+            throw err;
         }
         const newRule = {
-            id: newId,
+            id: rawId,
             matrixId,
             fromSkuId,
             fromSkuCode,
@@ -2072,7 +2158,7 @@ class MasterDataService {
             notes,
             status,
         };
-        inMemoryChangeoverRules = [newRule, ...inMemoryChangeoverRules.filter((r) => r.id !== newId && r.matrixId !== matrixId)];
+        inMemoryChangeoverRules = [newRule, ...inMemoryChangeoverRules.filter((r) => r.id !== rawId && r.matrixId !== matrixId)];
         return newRule;
     }
     async updateChangeoverRule(tenantId, id, input) {
@@ -2088,7 +2174,7 @@ class MasterDataService {
         const notes = input.notes;
         const status = input.status;
         try {
-            await database_js_1.db.execute((0, drizzle_orm_1.sql) `
+            const res = await database_js_1.db.execute((0, drizzle_orm_1.sql) `
         UPDATE public.changeover_rules SET
           from_sku_id = COALESCE(${fromSkuId}, from_sku_id),
           from_sku_code = COALESCE(${fromSkuCode}, from_sku_code),
@@ -2103,10 +2189,30 @@ class MasterDataService {
           status = COALESCE(${status}, status),
           updated_at = NOW()
         WHERE id::text = ${id} OR matrix_id = ${id} OR lower(matrix_id) = lower(${id})
+        RETURNING 
+          id,
+          matrix_id AS "matrixId",
+          from_sku_id AS "fromSkuId",
+          from_sku_code AS "fromSkuCode",
+          from_family AS "fromFamily",
+          to_sku_id AS "toSkuId",
+          to_sku_code AS "toSkuCode",
+          to_family AS "toFamily",
+          changeover_duration_min AS "changeoverDurationMin",
+          sanitation_class AS "sanitationClass",
+          allergen_cleaning_required AS "allergenCleaningRequired",
+          notes,
+          status,
+          created_at AS "createdAt",
+          updated_at AS "updatedAt"
       `);
+            if (res?.rows?.[0]) {
+                return res.rows[0];
+            }
         }
         catch (err) {
             console.warn("DB updateChangeoverRule error:", err.message);
+            throw err;
         }
         const idx = inMemoryChangeoverRules.findIndex((r) => r.id === id || r.matrixId === id);
         if (idx !== -1) {
@@ -2124,6 +2230,7 @@ class MasterDataService {
         }
         catch (err) {
             console.warn("DB deleteChangeoverRule error:", err.message);
+            throw err;
         }
         const idx = inMemoryChangeoverRules.findIndex((r) => r.id === id || r.matrixId === id);
         if (idx !== -1) {
@@ -2136,9 +2243,6 @@ class MasterDataService {
     // 13. SANITATION & ALLERGENS
     // ==========================================
     async listSanitationClasses(tenantId) {
-        if (tenantId) {
-            return [];
-        }
         try {
             const res = await database_js_1.db.execute((0, drizzle_orm_1.sql) `
         SELECT 
@@ -2330,9 +2434,6 @@ class MasterDataService {
         return { id, message: "Sanitation class deleted" };
     }
     async listAllergenRules(tenantId) {
-        if (tenantId) {
-            return [];
-        }
         try {
             const res = await database_js_1.db.execute((0, drizzle_orm_1.sql) `
         SELECT
@@ -2562,7 +2663,7 @@ class MasterDataService {
             }
             if (!tId)
                 throw new Error("No tenantId available to persist SKU");
-            const cat = (newSku.category.toUpperCase().includes("RAW")) ? "RAW_MATERIAL" : (newSku.category.toUpperCase().includes("PACK") ? "PACKAGING" : "FINISHED_GOODS");
+            const cat = input.category || newSku.category || "Finished Goods";
             const costRaw = String(newSku.stdCost || "0").replace(/[^\d.]/g, "");
             const [insertedSku] = await database_js_1.db.insert(masterData_js_1.skus).values({
                 tenantId: tId,
@@ -2592,11 +2693,7 @@ class MasterDataService {
         }
         // Persist to PostgreSQL by matching on skuCode or id
         try {
-            const cat = input.category
-                ? input.category.toUpperCase().includes("RAW") ? "RAW_MATERIAL"
-                    : input.category.toUpperCase().includes("PACK") ? "PACKAGING"
-                        : "FINISHED_GOODS"
-                : undefined;
+            const cat = input.category !== undefined ? input.category : undefined;
             const updates = {};
             if (input.name)
                 updates.name = input.name;
@@ -2732,18 +2829,18 @@ class MasterDataService {
                         bomNumber: r.bom_number || `BOM-${String(r.id).substring(0, 4)}`,
                         finishedSkuId: r.sku_id ? String(r.sku_id) : "SKU-001",
                         finishedSkuCode: r.sku_code || "SKU-5001",
-                        finishedSkuName: r.name || r.sku_name || "Finished Beverage",
+                        finishedSkuName: r.name || r.sku_name || "Finished Meat Product",
                         revision: r.version || "R1",
-                        batchSize: `${Number(r.batch_size || 10000).toLocaleString()} ${r.batch_uom || 'Liters'}`,
+                        batchSize: `${Number(r.batch_size || 10000).toLocaleString()} ${r.batch_uom || 'LBS'}`,
                         yieldTarget: `${Number(r.yield_percent || 99.0).toFixed(1)}%`,
                         expectedYieldPct: Number(r.yield_percent) || 99.0,
                         status: statusDisplay,
                         approvalStatus: r.approval_status || "Approved",
-                        createdBy: r.created_by || "Alexander Vance",
+                        createdBy: r.created_by || "Stefan Crawford",
                         lastUpdated: r.updated_at ? new Date(r.updated_at).toISOString().substring(0, 10) : new Date().toISOString().substring(0, 10),
                         components,
                         revisionHistory: [
-                            { revision: r.version || "R1", status: r.approval_status || "Approved", createdBy: r.created_by || "Alexander Vance", date: new Date(r.created_at).toISOString().substring(0, 10), changes: "Formulation active in PostgreSQL public.boms", approvedBy: "Sarah Jenkins" }
+                            { revision: r.version || "R1", status: r.approval_status || "Approved", createdBy: r.created_by || "Stefan Crawford", date: new Date(r.created_at).toISOString().substring(0, 10), changes: "Formulation active in PostgreSQL public.boms", approvedBy: "Stephanie Kuzmych" }
                         ]
                     };
                 });
@@ -2811,7 +2908,7 @@ class MasterDataService {
             const yieldNum = Number(String(input.yieldTarget || input.yieldPercent || "99.0").replace(/[^\d.]/g, "")) || 99.0;
             const status = input.status || "Draft";
             const approvalStatus = input.approvalStatus || (status === "Active" ? "Approved" : "Draft");
-            const createdBy = input.createdBy || "Alexander Vance";
+            const createdBy = input.createdBy || "Ronald Robinson";
             // 4. Insert into public.boms
             const [inserted] = await database_js_1.db.insert(masterData_js_1.boms).values({
                 tenantId: resolvedTenantId,
@@ -2904,7 +3001,7 @@ class MasterDataService {
                 createdBy,
                 lastUpdated: new Date().toISOString().substring(0, 10),
                 revisionHistory: [
-                    { revision: version, status: approvalStatus, createdBy, date: new Date().toISOString().substring(0, 10), changes: "Initial BOM Draft Formulation registered in DB.", approvedBy: approvalStatus === "Approved" ? "Sarah Jenkins" : "-" }
+                    { revision: version, status: approvalStatus, createdBy, date: new Date().toISOString().substring(0, 10), changes: "Initial BOM Draft Formulation registered in DB.", approvedBy: approvalStatus === "Approved" ? "Stephanie Kuzmych" : "-" }
                 ]
             };
         }
@@ -3040,6 +3137,35 @@ class MasterDataService {
             throw err;
         }
     }
+    async updateAssetType(tenantId, id, input) {
+        try {
+            const name = String(input.name || "").trim();
+            if (!name) {
+                throw new Error("Asset type name is required");
+            }
+            const code = (input.code || name.replace(/[^A-Z0-9]/gi, "").substring(0, 8)).toUpperCase();
+            const description = input.description || "";
+            const res = await database_js_1.db.execute((0, drizzle_orm_1.sql) `
+        UPDATE public.asset_types 
+        SET name = ${name}, code = ${code}, description = ${description}, updated_at = NOW()
+        WHERE id::text = ${id} OR code = ${id}
+        RETURNING *
+      `);
+            const row = res?.rows?.[0] || (Array.isArray(res) ? res[0] : null);
+            return {
+                id: String(row?.id || id),
+                name: row?.name || name,
+                code: row?.code || code,
+                description: row?.description || description,
+                createdAt: row?.created_at,
+                updatedAt: row?.updated_at || new Date().toISOString()
+            };
+        }
+        catch (err) {
+            console.warn("DB updateAssetType error:", err.message);
+            throw err;
+        }
+    }
     async deleteAssetType(tenantId, id) {
         try {
             await database_js_1.db.execute((0, drizzle_orm_1.sql) `DELETE FROM public.asset_types WHERE id::text = ${id} OR code = ${id} OR name = ${id}`);
@@ -3134,8 +3260,8 @@ class MasterDataService {
                 plantMap.set(p.id, p.name);
             });
             return rows.map((r) => {
-                const plantName = (r.plantId && plantMap.get(r.plantId)) || "Indore Mega Bottling & Canning Facility";
-                const lineName = (r.lineId && lineMap.get(r.lineId)) || "Line 1 Bottling & Canning (250 BPM)";
+                const plantName = (r.plantId && plantMap.get(r.plantId)) || "Plant 1 - Meat Processing & Smokehouse Facility";
+                const lineName = (r.lineId && lineMap.get(r.lineId)) || "Line 1 - Smokehouse & Grinder Line";
                 const rawStatus = (r.status || "Operational").trim();
                 const formattedStatus = rawStatus.charAt(0).toUpperCase() + rawStatus.slice(1).toLowerCase();
                 const rawCrit = (r.criticalLevel || "Medium").replace(/^CRITICAL_/i, "").replace(/_P[1-3]$/i, "");
@@ -3250,9 +3376,9 @@ class MasterDataService {
             name: inserted.name,
             type: inserted.modelNumber,
             department: input.department || "Packaging",
-            plant: input.plant || "Indore Mega Facility",
+            plant: input.plant || "Plant 1 - Meat Processing & Smokehouse Facility",
             plantId,
-            line: input.line || "Line 1 Bottling & Canning",
+            line: input.line || "Line 1 - Smokehouse & Grinder Line",
             lineId,
             location: input.location || "Bay 4A - Main Hall",
             status: input.status || "Operational",
@@ -3563,7 +3689,7 @@ class MasterDataService {
           qs.id,
           qs.tenant_id,
           qs.sku_id,
-          COALESCE(qs.parameter_name, qs.parameter, qs.specification_title, 'Quality Parameter') AS parameter_name,
+          COALESCE(qs.parameter_name, 'Quality Parameter') AS parameter_name,
           COALESCE(qs.target_value, 0) AS target_value,
           COALESCE(qs.min_tolerance, 0) AS min_tolerance,
           COALESCE(qs.max_tolerance, 0) AS max_tolerance,
@@ -3688,7 +3814,6 @@ class MasterDataService {
         WHERE id::text = ${id}
            OR id::text LIKE '%' || ${id}
            OR lower(COALESCE(parameter_name, '')) = lower(${id})
-           OR lower(COALESCE(parameter, '')) = lower(${id})
       `);
             return { id, ...input };
         }
@@ -3704,8 +3829,6 @@ class MasterDataService {
         WHERE id::text = ${id}
            OR id::text LIKE '%' || ${id}
            OR lower(COALESCE(parameter_name, '')) = lower(${id})
-           OR lower(COALESCE(parameter, '')) = lower(${id})
-           OR lower(COALESCE(specification_title, '')) = lower(${id})
       `);
             return { id, message: "Quality specification deleted" };
         }
@@ -3718,56 +3841,133 @@ class MasterDataService {
     // 15. LABOUR STANDARDS & CREW MANNING
     // ==========================================
     async listLabourStandards(tenantId) {
-        if (tenantId) {
+        try {
+            const res = await database_js_1.db.execute((0, drizzle_orm_1.sql) `
+        SELECT 
+          id,
+          standard_id AS "standardId",
+          line_id AS "lineId",
+          line_name AS "lineName",
+          standard_crew AS "standardCrew",
+          std_labor_hours_per_1k_units AS "stdLaborHoursPer1kUnits",
+          direct_cost_per_hour AS "directCostPerHour",
+          status,
+          created_at AS "createdAt",
+          updated_at AS "updatedAt"
+        FROM public.labour_standards
+        ORDER BY created_at DESC
+      `);
+            const rows = res?.rows || (Array.isArray(res) ? res : []);
+            return rows.map((r) => ({
+                id: String(r.id),
+                standardId: r.standardId || `LBR-${String(r.id).slice(-4)}`,
+                lineId: r.lineId || "LIN-01",
+                lineName: r.lineName || "Production Line",
+                standardCrew: Number(r.standardCrew) || 8,
+                stdLaborHoursPer1kUnits: Number(r.stdLaborHoursPer1kUnits) || 2.0,
+                directCostPerHour: r.directCostPerHour || "$25.00",
+                status: r.status || "Active",
+                createdAt: r.createdAt,
+                updatedAt: r.updatedAt,
+            }));
+        }
+        catch (err) {
+            console.warn("DB listLabourStandards error:", err.message);
             return [];
         }
-        return inMemoryLabourStandards;
     }
     async createLabourStandard(tenantId, input) {
-        const newId = `LBR-0${inMemoryLabourStandards.length + 1}`;
-        const rawCost = input.directCostPerHour !== undefined ? input.directCostPerHour.toString().trim() : "$25.00";
-        const costStr = rawCost.startsWith("$") ? rawCost : `$${rawCost}`;
-        const newStandard = {
-            id: input.id || newId,
-            lineId: input.lineId || "LIN-01",
-            lineName: input.lineName || "Production Line",
-            standardCrew: Number(input.standardCrew) || 8,
-            stdLaborHoursPer1kUnits: Number(input.stdLaborHoursPer1kUnits) || 2.0,
-            directCostPerHour: costStr,
-            status: input.status || "Active",
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-        };
-        inMemoryLabourStandards.unshift(newStandard);
-        return newStandard;
+        try {
+            const standardIdVal = String(input.standardId || input.id || `LBR-${Date.now().toString().slice(-4)}`).trim();
+            const lineIdVal = String(input.lineId || "LIN-01").trim();
+            const lineNameVal = String(input.lineName || "Production Line").trim();
+            const crewVal = Number(input.standardCrew) || 8;
+            const hoursVal = Number(input.stdLaborHoursPer1kUnits) || 2.0;
+            const rawCost = input.directCostPerHour !== undefined ? input.directCostPerHour.toString().trim() : "$25.00";
+            const costStr = rawCost.startsWith("$") ? rawCost : `$${rawCost}`;
+            const statusVal = String(input.status || "Active").trim();
+            const res = await database_js_1.db.execute((0, drizzle_orm_1.sql) `
+        INSERT INTO public.labour_standards (
+          standard_id, line_id, line_name, standard_crew,
+          std_labor_hours_per_1k_units, direct_cost_per_hour, status,
+          created_at, updated_at
+        ) VALUES (
+          ${standardIdVal}, ${lineIdVal}, ${lineNameVal}, ${crewVal},
+          ${hoursVal}, ${costStr}, ${statusVal},
+          NOW(), NOW()
+        )
+        ON CONFLICT (standard_id) DO UPDATE SET
+          line_id = EXCLUDED.line_id,
+          line_name = EXCLUDED.line_name,
+          standard_crew = EXCLUDED.standard_crew,
+          std_labor_hours_per_1k_units = EXCLUDED.std_labor_hours_per_1k_units,
+          direct_cost_per_hour = EXCLUDED.direct_cost_per_hour,
+          status = EXCLUDED.status,
+          updated_at = NOW()
+        RETURNING *
+      `);
+            const row = res?.rows?.[0] || (Array.isArray(res) ? res[0] : null);
+            return {
+                id: row?.id ? String(row.id) : standardIdVal,
+                standardId: row?.standard_id || standardIdVal,
+                lineId: row?.line_id || lineIdVal,
+                lineName: row?.line_name || lineNameVal,
+                standardCrew: Number(row?.standard_crew ?? crewVal),
+                stdLaborHoursPer1kUnits: Number(row?.std_labor_hours_per_1k_units ?? hoursVal),
+                directCostPerHour: row?.direct_cost_per_hour || costStr,
+                status: row?.status || statusVal,
+                createdAt: row?.created_at || new Date().toISOString(),
+                updatedAt: row?.updated_at || new Date().toISOString(),
+            };
+        }
+        catch (err) {
+            console.error("DB createLabourStandard error:", err.message);
+            throw err;
+        }
     }
     async updateLabourStandard(tenantId, id, input) {
-        const idx = inMemoryLabourStandards.findIndex((s) => s.id === id);
-        if (idx !== -1) {
-            let costStr = inMemoryLabourStandards[idx].directCostPerHour;
-            if (input.directCostPerHour !== undefined) {
-                const raw = input.directCostPerHour.toString().trim();
+        try {
+            let costStr = input.directCostPerHour;
+            if (costStr !== undefined) {
+                const raw = costStr.toString().trim();
                 costStr = raw.startsWith("$") ? raw : `$${raw}`;
             }
-            inMemoryLabourStandards[idx] = {
-                ...inMemoryLabourStandards[idx],
-                ...input,
-                standardCrew: input.standardCrew !== undefined ? Number(input.standardCrew) : inMemoryLabourStandards[idx].standardCrew,
-                stdLaborHoursPer1kUnits: input.stdLaborHoursPer1kUnits !== undefined ? Number(input.stdLaborHoursPer1kUnits) : inMemoryLabourStandards[idx].stdLaborHoursPer1kUnits,
-                directCostPerHour: costStr,
-                updatedAt: new Date().toISOString()
-            };
-            return inMemoryLabourStandards[idx];
+            const crewVal = input.standardCrew !== undefined ? Number(input.standardCrew) : null;
+            const hoursVal = input.stdLaborHoursPer1kUnits !== undefined ? Number(input.stdLaborHoursPer1kUnits) : null;
+            await database_js_1.db.execute((0, drizzle_orm_1.sql) `
+        UPDATE public.labour_standards
+        SET
+          line_id = COALESCE(${input.lineId || null}, line_id),
+          line_name = COALESCE(${input.lineName || null}, line_name),
+          standard_crew = COALESCE(${crewVal}, standard_crew),
+          std_labor_hours_per_1k_units = COALESCE(${hoursVal}, std_labor_hours_per_1k_units),
+          direct_cost_per_hour = COALESCE(${costStr || null}, direct_cost_per_hour),
+          status = COALESCE(${input.status || null}, status),
+          updated_at = NOW()
+        WHERE id::text = ${id}
+           OR standard_id = ${id}
+           OR lower(line_id) = lower(${id})
+      `);
+            return { id, ...input };
         }
-        return { id, ...input };
+        catch (err) {
+            console.warn("DB updateLabourStandard error:", err.message);
+            return { id, ...input };
+        }
     }
     async deleteLabourStandard(tenantId, id) {
-        const idx = inMemoryLabourStandards.findIndex((s) => s.id === id);
-        if (idx !== -1) {
-            const deleted = inMemoryLabourStandards.splice(idx, 1);
-            return deleted[0];
+        try {
+            await database_js_1.db.execute((0, drizzle_orm_1.sql) `
+        DELETE FROM public.labour_standards
+        WHERE id::text = ${id}
+           OR standard_id = ${id}
+      `);
+            return { id, message: "Labour standard deleted" };
         }
-        return { id, message: "Labour standard deleted" };
+        catch (err) {
+            console.warn("DB deleteLabourStandard error:", err.message);
+            return { id, message: "Labour standard deleted" };
+        }
     }
     // ==========================================
     // 17. EMPLOYEE SKILLS MATRIX
@@ -3805,7 +4005,7 @@ class MasterDataService {
                     departmentId: r.departmentId || "DEP-01",
                     role: r.role || "Line Operator",
                     plantId: r.plantId || "PLT-01",
-                    plantName: r.plantName || "Indore Plant",
+                    plantName: r.plantName || "Plant 1 - Meat Processing & Smokehouse Facility",
                     skillLevel: r.skillLevel || "Level 2 (Certified Operator)",
                     skills: Array.isArray(r.skills) ? r.skills : [],
                     certifications: Array.isArray(r.certifications) ? r.certifications : [],
@@ -3831,7 +4031,7 @@ class MasterDataService {
                             departmentId: "DEP-02",
                             role: s.designation || "Maintenance Technician",
                             plantId: s.plantId,
-                            plantName: "Indore Plant",
+                            plantName: "Plant 1 - Meat Processing & Smokehouse Facility",
                             skillLevel: "Level 2 (Certified Operator)",
                             skills: ["Preventive Maintenance", "Floor Diagnostics"],
                             certifications: Array.isArray(s.certifications) ? s.certifications : ["GMP Plant Safety"],
@@ -3862,7 +4062,7 @@ class MasterDataService {
         const deptIdVal = input.departmentId || "DEP-01";
         const roleVal = input.role || "Line Operator";
         const plantIdVal = input.plantId || "PLT-01";
-        const plantNameVal = input.plantName || "Indore Plant";
+        const plantNameVal = input.plantName || "Plant 1 - Meat Processing & Smokehouse Facility";
         const levelVal = input.skillLevel || "Level 2 (Certified Operator)";
         const skillsJson = JSON.stringify(Array.isArray(input.skills) ? input.skills : ["Standard Operating Procedures"]);
         const certsJson = JSON.stringify(Array.isArray(input.certifications) ? input.certifications : ["Plant Safety GMP"]);
@@ -4123,7 +4323,7 @@ class MasterDataService {
                     resourceType: r.resourceType || "Selective Pallet Rack",
                     type: r.resourceType || "Selective Pallet Rack",
                     plantId: r.plantId || "PLT-01",
-                    plantName: r.plantName || "Indore Plant",
+                    plantName: r.plantName || "Plant 1 - Meat Processing & Smokehouse Facility",
                     zone: r.zone || "General Staging",
                     capacityUnit: r.capacityUnit || "Pallet Positions",
                     totalCapacity: r.totalCapacity !== null && r.totalCapacity !== undefined ? Number(r.totalCapacity) : 500,
@@ -4150,7 +4350,7 @@ class MasterDataService {
         const nameVal = input.name || "Storage Resource Bay";
         const typeVal = input.resourceType || input.type || "Selective Pallet Rack";
         const plantIdVal = input.plantId || "PLT-01";
-        const plantNameVal = input.plantName || "Indore Plant";
+        const plantNameVal = input.plantName || "Plant 1 - Meat Processing & Smokehouse Facility";
         const zoneVal = input.zone || "General Staging";
         const unitVal = input.capacityUnit || "Pallet Positions";
         const totalCap = Number(input.totalCapacity) || 500;
@@ -4257,6 +4457,110 @@ class MasterDataService {
             console.warn("DB deleteStorageResource error:", err.message);
         }
         return { id, message: "Storage resource deleted from database" };
+    }
+    // ==========================================
+    // 20. STORAGE TYPES (STRICTLY public.storage_types)
+    // ==========================================
+    async listStorageTypes(tenantId) {
+        try {
+            const res = await database_js_1.db.execute((0, drizzle_orm_1.sql) `
+        SELECT 
+          id,
+          type_code AS "typeCode",
+          name,
+          category,
+          description,
+          status,
+          created_at AS "createdAt",
+          updated_at AS "updatedAt"
+        FROM public.storage_types
+        ORDER BY created_at ASC
+      `);
+            if (Array.isArray(res?.rows)) {
+                return res.rows.map((r) => ({
+                    id: r.id,
+                    typeCode: r.typeCode || `ST-${String(r.id).slice(0, 6)}`,
+                    name: r.name,
+                    category: r.category || "Warehouse Storage",
+                    description: r.description || "",
+                    status: r.status || "Active",
+                    createdAt: r.createdAt,
+                    updatedAt: r.updatedAt,
+                }));
+            }
+        }
+        catch (err) {
+            console.warn("DB listStorageTypes error:", err.message);
+        }
+        return [];
+    }
+    async createStorageType(tenantId, input) {
+        const rawCode = (input.typeCode || input.code || `ST-${Date.now().toString().slice(-4)}`).toUpperCase().trim();
+        const nameVal = (input.name || "New Storage Type").trim();
+        const categoryVal = input.category || "Warehouse Storage";
+        const descVal = input.description || "";
+        const statusVal = input.status || "Active";
+        try {
+            const res = await database_js_1.db.execute((0, drizzle_orm_1.sql) `
+        INSERT INTO public.storage_types (
+          type_code, name, category, description, status, created_at, updated_at
+        ) VALUES (
+          ${rawCode}, ${nameVal}, ${categoryVal}, ${descVal}, ${statusVal}, NOW(), NOW()
+        )
+        RETURNING id, type_code AS "typeCode", name, category, description, status, created_at AS "createdAt", updated_at AS "updatedAt"
+      `);
+            if (res.rows?.[0]) {
+                return res.rows[0];
+            }
+        }
+        catch (err) {
+            console.warn("DB createStorageType error:", err.message);
+        }
+        return {
+            id: `st-${Date.now()}`,
+            typeCode: rawCode,
+            name: nameVal,
+            category: categoryVal,
+            description: descVal,
+            status: statusVal,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        };
+    }
+    async updateStorageType(tenantId, id, input) {
+        try {
+            const res = await database_js_1.db.execute((0, drizzle_orm_1.sql) `
+        UPDATE public.storage_types
+        SET
+          name = COALESCE(${input.name || null}, name),
+          type_code = COALESCE(${input.typeCode ? input.typeCode.toUpperCase().trim() : null}, type_code),
+          category = COALESCE(${input.category || null}, category),
+          description = COALESCE(${input.description !== undefined ? input.description : null}, description),
+          status = COALESCE(${input.status || null}, status),
+          updated_at = NOW()
+        WHERE id::text = ${id} OR type_code = ${id} OR lower(type_code) = lower(${id})
+        RETURNING id, type_code AS "typeCode", name, category, description, status, created_at AS "createdAt", updated_at AS "updatedAt"
+      `);
+            if (res.rows?.[0]) {
+                return res.rows[0];
+            }
+        }
+        catch (err) {
+            console.warn("DB updateStorageType error:", err.message);
+        }
+        return { id, ...input, updatedAt: new Date().toISOString() };
+    }
+    async deleteStorageType(tenantId, id) {
+        try {
+            await database_js_1.db.execute((0, drizzle_orm_1.sql) `
+        DELETE FROM public.storage_types
+        WHERE id::text = ${id} OR type_code = ${id} OR lower(type_code) = lower(${id})
+      `);
+        }
+        catch (err) {
+            console.warn("DB deleteStorageType error:", err.message);
+        }
+        return { id, message: "Storage type deleted from database" };
     }
 }
 exports.MasterDataService = MasterDataService;

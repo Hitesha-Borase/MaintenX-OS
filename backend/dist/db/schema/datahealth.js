@@ -94,7 +94,7 @@ exports.systemGovernanceReports = (0, pg_core_1.pgTable)("system_governance_repo
     tier: (0, pg_core_1.varchar)("tier", { length: 100 }).default("ENTERPRISE TIER ACTIVE"),
     edgeHealth: (0, pg_core_1.varchar)("edge_health", { length: 100 }).default("99.99% HEALTH"),
     status: (0, pg_core_1.varchar)("status", { length: 50 }).default("PUBLISHED"),
-    generatedBy: (0, pg_core_1.varchar)("generated_by", { length: 128 }).default("Alexander Vance"),
+    generatedBy: (0, pg_core_1.varchar)("generated_by", { length: 128 }).default("Ronald Robinson"),
     metrics: (0, pg_core_1.jsonb)("metrics"),
     createdAt: (0, pg_core_1.timestamp)("created_at", { withTimezone: true }).defaultNow(),
     updatedAt: (0, pg_core_1.timestamp)("updated_at", { withTimezone: true }).defaultNow(),

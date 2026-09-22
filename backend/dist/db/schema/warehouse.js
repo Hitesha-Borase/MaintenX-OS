@@ -9,7 +9,7 @@ exports.warehouses = (0, pg_core_1.pgTable)("warehouses", {
     id: (0, pg_core_1.uuid)("id").defaultRandom().primaryKey(),
     tenantId: (0, pg_core_1.uuid)("tenant_id").references(() => tenants_1.tenants.id, { onDelete: "cascade" }).notNull(),
     plantId: (0, pg_core_1.uuid)("plant_id").references(() => tenants_1.plants.id, { onDelete: "cascade" }).notNull(),
-    code: (0, pg_core_1.varchar)("code", { length: 50 }).notNull(), // "WH-MAIN-INDORE"
+    code: (0, pg_core_1.varchar)("code", { length: 50 }).notNull(), // "WH-MEAT-01"
     name: (0, pg_core_1.varchar)("name", { length: 255 }).notNull(), // "Main Ambient & Cold Storage Warehouse"
     type: (0, pg_core_1.varchar)("type", { length: 100 }).default("RAW_AND_FINISHED"),
     isActive: (0, pg_core_1.boolean)("is_active").default(true).notNull(),

@@ -18,7 +18,8 @@ class CIController {
     // ============================================================================
     async getDashboardSummary(request, reply) {
         const { plantId, stage } = request.query || {};
-        const data = await ci_service_js_1.ciService.getDashboardSummary(plantId, stage);
+        const tenantId = request.user?.tenantId;
+        const data = await ci_service_js_1.ciService.getDashboardSummary(plantId, stage, tenantId);
         return reply.send((0, responseFormatter_js_1.formatSuccess)(data));
     }
     // ============================================================================
@@ -26,7 +27,8 @@ class CIController {
     // ============================================================================
     async getInvestigations(request, reply) {
         const { plantId, stage } = request.query || {};
-        const data = await ci_service_js_1.ciService.listInvestigations(plantId, stage);
+        const tenantId = request.user?.tenantId;
+        const data = await ci_service_js_1.ciService.listInvestigations(plantId, stage, tenantId);
         return reply.send((0, responseFormatter_js_1.formatSuccess)(data));
     }
     async getInvestigation(request, reply) {
@@ -62,7 +64,8 @@ class CIController {
     }
     async getRCASummary(request, reply) {
         const plantId = request.query?.plantId;
-        const data = await ci_service_js_1.ciService.getRCASummary(plantId);
+        const tenantId = request.user?.tenantId;
+        const data = await ci_service_js_1.ciService.getRCASummary(plantId, tenantId);
         return reply.send((0, responseFormatter_js_1.formatSuccess)(data));
     }
     // ============================================================================
@@ -119,7 +122,8 @@ class CIController {
     // 5. CAPA ACTIONS
     // ============================================================================
     async getCapaActions(request, reply) {
-        const data = await ci_service_js_1.ciService.listCapaActions(request.query);
+        const tenantId = request.user?.tenantId;
+        const data = await ci_service_js_1.ciService.listCapaActions({ ...(request.query || {}), tenantId });
         return reply.send((0, responseFormatter_js_1.formatSuccess)(data));
     }
     async createCapaAction(request, reply) {
@@ -157,7 +161,8 @@ class CIController {
     // ============================================================================
     async getLosses(request, reply) {
         const { plantId, category, stage } = request.query || {};
-        const data = await ci_service_js_1.ciService.listLosses(plantId, category, stage);
+        const tenantId = request.user?.tenantId;
+        const data = await ci_service_js_1.ciService.listLosses(plantId, category, stage, tenantId);
         return reply.send((0, responseFormatter_js_1.formatSuccess)(data));
     }
     async createLoss(request, reply) {
@@ -172,7 +177,8 @@ class CIController {
     }
     async getLossSummary(request, reply) {
         const plantId = request.query?.plantId;
-        const data = await ci_service_js_1.ciService.getLossSummary(plantId);
+        const tenantId = request.user?.tenantId;
+        const data = await ci_service_js_1.ciService.getLossSummary(plantId, tenantId);
         return reply.send((0, responseFormatter_js_1.formatSuccess)(data));
     }
     // ============================================================================
@@ -180,7 +186,8 @@ class CIController {
     // ============================================================================
     async getProjects(request, reply) {
         const plantId = request.query?.plantId;
-        const data = await ci_service_js_1.ciService.listProjects(plantId);
+        const tenantId = request.user?.tenantId;
+        const data = await ci_service_js_1.ciService.listProjects(plantId, tenantId);
         return reply.send((0, responseFormatter_js_1.formatSuccess)(data));
     }
     async getProject(request, reply) {
@@ -218,7 +225,8 @@ class CIController {
     }
     async getBenefitsSummary(request, reply) {
         const plantId = request.query?.plantId;
-        const data = await ci_service_js_1.ciService.getBenefitsSummary(plantId);
+        const tenantId = request.user?.tenantId;
+        const data = await ci_service_js_1.ciService.getBenefitsSummary(plantId, tenantId);
         return reply.send((0, responseFormatter_js_1.formatSuccess)(data));
     }
     // ============================================================================
@@ -226,7 +234,8 @@ class CIController {
     // ============================================================================
     async getStandards(request, reply) {
         const { plantId, type } = request.query || {};
-        const data = await ci_service_js_1.ciService.listStandards(plantId, type);
+        const tenantId = request.user?.tenantId;
+        const data = await ci_service_js_1.ciService.listStandards(plantId, type, tenantId);
         return reply.send((0, responseFormatter_js_1.formatSuccess)(data));
     }
     async createStandard(request, reply) {
@@ -249,7 +258,8 @@ class CIController {
     // ============================================================================
     async getSolutions(request, reply) {
         const { assetId, search } = request.query || {};
-        const data = await ci_service_js_1.ciService.listSolutions(assetId, search);
+        const tenantId = request.user?.tenantId;
+        const data = await ci_service_js_1.ciService.listSolutions(assetId, search, tenantId);
         return reply.send((0, responseFormatter_js_1.formatSuccess)(data));
     }
     async createSolution(request, reply) {
@@ -267,7 +277,8 @@ class CIController {
     // ============================================================================
     async getCapex(request, reply) {
         const plantId = request.query?.plantId;
-        const data = await ci_service_js_1.ciService.listCapex(plantId);
+        const tenantId = request.user?.tenantId;
+        const data = await ci_service_js_1.ciService.listCapex(plantId, tenantId);
         return reply.send((0, responseFormatter_js_1.formatSuccess)(data));
     }
     async createCapex(request, reply) {
@@ -285,7 +296,8 @@ class CIController {
     // ============================================================================
     async getReliabilityRecords(request, reply) {
         const { plantId, onlyBadActors, stage } = request.query || {};
-        const data = await ci_service_js_1.ciService.listReliabilityRecords(plantId, onlyBadActors === "true", stage);
+        const tenantId = request.user?.tenantId;
+        const data = await ci_service_js_1.ciService.listReliabilityRecords(plantId, onlyBadActors === "true", stage, tenantId);
         return reply.send((0, responseFormatter_js_1.formatSuccess)(data));
     }
     async launchRcaFromBadActor(request, reply) {

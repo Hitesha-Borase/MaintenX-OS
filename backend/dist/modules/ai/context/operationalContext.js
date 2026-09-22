@@ -37,7 +37,7 @@ class OperationalContextBuilder {
                     .join("\n")
                 : "- Micro-stoppage: Photoeye PE-04 glare reflection (18 mins, resolved).";
             return `
-[PLANT ENVIRONMENT: Indore Plant 01 - Manufacturing Cloud]
+[PLANT ENVIRONMENT: Plant 1 - Meat Processing & Smokehouse Facility - Manufacturing Cloud]
 Current Time: ${new Date().toISOString()}
 
 ACTIVE PRODUCTION LINES:
@@ -52,16 +52,16 @@ ${downtimeSummary}
 OPERATIONAL TARGETS:
 - Overall Plant OEE Target: 85.0% (Current estimated: 88.4%)
 - Availability: 94.2% | Performance: 96.1% | Quality: 99.8%
-- Quality Critical Control Points (CCP): All verified within tolerance limits.
+- Quality Critical Control Points (CCP): All verified within CFIA / HACCP tolerance limits.
 `.trim();
         }
         catch (err) {
             console.warn("[OperationalContextBuilder] Fallback to default operational context:", err.message);
             return `
-[PLANT ENVIRONMENT: Indore Plant 01 - Manufacturing Cloud]
+[PLANT ENVIRONMENT: Plant 1 - Meat Processing & Smokehouse Facility - Manufacturing Cloud]
 Current Time: ${new Date().toISOString()}
-Line 1 Bottling: RUNNING at 250 bpm, OEE: 88.4%
-Line 2 Pasteurizer: RUNNING at 200 bpm, OEE: 84.1%
+Line 1 Smokehouse & Grinder: RUNNING at 2,450 LBS/HR, OEE: 88.4%
+Line 2 Slicing & Packaging: RUNNING at 1,780 LBS/HR, OEE: 85.2%
 Active Work Orders: 2 Low Priority, 0 Emergency Breakdown
 No active quality holds or critical CCP breaches.
 `.trim();

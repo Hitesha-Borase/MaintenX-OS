@@ -33,6 +33,12 @@ async function billingRoutes(fastify) {
                 summary: "Cryptographically Verify Razorpay Payment Signature & Activate Subscription",
             },
         }, billing_controller_js_1.billingController.verifyPayment.bind(billing_controller_js_1.billingController));
+        authScope.post("/upgrade", {
+            schema: {
+                tags: ["Billing & Subscriptions (Razorpay)"],
+                summary: "Upgrade Tenant Plan & Synchronize Entitled Modules",
+            },
+        }, billing_controller_js_1.billingController.upgradePlan.bind(billing_controller_js_1.billingController));
         authScope.get("/subscription", {
             schema: {
                 tags: ["Billing & Subscriptions (Razorpay)"],

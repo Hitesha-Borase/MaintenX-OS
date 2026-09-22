@@ -37,12 +37,7 @@ class ProductionService {
       `);
             if (res.rows.length > 0)
                 return res.rows;
-            return [
-                { id: "PO-2026-001", orderNumber: "PO-2026-001", productName: "500ml Sparkling Citrus", line: "Line 1 — Aseptic", targetQuantity: 48000, producedQuantity: 32150, scrapQuantity: 180, status: "Running", priority: "High" },
-                { id: "PO-2026-002", orderNumber: "PO-2026-002", productName: "1L Sparkling Tonic Water", line: "Line 1 — Aseptic", targetQuantity: 32000, producedQuantity: 0, scrapQuantity: 0, status: "Scheduled", priority: "Normal" },
-                { id: "PO-2026-003", orderNumber: "PO-2026-003", productName: "250ml Slim Can Energy Drink", line: "Line 2 — Canning", targetQuantity: 55000, producedQuantity: 28900, scrapQuantity: 210, status: "Running", priority: "High" },
-                { id: "PO-2026-004", orderNumber: "PO-2026-004", productName: "330ml Classic Cola Can", line: "Line 2 — Canning", targetQuantity: 40000, producedQuantity: 0, scrapQuantity: 0, status: "Scheduled", priority: "Normal" }
-            ];
+            return [];
         }
         finally {
             client.release();
@@ -64,8 +59,13 @@ class ProductionService {
         RETURNING id, order_number as "orderNumber", target_quantity as "targetQuantity", status;
       `, [tenantId, plantId || 'PLT-01', orderNumber, skuId, lineId, targetQuantity, input.priority || 'Normal']);
             const order = res.rows[0];
-            const batchNumber = `BAT-${order.orderNumber}`;
-            return { order, batch: { id: batchNumber, batchNumber } };
+            const batchNumber = `BAT-${order.orderNumber.replace('PO-', '')}`;
+            const bRes = await client.query(`
+        INSERT INTO batches (tenant_id, plant_id, production_order_id, batch_number, sku_id, target_volume, actual_volume, uom, status, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, $5, $6, '0', 'Bottles', 'Scheduled', NOW(), NOW())
+        RETURNING id, batch_number;
+      `, [tenantId, plantId || 'PLT-01', order.id, batchNumber, skuId, targetQuantity]).catch(() => null);
+            return { order, batch: bRes?.rows?.[0] || { id: batchNumber, batchNumber } };
         }
         finally {
             client.release();
@@ -436,7 +436,7 @@ class ProductionService {
             plantCode: plantId || "PLT-01",
             shiftA: { output: "48,200 units", scrap: "380 units", oee: "88.4%", supervisor: "Thomas Sterling" },
             shiftB: { output: "46,800 units", scrap: "410 units", oee: "86.1%", supervisor: "Chloe Dupuis" },
-            shiftC: { output: "44,500 units", scrap: "520 units", oee: "84.2%", supervisor: "Carlos Mendez" }
+            shiftC: { output: "44,500 units", scrap: "520 units", oee: "84.2%", supervisor: "Ashley Kulcar" }
         };
     }
     async listDowntime(plantId) {

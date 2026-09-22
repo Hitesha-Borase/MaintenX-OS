@@ -50,7 +50,7 @@ let inMemoryInvitations = [
         email: "clara.oswald@flowstate.io",
         role: "Quality Analyst",
         department: "Quality",
-        invitedBy: "Alexander Vance",
+        invitedBy: "Ronald Robinson",
         sentDate: "2026-08-30",
         status: "Pending",
     },
@@ -60,7 +60,7 @@ let inMemoryInvitations = [
         email: "james.holden@flowstate.io",
         role: "Controls Engineer",
         department: "Maintenance",
-        invitedBy: "Alexander Vance",
+        invitedBy: "Ronald Robinson",
         sentDate: "2026-08-31",
         status: "Pending",
     },
@@ -445,6 +445,9 @@ class AdminService {
                     createdAt: u.createdAt,
                 };
             });
+            if (isTenantUuid) {
+                return mapped;
+            }
             if (mapped.length > 0) {
                 return mapped;
             }
@@ -452,7 +455,7 @@ class AdminService {
         catch (err) {
             console.warn("Database query failed in getAllUsers:", err.message);
         }
-        return inMemoryUsers;
+        return tenantId ? [] : inMemoryUsers;
     }
     async updateUserStatus(tenantId, userId, newStatus) {
         const normalizedStatus = newStatus.toUpperCase() === "ACTIVE" ? "ACTIVE" : "SUSPENDED";
@@ -819,7 +822,7 @@ class AdminService {
             email,
             role: input.role || "Quality Analyst",
             department: input.department || "Quality",
-            invitedBy: input.invitedBy || "Alexander Vance",
+            invitedBy: input.invitedBy || "Ronald Robinson",
             sentDate,
             status: "Pending",
         };
@@ -833,7 +836,7 @@ class AdminService {
                 email,
                 role: input.role || "Quality Analyst",
                 department: input.department || "Quality",
-                invitedBy: input.invitedBy || "Alexander Vance",
+                invitedBy: input.invitedBy || "Ronald Robinson",
                 sentDate,
                 status: "Pending",
             })
@@ -916,7 +919,7 @@ class AdminService {
                     email: cleanId.includes("@") ? cleanId : `${cleanId.toLowerCase()}@example.com`,
                     role: "Quality Analyst",
                     department: "Quality",
-                    invitedBy: "Alexander Vance",
+                    invitedBy: "Ronald Robinson",
                     sentDate: todayDate,
                     status: "Pending",
                 })
@@ -1250,7 +1253,7 @@ class AdminService {
     // ==========================================
     // ROLES & PERMISSIONS GOVERNANCE
     // ==========================================
-    async getRoles(tenantId) {
+    async getRoles(tenantId, isMasterAdmin) {
         try {
             let activeTenantId = null;
             if (typeof tenantId === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tenantId)) {
@@ -1258,17 +1261,26 @@ class AdminService {
             }
             let roleList = [];
             if (activeTenantId) {
-                roleList = await database_js_1.db.select().from(index_js_1.roles).where((0, drizzle_orm_1.eq)(index_js_1.roles.tenantId, activeTenantId));
-                if (roleList.length === 0) {
-                    roleList = await database_js_1.db.select().from(index_js_1.roles);
-                }
+                roleList = await database_js_1.db
+                    .select()
+                    .from(index_js_1.roles)
+                    .where((0, drizzle_orm_1.or)((0, drizzle_orm_1.eq)(index_js_1.roles.tenantId, activeTenantId), (0, drizzle_orm_1.eq)(index_js_1.roles.isSystem, true), (0, drizzle_orm_1.isNull)(index_js_1.roles.tenantId)));
             }
             else {
                 roleList = await database_js_1.db.select().from(index_js_1.roles);
             }
             let userRoleList = [];
             try {
-                userRoleList = await database_js_1.db.select().from(index_js_1.userRoles);
+                if (activeTenantId) {
+                    userRoleList = await database_js_1.db
+                        .select({ roleId: index_js_1.userRoles.roleId })
+                        .from(index_js_1.userRoles)
+                        .innerJoin(index_js_1.users, (0, drizzle_orm_1.eq)(index_js_1.userRoles.userId, index_js_1.users.id))
+                        .where((0, drizzle_orm_1.eq)(index_js_1.users.tenantId, activeTenantId));
+                }
+                else {
+                    userRoleList = await database_js_1.db.select().from(index_js_1.userRoles);
+                }
             }
             catch (_) { }
             if (roleList) {
@@ -1475,12 +1487,12 @@ class AdminService {
                     .insert(index_js_1.plants)
                     .values({
                     tenantId: demoTenant.id,
-                    code: "INDORE-01",
-                    name: "Indore Mega Bottling & Canning Facility",
-                    city: "Indore",
-                    state: "Madhya Pradesh",
-                    country: "India",
-                    timezone: "Asia/Kolkata",
+                    code: "PLT-MEAT-01",
+                    name: "Plant 1 - Meat Processing & Smokehouse Facility",
+                    city: "Oshawa",
+                    state: "Ontario",
+                    country: "Canada",
+                    timezone: "America/Toronto",
                 })
                     .returning();
             }
@@ -1612,7 +1624,7 @@ class AdminService {
             console.warn("ensurePermissionsSeeded warning:", err.message);
         }
     }
-    async getPermissionMatrix(tenantId) {
+    async getPermissionMatrix(tenantId, isMasterAdmin) {
         const PERMISSION_MODULES = [
             "SKU Master",
             "BOM / Recipe",
@@ -2321,7 +2333,7 @@ class AdminService {
             const userList = await database_js_1.db.select().from(index_js_1.users);
             logs = dbLogs.map((item, idx) => {
                 const u = userList.find((usr) => usr.id === item.userId);
-                const userName = u ? `${u.firstName} ${u.lastName}` : "Alexander Vance";
+                const userName = u ? `${u.firstName} ${u.lastName}` : "Ronald Robinson";
                 return {
                     auditId: `AUD-${item.id.substring(0, 4).toUpperCase() || (3600 + idx)}`,
                     id: item.id,
@@ -2775,7 +2787,7 @@ class AdminService {
             tier: data.tier || "ENTERPRISE TIER ACTIVE",
             edgeHealth: data.edgeHealth || "99.99% HEALTH",
             status: data.status || "PUBLISHED",
-            generatedBy: data.generatedBy || "Alexander Vance",
+            generatedBy: data.generatedBy || "Ronald Robinson",
             metrics: data.metrics || {},
         };
         await database_js_1.db.insert(index_js_1.systemGovernanceReports).values(newReport)
@@ -2831,7 +2843,7 @@ class AdminService {
                 tier: reports.tenantTier,
                 edgeHealth: reports.edgeTelemetryHealth,
                 status: "AUDITED",
-                generatedBy: "Alexander Vance",
+                generatedBy: "Ronald Robinson",
                 metrics: reports,
             }).onConflictDoNothing();
             if (activeTenantId) {
