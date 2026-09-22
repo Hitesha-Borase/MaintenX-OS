@@ -75,10 +75,18 @@ export function MultiPlantKPIs() {
     setChecklist(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
+  const [isDispatching, setIsDispatching] = useState(false);
+
   const handleConfirmAudit = async (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     if (!selectedPlant) return;
 
+    if (!leadAuditor.trim()) {
+      addToast("Please enter the Lead Auditor name", "error");
+      return;
+    }
+
+    setIsDispatching(true);
     try {
       await executiveService.initiatePlantAudit({
         plantId: selectedPlant.id,
@@ -92,7 +100,7 @@ export function MultiPlantKPIs() {
       setKpis(prev =>
         prev.map(p =>
           p.id === selectedPlant.id
-            ? { ...p, auditStatus: "Audit In Progress", lastAudit: "Just Now" }
+            ? { ...p, auditStatus: "Audit In Progress", lastAudit: "Just Now", status: "Audit Dispatched" }
             : p
         )
       );
@@ -103,12 +111,13 @@ export function MultiPlantKPIs() {
       setKpis(prev =>
         prev.map(p =>
           p.id === selectedPlant.id
-            ? { ...p, auditStatus: "Audit In Progress", lastAudit: "Just Now" }
+            ? { ...p, auditStatus: "Audit In Progress", lastAudit: "Just Now", status: "Audit Dispatched" }
             : p
         )
       );
       addToast(`On-site performance audit initiated for ${selectedPlant.plant || selectedPlant.name}.`, "success");
     } finally {
+      setIsDispatching(false);
       setIsAuditModalOpen(false);
     }
   };
@@ -216,8 +225,8 @@ export function MultiPlantKPIs() {
             <Button variant="secondary" onClick={() => setIsAuditModalOpen(false)}>
               Cancel
             </Button>
-            <Button variant="primary" icon={Send} onClick={handleConfirmAudit}>
-              Confirm & Dispatch Audit
+            <Button variant="primary" icon={Send} onClick={handleConfirmAudit} disabled={isDispatching}>
+              {isDispatching ? "Dispatching..." : "Confirm & Dispatch Audit"}
             </Button>
           </>
         }

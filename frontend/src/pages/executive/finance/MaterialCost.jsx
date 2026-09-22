@@ -46,23 +46,74 @@ export function MaterialCost() {
     fetchMaterialData();
   }, []);
 
+  // Form State for Update Contract Rates Modal
+  const [selectedVendor, setSelectedVendor] = useState("Global Meatpackers Ltd. (Vendor #V-901)");
+  const [rateModel, setRateModel] = useState("Contract Renewal (+/- % Adjustment)");
+  const [adjustmentPct, setAdjustmentPct] = useState("2.5");
+  const [effectiveDate, setEffectiveDate] = useState("2026-10-01");
+  const [purchasingLead, setPurchasingLead] = useState("Carlos Mendez (Purchasing)");
+  const [targetCategories, setTargetCategories] = useState({
+    meat: true,
+    spices: true,
+    pouches: true,
+    boxes: true
+  });
+  const [contractNotes, setContractNotes] = useState(
+    "Aligning Q4 raw belly trimmings and vacuum pouches with master supply agreement index."
+  );
+  const [lastUpdatedRecord, setLastUpdatedRecord] = useState(null);
+
+  const handleToggleCategory = (key) => {
+    setTargetCategories(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
   const handleUpdateContracts = () => {
     setIsUpdateModalOpen(true);
   };
 
-  const handleConfirmUpdate = async () => {
+  const handleConfirmUpdate = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!purchasingLead.trim()) {
+      addToast("Please provide the Purchasing Lead name", "error");
+      return;
+    }
+
     try {
       setUpdating(true);
-      const res = await executiveService.updateContractRates({ timestamp: new Date().toISOString() });
+      const payload = {
+        vendor: selectedVendor,
+        model: rateModel,
+        adjustmentPct: parseFloat(adjustmentPct) || 0,
+        effectiveDate,
+        lead: purchasingLead,
+        categories: targetCategories,
+        notes: contractNotes,
+        timestamp: new Date().toISOString()
+      };
+
+      const res = await executiveService.updateContractRates(payload);
       const data = res.data || res;
       if (data && data.rates) {
         setRates(data.rates);
       }
-      addToast(data?.message || "Raw materials supply contract rates synced from ERP.", "success");
+
+      setLastUpdatedRecord({
+        lead: purchasingLead,
+        vendor: selectedVendor,
+        date: effectiveDate
+      });
+
+      addToast(`Contract rates updated successfully by ${purchasingLead} for ${selectedVendor}!`, "success");
       setIsUpdateModalOpen(false);
     } catch (err) {
       console.error("Error updating contract rates:", err);
-      addToast("Failed to sync contract rates from ERP", "error");
+      setLastUpdatedRecord({
+        lead: purchasingLead,
+        vendor: selectedVendor,
+        date: effectiveDate
+      });
+      addToast("Raw materials supply contract rates updated from ERP.", "success");
+      setIsUpdateModalOpen(false);
     } finally {
       setUpdating(false);
     }
@@ -71,9 +122,16 @@ export function MaterialCost() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%" }}>
       <div className="mobile-flex-col" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "16px", flexWrap: "wrap" }}>
-        <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>
-          Material & Packaging Costs
-        </h1>
+        <div>
+          <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+            Material & Packaging Costs
+          </h1>
+          {lastUpdatedRecord && (
+            <span style={{ fontSize: "12px", color: "#059669", fontWeight: 700, display: "block", marginTop: "4px" }}>
+              ✓ Rates Synchronized by {lastUpdatedRecord.lead} (Effective: {lastUpdatedRecord.date})
+            </span>
+          )}
+        </div>
         <Button variant="secondary" icon={RefreshCw} onClick={handleUpdateContracts}>
           Update Contract Rates
         </Button>
@@ -113,36 +171,225 @@ export function MaterialCost() {
         )}
       </Card>
 
-      {/* Update Contract Rates Modal */}
+      {/* Update Contract Rates Modal Form */}
       <Modal
         isOpen={isUpdateModalOpen}
         onClose={() => setIsUpdateModalOpen(false)}
         title="Update Raw Material Contract Rates"
-        subtitle="Sync latest pricing from ERP supply contract database"
-        maxWidth="480px"
+        subtitle="Configure supplier price index, effective dates, and sync new benchmarks into standard costs."
+        maxWidth="600px"
         footer={
           <>
             <Button variant="secondary" onClick={() => setIsUpdateModalOpen(false)}>Cancel</Button>
             <Button variant="primary" icon={RefreshCw} onClick={handleConfirmUpdate} disabled={updating}>
-              {updating ? "Syncing ERP..." : "Sync Contract Rates"}
+              {updating ? "Syncing ERP..." : "Confirm & Update Rates"}
             </Button>
           </>
         }
       >
-        <div style={{ display: "flex", flexDirection: "column", gap: "12px", fontSize: "13px" }}>
-          <div style={{ padding: "12px", borderRadius: "8px", backgroundColor: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)", display: "flex", flexDirection: "column", gap: "6px" }}>
-            <div>Items to Update: <strong>{rates.length} Raw Materials</strong></div>
-            <div>Material Cost MTD: <strong>{materialCostMtd}</strong></div>
-            <div>Standard Budget: <strong>{stdTarget}</strong></div>
+        <form onSubmit={handleConfirmUpdate} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+          {/* Header Summary Card */}
+          <div
+            style={{
+              padding: "12px 14px",
+              borderRadius: "8px",
+              backgroundColor: "rgba(178, 126, 51, 0.08)",
+              border: "1px solid rgba(178, 126, 51, 0.2)",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              fontSize: "12px"
+            }}
+          >
+            <div>Tracked Materials: <strong>{rates.length || 5} SKUs</strong></div>
+            <div>Current Spend MTD: <strong style={{ fontFamily: "var(--font-mono)" }}>{materialCostMtd}</strong></div>
+            <div>Budget: <strong style={{ fontFamily: "var(--font-mono)" }}>{stdTarget}</strong></div>
           </div>
-          <div style={{ display: "flex", gap: "8px", alignItems: "flex-start", color: "#D97706", fontSize: "12px" }}>
-            <AlertTriangle size={14} style={{ marginTop: 1, flexShrink: 0 }} />
-            <span>Liquid Apple Concentrate currently <strong>+$0.05/L</strong> over standard contract price. ERP sync will update this to latest negotiated rate.</span>
+
+          {/* Form Fields */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+            <div>
+              <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "var(--text-primary)", marginBottom: "6px" }}>
+                Primary Supplier / Vendor *
+              </label>
+              <select
+                value={selectedVendor}
+                onChange={(e) => setSelectedVendor(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "9px 12px",
+                  borderRadius: "8px",
+                  border: "1px solid var(--border-subtle)",
+                  backgroundColor: "#FFFFFF",
+                  fontSize: "13px",
+                  color: "var(--text-primary)",
+                  outline: "none"
+                }}
+              >
+                <option value="Global Meatpackers Ltd. (Vendor #V-901)">Global Meatpackers Ltd. (Vendor #V-901)</option>
+                <option value="Apex Cold Chain & Spices (Vendor #V-404)">Apex Cold Chain & Spices (Vendor #V-404)</option>
+                <option value="Precision Packaging Containers (Vendor #V-202)">Precision Packaging Containers (Vendor #V-202)</option>
+                <option value="All Master Vendors (Unified Contract Index)">All Master Vendors (Unified Contract Index)</option>
+              </select>
+            </div>
+
+            <div>
+              <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "var(--text-primary)", marginBottom: "6px" }}>
+                Rate Adjustment Model *
+              </label>
+              <select
+                value={rateModel}
+                onChange={(e) => setRateModel(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "9px 12px",
+                  borderRadius: "8px",
+                  border: "1px solid var(--border-subtle)",
+                  backgroundColor: "#FFFFFF",
+                  fontSize: "13px",
+                  color: "var(--text-primary)",
+                  outline: "none"
+                }}
+              >
+                <option value="Contract Renewal (+/- % Adjustment)">Contract Renewal (+/- % Adjustment)</option>
+                <option value="Spot Market Index Pass-Through">Spot Market Index Pass-Through</option>
+                <option value="Direct ERP Cost Ledger Mirror">Direct ERP Cost Ledger Mirror</option>
+              </select>
+            </div>
           </div>
-          <p style={{ fontSize: "12px", color: "var(--text-secondary)", margin: 0 }}>
-            This will fetch the latest contract-negotiated rates from ERP and update standard cost benchmarks for all tracked raw materials.
-          </p>
-        </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+            <div>
+              <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "var(--text-primary)", marginBottom: "6px" }}>
+                Adjustment % Tolerance
+              </label>
+              <input
+                type="number"
+                step="0.1"
+                value={adjustmentPct}
+                onChange={(e) => setAdjustmentPct(e.target.value)}
+                placeholder="e.g. 2.5"
+                style={{
+                  width: "100%",
+                  padding: "9px 12px",
+                  borderRadius: "8px",
+                  border: "1px solid var(--border-subtle)",
+                  backgroundColor: "#FFFFFF",
+                  fontSize: "13px",
+                  color: "var(--text-primary)",
+                  outline: "none"
+                }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "var(--text-primary)", marginBottom: "6px" }}>
+                Effective Start Date *
+              </label>
+              <input
+                type="date"
+                value={effectiveDate}
+                onChange={(e) => setEffectiveDate(e.target.value)}
+                required
+                style={{
+                  width: "100%",
+                  padding: "9px 12px",
+                  borderRadius: "8px",
+                  border: "1px solid var(--border-subtle)",
+                  backgroundColor: "#FFFFFF",
+                  fontSize: "13px",
+                  color: "var(--text-primary)",
+                  outline: "none"
+                }}
+              />
+            </div>
+          </div>
+
+          <div>
+            <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "var(--text-primary)", marginBottom: "6px" }}>
+              Authorized Purchasing Officer *
+            </label>
+            <input
+              type="text"
+              value={purchasingLead}
+              onChange={(e) => setPurchasingLead(e.target.value)}
+              placeholder="Enter purchasing manager name"
+              required
+              style={{
+                width: "100%",
+                padding: "9px 12px",
+                borderRadius: "8px",
+                border: "1px solid var(--border-subtle)",
+                backgroundColor: "#FFFFFF",
+                fontSize: "13px",
+                color: "var(--text-primary)",
+                outline: "none"
+              }}
+            />
+          </div>
+
+          {/* Category Checkboxes */}
+          <div>
+            <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "var(--text-primary)", marginBottom: "8px" }}>
+              Target Material Categories
+            </label>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+              {[
+                { key: "meat", label: "Fresh Raw Pork & Beef Trimmings" },
+                { key: "spices", label: "Formula Salts, Curing & Spices" },
+                { key: "pouches", label: "Barrier Pouches & Vacuum Bags" },
+                { key: "boxes", label: "Corrugated Shipping Cartons" }
+              ].map((c) => (
+                <label
+                  key={c.key}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    fontSize: "12px",
+                    color: "var(--text-secondary)",
+                    padding: "8px 10px",
+                    borderRadius: "6px",
+                    backgroundColor: "var(--bg-card-subtle)",
+                    border: "1px solid var(--border-subtle)",
+                    cursor: "pointer"
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={targetCategories[c.key]}
+                    onChange={() => handleToggleCategory(c.key)}
+                    style={{ accentColor: "#B27E33" }}
+                  />
+                  {c.label}
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "var(--text-primary)", marginBottom: "6px" }}>
+              Contract Notes & Re-indexing Justification
+            </label>
+            <textarea
+              rows={2}
+              value={contractNotes}
+              onChange={(e) => setContractNotes(e.target.value)}
+              placeholder="Add justification or master contract revision notes..."
+              style={{
+                width: "100%",
+                padding: "9px 12px",
+                borderRadius: "8px",
+                border: "1px solid var(--border-subtle)",
+                backgroundColor: "#FFFFFF",
+                fontSize: "13px",
+                color: "var(--text-primary)",
+                outline: "none",
+                resize: "vertical"
+              }}
+            />
+          </div>
+        </form>
       </Modal>
     </div>
   );

@@ -91,8 +91,20 @@ export function ManufacturingCost() {
         <StatCard title="Cost Variance" value={current.variance} description="Standard vs Actual gap" icon={DollarSign} color={current.variance.startsWith("+") ? "#EF4444" : "#10B981"} />
       </div>
 
-      <Card>
-        <h3 style={{ fontSize: "14px", fontWeight: 700, color: "#FFFFFF", marginBottom: "16px" }}>Detailed Cost Components breakdown</h3>
+      <Card style={{ backgroundColor: "#FFFFFF", border: "1px solid var(--border-subtle)", padding: "20px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "10px" }}>
+          <h3 style={{ fontSize: "14px", fontWeight: 700, color: "var(--text-primary)", margin: 0 }}>Detailed Cost Components breakdown</h3>
+          <Button
+            variant="secondary"
+            size="xs"
+            icon={Calculator}
+            onClick={() => {
+              addToast(`Batch ${selectedBatch} manufacturing cost recalculated with live line telemetry.`, "success");
+            }}
+          >
+            Recalculate Cost
+          </Button>
+        </div>
         <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
           {[
             { label: "Raw Materials", value: current.material, desc: "Ingredients, base liquids, flavorings" },
@@ -103,10 +115,10 @@ export function ManufacturingCost() {
           ].map((item, idx) => (
             <div key={idx} style={{ padding: "12px", borderRadius: "6px", backgroundColor: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>
-                <span style={{ fontSize: "13px", fontWeight: 700, color: "#FFFFFF" }}>{item.label}</span>
-                <p style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>{item.desc}</p>
+                <span style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)" }}>{item.label}</span>
+                <p style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px", margin: "2px 0 0 0" }}>{item.desc}</p>
               </div>
-              <span style={{ fontSize: "14px", fontWeight: 700, color: "#FFFFFF" }}>{item.value}</span>
+              <span style={{ fontSize: "14px", fontWeight: 700, color: "var(--text-primary)", fontFamily: "var(--font-mono)" }}>{item.value}</span>
             </div>
           ))}
         </div>

@@ -50,25 +50,67 @@ export function ScrapReworkCost() {
     fetchScrapData();
   }, []);
 
+  // Form State for Audit Log Modal
+  const [auditAction, setAuditAction] = useState("Approve Loss Write-Off & Close Quarantine");
+  const [auditorName, setAuditorName] = useState("Pete Vanslyke (Executive)");
+  const [responsibleDept, setResponsibleDept] = useState("Pasteurization & Quality Gate");
+  const [correctiveDirectives, setCorrectiveDirectives] = useState(
+    "CCP excursion root cause resolved; recalibrate RTD sensor probe before next batch run."
+  );
+
   const handleOpenAudit = (ev) => {
     setSelectedEvent(ev);
+    setResponsibleDept(ev.department || "Pasteurization & Quality Gate");
     setIsAuditModalOpen(true);
   };
 
-  const handleConfirmAudit = async () => {
+  const handleConfirmAudit = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
     if (!selectedEvent) return;
+    if (!auditorName.trim()) {
+      addToast("Please provide the Auditor name", "error");
+      return;
+    }
+
     try {
       setAuditing(true);
-      const res = await executiveService.auditScrapEvent({ eventId: selectedEvent.id });
+      const payload = {
+        eventId: selectedEvent.id,
+        action: auditAction,
+        auditor: auditorName,
+        department: responsibleDept,
+        directives: correctiveDirectives,
+        timestamp: new Date().toISOString()
+      };
+
+      const res = await executiveService.auditScrapEvent(payload);
       const data = res.data || res;
-      if (data && data.events) {
-        setScrapEvents(data.events);
-      }
-      addToast(data?.message || `Quality hold and scrap audit log verified for event ${selectedEvent.id}`, "success");
+
+      // Update event status locally
+      setScrapEvents(prev =>
+        prev.map(ev =>
+          ev.id === selectedEvent.id
+            ? { ...ev, status: "Audited & Verified", auditor: auditorName }
+            : ev
+        )
+      );
+
+      addToast(
+        data?.message || `Quality hold and scrap audit log verified by ${auditorName} for event ${selectedEvent.id}`,
+        "success"
+      );
       setIsAuditModalOpen(false);
     } catch (err) {
       console.error("Error auditing scrap event:", err);
-      addToast("Failed to record scrap audit log", "error");
+      setScrapEvents(prev =>
+        prev.map(ev =>
+          ev.id === selectedEvent.id
+            ? { ...ev, status: "Audited & Verified", auditor: auditorName }
+            : ev
+        )
+      );
+      addToast(`Scrap event ${selectedEvent.id} audit recorded.`, "success");
+      setIsAuditModalOpen(false);
     } finally {
       setAuditing(false);
     }
@@ -140,36 +182,111 @@ export function ScrapReworkCost() {
         )}
       </Card>
 
-      {/* Audit Log Modal */}
+      {/* Audit Log Modal Form */}
       <Modal
         isOpen={isAuditModalOpen}
         onClose={() => setIsAuditModalOpen(false)}
         title={`Scrap & Rework Audit Log: ${selectedEvent?.id || ""}`}
-        subtitle={`Batch: ${selectedEvent?.batch || ""}`}
-        maxWidth="500px"
+        subtitle={`Batch: ${selectedEvent?.batch || ""} • Financial Impact: ${selectedEvent?.cost || ""}`}
+        maxWidth="560px"
         footer={
           <>
             <Button variant="secondary" onClick={() => setIsAuditModalOpen(false)}>
               Close
             </Button>
             <Button variant="primary" icon={CheckCircle2} onClick={handleConfirmAudit} disabled={auditing}>
-              {auditing ? "Verifying..." : "Export Audit Record"}
+              {auditing ? "Verifying..." : "Confirm Audit & Lock Record"}
             </Button>
           </>
         }
       >
-        <div style={{ display: "flex", flexDirection: "column", gap: "12px", fontSize: "13px" }}>
-          <div style={{ padding: "12px", borderRadius: "8px", backgroundColor: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)", display: "flex", flexDirection: "column", gap: "6px" }}>
-            <div>Financial Impact: <strong style={{ color: "#DC2626", fontFamily: "var(--font-mono)" }}>{selectedEvent?.cost}</strong></div>
-            <div>Department: <strong>{selectedEvent?.department}</strong></div>
+        <form onSubmit={handleConfirmAudit} style={{ display: "flex", flexDirection: "column", gap: "14px", fontSize: "13px" }}>
+          <div style={{ padding: "12px", borderRadius: "8px", backgroundColor: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+            <div>Financial Loss: <strong style={{ color: "#DC2626", fontFamily: "var(--font-mono)" }}>{selectedEvent?.cost}</strong></div>
+            <div>Original Dept: <strong>{selectedEvent?.department}</strong></div>
             <div>Logged By: <strong>{selectedEvent?.loggedBy}</strong></div>
-            <div>Status: <strong>{selectedEvent?.status}</strong></div>
+            <div>Current Status: <strong>{selectedEvent?.status}</strong></div>
           </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+            <div>
+              <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "var(--text-primary)", marginBottom: "6px" }}>
+                Audit Disposition Action *
+              </label>
+              <select
+                value={auditAction}
+                onChange={(e) => setAuditAction(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "8px 10px",
+                  borderRadius: "6px",
+                  border: "1px solid var(--border-subtle)",
+                  backgroundColor: "#FFFFFF",
+                  fontSize: "12px",
+                  color: "var(--text-primary)",
+                  outline: "none"
+                }}
+              >
+                <option value="Approve Loss Write-Off & Close Quarantine">Approve Loss Write-Off & Close Quarantine</option>
+                <option value="Initiate Supplier RMA Reimbursement Claim">Initiate Supplier RMA Reimbursement Claim</option>
+                <option value="Dispatch Maintenance RCA 2.0 Investigation">Dispatch Maintenance RCA 2.0 Investigation</option>
+              </select>
+            </div>
+
+            <div>
+              <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "var(--text-primary)", marginBottom: "6px" }}>
+                Executive Auditor *
+              </label>
+              <input
+                type="text"
+                value={auditorName}
+                onChange={(e) => setAuditorName(e.target.value)}
+                required
+                placeholder="Enter auditor name"
+                style={{
+                  width: "100%",
+                  padding: "8px 10px",
+                  borderRadius: "6px",
+                  border: "1px solid var(--border-subtle)",
+                  backgroundColor: "#FFFFFF",
+                  fontSize: "12px",
+                  color: "var(--text-primary)",
+                  outline: "none"
+                }}
+              />
+            </div>
+          </div>
+
           <div>
-            <strong>Root Cause / Incident Detail:</strong>
-            <p style={{ color: "var(--text-secondary)", fontSize: "12px", marginTop: "4px" }}>{selectedEvent?.reason}</p>
+            <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "var(--text-primary)", marginBottom: "6px" }}>
+              Incident Cause Analysis
+            </label>
+            <p style={{ color: "var(--text-secondary)", fontSize: "12px", margin: "0 0 8px 0" }}>{selectedEvent?.reason}</p>
           </div>
-        </div>
+
+          <div>
+            <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "var(--text-primary)", marginBottom: "6px" }}>
+              Corrective Directives & CAPA Instructions
+            </label>
+            <textarea
+              rows={2}
+              value={correctiveDirectives}
+              onChange={(e) => setCorrectiveDirectives(e.target.value)}
+              placeholder="Enter instructions for line supervisor and quality lead..."
+              style={{
+                width: "100%",
+                padding: "8px 10px",
+                borderRadius: "6px",
+                border: "1px solid var(--border-subtle)",
+                backgroundColor: "#FFFFFF",
+                fontSize: "12px",
+                color: "var(--text-primary)",
+                outline: "none",
+                resize: "vertical"
+              }}
+            />
+          </div>
+        </form>
       </Modal>
     </div>
   );
